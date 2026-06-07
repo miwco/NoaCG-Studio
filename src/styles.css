@@ -154,7 +154,28 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
   border: 0;
   transform-origin: center center;
   background: transparent;
+  /* A soft shadow frames the canvas so its bounds read against the stage. */
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.55);
   /* width/height set dynamically by PreviewFrame based on template.resolution */
+}
+
+/* Preview toolbar (guides + background switches), top-right of the stage. */
+.preview-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 6;
+}
+.preview-toolbar .guide-switch,
+.preview-toolbar .bg-switch {
+  display: flex;
+  gap: 4px;
+}
+.preview-toolbar button {
+  font-size: 11px;
+  padding: 3px 9px;
 }
 
 .simulator {

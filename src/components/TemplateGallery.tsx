@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { TEMPLATE_REGISTRY, type TemplateEntry } from '../templates/index';
-import { RESOLUTIONS, FPS_OPTIONS, type Resolution } from '../model/types';
+import { ASPECTS, FPS_OPTIONS, type AspectPreset, type Resolution } from '../model/types';
 
 /** Minimal SVG thumbnail representing each template type. */
 function TemplateThumbnail({ type }: { type: string }) {
@@ -98,8 +98,17 @@ export default function TemplateGallery() {
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
 
   const [selectedEntry, setSelectedEntry] = useState<TemplateEntry>(TEMPLATE_REGISTRY[0]);
-  const [resolution, setResolution] = useState<Resolution>(RESOLUTIONS[0]);
+  const [aspect, setAspect] = useState<AspectPreset>(ASPECTS[0]);
+  const [resolution, setResolution] = useState<Resolution>(ASPECTS[0].resolutions[0]);
   const [fps, setFps] = useState(25);
+
+  // Switching aspect ratio repopulates the resolution list and resets to its first option.
+  const onAspectChange = (id: string) => {
+    const a = ASPECTS.find((x) => x.id === id);
+    if (!a) return;
+    setAspect(a);
+    setResolution(a.resolutions[0]);
+  };
 
   // Close on Escape.
   useEffect(() => {
@@ -130,15 +139,23 @@ export default function TemplateGallery() {
           </div>
           <div className="gallery-settings">
             <div className="field-row" style={{ alignItems: 'center', gap: 8 }}>
+              <label style={{ margin: 0, whiteSpace: 'nowrap' }}>Aspect</label>
+              <select value={aspect.id} onChange={(e) => onAspectChange(e.target.value)}>
+                {ASPECTS.map((a) => (
+                  <option key={a.id} value={a.id}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field-row" style={{ alignItems: 'center', gap: 8 }}>
               <label style={{ margin: 0, whiteSpace: 'nowrap' }}>Resolution</label>
               <select
                 value={resolution.label}
                 onChange={(e) => {
-                  const r = RESOLUTIONS.find((r) => r.label === e.target.value);
+                  const r = aspect.resolutions.find((r) => r.label === e.target.value);
                   if (r) setResolution(r);
                 }}
               >
-                {RESOLUTIONS.map((r) => (
+                {aspect.resolutions.map((r) => (
                   <option key={r.label} value={r.label}>{r.label}</option>
                 ))}
               </select>
@@ -192,7 +209,7 @@ export default function TemplateGallery() {
           <div className="gallery-selection-info">
             <strong>{selectedEntry.name}</strong>
             <span className="muted" style={{ marginLeft: 8 }}>
-              {resolution.width}×{resolution.height} · {fps} fps
+              {aspect.label} · {resolution.width}×{resolution.height} · {fps} fps
             </span>
           </div>
           <div className="row" style={{ gap: 8 }}>

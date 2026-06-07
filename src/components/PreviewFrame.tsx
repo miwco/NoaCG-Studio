@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { composeDocument } from '../preview/composeDocument';
 import { useTemplateStore } from '../store/templateStore';
+import CanvasGuides from './CanvasGuides';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement>;
@@ -18,6 +19,8 @@ export default function PreviewFrame({ iframeRef }: Props) {
   const previewBg = useTemplateStore((s) => s.previewBg);
   const setPreviewBg = useTemplateStore((s) => s.setPreviewBg);
   const setPreviewError = useTemplateStore((s) => s.setPreviewError);
+  const guides = useTemplateStore((s) => s.guides);
+  const setGuide = useTemplateStore((s) => s.setGuide);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.3);
@@ -74,17 +77,37 @@ export default function PreviewFrame({ iframeRef }: Props) {
           transform: `translate(-50%, -50%) scale(${scale})`,
         }}
       />
-      <div className="bg-switch" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4 }}>
-        {(['checkerboard', 'black', 'video'] as const).map((bg) => (
+      <CanvasGuides width={stageW * scale} height={stageH * scale} />
+
+      <div className="preview-toolbar">
+        <div className="guide-switch">
           <button
-            key={bg}
-            className={previewBg === bg ? 'active' : ''}
-            onClick={() => setPreviewBg(bg)}
-            title={`${bg} background`}
+            className={guides.safeAreas ? 'active' : ''}
+            onClick={() => setGuide('safeAreas', !guides.safeAreas)}
+            title="Toggle broadcast safe areas (title-safe / action-safe)"
           >
-            {bg === 'checkerboard' ? 'Trans' : bg === 'black' ? 'Black' : 'Video'}
+            Safe
           </button>
-        ))}
+          <button
+            className={guides.grid ? 'active' : ''}
+            onClick={() => setGuide('grid', !guides.grid)}
+            title="Toggle rule-of-thirds grid"
+          >
+            Grid
+          </button>
+        </div>
+        <div className="bg-switch">
+          {(['checkerboard', 'black', 'video'] as const).map((bg) => (
+            <button
+              key={bg}
+              className={previewBg === bg ? 'active' : ''}
+              onClick={() => setPreviewBg(bg)}
+              title={`${bg} background`}
+            >
+              {bg === 'checkerboard' ? 'Trans' : bg === 'black' ? 'Black' : 'Video'}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
