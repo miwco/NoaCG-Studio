@@ -1,0 +1,7 @@
+node_modules
+dist
+*.local
+.DS_Store
+
+# Local SPX reference templates (kept on disk, not in the repo)
+example_projects/

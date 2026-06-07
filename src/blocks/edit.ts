@@ -1,0 +1,53 @@
+// Small, deterministic helpers used by building blocks to edit the visible template code.
+// Blocks return readable, well-commented code so users learn from the result.
+
+import { replaceDefinitionInHtml } from '../model/spxDefinition';
+import type { SpxField, SpxTemplate } from '../model/types';
+
+/** Next free field id (f0, f1, f2...) given the current fields. */
+export function nextFieldId(fields: SpxField[]): string {
+  let max = -1;
+  for (const f of fields) {
+    const m = /^f(\d+)$/.exec(f.field);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `f${max + 1}`;
+}
+
+/** Insert an HTML snippet just before the hidden-data block (or before </body>). */
+export function insertGraphicHtml(html: string, snippet: string): string {
+  const marker = /<!-- Hidden data holders/i;
+  if (marker.test(html)) {
+    return html.replace(marker, `${snippet}\n\n  <!-- Hidden data holders`);
+  }
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${snippet}\n</body>`);
+  }
+  return html + snippet;
+}
+
+/** Insert a hidden data holder element just before </body>. */
+export function insertHiddenHolder(html: string, id: string): string {
+  const holder = `  <div class="spx-data" id="${id}"></div>`;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${holder}\n</body>`);
+  }
+  return html + '\n' + holder;
+}
+
+/** Append a CSS block (with a comment header) to the stylesheet. */
+export function appendCss(css: string, header: string, body: string): string {
+  return `${css}\n\n/* ${header} */\n${body}\n`;
+}
+
+/** Append a JS block (with a comment header) to the template script. */
+export function appendJs(js: string, header: string, body: string): string {
+  return `${js}\n\n// ${header}\n${body}\n`;
+}
+
+/** Add a field to the definition and re-serialize it back into the HTML. */
+export function addFieldToDefinition(template: SpxTemplate, field: SpxField): SpxTemplate {
+  const fields = [...template.fields, field];
+  const html = replaceDefinitionInHtml(template.html, template.settings, fields);
+  return { ...template, html, fields };
+}
