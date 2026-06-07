@@ -21,7 +21,13 @@ function stripLocalAssetTags(html: string): string {
 export function composeDocument(template: SpxTemplate): string {
   let html = stripLocalAssetTags(template.html);
 
-  const styleTag = `<style id="spx-inline-css">\n${template.css}\n</style>`;
+  const { width, height } = template.resolution;
+
+  // Base style: ensure the canvas is always exactly the right resolution even if the
+  // template CSS doesn't set it (e.g. the blank template). Template CSS can override.
+  const baseStyle = `html, body { width: ${width}px; height: ${height}px; overflow: hidden; }`;
+
+  const styleTag = `<style id="spx-base-style">\n${baseStyle}\n</style>\n<style id="spx-inline-css">\n${template.css}\n</style>`;
   const gsapTag = `<script id="spx-gsap">\n${gsapSource}\n</script>`;
   const jsTag = `<script id="spx-template-js">\n${template.js}\n</script>`;
 

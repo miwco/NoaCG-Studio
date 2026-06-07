@@ -22,6 +22,8 @@ interface TemplateState {
   validation: ValidationResult | null;
   /** Latest runtime error reported by the live preview iframe, if any. */
   previewError: string | null;
+  /** Whether the template gallery / new-project screen is open. */
+  galleryOpen: boolean;
 
   setActiveTab: (tab: EditorTab) => void;
   setPreviewBg: (bg: PreviewBg) => void;
@@ -31,7 +33,7 @@ interface TemplateState {
   setCss: (css: string) => void;
   setJs: (js: string) => void;
 
-  /** Replace the whole template (used by building blocks and AI). */
+  /** Replace the whole template (used by building blocks, AI, and template gallery). */
   applyTemplate: (template: SpxTemplate, summary?: string) => void;
   resetToDefault: () => void;
 
@@ -40,6 +42,9 @@ interface TemplateState {
 
   setValidation: (result: ValidationResult | null) => void;
   setPreviewError: (error: string | null) => void;
+
+  openGallery: () => void;
+  closeGallery: () => void;
 }
 
 /** Build the sample-data map from a template's fields, preserving existing edited values. */
@@ -69,6 +74,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   sampleData: syncSampleData(initialTemplate, {}),
   validation: null,
   previewError: null,
+  galleryOpen: true, // Show the template chooser on first load.
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPreviewBg: (bg) => set({ previewBg: bg }),
@@ -85,7 +91,12 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   applyTemplate: (template) =>
     set((s) => {
       const synced = withParsedFields(template);
-      return { template: synced, sampleData: syncSampleData(synced, s.sampleData), validation: null };
+      return {
+        template: synced,
+        sampleData: syncSampleData(synced, s.sampleData),
+        validation: null,
+        galleryOpen: false,
+      };
     }),
 
   resetToDefault: () =>
@@ -99,4 +110,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
 
   setValidation: (validation) => set({ validation }),
   setPreviewError: (previewError) => set({ previewError }),
+
+  openGallery: () => set({ galleryOpen: true }),
+  closeGallery: () => set({ galleryOpen: false }),
 }));
