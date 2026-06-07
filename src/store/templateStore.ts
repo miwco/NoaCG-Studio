@@ -4,13 +4,13 @@
 import { create } from 'zustand';
 import { createDefaultTemplate } from '../model/defaultTemplate';
 import { parseDefinition } from '../model/spxDefinition';
-import type { SpxTemplate } from '../model/types';
+import type { AssetFile, SpxTemplate } from '../model/types';
 import { DATA_FTYPES } from '../model/types';
 import type { ValidationResult } from '../validation/validateTemplate';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'blocks' | 'ai' | 'validate' | 'export';
+export type SidePanel = 'data' | 'blocks' | 'brand' | 'ai' | 'validate' | 'export';
 
 interface TemplateState {
   template: SpxTemplate;
@@ -39,6 +39,11 @@ interface TemplateState {
 
   setSampleValue: (field: string, value: string) => void;
   resetSampleData: () => void;
+
+  /** Add an uploaded asset (image/font) to the template. */
+  addAsset: (asset: AssetFile) => void;
+  /** Remove an asset by its relative path. */
+  removeAsset: (path: string) => void;
 
   setValidation: (result: ValidationResult | null) => void;
   setPreviewError: (error: string | null) => void;
@@ -107,6 +112,18 @@ export const useTemplateStore = create<TemplateState>((set) => ({
 
   setSampleValue: (field, value) => set((s) => ({ sampleData: { ...s.sampleData, [field]: value } })),
   resetSampleData: () => set((s) => ({ sampleData: syncSampleData(s.template, {}) })),
+
+  addAsset: (asset) =>
+    set((s) => ({
+      template: {
+        ...s.template,
+        assets: [...s.template.assets.filter((a) => a.path !== asset.path), asset],
+      },
+    })),
+  removeAsset: (path) =>
+    set((s) => ({
+      template: { ...s.template, assets: s.template.assets.filter((a) => a.path !== path) },
+    })),
 
   setValidation: (validation) => set({ validation }),
   setPreviewError: (previewError) => set({ previewError }),
