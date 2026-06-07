@@ -10,7 +10,14 @@ import type { ValidationResult } from '../validation/validateTemplate';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'blocks' | 'brand' | 'ai' | 'validate' | 'export';
+export type SidePanel = 'data' | 'blocks' | 'brand' | 'learn' | 'ai' | 'validate' | 'export';
+
+/** What the cursor is currently on in the code editor (drives the Learn panel). */
+export interface EditorContext {
+  tab: EditorTab;
+  token: string;
+  line: string;
+}
 
 interface TemplateState {
   template: SpxTemplate;
@@ -22,6 +29,8 @@ interface TemplateState {
   validation: ValidationResult | null;
   /** Latest runtime error reported by the live preview iframe, if any. */
   previewError: string | null;
+  /** What the code-editor cursor is currently on (drives the Learn panel). */
+  editorContext: EditorContext | null;
   /** Whether the template gallery / new-project screen is open. */
   galleryOpen: boolean;
 
@@ -47,6 +56,7 @@ interface TemplateState {
 
   setValidation: (result: ValidationResult | null) => void;
   setPreviewError: (error: string | null) => void;
+  setEditorContext: (ctx: EditorContext | null) => void;
 
   openGallery: () => void;
   closeGallery: () => void;
@@ -79,6 +89,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   sampleData: syncSampleData(initialTemplate, {}),
   validation: null,
   previewError: null,
+  editorContext: null,
   galleryOpen: true, // Show the template chooser on first load.
 
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -127,6 +138,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
 
   setValidation: (validation) => set({ validation }),
   setPreviewError: (previewError) => set({ previewError }),
+  setEditorContext: (editorContext) => set({ editorContext }),
 
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),
