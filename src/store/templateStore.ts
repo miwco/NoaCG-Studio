@@ -31,6 +31,8 @@ interface TemplateState {
   previewError: string | null;
   /** What the code-editor cursor is currently on (drives the Learn panel). */
   editorContext: EditorContext | null;
+  /** Preview canvas guides: broadcast safe areas and a rule-of-thirds grid. */
+  guides: { safeAreas: boolean; grid: boolean };
   /** Whether the template gallery / new-project screen is open. */
   galleryOpen: boolean;
 
@@ -57,6 +59,7 @@ interface TemplateState {
   setValidation: (result: ValidationResult | null) => void;
   setPreviewError: (error: string | null) => void;
   setEditorContext: (ctx: EditorContext | null) => void;
+  setGuide: (key: 'safeAreas' | 'grid', value: boolean) => void;
 
   openGallery: () => void;
   closeGallery: () => void;
@@ -90,6 +93,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   validation: null,
   previewError: null,
   editorContext: null,
+  guides: { safeAreas: false, grid: false },
   galleryOpen: true, // Show the template chooser on first load.
 
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -139,6 +143,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   setValidation: (validation) => set({ validation }),
   setPreviewError: (previewError) => set({ previewError }),
   setEditorContext: (editorContext) => set({ editorContext }),
+  setGuide: (key, value) => set((s) => ({ guides: { ...s.guides, [key]: value } })),
 
   openGallery: () => set({ galleryOpen: true }),
   closeGallery: () => set({ galleryOpen: false }),

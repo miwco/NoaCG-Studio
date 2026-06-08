@@ -31,6 +31,30 @@ export const RESOLUTIONS: Resolution[] = [
   { width: 1280, height: 720,  label: '720p (1280×720)' },
 ];
 
+/** Aspect-ratio presets shown at project creation, each offering a few resolutions. */
+export interface AspectPreset {
+  id: string;
+  label: string;
+  resolutions: Resolution[];
+}
+
+export const ASPECTS: AspectPreset[] = [
+  { id: '16:9', label: '16:9 Landscape', resolutions: RESOLUTIONS },
+  {
+    id: '9:16',
+    label: '9:16 Vertical',
+    resolutions: [
+      { width: 1080, height: 1920, label: 'Vertical (1080×1920)' },
+      { width: 720, height: 1280, label: 'Vertical (720×1280)' },
+    ],
+  },
+  {
+    id: '1:1',
+    label: '1:1 Square',
+    resolutions: [{ width: 1080, height: 1080, label: 'Square (1080×1080)' }],
+  },
+];
+
 export const FPS_OPTIONS = [25, 30, 50, 60] as const;
 
 // ── Layer model (structural foundation for future visual editing) ─────────────
@@ -42,7 +66,7 @@ export const FPS_OPTIONS = [25, 30, 50, 60] as const;
 export type LayerType = 'text' | 'image' | 'container' | 'rect';
 
 export interface TemplateLayer {
-  /** Matches the HTML element id (e.g. "f0_gfx", "logo"). */
+  /** Matches the HTML element id (e.g. "f0", "logo"). */
   id: string;
   type: LayerType;
   /** Human-readable label shown in future visual tools ("Name field", "Logo"). */
@@ -135,7 +159,7 @@ export interface SpxTemplate {
   fps: number;
   html: string; // body structure + <script id="spx-template-definition"> block
   css: string;
-  js: string; // clean play(), stop(), update(data), runTemplateUpdate()
+  js: string; // clean play(), stop(), update(data), next()
   fields: SpxField[]; // parsed view of the definition (source of truth = the code)
   settings: SpxSettings;
   assets: AssetFile[];
