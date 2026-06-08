@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BUILDING_BLOCKS, type BuildingBlock } from '../blocks/registry';
+import { lastInsertedSelector, setCssDeclaration } from '../blocks/edit';
+import { CHIP_PROPS } from '../teach/cssReference';
 import { useTemplateStore, type EditorTab } from '../store/templateStore';
 
 /** Hierarchical menu location for a block (falls back to a sensible default from its category). */
@@ -33,6 +35,7 @@ export default function BuildingBlockMenu() {
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const setLastInserted = useTemplateStore((s) => s.setLastInserted);
+  const lastInserted = useTemplateStore((s) => s.lastInserted);
   const undo = useTemplateStore((s) => s.undo);
   const historyLen = useTemplateStore((s) => s.history.length);
 
@@ -45,10 +48,19 @@ export default function BuildingBlockMenu() {
 
   const apply = (block: BuildingBlock) => {
     const tab = tabOf(block);
-    applyTemplate(block.apply(template));
+    const next = block.apply(template);
+    applyTemplate(next);
     setActiveTab(tab);
-    setLastInserted({ selector: null, tab });
+    setLastInserted({ selector: lastInsertedSelector(next.html), tab });
     setToast(block.label);
+  };
+
+  // Insert a suggested property into the rule the last block created.
+  const addProperty = (prop: string, example: string) => {
+    if (!lastInserted?.selector) return;
+    applyTemplate({ ...template, css: setCssDeclaration(template.css, lastInserted.selector, prop, example) });
+    setActiveTab('css');
+    setToast(prop);
   };
 
   // Search across the whole tree.
@@ -136,6 +148,29 @@ export default function BuildingBlockMenu() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {lastInserted?.selector && !searching && (
+        <div className="panel-section chip-section">
+          <div className="block-cat">
+            Add a property to <code className="inline">{lastInserted.selector}</code>
+          </div>
+          <div className="chip-row">
+            {CHIP_PROPS.map((p) => (
+              <button
+                key={p.prop}
+                className="prop-chip"
+                title={`${p.description}  (inserts ${p.prop}: ${p.example})`}
+                onClick={() => addProperty(p.prop, p.example)}
+              >
+                + {p.prop}
+              </button>
+            ))}
+          </div>
+          <p className="hint" style={{ marginTop: 6 }}>
+            See the <strong>Learn</strong> tab for the full CSS reference.
+          </p>
         </div>
       )}
 

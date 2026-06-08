@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { explain } from '../teach/explain';
 import type { ExplainCategory } from '../teach/knowledge';
+import { CSS_REFERENCE, mdnUrl } from '../teach/cssReference';
 
 const CAT_COLOR: Record<ExplainCategory, string> = {
   SPX: '#3aa0ff',
@@ -26,6 +28,7 @@ const GLOSSARY: { term: string; what: string }[] = [
 export default function LearnPanel() {
   const ctx = useTemplateStore((s) => s.editorContext);
   const explanations = ctx ? explain(ctx) : [];
+  const [openGroup, setOpenGroup] = useState<string | null>('Text');
 
   return (
     <div>
@@ -82,6 +85,39 @@ export default function LearnPanel() {
           </div>
         </div>
       )}
+
+      {/* Browsable CSS property reference. */}
+      <div className="panel-section">
+        <h3>CSS reference</h3>
+        <p className="hint">Common properties grouped by purpose. Each links to the full MDN docs.</p>
+        {CSS_REFERENCE.map((group) => {
+          const open = openGroup === group.name;
+          return (
+            <div className="ref-group" key={group.name}>
+              <button className="ref-group-head" onClick={() => setOpenGroup(open ? null : group.name)}>
+                <span>{open ? '▾' : '▸'} {group.name}</span>
+                <span className="muted" style={{ fontSize: 11 }}>{group.blurb}</span>
+              </button>
+              {open && (
+                <div className="ref-props">
+                  {group.props.map((p) => (
+                    <div className="ref-prop" key={p.prop}>
+                      <div className="ref-prop-head">
+                        <code className="inline">{p.prop}</code>
+                        <a className="ref-mdn" href={mdnUrl(p.prop)} target="_blank" rel="noreferrer">
+                          MDN ↗
+                        </a>
+                      </div>
+                      <div className="ref-prop-desc">{p.description}</div>
+                      <code className="ref-prop-eg">{p.prop}: {p.example};</code>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -258,6 +258,43 @@ kbd {
   background: var(--bg);
 }
 
+/* Suggested-property chips */
+.chip-section { margin-top: 14px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.prop-chip {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--bg-3);
+}
+.prop-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* CSS reference (Learn tab) */
+.ref-group { border-top: 1px solid var(--border); }
+.ref-group-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 9px 2px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ref-group-head:hover { background: transparent; color: var(--accent); }
+.ref-props { padding: 2px 0 8px; }
+.ref-prop { padding: 7px 0; border-top: 1px dashed var(--border); }
+.ref-prop-head { display: flex; align-items: center; justify-content: space-between; }
+.ref-mdn { font-size: 11px; color: var(--accent); text-decoration: none; }
+.ref-mdn:hover { text-decoration: underline; }
+.ref-prop-desc { font-size: 12px; color: var(--text-dim); margin: 3px 0; line-height: 1.4; }
+.ref-prop-eg { font-size: 11px; color: #4ec9b0; }
+
 .issue { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; line-height: 1.35; border: 1px solid var(--border); }
 .issue.error { background: rgba(255, 107, 107, 0.08); border-color: rgba(255, 107, 107, 0.4); }
 .issue.warn { background: rgba(255, 180, 84, 0.08); border-color: rgba(255, 180, 84, 0.4); }

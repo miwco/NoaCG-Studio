@@ -108,6 +108,67 @@ export function insertIntoFunction(js: string, fnName: string, line: string): st
   return js.replace(re, `$1\n  ${line}`);
 }
 
+/** Selector for the most recently inserted block element (last data-gfx). Null if none. */
+export function lastInsertedSelector(html: string): string | null {
+  const tag = lastTagMatch(html, GFX_TAG);
+  if (!tag) return null;
+  const idM = /\bid=["']([^"']+)["']/.exec(tag.text);
+  if (idM) return `#${idM[1]}`;
+  const clM = /\bclass=["']([^"']+)["']/.exec(tag.text);
+  if (clM) return `.${clM[1].trim().split(/\s+/)[0]}`;
+  return null;
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Body of the rule whose selector list exactly equals `selector` (comments stripped). */
+function findRuleBody(css: string, selector: string): { body: string; start: number; end: number } | null {
+  let i = 0;
+  let ruleStart = 0;
+  while (i < css.length) {
+    if (css[i] === '{') {
+      const sel = css.slice(ruleStart, i).replace(/\/\*[\s\S]*?\*\//g, '').trim();
+      let depth = 1;
+      let j = i + 1;
+      while (j < css.length && depth > 0) {
+        if (css[j] === '{') depth++;
+        else if (css[j] === '}') depth--;
+        j++;
+      }
+      if (sel === selector) return { body: css.slice(i + 1, j - 1), start: i + 1, end: j - 1 };
+      i = j;
+      ruleStart = j;
+      continue;
+    }
+    i++;
+  }
+  return null;
+}
+
+/**
+ * Insert/replace a single `prop: value` declaration inside the rule for `selector`, creating the
+ * rule if it doesn't exist. Deterministic; preserves the rest of the stylesheet. Used by the
+ * Blocks panel's suggested-property chips.
+ */
+export function setCssDeclaration(css: string, selector: string, prop: string, value: string): string {
+  const rule = findRuleBody(css, selector);
+  if (rule) {
+    const re = new RegExp(`(^|;|\\{)(\\s*)${escapeRe(prop)}\\s*:[^;}]*`, 'i');
+    let body = rule.body;
+    if (re.test(body)) {
+      body = body.replace(re, `$1$2${prop}: ${value}`);
+    } else {
+      const trimmed = body.replace(/\s*$/, '');
+      const sep = trimmed.endsWith(';') || trimmed === '' ? '' : ';';
+      body = `${trimmed}${sep}\n  ${prop}: ${value};\n`;
+    }
+    return css.slice(0, rule.start) + body + css.slice(rule.end);
+  }
+  return `${css.replace(/\s*$/, '')}\n\n${selector} {\n  ${prop}: ${value};\n}\n`;
+}
+
 /**
  * A sensible lower-left, action-safe position for a newly inserted element. Staggers upward
  * (raising `bottom`) when other inserted elements exist so they don't pile up or overlap.
