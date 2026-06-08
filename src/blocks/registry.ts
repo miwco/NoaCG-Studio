@@ -289,17 +289,102 @@ function startCountdown() {
     },
   },
 
-  // ----- Elements -----
+  // ----- Boxes & lines -----
+  {
+    id: 'box',
+    label: 'Background box',
+    category: 'Elements',
+    path: ['Boxes & lines'],
+    primaryTab: 'css',
+    keywords: ['box', 'panel', 'background', 'card', 'rectangle'],
+    description: 'A panel/box to sit behind text or other elements.',
+    apply: (t) => {
+      const pos = positionForNewElement(t);
+      const html = `  <!-- Background box — place text or other elements in front of it. -->
+  <div class="box" data-gfx></div>`;
+      let next = { ...t, html: insertGraphicHtml(t.html, html) };
+      next = {
+        ...next,
+        css: appendCss(
+          next.css,
+          'Background box (block)',
+          `.box {
+  position: absolute;          /* place freely on the canvas */
+  left: ${pos.left}px;
+  bottom: ${pos.bottom}px;
+  width: 760px;                /* box size — adjust to fit your content */
+  height: 200px;
+  background: rgba(10, 14, 22, 0.88);  /* panel colour (semi-transparent over video) */
+  border-left: 8px solid #3aa0ff;      /* accent strip — your brand colour */
+  border-radius: 4px;          /* corner rounding */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);  /* lift the box off the video */
+}`,
+        ),
+      };
+      next = addLayer(next, { id: 'box', type: 'rect', label: 'Background box', styles: { position: 'absolute', left: `${pos.left}px`, bottom: `${pos.bottom}px` } });
+      return next;
+    },
+  },
+  {
+    id: 'accent-line',
+    label: 'Accent line',
+    category: 'Elements',
+    path: ['Boxes & lines'],
+    primaryTab: 'css',
+    keywords: ['line', 'rule', 'underline', 'divider', 'accent'],
+    description: 'A thin horizontal accent line / rule.',
+    apply: (t) => {
+      const pos = positionForNewElement(t);
+      const html = `  <!-- Accent line / rule. -->
+  <div class="accent-line" data-gfx></div>`;
+      let next = { ...t, html: insertGraphicHtml(t.html, html) };
+      next = {
+        ...next,
+        css: appendCss(
+          next.css,
+          'Accent line (block)',
+          `.accent-line {
+  position: absolute;          /* place freely on the canvas */
+  left: ${pos.left}px;
+  bottom: ${pos.bottom}px;
+  width: 480px;                /* line length */
+  height: 6px;                 /* line thickness */
+  background: #ffd32a;         /* line colour — your brand colour */
+  border-radius: 3px;          /* round the ends */
+}`,
+        ),
+      };
+      next = addLayer(next, { id: 'accent-line', type: 'rect', label: 'Accent line', styles: { position: 'absolute', left: `${pos.left}px`, bottom: `${pos.bottom}px` } });
+      return next;
+    },
+  },
+
+  // ----- Logos & images -----
   {
     id: 'logo',
     label: 'Logo image',
     category: 'Elements',
+    path: ['Logos & images'],
+    primaryTab: 'html',
+    keywords: ['logo', 'image', 'brand'],
     description: 'An <img> logo (set the src to a file in assets/).',
     apply: (t) => {
-      const html = `  <!-- Logo (replace src with your file in assets/) -->
-  <img class="logo" id="logo" src="assets/logo.png" alt="logo" />`;
+      const html = `  <!-- Logo (upload your file in the Brand tab, then set the src). -->
+  <img class="logo" id="logo" src="assets/logo.png" alt="logo" data-gfx />`;
       let next = { ...t, html: insertGraphicHtml(t.html, html) };
-      next = { ...next, css: appendCss(next.css, 'Logo (block)', `.logo { position: absolute; top: 80px; left: 120px; height: 120px; }`) };
+      next = {
+        ...next,
+        css: appendCss(
+          next.css,
+          'Logo (block)',
+          `.logo {
+  position: absolute;          /* place freely on the canvas */
+  top: 80px;                   /* distance from the top edge */
+  left: 120px;                 /* distance from the left edge */
+  height: 120px;               /* logo size (width scales automatically) */
+}`,
+        ),
+      };
       next = addLayer(next, { id: 'logo', type: 'image', label: 'Logo', styles: { position: 'absolute', top: '80px', left: '120px', height: '120px' } });
       return next;
     },
@@ -308,34 +393,90 @@ function startCountdown() {
     id: 'bug',
     label: 'Corner bug',
     category: 'Elements',
+    path: ['Logos & images'],
+    primaryTab: 'html',
+    keywords: ['bug', 'watermark', 'corner', 'logo'],
     description: 'A small persistent logo/bug in the top-right corner.',
     apply: (t) => {
-      const html = `  <!-- Corner bug -->
-  <img class="bug" id="bug" src="assets/bug.png" alt="bug" />`;
+      const html = `  <!-- Corner bug (persistent on-air logo). -->
+  <img class="bug" id="bug" src="assets/bug.png" alt="bug" data-gfx />`;
       let next = { ...t, html: insertGraphicHtml(t.html, html) };
-      next = { ...next, css: appendCss(next.css, 'Corner bug (block)', `.bug { position: absolute; top: 48px; right: 48px; height: 90px; opacity: 0.95; }`) };
+      next = {
+        ...next,
+        css: appendCss(
+          next.css,
+          'Corner bug (block)',
+          `.bug {
+  position: absolute;          /* place freely on the canvas */
+  top: 48px;                   /* distance from the top edge */
+  right: 48px;                 /* distance from the right edge */
+  height: 90px;                /* bug size */
+  opacity: 0.95;               /* 0 transparent … 1 solid */
+}`,
+        ),
+      };
       next = addLayer(next, { id: 'bug', type: 'image', label: 'Corner bug', styles: { position: 'absolute', top: '48px', right: '48px', height: '90px' } });
       return next;
     },
   },
   {
-    id: 'text-element',
-    label: 'Text element',
+    id: 'image-caption',
+    label: 'Image + caption',
     category: 'Elements',
-    description: 'A standalone styled text element (no data field).',
+    path: ['Logos & images'],
+    primaryTab: 'css',
+    keywords: ['image', 'photo', 'caption', 'credit'],
+    description: 'An image with a caption line bound to a data field.',
     apply: (t) => {
-      const html = `  <!-- Static text element -->
-  <div class="static-text" id="static-text">Static text</div>`;
-      let next = { ...t, html: insertGraphicHtml(t.html, html) };
-      next = { ...next, css: appendCss(next.css, 'Static text (block)', `.static-text { position: absolute; left: 120px; top: 220px; color: #fff; font-size: 28px; }`) };
-      next = addLayer(next, { id: 'static-text', type: 'text', label: 'Static text', text: 'Static text', styles: { position: 'absolute', left: '120px', top: '220px', color: '#fff', fontSize: '28px' } });
+      const id = nextFieldId(t.fields);
+      const pos = positionForNewElement(t);
+      let next = addFieldToDefinition(t, { field: id, ftype: 'textfield', title: 'Caption', value: 'Caption text' });
+      const html = `  <!-- Image + caption. SPX writes the caption (${id}) into the matching id. -->
+  <figure class="img-cap" data-gfx>
+    <img class="img-cap-img" src="assets/photo.jpg" alt="" />
+    <figcaption id="${id}" class="img-cap-text">Caption text</figcaption>
+  </figure>`;
+      next = { ...next, html: insertGraphicHtml(next.html, html) };
+      next = {
+        ...next,
+        css: appendCss(
+          next.css,
+          'Image + caption (block)',
+          `.img-cap {
+  position: absolute;          /* place freely on the canvas */
+  left: ${pos.left}px;
+  bottom: ${pos.bottom}px;
+  margin: 0;
+}
+.img-cap-img {
+  display: block;
+  width: 420px;                /* image size */
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+.img-cap-text {
+  margin-top: 10px;            /* gap under the image */
+  color: #ffffff;
+  font-family: "Open Sans", Arial, sans-serif;
+  font-size: 24px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);  /* legibility over video */
+}`,
+        ),
+      };
+      next = addLayer(next, { id, type: 'text', label: 'Caption', fieldId: id, text: 'Caption text', styles: { color: '#ffffff', fontSize: '24px' } });
       return next;
     },
   },
+
+  // ----- Sport -----
   {
     id: 'score-row',
     label: 'Score row',
     category: 'Elements',
+    path: ['Sport'],
+    primaryTab: 'css',
+    keywords: ['score', 'sport', 'teams', 'scoreboard'],
     description: 'Two-team inline score strip with four fields (names + scores).',
     apply: (t) => {
       const idA = nextFieldId(t.fields);
