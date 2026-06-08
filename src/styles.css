@@ -206,6 +206,58 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 .block-btn .b-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 .block-cat { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin: 14px 0 6px; }
 
+/* Blocks: search, hierarchical menu, toast */
+.block-search {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.block-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-bottom: 10px; }
+.block-breadcrumb .crumb {
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.block-breadcrumb .crumb:hover { text-decoration: underline; background: transparent; }
+.block-breadcrumb .crumb-sep { color: var(--text-dim); font-size: 12px; }
+.block-groups { display: flex; flex-direction: column; gap: 6px; }
+.block-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  padding: 11px 12px;
+  font-size: 13px;
+}
+.block-group .bg-name { font-weight: 600; }
+.block-group .bg-count { font-size: 11px; color: var(--text-dim); }
+.block-toast {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  font-size: 13px;
+  background: rgba(58, 160, 255, 0.12);
+  border: 1px solid rgba(58, 160, 255, 0.4);
+  border-radius: 6px;
+}
+kbd {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--bg);
+}
+
 .issue { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; line-height: 1.35; border: 1px solid var(--border); }
 .issue.error { background: rgba(255, 107, 107, 0.08); border-color: rgba(255, 107, 107, 0.4); }
 .issue.warn { background: rgba(255, 180, 84, 0.08); border-color: rgba(255, 180, 84, 0.4); }

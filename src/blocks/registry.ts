@@ -15,11 +15,20 @@ import {
 } from './edit';
 import type { SpxField, SpxTemplate } from '../model/types';
 
+import type { EditorTab } from '../store/templateStore';
+
 export interface BuildingBlock {
   id: string;
   label: string;
   category: 'Structure' | 'Elements' | 'Fields' | 'Animation';
   description: string;
+  /** Hierarchical menu location, e.g. ['Lower third'] or ['Animation','GSAP']. Derived from
+   *  category when omitted (see BuildingBlockMenu). */
+  path?: string[];
+  /** Editor tab to jump to after applying, so the change is visible. Derived when omitted. */
+  primaryTab?: EditorTab;
+  /** Extra search keywords. */
+  keywords?: string[];
   apply: (template: SpxTemplate) => SpxTemplate;
 }
 

@@ -35,6 +35,10 @@ interface TemplateState {
   guides: { safeAreas: boolean; grid: boolean };
   /** Whether the template gallery / new-project screen is open. */
   galleryOpen: boolean;
+  /** Snapshots taken before each block / AI / gallery apply, for one-click undo. */
+  history: SpxTemplate[];
+  /** The selector + tab the most recent block touched (drives suggestion chips). */
+  lastInserted: { selector: string | null; tab: EditorTab } | null;
 
   setActiveTab: (tab: EditorTab) => void;
   setPreviewBg: (bg: PreviewBg) => void;
@@ -46,6 +50,10 @@ interface TemplateState {
 
   /** Replace the whole template (used by building blocks, AI, and template gallery). */
   applyTemplate: (template: SpxTemplate, summary?: string) => void;
+  /** Restore the template from before the last apply. No-op when history is empty. */
+  undo: () => void;
+  /** Record what the last block touched (for the suggestion chips). */
+  setLastInserted: (info: { selector: string | null; tab: EditorTab } | null) => void;
   resetToDefault: () => void;
 
   setSampleValue: (field: string, value: string) => void;
@@ -95,6 +103,8 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   editorContext: null,
   guides: { safeAreas: false, grid: false },
   galleryOpen: true, // Show the template chooser on first load.
+  history: [],
+  lastInserted: null,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPreviewBg: (bg) => set({ previewBg: bg }),
@@ -116,8 +126,25 @@ export const useTemplateStore = create<TemplateState>((set) => ({
         sampleData: syncSampleData(synced, s.sampleData),
         validation: null,
         galleryOpen: false,
+        // Snapshot the pre-apply template so the action can be undone.
+        history: [...s.history, s.template].slice(-30),
       };
     }),
+
+  undo: () =>
+    set((s) => {
+      if (s.history.length === 0) return {};
+      const prev = s.history[s.history.length - 1];
+      return {
+        template: prev,
+        sampleData: syncSampleData(prev, s.sampleData),
+        validation: null,
+        history: s.history.slice(0, -1),
+        lastInserted: null,
+      };
+    }),
+
+  setLastInserted: (lastInserted) => set({ lastInserted }),
 
   resetToDefault: () =>
     set(() => {

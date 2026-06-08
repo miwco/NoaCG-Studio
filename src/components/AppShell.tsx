@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import CodeEditor from './CodeEditor';
 import PreviewFrame from './PreviewFrame';
@@ -15,6 +15,29 @@ export default function AppShell() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const template = useTemplateStore((s) => s.template);
   const openGallery = useTemplateStore((s) => s.openGallery);
+  const undo = useTemplateStore((s) => s.undo);
+
+  // Global undo for block / AI / gallery actions. Skips Monaco and form fields so they
+  // keep their own native text undo.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isZ = e.key === 'z' || e.key === 'Z';
+      if (!isZ || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      const inEditable =
+        !!el?.closest?.('.monaco-editor') ||
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        !!el?.isContentEditable;
+      if (inEditable) return;
+      e.preventDefault();
+      undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo]);
 
   return (
     <div className="app">
