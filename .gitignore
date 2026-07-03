@@ -3,5 +3,11 @@ dist
 *.local
 .DS_Store
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
 # Local SPX reference templates (kept on disk, not in the repo)
 example_projects/

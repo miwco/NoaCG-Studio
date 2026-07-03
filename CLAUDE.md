@@ -105,9 +105,9 @@ Key flows and patterns:
 
 Always `npm run build` (typecheck + build) after changes.
 
-- **UI flows → use Playwright.** Verify user-facing flows (gallery → create, applying blocks,
-  undo/Ctrl+Z, search, tab switches, export) with Playwright end-to-end tests driving the dev server.
-  If `@playwright/test` isn't set up yet, add it and a `test:e2e` script before relying on it.
+- **UI flows → use Playwright.** Verify user-facing flows with the E2E suite in `e2e/` (specs drive
+  the real dev server). Run `npm run test:e2e`. Add a spec for any new user-facing flow (gallery,
+  blocks, undo, guides, branding, export, …).
 - **Logic checks without UI (fast path):** Vite serves source modules, so in a browser context you
   can `await import('/src/blocks/registry.ts?t=' + Date.now())`, apply blocks to
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
