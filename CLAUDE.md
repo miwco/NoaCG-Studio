@@ -72,7 +72,9 @@ src/
   model/        types.ts (SpxTemplate, Resolution, ASPECTS…), spxDefinition (parse/serialize),
                 wizard.ts (categories, variants, WizardOptions, palettes), fonts.ts (bundled OFL
                 fonts registry + CustomFont import helpers), brand.ts (ProjectBrand save/load,
-                localStorage 'spx-gfx-brand'), easings.ts (12 easing presets), defaultTemplate
+                localStorage 'spx-gfx-brand'), packets.ts (packet manager data layer: graphics
+                collections 'spx-gfx-packets' + brand looks 'spx-gfx-looks' +
+                captureLookFromTemplate/applyLookToTemplate), easings.ts, defaultTemplate
   templates/    blank.ts + the wizard catalog, resolved through catalog.ts (CATALOG,
                 variantsFor/variantById):
                   shared/       base.ts (generic assembler pieces: :root vars, zones, auto-fit,
@@ -125,8 +127,12 @@ src/
                 settings.ts (localStorage + .env: key, model), index.ts (getAiProvider —
                 Claude when configured, stub otherwise), stubProvider.ts, presets.ts
   validation/   validateTemplate.ts — runs before export and on AI output
-  export/       registry.ts (targets), targets/spxStarter.ts, targets/spxPack.ts, common.ts
-                (also bundles referenced fonts/*.woff2 + FONT_LICENSES.md)
+  export/       registry.ts (4 targets), targets/spxStarter.ts (+ buildStarterInto, reused by
+                packets), targets/spxPack.ts, targets/casparcg.ts (single self-contained html +
+                JSON/XML data shim), targets/ograf.ts (EBU OGraf v1: manifest from DataFields +
+                graphic.mjs Web Component embedding the runtime; AMD-guarded gsap loader),
+                packetExport.ts (whole packet -> one zip, a Starter folder per graphic),
+                common.ts (slug, addSharedAssets, addReferencedFonts, FONT_LICENSES.md)
   teach/        knowledge.ts + explain.ts — surfaced as Monaco HOVER tooltips in the editor
                 (registered in CodeEditor.tsx; there is no Learn tab), cssReference.ts
   assets/       gsap.min.js (bundled), assetUtils.ts (data-URL assets)
@@ -137,6 +143,7 @@ src/
                  SidePanel (five tabs: Data / Style / Motion / AI / Export),
                  SampleDataPanel (sample values + add-field), StylePanel, AnimationPanel
                  (In/Out/Both phase control), AIPromptPanel, ExportPanel (validation inline),
+                 PacketManager (📦 topbar modal: packets + brand looks),
                  wizard/ (CreationWizard, draft.ts, WizardPreview, MiniPreview, steps/)
 public/fonts/   the 6 bundled woff2 fonts (served at /fonts, copied into exports)
 scripts/        l3-sweep.mjs — Playwright dev tool: `node scripts/l3-sweep.mjs <shots-dir>

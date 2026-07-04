@@ -108,9 +108,20 @@ with its lower-third siblings (§8), swept per category, and covered by an E2E s
 - [x] **Learn tab removed** — the knowledge base became Monaco hover tooltips (hover play(),
       an fN id, or a CSS property); Claude-powered Explain stays in the AI panel
 
+### Packet manager + more playout targets
+- [x] **Packet manager (graphics)** — 📦 Packets in the topbar: save the current graphic into a
+      named packet (same name = update), reopen any saved graphic, export the whole packet as
+      ONE zip (a plug-and-play SPX folder per graphic)
+- [x] **Packet manager (looks)** — named brand looks captured from the current graphic's actual
+      :root vars + font (Style-panel tweaks included): apply to any graphic (highlighted,
+      undoable), set as the project brand for new graphics, share/import as a .look.json file
+- [x] **OGraf export** — EBU OGraf v1 package: .ograf.json manifest (data schema from the
+      DataFields, stepCount) + graphic.mjs Web Component wrapping the template runtime; manifest
+      self-check gates the build; E2E drives the component through the renderer contract
+- [x] **CasparCG export** — one self-contained .html (CG ADD loads it directly) with a data shim
+      accepting both JSON and CasparCG XML templateData payloads
+
 ### Later (explicitly deferred)
-- [ ] Full package manager (named, saved packages; apply-to-all; share as a file) — the
-      project-brand mechanism above is the light version
 
 ### AI mode (after the wizard works)
 - [x] Claude-backed `AIProvider` (key via the in-app AI settings or `VITE_ANTHROPIC_API_KEY`;
@@ -126,8 +137,8 @@ with its lower-third siblings (§8), swept per category, and covered by an E2E s
 
 ### Export & platform
 - [x] SPX Starter + Advanced/Pack export with validation gate
-- [ ] OGraf export target + schema-based validator (see `.claude/skills/ograf-expert`)
-- [ ] CasparCG-flavored export notes/target if needed beyond SPX packaging
+- [x] OGraf export target + manifest validator (see `.claude/skills/ograf-expert`)
+- [x] CasparCG export target (self-contained single file + XML data shim)
 - [ ] Data-driven/live content architecture (ticker/scoreboard controlled from a backend) — later
 
 ### Quality bar (always-on)

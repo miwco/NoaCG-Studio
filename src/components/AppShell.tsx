@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import CodeEditor from './CodeEditor';
 import PreviewFrame from './PreviewFrame';
 import PlayoutSimulator from './PlayoutSimulator';
 import SidePanel from './SidePanel';
+import PacketManager from './PacketManager';
 import CreationWizard from './wizard/CreationWizard';
 
 /**
@@ -18,6 +19,7 @@ export default function AppShell() {
   const template = useTemplateStore((s) => s.template);
   const openGallery = useTemplateStore((s) => s.openGallery);
   const undo = useTemplateStore((s) => s.undo);
+  const [packetsOpen, setPacketsOpen] = useState(false);
 
   // Global undo for block / AI / gallery actions. Skips Monaco and form fields so they
   // keep their own native text undo.
@@ -52,6 +54,9 @@ export default function AppShell() {
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
         <div className="spacer" />
+        <button onClick={() => setPacketsOpen(true)} title="Save this show's graphics together + manage brand looks">
+          📦 Packets
+        </button>
         <button onClick={openGallery} title="Start a new project from a template">
           + New project
         </button>
@@ -73,6 +78,9 @@ export default function AppShell() {
 
       {/* Creation wizard overlay — shown on startup and via "New project". */}
       <CreationWizard />
+
+      {/* Packet manager overlay — saved graphics collections + brand looks. */}
+      {packetsOpen && <PacketManager onClose={() => setPacketsOpen(false)} />}
     </div>
   );
 }

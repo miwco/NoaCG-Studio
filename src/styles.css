@@ -196,6 +196,29 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .simulator .bg-switch { margin-left: auto; display: flex; gap: 4px; }
 
+/* ---------- Packet manager ---------- */
+.pk-modal { max-width: 760px; }
+.pk-body { overflow-y: auto; padding: 14px 18px; min-height: 0; flex: 1; }
+.pk-body .spacer { flex: 1; }
+.pk-packet { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.pk-graphic {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}
+.pk-graphic:first-of-type { border-top: none; }
+.pk-swatches { display: inline-flex; gap: 3px; }
+.pk-swatches i {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  display: inline-block;
+}
+
 /* ---------- Editor change highlight (what the last apply touched) ---------- */
 .changed-line { background: rgba(94, 175, 255, 0.10); }
 .changed-gutter {

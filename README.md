@@ -68,11 +68,17 @@ npm run build    # typecheck + production build to dist/
 - **Validation, inside Export** — runtime functions, `SPXGCTemplateDefinition`, field↔DOM
   mapping, relative asset paths (HTML + CSS), missing assets, JS syntax, and preview runtime
   errors run automatically in the Export panel; errors are listed inline and block the download.
-- **Export** (modular targets) — **Starter** (1:1 with the editor code) and **Advanced / Pack**
-  (fuller SPX package with a helper interface + metadata). Both are plug-and-play: the zip
-  contains one project folder, so extracting into your SPX/CasparCG templates folder gives
-  `[TemplatesFolder]/your_project/index.html` with images under `your_project/images/` —
-  relative paths, bundled GSAP, no external dependencies.
+- **Export** (four targets) — **SPX Starter** (1:1 with the editor code) and **SPX Advanced /
+  Pack** extract as `[TemplatesFolder]/your_project/index.html` with `images/` beside it;
+  **CasparCG** produces ONE self-contained `.html` (CSS, JS, GSAP, images inlined — exactly what
+  `CG ADD` loads) with a data shim that accepts both JSON and CasparCG XML payloads; **OGraf
+  (EBU v1)** produces a `.ograf.json` manifest (data schema generated from your fields) plus a
+  `graphic.mjs` Web Component wrapping the template's own runtime, ready for any OGraf renderer.
+  All plug-and-play: relative paths, bundled GSAP, no external dependencies.
+- **Packet manager** (📦 Packets) — save a show's graphics together into a named packet: reopen
+  any of them, and export the whole packet as one zip (a folder per graphic). Named **brand
+  looks** capture the current graphic's colors + font: apply one to any graphic, set it as the
+  brand for new graphics, or share it as a `.look.json` file.
 
 ## SPX field convention
 
