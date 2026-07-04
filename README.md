@@ -17,9 +17,16 @@ npm run build    # typecheck + production build to dist/
 
 ## What it does
 
-- **Project start / template gallery** — pick a starter (lower third, fullscreen title, starting
-  soon, corner bug, info box, countdown, scoreboard, blank), an **aspect ratio** (16:9 / 9:16 / 1:1),
-  a **resolution** (1080p / 4K / 720p / vertical / square), and **fps**.
+- **Choose-first creation wizard** — build a graphic by choosing, then learn from the code it
+  writes: Entry (template / **import your own graphics** / blank) → Category → **Template**
+  (10 marketplace-grade lower thirds: 4 minimal · 3 sport · 3 glass, live previews) → **Fields**
+  (1–3 text lines, the design adapts) → **Style** (curated palettes, 6 bundled open-license fonts,
+  size, 9-zone safe-area position) → **Animation** (signature GSAP presets, speed, **12 easing
+  presets**, multi-step reveal), with a persistent live preview (Play/Stop) at every step. Aspect
+  ratio (16:9 / 9:16 / 1:1), resolution, and fps chosen along the way.
+- **Live Style & Motion panels after creation** — colors/font/size/position patch the `:root`
+  style contract in the visible CSS; animation preset/speed/easing/steps rewrite only a clearly
+  marked region of the JS. Your own edits outside the contract are never touched; Ctrl+Z undoes.
 - **Code editor** (Monaco) with HTML / CSS / JS tabs — the template is the single source of truth.
 - **Live preview** in a sandboxed iframe, scaled to fit, with a visible **canvas outline** and
   toggleable **safe-area** and **rule-of-thirds** guides, over transparent / black / video-like
@@ -33,7 +40,7 @@ npm run build    # typecheck + production build to dist/
   Inserted elements land in the lower-left action-safe area with rich, commented CSS. Every apply is
   **undoable** (toast button or **Ctrl/Cmd+Z**), and after inserting, **suggested-property chips**
   add common CSS one click at a time.
-- **Branding & assets** — upload logos/images/fonts (stored as data URLs, bundled into the export
+- **Assets & branding** — upload logos/images/fonts (stored as data URLs, bundled into the export
   under `assets/` with relative paths); brand colours are managed as `:root` CSS variables; add
   `@font-face` from an uploaded font.
 - **Learn (teaching) layer** — click any token in the editor for a short, SPX-specific explanation,
@@ -57,19 +64,25 @@ alternative "premium pack" split style.
 
 ```
 src/
-  model/        types, SPXGCTemplateDefinition parse/serialize, default template
-  templates/    hand-authored starter templates + registry
+  model/        types, SPXGCTemplateDefinition parse/serialize, wizard data model (categories,
+                variants, palettes), bundled-fonts registry, easing presets
+  templates/    blank + lowerThirds/ (lt01…lt10 wizard variants, shared scaffolding, GSAP
+                animation presets with the marked-region contract)
   store/        zustand store (template + UI state, undo history)
   preview/      composeDocument (inline CSS + GSAP + JS + assets into the iframe)
-  blocks/       hierarchical building-block registry + deterministic edit helpers + brand CSS vars
+  blocks/       hierarchical building-block registry + deterministic edit helpers + :root CSS
+                vars + marked-region animation patchers
   ai/           AIProvider interface + deterministic stub + presets
   validation/   validateTemplate (runs before export and on AI output)
-  export/       target registry + Starter / Pack exporters + shared helpers
+  export/       target registry + Starter / Pack exporters (bundle fonts + assets)
   teach/        cursor explanations + curated CSS reference (Learn tab + suggestion chips)
   assets/       bundled GSAP + data-URL asset helpers
   components/    AppShell, CodeEditor, PreviewFrame, CanvasGuides, PlayoutSimulator, SidePanel,
-                 SampleDataPanel, BuildingBlockMenu, BrandPanel, LearnPanel, AIPromptPanel,
-                 TemplateValidator, ExportPanel, TemplateGallery
+                 SampleDataPanel, BuildingBlockMenu, StylePanel, AnimationPanel, LearnPanel,
+                 AIPromptPanel, TemplateValidator, ExportPanel, wizard/ (stepper + live preview)
+public/fonts/   six bundled open-license fonts (ship with every export)
+scripts/        l3-sweep.mjs — variant validation sweep + taste screenshots (Playwright)
+docs/           GOALS.md · DESIGN_LANGUAGE.md · SPX_TEMPLATE_FORMAT.md
 ```
 
 Export targets, building blocks, AI, and validation are kept modular so CasparCG and OGraf

@@ -63,23 +63,51 @@ Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from the real example
 
 ```
 src/
-  model/        types.ts (SpxTemplate, Resolution, ASPECTS, Ftype…), spxDefinition (parse/serialize),
-                defaultTemplate (re-exports lowerThird)
-  templates/    hand-authored starter templates (lowerThird, fullscreen, bug, countdown,
-                scoreboard, infoBox, startingSoon, blank) + index registry
+  model/        types.ts (SpxTemplate, Resolution, ASPECTS…), spxDefinition (parse/serialize),
+                wizard.ts (categories, variants, WizardOptions, palettes), fonts.ts (bundled OFL
+                fonts registry), easings.ts (12 easing presets), defaultTemplate (lt01)
+  templates/    blank.ts + lowerThirds/ — the wizard catalog: lt01…lt10 variants built on
+                shared.ts (assembleLowerThird/defineVariant, .l3 structure contract, zoneDecls,
+                auto-fit pattern) and animPresets.ts (marked-region GSAP presets)
   store/        templateStore.ts — zustand; template + UI state; undo history; lastInserted
   preview/      composeDocument.ts — inlines CSS + GSAP + JS + assets into the iframe srcdoc
-  blocks/       registry.ts (hierarchical BuildingBlock[]), edit.ts (deterministic edit helpers),
-                cssVars.ts (:root brand vars)
+  blocks/       registry.ts (hierarchical BuildingBlock[]), edit.ts, cssVars.ts (:root vars),
+                animPatch.ts (marked-region readers/patchers for the Motion panel)
   ai/           provider.ts (AIProvider interface), stubProvider.ts (deterministic), presets.ts
   validation/   validateTemplate.ts — runs before export and on AI output
   export/       registry.ts (targets), targets/spxStarter.ts, targets/spxPack.ts, common.ts
+                (also bundles referenced fonts/*.woff2 + FONT_LICENSES.md)
   teach/        knowledge.ts (cursor explanations), explain.ts, cssReference.ts (browsable + chips)
   assets/       gsap.min.js (bundled), assetUtils.ts (data-URL assets)
   components/    AppShell, CodeEditor, PreviewFrame, CanvasGuides, PlayoutSimulator, SidePanel,
-                 SampleDataPanel, BuildingBlockMenu, BrandPanel, LearnPanel, AIPromptPanel,
-                 TemplateValidator, ExportPanel, TemplateGallery
+                 SampleDataPanel, BuildingBlockMenu, StylePanel, AnimationPanel, LearnPanel,
+                 AIPromptPanel, TemplateValidator, ExportPanel,
+                 wizard/ (CreationWizard, draft.ts, WizardPreview, MiniPreview, steps/)
+public/fonts/   the 6 bundled woff2 fonts (served at /fonts, copied into exports)
+scripts/        l3-sweep.mjs — Playwright dev tool: validates every variant × preset × easing and
+                captures taste screenshots
+docs/           GOALS.md (north star + milestones), DESIGN_LANGUAGE.md (taste rulebook),
+                SPX_TEMPLATE_FORMAT.md (SPX contract)
 ```
+
+### The choose-first creation flow (primary UX)
+
+New projects go through the **CreationWizard** (Entry → Category → Template → Fields → Style →
+Animation, persistent live preview). Creating calls `variant.create(options)` which generates the
+complete, commented template. After creation, code is the source of truth and two **live panels**
+keep working via deterministic patches:
+
+- **Style panel** — reads/writes the `:root` style contract (`--accent`, `--text-color`,
+  `--text-dim`, `--panel-bg`, `--font-heading`, `--scale`), swaps the marked `@font-face` block,
+  re-anchors `.l3` via `zoneDecls`.
+- **Motion panel** — only touches the marked region
+  (`/* == ANIMATION … == */ … /* == END ANIMATION == */`) and its three knob variables
+  (`animSpeed`, `easeIn`, `easeOut`). Preset/steps swaps re-emit the region (undoable); user code
+  outside the markers is never modified.
+
+**Easing doctrine** lives in `model/easings.ts` + DESIGN_LANGUAGE §4: entrances use Out-direction
+curves, exits use In-direction and run faster; Back Out for pops; Bounce/Elastic playful-only;
+Linear only for continuous motion.
 
 Key flows and patterns:
 

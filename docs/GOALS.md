@@ -26,22 +26,24 @@ source of truth, and always exports to a working SPX package.
 ## Milestones
 
 ### The choose-first creation flow (current push)
-- [ ] **Phase 0** — GOALS.md + DESIGN_LANGUAGE.md committed
-- [ ] **Phase 1** — Foundations: bundled open fonts, GSAP animation-preset library (marked
+- [x] **Phase 0** — GOALS.md + DESIGN_LANGUAGE.md committed
+- [x] **Phase 1** — Foundations: bundled open fonts, GSAP animation-preset library (marked
       regions + `animSpeed` + steps), shared lower-third scaffolding (auto-fit text, 9-zone
       positioning, `:root` style contract), wizard data model
-- [ ] **Phase 2** — 10 tasteful lower thirds (4 minimal · 3 sport · 3 glass), built and
-      taste-judged via multi-agent workflow; user approves screenshots
-- [ ] **Phase 3** — Creation wizard replaces the gallery: Entry → Category → Template → Fields →
+- [x] **Phase 2** — 10 tasteful lower thirds (4 minimal · 3 sport · 3 glass), built and
+      taste-judged via multi-agent workflow; user approved screenshots. Bonus: the 12-preset
+      easing system (direction-correct per phase) per the approved easing doctrine
+- [x] **Phase 3** — Creation wizard replaces the gallery: Entry → Category → Template → Fields →
       Style → Animation, with persistent live preview (Play/Stop at every step)
-- [ ] **Phase 4** — Live panels after creation: Style (colors/font/size/position via `:root`
-      vars) + Animation (preset/speed/steps via marked region); Brand tab retires into Style
-- [ ] **Phase 5** — "Import graphics" entry: drag-drop images → graphic type → prefilled wizard
-- [ ] **Phase 6** — Playwright specs for the wizard flow, docs updated, old starters retired
-      (Blank survives)
+- [x] **Phase 4** — Live panels after creation: Style (colors/font/size/position via `:root`
+      vars) + Motion (preset/speed/easing/steps via marked region); Brand tab retired into Style
+- [x] **Phase 5** — "Import graphics" entry: drag-drop images → graphic type → prefilled wizard
+      (logo-slot designs first, first image auto-placed)
+- [x] **Phase 6** — Playwright specs for the wizard flow (9 passing), docs updated, old starters
+      retired (Blank survives)
 
 ### Template catalog (each category repeats the Phase 2 pattern)
-- [ ] Lower thirds (10)
+- [x] Lower thirds (10)
 - [ ] Full/half/custom screen info cards (3)
 - [ ] End credits (3)
 - [ ] Starting-soon loop with timer (3)
@@ -67,5 +69,6 @@ source of truth, and always exports to a working SPX package.
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate
 - [x] Playwright E2E for core UI flows
-- [ ] Every new user-facing flow ships with a Playwright spec
-- [ ] Every template category ships with a harness sweep (validate + play/stop/update/next clean)
+- [x] Every new user-facing flow ships with a Playwright spec (wizard suite: 9 specs)
+- [x] Lower thirds ship with a harness sweep (`scripts/l3-sweep.mjs`: validate + runtime ×
+      preset × easing + auto-fit + taste screenshots); repeat per future category
