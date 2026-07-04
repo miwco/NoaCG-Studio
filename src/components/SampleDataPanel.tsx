@@ -1,5 +1,49 @@
+import { useRef } from 'react';
 import { DATA_FTYPES, type SpxField } from '../model/types';
+import { fileToDataUrl, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
 import { useTemplateStore } from '../store/templateStore';
+
+/** Image field ("filelist"): pick an already-added image, or upload a new one. */
+function ImageFieldControl({ value, set }: { value: string; set: (v: string) => void }) {
+  const assets = useTemplateStore((s) => s.template.assets);
+  const addAsset = useTemplateStore((s) => s.addAsset);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const images = assets.filter((a) => isImageAsset(a.path));
+
+  const upload = async (file: File) => {
+    const path = uniqueAssetPath(file.name, assets);
+    addAsset({ path, data: await fileToDataUrl(file) });
+    set(path); // the field value is the image's relative path, e.g. images/logo.png
+  };
+
+  return (
+    <div>
+      <div className="row">
+        <select
+          className="grow"
+          value={images.some((a) => a.path === value) ? value : ''}
+          onChange={(e) => set(e.target.value)}
+          title="Images already in this project (bundled into the export under images/)"
+        >
+          <option value="">(no image)</option>
+          {images.map((a) => (
+            <option key={a.path} value={a.path}>{a.path}</option>
+          ))}
+        </select>
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+          style={{ display: 'none' }}
+          onChange={(e) => { if (e.target.files?.[0]) void upload(e.target.files[0]); e.target.value = ''; }}
+        />
+        <button onClick={() => fileInput.current?.click()} title="Upload an image — bundled into the export under images/">
+          ⬆ Upload…
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /** Render the appropriate input control for a field's ftype. */
 function FieldControl({ field }: { field: SpxField }) {
@@ -8,6 +52,8 @@ function FieldControl({ field }: { field: SpxField }) {
   const set = (v: string) => setSampleValue(field.field, v);
 
   switch (field.ftype) {
+    case 'filelist':
+      return <ImageFieldControl value={value} set={set} />;
     case 'textarea':
       return <textarea rows={3} value={value} onChange={(e) => set(e.target.value)} />;
     case 'number':

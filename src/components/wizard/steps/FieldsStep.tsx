@@ -7,7 +7,13 @@ interface Props {
   onDraft: (patch: DraftPatch) => void;
 }
 
-const EXTRA_FTYPES: ExtraFieldSpec['ftype'][] = ['textfield', 'number', 'checkbox', 'color', 'dropdown'];
+// The field types live broadcast graphics actually use (SPX ftype in parentheses).
+const EXTRA_FTYPES: { value: ExtraFieldSpec['ftype']; label: string }[] = [
+  { value: 'textfield', label: 'Text' },
+  { value: 'textarea', label: 'Long text' },
+  { value: 'number', label: 'Number' },
+  { value: 'filelist', label: 'Image' },
+];
 
 /** Step 3 — the data fields: 1–3 visible text lines (the design adapts) + optional extras. */
 export default function FieldsStep({ variant, draft, onDraft }: Props) {
@@ -73,10 +79,14 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
             <input placeholder="Label" value={f.title} onChange={(e) => setExtra(i, { title: e.target.value })} />
             <select value={f.ftype} onChange={(e) => setExtra(i, { ftype: e.target.value as ExtraFieldSpec['ftype'] })}>
               {EXTRA_FTYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
-            <input placeholder="Default value" value={f.value} onChange={(e) => setExtra(i, { value: e.target.value })} />
+            <input
+              placeholder={f.ftype === 'filelist' ? 'images/logo.png (or empty)' : 'Default value'}
+              value={f.value}
+              onChange={(e) => setExtra(i, { value: e.target.value })}
+            />
             <button title="Remove" onClick={() => onDraft({ extraFields: draft.extraFields.filter((_, k) => k !== i) })}>✕</button>
           </div>
         ))}

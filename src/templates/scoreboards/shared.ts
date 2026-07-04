@@ -35,6 +35,7 @@ import {
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
+  setFieldValueJs,
   zoneCssText,
 } from '../shared/base';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
@@ -70,6 +71,8 @@ function sbRuntimeJs(name: string, animationBlock: string): string {
 var onAir = false;               // true between play() and stop() — pops only happen on air
 var scoreIds = ['f1', 'f3'];     // the two score fields (f0/f2 are the team names)
 
+${setFieldValueJs}
+
 // update(data): SPX sends field values as JSON, e.g. {"f0":"HOME","f1":"2"}.
 // Each value is written into the element whose id matches the field name (f0 -> id="f0").
 // A score that CHANGES while on air gets a pop: scale up, then spring back down.
@@ -79,7 +82,7 @@ function update(data) {
     var el = document.getElementById(key);
     if (!el) continue;
     var changed = el.textContent !== String(fields[key]);  // textContent: exactly what the operator typed
-    el.textContent = fields[key];    // plain-text write — operator input never runs as HTML
+    setFieldValue(el, fields[key]);
     if (changed && onAir && scoreIds.indexOf(key) !== -1) {
       // Pop the MASK (the span's parent), not the span: the span is clipped by the mask's
       // overflow:hidden, so scaling it would chop the outer digits of a two-digit score.

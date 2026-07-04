@@ -157,6 +157,26 @@ the wizard path: the old template's values would leak into the new graphic's fie
 load-time DOM work (initial rebuild/paint) must use the DOM-ready guard pattern (see
 shared/clock.ts or the rebuild calls in credits/tickers/infographics runtimes).
 
+**Images & fields (the broadcast field policy):**
+- Field types offered to users are the ones live graphics actually use: `textfield`,
+  `textarea`, `number`, and **`filelist` = the image field** (SPX lists files from
+  `assetfolder: './images/'`). `dropdown`/`checkbox`/`color` exist in the SPX format but are
+  reserved for genuinely constrained design choices (e.g. the quiz's correct-answer dropdown) —
+  don't offer them in generic field UIs.
+- Asset path convention: uploads land at `images/<file>` (fonts at `fonts/<file>`); the export
+  zip wraps everything in one project folder, so extracting into a templates folder yields
+  `[TemplatesFolder]/<project>/index.html` + `<project>/images/<file>` — the layout SPX and
+  CasparCG expect. Both exporters use `zip.folder(slug(name))`.
+- Every runtime writes fields through the shared `setFieldValue` helper (base.ts
+  `setFieldValueJs`): text -> textContent, `<img id="fN">` -> src (empty value hides the img and
+  toggles `.has-image` on its parent so CSS can show a placeholder). Data-driven categories may
+  instead keep the path in a hidden source div (credits' #f2 logo).
+- Logo slots are real SPX fields: credits f2, corner bug + card03 design-owned `extraFields`
+  (`StandardDesign.extraFields`, id computed after all user fields).
+- The preview iframe can't resolve `images/...` set at runtime — composeDocument injects a
+  MutationObserver shim that swaps known relative paths for their in-memory data URLs.
+  Exported packages never include the shim.
+
 **Easing doctrine** lives in `model/easings.ts` + DESIGN_LANGUAGE §4: entrances use Out-direction
 curves, exits use In-direction and run faster; Back Out for pops; Bounce/Elastic playful-only;
 Linear only for continuous motion (credits rolls, ticker marquees — strictly `ease: 'none'`).

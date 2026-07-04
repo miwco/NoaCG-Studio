@@ -31,30 +31,32 @@ export const bug01: TemplateVariant = defineBugVariant(
     uicolor: '2',
   },
   (o) => {
-    // The logo is rendered only when an image was actually imported; otherwise the tile
-    // shows a placeholder mark (an accent diamond painted on a ::before layer).
-    const mark = o.logoAssetPath
-      ? `      <!-- Imported logo — a rounded square leading the tile (see .bug-logo). -->
-      <img class="bug-logo" src="${o.logoAssetPath}" alt="" />`
-      : `      <!-- Placeholder mark — swap in a real logo via the import flow. The diamond
-           itself is painted on ::before so this box never carries the rotation. -->
-      <div class="bug-mark"></div>`;
+    // The logo is a real SPX image field ("filelist"): the operator picks a file from the
+    // project's images/ folder and update() writes it into the <img>. The field id comes
+    // after every wizard field so nothing collides.
+    const logoField = `f${o.lines.length + o.extraFields.length}`;
+    const logoPath = o.logoAssetPath ?? '';
 
-    const markCss = o.logoAssetPath
-      ? `/* The imported logo: a rounded square filling the mark area of the tile. */
-.bug-logo {
-  display: block;                  /* its own row — the caption starts below it */
-  width: calc(84px * var(--scale));   /* logo square width */
-  height: calc(84px * var(--scale));  /* logo square height */
-  border-radius: calc(12px * var(--scale));  /* rounded corners echo the tile shape */
-  object-fit: cover;               /* fill the square without distorting the image */
-}`
-      : `/* The placeholder mark: an untransformed sizing box; the rotation lives on the
+    const mark = `      <!-- The mark area: your logo (image field ${logoField}) sits on top of a placeholder
+           diamond. When a logo path is set, .has-image hides the diamond. -->
+      <div class="bug-media${logoPath ? ' has-image' : ''}">
+        <div class="bug-mark"></div>
+        <img id="${logoField}" class="bug-logo"${logoPath ? ` src="${logoPath}"` : ' style="display: none"'} alt="" />
+      </div>`;
+
+    const markCss = `/* The mark area: one square box holding both the placeholder diamond and the logo.
+   update() toggles .has-image here, so the CSS decides which of the two shows. */
+.bug-media {
+  position: relative;              /* the mark and the logo stack inside this square */
+  width: calc(84px * var(--scale));   /* mark area width */
+  height: calc(84px * var(--scale));  /* mark area height — the tile keeps its shape either way */
+}
+
+/* The placeholder mark: an untransformed sizing box; the rotation lives on the
    ::before layer only, so animation presets never tween a rotated element. */
 .bug-mark {
-  position: relative;              /* anchor for the ::before diamond */
-  width: calc(84px * var(--scale));   /* same footprint as an imported logo */
-  height: calc(84px * var(--scale));  /* so the tile keeps its shape either way */
+  position: absolute;              /* fills the mark area */
+  inset: 0;                        /* all four edges */
 }
 .bug-mark::before {
   content: '';                     /* pseudo-elements need content to render */
@@ -66,14 +68,38 @@ export const bug01: TemplateVariant = defineBugVariant(
   transform: translate(-50%, -50%) rotate(45deg);  /* center it, then turn it into a diamond */
   background: var(--accent);       /* the one accent moment on the tile */
   border-radius: calc(10px * var(--scale));  /* softened points — friendly, not sharp */
+}
+.bug-media.has-image .bug-mark {
+  display: none;                   /* a picked logo replaces the placeholder */
+}
+
+/* The logo: a rounded square filling the mark area (contain — wordmarks must not crop). */
+.bug-logo {
+  position: absolute;              /* covers the mark area */
+  inset: 0;                        /* all four edges */
+  width: 100%;                     /* fill the square… */
+  height: 100%;                    /* …both ways */
+  border-radius: calc(12px * var(--scale));  /* rounded corners echo the tile shape */
+  object-fit: contain;             /* show the whole logo, never crop a wide wordmark */
 }`;
 
     return {
-      html: `    <!-- One frosted tile: ${o.logoAssetPath ? 'logo' : 'placeholder mark'} above a tiny caps caption. -->
+      html: `    <!-- One frosted tile: the logo mark above a tiny caps caption. -->
     <div class="bug-box">
 ${mark}
 ${bugLineMasks(o)}
     </div>`,
+
+      extraFields: [
+        {
+          field: logoField,
+          ftype: 'filelist',
+          title: 'Logo',
+          value: logoPath,
+          assetfolder: './images/',
+          extension: 'png',
+        },
+      ],
 
       css: `/* The tile — a small frosted square: translucent glass, heavy backdrop blur,
    hairline keyline, one soft lifting shadow. Everything stacks and centers inside it. */

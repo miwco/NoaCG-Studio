@@ -53,9 +53,11 @@ npm run build    # typecheck + production build to dist/
   Inserted elements land in the lower-left action-safe area with rich, commented CSS. Every apply is
   **undoable** (toast button or **Ctrl/Cmd+Z**), and after inserting, **suggested-property chips**
   add common CSS one click at a time.
-- **Assets & branding** — upload logos/images/fonts (stored as data URLs, bundled into the export
-  under `assets/` with relative paths); brand colours are managed as `:root` CSS variables; add
-  `@font-face` from an uploaded font.
+- **Image fields & assets** — fields use the types live broadcast actually needs: text, long
+  text, number, and **Image** (SPX `filelist` — the operator picks a file from the project's
+  `images/` folder). End credits, the corner bug, and the frosted info card expose their logo
+  slot as a real Logo field; uploads are stored as data URLs, render live in the preview, and
+  export as real files under `images/`. Brand colours are managed as `:root` CSS variables.
 - **Learn (teaching) layer** — click any token in the editor for a short, SPX-specific explanation,
   and browse a curated **CSS property reference** with examples and deep-links to MDN.
 - **AI assistant** — currently a deterministic stub behind a clean `AIProvider` interface
@@ -63,8 +65,10 @@ npm run build    # typecheck + production build to dist/
 - **Validation** — runtime functions, `SPXGCTemplateDefinition`, field↔DOM mapping, relative asset
   paths (HTML + CSS), missing assets, JS syntax, and preview runtime errors. Errors block export.
 - **Export** (modular targets) — **Starter** (1:1 with the editor code) and **Advanced / Pack**
-  (fuller SPX package with a helper interface + metadata). Both are plug-and-play: relative paths,
-  bundled GSAP, no external dependencies.
+  (fuller SPX package with a helper interface + metadata). Both are plug-and-play: the zip
+  contains one project folder, so extracting into your SPX/CasparCG templates folder gives
+  `[TemplatesFolder]/your_project/index.html` with images under `your_project/images/` —
+  relative paths, bundled GSAP, no external dependencies.
 
 ## SPX field convention
 

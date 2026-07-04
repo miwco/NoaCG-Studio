@@ -29,6 +29,7 @@ import {
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
+  setFieldValueJs,
   zoneCssText,
 } from '../shared/base';
 import { clockRuntimeJs } from '../shared/clock';
@@ -57,13 +58,15 @@ function ssRuntimeJs(name: string, animationBlock: string): string {
 
 ${clockRuntimeJs('ss', 'f2')}
 
+${setFieldValueJs}
+
 // update(data): SPX sends field values as JSON; each value is written into the element
 // whose id matches the field name (f2 is the hidden minutes source the clock reads).
 function update(data) {
   var fields = (typeof data === 'string') ? JSON.parse(data) : data;
   for (var key in fields) {
     var el = document.getElementById(key);
-    if (el) el.textContent = fields[key];
+    if (el) setFieldValue(el, fields[key]);
   }
   // If the countdown isn't running yet, repaint the idle clock with the new duration.
   if (!clockTimer) {

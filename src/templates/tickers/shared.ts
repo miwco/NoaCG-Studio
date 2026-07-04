@@ -30,6 +30,7 @@ import {
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
+  setFieldValueJs,
   zoneCssText,
 } from '../shared/base';
 import type { PresetConfig } from '../lowerThirds/animPresets';
@@ -68,13 +69,15 @@ function rebuildTicker() {
   track.innerHTML = TICKER_DOUBLE_ITEMS ? html + html : html;
 }
 
+${setFieldValueJs}
+
 // update(data): SPX sends field values as JSON; the label (f1) is written straight into
 // its element, the items (f0) into the hidden source — then the track re-renders.
 function update(data) {
   var fields = (typeof data === 'string') ? JSON.parse(data) : data;
   for (var key in fields) {
     var el = document.getElementById(key);
-    if (el) el.textContent = fields[key];
+    if (el) setFieldValue(el, fields[key]);
   }
   rebuildTicker();
 }

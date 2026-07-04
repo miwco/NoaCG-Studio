@@ -80,6 +80,18 @@ source of truth, and always exports to a working SPX package.
 **The catalog is complete: 31 designs across all 10 categories, every one family-consistent
 with its lower-third siblings (§8), swept per category, and covered by an E2E spec.**
 
+### Images done right (user feedback after wave 2)
+- [x] **Broadcast field set** — the wizard/panels offer text, long text, number, and **Image**
+      (SPX `filelist` listing `./images/`); dropdown/color/checkbox retired from generic UIs
+      (kept only where a design truly needs a constrained choice, e.g. the quiz answer)
+- [x] **Image-aware runtime** — every category's `update()` writes through `setFieldValue`:
+      `<img id="fN">` gets the path as `src`, empty hides it and toggles `.has-image`
+- [x] **Logo fields** — end credits (f2), corner bug, and the frosted info card expose their
+      logo slot as a real SPX field; the Data panel gets an image picker + upload
+- [x] **Export folder structure** — the zip contains `<project>/index.html` +
+      `<project>/images/<file>` (+ fonts/, css/, js/), extracting straight into
+      `[TemplatesFolder]/` the way SPX/CasparCG expect
+
 ### Later (explicitly deferred)
 - [ ] Full package manager (named, saved packages; apply-to-all; share as a file) — the
       project-brand mechanism above is the light version

@@ -6,7 +6,7 @@
 // package keeps the external references (the files are written to disk by the exporter).
 
 import gsapSource from '../assets/gsap.min.js?raw';
-import { inlineAssetRefs } from '../assets/assetUtils';
+import { inlineAssetRefs, isDataUrl } from '../assets/assetUtils';
 import type { SpxTemplate } from '../model/types';
 
 /** Remove <link>/<script> tags that point at local template files we will inline instead. */
@@ -35,6 +35,37 @@ export function composeDocument(template: SpxTemplate): string {
   const gsapTag = `<script id="spx-gsap">\n${gsapSource}\n</script>`;
   const jsTag = `<script id="spx-template-js">\n${template.js}\n</script>`;
 
+  // Preview-only: uploaded assets exist as in-memory data URLs, so an image path the
+  // template sets at RUNTIME (update() writing an <img> src, a rebuild injecting
+  // <img src="images/...">) can't resolve inside the srcdoc iframe. This observer swaps
+  // any known relative path for its data URL the moment it appears. The exported package
+  // has the real files on disk and needs none of this.
+  const runtimeAssets = Object.fromEntries(
+    template.assets.filter((a) => isDataUrl(a.data)).map((a) => [a.path, a.data as string]),
+  );
+  const assetShimTag = Object.keys(runtimeAssets).length
+    ? `<script id="spx-preview-assets">
+(function () {
+  var MAP = ${JSON.stringify(runtimeAssets)};
+  function fix(img) {
+    var src = img.getAttribute('src');
+    if (!src) return;
+    var clean = src.replace(/^\\.\\//, '');
+    if (MAP[clean]) img.src = MAP[clean];
+  }
+  new MutationObserver(function (muts) {
+    muts.forEach(function (m) {
+      if (m.type === 'attributes' && m.target.tagName === 'IMG') fix(m.target);
+      if (m.addedNodes) m.addedNodes.forEach(function (n) {
+        if (n.tagName === 'IMG') fix(n);
+        else if (n.querySelectorAll) n.querySelectorAll('img').forEach(fix);
+      });
+    });
+  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+})();
+</script>\n`
+    : '';
+
   // Capture runtime errors and report them to the builder (for the validator / inline feedback).
   // Defined before the template JS so it also catches errors thrown there.
   const captureTag = `<script id="spx-error-capture">
@@ -48,7 +79,7 @@ window.addEventListener('unhandledrejection', function (ev) {
 </script>`;
 
   // GSAP must load before the template JS. Put both at the end of <head> if possible.
-  const headInjection = `${gsapTag}\n${styleTag}\n`;
+  const headInjection = `${assetShimTag}${gsapTag}\n${styleTag}\n`;
   if (/<\/head>/i.test(html)) {
     html = html.replace(/<\/head>/i, `${headInjection}</head>`);
   } else {

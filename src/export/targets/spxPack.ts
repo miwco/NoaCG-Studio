@@ -3,7 +3,7 @@
 // only the packaging differs. The template.js still owns play()/stop()/update().
 
 import JSZip from 'jszip';
-import { addSharedAssets, ensureExternalRefs, spxReadme } from '../common';
+import { addSharedAssets, ensureExternalRefs, slug, spxReadme } from '../common';
 import type { ExportTarget } from '../registry';
 
 // Helper interface added alongside (not replacing) the template's own runtime functions.
@@ -57,17 +57,19 @@ export const spxPack: ExportTarget = {
   description: 'Fuller SPX package with a helper interface and metadata. Same on-screen behavior.',
   async build(template) {
     const zip = new JSZip();
+    // One project folder at the zip root — extracts as [TemplatesFolder]/your_project/…
+    const root = zip.folder(slug(template.name))!;
     const html = injectInterfaceRef(ensureExternalRefs(template.html));
-    zip.file('index.html', html);
-    zip.file('css/template.css', template.css);
-    zip.file('js/template.js', template.js);
-    zip.file('js/spx_interface.js', SPX_INTERFACE_JS);
-    zip.file('README.md', spxReadme(template, 'Advanced / Pack'));
-    zip.file(
+    root.file('index.html', html);
+    root.file('css/template.css', template.css);
+    root.file('js/template.js', template.js);
+    root.file('js/spx_interface.js', SPX_INTERFACE_JS);
+    root.file('README.md', spxReadme(template, 'Advanced / Pack'));
+    root.file(
       'template.meta.json',
       JSON.stringify({ name: template.name, settings: template.settings, fields: template.fields }, null, 2),
     );
-    await addSharedAssets(zip, template);
+    await addSharedAssets(root, template);
     return zip;
   },
 };

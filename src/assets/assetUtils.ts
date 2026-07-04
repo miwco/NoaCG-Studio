@@ -1,6 +1,11 @@
 // Asset helpers. Uploaded images/fonts are stored as base64 data URLs in template.assets[]
 // (path + data). The preview inlines them; the exporter decodes them back into real files
-// under assets/ with relative paths. This keeps the app fully offline with no backend.
+// with relative paths. This keeps the app fully offline with no backend.
+//
+// Path convention (matches how SPX / CasparCG projects are laid out on disk):
+//   images/<file>   uploaded images — next to the template, exported as YourProject/images/
+//   fonts/<file>    imported fonts
+//   assets/<file>   anything else (legacy uploads keep working)
 
 import type { AssetFile } from '../model/types';
 
@@ -42,12 +47,13 @@ export function isFontAsset(path: string): boolean {
   return FONT_EXT.includes(extOf(path));
 }
 
-/** A safe, unique relative asset path (assets/<sanitized-name>), avoiding collisions. */
+/** A safe, unique relative asset path, sorted into images/ | fonts/ | assets/ by type. */
 export function uniqueAssetPath(name: string, existing: AssetFile[]): string {
   const dot = name.lastIndexOf('.');
   const base = (dot >= 0 ? name.slice(0, dot) : name).replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'asset';
   const ext = dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
-  const make = (n: number) => `assets/${base}${n ? '-' + n : ''}${ext ? '.' + ext : ''}`;
+  const folder = IMAGE_EXT.includes(ext) ? 'images' : FONT_EXT.includes(ext) ? 'fonts' : 'assets';
+  const make = (n: number) => `${folder}/${base}${n ? '-' + n : ''}${ext ? '.' + ext : ''}`;
   let n = 0;
   while (existing.some((a) => a.path === make(n))) n++;
   return make(n);

@@ -55,10 +55,16 @@ export interface LineSpec {
   sample: string;
 }
 
-/** An extra, non-visual data field added to the SPX definition only. */
+/**
+ * An extra, non-visual data field added to the SPX definition only.
+ * The offered types are the ones live broadcast graphics actually use: text, long text,
+ * a number, or an image ("filelist" — the operator picks a file from the project's
+ * images/ folder). SPX also knows dropdown/checkbox/color, but those are reserved for
+ * designs with a genuinely constrained choice (e.g. the quiz's correct-answer dropdown).
+ */
 export interface ExtraFieldSpec {
   title: string;
-  ftype: 'textfield' | 'number' | 'checkbox' | 'color' | 'dropdown';
+  ftype: 'textfield' | 'textarea' | 'number' | 'filelist';
   value: string;
 }
 
@@ -242,9 +248,8 @@ export function fieldsFromOptions(o: ResolvedOptions): SpxField[] {
       ftype: extra.ftype,
       title: extra.title,
       value: extra.value,
-      ...(extra.ftype === 'dropdown'
-        ? { items: [{ text: extra.value, value: extra.value }] }
-        : {}),
+      // Image fields ("filelist") list the project's images/ folder in SPX.
+      ...(extra.ftype === 'filelist' ? { assetfolder: './images/', extension: 'png' } : {}),
     });
   });
   return fields;

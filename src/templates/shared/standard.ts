@@ -2,7 +2,7 @@
 // cards, …) is the same machine with a different class prefix + structure comment + width cap.
 // A category module defines its CategorySpec once; variants stay tiny design builders.
 
-import type { SpxTemplate, TemplateType, Resolution } from '../../model/types';
+import type { SpxField, SpxTemplate, TemplateType, Resolution } from '../../model/types';
 import { definitionScriptBlock } from '../../model/spxDefinition';
 import { resolveEasing } from '../../model/easings';
 import {
@@ -32,6 +32,11 @@ export interface StandardDesign {
   css: string;
   /** Whether the design includes a .<prefix>-accent element. */
   hasAccent: boolean;
+  /**
+   * Fields the DESIGN owns beyond the wizard lines — e.g. an image field ("filelist")
+   * bound to an <img id="fN"> logo slot. Appended after the line/extra fields.
+   */
+  extraFields?: SpxField[];
 }
 
 export interface StandardMeta {
@@ -76,7 +81,7 @@ export function assembleStandard(
 ): SpxTemplate {
   const p = cat.prefix;
   const font = resolveHeadingFont(o); // imported font wins over the bundled set
-  const fields = fieldsFromOptions(o);
+  const fields = [...fieldsFromOptions(o), ...(design.extraFields ?? [])];
   const settings = baseSettings(meta, o);
   const scale = computeScale(o);
   const maxTextWidth = (cat.maxTextWidth ?? computeMaxTextWidth)(o.resolution);

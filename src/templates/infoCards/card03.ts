@@ -33,32 +33,43 @@ export const card03: TemplateVariant = defineCardVariant(
     uicolor: '2',
   },
   (o) => {
-    // The logo is rendered only when an image was actually imported — never an empty src.
-    const logo = o.logoAssetPath
-      ? `      <!-- Imported logo — a rounded square above the heading (see .card-logo). -->
-      <img class="card-logo" src="${o.logoAssetPath}" alt="" />
-`
-      : '';
+    // The logo is a real SPX image field ("filelist"): pick a file from the project's
+    // images/ folder in SPX, or leave it empty — an empty value keeps the row collapsed.
+    const logoField = `f${o.lines.length + o.extraFields.length}`;
+    const logoPath = o.logoAssetPath ?? '';
 
-    const logoCss = o.logoAssetPath
-      ? `
+    const logo = `      <!-- Logo (image field ${logoField}) — a rounded square above the heading. Empty = hidden. -->
+      <img id="${logoField}" class="card-logo"${logoPath ? ` src="${logoPath}"` : ' style="display: none"'} alt="" />
+`;
 
-/* The imported logo: a rounded square leading the card, above the heading. */
+    const logoCss = `
+
+/* The logo: a rounded square leading the card, above the heading (hidden while empty). */
 .card-logo {
   display: block;                  /* its own row — the heading starts below it */
   width: calc(56px * var(--scale));   /* logo square width */
   height: calc(56px * var(--scale));  /* logo square height */
   margin-bottom: calc(16px * var(--scale));  /* air between logo and heading */
   border-radius: calc(12px * var(--scale));  /* rounded corners echo the panel shape */
-  object-fit: cover;               /* fill the square without distorting the image */
-}`
-      : '';
+  object-fit: contain;             /* show the whole logo, never crop a wide wordmark */
+}`;
 
     return {
-      html: `    <!-- One frosted glass panel: ${o.logoAssetPath ? 'logo + ' : ''}masked heading and body lines inside a single translucent card. -->
+      html: `    <!-- One frosted glass panel: logo + masked heading and body lines inside a single translucent card. -->
     <div class="card-box">
 ${logo}${cardLineMasks(o)}
     </div>`,
+
+      extraFields: [
+        {
+          field: logoField,
+          ftype: 'filelist',
+          title: 'Logo',
+          value: logoPath,
+          assetfolder: './images/',
+          extension: 'png',
+        },
+      ],
 
       css: `/* The frosted panel — translucent card, heavy backdrop blur, one soft lifting shadow. */
 .card-box {
