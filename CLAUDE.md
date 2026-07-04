@@ -111,7 +111,12 @@ src/
   preview/      composeDocument.ts — inlines CSS + GSAP + JS + assets into the iframe srcdoc
   blocks/       registry.ts (hierarchical BuildingBlock[]), edit.ts, cssVars.ts (:root vars),
                 animPatch.ts (marked-region readers/patchers for the Motion panel)
-  ai/           provider.ts (AIProvider interface), stubProvider.ts (deterministic), presets.ts
+  ai/           provider.ts (AIProvider + GenerateContext), claudeProvider.ts (real provider:
+                system prompt = SPX + house contracts + lt01's generated code as the canonical
+                example; forced emit_template tool; validate + one repair round), anthropic.ts
+                (direct browser call with the user's key OR VITE_AI_PROXY_URL gateway),
+                settings.ts (localStorage + .env: key, model), index.ts (getAiProvider —
+                Claude when configured, stub otherwise), stubProvider.ts, presets.ts
   validation/   validateTemplate.ts — runs before export and on AI output
   export/       registry.ts (targets), targets/spxStarter.ts, targets/spxPack.ts, common.ts
                 (also bundles referenced fonts/*.woff2 + FONT_LICENSES.md)

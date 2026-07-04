@@ -13,9 +13,12 @@ import TemplateStep from './steps/TemplateStep';
 import FieldsStep from './steps/FieldsStep';
 import StyleStep from './steps/StyleStep';
 import AnimationStep from './steps/AnimationStep';
+import AiStep from './steps/AiStep';
+import type { SpxTemplate } from '../../model/types';
 
 const STEP_TITLES = ['Start', 'Category', 'Template', 'Fields', 'Style', 'Animation'];
 const STEP_TITLES_IMPORT = ['Start', 'Import', 'Template', 'Fields', 'Style', 'Animation'];
+const STEP_TITLES_AI = ['Start', 'Describe'];
 
 /**
  * The choose-first creation wizard (replaces the old template gallery). Six steps —
@@ -30,9 +33,11 @@ export default function CreationWizard() {
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
 
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<'template' | 'import'>('template');
+  const [mode, setMode] = useState<'template' | 'import' | 'ai'>('template');
   const [draft, setDraft] = useState<WizardDraft>(initialDraft);
   const [replayKey, setReplayKey] = useState(0);
+  // Describe-it mode: the AI's current (validated) result, previewed live like any draft.
+  const [aiResult, setAiResult] = useState<{ template: SpxTemplate; valid: boolean } | null>(null);
   // The saved project brand ("Match current project" keeps new graphics in the same package).
   const [brand, setBrand] = useState<ProjectBrand | null>(null);
   const [matchBrand, setMatchBrand] = useState(false);
@@ -43,6 +48,7 @@ export default function CreationWizard() {
       setStep(0);
       setMode('template');
       setDraft(initialDraft());
+      setAiResult(null);
       const b = loadBrand();
       setBrand(b);
       setMatchBrand(!!b);
@@ -76,6 +82,12 @@ export default function CreationWizard() {
     setActiveTab('html');
   };
 
+  const createFromAi = () => {
+    if (!aiResult?.valid) return;
+    applyTemplate(aiResult.template, { resetSampleData: true });
+    setActiveTab('html');
+  };
+
   const create = () => {
     if (!previewTemplate || !variant) return;
     applyTemplate(previewTemplate, { resetSampleData: true });
@@ -95,8 +107,8 @@ export default function CreationWizard() {
     (step === 1 && (mode === 'import' ? draft.importedImages.length === 0 || !draft.category : !draft.category)) ||
     (step === 2 && !draft.variantId);
 
-  const showPreview = step >= 2 && !!previewTemplate;
-  const stepTitles = mode === 'import' ? STEP_TITLES_IMPORT : STEP_TITLES;
+  const showPreview = mode === 'ai' ? step === 1 && !!aiResult : step >= 2 && !!previewTemplate;
+  const stepTitles = mode === 'ai' ? STEP_TITLES_AI : mode === 'import' ? STEP_TITLES_IMPORT : STEP_TITLES;
 
   // Ordering: imported images put logo-slot designs first; a matched brand puts its
   // style family first (so the package's siblings lead).
@@ -143,7 +155,17 @@ export default function CreationWizard() {
               <EntryStep
                 onTemplates={() => { setMode('template'); setStep(1); }}
                 onImport={() => { setMode('import'); setStep(1); }}
+                onAi={() => { setMode('ai'); setStep(1); }}
                 onBlank={startBlank}
+              />
+            )}
+            {step === 1 && mode === 'ai' && (
+              <AiStep
+                resolution={draftResolution(draft)}
+                fps={draft.fps}
+                brandPalette={matchBrand && brand ? brand.palette : null}
+                result={aiResult?.template ?? null}
+                onResult={(template, valid) => setAiResult(template ? { template, valid } : null)}
               />
             )}
             {step === 1 && mode === 'import' && (
@@ -198,9 +220,12 @@ export default function CreationWizard() {
             )}
           </div>
 
-          {showPreview && previewTemplate && (
+          {showPreview && (mode === 'ai' ? aiResult : previewTemplate) && (
             <aside className="wz-side">
-              <WizardPreview template={previewTemplate} replayKey={replayKey} />
+              <WizardPreview
+                template={mode === 'ai' ? aiResult!.template : previewTemplate!}
+                replayKey={replayKey}
+              />
             </aside>
           )}
         </div>
@@ -209,7 +234,7 @@ export default function CreationWizard() {
         <div className="wz-footer">
           <div className="row" style={{ gap: 14, alignItems: 'center' }}>
             {step > 0 && <button onClick={() => setStep(step - 1)}>‹ Back</button>}
-            {brand && step >= 2 && (
+            {brand && (mode === 'ai' ? step >= 1 : step >= 2) && (
               <label className="wz-match" title="Reuse this project's palette and font so the new graphic belongs to the same package">
                 <input
                   type="checkbox"
@@ -229,12 +254,22 @@ export default function CreationWizard() {
             )}
           </div>
           <div className="row" style={{ gap: 8 }}>
-            {step > 0 && step < 5 && (
+            {mode !== 'ai' && step > 0 && step < 5 && (
               <button disabled={nextDisabled} onClick={() => setStep(step + 1)}>
                 Next ›
               </button>
             )}
-            {step >= 2 && (
+            {mode === 'ai' && step === 1 && (
+              <button
+                className="primary"
+                disabled={!aiResult?.valid}
+                onClick={createFromAi}
+                title={aiResult && !aiResult.valid ? 'The result has validation errors — refine or regenerate first' : undefined}
+              >
+                Create project
+              </button>
+            )}
+            {mode !== 'ai' && step >= 2 && (
               <button className="primary" disabled={!previewTemplate} onClick={create}>
                 Create project
               </button>

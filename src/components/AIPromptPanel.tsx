@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { aiProvider } from '../ai/stubProvider';
+import { getAiProvider } from '../ai';
+import { aiConfigured } from '../ai/settings';
 import { useTemplateStore } from '../store/templateStore';
 import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
 import type { TemplateChange } from '../model/types';
@@ -7,9 +8,9 @@ import type { TemplateChange } from '../model/types';
 type Pending = { change: TemplateChange; validation: ValidationResult } | null;
 
 /**
- * AI panel. The AI is constrained: it composes deterministic blocks/presets and every result is
- * validated. Changes are shown for confirm-before-apply so the platform keeps SPX compatibility.
- * (Currently backed by a deterministic stub; a real Claude provider drops in behind AIProvider.)
+ * AI panel. Backed by Claude when an API key is configured (see the wizard's Describe-it
+ * step for settings), by the deterministic stub otherwise. Every result is validated and
+ * shown for confirm-before-apply so the platform keeps SPX compatibility.
  */
 export default function AIPromptPanel() {
   const template = useTemplateStore((s) => s.template);
@@ -37,7 +38,7 @@ export default function AIPromptPanel() {
     setPending(null);
     try {
       const code = activeTab === 'html' ? template.html : activeTab === 'css' ? template.css : template.js;
-      setExplanation(await aiProvider.explain(code));
+      setExplanation(await getAiProvider().explain(code));
     } finally {
       setBusy(false);
     }
@@ -55,6 +56,12 @@ export default function AIPromptPanel() {
         <p className="hint">
           Describe what you want. The assistant proposes a change you review before applying. Every
           result is validated for SPX compatibility.
+          {!aiConfigured() && (
+            <>
+              {' '}Currently using the offline stub — add an Anthropic API key (New project →
+              Describe it → AI settings) for full Claude-powered edits.
+            </>
+          )}
         </p>
       </div>
 
@@ -66,18 +73,18 @@ export default function AIPromptPanel() {
       />
 
       <div className="row wrap" style={{ marginTop: 8 }}>
-        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => aiProvider.generate(prompt))}>
+        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => getAiProvider().generate(prompt))}>
           Generate
         </button>
-        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => aiProvider.modify(prompt, template))}>
+        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => getAiProvider().modify(prompt, template))}>
           Modify
         </button>
       </div>
       <div className="row wrap" style={{ marginTop: 6 }}>
-        <button disabled={busy} onClick={() => runChange(() => aiProvider.makeSpxReady(template))}>
+        <button disabled={busy} onClick={() => runChange(() => getAiProvider().makeSpxReady(template))}>
           Make SPX-ready
         </button>
-        <button disabled={busy} onClick={() => runChange(() => aiProvider.fix(template))}>
+        <button disabled={busy} onClick={() => runChange(() => getAiProvider().fix(template))}>
           Fix
         </button>
         <button disabled={busy} onClick={onExplain}>

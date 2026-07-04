@@ -11,3 +11,6 @@ playwright/.cache/
 
 # Local SPX reference templates (kept on disk, not in the repo)
 example_projects/
+
+# Never commit API keys - copy .env.example to .env and fill it in locally.
+.env

@@ -97,10 +97,16 @@ with its lower-third siblings (§8), swept per category, and covered by an E2E s
       project-brand mechanism above is the light version
 
 ### AI mode (after the wizard works)
-- [ ] Claude-backed `AIProvider` (API key via `.env`, e.g. `VITE_ANTHROPIC_API_KEY`)
-- [ ] Prompt → graphic template (iterative refine loop, validated before apply)
-- [ ] Drag-and-drop images → AI builds a matching HTML template automatically (uses the design
-      language + SPX skill for taste and correctness)
+- [x] Claude-backed `AIProvider` (key via the in-app AI settings or `VITE_ANTHROPIC_API_KEY`;
+      model configurable, Sonnet 5 default; `VITE_AI_PROXY_URL` is the seam a future hosted
+      gateway plugs into without app changes)
+- [x] Prompt → graphic template ("Describe it" wizard entry: validated before apply, one
+      automatic repair round on validator errors, refine loop on the result; generated code
+      keeps the house contracts so the Style/Motion panels and brand still work on it)
+- [x] Images in generation — upload logo / still, Claude SEES them (vision), they bundle as
+      `images/` assets; project brand colors carried in via the match toggle
+- [x] AI panel (modify / fix / explain / make-SPX-ready) backed by Claude when configured,
+      by the deterministic stub otherwise
 
 ### Export & platform
 - [x] SPX Starter + Advanced/Pack export with validation gate
