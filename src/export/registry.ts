@@ -1,10 +1,13 @@
-// Export target registry. Targets are modular so CasparCG and OGraf exporters can be added later
-// without touching the UI. Each target transforms the template into a downloadable zip package.
+// Export target registry. Each target transforms the template into a downloadable zip
+// package: SPX (folder), CasparCG (single self-contained html), OGraf (manifest + Web
+// Component).
 
 import type JSZip from 'jszip';
 import type { SpxTemplate } from '../model/types';
 import { spxStarter } from './targets/spxStarter';
 import { spxPack } from './targets/spxPack';
+import { casparTarget } from './targets/casparcg';
+import { ografTarget } from './targets/ograf';
 
 export interface ExportTarget {
   id: string;
@@ -13,4 +16,4 @@ export interface ExportTarget {
   build: (template: SpxTemplate) => Promise<JSZip>;
 }
 
-export const EXPORT_TARGETS: ExportTarget[] = [spxStarter, spxPack];
+export const EXPORT_TARGETS: ExportTarget[] = [spxStarter, spxPack, casparTarget, ografTarget];

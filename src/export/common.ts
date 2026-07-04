@@ -23,7 +23,7 @@ export function slug(name: string): string {
  * The files live in public/fonts/ (served at /fonts/<file> in dev and production builds), so we
  * fetch them at export time and write them under fonts/ with the same relative path the CSS uses.
  */
-async function addReferencedFonts(zip: JSZip, template: SpxTemplate): Promise<void> {
+export async function addReferencedFonts(zip: JSZip, template: SpxTemplate): Promise<void> {
   const refs = [...template.css.matchAll(/url\(["']?fonts\/([\w.-]+\.(?:woff2|woff|ttf|otf))["']?\)/gi)].map((m) => m[1]);
   const unique = [...new Set(refs)];
   if (unique.length === 0) return;
