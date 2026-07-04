@@ -202,6 +202,7 @@ Always `npm run build` (typecheck + build) after changes.
 - Work happens on `main` (the old feature branches were merged and deleted). Only branch if the user
   asks.
 - The working rhythm in this repo: **commit each completed, verified phase/step** with a descriptive
-  message (end with the `Co-Authored-By: Claude …` trailer); the user likes GitHub kept up to date,
-  but ask before pushing unless they've already asked in the current effort.
+  message. **Never add a `Co-Authored-By` trailer or any agent co-author** (the user's global rule).
+  The user likes GitHub kept up to date, but ask before pushing unless they've already asked in the
+  current effort.
 - Don't commit `dist/` changes as part of feature work.
