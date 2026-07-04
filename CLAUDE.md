@@ -5,10 +5,16 @@ conventions change.
 
 ## What this is
 
-An **AI-assisted, SPX-first, code-first** browser tool for building HTML broadcast graphics and
-exporting them as working **SPX** templates (SPX Graphics / CasparCG). The user always sees and edits
-the real HTML/CSS/JS (Monaco editor) with a live preview; building blocks, an AI assistant, branding,
-and a teaching layer support that workflow rather than hiding the code.
+An **AI-assisted, SPX-first** browser tool for building HTML broadcast graphics and exporting them
+as working **SPX** templates (SPX Graphics / CasparCG). The primary UX is **choose-first,
+learn-after**: the creation wizard builds the graphic from choices (template → fields → style →
+animation) and writes simple, commented code the user then reads, learns from, and edits. Code
+remains the single source of truth — Monaco always shows it, the live panels patch it
+deterministically, and nothing hides behind visual-only tools.
+
+Binding project docs (read before generating or judging templates): **`docs/DESIGN_LANGUAGE.md`**
+(taste + motion + code-style rules) and **`docs/GOALS.md`** (north star + milestone checklist —
+keep it checked off as work lands).
 
 **The pillars (keep every change true to these):**
 - **AI-assisted** — AI and blocks help write the template, but the human stays in control of the code.
@@ -141,15 +147,25 @@ Always `npm run build` (typecheck + build) after changes.
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
   iframe to call `update()/play()/stop()`. Good for blocks, templates, validation, and export logic.
 - **Store/state checks:** `import('/src/store/templateStore.ts')` then `useTemplateStore.getState()`.
+- **Template catalog sweep:** `node scripts/l3-sweep.mjs [shots-dir]` (dev server must be running) —
+  validates every lower-third variant × preset × easing (runtime, steps, auto-fit) and captures
+  settled-state taste screenshots. Repeat this pattern for each new template category.
 
-**Gotchas:** after many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it
-if a change isn't reflected. Monaco isn't fully interactive in a headless preview and GSAP animations
-don't visibly tick (rAF); assert on DOM/state, not screenshots, for those.
+**Gotchas:**
+- After many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it if a
+  change isn't reflected.
+- Worse: after HMR updates, `import('/src/store/…')` in an eval/console context can resolve a
+  **different module instance** than the running app (a "ghost store" — your clicks patch the real
+  store while your assertions read the stale one). If state reads disagree with visible UI,
+  **restart the dev server and reload** before trusting any eval-based assertion.
+- Monaco isn't fully interactive in a headless preview and GSAP animations don't visibly tick (rAF);
+  assert on DOM/state, not screenshots, for those.
 
 ## Git
 
 - Work happens on `main` (the old feature branches were merged and deleted). Only branch if the user
   asks.
-- Commit only when the user asks. Keep messages descriptive; end with the
-  `Co-Authored-By: Claude …` trailer.
+- The working rhythm in this repo: **commit each completed, verified phase/step** with a descriptive
+  message (end with the `Co-Authored-By: Claude …` trailer); the user likes GitHub kept up to date,
+  but ask before pushing unless they've already asked in the current effort.
 - Don't commit `dist/` changes as part of feature work.
