@@ -47,12 +47,12 @@ source of truth, and always exports to a working SPX package.
       retired (Blank survives)
 
 ### Broadcast packages + your brand (current push)
-- [ ] **Custom colors** — a "Custom" palette in the wizard Style step: accent / text / dim / panel
+- [x] **Custom colors** — a "Custom" palette in the wizard Style step: accent / text / dim / panel
       via color picker + free hex/rgba input (Style panel already edits them post-creation)
-- [ ] **Imported fonts, embedded** — upload .woff2/.woff/.ttf/.otf in the wizard or Style panel;
+- [x] **Imported fonts, embedded** — upload .woff2/.woff/.ttf/.otf in the wizard or Style panel;
       the file becomes a template asset (`fonts/…`), gets a visible `@font-face`, renders in the
       preview, and ships inside the export (single file per font; weight sets later)
-- [ ] **Project brand + match toggle** — the app remembers the project's brand (family, palette
+- [x] **Project brand + match toggle** — the app remembers the project's brand (family, palette
       incl. custom, font incl. imported); the wizard preselects it ("Match current project", on
       by default) so the next graphic automatically belongs to the same package
 - [ ] **Package-consistency foundations** — DESIGN_LANGUAGE addendum with per-family

@@ -91,6 +91,16 @@ export function draftResolution(draft: WizardDraft): Resolution {
   return aspect.resolutions.find((r) => r.label === draft.resolutionLabel) ?? aspect.resolutions[0];
 }
 
+/** The DraftPatch that applies a saved project brand to the draft ("Match current project"). */
+export function brandPatch(brand: import('../../model/brand').ProjectBrand): DraftPatch {
+  return {
+    customPalette: brand.palette.id === 'custom' ? brand.palette : null,
+    paletteId: brand.palette.id !== 'custom' ? brand.palette.id : null,
+    fontId: brand.customFont ? 'custom' : brand.fontId,
+    customFont: brand.customFont,
+  };
+}
+
 /** Map the draft onto WizardOptions (nulls fall back to the variant's defaults). */
 export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): WizardOptions {
   return {

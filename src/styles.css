@@ -687,3 +687,5 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   border-top: 1px solid var(--border);
   font-size: 12px;
 }
+
+.wz-match { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; }

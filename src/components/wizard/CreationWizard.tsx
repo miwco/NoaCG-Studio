@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTemplateStore } from '../../store/templateStore';
 import { LOWER_THIRDS, lowerThirdById } from '../../templates/lowerThirds';
 import { createBlankTemplate } from '../../templates/blank';
-import { draftResolution, draftToOptions, initialDraft, mergeDraft, type DraftPatch, type WizardDraft } from './draft';
+import { brandPatch, draftResolution, draftToOptions, initialDraft, mergeDraft, type DraftPatch, type WizardDraft } from './draft';
+import { loadBrand, saveBrand, type ProjectBrand } from '../../model/brand';
+import { paletteById } from '../../model/wizard';
 import WizardPreview from './WizardPreview';
 import EntryStep from './steps/EntryStep';
 import ImportStep from './steps/ImportStep';
@@ -31,13 +33,19 @@ export default function CreationWizard() {
   const [mode, setMode] = useState<'template' | 'import'>('template');
   const [draft, setDraft] = useState<WizardDraft>(initialDraft);
   const [replayKey, setReplayKey] = useState(0);
+  // The saved project brand ("Match current project" keeps new graphics in the same package).
+  const [brand, setBrand] = useState<ProjectBrand | null>(null);
+  const [matchBrand, setMatchBrand] = useState(false);
 
-  // Fresh wizard every time it opens.
+  // Fresh wizard every time it opens; reload the brand (it may have just been saved).
   useEffect(() => {
     if (open) {
       setStep(0);
       setMode('template');
       setDraft(initialDraft());
+      const b = loadBrand();
+      setBrand(b);
+      setMatchBrand(!!b);
     }
   }, [open]);
 
@@ -69,9 +77,18 @@ export default function CreationWizard() {
   };
 
   const create = () => {
-    if (!previewTemplate) return;
+    if (!previewTemplate || !variant) return;
     applyTemplate(previewTemplate);
     setActiveTab('html');
+    // Remember this look as the project brand so the next graphic matches it.
+    saveBrand({
+      styleTag: variant.styleTag,
+      palette:
+        draft.customPalette ??
+        (draft.paletteId ? paletteById(draft.paletteId) : variant.defaultPalette),
+      fontId: draft.fontId && draft.fontId !== 'custom' ? draft.fontId : draft.fontId === 'custom' ? null : variant.defaultFontId,
+      customFont: draft.fontId === 'custom' ? draft.customFont : null,
+    });
   };
 
   const nextDisabled =
@@ -81,11 +98,18 @@ export default function CreationWizard() {
   const showPreview = step >= 2 && !!previewTemplate;
   const stepTitles = mode === 'import' ? STEP_TITLES_IMPORT : STEP_TITLES;
 
-  // With imported images, designs that have a logo slot come first.
-  const orderedVariants =
-    draft.importedImages.length > 0
-      ? [...LOWER_THIRDS].sort((a, b) => Number(b.hasLogoSlot) - Number(a.hasLogoSlot))
-      : LOWER_THIRDS;
+  // Ordering: imported images put logo-slot designs first; a matched brand puts its
+  // style family first (so the package's siblings lead).
+  const orderedVariants = [...LOWER_THIRDS].sort((a, b) => {
+    if (draft.importedImages.length > 0) {
+      const logo = Number(b.hasLogoSlot) - Number(a.hasLogoSlot);
+      if (logo !== 0) return logo;
+    }
+    if (matchBrand && brand) {
+      return Number(b.styleTag === brand.styleTag) - Number(a.styleTag === brand.styleTag);
+    }
+    return 0;
+  });
 
   return (
     <div className="gallery-backdrop" onClick={(e) => { if (e.target === e.currentTarget) closeGallery(); }}>
@@ -152,11 +176,12 @@ export default function CreationWizard() {
                   patch({
                     variantId: v.id,
                     lines: v.suggestedLines.map((l) => ({ ...l })),
-                    paletteId: null,
-                    customPalette: null,
-                    fontId: null,
                     zone: null,
                     animation: { presetId: null },
+                    // Matched brand carries the package look into every new graphic.
+                    ...(matchBrand && brand
+                      ? brandPatch(brand)
+                      : { paletteId: null, customPalette: null, fontId: null }),
                   })
                 }
               />
@@ -182,8 +207,26 @@ export default function CreationWizard() {
 
         {/* Footer */}
         <div className="wz-footer">
-          <div>
+          <div className="row" style={{ gap: 14, alignItems: 'center' }}>
             {step > 0 && <button onClick={() => setStep(step - 1)}>‹ Back</button>}
+            {brand && step >= 2 && (
+              <label className="wz-match" title="Reuse this project's palette and font so the new graphic belongs to the same package">
+                <input
+                  type="checkbox"
+                  style={{ width: 'auto' }}
+                  checked={matchBrand}
+                  onChange={(e) => {
+                    setMatchBrand(e.target.checked);
+                    patch(
+                      e.target.checked
+                        ? brandPatch(brand)
+                        : { paletteId: null, customPalette: null, fontId: null },
+                    );
+                  }}
+                />
+                Match current project
+              </label>
+            )}
           </div>
           <div className="row" style={{ gap: 8 }}>
             {step > 0 && step < 5 && (
