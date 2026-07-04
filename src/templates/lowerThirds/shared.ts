@@ -64,37 +64,58 @@ export function lineMasks(o: ResolvedOptions, indent = '      '): string {
 
 // ── Positioning: 9 zones snapped to safe areas ───────────────────────────────
 
-interface ZoneCss {
-  /** CSS declarations (commented) placed inside the .l3 rule. */
-  decls: string;
+export interface ZoneDecl {
+  prop: string;
+  value: string;
+  comment: string;
 }
 
-function zoneCss(zone: Zone9, nudge: { x: number; y: number }, res: Resolution): ZoneCss {
+/**
+ * The full set of positioning declarations for an anchor zone (unused sides explicitly
+ * reset so re-positioning an existing template fully overrides the previous zone).
+ */
+export function zoneDecls(zone: Zone9, nudge: { x: number; y: number }, res: Resolution): ZoneDecl[] {
   const hInset = Math.round(res.width * 0.0625); // ≈ classic 120 px side inset at 1920
   const topInset = Math.round(res.height * 0.08);
   const bottomInset = Math.round(res.height * 0.11);
 
   const [v, h] = zone.split('-') as ['top' | 'mid' | 'bottom', 'left' | 'center' | 'right'];
-  const lines: string[] = [];
+  const decls: ZoneDecl[] = [];
   const transforms: string[] = [];
 
-  if (h === 'left') lines.push(`  left: ${hInset + nudge.x}px;           /* inset from the left edge (safe area) */`);
-  if (h === 'right') lines.push(`  right: ${hInset - nudge.x}px;          /* inset from the right edge (safe area) */`);
+  if (h === 'left') decls.push({ prop: 'left', value: `${hInset + nudge.x}px`, comment: 'inset from the left edge (safe area)' });
+  if (h === 'right') decls.push({ prop: 'right', value: `${hInset - nudge.x}px`, comment: 'inset from the right edge (safe area)' });
   if (h === 'center') {
-    lines.push(`  left: calc(50% + ${nudge.x}px);        /* anchored to the horizontal center */`);
+    decls.push({ prop: 'left', value: `calc(50% + ${nudge.x}px)`, comment: 'anchored to the horizontal center' });
     transforms.push('translateX(-50%)');
   }
-  if (v === 'top') lines.push(`  top: ${topInset + nudge.y}px;            /* inset from the top edge */`);
-  if (v === 'bottom') lines.push(`  bottom: ${bottomInset - nudge.y}px;         /* inset from the bottom — wrapped text grows upward */`);
+  if (v === 'top') decls.push({ prop: 'top', value: `${topInset + nudge.y}px`, comment: 'inset from the top edge' });
+  if (v === 'bottom') decls.push({ prop: 'bottom', value: `${bottomInset - nudge.y}px`, comment: 'inset from the bottom — wrapped text grows upward' });
   if (v === 'mid') {
-    lines.push(`  top: calc(50% + ${nudge.y}px);         /* anchored to the vertical center */`);
+    decls.push({ prop: 'top', value: `calc(50% + ${nudge.y}px)`, comment: 'anchored to the vertical center' });
     transforms.push('translateY(-50%)');
   }
-  if (transforms.length > 0) {
-    lines.push(`  transform: ${transforms.join(' ')};  /* center on the anchor point */`);
+  // Explicitly reset whatever this zone doesn't use, so zone changes fully override.
+  const used = new Set(decls.map((d) => d.prop));
+  for (const side of ['left', 'right', 'top', 'bottom']) {
+    if (!used.has(side)) decls.push({ prop: side, value: 'auto', comment: 'not used by this anchor zone' });
   }
+  decls.push({
+    prop: 'transform',
+    value: transforms.length > 0 ? transforms.join(' ') : 'none',
+    comment: transforms.length > 0 ? 'center on the anchor point' : 'no centering needed',
+  });
   const align = h === 'right' ? 'right' : h === 'center' ? 'center' : 'left';
-  lines.push(`  text-align: ${align};            /* lines align toward the anchor edge */`);
+  decls.push({ prop: 'text-align', value: align, comment: 'lines align toward the anchor edge' });
+  return decls;
+}
+
+/** Pretty CSS text for the zone declarations (used in freshly generated templates). */
+function zoneCss(zone: Zone9, nudge: { x: number; y: number }, res: Resolution): { decls: string } {
+  const lines = zoneDecls(zone, nudge, res)
+    // Freshly generated code omits the explicit "auto"/"none" resets for readability.
+    .filter((d) => !(d.value === 'auto' || (d.prop === 'transform' && d.value === 'none')))
+    .map((d) => `  ${d.prop}: ${d.value};`.padEnd(35) + `/* ${d.comment} */`);
   return { decls: lines.join('\n') };
 }
 

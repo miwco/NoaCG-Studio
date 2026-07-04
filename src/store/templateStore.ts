@@ -10,7 +10,7 @@ import type { ValidationResult } from '../validation/validateTemplate';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'blocks' | 'brand' | 'learn' | 'ai' | 'validate' | 'export';
+export type SidePanel = 'data' | 'blocks' | 'style' | 'animation' | 'learn' | 'ai' | 'validate' | 'export';
 
 /** What the cursor is currently on in the code editor (drives the Learn panel). */
 export interface EditorContext {

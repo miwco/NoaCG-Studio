@@ -2,6 +2,19 @@
 // Brand colors and fonts live in the visible CSS as variables (e.g. --brand-primary), so
 // the code stays the source of truth and templates can reference var(--brand-primary).
 
+/** List every custom property declared in the first :root rule (in source order). */
+export function listCssVariables(css: string): { name: string; value: string }[] {
+  const root = findRootBody(css);
+  if (!root) return [];
+  const out: { name: string; value: string }[] = [];
+  const re = /--([\w-]+)\s*:\s*([^;}]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(root.body))) {
+    out.push({ name: m[1], value: m[2].trim() });
+  }
+  return out;
+}
+
 /** Read a CSS variable's value from the first :root rule. Null if absent. */
 export function getCssVariable(css: string, name: string): string | null {
   const root = findRootBody(css);

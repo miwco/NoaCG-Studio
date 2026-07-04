@@ -1,0 +1,218 @@
+import { useRef, useState } from 'react';
+import { useTemplateStore } from '../store/templateStore';
+import { getCssVariable, listCssVariables, setCssVariable } from '../blocks/cssVars';
+import { setCssDeclaration } from '../blocks/edit';
+import { FONTS, fontFaceCss, fontStack } from '../model/fonts';
+import type { Zone9 } from '../model/wizard';
+import { zoneDecls } from '../templates/lowerThirds/shared';
+import { fileToDataUrl, isFontAsset, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
+
+/** rgb()/rgba()/#hex → #rrggbb for the color input swatch; non-colors return null. */
+function toHex(value: string): string | null {
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value;
+  if (/^#[0-9a-f]{3}$/i.test(value)) {
+    return '#' + value.slice(1).split('').map((c) => c + c).join('');
+  }
+  const m = value.match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const [r, g, b] = m[1].split(',').map((n) => parseInt(n.trim(), 10));
+  const h = (n: number) => Math.max(0, Math.min(255, n || 0)).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+
+function looksLikeColor(value: string): boolean {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) || /^(rgb|rgba|hsl|hsla)\(/i.test(value);
+}
+
+const ZONES: Zone9[] = [
+  'top-left', 'top-center', 'top-right',
+  'mid-left', 'mid-center', 'mid-right',
+  'bottom-left', 'bottom-center', 'bottom-right',
+];
+
+/**
+ * The live Style panel. Reads the template's :root style contract straight from the code
+ * and writes deterministic patches back (CSS variables, @font-face swap, .l3 position).
+ * Works on any template that keeps its :root variables — hand edits elsewhere are safe.
+ */
+export default function StylePanel() {
+  const template = useTemplateStore((s) => s.template);
+  const setCss = useTemplateStore((s) => s.setCss);
+  const addAsset = useTemplateStore((s) => s.addAsset);
+  const removeAsset = useTemplateStore((s) => s.removeAsset);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const vars = listCssVariables(template.css);
+  const colorVars = vars.filter((v) => looksLikeColor(v.value) || toHex(v.value) !== null);
+  const scaleVar = vars.find((v) => v.name === 'scale');
+
+  // The generated @font-face block is swappable only while its marker comment survives.
+  const canSwapFont = template.css.includes('/* Bundled open-source font');
+  const currentFamily = (template.css.match(/font-family:\s*"([^"]+)"/) || [])[1];
+
+  // Position editing needs the standard .l3 root.
+  const canPosition = /\.l3\s*\{/.test(template.css);
+
+  const setVar = (name: string, value: string) => setCss(setCssVariable(template.css, name, value));
+
+  const swapFont = (fontId: string) => {
+    const font = FONTS.find((f) => f.id === fontId);
+    if (!font) return;
+    let css = template.css.replace(/\/\* Bundled open-source font[\s\S]*?\}/, fontFaceCss(font));
+    if (getCssVariable(css, 'font-heading')) css = setCssVariable(css, 'font-heading', fontStack(font));
+    setCss(css);
+    setNote(`Font switched to ${font.family} (see the @font-face rule in the CSS).`);
+  };
+
+  const setZone = (zone: Zone9) => {
+    let css = template.css;
+    for (const d of zoneDecls(zone, { x: 0, y: 0 }, template.resolution)) {
+      css = setCssDeclaration(css, '.l3', d.prop, d.value);
+    }
+    setCss(css);
+    setNote(`Moved to ${zone} (see the .l3 rule in the CSS).`);
+  };
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    for (const file of Array.from(files)) {
+      const dataUrl = await fileToDataUrl(file);
+      addAsset({ path: uniqueAssetPath(file.name, template.assets), data: dataUrl });
+    }
+    setNote(`Added ${files.length} asset${files.length > 1 ? 's' : ''} — reference them as assets/<name> in the HTML.`);
+    if (fileInput.current) fileInput.current.value = '';
+  };
+
+  const images = template.assets.filter((a) => isImageAsset(a.path));
+  const others = template.assets.filter((a) => !isImageAsset(a.path) && !isFontAsset(a.path));
+
+  return (
+    <div>
+      <div className="panel-section">
+        <h3>Colors</h3>
+        {colorVars.length === 0 && (
+          <p className="hint">
+            No <code className="inline">:root</code> color variables found. Wizard-made templates
+            keep their palette here; you can add your own, e.g.{' '}
+            <code className="inline">--accent: #3aa0ff;</code>
+          </p>
+        )}
+        {colorVars.map((v) => {
+          const hex = toHex(v.value);
+          return (
+            <div className="field-row" key={v.name}>
+              <div className="field-meta">
+                <label style={{ margin: 0 }}>{v.name.replace(/-/g, ' ')}</label>
+                <span className="field-id">--{v.name}</span>
+              </div>
+              <div className="row">
+                {hex && (
+                  <input
+                    type="color"
+                    style={{ width: 44, padding: 2 }}
+                    value={hex}
+                    onChange={(e) => setVar(v.name, e.target.value)}
+                  />
+                )}
+                <input className="grow" value={v.value} onChange={(e) => setVar(v.name, e.target.value)} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {scaleVar && (
+        <div className="panel-section">
+          <h3>Size</h3>
+          <div className="row" style={{ gap: 6 }}>
+            {[{ l: 'S', s: 0.85 }, { l: 'M', s: 1 }, { l: 'L', s: 1.2 }].map(({ l, s }) => {
+              const resFactor = Math.min(template.resolution.width / 1920, template.resolution.height / 1080);
+              return (
+                <button key={l} onClick={() => setVar('scale', String(+(s * resFactor).toFixed(3)))}>
+                  {l}
+                </button>
+              );
+            })}
+            <input
+              className="grow"
+              value={scaleVar.value}
+              onChange={(e) => setVar('scale', e.target.value)}
+              title="--scale multiplies every size in the design"
+            />
+          </div>
+        </div>
+      )}
+
+      {canSwapFont && (
+        <div className="panel-section">
+          <h3>Font</h3>
+          <div className="wz-fonts">
+            {FONTS.map((f) => (
+              <button
+                key={f.id}
+                className={`wz-font ${currentFamily === f.family ? 'selected' : ''}`}
+                onClick={() => swapFont(f.id)}
+                title={f.blurb}
+              >
+                <span className="wz-font-sample" style={{ fontFamily: `"${f.family}", ${f.fallback}` }}>Ag</span>
+                <span><strong>{f.family}</strong></span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {canPosition && (
+        <div className="panel-section">
+          <h3>Position</h3>
+          <div className="wz-zones">
+            {ZONES.map((z) => (
+              <button key={z} className="wz-zone" onClick={() => setZone(z)} title={z} />
+            ))}
+          </div>
+          <p className="hint" style={{ marginTop: 6 }}>
+            Zones snap to safe areas and rewrite the <code className="inline">.l3</code> rule.
+            Fine-tune the pixel values in the CSS tab.
+          </p>
+        </div>
+      )}
+
+      <div className="divider" />
+
+      <div className="panel-section">
+        <h3>Assets</h3>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*,.woff,.woff2,.ttf,.otf"
+          multiple
+          onChange={(e) => onFiles(e.target.files)}
+          style={{ display: 'none' }}
+        />
+        <button className="primary" onClick={() => fileInput.current?.click()}>+ Upload asset</button>
+        {images.length > 0 && (
+          <div className="asset-grid" style={{ marginTop: 10 }}>
+            {images.map((a) => (
+              <div className="asset-card" key={a.path}>
+                <div className="asset-thumb">
+                  <img src={typeof a.data === 'string' ? a.data : ''} alt={a.path} />
+                </div>
+                <div className="asset-path" title={a.path}>{a.path.replace('assets/', '')}</div>
+                <button onClick={() => removeAsset(a.path)} title="Remove asset">✕ Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {others.map((a) => (
+          <div className="row" key={a.path} style={{ justifyContent: 'space-between', marginTop: 6 }}>
+            <span className="muted">{a.path}</span>
+            <button onClick={() => removeAsset(a.path)}>✕</button>
+          </div>
+        ))}
+      </div>
+
+      {note && <p className="hint">{note}</p>}
+    </div>
+  );
+}

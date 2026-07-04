@@ -1,7 +1,8 @@
 import { useTemplateStore, type SidePanel as PanelId } from '../store/templateStore';
 import SampleDataPanel from './SampleDataPanel';
 import BuildingBlockMenu from './BuildingBlockMenu';
-import BrandPanel from './BrandPanel';
+import StylePanel from './StylePanel';
+import AnimationPanel from './AnimationPanel';
 import LearnPanel from './LearnPanel';
 import AIPromptPanel from './AIPromptPanel';
 import TemplateValidator from './TemplateValidator';
@@ -10,7 +11,8 @@ import ExportPanel from './ExportPanel';
 const PANELS: { id: PanelId; label: string }[] = [
   { id: 'data', label: 'Data' },
   { id: 'blocks', label: 'Blocks' },
-  { id: 'brand', label: 'Brand' },
+  { id: 'style', label: 'Style' },
+  { id: 'animation', label: 'Motion' },
   { id: 'learn', label: 'Learn' },
   { id: 'ai', label: 'AI' },
   { id: 'validate', label: 'Validate' },
@@ -40,7 +42,8 @@ export default function SidePanel() {
       <div className="panel-body">
         {activePanel === 'data' && <SampleDataPanel />}
         {activePanel === 'blocks' && <BuildingBlockMenu />}
-        {activePanel === 'brand' && <BrandPanel />}
+        {activePanel === 'style' && <StylePanel />}
+        {activePanel === 'animation' && <AnimationPanel />}
         {activePanel === 'learn' && <LearnPanel />}
         {activePanel === 'ai' && <AIPromptPanel />}
         {activePanel === 'validate' && <TemplateValidator />}
