@@ -16,6 +16,10 @@ source of truth, and always exports to a working SPX package.
 ### What "done right" feels like
 - **Fast:** new project → on-air-worthy lower third in under 2 minutes, no code required.
 - **Tasteful:** every template looks like a paid MotionArray/Envato asset, not a tutorial demo.
+- **Consistent:** graphics made in the same project form a coherent **broadcast package** — the
+  same style family, palette, and typography across every category, usable in a real program.
+- **Yours:** custom brand colors (hex/picker) and imported fonts are first-class — fonts are
+  embedded in the template and its export, never external.
 - **Smooth:** animations run at 60 fps, transform/opacity-based, with professional easing.
 - **Teachable:** open any generated file and every line explains itself — clear names, short
   comments, no cleverness.
@@ -42,17 +46,39 @@ source of truth, and always exports to a working SPX package.
 - [x] **Phase 6** — Playwright specs for the wizard flow (9 passing), docs updated, old starters
       retired (Blank survives)
 
+### Broadcast packages + your brand (current push)
+- [ ] **Custom colors** — a "Custom" palette in the wizard Style step: accent / text / dim / panel
+      via color picker + free hex/rgba input (Style panel already edits them post-creation)
+- [ ] **Imported fonts, embedded** — upload .woff2/.woff/.ttf/.otf in the wizard or Style panel;
+      the file becomes a template asset (`fonts/…`), gets a visible `@font-face`, renders in the
+      preview, and ships inside the export (single file per font; weight sets later)
+- [ ] **Project brand + match toggle** — the app remembers the project's brand (family, palette
+      incl. custom, font incl. imported); the wizard preselects it ("Match current project", on
+      by default) so the next graphic automatically belongs to the same package
+- [ ] **Package-consistency foundations** — DESIGN_LANGUAGE addendum with per-family
+      cross-category tokens (shape, type roles, motion timing); shared template assembler
+      extracted from lowerThirds for all categories; continuous-motion machinery (linear loops)
+- [ ] **First wave categories** (each: briefs → workflow build + judge incl. a package-consistency
+      criterion → sweep → screenshot approval, shown next to their lower-third siblings):
+      - [ ] Info cards (3 — one per family)
+      - [ ] End credits (3)
+      - [ ] Tickers (3 — first continuous/linear motion graphics)
+
 ### Template catalog (each category repeats the Phase 2 pattern)
 - [x] Lower thirds (10)
-- [ ] Full/half/custom screen info cards (3)
-- [ ] End credits (3)
+- [ ] Full/half/custom screen info cards (3) — *first wave*
+- [ ] End credits (3) — *first wave*
+- [ ] Tickers (3) — *first wave*
 - [ ] Starting-soon loop with timer (3)
 - [ ] Game show countdown/timer (2)
 - [ ] Scoreboards (2)
-- [ ] Tickers (3)
 - [ ] Infographics (2)
 - [ ] Corner bug / picture placeholder (1)
 - [ ] Game-show quiz graphics with options (1)
+
+### Later (explicitly deferred)
+- [ ] Full package manager (named, saved packages; apply-to-all; share as a file) — the
+      project-brand mechanism above is the light version
 
 ### AI mode (after the wizard works)
 - [ ] Claude-backed `AIProvider` (API key via `.env`, e.g. `VITE_ANTHROPIC_API_KEY`)
