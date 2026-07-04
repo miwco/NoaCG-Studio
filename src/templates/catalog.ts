@@ -10,6 +10,8 @@ import { STARTING_SOON } from './startingSoon';
 import { GAME_TIMERS } from './gameTimers';
 import { SCOREBOARDS } from './scoreboards';
 import { CORNER_BUGS } from './cornerBug';
+import { INFOGRAPHICS } from './infographics';
+import { QUIZ } from './quiz';
 
 export const CATALOG: Partial<Record<TemplateCategory, TemplateVariant[]>> = {
   'lower-third': LOWER_THIRDS,
@@ -20,6 +22,8 @@ export const CATALOG: Partial<Record<TemplateCategory, TemplateVariant[]>> = {
   'game-timer': GAME_TIMERS,
   'scoreboard': SCOREBOARDS,
   'corner-bug': CORNER_BUGS,
+  'infographic': INFOGRAPHICS,
+  'quiz': QUIZ,
 };
 
 export function variantsFor(category: TemplateCategory | null): TemplateVariant[] {

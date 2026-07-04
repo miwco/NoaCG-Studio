@@ -3,12 +3,17 @@ import { CREDITS_PRESETS } from '../../../templates/endCredits/creditsPresets';
 import { TICKER_PRESETS } from '../../../templates/tickers/tickerPresets';
 import { SS_PRESETS } from '../../../templates/startingSoon/ssPresets';
 import { GT_PRESETS } from '../../../templates/gameTimers/gtPresets';
+import { IG_PRESETS } from '../../../templates/infographics/igPresets';
+import { QUIZ_PRESETS } from '../../../templates/quiz/quizPresets';
 import { EASINGS, type EasingId } from '../../../model/easings';
 import type { AnimSpeed, TemplateVariant } from '../../../model/wizard';
 import type { DraftPatch, WizardDraft } from '../draft';
 
 /** Every preset across categories (a variant lists which ones suit it). */
-const ALL_PRESETS = [...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS, ...SS_PRESETS, ...GT_PRESETS];
+const ALL_PRESETS = [
+  ...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS,
+  ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...QUIZ_PRESETS,
+];
 
 interface Props {
   variant: TemplateVariant;
@@ -33,7 +38,7 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
   // clock formats (starting-soon, game timers) have no line-by-line reveal.
   const stepsApply =
     draft.lines.length > 1 &&
-    !['end-credits', 'ticker', 'starting-soon', 'game-timer'].includes(variant.category);
+    !['end-credits', 'ticker', 'starting-soon', 'game-timer', 'infographic', 'quiz'].includes(variant.category);
 
   const standard = EASINGS.filter((e) => e.tag === 'standard');
   const playful = EASINGS.filter((e) => e.tag === 'playful');

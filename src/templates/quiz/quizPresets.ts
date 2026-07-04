@@ -1,0 +1,64 @@
+// Quiz motion presets. Same marked-region + knob contract as every category. The entrance
+// choreographs box → question → answer rows; the answer REVEAL itself is not part of the
+// preset — it lives in the runtime's revealAnswer(), triggered by SPX Continue (next()).
+//
+// The quiz structure contract (see shared.ts):
+//   .qz (root, opacity:0) → .qz-box (the panel) → .qz-mask > #f0 (question)
+//     → .qz-options → four .qz-option rows (.qz-letter chip + #f1..#f4)
+
+import type { AnimPresetId } from '../../model/wizard';
+import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
+
+const MARK_OPEN = '/* == ANIMATION (generated — the Animation panel rewrites this block) == */';
+const MARK_CLOSE = '/* == END ANIMATION == */';
+
+function knobs(cfg: PresetConfig): string {
+  return `var animSpeed = ${cfg.speed};  // 1 = normal · 0.75 = slower · 1.5 = faster
+var easeIn = '${cfg.easeIn}';   // entrance ease — arrives fast, settles smooth
+var easeOut = '${cfg.easeOut}';   // exit ease — starts naturally, leaves quickly`;
+}
+
+export const QUIZ_PRESETS: AnimPreset[] = [
+  {
+    id: 'quiz-reveal' as AnimPresetId,
+    name: 'Quiz reveal',
+    description: 'Box rises in, the question wipes up, the four answers stagger in — Continue reveals the correct one.',
+    autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
+    emit: (cfg) => `${MARK_OPEN}
+// Preset: Quiz reveal — panel in, question mask-up, answers stagger in one by one.
+// The correct-answer highlight is NOT here: next() (SPX Continue) runs revealAnswer().
+${knobs(cfg)}
+
+// buildInTimeline(): choreographed entrance — box, then question, then the answer rows.
+function buildInTimeline() {
+  var tl = gsap.timeline();
+  tl.set('.qz', { opacity: 1 });               // reveal the (CSS-hidden) graphic
+  tl.fromTo('.qz-box',                         // the panel: fade + a small rise
+    { opacity: 0, y: 24 },
+    { opacity: 1, y: 0, duration: 0.5 / animSpeed, ease: easeIn });
+  tl.fromTo('#f0',                             // the question slides up from behind its mask
+    { yPercent: 110 },
+    { yPercent: 0, duration: 0.55 / animSpeed, ease: easeIn }, '-=0.25');
+  tl.fromTo('.qz-option',                      // the four answers walk in one after another
+    { x: -24, opacity: 0 },
+    { x: 0, opacity: 1, duration: 0.45 / animSpeed, ease: easeIn, stagger: 0.1 / animSpeed },
+    '-=0.2');
+  return tl;
+}
+
+// buildOutTimeline(): quick exit — the whole panel lifts away, then the root hides.
+function buildOutTimeline() {
+  var tl = gsap.timeline();
+  tl.to('.qz-box', { opacity: 0, y: -16, duration: 0.35 / animSpeed, ease: easeOut });
+  tl.set('.qz', { opacity: 0 });               // fully hidden; ready to play again
+  return tl;
+}
+${MARK_CLOSE}`,
+  },
+];
+
+export function quizPresetById(id: AnimPresetId): AnimPreset {
+  const p = QUIZ_PRESETS.find((x) => x.id === id);
+  if (!p) throw new Error(`Unknown quiz preset: ${id}`);
+  return p;
+}

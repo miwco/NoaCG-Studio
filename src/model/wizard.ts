@@ -40,9 +40,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'game-timer',    name: 'Game show timer',         plannedCount: 2,  available: true , description: 'Countdowns and clocks for game formats.' },
   { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.' },
   { id: 'ticker',        name: 'Tickers',                 plannedCount: 3,  available: true , description: 'Scrolling news and info strips.' },
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 2,  available: false, description: 'Charts, stats, and data callouts.' },
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 2,  available: true , description: 'Charts, stats, and data callouts.' },
   { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 1,  available: true , description: 'A persistent corner logo (image placeholder).' },
-  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: false, description: 'Game-show questions with answer options.' },
+  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.' },
 ];
 
 // ── Wizard options (every choice the flow collects) ─────────────────────────

@@ -96,7 +96,12 @@ function stop() {
 function next() {}
 
 // Render once on load so the preview shows content before the first update().
-rebuildTicker();
+// This file loads in <head>, before the ticker elements exist — wait for the DOM.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', rebuildTicker);
+} else {
+  rebuildTicker();                // DOM already parsed (e.g. an inline preview build)
+}
 
 ${animationBlock}
 `;

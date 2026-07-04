@@ -8,6 +8,8 @@ import { CREDITS_PRESETS } from '../templates/endCredits/creditsPresets';
 import { TICKER_PRESETS } from '../templates/tickers/tickerPresets';
 import { SS_PRESETS } from '../templates/startingSoon/ssPresets';
 import { GT_PRESETS } from '../templates/gameTimers/gtPresets';
+import { IG_PRESETS } from '../templates/infographics/igPresets';
+import { QUIZ_PRESETS } from '../templates/quiz/quizPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
 
@@ -17,10 +19,15 @@ export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
   if (type === 'ticker') return TICKER_PRESETS;
   if (type === 'starting-soon') return SS_PRESETS;
   if (type === 'countdown') return GT_PRESETS;
+  if (type === 'infographic') return IG_PRESETS;
+  if (type === 'quiz') return QUIZ_PRESETS;
   return ANIM_PRESETS;
 }
 
-const ALL_PRESETS = [...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS, ...SS_PRESETS, ...GT_PRESETS];
+const ALL_PRESETS = [
+  ...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS,
+  ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...QUIZ_PRESETS,
+];
 
 function anyPresetById(id: AnimPresetId): AnimPreset {
   const p = ALL_PRESETS.find((x) => x.id === id);
