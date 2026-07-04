@@ -61,13 +61,14 @@ source of truth, and always exports to a working SPX package.
 - [ ] **First wave categories** (each: briefs → workflow build + judge incl. a package-consistency
       criterion → sweep → screenshot approval, shown next to their lower-third siblings):
       - [ ] Info cards (3 — one per family)
-      - [ ] End credits (3)
+      - [ ] End credits (4): role-above-name roll, title-left/name-right roll, one-pager
+            swap, left-to-right crawl — each ending with a logo + year placeholder
       - [ ] Tickers (3 — first continuous/linear motion graphics)
 
 ### Template catalog (each category repeats the Phase 2 pattern)
 - [x] Lower thirds (10)
 - [ ] Full/half/custom screen info cards (3) — *first wave*
-- [ ] End credits (3) — *first wave*
+- [ ] End credits (4) — *first wave*
 - [ ] Tickers (3) — *first wave*
 - [ ] Starting-soon loop with timer (3)
 - [ ] Game show countdown/timer (2)

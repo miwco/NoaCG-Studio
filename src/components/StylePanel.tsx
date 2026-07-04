@@ -2,7 +2,16 @@ import { useRef, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { getCssVariable, listCssVariables, setCssVariable } from '../blocks/cssVars';
 import { setCssDeclaration } from '../blocks/edit';
-import { FONTS, fontFaceCss, fontStack } from '../model/fonts';
+import {
+  FONTS,
+  customFontFaceCss,
+  customFontStack,
+  familyFromFileName,
+  fontFaceCss,
+  fontFormatForExt,
+  fontStack,
+  registerAppFont,
+} from '../model/fonts';
 import type { Zone9 } from '../model/wizard';
 import { zoneDecls } from '../templates/lowerThirds/shared';
 import { fileToDataUrl, isFontAsset, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
@@ -41,14 +50,17 @@ export default function StylePanel() {
   const addAsset = useTemplateStore((s) => s.addAsset);
   const removeAsset = useTemplateStore((s) => s.removeAsset);
   const fileInput = useRef<HTMLInputElement>(null);
+  const fontInput = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const vars = listCssVariables(template.css);
   const colorVars = vars.filter((v) => looksLikeColor(v.value) || toHex(v.value) !== null);
   const scaleVar = vars.find((v) => v.name === 'scale');
 
-  // The generated @font-face block is swappable only while its marker comment survives.
-  const canSwapFont = template.css.includes('/* Bundled open-source font');
+  // The generated @font-face block is swappable while its marker comment survives
+  // (bundled or imported — both carry a recognizable marker).
+  const FONT_BLOCK_RE = /\/\* (?:Bundled open-source|Imported) font[\s\S]*?\}/;
+  const canSwapFont = FONT_BLOCK_RE.test(template.css);
   const currentFamily = (template.css.match(/font-family:\s*"([^"]+)"/) || [])[1];
 
   // Position editing needs the standard .l3 root.
@@ -59,10 +71,29 @@ export default function StylePanel() {
   const swapFont = (fontId: string) => {
     const font = FONTS.find((f) => f.id === fontId);
     if (!font) return;
-    let css = template.css.replace(/\/\* Bundled open-source font[\s\S]*?\}/, fontFaceCss(font));
+    let css = template.css.replace(FONT_BLOCK_RE, fontFaceCss(font));
     if (getCssVariable(css, 'font-heading')) css = setCssVariable(css, 'font-heading', fontStack(font));
     setCss(css);
     setNote(`Font switched to ${font.family} (see the @font-face rule in the CSS).`);
+  };
+
+  /** Import a font file post-creation: embed as an asset + swap the marked @font-face. */
+  const importFont = async (file: File) => {
+    const dataUrl = await fileToDataUrl(file);
+    const family = familyFromFileName(file.name);
+    const ext = file.name.split('.').pop() ?? 'woff2';
+    const base = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-') || 'font';
+    const custom = {
+      family,
+      format: fontFormatForExt(ext),
+      asset: { path: `fonts/${base}.${ext.toLowerCase()}`, data: dataUrl },
+    };
+    registerAppFont(family, dataUrl);
+    addAsset(custom.asset);
+    let css = template.css.replace(FONT_BLOCK_RE, customFontFaceCss(custom));
+    if (getCssVariable(css, 'font-heading')) css = setCssVariable(css, 'font-heading', customFontStack(custom));
+    setCss(css);
+    setNote(`Imported "${family}" — embedded in the template and its export (see the @font-face rule).`);
   };
 
   const setZone = (zone: Zone9) => {
@@ -160,6 +191,16 @@ export default function StylePanel() {
               </button>
             ))}
           </div>
+          <input
+            ref={fontInput}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf"
+            style={{ display: 'none' }}
+            onChange={(e) => { if (e.target.files?.[0]) void importFont(e.target.files[0]); e.target.value = ''; }}
+          />
+          <button style={{ marginTop: 8 }} onClick={() => fontInput.current?.click()}>
+            ⬆ Import font… <span className="muted">(embedded in template + export)</span>
+          </button>
         </div>
       )}
 

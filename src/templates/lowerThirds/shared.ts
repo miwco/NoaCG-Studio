@@ -14,7 +14,7 @@
 
 import { DEFAULT_SETTINGS, type Resolution, type SpxSettings, type SpxTemplate } from '../../model/types';
 import { definitionScriptBlock } from '../../model/spxDefinition';
-import { fontById, fontFaceCss, fontStack } from '../../model/fonts';
+import { customFontFaceCss, customFontStack, fontById, fontFaceCss, fontStack } from '../../model/fonts';
 import { resolveEasing } from '../../model/easings';
 import {
   fieldsFromOptions,
@@ -126,7 +126,10 @@ function zoneCss(zone: Zone9, nudge: { x: number; y: number }, res: Resolution):
  * Everything generated here follows docs/DESIGN_LANGUAGE.md.
  */
 export function assembleLowerThird(meta: L3Meta, design: L3Design, o: ResolvedOptions): SpxTemplate {
-  const font = fontById(o.fontId);
+  // An imported font (embedded asset) wins over the bundled set.
+  const bundled = fontById(o.fontId);
+  const headingStack = o.customFont ? customFontStack(o.customFont) : fontStack(bundled);
+  const fontFace = o.customFont ? customFontFaceCss(o.customFont) : fontFaceCss(bundled);
   const fields = fieldsFromOptions(o);
 
   const settings: SpxSettings = {
@@ -181,11 +184,11 @@ ${design.html}
   --text-color: ${o.palette.text};          /* primary text */
   --text-dim: ${o.palette.textDim};  /* secondary text (title line) */
   --panel-bg: ${o.palette.panel};  /* the panel behind the text */
-  --font-heading: ${fontStack(font)};  /* the graphic's typeface */
+  --font-heading: ${headingStack};  /* the graphic's typeface */
   --scale: ${scale};                  /* size multiplier (also handles resolution) */
 }
 
-${fontFaceCss(font)}
+${fontFace}
 
 /* Reset and a transparent canvas (broadcast graphics render over video). */
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -279,7 +282,7 @@ ${animationBlock}
     js,
     fields,
     settings,
-    assets: o.importedImages,
+    assets: [...o.importedImages, ...(o.customFont ? [o.customFont.asset] : [])],
     layers: o.lines.map((line, i) => ({
       id: `f${i}`,
       type: 'text' as const,

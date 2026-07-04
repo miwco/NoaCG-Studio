@@ -5,7 +5,7 @@
 
 import type { Resolution, SpxField, SpxTemplate, AssetFile } from './types';
 import { RESOLUTIONS } from './types';
-import type { StyleTag } from './fonts';
+import type { CustomFont, StyleTag } from './fonts';
 import type { EasingId } from './easings';
 
 // ── Categories (the full catalog; only lower-third is implemented so far) ────
@@ -108,6 +108,8 @@ export interface WizardOptions {
   extraFields?: ExtraFieldSpec[];
   palette?: Palette;
   fontId?: string;
+  /** A user-imported font (embedded as an asset) — takes precedence over fontId. */
+  customFont?: CustomFont;
   /** Size multiplier written as --scale (S 0.85 · M 1 · L 1.2). */
   sizeScale?: number;
   zone?: Zone9;
@@ -128,6 +130,7 @@ export interface ResolvedOptions {
   extraFields: ExtraFieldSpec[];
   palette: Palette;
   fontId: string;
+  customFont: CustomFont | null;
   sizeScale: number;
   zone: Zone9;
   nudge: { x: number; y: number };
@@ -194,6 +197,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     extraFields: options.extraFields ?? [],
     palette: options.palette ?? variant.defaultPalette,
     fontId: options.fontId ?? variant.defaultFontId,
+    customFont: options.customFont ?? null,
     sizeScale: options.sizeScale ?? 1,
     zone: options.zone ?? variant.defaultZone,
     nudge: options.nudge ?? { x: 0, y: 0 },

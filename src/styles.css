@@ -441,6 +441,17 @@ kbd {
 .wz-swatch { width: 58px; height: 34px; border-radius: 5px; position: relative; display: block; border: 1px solid rgba(255,255,255,0.12); }
 .wz-swatch-accent { position: absolute; left: 6px; top: 6px; bottom: 6px; width: 8px; border-radius: 2px; }
 .wz-palette-name { font-size: 11px; color: var(--text-dim); }
+.wz-swatch-custom {
+  background:
+    linear-gradient(45deg, #2c333d 25%, transparent 25%),
+    linear-gradient(-45deg, #2c333d 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2c333d 75%),
+    linear-gradient(-45deg, transparent 75%, #2c333d 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0;
+  background-color: #20262e;
+}
+.wz-custom-colors { margin-top: 12px; max-width: 420px; }
 .wz-fonts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .wz-font { display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 12px; border-radius: 8px; }
 .wz-font.selected { border-color: var(--accent); }

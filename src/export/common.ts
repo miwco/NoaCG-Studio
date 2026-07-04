@@ -24,10 +24,14 @@ export function slug(name: string): string {
  * fetch them at export time and write them under fonts/ with the same relative path the CSS uses.
  */
 async function addReferencedFonts(zip: JSZip, template: SpxTemplate): Promise<void> {
-  const refs = [...template.css.matchAll(/url\(["']?fonts\/([\w.-]+\.woff2)["']?\)/gi)].map((m) => m[1]);
+  const refs = [...template.css.matchAll(/url\(["']?fonts\/([\w.-]+\.(?:woff2|woff|ttf|otf))["']?\)/gi)].map((m) => m[1]);
   const unique = [...new Set(refs)];
   if (unique.length === 0) return;
+  // Imported fonts already live in template.assets (written by the assets loop);
+  // only the builder-bundled files need fetching from /fonts.
+  const assetPaths = new Set(template.assets.map((a) => a.path));
   for (const file of unique) {
+    if (assetPaths.has(`fonts/${file}`)) continue;
     try {
       const res = await fetch(`/fonts/${file}`);
       if (!res.ok) continue;

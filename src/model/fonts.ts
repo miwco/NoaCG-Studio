@@ -101,9 +101,64 @@ export function fontStack(font: BundledFont): string {
 /** License note written into exported packages that bundle a font. */
 export const FONT_LICENSE_NOTE = `# Font licenses
 
-The fonts bundled in fonts/ are licensed under the SIL Open Font License 1.1 (OFL).
-They may be bundled, redistributed, and used commercially, but not sold on their own.
+Fonts under fonts/ that came from this builder's bundled set are licensed under the
+SIL Open Font License 1.1 (OFL): they may be bundled, redistributed, and used commercially,
+but not sold on their own. Full license text: https://openfontlicense.org
+(Bundled fonts sourced from Google Fonts, https://fonts.google.com.)
 
-Full license text: https://openfontlicense.org
-Fonts sourced from Google Fonts (https://fonts.google.com).
+Fonts you imported yourself are governed by their own licenses — make sure you have the
+right to embed and distribute them.
 `;
+
+// ── User-imported fonts (embedded in the template + its export) ───────────────
+
+import type { AssetFile } from './types';
+
+export interface CustomFont {
+  /** CSS font-family name (derived from the file name, user-editable). */
+  family: string;
+  /** @font-face format() string: woff2 | woff | truetype | opentype. */
+  format: string;
+  /** The font file as a data-URL asset at fonts/<file> — ships inside the export. */
+  asset: AssetFile;
+}
+
+/** Map a font file extension to its @font-face format() string. */
+export function fontFormatForExt(ext: string): string {
+  return { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' }[ext.toLowerCase()] ?? 'woff2';
+}
+
+/** A readable family name from a font file name ("Neue-Machina_Bold.otf" -> "Neue Machina Bold"). */
+export function familyFromFileName(name: string): string {
+  const base = name.replace(/\.(woff2|woff|ttf|otf)$/i, '');
+  return base.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim() || 'My Font';
+}
+
+/** The visible @font-face rule for an imported font (the file ships with the export). */
+export function customFontFaceCss(font: CustomFont): string {
+  return `/* Imported font (your file — embedded in the template and its export). */
+@font-face {
+  font-family: "${font.family}";
+  src: url("${font.asset.path}") format("${font.format}");
+  font-display: swap;          /* show fallback text until the font loads */
+  /* Single file: the browser synthesizes bold/italic. Add more @font-face rules
+     with their own files for true weights. */
+}`;
+}
+
+export function customFontStack(font: CustomFont): string {
+  return `"${font.family}", Arial, sans-serif`;
+}
+
+/**
+ * Make an imported font renderable in the builder UI itself (pickers, live preview host).
+ * Best-effort; the template preview works regardless because it inlines the asset.
+ */
+export function registerAppFont(family: string, dataUrl: string): void {
+  try {
+    const face = new FontFace(family, `url(${dataUrl})`);
+    void face.load().then((f) => (document as Document & { fonts: FontFaceSet }).fonts.add(f));
+  } catch {
+    /* non-fatal — UI falls back to the default font */
+  }
+}

@@ -153,6 +153,7 @@ export default function CreationWizard() {
                     variantId: v.id,
                     lines: v.suggestedLines.map((l) => ({ ...l })),
                     paletteId: null,
+                    customPalette: null,
                     fontId: null,
                     zone: null,
                     animation: { presetId: null },

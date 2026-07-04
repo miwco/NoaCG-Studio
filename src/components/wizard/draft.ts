@@ -8,6 +8,7 @@ import type {
   AnimSpeed,
   ExtraFieldSpec,
   LineSpec,
+  Palette,
   TemplateCategory,
   TemplateVariant,
   WizardOptions,
@@ -15,6 +16,7 @@ import type {
 } from '../../model/wizard';
 import { paletteById } from '../../model/wizard';
 import type { EasingId } from '../../model/easings';
+import type { CustomFont } from '../../model/fonts';
 
 export interface WizardDraft {
   category: TemplateCategory | null;
@@ -25,7 +27,12 @@ export interface WizardDraft {
   lines: LineSpec[];
   extraFields: ExtraFieldSpec[];
   paletteId: string | null;
+  /** User-defined colors (takes precedence over paletteId when set). */
+  customPalette: Palette | null;
+  /** 'custom' selects the imported font; a bundled id or null otherwise. */
   fontId: string | null;
+  /** The user's imported font, kept even while a bundled font is selected. */
+  customFont: CustomFont | null;
   sizeScale: number;
   zone: Zone9 | null;
   nudge: { x: number; y: number };
@@ -67,7 +74,9 @@ export function initialDraft(): WizardDraft {
     lines: [],
     extraFields: [],
     paletteId: null,
+    customPalette: null,
     fontId: null,
+    customFont: null,
     sizeScale: 1,
     zone: null,
     nudge: { x: 0, y: 0 },
@@ -89,8 +98,9 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
     fps: draft.fps,
     lines: draft.lines.length > 0 ? draft.lines : undefined,
     extraFields: draft.extraFields.length > 0 ? draft.extraFields : undefined,
-    palette: draft.paletteId ? paletteById(draft.paletteId) : undefined,
-    fontId: draft.fontId ?? undefined,
+    palette: draft.customPalette ?? (draft.paletteId ? paletteById(draft.paletteId) : undefined),
+    fontId: draft.fontId && draft.fontId !== 'custom' ? draft.fontId : undefined,
+    customFont: draft.fontId === 'custom' && draft.customFont ? draft.customFont : undefined,
     sizeScale: draft.sizeScale,
     zone: draft.zone ?? undefined,
     nudge: draft.nudge,
