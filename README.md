@@ -19,11 +19,21 @@ npm run build    # typecheck + production build to dist/
 
 - **Choose-first creation wizard** — build a graphic by choosing, then learn from the code it
   writes: Entry (template / **import your own graphics** / blank) → Category → **Template**
-  (10 marketplace-grade lower thirds: 4 minimal · 3 sport · 3 glass, live previews) → **Fields**
-  (1–3 text lines, the design adapts) → **Style** (curated palettes, 6 bundled open-license fonts,
-  size, 9-zone safe-area position) → **Animation** (signature GSAP presets, speed, **12 easing
-  presets**, multi-step reveal), with a persistent live preview (Play/Stop) at every step. Aspect
-  ratio (16:9 / 9:16 / 1:1), resolution, and fps chosen along the way.
+  (live previews) → **Fields** (the design adapts) → **Style** (curated palettes **or your own
+  custom colors**, 6 bundled open-license fonts **or an imported font — embedded in the template
+  and its export**, size, 9-zone safe-area position) → **Animation** (signature GSAP presets,
+  speed, **12 easing presets**, multi-step reveal), with a persistent live preview (Play/Stop) at
+  every step. Aspect ratio (16:9 / 9:16 / 1:1), resolution, and fps chosen along the way.
+- **Template catalog (20 designs)** — **10 lower thirds** (4 minimal · 3 sport · 3 glass),
+  **3 info cards**, **4 end-credit formats** (stacked roll, two-column roll, one-pager swap,
+  horizontal crawl — each ending with a logo + year block, all driven by a simple
+  `Role | Name` text field), and **3 tickers** (seamless marquees + an item flip). Every category
+  ships one design per style family, tuned to read as a **sibling** of its lower-third
+  counterpart.
+- **Broadcast packages** — the app remembers your project's **brand** (style family, palette
+  including custom colors, font including imported ones); the wizard's "Match current project"
+  toggle applies it to every new graphic, so everything you make in a project belongs to one
+  coherent, on-air-ready package.
 - **Live Style & Motion panels after creation** — colors/font/size/position patch the `:root`
   style contract in the visible CSS; animation preset/speed/easing/steps rewrite only a clearly
   marked region of the JS. Your own edits outside the contract are never touched; Ctrl+Z undoes.
@@ -65,9 +75,12 @@ alternative "premium pack" split style.
 ```
 src/
   model/        types, SPXGCTemplateDefinition parse/serialize, wizard data model (categories,
-                variants, palettes), bundled-fonts registry, easing presets
-  templates/    blank + lowerThirds/ (lt01…lt10 wizard variants, shared scaffolding, GSAP
-                animation presets with the marked-region contract)
+                variants, palettes), bundled-fonts registry + font import, project brand,
+                easing presets
+  templates/    blank + the catalog (resolved via catalog.ts): shared/ (generic assembler),
+                lowerThirds/ (lt01…lt10 + the GSAP animation presets with the marked-region
+                contract), infoCards/ (card01…card03), endCredits/ (cr01…cr04 + roll/pager/crawl
+                engines), tickers/ (tk01…tk03 + marquee/flip engines)
   store/        zustand store (template + UI state, undo history)
   preview/      composeDocument (inline CSS + GSAP + JS + assets into the iframe)
   blocks/       hierarchical building-block registry + deterministic edit helpers + :root CSS
@@ -81,7 +94,8 @@ src/
                  SampleDataPanel, BuildingBlockMenu, StylePanel, AnimationPanel, LearnPanel,
                  AIPromptPanel, TemplateValidator, ExportPanel, wizard/ (stepper + live preview)
 public/fonts/   six bundled open-license fonts (ship with every export)
-scripts/        l3-sweep.mjs — variant validation sweep + taste screenshots (Playwright)
+scripts/        l3-sweep.mjs — per-category variant validation sweep + taste screenshots
+                (Playwright; `node scripts/l3-sweep.mjs <shots-dir> <category>`)
 docs/           GOALS.md · DESIGN_LANGUAGE.md · SPX_TEMPLATE_FORMAT.md
 ```
 
@@ -92,5 +106,6 @@ exporters can be added later without touching the UI.
 
 - The Monaco editor loads from a CDN in dev; self-hosting it would make the builder fully offline.
 - AI is a deterministic stub — wiring a real Claude-backed `AIProvider` is a drop-in replacement.
-- Possible next steps: more graphic types (ticker, question/multiple-choice, game-show score),
-  CasparCG + OGraf exporters, and lightweight visual editing on top of the code.
+- Possible next steps: more graphic types (starting-soon loop, game-show timer, scoreboard,
+  infographic, corner bug, quiz), CasparCG + OGraf exporters, and lightweight visual editing on
+  top of the code.

@@ -58,18 +58,18 @@ source of truth, and always exports to a working SPX package.
 - [x] **Package-consistency foundations** — DESIGN_LANGUAGE addendum with per-family
       cross-category tokens (shape, type roles, motion timing); shared template assembler
       extracted from lowerThirds for all categories; continuous-motion machinery (linear loops)
-- [ ] **First wave categories** (each: briefs → workflow build + judge incl. a package-consistency
+- [x] **First wave categories** (each: briefs → workflow build + judge incl. a package-consistency
       criterion → sweep → screenshot approval, shown next to their lower-third siblings):
-      - [ ] Info cards (3 — one per family)
-      - [ ] End credits (4): role-above-name roll, title-left/name-right roll, one-pager
+      - [x] Info cards (3 — one per family)
+      - [x] End credits (4): role-above-name roll, title-left/name-right roll, one-pager
             swap, left-to-right crawl — each ending with a logo + year placeholder
-      - [ ] Tickers (3 — first continuous/linear motion graphics)
+      - [x] Tickers (3 — first continuous/linear motion graphics)
 
 ### Template catalog (each category repeats the Phase 2 pattern)
 - [x] Lower thirds (10)
-- [ ] Full/half/custom screen info cards (3) — *first wave*
-- [ ] End credits (4) — *first wave*
-- [ ] Tickers (3) — *first wave*
+- [x] Full/half/custom screen info cards (3) — *first wave*
+- [x] End credits (4) — *first wave*
+- [x] Tickers (3) — *first wave*
 - [ ] Starting-soon loop with timer (3)
 - [ ] Game show countdown/timer (2)
 - [ ] Scoreboards (2)
@@ -96,6 +96,10 @@ source of truth, and always exports to a working SPX package.
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate
 - [x] Playwright E2E for core UI flows
-- [x] Every new user-facing flow ships with a Playwright spec (wizard suite: 9 specs)
-- [x] Lower thirds ship with a harness sweep (`scripts/l3-sweep.mjs`: validate + runtime ×
-      preset × easing + auto-fit + taste screenshots); repeat per future category
+- [x] Every new user-facing flow ships with a Playwright spec (wizard suite: 9 specs; package
+      suite: 6 specs — custom colors, font import + export, brand match, one create+play spec
+      per new category, ticker loop sanity)
+- [x] Lower thirds ship with a harness sweep (`scripts/l3-sweep.mjs <shots-dir> <category>`:
+      validate + runtime × preset × easing + auto-fit/track checks + taste screenshots);
+      category-aware — run for every category (`lower-third`, `info-card`, `end-credits`,
+      `ticker`)

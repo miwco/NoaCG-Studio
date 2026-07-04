@@ -71,10 +71,25 @@ Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from the real example
 src/
   model/        types.ts (SpxTemplate, Resolution, ASPECTS…), spxDefinition (parse/serialize),
                 wizard.ts (categories, variants, WizardOptions, palettes), fonts.ts (bundled OFL
-                fonts registry), easings.ts (12 easing presets), defaultTemplate (lt01)
-  templates/    blank.ts + lowerThirds/ — the wizard catalog: lt01…lt10 variants built on
-                shared.ts (assembleLowerThird/defineVariant, .l3 structure contract, zoneDecls,
-                auto-fit pattern) and animPresets.ts (marked-region GSAP presets)
+                fonts registry + CustomFont import helpers), brand.ts (ProjectBrand save/load,
+                localStorage 'spx-gfx-brand'), easings.ts (12 easing presets), defaultTemplate
+  templates/    blank.ts + the wizard catalog, resolved through catalog.ts (CATALOG,
+                variantsFor/variantById):
+                  shared/       base.ts (generic assembler pieces: :root vars, zones, auto-fit,
+                                runtime scaffold) + standard.ts (CategorySpec, assembleStandard,
+                                makeDefineVariant) — every category builds on these
+                  lowerThirds/  lt01…lt10 on shared.ts (prefix 'l3') + animPresets.ts (6
+                                marked-region GSAP presets, prefix-parameterized — they animate
+                                any category's .{prefix}-box structure)
+                  infoCards/    card01…card03 (prefix 'card')
+                  endCredits/   cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
+                                credits-pages / credits-crawl); data-driven: a hidden #f0
+                                textarea holds "Role | Name" lines, template JS parses and
+                                rebuilds #credits-track, ends with logo + year (.credits-end)
+                  tickers/      tk01…tk03 (prefix 'ticker') + tickerPresets.ts (ticker-marquee /
+                                ticker-flip); data-driven: #f0 lines → #ticker-track items;
+                                marquee = items rendered twice, slide one set width, linear
+                                repeat:-1 (seamless loop)
   store/        templateStore.ts — zustand; template + UI state; undo history; lastInserted
   preview/      composeDocument.ts — inlines CSS + GSAP + JS + assets into the iframe srcdoc
   blocks/       registry.ts (hierarchical BuildingBlock[]), edit.ts, cssVars.ts (:root vars),
@@ -90,8 +105,9 @@ src/
                  AIPromptPanel, TemplateValidator, ExportPanel,
                  wizard/ (CreationWizard, draft.ts, WizardPreview, MiniPreview, steps/)
 public/fonts/   the 6 bundled woff2 fonts (served at /fonts, copied into exports)
-scripts/        l3-sweep.mjs — Playwright dev tool: validates every variant × preset × easing and
-                captures taste screenshots
+scripts/        l3-sweep.mjs — Playwright dev tool: `node scripts/l3-sweep.mjs <shots-dir>
+                <category>` validates every variant × preset × easing (+ category-specific
+                track/loop checks) and captures taste screenshots
 docs/           GOALS.md (north star + milestones), DESIGN_LANGUAGE.md (taste rulebook),
                 SPX_TEMPLATE_FORMAT.md (SPX contract)
 ```
@@ -104,16 +120,29 @@ complete, commented template. After creation, code is the source of truth and tw
 keep working via deterministic patches:
 
 - **Style panel** — reads/writes the `:root` style contract (`--accent`, `--text-color`,
-  `--text-dim`, `--panel-bg`, `--font-heading`, `--scale`), swaps the marked `@font-face` block,
-  re-anchors `.l3` via `zoneDecls`.
+  `--text-dim`, `--panel-bg`, `--font-heading`, `--scale`), swaps the marked `@font-face` block
+  (bundled or imported), re-anchors the root element via `zoneDecls`, and can import a font
+  post-creation.
 - **Motion panel** — only touches the marked region
   (`/* == ANIMATION … == */ … /* == END ANIMATION == */`) and its three knob variables
-  (`animSpeed`, `easeIn`, `easeOut`). Preset/steps swaps re-emit the region (undoable); user code
-  outside the markers is never modified.
+  (`animSpeed`, `easeIn`, `easeOut`). Presets are per-category (`blocks/animPatch.ts
+  presetsForType`); the root prefix is detected from `class="(\w+)-box"`. Preset/steps swaps
+  re-emit the region (undoable); user code outside the markers is never modified. The steps
+  toggle is hidden for end-credits/tickers (continuous formats).
 
 **Easing doctrine** lives in `model/easings.ts` + DESIGN_LANGUAGE §4: entrances use Out-direction
 curves, exits use In-direction and run faster; Back Out for pops; Bounce/Elastic playful-only;
-Linear only for continuous motion.
+Linear only for continuous motion (credits rolls, ticker marquees — strictly `ease: 'none'`).
+
+**Broadcast packages.** Graphics made in one project must read as siblings — DESIGN_LANGUAGE §8
+holds the per-family cross-category tokens (minimal / sport / glass shape, type, and motion
+values). Two mechanisms enforce it: the **project brand** (`model/brand.ts`, captured on every
+wizard Create; the wizard's "Match current project" toggle re-applies palette + font via
+`brandPatch`) and **sibling judging** (every new category variant is judged against its
+lower-third counterpart). Custom colors enter through the wizard's Custom palette (hex/rgba +
+picker); imported fonts become template assets (`fonts/<file>` data-URL) with a visible
+`@font-face`, are registered via the FontFace API for the builder UI, and ship as real binaries
+in the export.
 
 Key flows and patterns:
 
@@ -147,9 +176,10 @@ Always `npm run build` (typecheck + build) after changes.
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
   iframe to call `update()/play()/stop()`. Good for blocks, templates, validation, and export logic.
 - **Store/state checks:** `import('/src/store/templateStore.ts')` then `useTemplateStore.getState()`.
-- **Template catalog sweep:** `node scripts/l3-sweep.mjs [shots-dir]` (dev server must be running) —
-  validates every lower-third variant × preset × easing (runtime, steps, auto-fit) and captures
-  settled-state taste screenshots. Repeat this pattern for each new template category.
+- **Template catalog sweep:** `node scripts/l3-sweep.mjs <shots-dir> <category>` (dev server must
+  be running; category = `lower-third` | `info-card` | `end-credits` | `ticker`) — validates every
+  variant × preset × easing (runtime, steps, auto-fit, credits/ticker track checks) and captures
+  settled-state taste screenshots. Run it for the affected category after template changes.
 
 **Gotchas:**
 - After many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it if a
@@ -160,6 +190,12 @@ Always `npm run build` (typecheck + build) after changes.
   **restart the dev server and reload** before trusting any eval-based assertion.
 - Monaco isn't fully interactive in a headless preview and GSAP animations don't visibly tick (rAF);
   assert on DOM/state, not screenshots, for those.
+- In Playwright specs, **never clear localStorage via `addInitScript`** — the script also runs in
+  the same-origin srcdoc preview iframe, so every preview rebuild wipes the key (this silently
+  deleted the project brand). Fresh browser contexts already isolate storage per test.
+- The preview rebuilds on a ~350 ms debounce after `applyTemplate` — Playwright specs must wait for
+  it (or for an element unique to the new document) before clicking Play or asserting inside the
+  iframe, or they hit the previous document.
 
 ## Git
 

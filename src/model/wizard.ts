@@ -8,7 +8,7 @@ import { RESOLUTIONS } from './types';
 import type { CustomFont, StyleTag } from './fonts';
 import type { EasingId } from './easings';
 
-// ── Categories (the full catalog; only lower-third is implemented so far) ────
+// ── Categories (the full catalog; lower thirds, info cards, end credits, and tickers live) ──
 
 export interface CategoryInfo {
   id: TemplateCategory;
