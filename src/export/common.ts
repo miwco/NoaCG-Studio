@@ -4,6 +4,7 @@
 import type JSZip from 'jszip';
 import gsapSource from '../assets/gsap.min.js?raw';
 import { parseDataUrl } from '../assets/assetUtils';
+import { FONT_LICENSE_NOTE } from '../model/fonts';
 import type { SpxTemplate } from '../model/types';
 
 /** Slug suitable for a folder/zip name. */
@@ -17,9 +18,31 @@ export function slug(name: string): string {
   );
 }
 
-/** Write the bundled GSAP and any template assets into the zip (relative paths). */
+/**
+ * Bundle any fonts the template references (url("fonts/<file>.woff2") in its CSS) into the zip.
+ * The files live in public/fonts/ (served at /fonts/<file> in dev and production builds), so we
+ * fetch them at export time and write them under fonts/ with the same relative path the CSS uses.
+ */
+async function addReferencedFonts(zip: JSZip, template: SpxTemplate): Promise<void> {
+  const refs = [...template.css.matchAll(/url\(["']?fonts\/([\w.-]+\.woff2)["']?\)/gi)].map((m) => m[1]);
+  const unique = [...new Set(refs)];
+  if (unique.length === 0) return;
+  for (const file of unique) {
+    try {
+      const res = await fetch(`/fonts/${file}`);
+      if (!res.ok) continue;
+      zip.file(`fonts/${file}`, await res.arrayBuffer());
+    } catch {
+      // Font fetch failed (offline dev edge case) — the export still works with fallback fonts.
+    }
+  }
+  zip.file('FONT_LICENSES.md', FONT_LICENSE_NOTE);
+}
+
+/** Write the bundled GSAP, fonts, and any template assets into the zip (relative paths). */
 export async function addSharedAssets(zip: JSZip, template: SpxTemplate): Promise<void> {
   zip.file('js/gsap.min.js', gsapSource);
+  await addReferencedFonts(zip, template);
   for (const asset of template.assets) {
     if (typeof asset.data === 'string') {
       const parsed = parseDataUrl(asset.data);
