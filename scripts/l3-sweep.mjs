@@ -229,7 +229,12 @@ for (const id of ids) {
     f.setAttribute('allowtransparency', 'true');
     await new Promise((res) => { f.onload = res; f.srcdoc = composeDocument(tpl); document.body.appendChild(f); });
     const w = f.contentWindow;
-    w.update(JSON.stringify({ f0: v.suggestedLines[0]?.sample || 'Name', f1: v.suggestedLines[1]?.sample || '' }));
+    // Send every field's own default value — categories with fields beyond f0/f1
+    // (scoreboards, quiz…) must not have them blanked in the taste shot.
+    const data = {};
+    tpl.fields.forEach((fld) => { data[fld.field] = fld.value; });
+    if (v.suggestedLines[0]) data.f0 = v.suggestedLines[0].sample;
+    w.update(JSON.stringify(data));
     w.play();
   }, [id, CATEGORY]);
   await page.waitForTimeout(['end-credits', 'ticker'].includes(CATEGORY) ? 4500 : 1600); // continuous motion needs longer

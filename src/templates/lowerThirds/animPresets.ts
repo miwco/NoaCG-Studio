@@ -197,6 +197,7 @@ function buildInTimeline() {
     { x: 0, opacity: 1, duration: 0.45 / animSpeed, stagger: 0.08 / animSpeed },
     '-=0.35'
   );
+  tl.set('.${cfg.prefix}-box', { clearProps: 'clipPath' });     // drop the clip once open — skewed ::before/::after layers may poke past the box
   return tl;
 }
 
@@ -204,7 +205,10 @@ function buildInTimeline() {
 function buildOutTimeline() {
   var tl = gsap.timeline({ defaults: { ease: easeOut } });
   tl.to([${lineList(cfg.lineCount)}], { opacity: 0, duration: 0.2 / animSpeed });
-  tl.to('.${cfg.prefix}-box', { clipPath: 'inset(0 0 0 100%)', duration: 0.4 / animSpeed }, '-=0.1');
+  tl.fromTo('.${cfg.prefix}-box',
+    { clipPath: 'inset(0 0% 0 0%)' },                // re-arm the clip (the entrance cleared it)…
+    { clipPath: 'inset(0 0% 0 100%)', duration: 0.4 / animSpeed },  // …and wipe closed
+    '-=0.1');
   tl.set('.${cfg.prefix}', { opacity: 0 });                     // fully hidden; ready to play again
   return tl;
 }${stepsBlock(cfg)}
