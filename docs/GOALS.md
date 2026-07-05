@@ -186,12 +186,21 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
   both need server-side API keys / an inbound endpoint; they are Supabase-era features.
 
 ### Era 5 — Server era (one coherent planning round before building)
+**Planning round complete (2026-07-05)** — the binding design doc is **`docs/ERA5_PLAN.md`**
+(8-agent codebase recon + Supabase pattern research). Read it before building any phase.
 Stack: **Supabase** (✓ blessed 2026-07-05) — Google OAuth + email/password + tester
 invites, Postgres for cloud-saved projects/packets/looks, Realtime channels for remote
 control panels, Edge functions for the AI gateway + social ingestion later.
-Repo shape: ✓ decided 2026-07-05 — **private gateway split** (this repo stays the complete
-self-hostable app under **AGPL-3.0**; migrations/edge-functions/billing live in a separate
-private repo; the app reaches it via VITE_AI_PROXY_URL and Supabase URLs).
+Repo shape: ✓ decided 2026-07-05, **refined in the planning round** — **private gateway split**.
+This repo stays the complete self-hostable app under **AGPL-3.0** AND **carries the full
+`supabase/` folder** (config.toml + migrations with schema/RLS/auth-hook + seed + `.env.example`)
+so a self-hoster can `supabase db push` to a working instance; **only** billing / metered
+AI-gateway / social-ingestion edge functions + secrets live in the private repo. The app reaches
+the gateway via VITE_AI_PROXY_URL and Supabase URLs; with those unset it is pure offline mode.
+Build posture: ✓ **code-first, verify later** — each phase ships full code + migrations +
+edge-function stubs with `npm run build` green and the offline path E2E-green; live server paths
+(auth, RLS isolation, realtime) are maintainer-verified against a real Supabase (per-phase
+checklists in ERA5_PLAN.md). A green build never counts as "verified" for a server path.
 
 Why operability is the priority — evidence (2026-07-05): the C-vs-B comparison rig
 (`scripts/ai-compare.mjs`) ran 5 briefs through three arms on one model — raw one-shot,
@@ -202,16 +211,25 @@ verification, and a compounding human-rated corpus. The only generation-side inv
 data justifies is a DETERMINISTIC motion checker (multi-timestamp overlap sampling — animated
 correctness, e.g. karaoke wipes, is the one frontier every arm failed), NOT a "smarter AI" or
 a taste-critic skills layer.
-- [ ] Login (Google + custom) with invite-only beta accounts
-- [ ] Cloud persistence: projects, packets, brand looks per user (localStorage = offline fallback)
-- [ ] Remote realtime control: control panel on any device → channel → renderer subscription
-      block in exported templates
-- [ ] Social ingestion + show chat (public send-in page → moderated queue → graphic)
-- [ ] **User-shared templates** (user idea 2026-07-05): a community section where logged-in
-      users publish templates/packets others can browse and use — needs accounts, storage,
-      and a moderation/quality gate (the validator + bench checks are the automated part)
-- [ ] Payments/subscriptions LAST (long beta first; gateway plan already sketched in the
-      AI-mode discussion: separate private repo, Stripe, metered generations)
+Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
+- [ ] **5.0 Foundations** — `src/backend/` (config feature-detection + StorageProvider interface
+      + LocalStorageProvider), sync metadata (`updatedAt`/soft-delete) on packets/looks/brand with
+      backfill, `supabase/` scaffold (config.toml + migrations + seed), `.env.example` vars. No
+      visible feature; offline behaviour identical. *(in progress)*
+- [ ] **5.1 Auth (invite-only)** — Google OAuth + email/password; AuthGate only when configured +
+      required; allowlist table + Before-User-Created hook; admin invite is a private edge function
+- [ ] **5.2 Cloud persistence** — SupabaseProvider (documents + assets-in-Storage, per-user RLS);
+      local stays live, cloud is a background mirror; first-login 3-way merge + tombstones; the
+      working project becomes a first-class autosaved "project" (localStorage = offline fallback)
+- [ ] **5.3 Remote realtime control** — opt-in default-off export block over a private Realtime
+      channel (room-scoped JWT); controlpanel.html gains an any-device path; validator promotes
+      external-dep to error + whitelists `.supabase.co`
+- [ ] **5.4 Social ingestion + show chat** — public send-in page → moderated queue → graphic
+- [ ] **5.5 User-shared templates** (user idea 2026-07-05): a community section where logged-in
+      users publish templates/packets others browse and use — moderation gate = validator + bench
+      checks (automated) + human review
+- [ ] **5.6 Payments/subscriptions LAST** (long beta first; separate private repo, Stripe, metered
+      generations)
 
 ### Era 6 — WYSIWYG editor
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
