@@ -783,3 +783,45 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 }
 
 .wz-match { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+
+/* ---------- Auth (Era 5.1 — hosted closed beta only) ---------- */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 200;
+  padding: 24px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 26px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+.auth-brand { font-weight: 700; font-size: 18px; letter-spacing: 0.2px; }
+.auth-sub { margin: 6px 0 20px; font-size: 13px; }
+.auth-google { width: 100%; padding: 9px 12px; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--text-dim); font-size: 12px; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.auth-submit { width: 100%; margin-top: 14px; padding: 9px 12px; }
+.auth-error { color: var(--danger); font-size: 12px; margin: 12px 0 0; }
+.auth-note { color: var(--ok); font-size: 12px; margin: 12px 0 0; }
+.auth-toggle {
+  width: 100%;
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  padding: 4px;
+}
+.auth-toggle:hover { background: transparent; border-color: transparent; text-decoration: underline; }
+.auth-status { display: inline-flex; align-items: center; gap: 8px; }
+.auth-status .muted { font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-signout { font-size: 12px; padding: 4px 10px; }

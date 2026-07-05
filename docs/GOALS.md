@@ -212,12 +212,16 @@ data justifies is a DETERMINISTIC motion checker (multi-timestamp overlap sampli
 correctness, e.g. karaoke wipes, is the one frontier every arm failed), NOT a "smarter AI" or
 a taste-critic skills layer.
 Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
-- [ ] **5.0 Foundations** — `src/backend/` (config feature-detection + StorageProvider interface
-      + LocalStorageProvider), sync metadata (`updatedAt`/soft-delete) on packets/looks/brand with
-      backfill, `supabase/` scaffold (config.toml + migrations + seed), `.env.example` vars. No
-      visible feature; offline behaviour identical. *(in progress)*
-- [ ] **5.1 Auth (invite-only)** — Google OAuth + email/password; AuthGate only when configured +
-      required; allowlist table + Before-User-Created hook; admin invite is a private edge function
+- [x] **5.0 Foundations** — `src/backend/` (config feature-detection + StorageProvider interface
+      + LocalStorageProvider), sync metadata (`updatedAt`) on packets/looks/brand with backfill,
+      `supabase/` scaffold (config.toml + migrations + seed), `.env.example` vars. No visible
+      feature; offline behaviour identical (build + offline E2E green).
+- [x] **5.1 Auth (invite-only)** — `@supabase/supabase-js` (code-split; offline never loads it) +
+      client factory; Google OAuth + email/password; AuthGate + LoginScreen + topbar AuthStatus,
+      engaged only when configured + required; the allowlist table + Before-User-Created hook ship
+      in migration 0002; `scripts/allowlist.mjs` admin tool; callClaude attaches the user JWT as a
+      Bearer in proxy mode. *Code-first: offline path E2E-green; live auth/RLS verify pending a
+      real Supabase (checklist in ERA5_PLAN.md).*
 - [ ] **5.2 Cloud persistence** — SupabaseProvider (documents + assets-in-Storage, per-user RLS);
       local stays live, cloud is a background mirror; first-login 3-way merge + tombstones; the
       working project becomes a first-class autosaved "project" (localStorage = offline fallback)

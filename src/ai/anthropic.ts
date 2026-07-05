@@ -7,6 +7,7 @@
 //     server-side (and does auth/quotas). This is the seam a hosted version plugs into.
 
 import { loadAiSettings } from './settings';
+import { getAccessToken } from '../backend/auth';
 
 /** One content block in a user message (text or a base64 image for vision). */
 export type ContentBlock =
@@ -48,7 +49,12 @@ export async function callClaude(req: ClaudeRequest): Promise<unknown> {
 
   const url = s.proxyUrl ? `${s.proxyUrl.replace(/\/$/, '')}/messages` : 'https://api.anthropic.com/v1/messages';
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (!s.proxyUrl) {
+  if (s.proxyUrl) {
+    // Hosted gateway: authorize with the signed-in user's JWT so the gateway can meter per user.
+    // No session (a self-hoster's own proxy, or logged out) → no header, and the proxy still works.
+    const token = await getAccessToken();
+    if (token) headers['authorization'] = `Bearer ${token}`;
+  } else {
     if (!s.apiKey) throw new Error('No API key set. Add one under AI settings (or VITE_ANTHROPIC_API_KEY in .env).');
     headers['x-api-key'] = s.apiKey;
     headers['anthropic-version'] = '2023-06-01';

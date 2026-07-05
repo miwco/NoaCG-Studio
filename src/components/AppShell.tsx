@@ -6,6 +6,7 @@ import PlayoutSimulator from './PlayoutSimulator';
 import SidePanel from './SidePanel';
 import PacketManager from './PacketManager';
 import CreationWizard from './wizard/CreationWizard';
+import AuthStatus from './auth/AuthStatus';
 
 /**
  * Two-pane workspace: code editor (left) and, on the right, the live preview (16:9,
@@ -60,6 +61,8 @@ export default function AppShell() {
         <button onClick={openGallery} title="Start a new project from a template">
           + New project
         </button>
+        {/* Renders nothing offline; "signed in as … · Sign out" in hosted mode. */}
+        <AuthStatus />
       </header>
 
       <div className="workspace">
