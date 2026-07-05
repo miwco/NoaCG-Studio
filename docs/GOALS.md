@@ -158,12 +158,17 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
       standing quality process; re-run the full bank after any system-prompt change.
 
 ### Era 3.5 — Catalog growth from bench winners (user idea 2026-07-05)
-- [ ] The bench's off-catalog graphics become real catalog templates: promote the winners
-      (timing tower, poll donut, donation counter, quote card, schedule board, stock strip,
-      versus card…) into hand-tuned variants via the established brief→build→judge workflow.
-- [ ] Wizard category grouping: **Essentials** (the live-show must-haves: lower thirds,
-      tickers, scoreboards, credits…) vs **Specials/Niche** — so the catalog can grow
-      without burying the basics.
+- [x] Six bench winners promoted into hand-tuned variants (18-agent workflow, judged vs the
+      bench shots + family tokens): **tk04 Index Strip** (ticker), **ig03 Timing Tower**,
+      **ig04 Poll Ring**, **ig05 Rising Total**, **ig06 Schedule Board** (infographics, with
+      two new category presets: ring-fill + rows-cascade, and count-up now fills progress
+      bars), **card04 Quote Card** (info card). Catalog: **36 designs**.
+      DROPPED (user call — don't fight the contract): card05 Face-Off — a full-frame
+      versus layout misfits the info-card auto-fit/steps contract; revisit as its own
+      category if demand shows. Sweep-check gaps fixed along the way (infographics have no
+      mask contract; formatted-number rebinds; coherent steps opt-out via
+      StandardDesign.disableSteps).
+- [x] Wizard category grouping: **Essentials** vs **Specials** (CategoryInfo.group).
 
 ### Era 4 — Local backend (no server, no login)
 - [ ] **Control panels for your graphics** — auto-generate an operator page from the

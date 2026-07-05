@@ -18,6 +18,8 @@ export interface CategoryInfo {
   /** False until the category's variants exist — shown as "coming soon" in the wizard. */
   available: boolean;
   description: string;
+  /** Wizard grouping: the live-show must-haves vs the more specialised graphics. */
+  group: 'essentials' | 'specials';
 }
 
 export type TemplateCategory =
@@ -33,16 +35,18 @@ export type TemplateCategory =
   | 'quiz';
 
 export const CATEGORIES: CategoryInfo[] = [
-  { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 10, available: true,  description: 'Names, titles, and straps over the action.' },
-  { id: 'info-card',     name: 'Info cards',              plannedCount: 3,  available: true,  description: 'Full / half / custom screen information cards.' },
-  { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.' },
-  { id: 'starting-soon', name: 'Starting soon',           plannedCount: 3,  available: true , description: 'Pre-show holding loops with a timer.' },
-  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 2,  available: true , description: 'Countdowns and clocks for game formats.' },
-  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.' },
-  { id: 'ticker',        name: 'Tickers',                 plannedCount: 3,  available: true , description: 'Scrolling news and info strips.' },
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 2,  available: true , description: 'Charts, stats, and data callouts.' },
-  { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 1,  available: true , description: 'A persistent corner logo (image placeholder).' },
-  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.' },
+  // Essentials — the graphics almost every live show needs.
+  { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 10, available: true,  description: 'Names, titles, and straps over the action.', group: 'essentials' },
+  { id: 'ticker',        name: 'Tickers',                 plannedCount: 4,  available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
+  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
+  { id: 'info-card',     name: 'Info cards',              plannedCount: 4,  available: true,  description: 'Full / half screen cards — info and quotes.', group: 'essentials' },
+  { id: 'starting-soon', name: 'Starting soon',           plannedCount: 3,  available: true , description: 'Pre-show holding loops with a timer.', group: 'essentials' },
+  { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.', group: 'essentials' },
+  { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 1,  available: true , description: 'A persistent corner logo (image placeholder).', group: 'essentials' },
+  // Specials — for particular formats and moments.
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 6,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
+  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 2,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
+  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
 ];
 
 // ── Wizard options (every choice the flow collects) ─────────────────────────
@@ -106,6 +110,8 @@ export type AnimPresetId =
   // Infographic motion formats (templates/infographics/igPresets.ts):
   | 'count-up'
   | 'bars-grow'
+  | 'ring-fill'
+  | 'rows-cascade'
   // Quiz format (templates/quiz/quizPresets.ts) — next() reveals the correct answer:
   | 'quiz-reveal';
 

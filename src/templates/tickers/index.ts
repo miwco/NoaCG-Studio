@@ -5,11 +5,13 @@ import type { TemplateVariant } from '../../model/wizard';
 import { tk01 } from './tk01';
 import { tk02 } from './tk02';
 import { tk03 } from './tk03';
+import { tk04 } from './tk04';
 
 export const TICKERS: TemplateVariant[] = [
   tk01, // News Strip — minimal marquee (sibling lt01/lt02)
   tk02, // Volt Rail — sport marquee (sibling lt05/lt06)
   tk03, // Glass Flip — glass item flip (sibling lt08/lt09)
+  tk04, // bench-winner ticker variant
 ];
 
 export function tickerById(id: string): TemplateVariant | undefined {

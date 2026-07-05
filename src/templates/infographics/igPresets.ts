@@ -1,10 +1,14 @@
 // Infographic motion presets. Same marked-region + knob contract as every category.
-// Two data shapes, two presets:
-//   - 'count-up' (stat designs): the big number counts from 0 to its value.
+// One preset per data shape:
+//   - 'count-up' (stat designs): the big number counts from 0 to its value; any
+//     accompanying .ig-bar-fill progress bars grow to their data-value percent.
 //   - 'bars-grow' (bar designs): every .ig-bar-fill grows to its data-value percent.
+//   - 'ring-fill' (ring designs): an SVG ring draws to the stat's percent while it counts.
+//   - 'rows-cascade' (list designs): the rows of #ig-rows rise in one after another.
 //
 // The infographic structure contract (see shared.ts):
 //   .ig (root, opacity:0) → .ig-box (the panel) → stat value #f0 / #ig-bars rows
+//     / .ig-ring-fill circle (pathLength="100") / #ig-rows list rows
 
 import type { AnimPresetId } from '../../model/wizard';
 import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
@@ -64,6 +68,21 @@ function buildInTimeline() {
       },
     }, '-=0.2');                               // start while the panel is still settling
   }
+
+  // Designs may pair progress bars with the counter — grow each one to its data-value
+  // percent after the count. Harmless when the design has none (empty selection).
+  var fills = document.querySelectorAll('.ig-bar-fill');
+  if (fills.length > 0) {
+    tl.fromTo(fills,
+      { width: '0%' },                         // fromTo = replay-safe (always starts empty)
+      {
+        width: function (i, bar) { return bar.getAttribute('data-value') + '%'; },
+        duration: 0.9 / animSpeed,
+        ease: easeIn,
+        stagger: 0.1 / animSpeed,              // bars arrive one after another
+      }
+    );
+  }
   return tl;
 }
 
@@ -119,6 +138,117 @@ function buildOutTimeline() {
   tl.to('.ig-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
   tl.set('.ig', { opacity: 0 });               // fully hidden; ready to play again
   tl.set('#ig-bars .ig-bar-fill', { width: '0%' });  // bars grow again on replay
+  return tl;
+}
+${MARK_CLOSE}`,
+  },
+
+  {
+    id: 'ring-fill' as AnimPresetId,
+    name: 'Ring fill',
+    description: 'The panel rises in, then a ring draws around the stat while the number counts up.',
+    autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
+    emit: (cfg) => `${MARK_OPEN}
+// Preset: Ring fill — reveal the panel, then draw the ring to the stat's percent while
+// the number (#f0) counts up in sync. The ring is an SVG circle with pathLength="100",
+// so dashoffset 100 = empty and dashoffset (100 - percent) = filled to that percent.
+${knobs(cfg)}
+
+// buildInTimeline(): panel fades and rises in, then ring + counter run together.
+function buildInTimeline() {
+  var el = document.getElementById('f0');
+  // Read the target from data-target (update() keeps it current) — NOT from the live
+  // textContent, which is a mid-count value if the last play was interrupted.
+  var text = el.getAttribute('data-target');
+  if (text === null) {                         // first play before any update():
+    text = el.textContent;                     // seed it from the markup once
+    el.setAttribute('data-target', text);
+  }
+  var target = parseFloat(text);               // leading number: "87%" -> 87
+  if (isNaN(target)) target = 0;               // non-numeric text: ring stays empty
+  target = Math.max(0, Math.min(100, target)); // a ring can only show 0–100
+  var suffix = text.replace(/^\\s*[-+]?[0-9.,]+/, ''); // what follows it: '%', ' pts'…
+
+  var tl = gsap.timeline();
+  tl.set('.ig', { opacity: 1 });               // reveal the (CSS-hidden) graphic
+  tl.set('.ig-ring-fill', { strokeDashoffset: 100 });  // replay-safe: always start empty
+  tl.fromTo('.ig-box',
+    { opacity: 0, y: 24 },
+    { opacity: 1, y: 0, duration: 0.6 / animSpeed, ease: easeIn }
+  );
+
+  // Draw the ring and count the number in ONE tween block so they finish together.
+  var counter = { value: 0 };                  // a plain object GSAP can tween
+  tl.set(el, { textContent: '0' + suffix });   // zero AFTER storing the target above
+  tl.to('.ig-ring-fill', {
+    strokeDashoffset: 100 - target,            // dash offset shrinks as the ring fills
+    duration: 1.4 / animSpeed,
+    ease: easeIn,
+  }, '-=0.2');                                 // start while the panel is still settling
+  tl.to(counter, {
+    value: target,
+    duration: 1.4 / animSpeed,
+    ease: easeIn,
+    onUpdate: function () {
+      el.textContent = Math.round(counter.value) + suffix;  // whole numbers read best
+    },
+    onComplete: function () {
+      el.textContent = text;                   // restore the exact text (keeps decimals)
+    },
+  }, '<');                                     // '<' = in sync with the ring draw
+
+  return tl;
+}
+
+// buildOutTimeline(): quick fade away, then reset the ring for the next play().
+function buildOutTimeline() {
+  var tl = gsap.timeline();
+  tl.to('.ig-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
+  tl.set('.ig', { opacity: 0 });               // fully hidden; ready to play again
+  tl.set('.ig-ring-fill', { strokeDashoffset: 100 });  // ring draws again on replay
+  return tl;
+}
+${MARK_CLOSE}`,
+  },
+
+  {
+    id: 'rows-cascade' as AnimPresetId,
+    name: 'Rows cascade',
+    description: 'The panel rises in, then the rows cascade up into place one after another.',
+    autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
+    emit: (cfg) => `${MARK_OPEN}
+// Preset: Rows cascade — reveal the panel, then each row of #ig-rows rises in with a
+// short stagger. fromTo tweens make the cascade replay-safe (rows always start hidden).
+${knobs(cfg)}
+
+// buildInTimeline(): panel fades and rises in, then the rows cascade up one by one.
+function buildInTimeline() {
+  var tl = gsap.timeline();
+  tl.set('.ig', { opacity: 1 });               // reveal the (CSS-hidden) graphic
+  tl.fromTo('.ig-box',
+    { opacity: 0, y: 24 },
+    { opacity: 1, y: 0, duration: 0.6 / animSpeed, ease: easeIn }
+  );
+  // Every direct child of #ig-rows is one row — rise + fade, staggered down the list.
+  tl.fromTo('#ig-rows > *',
+    { y: 16, opacity: 0 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.4 / animSpeed,
+      stagger: 0.08 / animSpeed,               // rows arrive one after another
+      ease: easeIn,
+    },
+    '-=0.2'                                    // start while the panel is still settling
+  );
+  return tl;
+}
+
+// buildOutTimeline(): quick fade away — fromTo entrances make replays reset themselves.
+function buildOutTimeline() {
+  var tl = gsap.timeline();
+  tl.to('.ig-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
+  tl.set('.ig', { opacity: 0 });               // fully hidden; ready to play again
   return tl;
 }
 ${MARK_CLOSE}`,

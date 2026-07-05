@@ -37,6 +37,12 @@ export interface StandardDesign {
    * bound to an <img id="fN"> logo slot. Appended after the line/extra fields.
    */
   extraFields?: SpxField[];
+  /**
+   * Set when steps mode (SPX Continue) is semantically meaningless for the design —
+   * e.g. a versus card whose lines are simultaneous columns, not a reveal sequence.
+   * The wizard's steps flag is then ignored for this variant.
+   */
+  disableSteps?: boolean;
 }
 
 export interface StandardMeta {
@@ -82,7 +88,9 @@ export function assembleStandard(
   const p = cat.prefix;
   const font = resolveHeadingFont(o); // imported font wins over the bundled set
   const fields = [...fieldsFromOptions(o), ...(design.extraFields ?? [])];
-  const settings = baseSettings(meta, o);
+  // A design may opt out of steps mode (see StandardDesign.disableSteps); SPX then
+  // treats the graphic as single-step regardless of the wizard's steps flag.
+  const settings = baseSettings(meta, o, design.disableSteps ? { steps: '1' } : undefined);
   const scale = computeScale(o);
   const maxTextWidth = (cat.maxTextWidth ?? computeMaxTextWidth)(o.resolution);
 
@@ -136,7 +144,7 @@ ${design.css}
     prefix: p,
     lineCount: o.lines.length,
     hasAccent: design.hasAccent,
-    steps: o.animation.steps && o.lines.length > 1,
+    steps: o.animation.steps && o.lines.length > 1 && !design.disableSteps,
     speed: o.animation.speed,
     easeIn: ease.easeIn,
     easeOut: ease.easeOut,

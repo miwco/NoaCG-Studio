@@ -196,6 +196,16 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .simulator .bg-switch { margin-left: auto; display: flex; gap: 4px; }
 
+/* ---------- Category grouping (Essentials / Specials) ---------- */
+.wz-cat-group { margin-bottom: 18px; }
+.wz-cat-group-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
 /* ---------- Describe-it extras (example chips + brainstorm chat) ---------- */
 .wz-example {
   font-size: 12px;

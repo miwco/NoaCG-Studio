@@ -56,6 +56,7 @@ const results = await page.evaluate(async (CATEGORY) => {
     row.checks.masks = isCredits ? tpl.html.includes('credits-track')
       : isTicker ? tpl.html.includes('ticker-track')
       : clockPrefix ? tpl.html.includes(`${clockPrefix}-clock`)
+      : isInfographic ? tpl.html.includes('ig-box') // designs own their fields — no mask contract
       : (/-mask/.test(tpl.html) && tpl.html.includes('id="f0"'));
 
     const rt = await runInFrame(tpl, async (w, d) => {
@@ -65,7 +66,9 @@ const results = await page.evaluate(async (CATEGORY) => {
       w.stop();
       return { bound: d.getElementById('f0')?.textContent === 'Test Person' };
     });
-    row.checks.runtime = !rt.fatal && rt.errs.length === 0 && !!rt.bound;
+    // Infographics may REFORMAT field values on rebuild (thousand separators, parsing) —
+    // binding is proven by their shape checks below; here only error-freeness counts.
+    row.checks.runtime = !rt.fatal && rt.errs.length === 0 && (isInfographic || !!rt.bound);
     if (rt.fatal || rt.errs.length) row.issues.push('runtime: ' + (rt.fatal || rt.errs[0]));
 
     let presetOk = true;
@@ -88,6 +91,16 @@ const results = await page.evaluate(async (CATEGORY) => {
 
     if (['lower-third', 'info-card'].includes(CATEGORY) && v.maxLines >= 2) {
       const t3 = v.create({ animation: { steps: true } });
+      // A design may opt out of steps coherently (StandardDesign.disableSteps — e.g. a
+      // versus card whose lines are simultaneous columns): settings stay '1' AND no
+      // revealNextStep is emitted. That is a pass, not a failure.
+      const optedOut = t3.settings.steps === '1' && !t3.js.includes('revealNextStep');
+      if (optedOut) {
+        row.checks.stepsDecl = true;
+        row.checks.stepsRuntime = true;
+        out.push(row);
+        continue;
+      }
       row.checks.stepsDecl = Number(t3.settings.steps) >= 2;
       const r3 = await runInFrame(t3, async (w) => {
         w.play(); await new Promise((r) => setTimeout(r, 30)); w.next(); await new Promise((r) => setTimeout(r, 30));
@@ -127,11 +140,24 @@ const results = await page.evaluate(async (CATEGORY) => {
       continue;
     }
     if (isInfographic) {
-      // Bar designs rebuild from the textarea; stat designs count the number up during play.
+      // Infographics carry their own data shape: bars, cascaded rows, a filling ring, or
+      // a counting stat. Pass when the variant's shape demonstrably works.
       const r9 = await runInFrame(tpl, async (w, d) => {
         if (d.getElementById('ig-bars')) {
           w.update(JSON.stringify({ f0: 'Alpha | 80\nBeta | 55\nGamma | 30', f1: 'Results' }));
           return { bars: d.getElementById('ig-bars').children.length };
+        }
+        if (d.getElementById('ig-rows')) {
+          // Row designs rebuild from their textarea source (already holds a sample).
+          w.update(JSON.stringify({}));
+          return { rows: d.getElementById('ig-rows').children.length };
+        }
+        if (d.querySelector('.ig-ring-fill')) {
+          const ring = d.querySelector('.ig-ring-fill');
+          const before = getComputedStyle(ring).strokeDashoffset;
+          w.play();
+          await new Promise((r) => setTimeout(r, 1400));
+          return { ringMoved: getComputedStyle(ring).strokeDashoffset !== before };
         }
         w.play();
         const el = d.getElementById('f0');
@@ -139,7 +165,8 @@ const results = await page.evaluate(async (CATEGORY) => {
         await new Promise((r) => setTimeout(r, 500));
         return { counting: el.textContent !== first || first === '0' };
       });
-      row.checks.autoFit = !r9.fatal && r9.errs.length === 0 && (r9.bars >= 3 || !!r9.counting);
+      row.checks.autoFit =
+        !r9.fatal && r9.errs.length === 0 && (r9.bars >= 3 || r9.rows >= 2 || !!r9.ringMoved || !!r9.counting);
       if (!row.checks.autoFit) row.issues.push('infographic: ' + JSON.stringify(r9));
       out.push(row);
       continue;

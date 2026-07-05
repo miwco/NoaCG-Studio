@@ -5,11 +5,13 @@ import type { TemplateVariant } from '../../model/wizard';
 import { card01 } from './card01';
 import { card02 } from './card02';
 import { card03 } from './card03';
+import { card04 } from './card04';
 
 export const INFO_CARDS: TemplateVariant[] = [
   card01, // Hairline Card — minimal, sibling of lt01 Hairline
   card02, // Slab Card — sport, sibling of lt05 Angle Slab
   card03, // Frosted Panel — glass, sibling of lt08 Frosted Card
+  card04, // bench-winner card variant
 ];
 
 export function infoCardById(id: string): TemplateVariant | undefined {
