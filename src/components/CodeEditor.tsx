@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import '../monacoSetup'; // bundled Monaco + workers — no CDN, fully offline
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useTemplateStore, type EditorTab } from '../store/templateStore';
 import { explain, tokenAt } from '../teach/explain';

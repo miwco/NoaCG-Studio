@@ -128,21 +128,18 @@ reworked by a later one. Social/chat features were MOVED from the local era into
 server era (no server = no CORS-free social APIs, no inbound chat endpoint).
 
 ### Era 1 — Hygiene
-- [ ] **Self-hosted Monaco** — bundle the editor like GSAP is bundled; the builder becomes
-      fully offline and immune to CDN failures. (~small)
+- [x] **Self-hosted Monaco** — bundled like GSAP (src/monacoSetup.ts: loader.config +
+      Vite-bundled workers); E2E proves the editor works with every CDN blocked
 
 ### Era 2 — Workflow help: import to start
-Recommended order: HTML first (cheap, big utility), SVG second, Lottie last (biggest).
 - [ ] **Import HTML templates** — a wizard entry accepting an .html file or an SPX-style zip:
       split into HTML/CSS/JS panes, run validation, offer the AI "Make SPX-ready" fix path.
       Imported foreign templates won't have the house contracts (Style/Motion panels degrade
       gracefully — they already detect the contracts); converting to SPX/CasparCG/OGraf then
       comes free via the four export targets.
-- [ ] **Import animated SVG** — inline the SVG, map play()/stop() to CSS-class toggles, bind
-      `<text>` elements to fN fields. Simpler than Lottie; no new runtime dependency.
-- [ ] **Import Lottie** — needs the lottie-web player bundled into exports (like GSAP; the
-      offline pillar allows bundled, not CDN). Map in/out segments to play()/stop(), text
-      layers to fN fields where the AE project used text layers. A mini-project of its own.
+- SKIPPED for now (user decision 2026-07-05): animated-SVG import and Lottie import — revisit
+  after the server era if demand shows. (Lottie = the big one: bundled lottie-web player,
+  segment mapping, text-layer binding.)
 
 ### Era 3 — AI depth
 - [ ] **Chat-first Describe-it** — a short brainstorm conversation (Claude) that helps write
@@ -167,9 +164,10 @@ Recommended order: HTML first (cheap, big utility), SVG second, Lottie last (big
   both need server-side API keys / an inbound endpoint; they are Supabase-era features.
 
 ### Era 5 — Server era (one coherent planning round before building)
-Stack decision (user to bless): **Supabase** — Google OAuth + email/password + tester
-invites, Postgres for cloud-saved projects/packets/looks, Realtime channels for remote
-control panels, Edge functions for the AI gateway + social ingestion later.
+Stack: **Supabase** (✓ blessed by the user 2026-07-05) — Google OAuth + email/password +
+tester invites, Postgres for cloud-saved projects/packets/looks, Realtime channels for
+remote control panels, Edge functions for the AI gateway + social ingestion later.
+Remaining upfront decision at the gate: open-source repo vs private gateway split.
 - [ ] Login (Google + custom) with invite-only beta accounts
 - [ ] Cloud persistence: projects, packets, brand looks per user (localStorage = offline fallback)
 - [ ] Remote realtime control: control panel on any device → channel → renderer subscription

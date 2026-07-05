@@ -122,7 +122,6 @@ exporters can be added later without touching the UI.
 
 ## Notes / future work
 
-- The Monaco editor still loads from a CDN — self-hosting it (Era 1 of the roadmap) makes the
-  builder fully offline.
+- Fully offline: the Monaco editor is bundled with the app (no CDN), like GSAP and the fonts.
 - The road ahead (import-to-start, deeper AI, control panels + live data, accounts/realtime,
   WYSIWYG) lives in [`docs/GOALS.md`](docs/GOALS.md) under "The pipeline".
