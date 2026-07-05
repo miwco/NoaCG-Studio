@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 import { getAiProvider } from '../../../ai';
+import { brainstorm, type ChatMessage } from '../../../ai/brainstorm';
+import { EXAMPLE_PROMPTS } from '../../../ai/examplePrompts';
 import { AI_MODELS, aiConfigured, loadAiSettings, saveAiSettings } from '../../../ai/settings';
 import { fileToDataUrl, uniqueAssetPath } from '../../../assets/assetUtils';
 import type { AssetFile, Resolution, SpxTemplate } from '../../../model/types';
@@ -28,6 +30,33 @@ export default function AiStep({ resolution, fps, brandPalette, result, onResult
   const [summary, setSummary] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // The brainstorm chat (optional): sharpen the idea, then use its BRIEF as the prompt.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatBusy, setChatBusy] = useState(false);
+  const [latestBrief, setLatestBrief] = useState<string | null>(null);
+
+  const sendChat = async () => {
+    const text = chatInput.trim();
+    if (!text || chatBusy) return;
+    const history: ChatMessage[] = [...chat, { role: 'user', text }];
+    setChat(history);
+    setChatInput('');
+    setChatBusy(true);
+    setError(null);
+    try {
+      const { reply, brief } = await brainstorm(history);
+      setChat([...history, { role: 'assistant', text: reply }]);
+      if (brief) setLatestBrief(brief);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setChat(history.slice(0, -1)); // the failed turn goes back into the input
+      setChatInput(text);
+    } finally {
+      setChatBusy(false);
+    }
+  };
 
   const saveSetting = (patch: Parameters<typeof saveAiSettings>[0]) => {
     saveAiSettings(patch);
@@ -83,6 +112,21 @@ export default function AiStep({ resolution, fps, brandPalette, result, onResult
         </p>
       </div>
 
+      {/* Example briefs: show the range (most have no starting template) + teach the shape. */}
+      <div className="row wrap" style={{ marginBottom: 6, gap: 6 }}>
+        {EXAMPLE_PROMPTS.map((ex) => (
+          <button
+            key={ex.label}
+            className="wz-example"
+            title={ex.prompt}
+            onClick={() => setPrompt(ex.prompt)}
+            disabled={!!busy}
+          >
+            {ex.label}
+          </button>
+        ))}
+      </div>
+
       <textarea
         rows={4}
         placeholder={'e.g. "An election results lower third for channel A7: candidate name, party, and a\nvote percentage that counts up. Dark, serious, uses our logo as a small badge on the left."'}
@@ -90,6 +134,49 @@ export default function AiStep({ resolution, fps, brandPalette, result, onResult
         onChange={(e) => setPrompt(e.target.value)}
         disabled={!!busy}
       />
+
+      {/* Brainstorm chat: talk the idea through, then take the refined brief. */}
+      <div style={{ marginTop: 6 }}>
+        <button onClick={() => setChatOpen((o) => !o)} disabled={!aiConfigured(settings)}>
+          🗨 {chatOpen ? 'Hide brainstorm' : 'Brainstorm with AI…'}
+        </button>
+      </div>
+      {chatOpen && (
+        <div className="ai-chat">
+          {chat.length === 0 && (
+            <p className="hint">
+              Not sure what you need yet? Describe the show or the moment ("halftime of a local
+              derby, we need something for substitutions") and work it out together — every reply
+              ends with a ready-to-use brief.
+            </p>
+          )}
+          {chat.map((m, i) => (
+            <div key={i} className={`ai-msg ${m.role}`}>
+              <span>{m.text}</span>
+            </div>
+          ))}
+          {chatBusy && <p className="hint">⏳ Thinking…</p>}
+          {latestBrief && !chatBusy && (
+            <div className="ai-brief">
+              <span className="hint">Current brief: {latestBrief}</span>
+              <button className="primary" onClick={() => { setPrompt(latestBrief); setChatOpen(false); }}>
+                Use as brief
+              </button>
+            </div>
+          )}
+          <div className="row" style={{ marginTop: 6 }}>
+            <input
+              className="grow"
+              placeholder="Talk it through…"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void sendChat(); }}
+              disabled={chatBusy}
+            />
+            <button disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>Send</button>
+          </div>
+        </div>
+      )}
 
       <div className="row wrap" style={{ marginTop: 8, alignItems: 'center' }}>
         <input

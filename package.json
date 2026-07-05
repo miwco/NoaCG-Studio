@@ -1,6 +1,7 @@
 {
   "name": "spx-html-gfx-builder",
   "private": true,
+  "license": "AGPL-3.0-only",
   "version": "0.1.0",
   "type": "module",
   "description": "AI-assisted, code-first SPX HTML broadcast graphics builder",

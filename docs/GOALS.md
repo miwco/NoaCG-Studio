@@ -143,16 +143,15 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
   segment mapping, text-layer binding.)
 
 ### Era 3 — AI depth
-- [ ] **Chat-first Describe-it** — a short brainstorm conversation (Claude) that helps write
-      the brief before generation; the chat's conclusion becomes the prompt.
-- [ ] **Example prompt gallery** — curated prompts with thumbnail results, showing the range
-      (and teaching good briefs).
-- [ ] **"Any graphic" quality push** — the important one: generation must look
-      marketplace-grade for graphics that have NO starting template. Method: reuse the
-      multi-agent judging machinery on PROMPTS — a bank of diverse briefs → real generations
-      → screenshot gallery → judge → iterate the system prompt in claudeProvider.ts.
-      ⚠ Requires a real API key + a blessed token budget (all current AI tests are mocked;
-      prompt-quality work cannot be mocked).
+- [x] **Chat-first Describe-it** — the brainstorm chat (ai/brainstorm.ts): every reply ends
+      with a machine-readable BRIEF line; "Use as brief" fills the prompt box.
+- [x] **Example prompt gallery** — 8 curated off-catalog briefs as one-click chips in the
+      Describe-it step (ai/examplePrompts.ts).
+- [ ] **"Any graphic" quality push** — bench BUILT (`node scripts/ai-bench.mjs [out] [count]`:
+      12 template-less briefs → REAL generations → screenshots → review gallery +
+      results.json), ⚠ awaiting the first run: needs VITE_ANTHROPIC_API_KEY in .env and a
+      token budget nod (~a few cents per brief). Then: user taste review → iterate the
+      system prompt in claudeProvider.ts → re-bench.
 
 ### Era 4 — Local backend (no server, no login)
 - [ ] **Control panels for your graphics** — auto-generate an operator page from the
@@ -165,10 +164,12 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
   both need server-side API keys / an inbound endpoint; they are Supabase-era features.
 
 ### Era 5 — Server era (one coherent planning round before building)
-Stack: **Supabase** (✓ blessed by the user 2026-07-05) — Google OAuth + email/password +
-tester invites, Postgres for cloud-saved projects/packets/looks, Realtime channels for
-remote control panels, Edge functions for the AI gateway + social ingestion later.
-Remaining upfront decision at the gate: open-source repo vs private gateway split.
+Stack: **Supabase** (✓ blessed 2026-07-05) — Google OAuth + email/password + tester
+invites, Postgres for cloud-saved projects/packets/looks, Realtime channels for remote
+control panels, Edge functions for the AI gateway + social ingestion later.
+Repo shape: ✓ decided 2026-07-05 — **private gateway split** (this repo stays the complete
+self-hostable app under **AGPL-3.0**; migrations/edge-functions/billing live in a separate
+private repo; the app reaches it via VITE_AI_PROXY_URL and Supabase URLs).
 - [ ] Login (Google + custom) with invite-only beta accounts
 - [ ] Cloud persistence: projects, packets, brand looks per user (localStorage = offline fallback)
 - [ ] Remote realtime control: control panel on any device → channel → renderer subscription

@@ -124,6 +124,13 @@ docs/           GOALS.md · DESIGN_LANGUAGE.md · SPX_TEMPLATE_FORMAT.md
 Export targets, building blocks, AI, and validation are kept modular so CasparCG and OGraf
 exporters can be added later without touching the UI.
 
+## License
+
+**AGPL-3.0** (see [LICENSE](LICENSE)): the app is free to use, self-host, and modify — but
+anyone offering a modified version as a network service must share their changes under the
+same license. The hosted/paid service (when it exists) keeps its server-side gateway in a
+separate private repository; this repository is the complete self-hostable product.
+
 ## Notes / future work
 
 - Fully offline: the Monaco editor is bundled with the app (no CDN), like GSAP and the fonts.
