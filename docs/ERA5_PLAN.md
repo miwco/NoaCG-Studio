@@ -95,8 +95,10 @@ earlier phase is reworked by a later one.
   contract a cloud backend implements) + `LocalStorageProvider` over the existing keys, sharing one
   serialization codec with `packets.ts`/`brand.ts` (no divergence, no call-site churn - the UI keeps
   its synchronous local API; the async provider is the seam the 5.2 sync engine targets).
-- Sync metadata on the models: `updatedAt` (and soft-delete `deleted?`) added to `Packet`,
-  `SavedLook`, `ProjectBrand`, set on every write, **backfilled on read** for existing records.
+- Sync metadata: `updatedAt` added to `Packet`, `SavedLook`, `ProjectBrand`, set on every write and
+  **backfilled on read** for existing records. The soft-delete `deleted?` tombstone lives on the
+  `StoredRecord` sync contract; its *semantics* (propagating deletes, purge) land with the 5.2 sync
+  engine, so 5.0 ships no dead half-wired field on the domain models.
 - `supabase/` scaffold: `config.toml` (open auth/db/storage; private functions omitted),
   `migrations/` (documents + assets tables, per-user RLS, `updated_at` trigger; allowlist + auth
   hook), `seed.sql`, `README.md`.
