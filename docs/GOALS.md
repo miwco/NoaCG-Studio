@@ -171,12 +171,17 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
 - [x] Wizard category grouping: **Essentials** vs **Specials** (CategoryInfo.group).
 
 ### Era 4 — Local backend (no server, no login)
-- [ ] **Control panels for your graphics** — auto-generate an operator page from the
-      DataFields (number → +1/+2/+3 score buttons, textarea → ticker list editor, filelist →
-      image picker), customizable (quick buttons, hide/reorder); drives the in-app preview
-      live. This is the "custom backend builder" v1.
-- [ ] **Google Sheets as a live source** — exported templates optionally poll a published
-      Sheet (no auth needed) and call update(); ticker/scoreboard follow a spreadsheet edit.
+- [x] **Control panels for your graphics** — ONE modular engine (src/control/controlModel.ts)
+      turns any graphic's SPX DataFields into an operator panel: number → +/− stepper (custom
+      step), textarea → line editor, filelist → image picker, dropdown → select, etc. No
+      per-template code. Lives as the in-app **Control tab** (live-drives the preview) and as a
+      standalone **controlpanel.html** bundled with every SPX export — open the graphic as a
+      browser source and the panel drives it over a BroadcastChannel (a receiver is injected
+      into index.html). Same message shape swaps to a Supabase Realtime channel in Era 5.
+- [x] **Google Sheets as a live source** — the Control panel adds an editable polling block to
+      the template's own JS: fetch a published-CSV sheet every N seconds, map columns → fields
+      (seeded from field titles), call update(). Runs in preview + export. Documented CORS
+      reality: "Publish to web → CSV" links work client-side; the Era-5 gateway proxies the rest.
 - ⚠ MOVED to Era 5: social-media import (X/YouTube comments) and the show-chat website —
   both need server-side API keys / an inbound endpoint; they are Supabase-era features.
 

@@ -19,6 +19,7 @@ const REPLAY_AFTER_REBUILD_MS = 550;
 export default function PlayoutSimulator({ iframeRef }: Props) {
   const sampleData = useTemplateStore((s) => s.sampleData);
   const replayNonce = useTemplateStore((s) => s.replayNonce);
+  const controlCommand = useTemplateStore((s) => s.controlCommand);
 
   const win = (): SpxWindow | null => (iframeRef.current?.contentWindow as SpxWindow) ?? null;
 
@@ -47,6 +48,20 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
     const handle = setTimeout(() => playRef.current(), REPLAY_AFTER_REBUILD_MS);
     return () => clearTimeout(handle);
   }, [replayNonce]);
+
+  // Live control: the Control panel drives the preview immediately (the template hasn't
+  // changed, so no rebuild wait). Read the latest sample data straight from the store.
+  useEffect(() => {
+    if (!controlCommand) return;
+    const w = win();
+    if (!w) return;
+    const data = JSON.stringify(useTemplateStore.getState().sampleData);
+    if (controlCommand.action === 'update') w.update?.(data);
+    else if (controlCommand.action === 'play') { w.update?.(data); w.play?.(); }
+    else if (controlCommand.action === 'stop') w.stop?.();
+    else if (controlCommand.action === 'next') w.next?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlCommand?.nonce]);
 
   return (
     <div className="simulator">

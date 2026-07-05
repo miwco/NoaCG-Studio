@@ -6,17 +6,12 @@ import gsapSource from '../assets/gsap.min.js?raw';
 import { parseDataUrl } from '../assets/assetUtils';
 import { FONT_LICENSE_NOTE } from '../model/fonts';
 import type { SpxTemplate } from '../model/types';
+import { controlChannelName } from '../control/controlModel';
+import { controlReceiverScript } from '../control/receiverScript';
+import { renderControlPanelHtml } from '../control/controlPanelHtml';
 
-/** Slug suitable for a folder/zip name. */
-export function slug(name: string): string {
-  return (
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_+|_+$/g, '') || 'spx_template'
-  );
-}
+export { slug } from './slug';
+import { slug } from './slug';
 
 /**
  * Bundle any fonts the template references (url("fonts/<file>.woff2") in its CSS) into the zip.
@@ -80,6 +75,21 @@ export function ensureExternalRefs(html: string): string {
   return out;
 }
 
+/**
+ * Inject the control receiver before </body> so a standalone control panel on the same
+ * machine can drive the graphic live (BroadcastChannel). SPX/CasparCG still call the
+ * globals directly; this only adds a listener. No-op when there is no </body>.
+ */
+export function injectControlReceiver(html: string, template: SpxTemplate): string {
+  const block = controlReceiverScript(template.name, controlChannelName(template.name));
+  return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}\n</body>`) : html + block;
+}
+
+/** Bundle the generated controlpanel.html next to the graphic. */
+export function addControlPanel(root: JSZip, template: SpxTemplate): void {
+  root.file('controlpanel.html', renderControlPanelHtml(template));
+}
+
 /** A short README explaining how to deploy the package in SPX. */
 export function spxReadme(template: SpxTemplate, mode: string): string {
   return `# ${template.name} — SPX template (${mode})
@@ -101,9 +111,16 @@ Then select the template in an SPX rundown.
 - css/template.css  Styles.
 - js/template.js    Runtime: play(), stop(), update(data).
 - js/gsap.min.js    Bundled GSAP animation library (no internet required).
-${template.assets.length ? '- images/...        Images used by the template (image fields list this folder).\n' : ''}
+${template.assets.length ? '- images/...        Images used by the template (image fields list this folder).\n' : ''}- controlpanel.html An operator page auto-built from the fields (see below).
+
 ## Data fields
 ${template.fields.map((f) => `- ${f.field} (${f.ftype}): ${f.title}`).join('\n') || '- (none)'}
+
+## Operating it live (controlpanel.html)
+Run index.html as a browser source (OBS, vMix, a browser tab), then open controlpanel.html
+in another tab of the SAME browser. Edits and the Play/Stop/Update/Next buttons drive the
+graphic live over a BroadcastChannel — no server needed. (In an SPX rundown you drive the
+template the usual way; the control panel is an alternative for browser-source workflows.)
 
 All paths are relative, so the package is plug-and-play.
 `;

@@ -37,6 +37,9 @@ export function importHtmlTemplate(fileName: string, raw: string, extra?: { css?
   html = html.replace(/[ \t]*<script\b([^>]*)>([\s\S]*?)<\/script>\s*/gi, (full: string, attrs: string, body: string) => {
     if (/\bsrc\s*=/i.test(attrs)) return full; // external reference — keep in place
     if (/SPXGCTemplateDefinition/.test(body)) return full;
+    // Our own injected control receiver is re-added at export time — drop it on import so
+    // a round-trip stays faithful (same as we drop a bundled GSAP blob below).
+    if (/spx-control-receiver/.test(attrs)) return '';
     const trimmed = body.trim();
     if (!trimmed) return '';
     if (trimmed.length > 12000 && /gsap|GreenSock/i.test(trimmed.slice(0, 400))) return '';

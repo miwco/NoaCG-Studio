@@ -52,6 +52,12 @@ npm run build    # typecheck + production build to dist/
 - **Playout simulator** — Play / Stop / Update / Next call the template's SPX runtime functions.
 - **Sample data panel** — edit the values sent to `update(data)`, one control per field `ftype`,
   and **add new fields** (text / long text / number / image) straight into the SPX definition.
+- **Control panel** (operator view) — one modular engine turns a graphic's fields into an
+  operator UI (number → +/− stepper, textarea → line editor, image → picker), no per-template
+  code. It live-drives the preview, and a self-contained **controlpanel.html** ships with every
+  SPX export: run the graphic as a browser source and operate it from another tab over a
+  BroadcastChannel. It also adds a **Google Sheets live source** — an editable polling block that
+  pulls a published CSV into the fields on an interval.
 - **Import existing templates** — drop an `.html` file or an SPX-style `.zip` into the wizard's
   Import entry: it opens as editable code (styles/scripts split into the panes, assets pulled
   in), validation shows what needs fixing, and the export targets turn it into SPX, CasparCG,

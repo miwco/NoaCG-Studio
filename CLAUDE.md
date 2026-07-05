@@ -127,12 +127,19 @@ src/
                 settings.ts (localStorage + .env: key, model), index.ts (getAiProvider —
                 Claude when configured, stub otherwise), stubProvider.ts, presets.ts
   validation/   validateTemplate.ts — runs before export and on AI output
-  export/       registry.ts (4 targets), targets/spxStarter.ts (+ buildStarterInto, reused by
-                packets), targets/spxPack.ts, targets/casparcg.ts (single self-contained html +
-                JSON/XML data shim), targets/ograf.ts (EBU OGraf v1: manifest from DataFields +
-                graphic.mjs Web Component embedding the runtime; AMD-guarded gsap loader),
-                packetExport.ts (whole packet -> one zip, a Starter folder per graphic),
-                common.ts (slug, addSharedAssets, addReferencedFonts, FONT_LICENSES.md)
+  control/      the modular control-panel engine (Era 4): controlModel.ts (fields → operator
+                control descriptors by ftype, ONE generator, no per-template code;
+                controlChannelName + ControlMessage protocol), controlPanelHtml.ts (the
+                standalone controlpanel.html, same descriptors, inline), receiverScript.ts
+                (BroadcastChannel listener injected into exported index.html), liveData.ts
+                (editable published-CSV → update() polling block appended to template.js)
+  export/       registry.ts (4 targets), slug.ts (shared, avoids a cycle), targets/spxStarter.ts
+                (+ buildStarterInto, reused by packets), targets/spxPack.ts, targets/casparcg.ts
+                (single self-contained html + JSON/XML data shim), targets/ograf.ts (EBU OGraf
+                v1: manifest from DataFields + graphic.mjs Web Component; AMD-guarded gsap
+                loader), packetExport.ts (whole packet -> one zip, a Starter folder per graphic),
+                common.ts (addSharedAssets, addReferencedFonts, injectControlReceiver +
+                addControlPanel for SPX exports, FONT_LICENSES.md)
   teach/        knowledge.ts + explain.ts — surfaced as Monaco HOVER tooltips in the editor
                 (registered in CodeEditor.tsx; there is no Learn tab), cssReference.ts
   assets/       gsap.min.js (bundled), assetUtils.ts (data-URL assets)
@@ -140,10 +147,12 @@ src/
                  right — the stage's aspect-ratio comes from the template resolution),
                  CodeEditor (Monaco + change-highlight decorations + hover explanations),
                  PreviewFrame, CanvasGuides, PlayoutSimulator (auto-replays on replayNonce),
-                 SidePanel (five tabs: Data / Style / Motion / AI / Export),
-                 SampleDataPanel (sample values + add-field), StylePanel, AnimationPanel
-                 (In/Out/Both phase control), AIPromptPanel, ExportPanel (validation inline),
-                 PacketManager (📦 topbar modal: packets + brand looks),
+                 SidePanel (six tabs: Data / Control / Style / Motion / AI / Export),
+                 SampleDataPanel (sample values + add-field), ControlPanel (operator view from
+                 control/ engine; live-drives the preview via store.sendControl → simulator;
+                 downloads controlpanel.html; adds the Google-Sheets live-data block),
+                 StylePanel, AnimationPanel (In/Out/Both phase control), AIPromptPanel,
+                 ExportPanel (validation inline), PacketManager (📦 topbar modal),
                  wizard/ (CreationWizard, draft.ts, WizardPreview, MiniPreview, steps/)
 public/fonts/   the 6 bundled woff2 fonts (served at /fonts, copied into exports)
 scripts/        l3-sweep.mjs — Playwright dev tool: `node scripts/l3-sweep.mjs <shots-dir>

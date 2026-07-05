@@ -196,6 +196,14 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .simulator .bg-switch { margin-left: auto; display: flex; gap: 4px; }
 
+/* ---------- Control panel (operator view) ---------- */
+.ctl-step { width: 40px; flex: 0 0 auto; font-weight: 700; font-size: 16px; }
+.ctl-num { text-align: center; }
+.ctl-lines { display: flex; flex-direction: column; gap: 5px; }
+.ctl-lines .row > input { flex: 1; }
+.ctl-actions { display: flex; gap: 6px; margin-top: 14px; }
+.ctl-actions .primary { flex: 1; }
+
 /* ---------- Category grouping (Essentials / Specials) ---------- */
 .wz-cat-group { margin-bottom: 18px; }
 .wz-cat-group-title {

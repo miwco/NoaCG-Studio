@@ -29,8 +29,8 @@ test('layout: code pane left, preview above the tool tabs on the right', async (
   // …and the preview sits ABOVE the panel tabs in the same column.
   expect(stage!.y + stage!.height).toBeLessThanOrEqual(tabs!.y + 2);
   expect(Math.abs(stage!.x - tabs!.x)).toBeLessThan(40);
-  // The five focused tabs — Blocks/Learn/Validate are gone.
-  await expect(page.locator('.panel-tabs .tab')).toHaveText(['Data', 'Style', 'Motion', 'AI', 'Export']);
+  // The focused tabs — Blocks/Learn/Validate are gone; Control is the operator view.
+  await expect(page.locator('.panel-tabs .tab')).toHaveText(['Data', 'Control', 'Style', 'Motion', 'AI', 'Export']);
 });
 
 test('export: validation shows inline and gates the download on a broken template', async ({ page }) => {

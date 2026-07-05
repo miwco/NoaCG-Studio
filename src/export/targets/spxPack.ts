@@ -3,7 +3,7 @@
 // only the packaging differs. The template.js still owns play()/stop()/update().
 
 import JSZip from 'jszip';
-import { addSharedAssets, ensureExternalRefs, slug, spxReadme } from '../common';
+import { addControlPanel, addSharedAssets, ensureExternalRefs, injectControlReceiver, slug, spxReadme } from '../common';
 import type { ExportTarget } from '../registry';
 
 // Helper interface added alongside (not replacing) the template's own runtime functions.
@@ -59,7 +59,7 @@ export const spxPack: ExportTarget = {
     const zip = new JSZip();
     // One project folder at the zip root — extracts as [TemplatesFolder]/your_project/…
     const root = zip.folder(slug(template.name))!;
-    const html = injectInterfaceRef(ensureExternalRefs(template.html));
+    const html = injectControlReceiver(injectInterfaceRef(ensureExternalRefs(template.html)), template);
     root.file('index.html', html);
     root.file('css/template.css', template.css);
     root.file('js/template.js', template.js);
@@ -69,6 +69,7 @@ export const spxPack: ExportTarget = {
       'template.meta.json',
       JSON.stringify({ name: template.name, settings: template.settings, fields: template.fields }, null, 2),
     );
+    addControlPanel(root, template); // operator page beside the graphic
     await addSharedAssets(root, template);
     return zip;
   },

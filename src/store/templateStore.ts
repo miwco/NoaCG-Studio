@@ -10,7 +10,10 @@ import type { ValidationResult } from '../validation/validateTemplate';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'style' | 'animation' | 'ai' | 'export';
+export type SidePanel = 'data' | 'control' | 'style' | 'animation' | 'ai' | 'export';
+
+/** A live playout action the Control panel asks the simulator to run on the preview. */
+export type PlayoutAction = 'update' | 'play' | 'stop' | 'next';
 
 /** What the cursor is currently on in the code editor (drives the hover explanations). */
 export interface EditorContext {
@@ -80,6 +83,8 @@ interface TemplateState {
   lastChange: LastChange | null;
   /** Bumped by panels after an apply to make the playout simulator replay the graphic. */
   replayNonce: number;
+  /** The Control panel's latest live command (executed immediately by the simulator). */
+  controlCommand: { action: PlayoutAction; nonce: number } | null;
 
   setActiveTab: (tab: EditorTab) => void;
   setPreviewBg: (bg: PreviewBg) => void;
@@ -97,6 +102,8 @@ interface TemplateState {
   undo: () => void;
   /** Ask the playout simulator to replay the graphic (used after Motion applies). */
   requestReplay: () => void;
+  /** Drive the live preview from the Control panel (update/play/stop/next), immediately. */
+  sendControl: (action: PlayoutAction) => void;
   resetToDefault: () => void;
 
   setSampleValue: (field: string, value: string) => void;
@@ -149,6 +156,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   history: [],
   lastChange: null,
   replayNonce: 0,
+  controlCommand: null,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPreviewBg: (bg) => set({ previewBg: bg }),
@@ -209,6 +217,8 @@ export const useTemplateStore = create<TemplateState>((set) => ({
     }),
 
   requestReplay: () => set((s) => ({ replayNonce: s.replayNonce + 1 })),
+
+  sendControl: (action) => set((s) => ({ controlCommand: { action, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
 
   resetToDefault: () =>
     set(() => {
