@@ -192,6 +192,16 @@ control panels, Edge functions for the AI gateway + social ingestion later.
 Repo shape: ✓ decided 2026-07-05 — **private gateway split** (this repo stays the complete
 self-hostable app under **AGPL-3.0**; migrations/edge-functions/billing live in a separate
 private repo; the app reaches it via VITE_AI_PROXY_URL and Supabase URLs).
+
+Why operability is the priority — evidence (2026-07-05): the C-vs-B comparison rig
+(`scripts/ai-compare.mjs`) ran 5 briefs through three arms on one model — raw one-shot,
+raw + self-critique iteration, and our pipeline. On single-graphic quality the pipeline does
+NOT beat a competent iterator (C ≈ B, occasionally worse). So the generation model is not the
+moat; this era is — operability (control panels, live data, playout export, packets),
+verification, and a compounding human-rated corpus. The only generation-side investment the
+data justifies is a DETERMINISTIC motion checker (multi-timestamp overlap sampling — animated
+correctness, e.g. karaoke wipes, is the one frontier every arm failed), NOT a "smarter AI" or
+a taste-critic skills layer.
 - [ ] Login (Google + custom) with invite-only beta accounts
 - [ ] Cloud persistence: projects, packets, brand looks per user (localStorage = offline fallback)
 - [ ] Remote realtime control: control panel on any device → channel → renderer subscription
