@@ -228,6 +228,50 @@ async function generateArms(brief, roundsB) {
   );
 }
 
+// Neutral text-overlap detector, run inside the iframe. Two kinds of collision:
+//   - DIFFERENT text overlapping (>15% of the smaller box) — always a bug.
+//   - SAME text overlapping but NOT near-coincident — a MISALIGNED layered wipe/glow.
+// A perfectly-coincident duplicate (a real karaoke wipe over its base, a glow copy) is
+// intentional and allowed; an offset one is the exact bug the old whitelist hid.
+const OVERLAP_FN = () => {
+  const host = document.getElementById('shot');
+  if (!host || !host.contentDocument) return [];
+  const doc = host.contentDocument;
+  const texts = [...doc.querySelectorAll('body *')].filter((el) => {
+    const cs = doc.defaultView.getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) return false;
+    return [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+  });
+  const label = (el) => `<${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> "${el.textContent.trim().slice(0, 24)}"`;
+  const found = [];
+  for (let i = 0; i < texts.length; i++) {
+    for (let j = i + 1; j < texts.length; j++) {
+      const a = texts[i]; const b = texts[j];
+      if (a.contains(b) || b.contains(a)) continue;
+      const ra = a.getBoundingClientRect(); const rb = b.getBoundingClientRect();
+      const ix = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+      const iy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+      if (ix <= 4 || iy <= 4) continue;
+      const inter = ix * iy;
+      const areaA = ra.width * ra.height, areaB = rb.width * rb.height;
+      const smaller = Math.min(areaA, areaB);
+      if (smaller <= 0) continue;
+      if (a.textContent.trim() === b.textContent.trim()) {
+        // Intentional layer ONLY when the two copies are near-coincident (IoU high AND
+        // centres within a few px). Offset identical text = a misaligned wipe = a bug.
+        const union = areaA + areaB - inter;
+        const iou = union > 0 ? inter / union : 0;
+        const dx = Math.abs((ra.left + ra.right) / 2 - (rb.left + rb.right) / 2);
+        const dy = Math.abs((ra.top + ra.bottom) / 2 - (rb.top + rb.bottom) / 2);
+        if (!(iou > 0.8 && dx < 6 && dy < 6)) found.push(`${label(a)} ⇄ ${label(b)} (misaligned)`);
+      } else if (inter / smaller > 0.15) {
+        found.push(`${label(a)} ⇄ ${label(b)}`);
+      }
+    }
+  }
+  return found;
+};
+
 // ── Render one arm's template and capture screenshot + neutral overlap check ──
 async function shoot(arm, id, tpl) {
   await page.evaluate(async ({ template }) => {
@@ -250,38 +294,14 @@ async function shoot(arm, id, tpl) {
       // A broken arm may throw on play() — the screenshot still shows what it produced.
     }
   }, { template: { ...tpl, resolution: { width: 1920, height: 1080, label: '1080p' }, fps: 25, fields: [], settings: {}, assets: [], layers: [] } });
-  await page.waitForTimeout(2200);
+  // Sample DURING motion (mid-animation) and again once settled — a transient collision
+  // while bars grow / rows cascade / a lyric wipes is just as real as one in the final frame.
+  await page.waitForTimeout(1000);
+  const mid = await page.evaluate(OVERLAP_FN);
+  await page.waitForTimeout(1600); // ~2.6s total after play()
   await page.screenshot({ path: `${OUT}/${id}-${arm}.png` });
-
-  const overlaps = await page.evaluate(() => {
-    const host = document.getElementById('shot');
-    if (!host || !host.contentDocument) return [];
-    const doc = host.contentDocument;
-    const texts = [...doc.querySelectorAll('body *')].filter((el) => {
-      const cs = doc.defaultView.getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) return false;
-      return [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-    });
-    const label = (el) => `<${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}> "${el.textContent.trim().slice(0, 24)}"`;
-    const found = [];
-    for (let i = 0; i < texts.length; i++) {
-      for (let j = i + 1; j < texts.length; j++) {
-        const a = texts[i]; const b = texts[j];
-        if (a.contains(b) || b.contains(a)) continue;
-        if (a.textContent.trim() === b.textContent.trim()) continue;
-        const ra = a.getBoundingClientRect(); const rb = b.getBoundingClientRect();
-        const ix = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
-        const iy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-        if (ix > 4 && iy > 4) {
-          const inter = ix * iy;
-          const smaller = Math.min(ra.width * ra.height, rb.width * rb.height);
-          if (smaller > 0 && inter / smaller > 0.15) found.push(`${label(a)} ⇄ ${label(b)}`);
-        }
-      }
-    }
-    return found.slice(0, 5);
-  });
-  return overlaps;
+  const late = await page.evaluate(OVERLAP_FN);
+  return [...new Set([...mid, ...late])].slice(0, 5);
 }
 
 // ── Run ──────────────────────────────────────────────────────────────────────
