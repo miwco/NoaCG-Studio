@@ -18,6 +18,10 @@ export interface SavedProject {
 
 const STORAGE_KEY = 'spx-gfx-project';
 
+function notifyDataChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('spx-data-changed'));
+}
+
 export function loadProject(): SavedProject | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -44,14 +48,26 @@ export function saveProject(template: SpxTemplate): void {
       template,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rec));
+    notifyDataChanged();
   } catch {
     // Storage full or unavailable — non-fatal.
+  }
+}
+
+/** Write a whole SavedProject to the slot (used by the sync engine's put('project') on a pull). */
+export function upsertProject(project: SavedProject): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+    notifyDataChanged();
+  } catch {
+    // Non-fatal.
   }
 }
 
 export function clearProject(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    notifyDataChanged();
   } catch {
     // Non-fatal.
   }

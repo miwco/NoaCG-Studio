@@ -27,11 +27,16 @@ export interface ProjectBrand {
 
 const STORAGE_KEY = 'spx-gfx-brand';
 
+function notifyDataChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('spx-data-changed'));
+}
+
 export function saveBrand(brand: ProjectBrand): void {
   try {
     // Stamp the write time so cloud sync (Era 5) can resolve which side is newer.
     const stamped: ProjectBrand = { ...brand, updatedAt: new Date().toISOString() };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
+    notifyDataChanged();
   } catch {
     // Storage full or unavailable — the brand just won't persist. Non-fatal.
   }
@@ -60,6 +65,7 @@ export function loadBrand(): ProjectBrand | null {
 export function clearBrand(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    notifyDataChanged();
   } catch {
     // Non-fatal — nothing to remove or storage unavailable.
   }

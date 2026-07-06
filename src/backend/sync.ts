@@ -11,12 +11,10 @@
 // deleted=true) and win/lose by the same timestamp rule, so a delete propagates instead of the row
 // resurrecting.
 
-import type { StorageProvider, StoredRecord, SyncKind } from './storage';
+import { isSingleton, type StorageProvider, type StoredRecord, type SyncKind } from './storage';
 import { uuid } from '../model/id';
 
-/** Only packets and looks sync in 5.2a. Brand (a singleton with cross-device identity subtleties)
- *  and the working project arrive in 5.2b. */
-export const SYNC_KINDS: SyncKind[] = ['packet', 'look'];
+export const SYNC_KINDS: SyncKind[] = ['packet', 'look', 'brand', 'project'];
 
 const SYNC_META_KEY = 'spx-gfx-sync';
 const EPOCH = '1970-01-01T00:00:00.000Z';
@@ -36,7 +34,10 @@ export interface SyncResult {
   conflicts: number;
 }
 
-const recordKey = (r: StoredRecord) => `${r.kind}:${r.id}`;
+// Packets/looks reconcile by id; singletons (brand, project) reconcile by KIND — there is at most
+// one per user, and its id differs between local (a local uuid) and cloud (a per-user deterministic
+// uuid), so matching by kind is what pairs them.
+const recordKey = (r: StoredRecord) => (isSingleton(r.kind) ? r.kind : `${r.kind}:${r.id}`);
 
 /**
  * Pure reconciliation. `since` is when this device last synced; a record whose BOTH sides changed
@@ -67,7 +68,9 @@ export function reconcile(local: StoredRecord[], remote: StoredRecord[], since: 
     if (!l || !r) continue;
     if (l.updatedAt === r.updatedAt) continue; // same version — already in sync
 
-    const bothChanged = !firstSync && l.updatedAt > since && r.updatedAt > since;
+    // Singletons can't have a "(conflicted copy)" (there's only ever one), so they're always plain
+    // last-write-wins — a concurrent edit just means the newer device wins.
+    const bothChanged = !firstSync && !isSingleton(l.kind) && l.updatedAt > since && r.updatedAt > since;
     if (bothChanged) {
       // True conflict: remote wins as canonical; keep the local edit as a copy (but never copy a
       // tombstone — a "conflicted copy" of a delete is meaningless, so the remote edit just wins).

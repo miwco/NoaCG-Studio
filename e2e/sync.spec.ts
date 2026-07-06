@@ -75,6 +75,12 @@ test('sync engine: reconcile + runSync behave correctly', async ({ page }) => {
     p = reconcile([rec('f2', T1)], [rec('f2', T2)], EPOCH);
     check('first-sync no spurious conflict', p.toLocal.length === 1 && p.conflicts.length === 0);
 
+    // 6c. singleton (brand): local id 'default' vs remote id 'cloud' — matched by KIND (not id), and
+    //     a concurrent edit is plain LWW, never a "(conflicted copy)" (there can only be one).
+    const brandRec = (id: string, t: string) => ({ kind: 'brand' as const, id, updatedAt: t, body: { name: 'B', updatedAt: t } });
+    p = reconcile([brandRec('default', T1)], [brandRec('cloud', T2)], T0);
+    check('singleton matched by kind, LWW no conflict', p.toLocal.length === 1 && p.toRemote.length === 0 && p.conflicts.length === 0);
+
     // 7. delete propagates: local tombstone newer than remote live record → push the tombstone
     p = reconcile([rec('g', T2, { deleted: true })], [rec('g', T1)], T1);
     check('delete propagates', p.toRemote.length === 1 && p.toRemote[0].deleted === true);
@@ -104,7 +110,7 @@ test('sync engine: reconcile + runSync behave correctly', async ({ page }) => {
 
   const failures = results.filter((r) => !r.pass);
   expect(failures, JSON.stringify(failures, null, 2)).toEqual([]);
-  expect(results.length).toBe(12);
+  expect(results.length).toBe(13);
 });
 
 test('asset externalization: round-trips through a Storage stub', async ({ page }) => {

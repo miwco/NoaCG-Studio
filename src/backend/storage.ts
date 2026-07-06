@@ -24,9 +24,17 @@ import {
   type SavedLook,
 } from '../model/packets';
 import { loadBrand, saveBrand, clearBrand, type ProjectBrand } from '../model/brand';
+import { loadProject, upsertProject, clearProject, type SavedProject } from '../model/project';
 
-/** The kinds of records that sync. The working document ('project') arrives in Era 5.2. */
-export type SyncKind = 'packet' | 'look' | 'brand';
+/** The kinds of records that sync. */
+export type SyncKind = 'packet' | 'look' | 'brand' | 'project';
+
+/** Per-user singleton kinds: at most one per user, so the sync engine reconciles them by KIND
+ *  (not id) and never makes a "(conflicted copy)". The cloud row uses a per-user deterministic id. */
+export const SINGLETON_KINDS: SyncKind[] = ['brand', 'project'];
+export function isSingleton(kind: SyncKind): boolean {
+  return SINGLETON_KINDS.includes(kind);
+}
 
 /**
  * One syncable record plus the metadata the sync engine needs. `body` is the domain object
@@ -88,24 +96,32 @@ export class LocalStorageProvider implements StorageProvider {
   async list(kind: SyncKind): Promise<StoredRecord[]> {
     if (kind === 'packet') return loadAllPackets().map((p) => toStoredRecord('packet', p.id, p));
     if (kind === 'look') return loadAllLooks().map((l) => toStoredRecord('look', l.id, l));
+    if (kind === 'project') {
+      const project = loadProject();
+      return project ? [toStoredRecord('project', project.id, project)] : [];
+    }
     const brand = loadBrand();
     return brand ? [toStoredRecord('brand', BRAND_ID, brand)] : [];
   }
 
   async get(kind: SyncKind, id: string): Promise<StoredRecord | null> {
     const all = await this.list(kind);
+    // Singletons match by kind — there is only ever one, whatever id it carries.
+    if (isSingleton(kind)) return all[0] ?? null;
     return all.find((r) => r.id === id) ?? null;
   }
 
   async put(record: StoredRecord): Promise<void> {
     if (record.kind === 'packet') upsertPacket(record.body as Packet);
     else if (record.kind === 'look') upsertLook(record.body as SavedLook);
+    else if (record.kind === 'project') upsertProject(record.body as SavedProject);
     else saveBrand(record.body as ProjectBrand);
   }
 
   async remove(kind: SyncKind, id: string): Promise<void> {
     if (kind === 'packet') deletePacket(id);
     else if (kind === 'look') deleteLook(id);
+    else if (kind === 'project') clearProject();
     else clearBrand();
   }
 }

@@ -12,8 +12,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import { toStoredRecord, type StorageProvider, type StoredRecord, type SyncKind } from './storage';
+import { isSingleton, toStoredRecord, type StorageProvider, type StoredRecord, type SyncKind } from './storage';
 import { externalizeAssets, rehydrateAssets, dataUrlToBlob, blobToDataUrl } from './assets';
+import { deterministicUuid } from '../model/id';
 
 const TABLE = 'documents';
 const BUCKET = 'user-assets';
@@ -76,10 +77,12 @@ export class SupabaseProvider implements StorageProvider {
     warnIfLarge(record.kind, record.id, body);
 
     const srcName = (record.body as { name?: unknown }).name;
-    // user_id is omitted: it defaults to auth.uid() on insert, and RLS blocks updating another
-    // user's row. onConflict:'id' makes this an upsert keyed by the shared record id.
+    // Singletons (brand, project) use a per-user deterministic id so there is exactly one row per
+    // user per kind; packets/looks keep their own uuid. user_id is omitted: it defaults to
+    // auth.uid() on insert, and RLS blocks updating another user's row. onConflict:'id' upserts.
+    const rowId = isSingleton(record.kind) ? deterministicUuid(`${uid}:${record.kind}`) : record.id;
     const row = {
-      id: record.id,
+      id: rowId,
       kind: record.kind,
       name: typeof srcName === 'string' ? srcName : '',
       body,
@@ -87,6 +90,23 @@ export class SupabaseProvider implements StorageProvider {
     };
     const { error } = await sb.from(TABLE).upsert(row, { onConflict: 'id' });
     if (error) throw new Error(`Cloud put(${record.kind}) failed: ${error.message}`);
+  }
+
+  /**
+   * Coordinated tombstone purge: hard-delete this user's tombstone rows whose server write time is
+   * older than `beforeIso`. Called after a sync so old deletes are dropped from BOTH sides (a
+   * local-only purge would just be re-pulled). Uses the server updated_at column for the cutoff.
+   */
+  async purgeTombstones(beforeIso: string): Promise<number> {
+    const sb = await this.client();
+    const { data, error } = await sb
+      .from(TABLE)
+      .delete()
+      .eq('deleted', true)
+      .lt('updated_at', beforeIso)
+      .select('id');
+    if (error) throw new Error(`Cloud purge failed: ${error.message}`);
+    return data ? data.length : 0;
   }
 
   async remove(kind: SyncKind, id: string): Promise<void> {

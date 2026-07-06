@@ -9,6 +9,7 @@ import { getAccessToken } from './auth';
 import { LocalStorageProvider } from './storage';
 import { SupabaseProvider } from './supabaseProvider';
 import { runSync, type SyncResult } from './sync';
+import { purgeOldTombstones } from '../model/packets';
 
 export type SyncPhase = 'offline' | 'syncing' | 'synced' | 'error';
 export interface SyncState {
@@ -66,6 +67,16 @@ export async function syncNow(): Promise<void> {
     // so the extra pass they schedule finds nothing to do. Not suppressing them means a genuine
     // user edit that lands DURING a sync is never swallowed and gets its own follow-up pass.
     const result = await runSync(local, remote);
+    // Coordinated tombstone purge: drop deletes older than the grace period from BOTH sides (same
+    // cutoff), so a purged tombstone can't be re-pulled. 90 days is generous; a device offline
+    // longer than that could resurrect a delete — an acceptable edge for a beta. Best-effort.
+    try {
+      const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
+      await remote.purgeTombstones(cutoff);
+      purgeOldTombstones(cutoff);
+    } catch {
+      // Never fail a sync on cleanup.
+    }
     setState({ phase: 'synced', last: result });
   } catch (e) {
     setState({ phase: 'error', detail: e instanceof Error ? e.message : String(e) });

@@ -222,10 +222,20 @@ export function deleteLook(lookId: string): SavedLook[] {
   return all.filter((l) => !l.deleted);
 }
 
-// NOTE: tombstone purging is intentionally NOT done yet. A local-only purge is unsafe — the cloud
-// still holds the row, so the next sync re-pulls the tombstone and the purge never sticks. Coordinated
-// purge (delete the remote row past a grace period, then the local one) lands in Era 5.2b. Tombstones
-// are tiny (id + name + timestamp, payload stripped), so accumulation is negligible meanwhile.
+/**
+ * Drop local tombstones whose updatedAt is older than `beforeIso`. The sync controller calls this
+ * with the SAME cutoff it uses to purge the cloud, so a delete is dropped from BOTH sides at once
+ * and can't be re-pulled. Writes only when something is actually removed.
+ */
+export function purgeOldTombstones(beforeIso: string): void {
+  const fresh = <T extends { deleted?: boolean; updatedAt: string }>(x: T) => !x.deleted || x.updatedAt >= beforeIso;
+  const packets = loadAllPackets();
+  const keptP = packets.filter(fresh);
+  if (keptP.length !== packets.length) saveList(PACKETS_KEY, keptP);
+  const looks = loadAllLooks();
+  const keptL = looks.filter(fresh);
+  if (keptL.length !== looks.length) saveList(LOOKS_KEY, keptL);
+}
 
 /** Import a shared .json look file (shape-checked). Returns the new list or an error. */
 export function importLook(json: string): { looks: SavedLook[] | null; error: string | null } {
