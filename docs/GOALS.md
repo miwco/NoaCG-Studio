@@ -220,13 +220,16 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       client factory; Google OAuth + email/password; AuthGate + LoginScreen + topbar AuthStatus,
       engaged only when configured + required; the allowlist table + Before-User-Created hook ship
       in migration 0002; `scripts/allowlist.mjs` admin tool; callClaude attaches the user JWT as a
-      Bearer in proxy mode. *Code-first: offline path E2E-green; live auth/RLS verify pending a
-      real Supabase (checklist in ERA5_PLAN.md).*
-- [~] **5.2a Cloud persistence (packets + looks)** — `SupabaseProvider` (documents table, per-user
+      Bearer in proxy mode. **Live-verified 2026-07-06** on a real project: login gate,
+      email/password sign-in, AuthGate→app handoff; `enforce_allowlist` present + locked. (Invite
+      *rejection* still needs the dashboard Before-User-Created hook enabled.)
+- [x] **5.2a Cloud persistence (packets + looks)** — `SupabaseProvider` (documents table, per-user
       RLS) + a pure `reconcile()`/`runSync()` engine (LWW, true-conflict → "(conflicted copy)",
       tombstone deletes) + `syncController` (guarded, debounced, serialized) + topbar `SyncStatus`.
-      Local stays the live path; cloud mirrors. Build + offline E2E green (10 sync-logic assertions);
-      live round-trip is maintainer-verified. Body is inline jsonb for now.
+      Local stays the live path; cloud mirrors. Build + offline E2E green (12 sync-logic assertions);
+      hardened by an 11-agent adversarial review (7 bugs fixed). **Live-verified 2026-07-06**:
+      authed write/read round-trip, auto-sync "Synced", delete, and cross-user RLS isolation (user 2
+      cannot see user 1's rows). Body is inline jsonb until 5.2b.
 - [ ] **5.2b Cloud persistence (finish)** — externalize embedded assets to the Storage bucket
       (dedupe by hash); brand-singleton sync (cross-device identity); the working project becomes a
       first-class autosaved "project"; first-login reconciliation UX.
