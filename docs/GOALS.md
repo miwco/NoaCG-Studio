@@ -222,9 +222,14 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       in migration 0002; `scripts/allowlist.mjs` admin tool; callClaude attaches the user JWT as a
       Bearer in proxy mode. *Code-first: offline path E2E-green; live auth/RLS verify pending a
       real Supabase (checklist in ERA5_PLAN.md).*
-- [ ] **5.2 Cloud persistence** — SupabaseProvider (documents + assets-in-Storage, per-user RLS);
-      local stays live, cloud is a background mirror; first-login 3-way merge + tombstones; the
-      working project becomes a first-class autosaved "project" (localStorage = offline fallback)
+- [~] **5.2a Cloud persistence (packets + looks)** — `SupabaseProvider` (documents table, per-user
+      RLS) + a pure `reconcile()`/`runSync()` engine (LWW, true-conflict → "(conflicted copy)",
+      tombstone deletes) + `syncController` (guarded, debounced, serialized) + topbar `SyncStatus`.
+      Local stays the live path; cloud mirrors. Build + offline E2E green (10 sync-logic assertions);
+      live round-trip is maintainer-verified. Body is inline jsonb for now.
+- [ ] **5.2b Cloud persistence (finish)** — externalize embedded assets to the Storage bucket
+      (dedupe by hash); brand-singleton sync (cross-device identity); the working project becomes a
+      first-class autosaved "project"; first-login reconciliation UX.
 - [ ] **5.3 Remote realtime control** — opt-in default-off export block over a private Realtime
       channel (room-scoped JWT); controlpanel.html gains an any-device path; validator promotes
       external-dep to error + whitelists `.supabase.co`

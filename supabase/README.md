@@ -49,3 +49,30 @@ unchanged.
 
 Migrations are ordered by filename and are **immutable once shipped** — change the schema by adding
 a new migration, never by editing an applied one.
+
+## Verifying live (maintainer checklist)
+
+The app is built code-first: `npm run build` + offline E2E prove the offline path and the pure sync
+logic, but the server paths below need a real project. Do these once after connecting:
+
+**Auth (5.1)**
+1. With `VITE_REQUIRE_AUTH=true` and your `.env` pointing at the project, `npm run dev` → you should
+   see the login screen (not the app).
+2. Add your email to the allowlist (`insert into allowlist (email) values ('you@…');`), then sign up
+   / sign in with email+password → the app appears; the topbar shows your email + "Sign out".
+3. Sign up with a NON-allowlisted email → it must be rejected with the private-beta message. (This
+   confirms the `enforce_allowlist` hook is wired — Authentication → Hooks in the dashboard.)
+
+**Cloud sync (5.2a)**
+4. Signed in, open 📦 Packets, save a graphic into a packet → the topbar sync pill goes
+   "Syncing…" → "Synced". In the dashboard, Table Editor → `documents` shows a `packet` row owned by
+   your user.
+5. Sign in as the SAME user in another browser/profile → the packet appears (pull works).
+6. Delete the packet on one device → after sync it disappears on the other (tombstone propagates),
+   and the `documents` row has `deleted = true`.
+7. **RLS isolation (the security check):** sign in as a SECOND user → they must NOT see the first
+   user's packets, and the `documents`/`assets` selects return only their own rows. (RLS, not the
+   UI, is the boundary.)
+
+If any of 3 or 7 fail, stop and fix the policy/hook before inviting testers — those are the security
+guarantees.

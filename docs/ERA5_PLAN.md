@@ -118,6 +118,14 @@ earlier phase is reworked by a later one.
   the real boundary (UI gate is UX only).
 
 ### 5.2 - Cloud persistence (projects, packets, looks)
+Split when built: **5.2a** (done) = the sync engine + `SupabaseProvider` + tombstone deletes for
+**packets and looks**, body stored inline in jsonb, build+offline-E2E green (a 10-assertion pure
+`reconcile`/`runSync` spec). **5.2b** (pending) = externalize embedded assets to the Storage bucket
+(dedupe by hash), **brand-singleton sync** (its `id='default'` needs cross-device identity handling
+before it can share the uuid-PK table), the **working project as a first-class autosaved "project"**,
+and the first-login reconciliation UX. Rationale: the pure merge core is fully verifiable offline and
+worth landing solid; assets/brand/project each carry identity or UX subtleties best done deliberately.
+
 - `SupabaseProvider implements StorageProvider`. Schema: `documents(id, user_id, kind, name,
   body jsonb, updated_at, deleted)` with per-user RLS; **binaries (data-URL fonts/images) go to a
   private Storage bucket**, deduped by content-hash, referenced from an `assets` table (jsonb would

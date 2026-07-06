@@ -22,6 +22,7 @@ import {
 import { loadBrand, type ProjectBrand } from './brand';
 import type { SpxTemplate, TemplateType } from './types';
 import { extOf, isFontAsset } from '../assets/assetUtils';
+import { uuid } from './id';
 
 // ── Packets (graphics collections) ───────────────────────────────────────────
 
@@ -39,19 +40,39 @@ export interface Packet {
   graphics: SavedGraphic[];
   /** When the packet last changed (ISO). Bumped on every mutation; drives Era-5 cloud sync (LWW). */
   updatedAt: string;
+  /**
+   * Soft-delete tombstone: a deleted packet is hidden from the UI but kept (with its payload
+   * stripped) so the deletion propagates to other devices via cloud sync, instead of the row
+   * resurrecting from another device's stale copy. Purged after a grace period.
+   */
+  deleted?: boolean;
 }
 
 const PACKETS_KEY = 'spx-gfx-packets';
 const LOOKS_KEY = 'spx-gfx-looks';
 
+/** Record ids must be valid UUIDs — they become the cloud `documents.id` (uuid PK). */
 function newId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return uuid();
 }
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+// A FIXED timestamp used to back-fill records saved before updatedAt existed (pre-Era-5). It must
+// be a constant, not now(): a fresh now() on every read makes such a record look freshly-edited
+// each sync, so it would be re-pushed forever and could wrongly win conflicts. A stable old value
+// means it converges (both sides agree) and loses last-write-wins to any real dated edit.
+const BACKFILL_TS = '1970-01-01T00:00:00.000Z';
+
+// The sync layer (Era 5.2) listens for local data changes to schedule a cloud push. It is safe for
+// sync's own pull-writes to fire this too: the sync is idempotent, so the extra pass it schedules
+// finds nothing to do and settles.
+function notifyDataChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('spx-data-changed'));
+  }
 }
 
 function loadList<T>(key: string): T[] {
@@ -66,34 +87,40 @@ function loadList<T>(key: string): T[] {
 function saveList(key: string, list: unknown): string | null {
   try {
     localStorage.setItem(key, JSON.stringify(list));
+    notifyDataChanged();
     return null;
   } catch {
     return 'Browser storage is full — remove a graphic (large fonts/images count) or export and delete a packet.';
   }
 }
 
+/** All packets INCLUDING tombstones — for the sync engine. Back-fills a stable sync timestamp. */
+export function loadAllPackets(): Packet[] {
+  return loadList<Packet>(PACKETS_KEY).map((p) => (p.updatedAt ? p : { ...p, updatedAt: BACKFILL_TS }));
+}
+
+/** Live packets for the UI (tombstones hidden). */
 export function loadPackets(): Packet[] {
-  // Back-fill updatedAt for packets saved before Era 5 so every record has a sync timestamp.
-  return loadList<Packet>(PACKETS_KEY).map((p) => (p.updatedAt ? p : { ...p, updatedAt: nowIso() }));
+  return loadAllPackets().filter((p) => !p.deleted);
 }
 
 export function createPacket(name: string): Packet[] {
-  const packets = loadPackets();
-  packets.push({ id: newId(), name: name.trim() || 'Untitled packet', graphics: [], updatedAt: nowIso() });
-  saveList(PACKETS_KEY, packets);
-  return packets;
+  const all = loadAllPackets();
+  all.push({ id: newId(), name: name.trim() || 'Untitled packet', graphics: [], updatedAt: nowIso() });
+  saveList(PACKETS_KEY, all);
+  return all.filter((p) => !p.deleted);
 }
 
 /**
- * Insert or replace a whole packet by id (used by the Era-5 storage seam's put('packet')).
- * Unlike createPacket this preserves the given id and its graphics.
+ * Insert or replace a whole packet by id (used by the Era-5 storage seam's put('packet'), which
+ * also writes tombstones on a pulled delete). Preserves the given id, graphics, and deleted flag.
  */
 export function upsertPacket(packet: Packet): void {
-  const packets = loadPackets();
-  const i = packets.findIndex((p) => p.id === packet.id);
-  if (i >= 0) packets[i] = packet;
-  else packets.push(packet);
-  saveList(PACKETS_KEY, packets);
+  const all = loadAllPackets();
+  const i = all.findIndex((p) => p.id === packet.id);
+  if (i >= 0) all[i] = packet;
+  else all.push(packet);
+  saveList(PACKETS_KEY, all);
 }
 
 /**
@@ -101,9 +128,9 @@ export function upsertPacket(packet: Packet): void {
  * packet is replaced (saving twice = updating), so iterating on a show is natural.
  */
 export function saveGraphicToPacket(packetId: string, template: SpxTemplate): { packets: Packet[]; error: string | null } {
-  const packets = loadPackets();
-  const packet = packets.find((p) => p.id === packetId);
-  if (!packet) return { packets, error: 'That packet no longer exists.' };
+  const all = loadAllPackets();
+  const packet = all.find((p) => p.id === packetId && !p.deleted);
+  if (!packet) return { packets: all.filter((p) => !p.deleted), error: 'That packet no longer exists.' };
   const graphic: SavedGraphic = {
     id: newId(),
     name: template.name,
@@ -115,24 +142,31 @@ export function saveGraphicToPacket(packetId: string, template: SpxTemplate): { 
   if (existing >= 0) packet.graphics[existing] = graphic;
   else packet.graphics.push(graphic);
   packet.updatedAt = nowIso();
-  return { packets, error: saveList(PACKETS_KEY, packets) };
+  return { packets: all.filter((p) => !p.deleted), error: saveList(PACKETS_KEY, all) };
 }
 
 export function removeGraphic(packetId: string, graphicId: string): Packet[] {
-  const packets = loadPackets();
-  const packet = packets.find((p) => p.id === packetId);
+  const all = loadAllPackets();
+  const packet = all.find((p) => p.id === packetId);
   if (packet) {
     packet.graphics = packet.graphics.filter((g) => g.id !== graphicId);
     packet.updatedAt = nowIso();
   }
-  saveList(PACKETS_KEY, packets);
-  return packets;
+  saveList(PACKETS_KEY, all);
+  return all.filter((p) => !p.deleted);
 }
 
+/** Delete = tombstone (strip payload, keep the id + fresh timestamp) so the delete syncs. */
 export function deletePacket(packetId: string): Packet[] {
-  const packets = loadPackets().filter((p) => p.id !== packetId);
-  saveList(PACKETS_KEY, packets);
-  return packets;
+  const all = loadAllPackets();
+  const packet = all.find((p) => p.id === packetId);
+  if (packet) {
+    packet.deleted = true;
+    packet.graphics = [];
+    packet.updatedAt = nowIso();
+  }
+  saveList(PACKETS_KEY, all);
+  return all.filter((p) => !p.deleted);
 }
 
 // ── Looks (named brand looks) ────────────────────────────────────────────────
@@ -143,37 +177,55 @@ export interface SavedLook {
   brand: ProjectBrand;
   /** When the look last changed (ISO). Set on save; drives Era-5 cloud sync (LWW). */
   updatedAt: string;
+  /** Soft-delete tombstone (hidden from the UI, kept so the delete syncs). See Packet.deleted. */
+  deleted?: boolean;
 }
 
+/** All looks INCLUDING tombstones — for the sync engine. Back-fills a stable sync timestamp. */
+export function loadAllLooks(): SavedLook[] {
+  return loadList<SavedLook>(LOOKS_KEY).map((l) => (l.updatedAt ? l : { ...l, updatedAt: BACKFILL_TS }));
+}
+
+/** Live looks for the UI (tombstones hidden). */
 export function loadLooks(): SavedLook[] {
-  // Back-fill updatedAt for looks saved before Era 5 so every record has a sync timestamp.
-  return loadList<SavedLook>(LOOKS_KEY).map((l) => (l.updatedAt ? l : { ...l, updatedAt: nowIso() }));
+  return loadAllLooks().filter((l) => !l.deleted);
 }
 
 export function addLook(name: string, brand: ProjectBrand): SavedLook[] {
-  const looks = loadLooks();
-  looks.push({ id: newId(), name: name.trim() || 'Untitled look', brand, updatedAt: nowIso() });
-  saveList(LOOKS_KEY, looks);
-  return looks;
+  const all = loadAllLooks();
+  all.push({ id: newId(), name: name.trim() || 'Untitled look', brand, updatedAt: nowIso() });
+  saveList(LOOKS_KEY, all);
+  return all.filter((l) => !l.deleted);
 }
 
 /**
- * Insert or replace a whole look by id (used by the Era-5 storage seam's put('look')).
- * Unlike addLook this preserves the given id.
+ * Insert or replace a whole look by id (used by the Era-5 storage seam's put('look'), incl. a
+ * pulled tombstone). Preserves the given id and deleted flag.
  */
 export function upsertLook(look: SavedLook): void {
-  const looks = loadLooks();
-  const i = looks.findIndex((l) => l.id === look.id);
-  if (i >= 0) looks[i] = look;
-  else looks.push(look);
-  saveList(LOOKS_KEY, looks);
+  const all = loadAllLooks();
+  const i = all.findIndex((l) => l.id === look.id);
+  if (i >= 0) all[i] = look;
+  else all.push(look);
+  saveList(LOOKS_KEY, all);
 }
 
+/** Delete = tombstone so the delete syncs (see deletePacket). */
 export function deleteLook(lookId: string): SavedLook[] {
-  const looks = loadLooks().filter((l) => l.id !== lookId);
-  saveList(LOOKS_KEY, looks);
-  return looks;
+  const all = loadAllLooks();
+  const look = all.find((l) => l.id === lookId);
+  if (look) {
+    look.deleted = true;
+    look.updatedAt = nowIso();
+  }
+  saveList(LOOKS_KEY, all);
+  return all.filter((l) => !l.deleted);
 }
+
+// NOTE: tombstone purging is intentionally NOT done yet. A local-only purge is unsafe — the cloud
+// still holds the row, so the next sync re-pulls the tombstone and the purge never sticks. Coordinated
+// purge (delete the remote row past a grace period, then the local one) lands in Era 5.2b. Tombstones
+// are tiny (id + name + timestamp, payload stripped), so accumulation is negligible meanwhile.
 
 /** Import a shared .json look file (shape-checked). Returns the new list or an error. */
 export function importLook(json: string): { looks: SavedLook[] | null; error: string | null } {

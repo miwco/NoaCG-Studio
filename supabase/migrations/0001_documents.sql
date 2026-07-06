@@ -7,10 +7,13 @@
 --   * Binaries (data-URL fonts/images) do NOT go in `body` jsonb — a multi-graphic packet would be
 --     multi-MB and wreck sync/egress. They live in the private `user-assets` Storage bucket and are
 --     referenced by the `assets` table, deduped by content_hash.
---   * The server clock is authoritative for last-write-wins: a trigger sets updated_at on every
---     update. Never trust client clocks for the tiebreak.
+--   * last-write-wins runs on the CLIENT-controlled timestamp stored inside `body` (body.updatedAt),
+--     which is identical on both sides after a push, so reconcile is loop-free. A true concurrent
+--     edit (both sides changed since a device last synced) is kept as a "(conflicted copy)", so
+--     client-clock skew can never silently lose data. The `updated_at` COLUMN below is a server-side
+--     audit/ordering timestamp (maintained by the trigger); it is intentionally NOT the sync tiebreak.
 
--- ── updated_at trigger (server clock is authoritative) ───────────────────────────────────────────
+-- ── updated_at trigger (server-side audit/ordering timestamp) ─────────────────────────────────────
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

@@ -825,3 +825,11 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .auth-status { display: inline-flex; align-items: center; gap: 8px; }
 .auth-status .muted { font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .auth-signout { font-size: 12px; padding: 4px 10px; }
+
+/* Cloud sync status pill (Era 5.2) */
+.sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; }
+.sync-status .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); }
+.sync-synced .sync-dot { background: var(--ok); }
+.sync-syncing .sync-dot { background: var(--accent-2); }
+.sync-error .sync-dot { background: var(--danger); }
+.sync-error { color: var(--danger); border-color: var(--danger); }

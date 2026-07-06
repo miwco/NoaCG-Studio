@@ -14,10 +14,10 @@
 // key and must never leave the machine to a shared store.
 
 import {
-  loadPackets,
+  loadAllPackets,
   upsertPacket,
   deletePacket,
-  loadLooks,
+  loadAllLooks,
   upsertLook,
   deleteLook,
   type Packet,
@@ -54,29 +54,42 @@ export interface StorageProvider {
   remove(kind: SyncKind, id: string): Promise<void>;
 }
 
-/** The project brand is a per-user singleton, so it syncs under one stable id. */
+// The project brand is a per-user singleton. NOTE: 'default' is NOT a valid uuid, so brand is
+// deliberately excluded from SYNC_KINDS in 5.2a (it would be rejected by the documents.id uuid PK).
+// 5.2b gives the per-user brand a real uuid row before adding it to sync.
 export const BRAND_ID = 'default';
 
-function packetRecord(p: Packet): StoredRecord<Packet> {
-  return { kind: 'packet', id: p.id, updatedAt: p.updatedAt, body: p };
+/** The client-controlled version timestamp of a record — read from the body it lives on. This is
+ *  what the sync engine compares (both providers derive it the same way), so a pushed record has
+ *  the SAME updatedAt on both sides and reconcile never loops on it. The fallback is a FIXED old
+ *  value (never now()), so a body without a timestamp resolves identically every read. */
+export function bodyUpdatedAt(body: unknown): string {
+  const u = (body as { updatedAt?: unknown } | null)?.updatedAt;
+  return typeof u === 'string' ? u : '1970-01-01T00:00:00.000Z';
 }
-function lookRecord(l: SavedLook): StoredRecord<SavedLook> {
-  return { kind: 'look', id: l.id, updatedAt: l.updatedAt, body: l };
-}
-function brandRecord(b: ProjectBrand): StoredRecord<ProjectBrand> {
-  return { kind: 'brand', id: BRAND_ID, updatedAt: b.updatedAt ?? new Date().toISOString(), body: b };
+
+/** Wrap a domain object as a StoredRecord, deriving updatedAt + the tombstone flag from the body. */
+export function toStoredRecord(kind: SyncKind, id: string, body: unknown): StoredRecord {
+  return {
+    kind,
+    id,
+    updatedAt: bodyUpdatedAt(body),
+    deleted: Boolean((body as { deleted?: unknown } | null)?.deleted),
+    body,
+  };
 }
 
 /**
  * localStorage-backed provider — a thin async adapter over the existing model helpers, so there is
- * exactly one serialization path (no divergence between the live editor and the sync engine).
+ * exactly one serialization path (no divergence between the live editor and the sync engine). list()
+ * surfaces tombstones (loadAll*) so the sync engine can propagate deletes.
  */
 export class LocalStorageProvider implements StorageProvider {
   async list(kind: SyncKind): Promise<StoredRecord[]> {
-    if (kind === 'packet') return loadPackets().map(packetRecord);
-    if (kind === 'look') return loadLooks().map(lookRecord);
+    if (kind === 'packet') return loadAllPackets().map((p) => toStoredRecord('packet', p.id, p));
+    if (kind === 'look') return loadAllLooks().map((l) => toStoredRecord('look', l.id, l));
     const brand = loadBrand();
-    return brand ? [brandRecord(brand)] : [];
+    return brand ? [toStoredRecord('brand', BRAND_ID, brand)] : [];
   }
 
   async get(kind: SyncKind, id: string): Promise<StoredRecord | null> {
