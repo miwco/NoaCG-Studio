@@ -15,8 +15,20 @@ export interface ValidationResult {
   warnings: ValidationIssue[];
 }
 
-/** Domains allowed as external dependencies without warning. Empty by default (offline-first). */
-const ALLOWED_EXTERNAL: string[] = [];
+/** Host suffixes allowed as external dependencies without warning. Supabase is the one blessed
+ *  backend (Era 5, opt-in realtime/chat blocks); everything else still warns (offline-first). */
+const ALLOWED_EXTERNAL: string[] = ['.supabase.co'];
+
+/** True when a URL's HOST ends with an allowed suffix — a real host check, not a substring match
+ *  (so `evil.supabase.co.attacker.com` is NOT allowed). */
+function isAllowedExternal(url: string): boolean {
+  try {
+    const host = new URL(url.startsWith('//') ? `https:${url}` : url).host.toLowerCase();
+    return ALLOWED_EXTERNAL.some((suffix) => host === suffix.replace(/^\./, '') || host.endsWith(suffix));
+  } catch {
+    return false;
+  }
+}
 
 /** Detect the runtime entry points: classic globals OR the modern spxRenderer event API. */
 function hasRuntimeEntryPoints(js: string): { ok: boolean; missing: string[] } {
@@ -62,7 +74,7 @@ function classifyRefs(html: string, css: string): { external: string[]; absolute
   for (const url of collectRefs(html, css)) {
     if (/^data:/i.test(url)) continue; // inline data URLs are self-contained
     if (/^https?:\/\//i.test(url) || url.startsWith('//')) {
-      if (!ALLOWED_EXTERNAL.some((d) => url.includes(d))) external.push(url);
+      if (!isAllowedExternal(url)) external.push(url);
     } else if (url.startsWith('/')) {
       absolute.push(url);
     } else {

@@ -5,6 +5,7 @@
 
 import type { SpxField } from '../model/types';
 import { controlChannelName, controlsForFields, type ControlDescriptor } from './controlModel';
+import type { RemoteControlConfig } from './realtimeControl';
 import { isImageAsset } from '../assets/assetUtils';
 
 interface EmittedControl extends ControlDescriptor {
@@ -22,7 +23,10 @@ function jsonForScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-export function renderControlPanelHtml(template: { name: string; fields: SpxField[]; assets: { path: string }[] }): string {
+export function renderControlPanelHtml(
+  template: { name: string; fields: SpxField[]; assets: { path: string }[] },
+  remote?: RemoteControlConfig | null,
+): string {
   const channel = controlChannelName(template.name);
   const controls = emitControls(template.fields);
   const imagePaths = template.assets.filter((a) => isImageAsset(a.path)).map((a) => a.path);
@@ -74,16 +78,31 @@ export function renderControlPanelHtml(template: { name: string; fields: SpxFiel
 var CONTROLS = ${jsonForScript(controls)};
 var IMAGES = ${jsonForScript(imagePaths)};
 var CHANNEL = ${jsonForScript(channel)};
+var REMOTE = ${jsonForScript(remote ?? null)};   // {ref,key,topic} when remote control is enabled, else null
 
 // State: current value per field, seeded from the definition defaults.
 var state = {};
 CONTROLS.forEach(function (c) { state[c.field] = c.value; });
 
-// Transport: BroadcastChannel to the graphic on the same machine (Era 4). In Era 5 this
-// is swapped for a Supabase Realtime channel with the same message shape.
+// Transport 1: BroadcastChannel to a graphic on the SAME machine (Era 4).
 var ch = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel(CHANNEL) : null;
-document.getElementById('status').textContent = ch ? ('channel: ' + CHANNEL) : 'BroadcastChannel unsupported';
-function post(msg) { if (ch) ch.postMessage(msg); }
+
+// Transport 2 (optional): Supabase Realtime — drive a graphic on ANY device (Era 5). Send-only,
+// via the stateless REST broadcast endpoint (no socket/join needed for a sender). Public channel +
+// publishable key; the TOPIC is a shared secret.
+function sendRemote(msg) {
+  if (!REMOTE) return;
+  fetch('https://' + REMOTE.ref + '.supabase.co/realtime/v1/api/broadcast', {
+    method: 'POST',
+    headers: { apikey: REMOTE.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ topic: REMOTE.topic, event: 'control', payload: msg, private: false }] })
+  }).catch(function () { /* offline / blocked — the local BroadcastChannel path still works */ });
+}
+
+document.getElementById('status').textContent =
+  REMOTE ? ('remote + local · ' + REMOTE.topic) : (ch ? ('local channel: ' + CHANNEL) : 'BroadcastChannel unsupported');
+
+function post(msg) { if (ch) ch.postMessage(msg); sendRemote(msg); }
 function sendUpdate() { post({ t: 'update', data: state }); }
 function live() { return document.getElementById('live').checked; }
 function onChange(field, value) { state[field] = value; if (live()) sendUpdate(); }

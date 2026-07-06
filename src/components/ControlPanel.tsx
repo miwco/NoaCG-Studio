@@ -3,6 +3,13 @@ import { saveAs } from 'file-saver';
 import { controlsForFields, type ControlDescriptor } from '../control/controlModel';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
 import { hasLiveData, liveDataBlock, stripLiveData } from '../control/liveData';
+import {
+  hasRealtimeControl,
+  realtimeControlBlock,
+  stripRealtimeControl,
+  remoteControlConfig,
+} from '../control/realtimeControl';
+import { isBackendConfigured } from '../backend/config';
 import { slug } from '../export/common';
 import { fileToDataUrl, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
 import { useTemplateStore, type PlayoutAction } from '../store/templateStore';
@@ -116,12 +123,29 @@ export default function ControlPanel() {
 
   const controls = controlsForFields(template.fields);
   const liveDataOn = hasLiveData(template.js);
+  const remoteOn = hasRealtimeControl(template.js);
+  const backendConfigured = isBackendConfigured();
+  const remote = backendConfigured ? remoteControlConfig(template.name) : null;
 
   const drive = (action: PlayoutAction) => sendControl(action);
 
   const downloadPanel = () => {
-    const html = renderControlPanelHtml(template);
+    // Bundle the remote-send path into the panel only when this graphic has remote control enabled.
+    const html = renderControlPanelHtml(template, remoteOn ? remote : null);
     saveAs(new Blob([html], { type: 'text/html' }), `${slug(template.name)}_controlpanel.html`);
+  };
+
+  // Append / remove the remote-control receiver block in the graphic's own JS (undoable, and
+  // highlighted in the editor). The exported graphic then listens on the Supabase Realtime topic.
+  const enableRemote = () => {
+    if (!remote) return;
+    const js = stripRealtimeControl(template.js).trimEnd() + '\n\n' + realtimeControlBlock(remote);
+    applyTemplate({ ...template, js });
+    setActiveTab('js');
+  };
+  const disableRemote = () => {
+    applyTemplate({ ...template, js: stripRealtimeControl(template.js) });
+    setActiveTab('js');
   };
 
   // Add / replace the live-data polling block in the template's own JS (undoable, and
@@ -201,6 +225,42 @@ export default function ControlPanel() {
         </div>
         {liveDataOn && <p className="status-ok" style={{ marginTop: 6 }}>✓ Live-data block is in the JS (see the marked region).</p>}
       </div>
+
+      {backendConfigured && (
+        <div className="panel-section">
+          <div className="divider" />
+          <h3>Remote control <span className="muted">— any device</span></h3>
+          <p className="hint">
+            Drive the <em>exported</em> graphic from another device over the cloud. Enabling adds a
+            small, deletable receiver block to the JS; the downloaded control panel then also sends
+            over Supabase Realtime. The graphic and panel share an unguessable <strong>topic</strong> —
+            treat it as a secret. The default export stays fully offline.
+          </p>
+          {remote ? (
+            <>
+              <div className="row" style={{ marginTop: 6 }}>
+                <input
+                  readOnly
+                  value={remote.topic}
+                  style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
+                  title="Shared channel topic (keep secret)"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <div className="spacer" style={{ flex: 1 }} />
+                {remoteOn && <button onClick={disableRemote} title="Remove the remote-control block">Remove</button>}
+                <button className="primary" onClick={enableRemote}>{remoteOn ? 'Update block' : 'Enable remote'}</button>
+              </div>
+              {remoteOn && (
+                <p className="status-ok" style={{ marginTop: 6 }}>
+                  ✓ Remote-control block is in the JS. Download the control panel and open it on any device.
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="muted">Sign in to enable cloud remote control.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

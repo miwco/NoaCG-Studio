@@ -9,6 +9,7 @@ import type { SpxTemplate } from '../model/types';
 import { controlChannelName } from '../control/controlModel';
 import { controlReceiverScript } from '../control/receiverScript';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
+import { hasRealtimeControl, remoteControlConfig } from '../control/realtimeControl';
 
 export { slug } from './slug';
 import { slug } from './slug';
@@ -85,9 +86,11 @@ export function injectControlReceiver(html: string, template: SpxTemplate): stri
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}\n</body>`) : html + block;
 }
 
-/** Bundle the generated controlpanel.html next to the graphic. */
+/** Bundle the generated controlpanel.html next to the graphic. When the graphic has the remote-
+ *  control block, the panel also gets the Supabase Realtime send path (same project + topic). */
 export function addControlPanel(root: JSZip, template: SpxTemplate): void {
-  root.file('controlpanel.html', renderControlPanelHtml(template));
+  const remote = hasRealtimeControl(template.js) ? remoteControlConfig(template.name) : null;
+  root.file('controlpanel.html', renderControlPanelHtml(template, remote));
 }
 
 /** A short README explaining how to deploy the package in SPX. */
@@ -121,7 +124,14 @@ Run index.html as a browser source (OBS, vMix, a browser tab), then open control
 in another tab of the SAME browser. Edits and the Play/Stop/Update/Next buttons drive the
 graphic live over a BroadcastChannel — no server needed. (In an SPX rundown you drive the
 template the usual way; the control panel is an alternative for browser-source workflows.)
-
+${hasRealtimeControl(template.js) ? `
+## Remote control (enabled)
+This graphic also listens on a Supabase Realtime channel, so controlpanel.html can drive it from
+ANOTHER device — not just the same browser. The channel topic is a shared secret baked into both
+files; anyone who has it plus the publishable key can control the graphic, so keep it private. The
+render host must be allowed to reach wss://*.supabase.co. Delete the marked "REMOTE CONTROL" block
+in js/template.js for a pure-offline graphic.
+` : ''}
 All paths are relative, so the package is plug-and-play.
 `;
 }
