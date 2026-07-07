@@ -4,6 +4,9 @@ import { defineConfig, devices } from '@playwright/test';
 // user experiences it. Run with `npm run test:e2e`.
 export default defineConfig({
   testDir: './e2e',
+  // The authed community flows live in e2e/configured and run under playwright.live.config.ts (a
+  // configured, signed-in backend). Keep them out of this offline-pinned suite.
+  testIgnore: '**/configured/**',
   timeout: 30_000,
   expect: { timeout: 7_000 },
   fullyParallel: false,
