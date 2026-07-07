@@ -150,13 +150,17 @@ src/
                 standalone controlpanel.html, same descriptors, inline), receiverScript.ts
                 (BroadcastChannel listener injected into exported index.html), liveData.ts
                 (editable published-CSV → update() polling block appended to template.js)
-  export/       registry.ts (4 targets), slug.ts (shared, avoids a cycle), targets/spxStarter.ts
-                (+ buildStarterInto, reused by packets), targets/spxPack.ts, targets/casparcg.ts
-                (single self-contained html + JSON/XML data shim), targets/ograf.ts (EBU OGraf
-                v1: manifest from DataFields + graphic.mjs Web Component; AMD-guarded gsap
-                loader), packetExport.ts (whole packet -> one zip, a Starter folder per graphic),
-                common.ts (addSharedAssets, addReferencedFonts, injectControlReceiver +
-                addControlPanel for SPX exports, FONT_LICENSES.md)
+  export/       registry.ts (5 targets + ExportContext — the Data panel's sampleData rides
+                along so serverless targets can bake it), slug.ts (shared, avoids a cycle),
+                selfContained.ts (single-file composer: inline CSS/GSAP/JS/assets + extra body
+                scripts), targets/spxStarter.ts (+ buildStarterInto, reused by packets),
+                targets/spxPack.ts, targets/htmlOverlay.ts (OBS/vMix browser source: autoplay
+                block fills fields from baked sampleData -> definition defaults, then play();
+                receiver + controlpanel.html bundled), targets/casparcg.ts (selfContained +
+                JSON/XML data shim), targets/ograf.ts (EBU OGraf v1: manifest from DataFields +
+                graphic.mjs Web Component; AMD-guarded gsap loader), packetExport.ts (whole
+                packet -> one zip, a Starter folder per graphic), common.ts (addSharedAssets,
+                addReferencedFonts, injectControlReceiver + addControlPanel, FONT_LICENSES.md)
   teach/        knowledge.ts + explain.ts — surfaced as Monaco HOVER tooltips in the editor
                 (registered in CodeEditor.tsx; there is no Learn tab), cssReference.ts
   assets/       gsap.min.js (bundled), assetUtils.ts (data-URL assets)

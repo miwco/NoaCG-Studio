@@ -334,6 +334,15 @@ read-only scheduled cloud agent. Not yet built — see the plan doc for the veri
 - [x] SPX Starter + Advanced/Pack export with validation gate
 - [x] OGraf export target + manifest validator (see `.claude/skills/ograf-expert`)
 - [x] CasparCG export target (self-contained single file + XML data shim)
+- [x] **HTML overlay export (2026-07-08)** — one self-contained autoplay .html for plain browser
+      sources (OBS Browser Source, vMix Web Browser input, anything that renders a web page):
+      fills fields on load (Data-panel values baked at export, SPX-definition defaults as
+      fallback) then play(); ships the BroadcastChannel receiver + controlpanel.html (OBS custom
+      dock workflow documented) and honors the 5.3 remote-control block. Shared single-file
+      composer extracted (`export/selfContained.ts`, reused by CasparCG). E2E: loads the exported
+      file with zero outside calls and asserts the baked value + settled opacity.
+- [ ] Export research: LiveOS, H2R Graphics, Singular.Live, Flowics — what each ingests, which
+      need real adapters vs the plain HTML overlay (task queued)
 - [ ] Data-driven/live content architecture (ticker/scoreboard controlled from a backend) — later
 
 ### Quality bar (always-on)

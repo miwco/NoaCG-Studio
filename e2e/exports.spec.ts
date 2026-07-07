@@ -27,12 +27,37 @@ async function downloadTarget(page: Page, label: string): Promise<JSZip> {
   return JSZip.loadAsync(readFileSync(await download.path()));
 }
 
-test('export panel offers all four targets', async ({ page }) => {
+test('export panel offers all five targets', async ({ page }) => {
   await createHairline(page);
   await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
-  for (const label of ['Starter SPX export', 'Advanced / Pack export', 'CasparCG export', 'OGraf (EBU) export']) {
+  for (const label of ['Starter SPX export', 'Advanced / Pack export', 'HTML overlay (OBS / vMix)', 'CasparCG export', 'OGraf (EBU) export']) {
     await expect(page.locator('.issue', { hasText: label })).toBeVisible();
   }
+});
+
+test('html overlay: self-contained, autoplays with the Data panel values, control panel bundled', async ({ page }) => {
+  await createHairline(page);
+  // Type a custom value in the Data panel — the export must bake it in.
+  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  const nameInput = page.locator('.panel-body input').first();
+  await nameInput.fill('Overlay Works');
+  const zip = await downloadTarget(page, 'HTML overlay (OBS / vMix)');
+  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+  expect(names.sort()).toEqual(['hairline/README.md', 'hairline/controlpanel.html', 'hairline/hairline.html']);
+
+  const html = await zip.file('hairline/hairline.html')!.async('string');
+  expect(html).toContain('Autoplay for browser sources');
+  expect(html).toContain('spx-control-receiver'); // the BroadcastChannel receiver is inlined
+  expect(html).not.toMatch(/src=["'](?:\.\/)?js\//); // nothing external left
+
+  // Load the exported file like OBS would: no calls from outside — it must play itself.
+  const view = await page.context().newPage();
+  await view.setContent(html, { waitUntil: 'load' });
+  await expect(view.locator('#f0')).toHaveText('Overlay Works'); // baked value, not the default
+  await expect
+    .poll(async () => view.locator('.l3').evaluate((el) => getComputedStyle(el).opacity))
+    .toBe('1'); // play() ran on load
+  await view.close();
 });
 
 test('casparcg: one self-contained html that speaks JSON and CasparCG XML', async ({ page }) => {
