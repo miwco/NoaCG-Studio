@@ -23,8 +23,9 @@ test('offline: no community affordances anywhere', async ({ page }) => {
   await page.goto('/');
   await create(page, 'Lower thirds', 'Hairline');
 
-  // No Community button in the topbar.
+  // No Community or Moderate buttons in the topbar.
   await expect(page.getByRole('button', { name: /Community/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Moderate/ })).toHaveCount(0);
 
   // The Packets modal shows no "Share to community" section and no publish buttons.
   await page.getByRole('button', { name: '📦 Packets' }).click();

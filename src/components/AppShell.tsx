@@ -6,10 +6,12 @@ import PlayoutSimulator from './PlayoutSimulator';
 import SidePanel from './SidePanel';
 import PacketManager from './PacketManager';
 import CommunityGallery from './CommunityGallery';
+import ModerationQueue from './ModerationQueue';
 import CreationWizard from './wizard/CreationWizard';
 import AuthStatus from './auth/AuthStatus';
 import SyncStatus from './SyncStatus';
 import { isBackendConfigured } from '../backend/config';
+import { useIsModerator } from '../community/useIsModerator';
 
 /**
  * Two-pane workspace: code editor (left) and, on the right, the live preview (16:9,
@@ -33,6 +35,10 @@ export default function AppShell() {
     [backendConfigured],
   );
   const [communityOpen, setCommunityOpen] = useState(Boolean(initialTemplateSlug));
+
+  // Moderator takedown queue — the button appears only for users in the moderators table.
+  const isModerator = useIsModerator();
+  const [moderationOpen, setModerationOpen] = useState(false);
 
   // Global undo for block / AI / gallery actions. Skips Monaco and form fields so they
   // keep their own native text undo.
@@ -75,6 +81,11 @@ export default function AppShell() {
             🌐 Community
           </button>
         )}
+        {isModerator && (
+          <button onClick={() => setModerationOpen(true)} title="Review and remove published community templates">
+            🛡 Moderate
+          </button>
+        )}
         <button onClick={openGallery} title="Start a new project from a template">
           + New project
         </button>
@@ -107,6 +118,9 @@ export default function AppShell() {
       {communityOpen && (
         <CommunityGallery onClose={() => setCommunityOpen(false)} initialSlug={initialTemplateSlug} />
       )}
+
+      {/* Moderator takedown queue overlay — only reachable when the button is shown (a moderator). */}
+      {moderationOpen && <ModerationQueue onClose={() => setModerationOpen(false)} />}
     </div>
   );
 }

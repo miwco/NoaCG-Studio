@@ -54,6 +54,17 @@ export interface MySubmission {
   created_at: string;
 }
 
+/** A submission as a moderator sees it (any status). Same shape as MySubmission. */
+export type ModeratorItem = MySubmission & { author_name: string };
+
+/** A user's abuse report on a published item (moderator-visible only). */
+export interface CommunityReport {
+  id: string;
+  template_id: string;
+  reason: string;
+  created_at: string;
+}
+
 /** Per-session upload dedupe (same content hash → same key → upload at most once). */
 const uploaded = new Set<string>();
 
@@ -223,6 +234,45 @@ export async function isModerator(): Promise<boolean> {
   if (!sb) return false;
   const { data } = await sb.rpc('is_moderator');
   return data === true;
+}
+
+/** Moderator-only: every submission regardless of status (the migration-0005 SELECT policy grants
+ *  this; a non-moderator's identical query returns only their own rows). */
+export async function listAllForModeration(): Promise<ModeratorItem[]> {
+  const sb = await getSupabase();
+  if (!sb) return [];
+  const { data } = await sb
+    .from('community_templates')
+    .select('id, slug, kind, name, summary, category, author_name, status, moderation_note, created_at')
+    .order('created_at', { ascending: false });
+  return (data as ModeratorItem[] | null) ?? [];
+}
+
+/** Moderator-only: the abuse-report queue (community_reports_read RLS). */
+export async function listReports(): Promise<CommunityReport[]> {
+  const sb = await getSupabase();
+  if (!sb) return [];
+  const { data } = await sb
+    .from('community_reports')
+    .select('id, template_id, reason, created_at')
+    .order('created_at', { ascending: false });
+  return (data as CommunityReport[] | null) ?? [];
+}
+
+/** Moderator-only: fetch one submission's full, asset-rehydrated body for preview — ANY status
+ *  (unlike getCommunity, which is approved-only). */
+export async function getModeratorItem(id: string): Promise<(ModeratorItem & { body: unknown }) | null> {
+  const sb = await getSupabase();
+  if (!sb) return null;
+  const { data } = await sb
+    .from('community_templates')
+    .select('id, slug, kind, name, summary, category, author_name, status, moderation_note, created_at, body')
+    .eq('id', id)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as ModeratorItem & { body: unknown };
+  const body = await rehydrateAssets(row.body, (key) => download(sb, key));
+  return { ...row, body };
 }
 
 /** Moderator action (takedown/review). The DB guard trigger stamps reviewed_by/reviewed_at and blocks

@@ -259,9 +259,14 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       the full pre-review schema shipped for a one-line switch later; gallery reads signed-in-only;
       single graphics + looks (whole-packet publishing deferred). Offline-invariant (E2E-proven, no
       community UI without a backend); build + full E2E (55) green; migration adversarially reviewed
-      (5 findings fixed). **Deferred:** human pre-review + moderator queue UI, whole-packet publishing,
-      anon public gallery + login-less share page. Live authed/RLS paths → maintainer live-verify
-      (supabase/README.md §Community sharing).
+      (5 findings fixed). **Applied to live Supabase + fully live-verified (two-account pass,
+      2026-07-07):** publish → cross-user browse + import + asset round-trip through the public bucket,
+      author_id hidden, anon can't read, the author-self-approve attack blocked, moderator takedown +
+      author-can't-reverse; a 6th (anon EXECUTE via Supabase default grants) and a 7th (moderator had
+      no SELECT policy, so takedown matched 0 rows — migration 0005) were caught live and fixed. The
+      **moderator takedown queue UI shipped** (🛡 Moderate, gated on `is_moderator()`; review a
+      sandboxed preview → Remove/Restore; reports queue). **Deferred:** human pre-review flip (one line
+      + the queue already exists), whole-packet publishing, anon public gallery + login-less share page.
 - [ ] **5.6 Payments/subscriptions LAST** (long beta first; separate private repo, Stripe, metered
       generations)
 
