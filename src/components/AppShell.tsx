@@ -13,6 +13,7 @@ import SyncStatus from './SyncStatus';
 import { isBackendConfigured } from '../backend/config';
 import { useIsModerator } from '../community/useIsModerator';
 import { useIsMobile } from './useIsMobile';
+import { clampRatio, loadLayout, saveLayout, type LayoutPrefs } from '../model/layout';
 
 /**
  * Two-pane workspace: code editor (left) and, on the right, the live preview (16:9,
@@ -45,6 +46,49 @@ export default function AppShell() {
   // collapsed and mounted on demand (Monaco is heavy and secondary on mobile).
   const isMobile = useIsMobile();
   const [codeOpen, setCodeOpen] = useState(false);
+
+  // Desktop layout: collapse the code pane for full-width preview, and drag the divider to resize the
+  // code vs preview columns. Remembered in localStorage (the first persisted UI preference). Only the
+  // desktop branch reads this; the mobile branch ignores it.
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<LayoutPrefs>(loadLayout);
+  const [dragging, setDragging] = useState(false);
+
+  const toggleCode = () => {
+    setLayout((l) => {
+      const codeCollapsed = !l.codeCollapsed;
+      saveLayout({ codeCollapsed });
+      return { ...l, codeCollapsed };
+    });
+  };
+
+  const ratioFromEvent = (clientX: number): number | null => {
+    const rect = workspaceRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return null;
+    return clampRatio((clientX - rect.left) / rect.width);
+  };
+
+  const onDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    document.body.classList.add('resizing-cols');
+  };
+  const onDividerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const ratio = ratioFromEvent(e.clientX);
+    if (ratio !== null) setLayout((l) => ({ ...l, codeRatio: ratio }));
+  };
+  const onDividerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = ratioFromEvent(e.clientX);
+    if (ratio !== null) {
+      setLayout((l) => ({ ...l, codeRatio: ratio }));
+      saveLayout({ codeRatio: ratio }); // persist only on release, not on every move
+    }
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDragging(false);
+    document.body.classList.remove('resizing-cols');
+  };
 
   // Global undo for block / AI / gallery actions. Skips Monaco and form fields so they
   // keep their own native text undo.
@@ -79,6 +123,16 @@ export default function AppShell() {
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
         <div className="spacer" />
+        {!isMobile && (
+          <button
+            className={layout.codeCollapsed ? '' : 'active'}
+            onClick={toggleCode}
+            data-testid="toggle-code"
+            title={layout.codeCollapsed ? 'Show the code editor' : 'Collapse the code editor to give the preview full width'}
+          >
+            {layout.codeCollapsed ? '▸ Show code' : '▾ Hide code'}
+          </button>
+        )}
         <button onClick={() => setPacketsOpen(true)} title="Save this show's graphics together + manage brand looks">
           📦 Packets
         </button>
@@ -115,10 +169,31 @@ export default function AppShell() {
           </div>
         </div>
       ) : (
-        <div className="workspace">
-          <section className="pane">
-            <CodeEditor />
-          </section>
+        <div
+          className="workspace"
+          ref={workspaceRef}
+          style={{
+            gridTemplateColumns: layout.codeCollapsed
+              ? '1fr'
+              : `${layout.codeRatio}fr 6px ${1 - layout.codeRatio}fr`,
+          }}
+        >
+          {!layout.codeCollapsed && (
+            <>
+              <section className="pane" data-testid="code-pane">
+                <CodeEditor />
+              </section>
+              <div
+                className={`workspace-divider${dragging ? ' dragging' : ''}`}
+                data-testid="workspace-divider"
+                role="separator"
+                aria-orientation="vertical"
+                onPointerDown={onDividerPointerDown}
+                onPointerMove={onDividerPointerMove}
+                onPointerUp={onDividerPointerUp}
+              />
+            </>
+          )}
 
           <section className="pane">
             <div className="preview-wrap">

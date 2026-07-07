@@ -93,6 +93,22 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .pane:last-child { border-right: none; }
 
+/* Draggable divider between the code and preview columns (desktop split view). Transparent at rest —
+   the code pane's own border-right is the resting hairline; the divider only lights up on hover/drag.
+   Its ::before widens the 6px grid track's hit area to ~14px. */
+.workspace-divider {
+  position: relative;
+  cursor: col-resize;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
+.workspace-divider::before { content: ''; position: absolute; inset: 0 -4px; }
+.workspace-divider:hover,
+.workspace-divider.dragging { background: var(--accent); }
+/* During a drag, suppress text selection + force the resize cursor everywhere. */
+body.resizing-cols { user-select: none; cursor: col-resize; }
+
 .pane-header {
   display: flex;
   align-items: center;
