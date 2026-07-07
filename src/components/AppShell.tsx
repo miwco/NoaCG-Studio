@@ -138,6 +138,7 @@ export default function AppShell() {
         <button className="brand brand-home" onClick={openGallery} title="NoaCG Studio — start a new project">
           <BrandLogo size={24} />
         </button>
+        <span className="divider-dot" aria-hidden="true">·</span>
         <span className="tpl-name">{template.name}</span>
         <span className="mono muted" style={{ fontSize: 11, marginLeft: 6 }}>
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps

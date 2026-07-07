@@ -21,6 +21,12 @@
 }
 @font-face {
   font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-500.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
   src: url("/fonts/jetbrains-mono-700.woff2") format("woff2");
   font-weight: 700;
   font-display: swap;
@@ -45,7 +51,8 @@
   --text-dim: #8b98a8;     /* muted grey (the wordmark's "CG" grey) */
   --accent: var(--amber);  /* the on-air accent (was blue) */
   --accent-2: var(--glow); /* hover / live glow */
-  --danger: var(--rec);    /* live/record + errors */
+  --danger: #e06c75;       /* error/validation red — kept distinct from --rec, which the
+                              brand manual (§3) reserves for live/record status only */
   --warn: #f2b84b;
   --ok: #43c59e;
   --radius: 8px;
@@ -117,7 +124,7 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .topbar .brand { display: inline-flex; align-items: center; }
 .topbar .tpl-name { color: var(--text-dim); font-size: 13px; }
-.topbar .divider-dot { color: var(--border); }
+.topbar .divider-dot { color: #3d4756; margin: 0 -2px; user-select: none; }
 .topbar .spacer { flex: 1; }
 
 /* ---------- Brand mark + lockup (Brand Manual §2) ---------- */
@@ -1004,7 +1011,7 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .chat-acts { display: flex; gap: 4px; flex: 0 0 auto; }
 .chat-acts button { font-size: 12px; padding: 4px 8px; }
 .chat-badge { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; background: var(--bg-3); color: var(--text-dim); }
-.chat-badge.chat-on_air { background: var(--danger); color: #fff; }
+.chat-badge.chat-on_air { background: var(--rec); color: #fff; }  /* the reserved on-air red (§3) */
 .chat-badge.chat-approved { background: var(--ok); color: var(--void); }
 .chat-badge.chat-pending { background: var(--warn); color: var(--void); }
 
