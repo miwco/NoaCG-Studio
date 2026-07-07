@@ -59,3 +59,26 @@ test('dragging the divider resizes the columns, and the ratio persists', async (
   const codeReload = (await page.locator('[data-testid="code-pane"]').boundingBox())!.width;
   expect(Math.abs(codeReload - codeAfter)).toBeLessThan(30);
 });
+
+test('"preview on top" mode makes the preview full-width, above code, and persists', async ({ page }) => {
+  await createHairline(page);
+  const workspaceW = (await page.locator('.workspace').boundingBox())!.width;
+  const stageBefore = (await page.locator('.preview-stage').boundingBox())!.width;
+
+  await page.getByTestId('toggle-layout').click();
+
+  // The preview now spans (nearly) the full workspace width and sits ABOVE the code/panels row.
+  const previewPane = (await page.locator('.preview-pane').boundingBox())!;
+  const codePane = (await page.locator('[data-testid="code-pane"]').boundingBox())!;
+  expect(previewPane.width).toBeGreaterThan(workspaceW - 20);
+  expect(previewPane.y + previewPane.height).toBeLessThanOrEqual(codePane.y + 5);
+  // The stage is wider than in code-left mode (where it had ~half the width).
+  const stageAfter = (await page.locator('.preview-stage').boundingBox())!.width;
+  expect(stageAfter).toBeGreaterThan(stageBefore);
+
+  // The mode persists across a reload.
+  await page.reload();
+  await page.locator('.gallery-close').click();
+  await expect(page.locator('.preview-pane')).toBeVisible();
+  await expect(page.getByTestId('toggle-layout')).toHaveText(/Code left/);
+});

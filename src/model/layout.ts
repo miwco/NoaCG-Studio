@@ -1,27 +1,43 @@
-// Desktop layout preferences (Era 5.5+). The first PERSISTED UI preference in the app — everything
-// else in localStorage is content (project/brand/packets/looks). Mirrors the load/save-over-a-key
-// shape of ai/settings.ts and brand.ts. Only the desktop workspace reads this; the mobile layout
-// ignores it. See src/components/AppShell.tsx.
+// Desktop layout preferences. The first PERSISTED UI preference in the app — everything else in
+// localStorage is content (project/brand/packets/looks). Mirrors the load/save-over-a-key shape of
+// ai/settings.ts. Only the desktop workspace reads this; the mobile layout ignores it. See
+// src/components/AppShell.tsx.
 
 const STORAGE_KEY = 'spx-gfx-layout';
 
+/** Two desktop arrangements: the classic code-on-the-left split, or a full-width preview across the
+ *  top with code + panels below it (a genuinely bigger preview). */
+export type LayoutMode = 'code-left' | 'preview-top';
+
 export interface LayoutPrefs {
-  /** Whether the left code-editor pane is collapsed (desktop only), giving the preview full width. */
+  mode: LayoutMode;
+  /** Whether the code-editor pane is collapsed (applies in both modes), giving its space to the rest. */
   codeCollapsed: boolean;
-  /** The code column's width as a fraction of the workspace (0..1), clamped to [MIN, MAX]. */
+  /** code-left: the code column's width as a fraction of the workspace (0..1). */
   codeRatio: number;
+  /** preview-top: the preview row's height as a fraction of the workspace (0..1). */
+  previewRatio: number;
+  /** preview-top: the code column's width as a fraction of the bottom row (0..1). */
+  bottomRatio: number;
 }
 
-export const CODE_RATIO_MIN = 0.2;
-export const CODE_RATIO_MAX = 0.7;
-// 0.5 ≈ today's `1.05fr / 1fr` grid split.
-export const DEFAULT_LAYOUT: LayoutPrefs = { codeCollapsed: false, codeRatio: 0.5 };
+export const DEFAULT_LAYOUT: LayoutPrefs = {
+  mode: 'code-left',
+  codeCollapsed: false,
+  codeRatio: 0.5,     // ≈ today's 1.05fr / 1fr split
+  previewRatio: 0.58, // a big preview up top, with room for code + panels below
+  bottomRatio: 0.5,
+};
 
-/** Keep the code column within usable bounds (both panes stay legible). Exported so the drag handler
- *  uses the exact same limits as the stored value. */
-export function clampRatio(ratio: number): number {
-  if (!Number.isFinite(ratio)) return DEFAULT_LAYOUT.codeRatio;
-  return Math.min(CODE_RATIO_MAX, Math.max(CODE_RATIO_MIN, ratio));
+/** Clamp a split fraction to usable bounds so no region becomes unusable. Column splits use the tight
+ *  default; the preview HEIGHT split passes wider bounds so the preview can get large. */
+export function clampRatio(ratio: number, min = 0.2, max = 0.7): number {
+  if (!Number.isFinite(ratio)) return 0.5;
+  return Math.min(max, Math.max(min, ratio));
+}
+
+function num(v: unknown, fallback: number, min: number, max: number): number {
+  return typeof v === 'number' ? clampRatio(v, min, max) : fallback;
 }
 
 /** Load the saved layout, merged over defaults; falls back to defaults on missing/corrupt storage. */
@@ -33,8 +49,11 @@ export function loadLayout(): LayoutPrefs {
     // Corrupt storage — fall back to defaults.
   }
   return {
+    mode: saved.mode === 'preview-top' ? 'preview-top' : DEFAULT_LAYOUT.mode,
     codeCollapsed: saved.codeCollapsed ?? DEFAULT_LAYOUT.codeCollapsed,
-    codeRatio: typeof saved.codeRatio === 'number' ? clampRatio(saved.codeRatio) : DEFAULT_LAYOUT.codeRatio,
+    codeRatio: num(saved.codeRatio, DEFAULT_LAYOUT.codeRatio, 0.2, 0.7),
+    previewRatio: num(saved.previewRatio, DEFAULT_LAYOUT.previewRatio, 0.25, 0.85),
+    bottomRatio: num(saved.bottomRatio, DEFAULT_LAYOUT.bottomRatio, 0.2, 0.7),
   };
 }
 

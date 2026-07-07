@@ -109,6 +109,30 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 /* During a drag, suppress text selection + force the resize cursor everywhere. */
 body.resizing-cols { user-select: none; cursor: col-resize; }
 
+/* Horizontal divider (preview height) for the "preview on top" arrangement. */
+.workspace-divider-h {
+  position: relative;
+  cursor: row-resize;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+}
+.workspace-divider-h::before { content: ''; position: absolute; inset: -4px 0; }
+.workspace-divider-h:hover,
+.workspace-divider-h.dragging { background: var(--accent); }
+body.resizing-rows { user-select: none; cursor: row-resize; }
+
+/* "Preview on top": a full-width preview across the top (row 1), a horizontal divider (row 2), and a
+   code | panels row below (row 3, its own column grid). The preview FILLS its region (canvas centered,
+   letterboxed) rather than the tight 52vh cap the code-left mode keeps. Rows come from an inline
+   gridTemplateRows; force a single grid column so the base 2-column rule doesn't apply. */
+.preview-top { grid-template-columns: 1fr; }
+.preview-top .pane { border-right: none; }
+.preview-top .bottom-row { display: grid; min-height: 0; min-width: 0; }
+.preview-top .bottom-row > .pane { min-width: 0; }
+.preview-top .preview-wrap { flex: 1; min-height: 0; }
+.preview-top .preview-stage { flex: 1; max-height: none; min-height: 0; }
+
 .pane-header {
   display: flex;
   align-items: center;

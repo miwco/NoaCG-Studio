@@ -13,14 +13,29 @@ import SyncStatus from './SyncStatus';
 import { isBackendConfigured } from '../backend/config';
 import { useIsModerator } from '../community/useIsModerator';
 import { useIsMobile } from './useIsMobile';
+import { useSplitter, type Splitter } from './useSplitter';
 import { clampRatio, loadLayout, saveLayout, type LayoutPrefs } from '../model/layout';
 
+/** A drag handle between two regions (vertical between columns, horizontal between rows). */
+function Divider({ orient, splitter, testid }: { orient: 'v' | 'h'; splitter: Splitter; testid: string }) {
+  return (
+    <div
+      className={`${orient === 'v' ? 'workspace-divider' : 'workspace-divider-h'}${splitter.dragging ? ' dragging' : ''}`}
+      data-testid={testid}
+      role="separator"
+      aria-orientation={orient === 'v' ? 'vertical' : 'horizontal'}
+      onPointerDown={splitter.onPointerDown}
+      onPointerMove={splitter.onPointerMove}
+      onPointerUp={splitter.onPointerUp}
+    />
+  );
+}
+
 /**
- * Two-pane workspace: code editor (left) and, on the right, the live preview (16:9,
- * sized by the template's aspect) stacked above the playout simulator and the tool
- * panels. This keeps the canvas compact on portrait monitors instead of floating in
- * dead space. The iframe ref is shared so the simulator can call play()/stop()/update()
- * on the live preview.
+ * The workspace: on desktop, two switchable arrangements — code editor on the left beside the
+ * preview-over-panels column, or a full-width preview on top with code + panels below — with a
+ * collapsible code pane and drag dividers between regions. On a phone it reflows to one column.
+ * The iframe ref is shared so the simulator can call play()/stop()/update() on the live preview.
  */
 export default function AppShell() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -47,48 +62,43 @@ export default function AppShell() {
   const isMobile = useIsMobile();
   const [codeOpen, setCodeOpen] = useState(false);
 
-  // Desktop layout: collapse the code pane for full-width preview, and drag the divider to resize the
-  // code vs preview columns. Remembered in localStorage (the first persisted UI preference). Only the
-  // desktop branch reads this; the mobile branch ignores it.
+  // Desktop layout (the mobile branch ignores this). Two arrangements — code-on-the-left, or a
+  // full-width preview on top with code + panels below — plus a collapsible code pane and drag
+  // dividers between regions. Remembered in localStorage (the first persisted UI preference).
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const bottomRowRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<LayoutPrefs>(loadLayout);
-  const [dragging, setDragging] = useState(false);
 
-  const toggleCode = () => {
+  const toggleCode = () =>
     setLayout((l) => {
       const codeCollapsed = !l.codeCollapsed;
       saveLayout({ codeCollapsed });
       return { ...l, codeCollapsed };
     });
-  };
+  const toggleMode = () =>
+    setLayout((l) => {
+      const mode = l.mode === 'code-left' ? 'preview-top' : 'code-left';
+      saveLayout({ mode });
+      return { ...l, mode };
+    });
 
-  const ratioFromEvent = (clientX: number): number | null => {
-    const rect = workspaceRef.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return null;
-    return clampRatio((clientX - rect.left) / rect.width);
-  };
-
-  const onDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-    document.body.classList.add('resizing-cols');
-  };
-  const onDividerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging) return;
-    const ratio = ratioFromEvent(e.clientX);
-    if (ratio !== null) setLayout((l) => ({ ...l, codeRatio: ratio }));
-  };
-  const onDividerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const ratio = ratioFromEvent(e.clientX);
-    if (ratio !== null) {
-      setLayout((l) => ({ ...l, codeRatio: ratio }));
-      saveLayout({ codeRatio: ratio }); // persist only on release, not on every move
-    }
-    e.currentTarget.releasePointerCapture(e.pointerId);
-    setDragging(false);
-    document.body.classList.remove('resizing-cols');
-  };
+  // Drag dividers. Column splits use the tight [0.2,0.7] bounds; the preview HEIGHT split allows a
+  // wider range so the preview can dominate. Persist on release only (not on every move).
+  const codeWidth = useSplitter(
+    'x', workspaceRef,
+    (r) => setLayout((l) => ({ ...l, codeRatio: clampRatio(r, 0.2, 0.7) })),
+    (r) => saveLayout({ codeRatio: clampRatio(r, 0.2, 0.7) }),
+  );
+  const previewHeight = useSplitter(
+    'y', workspaceRef,
+    (r) => setLayout((l) => ({ ...l, previewRatio: clampRatio(r, 0.25, 0.85) })),
+    (r) => saveLayout({ previewRatio: clampRatio(r, 0.25, 0.85) }),
+  );
+  const bottomWidth = useSplitter(
+    'x', bottomRowRef,
+    (r) => setLayout((l) => ({ ...l, bottomRatio: clampRatio(r, 0.2, 0.7) })),
+    (r) => saveLayout({ bottomRatio: clampRatio(r, 0.2, 0.7) }),
+  );
 
   // Global undo for block / AI / gallery actions. Skips Monaco and form fields so they
   // keep their own native text undo.
@@ -112,6 +122,15 @@ export default function AppShell() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo]);
 
+  // The preview + simulator block, shared across the mobile and both desktop arrangements (only one
+  // renders at a time, so the shared iframeRef is always attached to a single instance).
+  const preview = (
+    <div className="preview-wrap">
+      <PreviewFrame iframeRef={iframeRef} />
+      <PlayoutSimulator iframeRef={iframeRef} />
+    </div>
+  );
+
   return (
     <div className="app">
       <header className="topbar">
@@ -123,6 +142,11 @@ export default function AppShell() {
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
         <div className="spacer" />
+        {!isMobile && (
+          <button onClick={toggleMode} data-testid="toggle-layout" title="Switch the workspace arrangement">
+            {layout.mode === 'code-left' ? '⬒ Preview top' : '◧ Code left'}
+          </button>
+        )}
         {!isMobile && (
           <button
             className={layout.codeCollapsed ? '' : 'active'}
@@ -156,16 +180,43 @@ export default function AppShell() {
 
       {isMobile ? (
         <div className="workspace workspace-mobile">
-          <div className="preview-wrap">
-            <PreviewFrame iframeRef={iframeRef} />
-            <PlayoutSimulator iframeRef={iframeRef} />
-          </div>
+          {preview}
           <SidePanel />
           <div className="mobile-code">
             <button className="mobile-code-toggle" onClick={() => setCodeOpen((o) => !o)}>
               {codeOpen ? '▾ Hide code' : '▸ Show code'}
             </button>
             {codeOpen && <CodeEditor />}
+          </div>
+        </div>
+      ) : layout.mode === 'preview-top' ? (
+        <div
+          className="workspace preview-top"
+          ref={workspaceRef}
+          style={{ gridTemplateRows: `${layout.previewRatio}fr 6px ${1 - layout.previewRatio}fr` }}
+        >
+          <section className="pane preview-pane">{preview}</section>
+          <Divider orient="h" splitter={previewHeight} testid="preview-divider" />
+          <div
+            className="bottom-row"
+            ref={bottomRowRef}
+            style={{
+              gridTemplateColumns: layout.codeCollapsed
+                ? '1fr'
+                : `${layout.bottomRatio}fr 6px ${1 - layout.bottomRatio}fr`,
+            }}
+          >
+            {!layout.codeCollapsed && (
+              <>
+                <section className="pane" data-testid="code-pane">
+                  <CodeEditor />
+                </section>
+                <Divider orient="v" splitter={bottomWidth} testid="bottom-divider" />
+              </>
+            )}
+            <section className="pane">
+              <SidePanel />
+            </section>
           </div>
         </div>
       ) : (
@@ -183,23 +234,11 @@ export default function AppShell() {
               <section className="pane" data-testid="code-pane">
                 <CodeEditor />
               </section>
-              <div
-                className={`workspace-divider${dragging ? ' dragging' : ''}`}
-                data-testid="workspace-divider"
-                role="separator"
-                aria-orientation="vertical"
-                onPointerDown={onDividerPointerDown}
-                onPointerMove={onDividerPointerMove}
-                onPointerUp={onDividerPointerUp}
-              />
+              <Divider orient="v" splitter={codeWidth} testid="workspace-divider" />
             </>
           )}
-
           <section className="pane">
-            <div className="preview-wrap">
-              <PreviewFrame iframeRef={iframeRef} />
-              <PlayoutSimulator iframeRef={iframeRef} />
-            </div>
+            {preview}
             <SidePanel />
           </section>
         </div>

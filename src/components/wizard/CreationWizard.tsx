@@ -131,7 +131,7 @@ export default function CreationWizard() {
         <div className="wz-header">
           <div>
             <h2>New project</h2>
-            <p className="hint">Build it by choosing — then read, learn, and edit the code it writes.</p>
+            <p className="hint">Build it by choosing — then tweak the code it writes, or leave it as-is.</p>
           </div>
           <div className="wz-dots">
             {stepTitles.map((t, i) => (
