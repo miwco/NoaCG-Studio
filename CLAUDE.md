@@ -341,6 +341,10 @@ Always `npm run build` (typecheck + build) after changes.
 **Gotchas:**
 - After many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it if a
   change isn't reflected.
+- The e2e suite pins **offline mode** via `webServer.env` in playwright.config.ts, but
+  `reuseExistingServer: true` means a dev server already running on 5174 (started by hand, with
+  the real `.env`) gets reused — backend-sensitive specs then fail confusingly. Kill any manual
+  server on 5174 before `npm run test:e2e`.
 - Worse: after HMR updates, `import('/src/store/…')` in an eval/console context can resolve a
   **different module instance** than the running app (a "ghost store" — your clicks patch the real
   store while your assertions read the stale one). If state reads disagree with visible UI,
