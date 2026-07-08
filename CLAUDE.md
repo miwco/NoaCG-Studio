@@ -158,15 +158,16 @@ src/
                 standalone controlpanel.html, same descriptors, inline), receiverScript.ts
                 (BroadcastChannel listener injected into exported index.html), liveData.ts
                 (editable published-CSV → update() polling block appended to template.js)
-  export/       registry.ts (5 targets + ExportContext — the Data panel's sampleData rides
+  export/       registry.ts (6 targets + ExportContext — the Data panel's sampleData rides
                 along so serverless targets can bake it), slug.ts (shared, avoids a cycle),
                 selfContained.ts (single-file composer: inline CSS/GSAP/JS/assets + extra body
                 scripts), targets/spxStarter.ts (+ buildStarterInto, reused by packets),
                 targets/spxPack.ts, targets/htmlOverlay.ts (OBS/vMix browser source: autoplay
                 block fills fields from baked sampleData -> definition defaults, then play();
-                receiver + controlpanel.html bundled), targets/casparcg.ts (selfContained +
-                JSON/XML data shim), targets/ograf.ts (EBU OGraf v1: manifest from DataFields +
-                graphic.mjs Web Component; AMD-guarded gsap loader), packetExport.ts (whole
+                receiver + controlpanel.html bundled), targets/h2r.ts (H2R Custom HTML: GDD
+                block from DataFields + play()-toggle shim), targets/casparcg.ts (selfContained
+                + JSON/XML data shim), targets/ograf.ts (EBU OGraf v1: manifest from DataFields
+                + graphic.mjs Web Component; AMD-guarded gsap loader), packetExport.ts (whole
                 packet -> one zip, a Starter folder per graphic), common.ts (addSharedAssets,
                 addReferencedFonts, injectControlReceiver + addControlPanel, FONT_LICENSES.md)
   teach/        knowledge.ts + explain.ts — surfaced as Monaco HOVER tooltips in the editor

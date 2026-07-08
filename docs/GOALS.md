@@ -392,7 +392,13 @@ read-only scheduled cloud agent. Not yet built — see the plan doc for the veri
       **LiveOS** is likely free via our existing OGraf export (OGraf demoed at NAB 2026; else a
       templates.json adapter); **Singular.Live / Flowics / uno** are closed composers — not
       ingest targets, interop at the production layer.
-- [ ] H2R Graphics export target (self-contained + GDD block; see the research doc)
+- [x] **H2R Graphics export target (2026-07-08)** — self-contained .html for H2R's Custom HTML
+      graphic type: embedded GDD block (`application/json+gdd`, properties keyed by element id
+      from the SPX DataFields) becomes H2R's editable inputs; a marked toggle shim converts
+      H2R's play()-both-ways convention into the template's play()/stop() pair. E2E drives it
+      exactly like H2R (update json string → toggle on → toggle off). 6 export targets.
+      *Maintainer to-do: one manual round in a real H2R install (field types render, partial
+      updates, off-air timing).*
 - [ ] Data-driven/live content architecture (ticker/scoreboard controlled from a backend) — later
 
 ### Quality bar (always-on)

@@ -27,12 +27,46 @@ async function downloadTarget(page: Page, label: string): Promise<JSZip> {
   return JSZip.loadAsync(readFileSync(await download.path()));
 }
 
-test('export panel offers all five targets', async ({ page }) => {
+test('export panel offers all six targets', async ({ page }) => {
   await createHairline(page);
   await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
-  for (const label of ['Starter SPX export', 'Advanced / Pack export', 'HTML overlay (OBS / vMix)', 'CasparCG export', 'OGraf (EBU) export']) {
+  for (const label of ['Starter SPX export', 'Advanced / Pack export', 'HTML overlay (OBS / vMix)', 'H2R Graphics export', 'CasparCG export', 'OGraf (EBU) export']) {
     await expect(page.locator('.issue', { hasText: label })).toBeVisible();
   }
+});
+
+test('h2r: GDD fields embedded, and the play() toggle drives entrance then exit', async ({ page }) => {
+  await createHairline(page);
+  const zip = await downloadTarget(page, 'H2R Graphics export');
+  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+  expect(names.sort()).toEqual(['hairline/README.md', 'hairline/hairline.html']);
+
+  const html = await zip.file('hairline/hairline.html')!.async('string');
+  // The GDD block H2R parses into editable inputs — property keys match the element ids.
+  const gddMatch = html.match(/<script type="application\/json\+gdd">\s*([\s\S]*?)\s*<\/script>/);
+  expect(gddMatch).toBeTruthy();
+  const gdd = JSON.parse(gddMatch![1]);
+  expect(gdd.properties.f0.label).toBe('Name');
+  expect(gdd.properties.f1.label).toBe('Title');
+  expect(gdd.properties.f0.gddType).toBe('single-line');
+  expect(html).not.toMatch(/src=["'](?:\.\/)?js\//); // nothing external left
+
+  // Drive it exactly like H2R: update(json string), then play() on air, play() again off air.
+  const view = await page.context().newPage();
+  await view.setContent(html, { waitUntil: 'load' });
+  await view.evaluate(() => {
+    (window as unknown as { update(raw: string): void }).update('{"f0":"H2R Works"}');
+    (window as unknown as { play(): void }).play(); // toggle ON — entrance
+  });
+  await expect(view.locator('#f0')).toHaveText('H2R Works');
+  await expect
+    .poll(async () => view.locator('.l3').evaluate((el) => getComputedStyle(el).opacity))
+    .toBe('1');
+  await view.evaluate(() => (window as unknown as { play(): void }).play()); // toggle OFF — exit
+  await expect
+    .poll(async () => view.locator('.l3').evaluate((el) => getComputedStyle(el).opacity))
+    .toBe('0');
+  await view.close();
 });
 
 test('export target choice is remembered as the default across reloads', async ({ page }) => {

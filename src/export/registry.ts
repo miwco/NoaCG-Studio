@@ -22,7 +22,8 @@ export interface ExportTarget {
 import { spxStarter } from './targets/spxStarter';
 import { spxPack } from './targets/spxPack';
 import { htmlOverlayTarget } from './targets/htmlOverlay';
+import { h2rTarget } from './targets/h2r';
 import { casparTarget } from './targets/casparcg';
 import { ografTarget } from './targets/ograf';
 
-export const EXPORT_TARGETS: ExportTarget[] = [spxStarter, spxPack, htmlOverlayTarget, casparTarget, ografTarget];
+export const EXPORT_TARGETS: ExportTarget[] = [spxStarter, spxPack, htmlOverlayTarget, h2rTarget, casparTarget, ografTarget];
