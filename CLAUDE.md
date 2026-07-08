@@ -99,15 +99,15 @@ src/
                                 makeDefineVariant) + clock.ts (countdown engine: hidden minutes
                                 field → M:SS + {prefix}-done at zero; DOM-ready-safe) — every
                                 category builds on these
-                  lowerThirds/  lt01…lt10 on shared.ts (prefix 'l3') + animPresets.ts (6
+                  lowerThirds/  lt01…lt13 on shared.ts (prefix 'l3') + animPresets.ts (6
                                 marked-region GSAP presets, prefix-parameterized — they animate
                                 any category's .{prefix}-box structure)
-                  infoCards/    card01…card03 (prefix 'card')
+                  infoCards/    card01…card05 (prefix 'card')
                   endCredits/   cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
                                 credits-pages / credits-crawl); data-driven: a hidden #f0
                                 textarea holds "Role | Name" lines, template JS parses and
                                 rebuilds #credits-track, ends with logo + year (.credits-end)
-                  tickers/      tk01…tk03 (prefix 'ticker') + tickerPresets.ts (ticker-marquee /
+                  tickers/      tk01…tk06 (prefix 'ticker') + tickerPresets.ts (ticker-marquee /
                                 ticker-flip); data-driven: #f0 lines → #ticker-track items;
                                 marquee = items rendered twice, slide one set width, linear
                                 repeat:-1 (seamless loop)
@@ -118,8 +118,10 @@ src/
                   scoreboards/  sb01…sb02 (prefix 'sb'; fixed 4-field contract f0-f3 as
                                 sb-masks so the standard presets drive them; update() pops a
                                 score's mask when it changes on air)
-                  cornerBug/    bug01 (prefix 'bug', standard assembler, logo slot +
-                                placeholder mark)
+                  cornerBug/    bug01…bug02 (prefix 'bug', standard assembler, logo slot +
+                                placeholder mark; bug02 = house live clock via
+                                StandardDesign.runtimeExtraJs — design-owned JS emitted
+                                BEFORE the marked ANIMATION region, DOM-ready guarded)
                   infographics/ ig01…ig02 (prefix 'ig'; design owns fields + runtimeExtraJs;
                                 igPresets: count-up — suffix-preserving number tween — and
                                 bars-grow over #ig-bars .ig-bar-fill[data-value])
@@ -187,7 +189,8 @@ src/
                  wizard/ (CreationWizard, draft.ts, WizardPreview, MiniPreview, steps/),
                  auth/ (useAuthState hook + authUi store + SignInDialog + SignInPrompt +
                  AuthStatus — see "Auth posture" below)
-public/fonts/   the 6 bundled woff2 fonts (served at /fonts, copied into exports)
+public/fonts/   the 7 bundled woff2 fonts (served at /fonts, copied into exports;
+                jetbrains-mono.woff2 doubles as the app UI's mono face)
 scripts/        l3-sweep.mjs — Playwright dev tool: `node scripts/l3-sweep.mjs <shots-dir>
                 <category>` validates every variant × preset × easing (+ category-specific
                 track/loop checks) and captures taste screenshots
@@ -259,8 +262,8 @@ curves, exits use In-direction and run faster; Back Out for pops; Bounce/Elastic
 Linear only for continuous motion (credits rolls, ticker marquees — strictly `ease: 'none'`).
 
 **Broadcast packages.** Graphics made in one project must read as siblings — DESIGN_LANGUAGE §8
-holds the per-family cross-category tokens (minimal / sport / glass shape, type, and motion
-values). Two mechanisms enforce it: the **project brand** (`model/brand.ts`, captured on every
+holds the per-family cross-category tokens (minimal / sport / glass / **noacg house** shape, type,
+and motion values; noacg is the product's own on-air look, rebuilt from the brand-kit overlays). Two mechanisms enforce it: the **project brand** (`model/brand.ts`, captured on every
 wizard Create; the wizard's "Match current project" toggle re-applies palette + font via
 `brandPatch`) and **sibling judging** (every new category variant is judged against its
 lower-third counterpart). Custom colors enter through the wizard's Custom palette (hex/rgba +

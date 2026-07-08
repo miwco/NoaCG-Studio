@@ -192,6 +192,22 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
       StandardDesign.disableSteps).
 - [x] Wizard category grouping: **Essentials** vs **Specials** (CategoryInfo.group).
 
+### The NoaCG house family (2026-07-08 — brand-kit overlays as first-class templates)
+- [x] **A 4th style family `noacg`** — the product's own on-air look (§8 tokens: 8px amber bar +
+      void blur(8px) panels, mono label voice, restrained accent glow), so built-in output
+      showcases the brand. New `NoaCG Amber` palette; JetBrains Mono bundled (variable 400-700,
+      one file now also serving the app UI); `labelFontFaceCss` = a design-owned second typeface
+      the Style panel's heading swap never touches; `StandardDesign.runtimeExtraJs` (the
+      infographics doctrine generalized) for design-owned runtime like live clocks.
+- [x] **7 house variants** rebuilt from `NoaCG-Brand-Kit/overlays/` (offline-first — no Google
+      Fonts, full SPX runtime): **lt11 House Strap**, **lt12 House Breaking** (accent chip +
+      headline panel), **lt13 House Interview** (3-line) · **bug02 House Clock** (logo/three-bar
+      mark + live HH:MM:SS, accent seconds) · **tk05 House Wire** + **tk06 House Markets**
+      (sign-colored deltas, live clock caps) · **card05 House Title** (mono kicker + huge title +
+      radial accent glow; the overlay's opaque backdrop intentionally dropped — catalog graphics
+      composite). Catalog: **43 designs**. Swept (lower-third / ticker / info-card all valid) +
+      4 house E2E specs (clock ticks, deltas color, chip stacks, mono face loads).
+
 ### Era 4 — Local backend (no server, no login)
 - [x] **Control panels for your graphics** — ONE modular engine (src/control/controlModel.ts)
       turns any graphic's SPX DataFields into an operator panel: number → +/− stepper (custom

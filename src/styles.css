@@ -15,20 +15,9 @@
 }
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono.woff2") format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono-500.woff2") format("woff2");
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/jetbrains-mono-700.woff2") format("woff2");
-  font-weight: 700;
+  src: url("/fonts/jetbrains-mono.woff2") format("woff2"); /* variable 400-700 (also in the
+     bundled template-font set, model/fonts.ts — one file serves the app AND the graphics) */
+  font-weight: 400 700;
   font-display: swap;
 }
 
@@ -684,6 +673,7 @@ kbd {
 .wz-style-tag[data-style='minimal'] { color: #e8c547; }
 .wz-style-tag[data-style='sport'] { color: #c8f31d; }
 .wz-style-tag[data-style='glass'] { color: #7dd3fc; }
+.wz-style-tag[data-style='noacg'] { color: var(--amber); }
 
 /* Step 3: field rows */
 .wz-line-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }

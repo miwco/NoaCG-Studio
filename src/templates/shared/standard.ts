@@ -43,6 +43,13 @@ export interface StandardDesign {
    * The wizard's steps flag is then ignored for this variant.
    */
   disableSteps?: boolean;
+  /**
+   * Extra runtime JS the design owns (e.g. a live clock painter). Emitted BEFORE the
+   * marked ANIMATION region — same doctrine as infographics — so the Motion panel can
+   * never rewrite it. Any load-time DOM work in it must use the DOM-ready guard
+   * (template.js loads in <head> in exported packages).
+   */
+  runtimeExtraJs?: string;
 }
 
 export interface StandardMeta {
@@ -150,7 +157,10 @@ ${design.css}
     easeOut: ease.easeOut,
   };
 
-  const js = runtimeJs(meta.name, preset.emit(presetCfg));
+  // Design-owned runtime (e.g. a live clock) lives OUTSIDE the marked ANIMATION region —
+  // before it — so preset/steps swaps in the Motion panel can never rewrite it.
+  const extraJs = design.runtimeExtraJs?.trim();
+  const js = runtimeJs(meta.name, extraJs ? `${extraJs}\n\n${preset.emit(presetCfg)}` : preset.emit(presetCfg));
 
   return {
     name: meta.name,
