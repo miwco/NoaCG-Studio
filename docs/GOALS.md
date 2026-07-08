@@ -295,8 +295,10 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       Signing in (topbar button or any gate) unlocks the account features: cloud sync, community,
       show chat, AI (both the side panel and the wizard's Describe-it entry). Local packets stay
       anonymous-friendly; publish/sync nudge sign-in inline. Offline builds grow no auth UI at all
-      (E2E-pinned). *Still invite-only at the account-creation step (the allowlist hook) — opening
-      signup is a separate switch + abuse-posture decision (email confirm + captcha) for later.*
+      (E2E-pinned). **Signup opened the same day** (migration `0006`: the Before-User-Created hook
+      now allows everyone; applied + live-verified with a throwaway signup). Re-close = restore the
+      0002 function body. *Remaining hardening (dashboard, manual): require email confirmation +
+      enable captcha — the live project currently auto-confirms.*
 - [ ] **5.7 Payments/subscriptions LAST** (long beta first; separate private repo, Stripe, metered
       generations)
 

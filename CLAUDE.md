@@ -202,8 +202,9 @@ everyone, hosted or self-hosted. Only *account features* gate themselves: cloud 
 show chat, and AI (hosted mode). The pattern: read `useAuthState().needsSignIn` (true only when a
 backend is configured AND the visitor is signed out) and render `SignInPrompt` / call
 `useAuthUi().openSignIn(reason)` — never block the app. Offline builds (no Supabase env) must grow
-**zero** auth UI (E2E-pinned in `e2e/auth.spec.ts`). Account creation is invite-only server-side
-(the allowlist hook) until the maintainer opens signup. Don't reintroduce an app-wide gate.
+**zero** auth UI (E2E-pinned in `e2e/auth.spec.ts`). Signup is OPEN (migration `0006` made the
+Before-User-Created hook permissive; restore the 0002 function body to re-close it to the
+allowlist). Don't reintroduce an app-wide gate.
 
 ### The choose-first creation flow (primary UX)
 

@@ -37,8 +37,9 @@ export async function signInWithEmail(email: string, password: string): Promise<
 }
 
 /**
- * Create an account with email + password. Blocked server-side unless the email is allowlisted
- * (the enforce_allowlist hook returns 403 for non-invitees); that message surfaces here.
+ * Create an account with email + password. Signup is open (migration 0006); the server-side
+ * Before-User-Created hook is the switch if it ever needs to re-close to the allowlist — any
+ * rejection message it returns surfaces here.
  */
 export async function signUpWithEmail(email: string, password: string): Promise<{ error: string | null }> {
   const sb = await getSupabase();

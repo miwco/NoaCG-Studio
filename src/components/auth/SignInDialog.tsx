@@ -7,9 +7,9 @@ import BrandLogo from '../BrandLogo';
 /**
  * The on-demand sign-in dialog (Era 5.6 — the open editor). The app is never walled behind it:
  * it opens over the workspace when the user clicks "Sign in" or hits an account-only feature
- * (cloud sync, community, AI). Google OAuth + email/password, with a sign-in / request-access
- * toggle. Account creation is gated server-side to allowlisted emails (the enforce_allowlist
- * hook), so a non-invitee's sign-up returns a clear message here.
+ * (cloud sync, community, AI). Google OAuth + email/password, with a sign-in / create-account
+ * toggle. Signup is open (migration 0006); the server-side hook can re-close it to the
+ * allowlist later without touching this dialog.
  */
 export default function SignInDialog() {
   const open = useAuthUi((s) => s.signInOpen);
@@ -110,7 +110,7 @@ export default function SignInDialog() {
             minLength={6}
           />
           <button type="submit" className="primary auth-submit" disabled={busy}>
-            {mode === 'signin' ? 'Sign in' : 'Request access'}
+            {mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
 
@@ -118,7 +118,7 @@ export default function SignInDialog() {
         {note && <p className="auth-note">{note}</p>}
 
         <button className="auth-toggle" onClick={toggle} disabled={busy}>
-          {mode === 'signin' ? 'Have an invite? Create your account' : 'Already have an account? Sign in'}
+          {mode === 'signin' ? 'New here? Create a free account' : 'Already have an account? Sign in'}
         </button>
       </div>
     </div>
