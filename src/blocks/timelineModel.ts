@@ -25,6 +25,11 @@ export interface TimelineTween {
    * (e.g. a marquee's width-derived speed) stay read-only.
    */
   editable: boolean;
+  /**
+   * T2.5: this tween's OWN ease literal (e.g. "back.out(1.6)"), or null when it inherits
+   * the phase knob (the `ease: easeIn/easeOut` variables or the timeline defaults).
+   */
+  ease: string | null;
 }
 
 export interface TimelinePhase {
@@ -71,6 +76,8 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
 
   const durationMatch = vars.match(/duration:\s*([\d.]+)\s*\/\s*animSpeed/);
   const staggerMatch = vars.match(/stagger:\s*([\d.]+)\s*\/\s*animSpeed/);
+  // A quoted ease is a per-tween override; `ease: easeIn/easeOut` inherits the phase knob.
+  const easeMatch = vars.match(/ease:\s*'([^']+)'/);
 
   // The position argument sits after the LAST object literal: '-=N' (overlap) or an
   // absolute `N / animSpeed` / bare number (what T2 writes).
@@ -89,6 +96,7 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
       ? Number(absoluteMatch[1]) / (absoluteMatch[2] ? animSpeed : 1)
       : null,
     editable: kind !== 'set' && !!durationMatch,
+    ease: easeMatch ? easeMatch[1] : null,
   };
 }
 
@@ -115,6 +123,7 @@ function parsePhase(id: TimelinePhase['id'], body: string, animSpeed: number): T
       start,
       end,
       editable: parsed.editable,
+      ease: parsed.ease,
     });
   }
   return {
@@ -150,6 +159,39 @@ export function parseTimeline(js: string): TimelineModel | null {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** Locate the Nth tl call of a phase's build function inside the marked region. */
+function locateCall(js: string, phaseId: 'in' | 'out', tweenIndex: number) {
+  const regionMatch = js.match(REGION_RE);
+  if (!regionMatch || regionMatch.index === undefined) return null;
+  const region = regionMatch[0];
+  const animSpeed = Number(region.match(/var animSpeed = ([\d.]+)/)?.[1] ?? NaN);
+  if (!animSpeed) return null;
+
+  const fnName = phaseId === 'in' ? 'buildInTimeline' : 'buildOutTimeline';
+  const bodyMatch = region.match(fnBodyRe(fnName));
+  if (!bodyMatch || bodyMatch.index === undefined) return null;
+  const body = bodyMatch[1];
+  const bodyStart = bodyMatch.index + bodyMatch[0].indexOf(body);
+
+  const re = new RegExp(CALL_RE.source, 'g');
+  let m: RegExpExecArray | null;
+  let i = -1;
+  while ((m = re.exec(body))) {
+    i += 1;
+    if (i === tweenIndex) break;
+  }
+  if (!m || i !== tweenIndex) return null;
+
+  return { js, regionIndex: regionMatch.index, region, bodyStart, body, callIndex: m.index, call: m[0], animSpeed };
+}
+
+/** Splice a modified call back: body → region → js. */
+function spliceCall(loc: NonNullable<ReturnType<typeof locateCall>>, call: string): string {
+  const newBody = loc.body.slice(0, loc.callIndex) + call + loc.body.slice(loc.callIndex + loc.call.length);
+  const newRegion = loc.region.slice(0, loc.bodyStart) + newBody + loc.region.slice(loc.bodyStart + loc.body.length);
+  return loc.js.slice(0, loc.regionIndex) + newRegion + loc.js.slice(loc.regionIndex + loc.region.length);
+}
+
 /**
  * T2: rewrite one tween's timing inside the marked region — the parser in reverse. `start`
  * and `duration` are in ACTUAL seconds (the model's clock); literals are written pre-division
@@ -164,39 +206,19 @@ export function patchTweenTiming(
   tweenIndex: number,
   timing: { start?: number; duration?: number },
 ): string | null {
-  const regionMatch = js.match(REGION_RE);
-  if (!regionMatch || regionMatch.index === undefined) return null;
-  const region = regionMatch[0];
-  const animSpeed = Number(region.match(/var animSpeed = ([\d.]+)/)?.[1] ?? NaN);
-  if (!animSpeed) return null;
-
-  const fnName = phaseId === 'in' ? 'buildInTimeline' : 'buildOutTimeline';
-  const bodyMatch = region.match(fnBodyRe(fnName));
-  if (!bodyMatch || bodyMatch.index === undefined) return null;
-  const body = bodyMatch[1];
-  const bodyStart = bodyMatch.index + bodyMatch[0].indexOf(body);
-
-  // Locate the Nth tl call within the function body.
-  const re = new RegExp(CALL_RE.source, 'g');
-  let m: RegExpExecArray | null;
-  let i = -1;
-  while ((m = re.exec(body))) {
-    i += 1;
-    if (i === tweenIndex) break;
-  }
-  if (!m || i !== tweenIndex) return null;
-
-  let call = m[0];
+  const loc = locateCall(js, phaseId, tweenIndex);
+  if (!loc) return null;
+  let call = loc.call;
 
   if (timing.duration !== undefined) {
-    const literal = round2(Math.max(0.05, timing.duration) * animSpeed);
+    const literal = round2(Math.max(0.05, timing.duration) * loc.animSpeed);
     const next = call.replace(/duration:\s*[\d.]+\s*\/\s*animSpeed/, `duration: ${literal} / animSpeed`);
     if (next === call) return null; // no duration literal — not an editable tween
     call = next;
   }
 
   if (timing.start !== undefined) {
-    const literal = round2(Math.max(0, timing.start) * animSpeed);
+    const literal = round2(Math.max(0, timing.start) * loc.animSpeed);
     const position = `${literal} / animSpeed`;
     // Replace an existing position arg (after the last object literal) or append one.
     const tailAt = call.lastIndexOf('}') + 1;
@@ -210,8 +232,44 @@ export function patchTweenTiming(
     call = head + tail;
   }
 
-  // Splice the modified call back: body → region → js.
-  const newBody = body.slice(0, m.index) + call + body.slice(m.index + m[0].length);
-  const newRegion = region.slice(0, bodyStart) + newBody + region.slice(bodyStart + body.length);
-  return js.slice(0, regionMatch.index) + newRegion + js.slice(regionMatch.index + region.length);
+  return spliceCall(loc, call);
+}
+
+/**
+ * T2.5: set (or clear) one tween's OWN ease inside the marked region. `ease` is a GSAP ease
+ * string from the easing vocabulary (written as a quoted literal in the tween's vars, so the
+ * code shows exactly what plays); null removes the override and the tween falls back to the
+ * phase's easeIn/easeOut knob (the timeline defaults).
+ */
+export function patchTweenEase(
+  js: string,
+  phaseId: 'in' | 'out',
+  tweenIndex: number,
+  ease: string | null,
+): string | null {
+  const loc = locateCall(js, phaseId, tweenIndex);
+  if (!loc) return null;
+  let call = loc.call;
+
+  if (ease === null) {
+    // Remove a quoted per-tween override; `ease: easeIn/easeOut` refs ARE the default.
+    const next = call.replace(/,\s*ease:\s*'[^']*'/, '').replace(/ease:\s*'[^']*'\s*,\s*/, '');
+    if (next === call) return js; // nothing to remove — already inheriting
+    return spliceCall(loc, next);
+  }
+
+  if (/ease:\s*'[^']*'/.test(call)) {
+    // Replace an existing quoted override.
+    return spliceCall(loc, call.replace(/ease:\s*'[^']*'/, `ease: '${ease}'`));
+  }
+  if (/ease:\s*(easeIn|easeOut)\b/.test(call)) {
+    // Replace a knob reference with the explicit literal.
+    return spliceCall(loc, call.replace(/ease:\s*(easeIn|easeOut)\b/, `ease: '${ease}'`));
+  }
+  // Insert into the LAST vars object (fromTo's "to" vars) before its closing brace.
+  const lastBrace = call.lastIndexOf('}');
+  if (lastBrace === -1) return null;
+  const before = call.slice(0, lastBrace).replace(/\s*$/, '');
+  const needsComma = !before.endsWith('{') && !before.endsWith(',');
+  return spliceCall(loc, `${before}${needsComma ? ',' : ''} ease: '${ease}' ${call.slice(lastBrace)}`);
 }

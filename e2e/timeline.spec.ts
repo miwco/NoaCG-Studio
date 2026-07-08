@@ -145,6 +145,30 @@ test('T2: moving a bar writes an explicit start position', async ({ page }) => {
     .toBe('1');
 });
 
+test('T2.5: the ease picker writes and clears a per-tween ease literal', async ({ page }) => {
+  await createHairline(page); // line-reveal: tween 1 = the accent draw (inherits easeIn)
+  const templateJs = async () =>
+    page
+      .frameLocator('iframe.preview-frame')
+      .locator('body')
+      .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+
+  // Pick Back for the accent tween — its call gains an explicit quoted ease.
+  const ease = page.getByTestId('timeline-ease-1');
+  await expect(ease).toHaveValue('auto');
+  await ease.selectOption('back.out(1.6)');
+  await page.waitForTimeout(650);
+  const withEase = (await templateJs()).match(/tl\.fromTo\('\.l3-accent'[\s\S]*?\);/)?.[0] ?? '';
+  expect(withEase).toContain("ease: 'back.out(1.6)'");
+  await expect(page.getByTestId('timeline-ease-1')).toHaveValue('back.out(1.6)');
+
+  // Back to auto — the override is removed and the knob rules again.
+  await page.getByTestId('timeline-ease-1').selectOption('auto');
+  await page.waitForTimeout(650);
+  const cleared = (await templateJs()).match(/tl\.fromTo\('\.l3-accent'[\s\S]*?\);/)?.[0] ?? '';
+  expect(cleared).not.toContain("ease: 'back.out(1.6)'");
+});
+
 test('timeline strip collapses to a slim bar and remembers it', async ({ page }) => {
   await createHairline(page);
   const timeline = page.getByTestId('timeline');

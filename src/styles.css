@@ -1225,6 +1225,22 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   background: rgba(232, 237, 242, 0.7);
   pointer-events: none;
 }
+
+/* T2.5 — the per-tween ease picker at the row's end ('auto' inherits the phase knob). */
+.timeline-ease {
+  width: 96px;
+  flex-shrink: 0;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10px;
+  padding: 1px 4px;
+  height: 18px;
+  background: rgba(232, 237, 242, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+}
+.timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
+.timeline-ease-spacer { width: 96px; flex-shrink: 0; }
 .timeline-scrub { accent-color: var(--amber); }
 
 /* Cloud sync status pill (Era 5.2) */

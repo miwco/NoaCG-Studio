@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import { parseTimeline, patchTweenTiming } from '../blocks/timelineModel';
+import { parseTimeline, patchTweenEase, patchTweenTiming } from '../blocks/timelineModel';
+import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { useIsMobile } from './useIsMobile';
 import type { SpxWindow } from './PlayoutSimulator';
+
+/** The per-tween ease options for a phase: the vocabulary's phase-correct half, deduped by
+ *  the actual GSAP string (several presets share a curve), plus 'auto' (inherit the knob). */
+function easeOptionsFor(phase: 'in' | 'out'): { value: string; label: string }[] {
+  const seen = new Map<string, string>();
+  for (const e of EASINGS) {
+    const value = phase === 'in' ? e.gsapIn : e.gsapOut;
+    if (!seen.has(value)) seen.set(value, e.tag === 'standard' ? e.name : `${e.name} ·${e.tag}`);
+  }
+  return [...seen.entries()].map(([value, label]) => ({ value, label }));
+}
 
 /** A bar drag in progress (T2): move = slide the start, resize = stretch the duration. */
 interface BarDrag {
@@ -135,6 +147,16 @@ export default function TimelineView({ iframeRef }: Props) {
     );
   };
 
+  /** T2.5: set/clear one tween's own ease — one undoable patch + replay. */
+  const pickEase = (index: number, value: string) => {
+    const js = patchTweenEase(template.js, phase.id, index, value === 'auto' ? null : value);
+    if (!js || js === template.js) return;
+    applyTemplate({ ...template, js });
+    requestReplay();
+  };
+  // Cheap enough to build per render — and NO hooks may sit below the model-null return above.
+  const easeOptions = easeOptionsFor(phase.id);
+
   /** Release: rewrite the tween's timing literals in the marked region — one undoable patch. */
   const endBarDrag = () => {
     const d = barDragRef.current;
@@ -237,14 +259,34 @@ export default function TimelineView({ iframeRef }: Props) {
                     )}
                   </div>
                 </div>
+                {/* T2.5 — the tween's own ease; 'auto' inherits the phase knob. */}
+                {tw.editable ? (
+                  <select
+                    className="timeline-ease"
+                    value={tw.ease ?? 'auto'}
+                    onChange={(e) => pickEase(i, e.target.value)}
+                    title="This line's own ease — 'auto' follows the phase's easing knob"
+                    data-testid={`timeline-ease-${i}`}
+                  >
+                    <option value="auto">auto</option>
+                    {easeOptions.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                    {tw.ease && !easeOptions.some((o) => o.value === tw.ease) && (
+                      <option value={tw.ease}>{tw.ease}</option>
+                    )}
+                  </select>
+                ) : (
+                  <span className="timeline-ease-spacer" aria-hidden="true" />
+                )}
               </div>
             );
           })}
-          {/* The playhead — spans the lane area (past the fixed label column). */}
+          {/* The playhead — spans the lane area (between the label and ease columns). */}
           <div
             className="timeline-playhead"
             data-testid="timeline-playhead"
-            style={{ left: `calc(110px + (100% - 110px) * ${frac})` }}
+            style={{ left: `calc(110px + (100% - 110px - 104px) * ${frac})` }}
             aria-hidden="true"
           />
         </div>

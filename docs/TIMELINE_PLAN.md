@@ -40,11 +40,47 @@ auto-replay so the new timing is heard immediately. set() ticks and measured dur
 (customizations are intentionally preset-scoped). **Per-element eases: deferred to T2.5**
 (the easing vocabulary + direction doctrine in model/easings.ts stays the law).
 
-### T3 — Steps & next() sequencing (the live-graphics differentiator)
-Model SPX Continue/next() as timeline SEGMENTS: reveal groups with an explicit order,
-per-segment timing, and a visual "what plays on each press" strip. Covers quiz reveals,
-multi-line straps, scoreboard moments. This is where we beat generic tools: the timeline
-speaks playout (play/next/stop), not video-editor time.
+### T3 — Steps & next() sequencing (the live-graphics differentiator) — PLANNED 2026-07-08
+
+**Competitive research (sources: docs.loopic.io API docs, SPX HTML template docs):**
+- **Loopic** models multi-phase graphics as ONE keyframe timeline with **Stop actions** (the
+  playhead pauses there; the next command resumes toward the following stop) and an **Outro
+  action** (the stop command plays from that frame). Intuitive AE-style authoring — but the
+  step count is baked into the keyframes, so data-driven graphics (N credit lines, N quiz
+  options) can't adapt; and their SPX "Steps" support was still listed as upcoming in their
+  LiveOS integration notes.
+- **SPX** itself only counts: `steps ≥ 2` shows the operator a **Continue** button; each press
+  calls the template's `next()`. What a step DOES is entirely template-defined, and SPX shows
+  nothing about what comes next.
+- **CasparCG** `next()` = same contract; **H2R** has no next at all; **Singular.Live** uses
+  state/payload control, a different paradigm.
+
+**The NoaCG model — segment chain (the synthesis that beats both):** the graphic is a chain
+`▶ IN → » Step 2 → » Step 3 → … → ■ OUT`, rendered on the timeline strip as consecutive
+segments separated by playout markers — it LOOKS like Loopic's stop-point timeline (instantly
+familiar), but each step segment is semantically generated from the fields, so the step count
+follows the data and presets stay swappable. The operator-facing truth ("what plays on each
+press") is the strip itself.
+
+Slices:
+- **T3.1 — Steps on the strip + live playhead.** Emit upgrade: `revealNextStep()` returns its
+  tween and reads per-step knobs (see T3.2), and the steps block gains a parseable shape. The
+  strip renders segment tabs `In · »2 · »3 · … · Out` with real durations and markers; the
+  simulator wraps next() so `__activeTl` covers steps and the playhead sweeps each press.
+  Scrubbing a step segment first jumps IN + prior steps to their end (suppressed), then pauses
+  the step's tween. The `out` playout setting shows as a badge after OUT ("manual" / auto-ms).
+- **T3.2 — Per-step timing/ease knobs.** The emitted steps block declares per-step literals
+  (duration/ease per revealed line — same `N / animSpeed` + quoted-ease vocabulary), patched by
+  the same literal patcher the T2/T2.5 bars use. Bars inside step segments drag like any other.
+- **T3.3 — Reveal groups (the better-than-Loopic move).** Which lines reveal on which press
+  stops being fixed one-line-per-step: the emitted block declares
+  `var stepGroups = [['#f1'], ['#f2', '#f3']]` (commented, readable), the runtime reveals a
+  GROUP per next(), and the strip lets you drag a line's bar from one step segment to another
+  to regroup. Data-driven graphics get arbitrary reveal choreography with zero keyframing.
+
+Non-goals: freeform stop-points inside arbitrary hand-written timelines (the code editor is
+the escape hatch, as ever); Singular-style state machines. The steps vocabulary stays within
+the marked region + the SPX `steps` setting so every export target keeps working.
 
 ### T4 — Custom sequences (escape hatch, later)
 Add/reorder simple actions per element (move/fade/scale/blur) as new emitted tweens in the
