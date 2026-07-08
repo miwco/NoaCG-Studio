@@ -116,7 +116,7 @@ test('end credits: text field drives the parsed roll', async ({ page }) => {
   // Editing the credits in the Data panel + ⟳ Update re-renders the rows.
   await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
   await page.locator('.panel-body textarea').first().fill('CREW\nShowrunner | Nova Reyes');
-  await page.getByRole('button', { name: '⟳ Update' }).click();
+  await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
   await expect(track.locator('.credits-row')).toHaveCount(1);
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect

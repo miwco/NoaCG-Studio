@@ -46,7 +46,7 @@ test('scoreboard: all four fields bind and a score change lands', async ({ page 
   await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
   const scoreInput = page.locator('.panel-body .field-row', { hasText: 'Score A' }).locator('input').first();
   await scoreInput.fill('5');
-  await page.getByRole('button', { name: '⟳ Update' }).click();
+  await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
   await expect(frame(page).locator('#f1')).toHaveText('5');
   await expect(frame(page).locator('#f2')).toHaveText('AWAY');
 });

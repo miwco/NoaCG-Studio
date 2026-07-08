@@ -65,7 +65,7 @@ test('end credits: uploading a logo through the Logo field puts it in the end bl
   // Placeholder first — no logo picked yet.
   await expect(frame(page).locator('.credits-end .credits-logo-slot')).toBeAttached();
   await uploadImage(page, 'Logo', 'my_logo.png');
-  await page.getByRole('button', { name: '⟳ Update' }).click();
+  await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
   const logo = frame(page).locator('.credits-end img.credits-logo');
   await expect(logo).toBeAttached();
   // The preview shim resolves the relative path to the in-memory data URL.
@@ -79,7 +79,7 @@ test('corner bug: the logo field replaces the placeholder mark', async ({ page }
   await create(page);
   await expect(frame(page).locator('.corner-bug-mark')).toBeVisible();
   await uploadImage(page, 'Logo', 'channel_mark.png');
-  await page.getByRole('button', { name: '⟳ Update' }).click();
+  await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
   await expect(frame(page).locator('.corner-bug-media.has-image')).toBeAttached();
   await expect(frame(page).locator('.corner-bug-mark')).toBeHidden();
   await expect
