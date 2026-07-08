@@ -341,11 +341,15 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
 - [ ] **5.7 Payments/subscriptions LAST** (long beta first; separate private repo, Stripe, metered
       generations)
 
-### Era 6 — WYSIWYG editor
+### Era 6 — WYSIWYG editor + timeline
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/
-duration knobs. Big; planned last deliberately.
+duration knobs. Big; planned last deliberately. **Binding plans (2026-07-08):
+`docs/WYSIWYG_PLAN.md`** (slices W1 drag-to-position → W2 scale handle → W3 in-place text →
+W4 element nudges, with guardrails) **and `docs/TIMELINE_PLAN.md`** (T1 read-only timeline
+view → T2 timing knobs → T3 steps/next() sequencing → T4 custom sequences; not a Loopic
+clone, never a creation surface). Recommended order: W1 → T1 → T2 → W2/W3 → T3.
 
 ### Era 7 — Nightly automation + the auto-generated graphics library (committed direction, unscheduled)
 Binding plan: **`docs/NIGHTLY_AUTOMATION_PLAN.md`**. The site continuously generates and (eventually)
@@ -382,8 +386,13 @@ read-only scheduled cloud agent. Not yet built — see the plan doc for the veri
       dock workflow documented) and honors the 5.3 remote-control block. Shared single-file
       composer extracted (`export/selfContained.ts`, reused by CasparCG). E2E: loads the exported
       file with zero outside calls and asserts the baked value + settled opacity.
-- [ ] Export research: LiveOS, H2R Graphics, Singular.Live, Flowics — what each ingests, which
-      need real adapters vs the plain HTML overlay (task queued)
+- [x] **Export research (2026-07-08)** — `docs/EXPORT_TARGETS_RESEARCH.md`: **H2R Graphics** is a
+      HIGH-priority small adapter (its Custom HTML type calls our exact `play()`/`update(json)`
+      contract; fields declared via a GDD script block we can generate from DataFields);
+      **LiveOS** is likely free via our existing OGraf export (OGraf demoed at NAB 2026; else a
+      templates.json adapter); **Singular.Live / Flowics / uno** are closed composers — not
+      ingest targets, interop at the production layer.
+- [ ] H2R Graphics export target (self-contained + GDD block; see the research doc)
 - [ ] Data-driven/live content architecture (ticker/scoreboard controlled from a backend) — later
 
 ### Quality bar (always-on)
