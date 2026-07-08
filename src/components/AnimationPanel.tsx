@@ -5,12 +5,12 @@ import {
   presetsForType,
   readAnimationInfo,
   setAnimKnob,
+  setStepsMode,
   swapAnimationPhase,
   type AnimPhase,
 } from '../blocks/animPatch';
 import { EASINGS, resolveEasing, type EasingId } from '../model/easings';
 import type { AnimPresetId } from '../model/wizard';
-import { replaceDefinitionInHtml } from '../model/spxDefinition';
 
 const SPEEDS = [
   { label: 'Slower', value: 0.75 },
@@ -94,13 +94,8 @@ export default function AnimationPanel() {
   };
 
   const toggleSteps = (on: boolean) => {
-    const cfg = presetConfigFromTemplate(template, on);
-    const presetId = info.inPresetId ?? 'slide-fade';
-    // Steps are part of the entrance: re-emit the IN phase, keep the exit as-is.
-    const js = swapAnimationPhase(template.js, presetId, cfg, 'in');
-    const steps = on && cfg.lineCount > 1 ? String(cfg.lineCount) : '1';
-    const settings = { ...template.settings, steps };
-    const html = replaceDefinitionInHtml(template.html, settings, template.fields);
+    // Steps are part of the entrance: setStepsMode re-emits the IN phase, keeps the exit.
+    const { js, html, settings } = setStepsMode(template, on);
     applyAndShow(js, { html, settings });
   };
 

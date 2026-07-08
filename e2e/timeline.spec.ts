@@ -37,9 +37,15 @@ test('timeline strip lives under the preview and renders the preset structure', 
   await expect(timeline).toContainText('expo.out'); // line-reveal's auto ease pair
   const rows = timeline.locator('.timeline-row');
   await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toContainText('.l3');
-  await expect(rows.nth(1)).toContainText('.l3-accent');
-  await expect(rows.nth(2)).toContainText('#f0, #f1');
+  // Rows are labelled in plain words (the raw selector lives in the tooltip)…
+  await expect(rows.nth(0)).toContainText('Whole graphic');
+  await expect(rows.nth(1)).toContainText('Accent line');
+  await expect(rows.nth(2)).toContainText('Name + Title');
+  // …and each bar says what it does (line-reveal: the accent draws, the lines slide).
+  await expect(rows.nth(1).locator('.timeline-bar-verb')).toHaveText('draw');
+  await expect(rows.nth(2).locator('.timeline-bar-verb')).toHaveText('slide');
+  // The gesture hint makes retime/stretch/ease discoverable without hovering.
+  await expect(timeline.getByTestId('timeline-hint')).toContainText('drag a bar to retime');
   // Both phases offered, with real durations; idle playhead parks at the END of In.
   await expect(timeline.locator('[data-testid="timeline-seg-in"]')).toContainText('s');
   await expect(timeline.locator('[data-testid="timeline-seg-out"]')).toContainText('s');
@@ -276,6 +282,86 @@ test('T3.3: dragging a line onto another step regroups the Continue chain (and b
   const plus = (await page.getByTestId('timeline-seg-new').boundingBox())!;
   await page.mouse.move(plus.x + plus.width / 2, plus.y + plus.height / 2, { steps: 6 });
   await page.mouse.up();
+  await page.waitForTimeout(650);
+  expect(await templateJs()).toContain("var stepGroups = [['#f1'], ['#f2']];");
+  await expect(page.getByTestId('timeline-seg-step-3')).toBeVisible();
+});
+
+test('the »+ Step button turns steps on, then splits a group into another step', async ({ page }) => {
+  await createHairline(page); // two lines, created WITHOUT steps
+  const templateJs = async () =>
+    page
+      .frameLocator('iframe.preview-frame')
+      .locator('body')
+      .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+
+  // No steps yet — but the strip offers »+ Step (the affordance the Motion checkbox hides).
+  expect(await templateJs()).not.toContain('function revealNextStep');
+  const addStep = page.getByTestId('timeline-seg-new');
+  await expect(addStep).toBeVisible();
+
+  // Click 1: step reveal turns ON — same patch as the Motion panel's checkbox.
+  await addStep.click();
+  await expect(page.getByTestId('timeline-seg-step-2')).toBeVisible();
+  await page.waitForTimeout(650);
+  const js = await templateJs();
+  expect(js).toContain("var stepGroups = [['#f1']];");
+  // The SPX steps setting follows, so the operator gets the Continue button.
+  const html = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.documentElement.outerHTML);
+  expect(html).toContain('"steps": "2"');
+
+  // With every line already in its own step (and none multi-line), »+ Step disappears.
+  await expect(addStep).toHaveCount(0);
+
+  // Two-line template: nothing left to split — undo removes the steps and the button returns.
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('timeline-seg-step-2')).toHaveCount(0);
+  await expect(page.getByTestId('timeline-seg-new')).toBeVisible();
+});
+
+test('the »+ Step button splits the last multi-line reveal into its own step', async ({ page }) => {
+  // Soft Stack with steps ON: groups start as [['#f1'], ['#f2']] — all single-line.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
+  await page.locator('.wz-variant', { hasText: 'Soft Stack' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.locator('.wz-step input[type="checkbox"]').check();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+
+  const templateJs = async () =>
+    page
+      .frameLocator('iframe.preview-frame')
+      .locator('body')
+      .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+
+  // All groups single-line → nothing to split → no »+ Step offered.
+  await expect(page.getByTestId('timeline-seg-new')).toHaveCount(0);
+
+  // Merge »3 into »2 by dragging (T3.3) — now one multi-line group exists.
+  await page.getByTestId('timeline-seg-step-3').click();
+  const bar = page.getByTestId('timeline-bar-0');
+  const bb = (await bar.boundingBox())!;
+  const tab2 = (await page.getByTestId('timeline-seg-step-2').boundingBox())!;
+  await page.mouse.move(bb.x + 20, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(tab2.x + tab2.width / 2, tab2.y + tab2.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(650);
+  expect(await templateJs()).toContain("var stepGroups = [['#f1', '#f2']];");
+
+  // »+ Step reappears; a CLICK splits the group's last line into a new Continue step.
+  const addStep = page.getByTestId('timeline-seg-new');
+  await expect(addStep).toBeVisible();
+  await addStep.click();
   await page.waitForTimeout(650);
   expect(await templateJs()).toContain("var stepGroups = [['#f1'], ['#f2']];");
   await expect(page.getByTestId('timeline-seg-step-3')).toBeVisible();

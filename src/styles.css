@@ -1173,7 +1173,16 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   outline-offset: 1px;
   background: rgba(246, 166, 35, 0.12);
 }
-.timeline-newstep { color: var(--text-dim); border: 1px dashed var(--border); border-radius: 6px; padding: 2px 8px; font-size: 11px; }
+.timeline-newstep {
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.timeline-newstep:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.5); }
 .regroup-ghost {
   position: fixed;
   z-index: 300;
@@ -1209,8 +1218,7 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-label {
   width: 102px;
   flex-shrink: 0;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 10px;
+  font-size: 10.5px;          /* friendly element names (raw selector in the tooltip) */
   color: var(--text-dim);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1249,6 +1257,30 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-bar.set {
   width: 3px;
   background: var(--paper);   /* an instant set() — a tick, not a span */
+}
+/* What the bar does, written on it ("fade + slide", "wipe", "reveal", …). */
+.timeline-bar-verb {
+  position: absolute;
+  inset: 0;
+  padding: 0 9px 0 5px;       /* right padding keeps clear of the resize grip */
+  font-size: 8.5px;
+  line-height: 10px;
+  letter-spacing: 0.05em;
+  color: rgba(10, 12, 16, 0.85);   /* dark ink on the amber bar */
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: none;       /* the bar underneath owns the drag */
+  user-select: none;
+}
+/* The one-line gesture hint under the tracks — discoverability without hovering. */
+.timeline-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .timeline-playhead {
   position: absolute;

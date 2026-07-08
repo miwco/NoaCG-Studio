@@ -7,7 +7,9 @@ import {
   patchStepTiming,
   patchTweenEase,
   patchTweenTiming,
+  type TimelineTween,
 } from '../blocks/timelineModel';
+import { setStepsMode } from '../blocks/animPatch';
 import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { useIsMobile } from './useIsMobile';
@@ -53,6 +55,27 @@ interface RegroupDrag {
   overStep: number | null;
 }
 
+/** What a bar DOES, in plain words — derived from the tween's animated props. Ordered by
+ *  visual dominance; the two strongest verbs are shown inside the bar (e.g. "slide + fade"). */
+const PROP_VERBS: [RegExp, string][] = [
+  [/^clipPath$/, 'wipe'],
+  [/^filter$/, 'blur'],
+  [/^scaleX$/, 'draw'],
+  [/^scale[YZ]?$/, 'pop'],
+  [/^skew/, 'skew'],
+  [/^(x|y|xPercent|yPercent)$/, 'slide'],
+  [/^opacity$/, 'fade'],
+];
+
+function actionLabel(tween: Pick<TimelineTween, 'kind' | 'props'>): string {
+  if (tween.kind === 'set') return '';
+  const verbs: string[] = [];
+  for (const [re, verb] of PROP_VERBS) {
+    if (tween.props.some((p) => re.test(p)) && !verbs.includes(verb)) verbs.push(verb);
+  }
+  return verbs.slice(0, 2).join(' + ');
+}
+
 /** The per-tween ease options for a phase: the vocabulary's phase-correct half, deduped by
  *  the actual GSAP string (several presets share a curve), plus 'auto' (inherit the knob). */
 function easeOptionsFor(direction: 'in' | 'out'): { value: string; label: string }[] {
@@ -80,6 +103,12 @@ export default function TimelineView({ iframeRef }: Props) {
   const requestReplay = useTemplateStore((s) => s.requestReplay);
 
   const model = useMemo(() => parseTimeline(template.js), [template.js]);
+  // The category's class prefix + visible line count — for friendly labels and the »+ button.
+  const prefix = useMemo(() => (template.html.match(/class="(\w+)-box"/) || [])[1] ?? null, [template.html]);
+  const lineCount = useMemo(
+    () => (template.html.match(/id="f\d+"[^>]*class="\w+-/g) || []).length,
+    [template.html],
+  );
   const [phaseId, setPhaseId] = useState<string>('in');
   const [time, setTime] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
@@ -266,6 +295,33 @@ export default function TimelineView({ iframeRef }: Props) {
     setPhaseId(`step-${dest + 2}`);
   };
 
+  // ── The »+ Step button: grow the Continue chain without knowing the internals ─────
+  // Steps off → turn step reveal on (the SAME patch as the Motion panel's checkbox).
+  // Steps on → split the last multi-line reveal group into a new Continue step.
+  const stepsSupported =
+    !['end-credits', 'ticker', 'starting-soon', 'countdown', 'infographic', 'quiz'].includes(template.type);
+  const stepsOn = template.js.includes('function revealNextStep');
+  const splitFrom = (() => {
+    for (let i = model.steps.length - 1; i >= 0; i--) {
+      const s = model.steps[i];
+      if (s.groupable && s.targets.length > 1) return i;
+    }
+    return -1;
+  })();
+  const canAddStep = stepsSupported && (!stepsOn ? lineCount > 1 : splitFrom !== -1);
+
+  const addStep = () => {
+    if (!stepsOn) {
+      applyTemplate({ ...template, ...setStepsMode(template, true) });
+    } else {
+      const group = model.steps[splitFrom];
+      const js = patchStepRegroup(template.js, group.targets[group.targets.length - 1], splitFrom, model.steps.length);
+      if (!js) return;
+      applyTemplate({ ...template, js });
+    }
+    requestReplay(); // play it — the new step is one » Next press away
+  };
+
   const scrubTo = (raw: number) => {
     // Range steps accumulate float error and can stall one step short of the end — snap the
     // last step to the exact phase end so end-of-phase set() calls (e.g. the final hide) render.
@@ -281,7 +337,25 @@ export default function TimelineView({ iframeRef }: Props) {
     sendScrub(id, 0);
   };
 
-  const label = (targets: string[]) => targets.join(', ');
+  // ── Friendly row labels: name the ELEMENT in plain words (the raw selector stays in
+  //    the tooltip). `#fN` targets use the operator field's title from the definition.
+  const friendlyTarget = (t: string): string => {
+    if (prefix) {
+      if (t === `.${prefix}`) return 'Whole graphic';
+      if (t === `.${prefix}-box`) return 'Panel';
+      if (t === `.${prefix}-accent`) return 'Accent line';
+      if (t.startsWith(`.${prefix}-`)) {
+        const part = t.slice(prefix.length + 2);
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      }
+    }
+    if (/^#f\d+$/.test(t)) {
+      const field = template.fields.find((f) => f.field === t.slice(1));
+      return field?.title || t;
+    }
+    return t;
+  };
+  const label = (targets: string[]) => targets.map(friendlyTarget).join(' + ');
 
   /** The rows shown for the selected segment: the phase's tweens, or ONE ROW PER LINE of
    *  the step's reveal group (each offset by the group stagger — drag a row to regroup). */
@@ -308,15 +382,22 @@ export default function TimelineView({ iframeRef }: Props) {
         </button>
         {segments.map((s) => (
           <span key={s.id} style={{ display: 'contents' }}>
-            {/* The »+ drop target — a NEW Continue step; shown only while regrouping. */}
-            {s.kind === 'out' && regroup && (
-              <span
-                className={`tab timeline-seg timeline-newstep${regroup.overStep === model.steps.length ? ' drop-target' : ''}`}
+            {/* »+ Step — click to grow the Continue chain (turns steps on, or splits a
+                multi-line reveal); doubles as the new-step DROP target while regrouping. */}
+            {s.kind === 'out' && (regroup || canAddStep) && (
+              <button
+                className={`tab timeline-seg timeline-newstep${regroup?.overStep === model.steps.length ? ' drop-target' : ''}`}
                 data-step-drop={model.steps.length}
                 data-testid="timeline-seg-new"
+                onClick={regroup ? undefined : addStep}
+                title={
+                  !stepsOn
+                    ? 'Add a Continue step — ▶ Play then shows only the first line; each » Next press reveals the next one'
+                    : 'Add a Continue step — splits the last multi-line reveal so its last line gets its own » Next press'
+                }
               >
-                <span className="timeline-marker">»</span> +
-              </span>
+                <span className="timeline-marker">»</span> + Step
+              </button>
             )}
             <button
               className={`tab timeline-seg ${s.id === seg.id ? 'active' : ''}${
@@ -375,8 +456,8 @@ export default function TimelineView({ iframeRef }: Props) {
                     }}
                     title={
                       tw.kind === 'set'
-                        ? `set · ${tw.props.join(', ')}`
-                        : `${tw.props.join(', ')} · ${(d ? start : tw.start).toFixed(2)}–${(d ? start + span : tw.end).toFixed(2)}s${tw.stagger ? ` · stagger ${tw.stagger.toFixed(2)}s` : ''}${
+                        ? `instant set · ${tw.props.join(', ')}`
+                        : `${(step ? 'reveal' : actionLabel(tw)) || 'animate'} (${tw.props.join(', ')}) · ${(d ? start : tw.start).toFixed(2)}–${(d ? start + span : tw.end).toFixed(2)}s${tw.stagger ? ` · stagger ${tw.stagger.toFixed(2)}s` : ''}${
                             step?.groupable
                               ? ' — drag onto another » step to regroup, edge to stretch'
                               : tw.editable
@@ -398,6 +479,12 @@ export default function TimelineView({ iframeRef }: Props) {
                     onPointerUp={() => { endBarDrag(); endRegroup(); }}
                     onPointerCancel={() => { setBarDrag(null); setRegroup(null); }}
                   >
+                    {/* What this bar does, in plain words — steps are always reveals. */}
+                    {tw.kind !== 'set' && (
+                      <span className="timeline-bar-verb" aria-hidden="true">
+                        {step ? 'reveal' : actionLabel(tw)}
+                      </span>
+                    )}
                     {tw.editable && tw.kind !== 'set' && (
                       <span
                         className="timeline-bar-handle"
@@ -414,10 +501,10 @@ export default function TimelineView({ iframeRef }: Props) {
                     className="timeline-ease"
                     value={tw.ease ?? 'auto'}
                     onChange={(e) => pickEase(i, e.target.value)}
-                    title="This line's own ease — 'auto' follows the phase's easing knob"
+                    title="How this move accelerates (its ease) — 'auto' follows the phase's easing knob"
                     data-testid={`timeline-ease-${i}`}
                   >
-                    <option value="auto">auto</option>
+                    <option value="auto">ease · auto</option>
                     {easeOptions.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
@@ -439,6 +526,17 @@ export default function TimelineView({ iframeRef }: Props) {
             aria-hidden="true"
           />
         </div>
+      )}
+
+      {/* One line of context so the gestures are discoverable without hovering. */}
+      {!collapsed && (
+        <p className="timeline-hint" data-testid="timeline-hint">
+          {step
+            ? 'Plays on one » Next press — drag a row onto another » tab to move it, edge to stretch, menu for ease.'
+            : seg.kind === 'out'
+              ? 'The exit (■ Stop) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'
+              : 'The entrance (▶ Play) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'}
+        </p>
       )}
 
       {/* T3.3 — the line chip following the pointer while regrouping. */}

@@ -90,6 +90,20 @@ Non-goals: freeform stop-points inside arbitrary hand-written timelines (the cod
 the escape hatch, as ever); Singular-style state machines. The steps vocabulary stays within
 the marked region + the SPX `steps` setting so every export target keeps working.
 
+### T3.5 — Discoverability pass (user feedback) — ✅ SHIPPED (2026-07-08)
+The engine worked but read as internals: rows were raw selectors, gestures and the fade
+bars were only findable by hovering, and steps could only be turned on at creation (or in
+the Motion checkbox nobody connects to the strip). Pure UX affordances, no new contract:
+- **Plain-word rows**: labels name the element ("Whole graphic", "Panel", "Accent line",
+  field titles for `#fN`); each bar carries its action verb ("fade + slide", "wipe",
+  "draw", "reveal") derived from the parsed props. Raw selectors/props stay in tooltips.
+- **»+ Step on the strip**: steps off → one click turns step reveal on (`setStepsMode` in
+  animPatch — the SAME patch as the Motion checkbox, now shared); steps on → splits the
+  last multi-line reveal group into a new Continue step (`patchStepRegroup`). Hidden when
+  there is nothing to add; doubles as the new-step drop target while regrouping.
+- **Inline hint line** under the tracks, per segment kind (retime/stretch/ease gestures;
+  what a » segment means), and the ease chips read "ease · auto" instead of "auto".
+
 ### T4 — Custom sequences (escape hatch, later)
 Add/reorder simple actions per element (move/fade/scale/blur) as new emitted tweens in the
 region — still preset-grade readable output with comments. The moment a request needs

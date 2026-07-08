@@ -12,6 +12,7 @@ import { IG_PRESETS } from '../templates/infographics/igPresets';
 import { QUIZ_PRESETS } from '../templates/quiz/quizPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
+import { replaceDefinitionInHtml } from '../model/spxDefinition';
 
 /** The presets that apply to a template, by its category. */
 export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
@@ -105,6 +106,26 @@ export function presetConfigFromTemplate(template: SpxTemplate, steps: boolean):
     easeIn: info.easeIn ?? preset.autoEase.easeIn,
     easeOut: info.easeOut ?? preset.autoEase.easeOut,
   };
+}
+
+/**
+ * Turn multi-step reveal on/off — the ONE steps switch (the Motion panel's checkbox and the
+ * timeline strip's »+ button both call this). Steps ride with the entrance, so the IN phase
+ * is re-emitted with/without the steps block, and the SPX `steps` setting follows so the
+ * operator gets the Continue button. Returns the patched template parts.
+ */
+export function setStepsMode(
+  template: SpxTemplate,
+  on: boolean,
+): Pick<SpxTemplate, 'js' | 'html' | 'settings'> {
+  const info = readAnimationInfo(template.js);
+  const cfg = presetConfigFromTemplate(template, on);
+  const presetId = info.inPresetId ?? 'slide-fade';
+  const js = swapAnimationPhase(template.js, presetId, cfg, 'in');
+  const steps = on && cfg.lineCount > 1 ? String(cfg.lineCount) : '1';
+  const settings = { ...template.settings, steps };
+  const html = replaceDefinitionInHtml(template.html, settings, template.fields);
+  return { js, html, settings };
 }
 
 /** Replace the managed region with a freshly emitted block for `presetId`. */
