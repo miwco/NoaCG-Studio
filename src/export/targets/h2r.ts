@@ -98,6 +98,7 @@ export const h2rTarget: ExportTarget = {
   label: 'H2R Graphics export',
   description:
     'One self-contained .html for H2R\'s Custom HTML graphic type — fields become editable H2R inputs (embedded GDD), on/off drives the entrance and exit.',
+  successMessage: '✓ Exported. Add the .html as an H2R Custom HTML graphic (see README.md).',
   async build(template) {
     const zip = new JSZip();
     const name = slug(template.name);

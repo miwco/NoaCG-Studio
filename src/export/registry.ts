@@ -15,15 +15,17 @@ export interface ExportTarget {
   id: string;
   label: string;
   description: string;
+  /** Success line shown after a download. Each target speaks for its own workflow — SPX says
+   *  "drop the folder in", a browser-source target says "add the .html as a source", etc. */
+  successMessage: string;
   build: (template: SpxTemplate, ctx?: ExportContext) => Promise<JSZip>;
 }
 
 // Imported AFTER the interfaces so targets can import types from here without a cycle.
-import { spxStarter } from './targets/spxStarter';
-import { spxPack } from './targets/spxPack';
+import { spxTarget } from './targets/spxStarter';
 import { htmlOverlayTarget } from './targets/htmlOverlay';
 import { h2rTarget } from './targets/h2r';
 import { casparTarget } from './targets/casparcg';
 import { ografTarget } from './targets/ograf';
 
-export const EXPORT_TARGETS: ExportTarget[] = [spxStarter, spxPack, htmlOverlayTarget, h2rTarget, casparTarget, ografTarget];
+export const EXPORT_TARGETS: ExportTarget[] = [spxTarget, htmlOverlayTarget, h2rTarget, casparTarget, ografTarget];

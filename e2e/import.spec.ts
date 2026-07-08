@@ -94,7 +94,7 @@ test('import round-trip: an exported Starter zip re-imports as the same code', a
   await page.getByRole('button', { name: '+ New project' }).click();
   await page.locator('[data-entry="import"]').click();
   await page.locator('.wz-drop input[type="file"]').setInputFiles({
-    name: 'hairline_spx-starter.zip',
+    name: 'hairline_spx.zip',
     mimeType: 'application/zip',
     buffer: zipBuffer,
   });

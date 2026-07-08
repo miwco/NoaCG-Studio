@@ -189,6 +189,7 @@ export const ografTarget: ExportTarget = {
   id: 'ograf',
   label: 'OGraf (EBU) export',
   description: 'An OGraf v1 Graphic: manifest + Web Component wrapping this template — for OGraf-compatible renderers.',
+  successMessage: '✓ Exported. Load the unzipped folder in an OGraf-compatible renderer.',
   async build(template) {
     const manifest = buildOgrafManifest(template);
     const errors = validateOgrafManifest(manifest);

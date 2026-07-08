@@ -27,10 +27,10 @@ async function downloadTarget(page: Page, label: string): Promise<JSZip> {
   return JSZip.loadAsync(readFileSync(await download.path()));
 }
 
-test('export panel offers all six targets', async ({ page }) => {
+test('export panel offers all five targets', async ({ page }) => {
   await createHairline(page);
   await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
-  for (const label of ['Starter SPX export', 'Advanced / Pack export', 'HTML overlay (OBS / vMix)', 'H2R Graphics export', 'CasparCG export', 'OGraf (EBU) export']) {
+  for (const label of ['SPX export', 'HTML overlay (OBS / vMix)', 'H2R Graphics export', 'CasparCG export', 'OGraf (EBU) export']) {
     await expect(page.locator('.issue', { hasText: label })).toBeVisible();
   }
 });

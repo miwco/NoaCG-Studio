@@ -44,6 +44,7 @@ export const casparTarget: ExportTarget = {
   id: 'casparcg',
   label: 'CasparCG export',
   description: 'One self-contained .html file (CSS, JS, GSAP, images inlined) + a data shim for CasparCG XML payloads.',
+  successMessage: '✓ Exported. Drop the .html into your CasparCG templates folder.',
   async build(template) {
     const zip = new JSZip();
     const name = slug(template.name);

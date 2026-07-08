@@ -87,6 +87,7 @@ export const htmlOverlayTarget: ExportTarget = {
   label: 'HTML overlay (OBS / vMix)',
   description:
     'One self-contained .html that autoplays as a browser source — OBS, vMix, or any tool that renders a web page. Includes a control panel for live edits.',
+  successMessage: '✓ Exported. Unzip and add the .html as a browser source (see README.md).',
   async build(template, ctx?: ExportContext) {
     const zip = new JSZip();
     const name = slug(template.name);

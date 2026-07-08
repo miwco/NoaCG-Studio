@@ -159,11 +159,12 @@ src/
                 standalone controlpanel.html, same descriptors, inline), receiverScript.ts
                 (BroadcastChannel listener injected into exported index.html), liveData.ts
                 (editable published-CSV → update() polling block appended to template.js)
-  export/       registry.ts (6 targets + ExportContext — the Data panel's sampleData rides
-                along so serverless targets can bake it), slug.ts (shared, avoids a cycle),
-                selfContained.ts (single-file composer: inline CSS/GSAP/JS/assets + extra body
-                scripts), targets/spxStarter.ts (+ buildStarterInto, reused by packets),
-                targets/spxPack.ts, targets/htmlOverlay.ts (OBS/vMix browser source: autoplay
+  export/       registry.ts (5 targets, each with its own successMessage + ExportContext — the
+                Data panel's sampleData rides along so serverless targets can bake it), slug.ts
+                (shared, avoids a cycle), selfContained.ts (single-file composer: inline
+                CSS/GSAP/JS/assets + extra body scripts), targets/spxStarter.ts (the one SPX
+                export = spxTarget, id 'spx'; + buildStarterInto, reused by packets),
+                targets/htmlOverlay.ts (OBS/vMix browser source: autoplay
                 block fills fields from baked sampleData -> definition defaults, then play();
                 receiver + controlpanel.html bundled), targets/h2r.ts (H2R Custom HTML: GDD
                 block from DataFields + play()-toggle shim), targets/casparcg.ts (selfContained

@@ -49,11 +49,8 @@ export default function ExportPanel() {
       const zip = await target.build(template, { sampleData });
       const blob = await zip.generateAsync({ type: 'blob' });
       saveAs(blob, `${slug(template.name)}_${target.id}.zip`);
-      setMessage(
-        target.id === 'html-overlay'
-          ? '✓ Exported. Unzip and add the .html as a browser source (see README.md).'
-          : '✓ Exported. Drop the unzipped folder into your SPX templates.',
-      );
+      // Each target carries its own success line, so its deploy workflow reads correctly.
+      setMessage(target.successMessage);
     } catch (err) {
       setMessage('Export failed: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
