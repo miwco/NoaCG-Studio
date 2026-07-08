@@ -10,7 +10,7 @@ test.describe('anonymous visitor (open editor)', () => {
   test.skip(!SUPABASE_URL, 'set VITE_SUPABASE_URL to run the configured-mode suite');
 
   test('creates a graphic and reaches export with no account', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     // No wall: the creation wizard opens straight away and no sign-in dialog is up.
     await expect(page.locator('.wz-modal')).toBeVisible();
     await expect(page.locator('.auth-card')).toHaveCount(0);
@@ -25,7 +25,7 @@ test.describe('anonymous visitor (open editor)', () => {
   });
 
   test('account features prompt for sign-in instead of walling the app', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await expect(page.locator('.wz-modal')).toBeVisible();
     await page.keyboard.press('Escape'); // close the wizard to reach the topbar + panels
 

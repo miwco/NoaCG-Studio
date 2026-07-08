@@ -4,7 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 // (> 768px → !isMobile), so the two-pane split view with the divider is active.
 
 async function createHairline(page: Page) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();

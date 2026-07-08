@@ -79,8 +79,10 @@ The app is built code-first: `npm run build` + offline E2E prove the offline pat
 logic, but the server paths below need a real project. Do these once after connecting:
 
 **Auth (5.1, reworked in 5.6 — the open editor + open signup)**
-1. With your `.env` pointing at the project, `npm run dev` → the EDITOR loads with no login wall;
-   the topbar shows a "Sign in" button, and the AI tab / 🌐 Community prompt for sign-in.
+1. With your `.env` pointing at the project, `npm run dev` → open `/app`: the EDITOR loads with no
+   login wall; the topbar shows a "Sign in" button, and the AI tab / 🌐 Community prompt for
+   sign-in. (The root `/` is the public landing page.) Google OAuth returns to `/app` — the
+   dashboard's Auth → URL Configuration must allowlist that redirect URL.
 2. Sign up with ANY email via the dialog → account created (0006 open signup; live-verified
    2026-07-08 with a throwaway address, then deleted). Sign in → the dialog closes; the topbar
    shows your email + "Sign out".

@@ -4,7 +4,7 @@ import { test, expect, type Page, type FrameLocator } from '@playwright/test';
 
 /** Walk the wizard entry → category → variant selection. */
 async function toVariantStep(page: Page, variantName: string) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat:not([disabled])').first().click();
@@ -39,7 +39,7 @@ test('wizard: create a lower third with defaults', async ({ page }) => {
 });
 
 test('wizard: blank project escape hatch', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   await page.locator('[data-entry="blank"]').click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Blank');
@@ -75,7 +75,7 @@ test('wizard: steps mode reveals lines on Next', async ({ page }) => {
 });
 
 test('import graphics: image lands in the logo slot', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   await page.locator('[data-entry="import"]').click();
   // A tiny 1×1 PNG.
   await page.locator('.wz-drop input[type="file"]').setInputFiles({

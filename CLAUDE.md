@@ -44,10 +44,16 @@ keep it checked off as work lands).
 
 ```bash
 npm install
-npm run dev      # Vite dev server on http://localhost:5174
+npm run dev      # Vite dev server on http://localhost:5174 (landing at /, THE EDITOR AT /app)
 npm run build    # tsc (typecheck) && vite build -> dist/   <-- run this after changes; it's the CI gate
 npm run preview  # serve the production build
 ```
+
+**Two pages (Vite MPA):** `index.html` is the static public landing at `/` (no React; carries a
+redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query).
+`app.html` is the editor at `/app` — dev/preview get the clean URL from the `app-clean-url`
+plugin in vite.config.ts; production gets it from Vercel `cleanUrls` (vercel.json). E2E specs
+navigate to `/app`.
 
 There is **no unit-test suite**. Verify changes with `npm run build` plus in-browser checks (see
 Verifying, below). Never mark work done on a green build alone if behaviour is observable — check it.

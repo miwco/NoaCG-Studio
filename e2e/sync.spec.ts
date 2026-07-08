@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 // in-memory provider — no backend needed. The LIVE Supabase round-trip is maintainer-verified.
 
 test('sync engine: reconcile + runSync behave correctly', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
 
   const results = await page.evaluate(async () => {
     const { reconcile, runSync } = await import('/src/backend/sync.ts?t=' + Date.now());
@@ -114,7 +114,7 @@ test('sync engine: reconcile + runSync behave correctly', async ({ page }) => {
 });
 
 test('asset externalization: round-trips through a Storage stub', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
 
   const result = await page.evaluate(async () => {
     const { externalizeAssets, rehydrateAssets, STORAGE_SENTINEL } = await import('/src/backend/assets.ts?t=' + Date.now());

@@ -6,7 +6,7 @@ import { test, expect, type Page, type FrameLocator } from '@playwright/test';
 // the live clock, the sign-colored market deltas, and the label chip structure).
 
 async function createFrom(page: Page, categoryName: string, variantName: string) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: categoryName }).click();

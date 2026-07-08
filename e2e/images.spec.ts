@@ -11,7 +11,7 @@ const PNG_1PX = Buffer.from(
 );
 
 async function createFrom(page: Page, categoryName: string, variantName: string) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: categoryName }).click();

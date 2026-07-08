@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 // taken through its load/updateAction/playAction contract.
 
 async function createHairline(page: Page) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();

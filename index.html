@@ -1,25 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NoaCG Studio — Broadcast graphics, built in minutes</title>
-    <meta
-      name="description"
-      content="NoaCG Studio is a modern, premium broadcast graphics builder. Create on-air lower thirds, tickers, scoreboards and more — no code required — and export working SPX, CasparCG, and OGraf templates."
-    />
-    <meta name="theme-color" content="#0a0c10" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-    <link rel="apple-touch-icon" href="/noacg-icon-256.png" />
-    <!-- Bundled brand typefaces (no CDN) — preload so the wordmark paints without a flash. -->
-    <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
-    <meta property="og:title" content="NoaCG Studio" />
-    <meta property="og:description" content="Broadcast graphics, built in minutes. Premium on-air templates, exported to SPX / CasparCG / OGraf." />
-    <meta property="og:type" content="website" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NoaCG Studio — Broadcast graphics, built in minutes</title>
+  <meta
+    name="description"
+    content="NoaCG Studio is a free browser-based tool for creating premium HTML broadcast graphics — lower thirds, tickers, scoreboards, title cards — and running them anywhere: OBS, vMix, SPX Graphics, CasparCG, OGraf and more. No code required, no sign-up to try."
+  />
+  <meta name="theme-color" content="#0a0c10" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/noacg-icon-256.png" />
+  <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin />
+  <meta property="og:title" content="NoaCG Studio — Broadcast graphics, built in minutes" />
+  <meta property="og:description" content="Create premium on-air graphics in your browser and run them anywhere: OBS, vMix, SPX, CasparCG, OGraf. Free, no sign-up to try." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/landing/shot-title.png" />
+
+  <!-- Old share links point at the root with a query (?chat=<slug> send-in pages,
+       ?template=<slug> community deep links). The app now lives at /app — forward them
+       before anything paints. -->
+  <script>
+    (function () {
+      var q = window.location.search;
+      if (/[?&](chat|template)=/.test(q)) window.location.replace('/app' + q);
+    })();
+  </script>
+
+  <style>
+    /* NoaCG Studio landing — brand system: dark control-room ground, one amber "on-air"
+       accent, restrained glow (NoaCG-Brand-Kit/BRAND-MANUAL.md §3). */
+    @font-face {
+      font-family: "Space Grotesk";
+      src: url("/fonts/space-grotesk.woff2") format("woff2");
+      font-weight: 400 700;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("/fonts/jetbrains-mono.woff2") format("woff2");
+      font-weight: 400 700;
+      font-display: swap;
+    }
+
+    :root {
+      --void: #0a0c10;
+      --panel: #141922;
+      --amber: #f6a623;
+      --glow: #ffc65c;
+      --rec: #e5484d;
+      --paper: #e8edf2;
+      --dim: #b7bcc4;
+      --faint: #7c8798;
+      --line: rgba(232, 237, 242, 0.09);
+      --mono: "JetBrains Mono", Consolas, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background:
+        radial-gradient(55% 40% at 70% 0%, rgba(246, 166, 35, 0.07) 0%, transparent 70%),
+        var(--void);
+      color: var(--paper);
+      font-family: "Space Grotesk", Arial, sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Top bar ── */
+    header {
+      display: flex; align-items: center; gap: 14px;
+      padding: 22px 0;
+    }
+    .mark { display: flex; flex-direction: column; gap: 3px; width: 26px; }
+    .mark i { display: block; height: 6px; border-radius: 2px; }
+    .mark i:nth-child(1) { width: 100%; background: var(--amber); box-shadow: 0 0 10px rgba(246, 166, 35, 0.6); }
+    .mark i:nth-child(2) { width: 66%; background: var(--paper); }
+    .mark i:nth-child(3) { width: 40%; background: rgba(232, 237, 242, 0.3); }
+    .wordmark { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+    .wordmark span { color: var(--amber); }
+    .wordmark small {
+      display: block; font-family: var(--mono); font-weight: 400; font-size: 9px;
+      letter-spacing: 0.42em; color: var(--dim); text-transform: uppercase; margin-top: 1px;
+    }
+    header nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+    header nav a { font-size: 14px; color: var(--dim); }
+    header nav a:hover { color: var(--paper); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-block; padding: 12px 26px; border-radius: 8px;
+      font-weight: 600; font-size: 15px; letter-spacing: 0.01em;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+    .btn-amber {
+      background: var(--amber); color: #14100a;
+      box-shadow: 0 0 26px rgba(246, 166, 35, 0.28);
+    }
+    .btn-amber:hover { background: var(--glow); transform: translateY(-1px); box-shadow: 0 0 34px rgba(246, 166, 35, 0.4); }
+    .btn-ghost { border: 1px solid var(--line); color: var(--paper); }
+    .btn-ghost:hover { border-color: rgba(232, 237, 242, 0.25); }
+
+    /* ── Hero ── */
+    .hero { padding: 84px 0 30px; max-width: 780px; }
+    .kicker {
+      font-family: var(--mono); font-size: 13px; font-weight: 500;
+      letter-spacing: 0.28em; text-transform: uppercase; color: var(--amber);
+    }
+    h1 {
+      font-size: clamp(40px, 6.5vw, 68px); font-weight: 700;
+      line-height: 1.04; letter-spacing: -0.02em; margin: 18px 0 22px;
+    }
+    h1 em { font-style: normal; color: var(--amber); }
+    .lede { font-size: 19px; color: var(--dim); max-width: 640px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; align-items: center; }
+    .cta-note { font-family: var(--mono); font-size: 12px; color: var(--faint); letter-spacing: 0.04em; }
+
+    /* ── Platform chips ── */
+    .platforms { display: flex; flex-wrap: wrap; gap: 10px; padding: 40px 0 8px; align-items: center; }
+    .platforms .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); margin-right: 8px; }
+    .chip {
+      font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.12em;
+      padding: 7px 14px; border: 1px solid var(--line); border-radius: 6px; color: var(--dim);
+      text-transform: uppercase;
+    }
+    .chip.on { color: var(--amber); border-color: rgba(246, 166, 35, 0.35); }
+
+    /* ── Screenshot strip ── */
+    .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; padding: 48px 0 8px; }
+    .shot {
+      border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+      background: var(--panel);
+    }
+    .shot img { display: block; width: 100%; height: auto; }
+    .shot figcaption {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 14px; font-size: 13px; color: var(--dim);
+    }
+    .shot figcaption code { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; color: var(--faint); text-transform: uppercase; }
+
+    /* ── Sections ── */
+    section { padding: 72px 0 0; }
+    h2 { font-size: 30px; font-weight: 700; letter-spacing: -0.01em; margin: 14px 0 10px; }
+    .sub { color: var(--dim); max-width: 620px; }
+
+    .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 34px; }
+    .card {
+      background: linear-gradient(180deg, rgba(232, 237, 242, 0.028), transparent 60%), var(--panel);
+      border: 1px solid var(--line); border-radius: 12px; padding: 26px 26px 28px;
+    }
+    .card h3 { font-size: 18px; font-weight: 700; margin: 14px 0 8px; }
+    .card p { font-size: 15px; color: var(--dim); }
+    .card .n {
+      font-family: var(--mono); font-size: 12px; color: var(--amber); letter-spacing: 0.2em;
+    }
+    .card code { font-family: var(--mono); font-size: 12.5px; color: var(--paper); background: rgba(232,237,242,0.06); padding: 1px 6px; border-radius: 4px; }
+
+    /* ── Live row ── */
+    .live { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .live .chip { text-transform: none; letter-spacing: 0.04em; font-size: 13px; padding: 9px 16px; }
+
+    /* ── Bottom CTA ── */
+    .bottom {
+      margin: 96px 0 0; padding: 56px 24px; text-align: center;
+      border-top: 1px solid var(--line);
+      background: radial-gradient(50% 90% at 50% 0%, rgba(246, 166, 35, 0.06) 0%, transparent 70%);
+    }
+    .bottom h2 { font-size: 34px; }
+    .bottom .cta-row { justify-content: center; }
+
+    footer {
+      display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;
+      padding: 34px 0 44px; color: var(--faint); font-size: 13px;
+    }
+    footer .fm { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+    footer a { color: var(--dim); }
+    footer a:hover { color: var(--paper); }
+
+    @media (max-width: 640px) {
+      .hero { padding-top: 48px; }
+      header nav a.gh { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <a href="/" class="wordmark">Noa<span>CG</span><small>Studio</small></a>
+      <nav>
+        <a class="gh" href="https://github.com/miwco/NoaCG-Studio">GitHub</a>
+        <a class="btn btn-amber" href="/app">Open the editor</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <p class="kicker">Free · Browser-based · No sign-up to try</p>
+        <h1>Broadcast graphics, <em>built in minutes.</em></h1>
+        <p class="lede">
+          NoaCG Studio is a free tool for creating premium HTML broadcast graphics — lower thirds,
+          tickers, scoreboards, timers, title cards — and running them anywhere: OBS, vMix,
+          SPX&nbsp;Graphics, CasparCG, OGraf and more. Pick a template or describe it to AI;
+          the result is clean, editable code you own.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-amber" href="/app">Open the editor — it's free</a>
+          <a class="btn btn-ghost" href="#how">How it works</a>
+          <span class="cta-note">No account needed to create &amp; export</span>
+        </div>
+      </div>
+
+      <div class="platforms" aria-label="Export targets">
+        <span class="lbl">Runs on</span>
+        <span class="chip on">OBS</span>
+        <span class="chip on">vMix</span>
+        <span class="chip on">SPX Graphics</span>
+        <span class="chip on">CasparCG</span>
+        <span class="chip on">OGraf</span>
+        <span class="chip">LiveOS · H2R · more coming</span>
+      </div>
+
+      <div class="shots">
+        <figure class="shot">
+          <img src="/landing/shot-strap.png" alt="A lower third graphic: name and title on a dark panel with an amber accent bar" loading="lazy" width="960" height="540" />
+          <figcaption>Lower third <code>house strap</code></figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/landing/shot-markets.png" alt="A markets ticker strip with green and red percentage changes and a live clock" loading="lazy" width="960" height="540" />
+          <figcaption>Markets ticker <code>live clock</code></figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="/landing/shot-title.png" alt="A full-frame show title card: The Results Show, with an amber kicker line" loading="lazy" width="960" height="540" />
+          <figcaption>Title card <code>show open</code></figcaption>
+        </figure>
+      </div>
+
+      <section id="how">
+        <p class="kicker">How it works</p>
+        <h2>Choose, tweak, go on air.</h2>
+        <p class="sub">
+          A guided wizard builds the whole graphic from choices — no code required. Professionals
+          can open the always-available editor and take full control of the same file.
+        </p>
+        <div class="grid3">
+          <div class="card">
+            <span class="n">01 — CREATE</span>
+            <h3>Start from 43 broadcast-grade templates</h3>
+            <p>
+              Lower thirds, tickers, scoreboards, countdowns, credits, quiz graphics and more —
+              in consistent style families, so your package reads as one show. Or describe any
+              graphic and let AI write it.
+            </p>
+          </div>
+          <div class="card">
+            <span class="n">02 — MAKE IT YOURS</span>
+            <h3>Your brand, without opening code</h3>
+            <p>
+              Custom colors, imported fonts (embedded in the export), your logo, position, size,
+              and animation — all from live panels. Every change writes real, readable code you
+              can inspect and edit.
+            </p>
+          </div>
+          <div class="card">
+            <span class="n">03 — RUN ANYWHERE</span>
+            <h3>Export a working package</h3>
+            <p>
+              One click gives you a plug-and-play package: a browser-source overlay for OBS and
+              vMix, an SPX template, a CasparCG single file, or an OGraf graphic — validated,
+              offline-ready, fonts and images bundled.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <p class="kicker">Run it live</p>
+        <h2>Not just pretty — operable.</h2>
+        <p class="sub">
+          Every graphic ships with an auto-generated operator control panel. Drive it from another
+          browser tab, an OBS dock, or another device over the cloud — and feed it live data.
+        </p>
+        <div class="live">
+          <span class="chip">Operator control panels</span>
+          <span class="chip">Remote control from any device</span>
+          <span class="chip">Google Sheets as a live source</span>
+          <span class="chip">Audience send-in with moderation</span>
+          <span class="chip">Multi-step graphics (Continue)</span>
+        </div>
+      </section>
+
+      <section>
+        <p class="kicker">Honest engineering</p>
+        <h2>The code is yours. Forever.</h2>
+        <p class="sub">
+          Nothing hides behind a visual-only scene model: every graphic is real HTML, CSS, and
+          JavaScript — clean, commented, and editable. The app is open source (AGPL), self-hostable,
+          and works fully offline. Creating, editing, and exporting are free, always; an account
+          only adds cloud sync, community templates, and AI.
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <div class="bottom">
+    <h2>Make your next graphic in the browser.</h2>
+    <div class="cta-row" style="margin-top: 26px;">
+      <a class="btn btn-amber" href="/app">Open the editor — free, no sign-up</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <footer>
+      <span class="fm">NoaCG Studio · Broadcast graphics, built in minutes</span>
+      <span>
+        <a href="https://github.com/miwco/NoaCG-Studio">GitHub</a> ·
+        <a href="https://github.com/miwco/NoaCG-Studio/blob/main/LICENSE">AGPL-3.0</a> ·
+        Free forever for the core
+      </span>
+    </footer>
+  </div>
+</body>
 </html>

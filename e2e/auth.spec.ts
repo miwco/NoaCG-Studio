@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 // (AI / community / show chat prompting sign-in) are covered by e2e/configured/anonymous.spec.ts.
 
 test('offline / no-backend: the app loads with no auth UI at all', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   // The creation wizard opens straight away — nothing intercepted the app.
   await expect(page.locator('.wz-modal')).toBeVisible();
   // No sign-in dialog, no account status, no Sign in button in offline mode.

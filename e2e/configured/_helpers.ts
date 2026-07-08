@@ -14,7 +14,7 @@ export const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? '';
  *  fresh Playwright contexts have no persisted session). Leaves the wizard OPEN afterwards, the
  *  same state a fresh load presents, so createGraphic can run directly. */
 export async function signIn(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/app');
   // The startup wizard covers the topbar — close it to reach the Sign in button.
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.keyboard.press('Escape');

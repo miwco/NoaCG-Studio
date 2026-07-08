@@ -14,7 +14,10 @@ export interface AuthState {
   user: User | null;
 }
 
-const OAUTH_REDIRECT = typeof window !== 'undefined' ? window.location.origin : undefined;
+// Return to wherever the app itself is served from (/app hosted, /app.html raw self-host) —
+// NOT the bare origin: that is the public landing page, which runs no Supabase client.
+const OAUTH_REDIRECT =
+  typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined;
 
 /** Start Google OAuth. On success the page redirects, so a resolved value with no error means
  * "redirecting"; an error means it never left. */

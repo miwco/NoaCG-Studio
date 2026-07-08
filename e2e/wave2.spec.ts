@@ -4,7 +4,7 @@ import { test, expect, type Page, type FrameLocator } from '@playwright/test';
 // One create + play + behavior spec per category.
 
 async function createFrom(page: Page, categoryName: string, variantName: string) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: categoryName }).click();

@@ -192,6 +192,15 @@ server era (no server = no CORS-free social APIs, no inbound chat endpoint).
       StandardDesign.disableSteps).
 - [x] Wizard category grouping: **Essentials** vs **Specials** (CategoryInfo.group).
 
+### Public face (2026-07-08 — the landing page + open doors)
+- [x] **Public landing page at `/`** — static, brand-true (void/amber, bundled fonts, no React,
+      no CDN): hero + "runs on OBS · vMix · SPX · CasparCG · OGraf" chips + house-template
+      screenshots + how-it-works + operability row + free/AGPL footer. The editor moved to
+      **`/app`** (Vite MPA: app.html entry; dev/preview clean URL via the `app-clean-url` plugin,
+      production via Vercel `cleanUrls`). Old root `?chat=`/`?template=` share links redirect
+      with their query; in-app link generation follows `location.pathname`; Google OAuth returns
+      to `/app` (origin+pathname). E2E: landing.spec (3) + every spec migrated to `/app`.
+
 ### The NoaCG house family (2026-07-08 — brand-kit overlays as first-class templates)
 - [x] **A 4th style family `noacg`** — the product's own on-air look (§8 tokens: 8px amber bar +
       void blur(8px) panels, mono label voice, restrained accent glow), so built-in output

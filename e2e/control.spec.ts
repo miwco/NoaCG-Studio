@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 // "0 - 0"; a genuine number field, added below, gets the stepper.)
 
 async function createScoreboard(page: Page) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: 'Scoreboards' }).click();
@@ -71,7 +71,7 @@ test('export bundles controlpanel.html + injects the receiver into index.html', 
 });
 
 async function createHairline(page: Page) {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
