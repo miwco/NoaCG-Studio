@@ -40,15 +40,15 @@ test('house clock bug: the live clock ticks and the logo replaces the mark', asy
   await createFrom(page, 'Corner bug', 'House Clock');
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
-    .poll(async () => frame(page).locator('.bug').evaluate((el) => getComputedStyle(el).opacity))
+    .poll(async () => frame(page).locator('.corner-bug').evaluate((el) => getComputedStyle(el).opacity))
     .toBe('1');
   // The clock paints real local time and ticks once a second.
-  const clock = frame(page).locator('#bug-clock');
+  const clock = frame(page).locator('#corner-bug-clock');
   await expect(clock).toHaveText(/^\d{2}:\d{2}:\d{2}$/);
   const first = await clock.textContent();
   await expect(clock).not.toHaveText(first!, { timeout: 3000 });
   // Three-bar placeholder shows until a logo is picked.
-  await expect(frame(page).locator('.bug-mark')).toBeVisible();
+  await expect(frame(page).locator('.corner-bug-mark')).toBeVisible();
 });
 
 test('house markets: deltas are colored by sign', async ({ page }) => {

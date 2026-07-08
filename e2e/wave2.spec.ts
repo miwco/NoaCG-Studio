@@ -40,7 +40,7 @@ test('scoreboard: all four fields bind and a score change lands', async ({ page 
   await createFrom(page, 'Scoreboards', 'Match Strip');
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
-    .poll(async () => frame(page).locator('.sb').evaluate((el) => getComputedStyle(el).opacity))
+    .poll(async () => frame(page).locator('.scoreboard').evaluate((el) => getComputedStyle(el).opacity))
     .toBe('1');
   // Change Score A in the Data panel and push it with ⟳ Update.
   await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
@@ -55,7 +55,7 @@ test('corner bug: plays with the placeholder mark', async ({ page }) => {
   await createFrom(page, 'Corner bug', 'Glass Mark');
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
-    .poll(async () => frame(page).locator('.bug').evaluate((el) => getComputedStyle(el).opacity))
+    .poll(async () => frame(page).locator('.corner-bug').evaluate((el) => getComputedStyle(el).opacity))
     .toBe('1');
   await expect(frame(page).locator('#f0')).toHaveText('LIVE');
 });

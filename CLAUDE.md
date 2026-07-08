@@ -121,10 +121,10 @@ src/
                                 .starting-soon-pulse breathing + clock via shared/clock.ts, minutes in f2)
                   gameTimers/   gt01…gt02 (prefix 'game-timer', type 'countdown'; timer-run pop +
                                 timer-line-reveal; minutes in f1; .game-timer-done styles time-up)
-                  scoreboards/  sb01…sb02 (prefix 'sb'; fixed 4-field contract f0-f3 as
-                                sb-masks so the standard presets drive them; update() pops a
+                  scoreboards/  sb01…sb02 (prefix 'scoreboard'; fixed 4-field contract f0-f3 as
+                                scoreboard-masks so the standard presets drive them; update() pops a
                                 score's mask when it changes on air)
-                  cornerBug/    bug01…bug02 (prefix 'bug', standard assembler, logo slot +
+                  cornerBug/    bug01…bug02 (prefix 'corner-bug', standard assembler, logo slot +
                                 placeholder mark; bug02 = house live clock via
                                 StandardDesign.runtimeExtraJs — design-owned JS emitted
                                 BEFORE the marked ANIMATION region, DOM-ready guarded)

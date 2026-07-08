@@ -3,16 +3,16 @@
 //   f0 "Team A" (name) · f1 "Score A" · f2 "Team B" (name) · f3 "Score B"
 //
 // Structure contract (mirrors the standard .lower-third contract so the six standard lowerThirds
-// animation presets work unchanged with prefix 'sb' and lineCount 4):
-//   <div class="sb">                 root — zone positioned; opacity:0 until play()
-//     <div class="sb-box">           the panel; presets tween this
+// animation presets work unchanged with prefix 'scoreboard' and lineCount 4):
+//   <div class="scoreboard">                 root — zone positioned; opacity:0 until play()
+//     <div class="scoreboard-box">           the panel; presets tween this
 //       team group A:
-//         <div class="sb-mask"><span id="f0" class="sb-team">HOME</span></div>
-//         <div class="sb-mask"><span id="f1" class="sb-score">0</span></div>
+//         <div class="scoreboard-mask"><span id="f0" class="scoreboard-team">HOME</span></div>
+//         <div class="scoreboard-mask"><span id="f1" class="scoreboard-score">0</span></div>
 //       …divider of the design's choice…
 //       team group B:
-//         <div class="sb-mask"><span id="f2" class="sb-team">AWAY</span></div>
-//         <div class="sb-mask"><span id="f3" class="sb-score">0</span></div>
+//         <div class="scoreboard-mask"><span id="f2" class="scoreboard-team">AWAY</span></div>
+//         <div class="scoreboard-mask"><span id="f3" class="scoreboard-score">0</span></div>
 //     </div>
 //   </div>
 //
@@ -41,11 +41,11 @@ import {
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
 
 export interface SbDesign {
-  /** Inner HTML of .sb — must contain .sb-box with the four .sb-mask > span#fN lines. */
+  /** Inner HTML of .scoreboard — must contain .scoreboard-box with the four .scoreboard-mask > span#fN lines. */
   html: string;
   /** Variant CSS (panel, team names, scores, divider). Colors via :root vars only. */
   css: string;
-  /** Whether the design includes a .sb-accent element (line-reveal draws it first). */
+  /** Whether the design includes a .scoreboard-accent element (line-reveal draws it first). */
   hasAccent: boolean;
 }
 
@@ -141,7 +141,7 @@ export function assembleScoreboard(meta: SbMeta, design: SbDesign, o: ResolvedOp
     title: meta.name,
     definitionBlock: definitionScriptBlock(settings, SB_FIELDS),
     body: `  <!-- Scoreboard root — two team groups (name + score) inside one panel. -->
-  <div class="sb">
+  <div class="scoreboard">
 ${design.html}
   </div>`,
   });
@@ -155,22 +155,22 @@ ${font.face}
 ${resetCanvasCss(o.resolution)}
 
 /* ── Root position (anchor zone) ── */
-.sb {
+.scoreboard {
   position: absolute;
 ${zoneCssText(o.zone, o.nudge, o.resolution)}
   opacity: 0;                      /* hidden until play() runs the entrance */
 }
 
 /* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
-.sb-box {
+.scoreboard-box {
   width: fit-content;              /* the panel hugs the two team groups */
   max-width: ${maxTextWidth}px;             /* never wider than this — text wraps instead */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
-.sb-mask {
+.scoreboard-mask {
   overflow: hidden;                /* lines animate in from behind this mask */
 }
-.sb-mask > span {
+.scoreboard-mask > span {
   display: inline-block;           /* so the line can move (and pop) inside its mask */
   overflow-wrap: break-word;       /* break very long unbroken team names */
   text-wrap: balance;              /* wrapped rows get even lengths */
@@ -184,7 +184,7 @@ ${design.css}
   // 'auto' uses the preset's hand-tuned ease pair; a named easing preset overrides both phases.
   const ease = resolveEasing(o.animation.easing, preset.autoEase);
   const cfg: PresetConfig = {
-    prefix: 'sb',
+    prefix: 'scoreboard',
     lineCount: 4, // f0 team A · f1 score A · f2 team B · f3 score B
     hasAccent: design.hasAccent,
     steps: false, // scoreboards never step — the whole board enters at once

@@ -77,13 +77,13 @@ test('end credits: uploading a logo through the Logo field puts it in the end bl
 test('corner bug: the logo field replaces the placeholder mark', async ({ page }) => {
   await createFrom(page, 'Corner bug', 'Glass Mark');
   await create(page);
-  await expect(frame(page).locator('.bug-mark')).toBeVisible();
+  await expect(frame(page).locator('.corner-bug-mark')).toBeVisible();
   await uploadImage(page, 'Logo', 'channel_mark.png');
   await page.getByRole('button', { name: '⟳ Update' }).click();
-  await expect(frame(page).locator('.bug-media.has-image')).toBeAttached();
-  await expect(frame(page).locator('.bug-mark')).toBeHidden();
+  await expect(frame(page).locator('.corner-bug-media.has-image')).toBeAttached();
+  await expect(frame(page).locator('.corner-bug-mark')).toBeHidden();
   await expect
-    .poll(async () => frame(page).locator('img.bug-logo').evaluate((el) => (el as HTMLImageElement).src.slice(0, 5)))
+    .poll(async () => frame(page).locator('img.corner-bug-logo').evaluate((el) => (el as HTMLImageElement).src.slice(0, 5)))
     .toBe('data:');
 });
 
