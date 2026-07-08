@@ -11,19 +11,22 @@ import { composeSelfContainedHtml } from '../selfContained';
 import { slug } from '../common';
 import type { ExportTarget } from '../registry';
 
-/** Map one SPX DataField to a GDD property (H2R's editable-input schema). */
+/** Map one SPX DataField to a GDD property (H2R's editable-input schema). The shape mirrors
+ *  the working Loopic → H2R sample (type + label + description + default + gddType). */
 function gddProperty(field: SpxField): Record<string, unknown> {
-  const base = { label: field.title || field.field, description: field.title || '', default: field.value ?? '' };
+  const base = { type: 'string', label: field.title || field.field, description: field.title || '', default: field.value ?? '' };
   switch (field.ftype) {
     case 'textarea':
-      return { ...base, type: 'string', gddType: 'multi-line' };
+      return { ...base, gddType: 'multi-line' };
     case 'number':
-      return { ...base, type: 'number', default: Number(field.value) || 0 };
+      return { type: 'number', label: base.label, description: base.description, default: Number(field.value) || 0 };
     case 'filelist':
-      // An image/file path — H2R shows a text input; the value lands in the <img id="fN">.
-      return { ...base, type: 'string', gddType: 'file-path' };
+      // An image/file path — a plain single-line input the operator types/pastes the path
+      // into; the value lands in the <img id="fN">. (No 'file-path' gddType: H2R skips
+      // properties whose gddType it doesn't recognize.)
+      return { ...base, gddType: 'single-line' };
     default:
-      return { ...base, type: 'string', gddType: 'single-line', pattern: '' };
+      return { ...base, gddType: 'single-line' };
   }
 }
 
@@ -36,9 +39,12 @@ export function gddScript(template: SpxTemplate): string {
     type: 'object',
     properties: Object.fromEntries(template.fields.map((f) => [f.field, gddProperty(f)])),
   };
+  // The script tag MUST carry name="graphics-data-definition": that is how H2R (and the
+  // SuperflyTV GDD tooling) discovers the block. Without the name attribute H2R silently
+  // shows no editable fields — verified against H2R's own Loopic-exported sample.
   return `  <!-- GDD (Graphics Data Definition): H2R Graphics reads this into editable inputs.
        Each property key matches the element id the value is written into (f0, f1, …). -->
-  <script type="application/json+gdd">
+  <script name="graphics-data-definition" type="application/json+gdd">
 ${JSON.stringify(gdd, null, 2)}
   </script>
 `;

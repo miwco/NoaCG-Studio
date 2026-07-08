@@ -43,7 +43,9 @@ test('h2r: GDD fields embedded, and the play() toggle drives entrance then exit'
 
   const html = await zip.file('hairline/hairline.html')!.async('string');
   // The GDD block H2R parses into editable inputs — property keys match the element ids.
-  const gddMatch = html.match(/<script type="application\/json\+gdd">\s*([\s\S]*?)\s*<\/script>/);
+  // The script tag MUST carry name="graphics-data-definition": without it H2R never finds
+  // the block and shows no editable fields (the bug the real-app test surfaced).
+  const gddMatch = html.match(/<script name="graphics-data-definition" type="application\/json\+gdd">\s*([\s\S]*?)\s*<\/script>/);
   expect(gddMatch).toBeTruthy();
   const gdd = JSON.parse(gddMatch![1]);
   expect(gdd.properties.f0.label).toBe('Name');
