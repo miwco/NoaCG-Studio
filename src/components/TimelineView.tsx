@@ -9,7 +9,7 @@ import {
   patchTweenTiming,
   type TimelineTween,
 } from '../blocks/timelineModel';
-import { setStepsMode } from '../blocks/animPatch';
+import { readAnimationInfo, setStepsMode } from '../blocks/animPatch';
 import { countLines, detectPrefix } from '../model/structure';
 import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -75,6 +75,16 @@ function actionLabel(tween: Pick<TimelineTween, 'kind' | 'props'>): string {
     if (tween.props.some((p) => re.test(p)) && !verbs.includes(verb)) verbs.push(verb);
   }
   return verbs.slice(0, 2).join(' + ');
+}
+
+/** 1 → '1st', 2 → '2nd', 3 → '3rd', 4 → '4th', … (11–13 stay 'th'). */
+function ordinal(n: number): string {
+  const rem10 = n % 10;
+  const rem100 = n % 100;
+  if (rem10 === 1 && rem100 !== 11) return `${n}st`;
+  if (rem10 === 2 && rem100 !== 12) return `${n}nd`;
+  if (rem10 === 3 && rem100 !== 13) return `${n}rd`;
+  return `${n}th`;
 }
 
 /** The per-tween ease options for a phase: the vocabulary's phase-correct half, deduped by
@@ -166,7 +176,19 @@ export default function TimelineView({ iframeRef }: Props) {
   }, [model, iframeRef]);
 
   if (!model) {
-    return null; // hand-edited beyond recognition (or blank/imported) — the strip steps aside
+    // Blank/imported templates (no managed region) get no strip at all. A marked region the
+    // parser can't read gets an honest one-liner instead of silently vanishing.
+    if (!readAnimationInfo(template.js).hasRegion) return null;
+    return (
+      <div className="timeline-strip collapsed" data-testid="timeline">
+        <div className="timeline-head">
+          <p className="timeline-hint" data-testid="timeline-unreadable">
+            This animation is hand-crafted beyond what the timeline can chart — the JS code is
+            in charge. Applying a Motion preset brings the timeline back.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const inPhase = model.phases.find((p) => p.id === 'in') ?? model.phases[0];
@@ -306,7 +328,16 @@ export default function TimelineView({ iframeRef }: Props) {
     }
     return -1;
   })();
-  const canAddStep = stepsSupported && (!stepsOn ? lineCount > 1 : splitFrom !== -1);
+  // Why »+ Step is unavailable right now (null = clickable) — shown as the disabled button's
+  // tooltip, so the affordance explains itself instead of vanishing.
+  const addStepBlocked = !stepsOn
+    ? lineCount > 1
+      ? null
+      : 'Steps need at least two text lines — add another field in the Data tab first'
+    : splitFrom !== -1
+      ? null
+      : 'Every line already has its own » Next press — drag a row onto another » step to merge lines first';
+  const canAddStep = stepsSupported && !addStepBlocked;
 
   const addStep = () => {
     if (!stepsOn) {
@@ -382,16 +413,19 @@ export default function TimelineView({ iframeRef }: Props) {
           <span key={s.id} style={{ display: 'contents' }}>
             {/* »+ Step — click to grow the Continue chain (turns steps on, or splits a
                 multi-line reveal); doubles as the new-step DROP target while regrouping. */}
-            {s.kind === 'out' && (regroup || canAddStep) && (
+            {s.kind === 'out' && (regroup || stepsSupported) && (
               <button
                 className={`tab timeline-seg timeline-newstep${regroup?.overStep === model.steps.length ? ' drop-target' : ''}`}
                 data-step-drop={model.steps.length}
                 data-testid="timeline-seg-new"
-                onClick={regroup ? undefined : addStep}
+                disabled={!regroup && !canAddStep}
+                onClick={regroup || !canAddStep ? undefined : addStep}
                 title={
-                  !stepsOn
-                    ? 'Add a Continue step — ▶ Play then shows only the first line; each » Next press reveals the next one'
-                    : 'Add a Continue step — splits the last multi-line reveal so its last line gets its own » Next press'
+                  !regroup && addStepBlocked
+                    ? addStepBlocked
+                    : !stepsOn
+                      ? 'Add a Continue step — ▶ Play then shows only the first line; each » Next press reveals the next one'
+                      : 'Add a Continue step — splits the last multi-line reveal so its last line gets its own » Next press'
                 }
               >
                 <span className="timeline-marker">»</span> + Step
@@ -404,7 +438,7 @@ export default function TimelineView({ iframeRef }: Props) {
               onClick={() => pickSegment(s.id)}
               title={
                 s.kind === 'step'
-                  ? `Continue step ${s.label} — plays on the ${Number(s.label) - 1}${Number(s.label) === 2 ? 'st' : Number(s.label) === 3 ? 'nd' : 'th'} » Next press`
+                  ? `Continue step ${s.label} — plays on the ${ordinal(Number(s.label) - 1)} » Next press`
                   : s.kind === 'in'
                     ? 'The entrance — plays on ▶ Play'
                     : `The exit — plays on ■ Stop${outBadge ? ` (${outBadge})` : ''}`
@@ -540,7 +574,7 @@ export default function TimelineView({ iframeRef }: Props) {
       {/* T3.3 — the line chip following the pointer while regrouping. */}
       {regroup && (
         <div className="regroup-ghost" style={{ left: regroup.x + 10, top: regroup.y - 24 }}>
-          {regroup.target} → {regroup.overStep === null ? 'drop on a » step' : regroup.overStep === model.steps.length ? 'new step' : `step ${regroup.overStep + 2}`}
+          {friendlyTarget(regroup.target)} → {regroup.overStep === null ? 'drop on a » step' : regroup.overStep === model.steps.length ? 'new step' : `step ${regroup.overStep + 2}`}
         </div>
       )}
     </div>

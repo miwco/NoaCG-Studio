@@ -313,13 +313,15 @@ test('the »+ Step button turns steps on, then splits a group into another step'
     .evaluate(() => document.documentElement.outerHTML);
   expect(html).toContain('"steps": "2"');
 
-  // With every line already in its own step (and none multi-line), »+ Step disappears.
-  await expect(addStep).toHaveCount(0);
+  // With every line already in its own step (and none multi-line), »+ Step stays visible
+  // but disabled — its tooltip explains why instead of the affordance vanishing.
+  await expect(addStep).toBeDisabled();
+  await expect(addStep).toHaveAttribute('title', /Every line already has its own/);
 
-  // Two-line template: nothing left to split — undo removes the steps and the button returns.
+  // Two-line template: nothing left to split — undo removes the steps and »+ re-enables.
   await page.keyboard.press('Control+z');
   await expect(page.getByTestId('timeline-seg-step-2')).toHaveCount(0);
-  await expect(page.getByTestId('timeline-seg-new')).toBeVisible();
+  await expect(page.getByTestId('timeline-seg-new')).toBeEnabled();
 });
 
 test('the »+ Step button splits the last multi-line reveal into its own step', async ({ page }) => {
@@ -343,8 +345,8 @@ test('the »+ Step button splits the last multi-line reveal into its own step', 
       .locator('body')
       .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
 
-  // All groups single-line → nothing to split → no »+ Step offered.
-  await expect(page.getByTestId('timeline-seg-new')).toHaveCount(0);
+  // All groups single-line → nothing to split → »+ Step is offered but disabled.
+  await expect(page.getByTestId('timeline-seg-new')).toBeDisabled();
 
   // Merge »3 into »2 by dragging (T3.3) — now one multi-line group exists.
   await page.getByTestId('timeline-seg-step-3').click();
@@ -358,13 +360,26 @@ test('the »+ Step button splits the last multi-line reveal into its own step', 
   await page.waitForTimeout(650);
   expect(await templateJs()).toContain("var stepGroups = [['#f1', '#f2']];");
 
-  // »+ Step reappears; a CLICK splits the group's last line into a new Continue step.
+  // »+ Step re-enables; a CLICK splits the group's last line into a new Continue step.
   const addStep = page.getByTestId('timeline-seg-new');
-  await expect(addStep).toBeVisible();
+  await expect(addStep).toBeEnabled();
   await addStep.click();
   await page.waitForTimeout(650);
   expect(await templateJs()).toContain("var stepGroups = [['#f1'], ['#f2']];");
   await expect(page.getByTestId('timeline-seg-step-3')).toBeVisible();
+});
+
+test('a hand-edited region the parser cannot read gets an honest note, not a vanished strip', async ({ page }) => {
+  await createHairline(page);
+  await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toBeVisible();
+  // Mangle the marked region beyond the parser's shapes (rename the build functions).
+  await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const s = useTemplateStore.getState();
+    s.setJs(s.template.js.replace(/buildInTimeline/g, 'buildEntrance'));
+  });
+  await expect(page.getByTestId('timeline-unreadable')).toContainText('hand-crafted');
+  await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toHaveCount(0);
 });
 
 test('timeline strip collapses to a slim bar and remembers it', async ({ page }) => {

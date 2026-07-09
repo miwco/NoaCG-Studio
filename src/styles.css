@@ -1197,6 +1197,9 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   cursor: pointer;
 }
 .timeline-newstep:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.5); }
+/* Unavailable (nothing to split / one line): stays visible, the tooltip says why. */
+.timeline-newstep:disabled { opacity: 0.45; cursor: default; }
+.timeline-newstep:disabled:hover { color: var(--text-dim); border-color: var(--border); }
 .regroup-ghost {
   position: fixed;
   z-index: 300;
