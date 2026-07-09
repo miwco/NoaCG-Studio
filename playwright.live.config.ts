@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { loadEnv } from 'vite';
+import { livePort } from './scripts/dev-port.mjs';
 
 // Playwright's runner (Node) does NOT auto-load .env — only Vite does, and only for its own dev
 // server. Load the project's .env here so the specs can read the test-account creds from a FILE
@@ -30,13 +31,15 @@ export default defineConfig({
   retries: 1,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5175',
+    // The live suite runs beside the offline one, so it takes the dev port's odd neighbour
+    // (5175 in the main checkout; per-worktree otherwise — see scripts/dev-port.mjs).
+    baseURL: `http://localhost:${livePort()}`,
     trace: 'on-first-retry',
   },
   projects: [{ name: 'configured', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'vite --port 5175 --strictPort',
-    url: 'http://localhost:5175',
+    command: `vite --port ${livePort()} --strictPort`,
+    url: `http://localhost:${livePort()}`,
     reuseExistingServer: true,
     timeout: 60_000,
     // NO Supabase override here (unlike the offline config): Vite loads VITE_SUPABASE_URL / _ANON_KEY

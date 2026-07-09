@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { devPort } from './scripts/dev-port.mjs';
 
 // End-to-end UI-flow tests. These drive the real dev server, so they verify the app the way a
 // user experiences it. Run with `npm run test:e2e`.
+// The port comes from scripts/dev-port.mjs (5174 in the main checkout, a stable per-worktree
+// port in a linked worktree), so parallel worktrees never reuse each other's servers.
+const base = `http://localhost:${devPort()}`;
 export default defineConfig({
   testDir: './e2e',
   // The authed community flows live in e2e/configured and run under playwright.live.config.ts (a
@@ -14,13 +18,13 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: base,
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5174',
+    url: base,
     reuseExistingServer: true,
     timeout: 60_000,
     // Pin the suite to OFFLINE mode regardless of the developer's local .env (which may hold real

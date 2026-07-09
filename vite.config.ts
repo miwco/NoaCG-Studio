@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { devPort, writeLaunchConfig } from './scripts/dev-port.mjs';
 
 // NoaCG Studio — dev/build config.
 // Two pages: index.html is the static public landing at "/", app.html is the editor at
@@ -28,14 +29,21 @@ function appCleanUrl(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), appCleanUrl()],
-  server: { port: 5174, open: true },
-  build: {
-    target: 'es2020',
-    outDir: 'dist',
-    rollupOptions: {
-      input: { landing: 'index.html', app: 'app.html' },
+export default defineConfig(({ command }) => {
+  // Keep the Claude preview launch config pointing at this checkout's port (worktrees get
+  // their own — see scripts/dev-port.mjs). Serve-time only: builds shouldn't touch files.
+  if (command === 'serve') writeLaunchConfig();
+  return {
+    plugins: [react(), appCleanUrl()],
+    // strictPort: the port is this checkout's identity (playwright + the dev scripts derive
+    // the same number), so failing loudly beats silently drifting onto a neighbour's port.
+    server: { port: devPort(), strictPort: true, open: true },
+    build: {
+      target: 'es2020',
+      outDir: 'dist',
+      rollupOptions: {
+        input: { landing: 'index.html', app: 'app.html' },
+      },
     },
-  },
+  };
 });

@@ -3,6 +3,7 @@
 // over a video-like backdrop for the user's taste review.
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import { devPort } from './dev-port.mjs';
 
 const OUT = process.argv[2] || './l3-shots';
 const CATEGORY = process.argv[3] || 'lower-third';
@@ -11,7 +12,7 @@ mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 0.5 });
 page.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
-await page.goto('http://localhost:5174/', { waitUntil: 'domcontentloaded' });
+await page.goto(`http://localhost:${devPort()}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(800);
 
 // ---------- 1) Deterministic checks (run inside the app page: Vite serves the source) ----------

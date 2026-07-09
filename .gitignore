@@ -22,3 +22,7 @@ example_projects/
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand)
 bench-out/
 compare-out/
+
+# Generated per-checkout by scripts/dev-port.mjs (postinstall): each worktree gets its own
+# dev-server port, so this file must never be shared through git.
+.claude/launch.json

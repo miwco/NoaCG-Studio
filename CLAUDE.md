@@ -44,10 +44,17 @@ keep it checked off as work lands).
 
 ```bash
 npm install
-npm run dev      # Vite dev server on http://localhost:5174 (landing at /, THE EDITOR AT /app)
+npm run dev      # Vite dev server (landing at /, THE EDITOR AT /app)
 npm run build    # tsc (typecheck) && vite build -> dist/   <-- run this after changes; it's the CI gate
 npm run preview  # serve the production build
 ```
+
+**The dev port is per-checkout** (`scripts/dev-port.mjs`): 5174 in the main checkout (5175 for
+the live e2e suite), a stable path-derived port in a linked git worktree — so parallel worktrees
+never fight over one server. Vite (strictPort), both Playwright configs, and the dev scripts all
+derive the same number; `node scripts/dev-port.mjs` prints it. `.claude/launch.json` is
+GENERATED with that port by postinstall (gitignored — never hand-edit or commit it).
+`DEV_PORT=n` overrides everything if two worktrees ever hash to the same port.
 
 **Two pages (Vite MPA):** `index.html` is the static public landing at `/` (no React; carries a
 redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query).
@@ -345,9 +352,11 @@ Always `npm run build` (typecheck + build) after changes.
 - After many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it if a
   change isn't reflected.
 - The e2e suite pins **offline mode** via `webServer.env` in playwright.config.ts, but
-  `reuseExistingServer: true` means a dev server already running on 5174 (started by hand, with
-  the real `.env`) gets reused — backend-sensitive specs then fail confusingly. Kill any manual
-  server on 5174 before `npm run test:e2e`.
+  `reuseExistingServer: true` means a dev server already running on THIS checkout's port
+  (started by hand, with the real `.env`) gets reused — backend-sensitive specs then fail
+  confusingly. Kill any manual server on this checkout's port (`node scripts/dev-port.mjs`
+  prints it) before `npm run test:e2e`. Other worktrees' servers are harmless — they live on
+  their own ports.
 - Worse: after HMR updates, `import('/src/store/…')` in an eval/console context can resolve a
   **different module instance** than the running app (a "ghost store" — your clicks patch the real
   store while your assertions read the stale one). If state reads disagree with visible UI,
