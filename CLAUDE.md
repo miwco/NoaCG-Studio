@@ -104,7 +104,11 @@ src/
                 fonts registry + CustomFont import helpers), brand.ts (ProjectBrand save/load,
                 localStorage 'spx-gfx-brand'), packets.ts (packet manager data layer: graphics
                 collections 'spx-gfx-packets' + brand looks 'spx-gfx-looks' +
-                captureLookFromTemplate/applyLookToTemplate), easings.ts, defaultTemplate
+                captureLookFromTemplate/applyLookToTemplate), easings.ts, defaultTemplate,
+                structure.ts (detectPrefix/countLines + getTemplateParts — the TemplatePart
+                registry, THE shared element-identity contract: DOM-derived {selector, kind,
+                label, channel}, single-token selectors only; timeline labels, canvas
+                selection, and step assignment must all name elements through it)
   templates/    blank.ts + the wizard catalog, resolved through catalog.ts (CATALOG,
                 variantsFor/variantById):
                   shared/       base.ts (generic assembler pieces: :root vars, zones, auto-fit,

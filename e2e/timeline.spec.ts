@@ -547,6 +547,28 @@ test('corner bug: steps are not offered — the logo is not a text line', async 
   await expect(addStep).toHaveAttribute('title', /at least two text lines/);
 });
 
+test('the part registry names the template structure — the shared identity contract', async ({ page }) => {
+  await createHairline(page);
+  const parts = await page.evaluate(async () => {
+    const { getTemplateParts } = await import('/src/model/structure.ts');
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const t = useTemplateStore.getState().template;
+    return getTemplateParts(t.html, t.fields) as {
+      selector: string; kind: string; label: string; channel: string;
+    }[];
+  });
+  const bySelector = Object.fromEntries(parts.map((p) => [p.selector, p]));
+  expect(bySelector['.lower-third']).toMatchObject({ kind: 'root', label: 'Whole graphic' });
+  expect(bySelector['.lower-third-box']).toMatchObject({ kind: 'panel', label: 'Panel' });
+  expect(bySelector['.lower-third-accent']).toMatchObject({ kind: 'accent', label: 'Accent line' });
+  // Lines carry the operator field's title and the mask reveal channel.
+  expect(bySelector['#f0']).toMatchObject({ kind: 'line', channel: 'mask', label: 'Name' });
+  expect(bySelector['#f1']).toMatchObject({ kind: 'line', channel: 'mask', label: 'Title' });
+  expect(parts.filter((p) => p.kind === 'line')).toHaveLength(2);
+  // Single-token selectors only — the emitted-code parsers cannot round-trip anything else.
+  for (const p of parts) expect(p.selector).toMatch(/^[.#][\w-]+$/);
+});
+
 test('a hand-edited region the parser cannot read gets an honest note, not a vanished strip', async ({ page }) => {
   await createHairline(page);
   await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toBeVisible();

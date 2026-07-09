@@ -430,6 +430,17 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       the strip ("▶ Play now shows only the first line…"), and the steps checkbox copy in the
       wizard + Motion panel uses the same press language. E2E: definition follows merge/split;
       preset swap keeps a merged chain + tuned ease.
+- [x] **T4.0 the TemplatePart registry (2026-07-09)** — the shared element-identity contract
+      (model/structure.ts `getTemplateParts(html, fields)`): DOM-derived, never stored —
+      parts are {selector, kind: root|panel|accent|line|image|block, label, channel:
+      mask|rise} with single-token selectors only (the region parsers can't round-trip more)
+      and a uniqueness rule (a selector matching ≠1 elements is excluded, not guessed).
+      `countLines` = the registry's mask-capable `line` parts (DOMParser replaces the
+      attribute-order regex that miscounted logo imgs); the timeline strip's labels/ghost/
+      appears menu read `part.label` (friendlyTarget keeps heuristics only for unregistered
+      selectors). This is the contract the canvas selection layer and step generalization
+      build on — canvas session must consume it, never fork it. E2E pins the Hairline
+      part map + the selector shape rule.
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

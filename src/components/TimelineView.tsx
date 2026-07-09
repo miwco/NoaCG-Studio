@@ -10,7 +10,7 @@ import {
   type TimelineTween,
 } from '../blocks/timelineModel';
 import { readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
-import { countLines, detectPrefix } from '../model/structure';
+import { countLines, detectPrefix, getTemplateParts } from '../model/structure';
 import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { useIsMobile } from './useIsMobile';
@@ -118,6 +118,9 @@ export default function TimelineView({ iframeRef }: Props) {
   // The category's class prefix + visible line count — for friendly labels and the »+ button.
   const prefix = useMemo(() => detectPrefix(template.html), [template.html]);
   const lineCount = useMemo(() => countLines(template.html), [template.html]);
+  // The shared element-identity registry — the single home for part naming (labels here,
+  // in the canvas selection layer, and in step assignment must always agree).
+  const parts = useMemo(() => getTemplateParts(template.html, template.fields), [template.html, template.fields]);
   const stepsOn = template.js.includes('function revealNextStep');
   const [phaseId, setPhaseId] = useState<string>('in');
   const [time, setTime] = useState(0);
@@ -426,17 +429,15 @@ export default function TimelineView({ iframeRef }: Props) {
     sendScrub(id, 0);
   };
 
-  // ── Friendly row labels: name the ELEMENT in plain words (the raw selector stays in
-  //    the tooltip). `#fN` targets use the operator field's title from the definition.
+  // ── Friendly row labels: the part registry is the single naming home (the raw selector
+  //    stays in the tooltip); heuristics below only catch unregistered selectors (e.g.
+  //    hand-added tweens on custom classes).
   const friendlyTarget = (t: string): string => {
-    if (prefix) {
-      if (t === `.${prefix}`) return 'Whole graphic';
-      if (t === `.${prefix}-box`) return 'Panel';
-      if (t === `.${prefix}-accent`) return 'Accent line';
-      if (t.startsWith(`.${prefix}-`)) {
-        const part = t.slice(prefix.length + 2);
-        return part.charAt(0).toUpperCase() + part.slice(1);
-      }
+    const part = parts.find((p) => p.selector === t);
+    if (part) return part.label;
+    if (prefix && t.startsWith(`.${prefix}-`)) {
+      const suffix = t.slice(prefix.length + 2);
+      return suffix.charAt(0).toUpperCase() + suffix.slice(1);
     }
     if (/^#f\d+$/.test(t)) {
       const field = template.fields.find((f) => f.field === t.slice(1));
