@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { zoneDecls } from '../templates/shared/base';
 import { setCssDeclaration, setFieldDefault } from '../blocks/edit';
 import { getCssVariable, setCssVariable } from '../blocks/cssVars';
 import type { Zone9 } from '../model/wizard';
-import { detectPrefix } from '../model/structure';
+import { detectPrefix, getTemplateParts, type TemplatePart } from '../model/structure';
+import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement>;
@@ -62,6 +63,12 @@ const SCALE_MAX = 4;
  * the code editor to the changed tab, where the patched lines are highlighted — canvas editing
  * always shows the code it wrote. Broadcast templates take no pointer input of their own, so
  * this layer never competes with the graphic.
+ *
+ * On top of the gestures sits the SELECTION model: a click (below the drag threshold)
+ * selects the innermost TemplatePart under the point — outline + a chip speaking the
+ * registry's `part.label` — clicking the selected part again climbs to its container
+ * (panel → whole graphic), and empty canvas or Escape deselects. Selection is editor UI
+ * state ONLY: it never writes a byte into the template.
  */
 export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   const template = useTemplateStore((s) => s.template);
@@ -86,12 +93,27 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   editingRef.current = editing;
   const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
+  // ── Selection model (editor UI state only — never written into the template) ──
+  const [selected, setSelected] = useState<string | null>(null);
+  /** The selected element's live rect in CANVAS px (rAF-tracked below). */
+  const [selRect, setSelRect] = useState<CanvasRect | null>(null);
+  /** The innermost part under the pointer — the "what would a click select" preview. */
+  const [hoverPart, setHoverPart] = useState<{ selector: string; label: string; rect: CanvasRect } | null>(null);
+
   const res = template.resolution;
   const scale = width / res.width; // screen px per canvas px
   // The structure contract: every generated template has one root `.{prefix}` holding a
   // `.{prefix}-box` — the same detection every live panel uses (model/structure.ts).
   const prefix = detectPrefix(template.html) ?? 'lower-third';
   const rootSelector = `.${prefix}`;
+
+  // The template's addressable parts — THE shared element-identity contract
+  // (model/structure.ts). Selection and hover only ever name elements through it.
+  const parts = useMemo(() => getTemplateParts(template.html, template.fields), [template.html, template.fields]);
+  const selectedPart = selected ? parts.find((p) => p.selector === selected) ?? null : null;
+  // The corner scale handle anchors to the hovered root — or to the selection while the
+  // WHOLE GRAPHIC is selected, so the chip's one existing root action stays reachable.
+  const handleRect = hoverRect ?? (selectedPart?.kind === 'root' ? selRect : null);
 
   const doc = () => iframeRef.current?.contentDocument ?? null;
   const rootEl = () => doc()?.querySelector<HTMLElement>(rootSelector) ?? null;
@@ -119,6 +141,52 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     return null;
   };
 
+  /** Registered parts under a canvas point, innermost first (closest-ancestor order). */
+  const partChainAt = (p: { x: number; y: number }): { part: TemplatePart; el: HTMLElement }[] => {
+    const d = doc();
+    if (!d) return [];
+    const resolved: { part: TemplatePart; el: HTMLElement }[] = [];
+    for (const part of parts) {
+      const el = d.querySelector<HTMLElement>(part.selector);
+      if (el && el.getClientRects().length > 0) resolved.push({ part, el }); // rendered only
+    }
+    // Walk up from the element the point actually hits, collecting its ancestor parts.
+    const chain: { part: TemplatePart; el: HTMLElement }[] = [];
+    for (let el = d.elementFromPoint(p.x, p.y); el && el !== d.body && el !== d.documentElement; el = el.parentElement) {
+      const hit = resolved.find((r) => r.el === el);
+      if (hit) chain.push(hit);
+    }
+    if (chain.length > 0) return chain;
+    // Fallback for templates that opt out of pointer hit-testing (pointer-events: none is
+    // a legitimate overlay style in imported code): rect containment, innermost first.
+    const depth = (el: Element) => {
+      let n = 0;
+      for (let q = el.parentElement; q; q = q.parentElement) n++;
+      return n;
+    };
+    return resolved
+      .filter((r) => inRect(p, r.el.getBoundingClientRect()))
+      .sort((a, b) => {
+        const byDepth = depth(b.el) - depth(a.el);
+        if (byDepth !== 0) return byDepth;
+        const ra = a.el.getBoundingClientRect();
+        const rb = b.el.getBoundingClientRect();
+        return ra.width * ra.height - rb.width * rb.height; // ties: the smaller wins
+      });
+  };
+
+  /** A click selects the innermost part under the point; clicking the SELECTED part again
+   *  climbs to its container (panel → whole graphic); empty canvas deselects. */
+  const selectAt = (p: { x: number; y: number }) => {
+    const chain = partChainAt(p);
+    if (chain.length === 0) {
+      setSelected(null);
+      return;
+    }
+    const climb = chain[0].part.selector === selected && chain.length > 1;
+    setSelected(chain[climb ? 1 : 0].part.selector);
+  };
+
   // Focus the inline editor as soon as it opens.
   useEffect(() => {
     if (editing) {
@@ -136,6 +204,55 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drag]);
+
+  // A code edit can remove the selected element — selection follows the registry.
+  useEffect(() => {
+    if (selected && !parts.some((p) => p.selector === selected)) setSelected(null);
+  }, [parts, selected]);
+
+  // Track the selected element's on-screen rect. rAF on purpose: animations, preview
+  // rebuilds, and the scale handle all move the element, and the loop re-resolves the
+  // selector against whatever document the iframe currently holds.
+  useEffect(() => {
+    if (!selected) {
+      setSelRect(null);
+      return;
+    }
+    let raf = requestAnimationFrame(function track() {
+      const el = doc()?.querySelector<HTMLElement>(selected);
+      const r = el && el.getClientRects().length > 0 ? el.getBoundingClientRect() : null;
+      setSelRect((prev) => {
+        if (!r) return prev === null ? prev : null;
+        if (
+          prev &&
+          Math.abs(prev.left - r.left) < 0.5 &&
+          Math.abs(prev.top - r.top) < 0.5 &&
+          Math.abs(prev.width - r.width) < 0.5 &&
+          Math.abs(prev.height - r.height) < 0.5
+        ) {
+          return prev; // unchanged — no re-render churn while the graphic is at rest
+        }
+        return { left: r.left, top: r.top, width: r.width, height: r.height };
+      });
+      raf = requestAnimationFrame(track);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Escape deselects — but never steals the key from a drag, the inline editor (both own
+  // their Escape), or a focused form field / Monaco.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (dragRef.current || editingRef.current || scaleDragRef.current) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.('input, textarea, select, .monaco-editor')) return;
+      setSelected(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (editing) return; // the editor overlay handles its own events
@@ -183,6 +300,28 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
         if (!nearHandle) setHoverRect(null);
       }
     }
+    // Hover naming: the innermost registered part under the pointer — a preview of what a
+    // click would select. Runs outside the root rect too (block parts can live there).
+    const top = partChainAt(p)[0] ?? null;
+    setHoverPart((prev) => {
+      if (!top) return prev === null ? prev : null;
+      const tr = top.el.getBoundingClientRect();
+      if (
+        prev &&
+        prev.selector === top.part.selector &&
+        Math.abs(prev.rect.left - tr.left) < 0.5 &&
+        Math.abs(prev.rect.top - tr.top) < 0.5 &&
+        Math.abs(prev.rect.width - tr.width) < 0.5 &&
+        Math.abs(prev.rect.height - tr.height) < 0.5
+      ) {
+        return prev;
+      }
+      return {
+        selector: top.part.selector,
+        label: top.part.label,
+        rect: { left: tr.left, top: tr.top, width: tr.width, height: tr.height },
+      };
+    });
   };
 
   // ── W2: the corner scale handle → one --scale patch (the Style panel's size knob) ──
@@ -192,7 +331,7 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   };
 
   const startScaleDrag = (e: React.PointerEvent) => {
-    if (!hoverRect) return;
+    if (!handleRect) return;
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -201,8 +340,8 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
       startX: e.clientX,
       startY: e.clientY,
       origScale: orig,
-      rootWidth: hoverRect.width * scale,
-      rootHeight: hoverRect.height * scale,
+      rootWidth: handleRect.width * scale,
+      rootHeight: handleRect.height * scale,
       value: orig,
     });
   };
@@ -237,10 +376,14 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     setActiveTab('css');
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = dragRef.current;
     setDrag(null);
-    if (!d || !d.active) return; // a click (below the threshold) is not a move
+    if (!d || !d.active) {
+      // A click (below the drag threshold) is not a move — it updates the SELECTION.
+      if (!editingRef.current) selectAt(toCanvas(e));
+      return;
+    }
 
     // The dragged root rect in canvas px.
     const left = d.root.left + d.dx / scale;
@@ -293,6 +436,10 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
       value: sampleData[hit.field] ?? hit.el.textContent ?? '',
       rect: { left: r.left, top: r.top, width: r.width, height: r.height },
     });
+    // Selection follows the edited field when it's a registered part (the second click
+    // that got us here may have climbed to the panel meanwhile).
+    const part = parts.find((pt) => pt.selector === `#${hit.field}`);
+    if (part) setSelected(part.selector);
   };
 
   /** Commit the inline edit: live sample value + the field's definition default (undoable). */
@@ -338,16 +485,46 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={() => setDrag(null)}
+      onPointerLeave={() => setHoverPart(null)}
       onDoubleClick={onDoubleClick}
     >
-      {/* W2 — the corner scale handle: appears while hovering the graphic; drag = --scale. */}
-      {hoverRect && !ghost && !editing && (
+      {/* Selection outline + naming chip, and the hover preview — editor UI state only. */}
+      {!ghost && !editing && (
+        <CanvasSelection
+          scale={scale}
+          width={width}
+          selection={
+            selectedPart && selRect
+              ? {
+                  rect: selRect,
+                  label: selectedPart.label,
+                  // The chip surfaces only actions that ALREADY exist where they apply.
+                  hint:
+                    selectedPart.kind === 'line'
+                      ? 'Double-click to edit'
+                      : selectedPart.kind === 'root'
+                        ? 'Corner handle resizes'
+                        : undefined,
+                }
+              : null
+          }
+          hover={
+            !scaleDrag && hoverPart && hoverPart.selector !== selected
+              ? { rect: hoverPart.rect, label: hoverPart.label }
+              : null
+          }
+        />
+      )}
+
+      {/* W2 — the corner scale handle: shows while hovering the graphic (and stays while
+          the whole graphic is selected); drag = --scale. */}
+      {handleRect && !ghost && !editing && (
         <div
           className={`scale-handle${scaleDrag ? ' dragging' : ''}`}
           data-testid="scale-handle"
           style={{
-            left: (hoverRect.left + hoverRect.width) * scale - 5,
-            top: (hoverRect.top + hoverRect.height) * scale - 5,
+            left: (handleRect.left + handleRect.width) * scale - 5,
+            top: (handleRect.top + handleRect.height) * scale - 5,
           }}
           title="Drag to resize (writes the --scale variable, like the Style panel's size)"
           onPointerDown={startScaleDrag}

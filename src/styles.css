@@ -1514,3 +1514,66 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   .pk-body { padding: 12px 14px; }
   .gallery-modal { width: 100vw; max-height: 100dvh; border-radius: 0; }
 }
+
+/* ---------- Canvas selection (Era 6 — click-to-select + hover naming; editor UI only) ---------- */
+/* All of this is overlay chrome inside .canvas-layer — pointer-events: none throughout,
+   so it can never swallow the drag / dblclick / scale-handle gestures underneath it. */
+.canvas-selection-outline {
+  position: absolute;
+  border: 1.5px solid var(--amber);
+  border-radius: 3px;
+  box-shadow: 0 0 14px rgba(246, 166, 35, 0.28);
+  pointer-events: none;
+  z-index: 5;
+}
+.canvas-hover-outline {
+  position: absolute;
+  border: 1px solid rgba(246, 166, 35, 0.5);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 5;
+}
+.canvas-hover-tag {
+  position: absolute;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(246, 166, 35, 0.9);
+  background: rgba(10, 12, 16, 0.78);
+  padding: 2px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 6;
+}
+/* The naming chip over the selected element: the registry label + (only where the action
+   already exists) a short affordance hint. */
+.canvas-chip {
+  position: absolute;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 340px;
+  overflow: hidden;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  background: rgba(10, 12, 16, 0.92);
+  border: 1px solid rgba(246, 166, 35, 0.45);
+  border-radius: 4px;
+  padding: 3px 9px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+}
+.canvas-chip-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.canvas-chip-hint {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}

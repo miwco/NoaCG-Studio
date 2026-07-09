@@ -472,6 +472,20 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       timelineModel.buildOverview = the pure matrix derivation. E2E: overview structure,
       zoom scaling (hold fixed), header-click selection; the whole regroup/retime suite
       re-pinned on overview geometry (bars scroll into view in narrow panes).
+- [x] **W4.1 the canvas selection model (2026-07-09)** — click a structural element in the
+      preview to select it: registry-backed hit-testing (`getTemplateParts` selectors via an
+      elementFromPoint closest-ancestor walk, rect-containment fallback for pointer-events:
+      none imports), an amber outline + naming chip speaking `part.label` (the same words as
+      the timeline strip), a hover outline + tag previewing what a click would select, and
+      click-again-to-climb (line/panel → whole graphic — the registry's nesting, so the root
+      stays reachable). Empty canvas or Escape deselects (Escape yields to drag/inline-edit/
+      form focus). The chip surfaces ONLY actions that already exist where they apply:
+      "Double-click to edit" on text lines; the corner --scale handle stays anchored while
+      the whole graphic is selected. Selection is editor UI state ONLY — no store field, no
+      template write, rAF-tracked rects so it follows animation and rebuilds. Step/press
+      assignment on selection is deliberately NOT here (lands after both Era-6 tracks merge).
+      E2E: canvas-selection (5 — select/name, hover, deselect ×2, climb+handle, edit/drag
+      layering).
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

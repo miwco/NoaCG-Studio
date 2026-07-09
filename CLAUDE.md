@@ -206,7 +206,18 @@ src/
                  setFieldDefault; corner handle → live --scale preview, diagonal-aware,
                  clamped 0.25–4; every gesture commits as ONE undoable applyTemplate and
                  jumps the editor to the changed tab, highlighted; root detected via
-                 model/structure.ts detectPrefix), CanvasGuides,
+                 model/structure.ts detectPrefix; plus the SELECTION model: a click
+                 selects the innermost TemplatePart under the point — registry-driven
+                 closest-ancestor hit test, rect-containment fallback — clicking the
+                 selected part again climbs to its container, hover previews the name,
+                 Escape or empty canvas deselects, the corner handle stays anchored
+                 while the whole graphic is selected; selection is editor UI state
+                 ONLY, never written into the template),
+                 CanvasSelection (the presentational selection/hover overlay: amber
+                 outline + a chip speaking part.label — the registry's words, same as
+                 the timeline strip; chips hint only actions that already exist:
+                 dblclick-to-edit on text lines, corner resize on the root),
+                 CanvasGuides,
                  PlayoutSimulator (owns the running preview timeline __activeTl; settles
                  the design view after every rebuild — progress(1, true) + a second
                  update(); auto-replays on replayNonce; playNext owns each Continue's
