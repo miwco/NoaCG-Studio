@@ -11,7 +11,8 @@ import {
   type OverviewSection,
   type TimelineTween,
 } from '../blocks/timelineModel';
-import { applyStepChain, currentStepChain, readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
+import { readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
+import { changePartPress } from '../blocks/stepAssign';
 import { countLines, detectPrefix, getTemplateParts } from '../model/structure';
 import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -416,56 +417,33 @@ export default function TimelineView({ iframeRef }: Props) {
   /** Assign an on-with-the-graphic part to a » Next press (a new one when toStep points
    *  past the chain) — the entrance choreography changes, so this re-emits the IN phase. */
   const assignPartToPress = (selector: string, toStep: number) => {
-    const chain = currentStepChain(template);
-    if (!chain) return; // steps are on whenever this UI is reachable
-    if (toStep >= chain.groups.length) {
-      chain.groups.push([selector]);
-      chain.durations.push('0.45');
-      chain.eases.push('easeIn');
-    } else {
-      chain.groups[toStep].push(selector);
-    }
-    chain.reveals[selector] = parts.find((p) => p.selector === selector)?.channel ?? 'rise';
-    applyTemplate({ ...template, ...applyStepChain(template, chain) });
+    const change = changePartPress(template, parts, model, selector, -1, toStep);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch });
     requestReplay();
-    setPhaseId(`step-${Math.min(toStep, chain.groups.length - 1) + 2}`);
+    setPhaseId(`step-${change.destStep! + 2}`);
   };
 
   /** Send an assigned part back to "appears with the graphic" — removed from every press
    *  (an emptied press disappears; the last part leaving turns steps off entirely). */
   const unassignPart = (selector: string) => {
-    const chain = currentStepChain(template);
-    if (!chain) return;
-    chain.groups = chain.groups.map((g) => g.filter((t) => t !== selector));
-    for (let i = chain.groups.length - 1; i >= 0; i--) {
-      if (chain.groups[i].length === 0) {
-        chain.groups.splice(i, 1);
-        chain.durations.splice(i, 1);
-        chain.eases.splice(i, 1);
-      }
-    }
-    delete chain.reveals[selector];
-    applyTemplate({ ...template, ...applyStepChain(template, chain.groups.length ? chain : null) });
+    const change = changePartPress(template, parts, model, selector, 0, -1);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch });
     requestReplay();
-    if (seg.stepIndex === undefined || seg.stepIndex >= chain.groups.length) setPhaseId('in');
+    if (seg.stepIndex === undefined || seg.stepIndex >= change.stepsAfter) setPhaseId('in');
   };
 
   /** The "appears on" menu (a part row's when-control): move a part to another » Next
    *  press — or give it its own — with a plain dropdown. Exactly the patch that dropping
    *  the row on a » card writes, minus the drag. */
   const moveLineTo = (target: string, fromStep: number, toStep: number) => {
-    if (toStep === fromStep) return;
-    const emptied = model.steps[fromStep].targets.length === 1;
-    // Moving the LAST step's only line to "a new press" would just re-create the same step.
-    if (toStep === model.steps.length && emptied && fromStep === model.steps.length - 1) return;
-    const js = patchStepRegroup(template.js, target, fromStep, toStep);
-    if (!js) return;
-    applyTemplate({ ...template, ...withStepsSetting(template, js) });
+    const change = changePartPress(template, parts, model, target, fromStep, toStep);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch });
     requestReplay();
     // Follow the moved line to its destination segment (indices shift when a step empties).
-    let dest = Math.min(toStep, model.steps.length);
-    if (emptied && fromStep < dest) dest -= 1;
-    setPhaseId(`step-${dest + 2}`);
+    setPhaseId(`step-${change.destStep! + 2}`);
   };
 
   // ── The »+ Step button: grow the Continue chain without knowing the internals ─────

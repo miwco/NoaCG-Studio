@@ -191,3 +191,37 @@ test('selection is shared: a canvas click highlights the timeline row, a row lab
   await expect(page.locator('[data-part="#f1"]')).not.toHaveClass(/selected/);
   await expect(page.locator('.change-dot')).toHaveCount(0);
 });
+
+test('the chip assigns the selected part to a press — the gutter control, from the canvas', async ({ page }) => {
+  await createHairline(page);
+  await waitSettled(page);
+
+  // Turn step reveal on from the strip (»+): press 1 now reveals the Title line.
+  await page.getByTestId('timeline-seg-new').click();
+  await page.waitForTimeout(650);
+
+  // Select the accent via its timeline row label (shared selection — and a click target
+  // far kinder than the 3px hairline itself).
+  await page.locator('[data-part=".lower-third-accent"]').click();
+  const chip = page.getByTestId('selection-chip');
+  await expect(chip).toContainText('Accent line');
+
+  // The chip carries the press control; the accent enters with ▶ Play today.
+  const appears = page.getByTestId('canvas-appears');
+  await expect(appears).toHaveValue('-1');
+
+  // Assign it to press 1 — the SAME applyStepChain patch the timeline gutter writes.
+  await appears.selectOption('0');
+  await page.waitForTimeout(650);
+  await expect(page.getByTestId('canvas-appears')).toHaveValue('0'); // re-parsed from the code
+  // The write landed in the code (the JS tab shows its change dot; HTML is the active tab).
+  await expect(page.locator('.tabs .tab', { hasText: 'JS' }).locator('.change-dot')).toBeVisible();
+  // The timeline gutter agrees — both surfaces read the same emitted chain (the accent is
+  // the second part of press 1's group).
+  await expect(page.getByTestId('timeline-appears-p0-1')).toHaveValue('0');
+
+  // And back to the entrance, from the canvas too (an emptied press disappears).
+  await page.getByTestId('canvas-appears').selectOption('-1');
+  await page.waitForTimeout(650);
+  await expect(page.getByTestId('canvas-appears')).toHaveValue('-1');
+});

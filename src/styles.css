@@ -1588,3 +1588,17 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   background: rgba(246, 166, 35, 0.07);
   box-shadow: inset 2px 0 0 var(--amber);
 }
+
+/* The chip's "appears on press" control — the timeline gutter's menu, reachable from the
+   canvas. The chip opts into pointer input only while it carries this control. */
+.canvas-chip.interactive { pointer-events: auto; }
+.canvas-chip select.canvas-appears {
+  width: auto;                /* the global select rule stretches to 100% — not in a chip */
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  padding: 1px 4px;
+  background: rgba(27, 34, 48, 0.9);
+  border-color: rgba(246, 166, 35, 0.35);
+  border-radius: 3px;
+  color: var(--text);
+}

@@ -495,6 +495,17 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       inert); still UI state only — no history, no template write. Next convergence slice:
       the chip's "appears on press" action reusing applyStepChain. E2E: canvas-selection +1
       (both directions + deselect, no code written).
+- [x] **W4.3 "appears on press" from the canvas (2026-07-09, the payoff slice)** — the
+      selected element's chip carries the timeline gutter's press control: select the
+      accent/logo/a line on the canvas → "appears with ▶ Play / on press N / on a new
+      press". Same conditions as the gutter (steps on, chain groupable, eligible kinds,
+      never the first line), same soloLast guard, ONE undoable apply + auto-replay. The
+      decision tree extracted to blocks/stepAssign.ts `changePartPress` (entrance→press
+      and press→entrance re-emit the IN phase with the registry channel; press→press stays
+      the tuning-preserving array patch) and the gutter now delegates to it — the two
+      surfaces cannot drift. The chip opts into pointer input only while it carries the
+      control and swallows its events (the gesture layer under it never fires). E2E:
+      canvas-selection +1 (assign via chip → code + gutter agree → back to the entrance).
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

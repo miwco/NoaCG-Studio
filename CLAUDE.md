@@ -158,7 +158,11 @@ src/
                 animPatch.ts (marked-region readers/patchers: readAnimationInfo reads per-phase
                 "// In preset:" / "// Out preset:" comments falling back to "// Preset:";
                 swapAnimationPhase(js, id, cfg, 'in'|'out'|'both') splices two emitted regions
-                at the buildOutTimeline boundary — steps code travels with the IN phase)
+                at the buildOutTimeline boundary — steps code travels with the IN phase),
+                stepAssign.ts (changePartPress — the ONE "appears on press" transition,
+                shared by the timeline gutter's menu and the canvas chip: entrance→press
+                and press→entrance re-emit the IN phase via applyStepChain, press→press
+                stays the tuning-preserving patchStepRegroup literal patch)
   ai/           provider.ts (AIProvider + GenerateContext), claudeProvider.ts (real provider:
                 system prompt = SPX + house contracts + lt01's generated code as the canonical
                 example; forced emit_template tool; validate + one repair round), anthropic.ts
@@ -219,7 +223,11 @@ src/
                  CanvasSelection (the presentational selection/hover overlay: amber
                  outline + a chip speaking part.label — the registry's words, same as
                  the timeline strip; chips hint only actions that already exist:
-                 dblclick-to-edit on text lines, corner resize on the root),
+                 dblclick-to-edit on text lines, corner resize on the root; an
+                 eligible selected part's chip carries the "appears on press" select —
+                 the timeline gutter's control from the canvas, same conditions, same
+                 blocks/stepAssign.ts patch — and swallows its own pointer events so
+                 the gesture layer under it never fires),
                  CanvasGuides,
                  PlayoutSimulator (owns the running preview timeline __activeTl; settles
                  the design view after every rebuild — progress(1, true) + a second

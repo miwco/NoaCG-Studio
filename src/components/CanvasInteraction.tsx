@@ -5,6 +5,8 @@ import { setCssDeclaration, setFieldDefault } from '../blocks/edit';
 import { getCssVariable, setCssVariable } from '../blocks/cssVars';
 import type { Zone9 } from '../model/wizard';
 import { detectPrefix, getTemplateParts, type TemplatePart } from '../model/structure';
+import { parseTimeline } from '../blocks/timelineModel';
+import { changePartPress } from '../blocks/stepAssign';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 
 interface Props {
@@ -76,6 +78,7 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const setSampleValue = useTemplateStore((s) => s.setSampleValue);
   const sampleData = useTemplateStore((s) => s.sampleData);
+  const requestReplay = useTemplateStore((s) => s.requestReplay);
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const [editing, setEditing] = useState<EditState | null>(null);
@@ -114,6 +117,33 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   // (model/structure.ts). Selection and hover only ever name elements through it.
   const parts = useMemo(() => getTemplateParts(template.html, template.fields), [template.html, template.fields]);
   const selectedPart = selected ? parts.find((p) => p.selector === selected) ?? null : null;
+
+  // ── "Appears on press" from the chip — the SAME control the timeline gutter offers,
+  //    under the same conditions (steps on, chain groupable, part eligible), writing the
+  //    same patch (blocks/stepAssign.ts changePartPress). The code stays the one truth. ──
+  const timelineModel = useMemo(() => parseTimeline(template.js), [template.js]);
+  const stepsOn = template.js.includes('function revealNextStep');
+  const chainGroupable =
+    !!timelineModel && timelineModel.steps.length > 0 && timelineModel.steps.every((s) => s.groupable);
+  const firstLine = parts.find((p) => p.kind === 'line')?.selector;
+  const pressEligible =
+    stepsOn &&
+    chainGroupable &&
+    !!selectedPart &&
+    (selectedPart.kind === 'line' || selectedPart.kind === 'image' || selectedPart.kind === 'accent') &&
+    selectedPart.selector !== firstLine;
+  /** Which press the selected part is on (-1 = appears with ▶ Play). */
+  const selectedPress = pressEligible
+    ? timelineModel!.steps.findIndex((s) => s.targets.includes(selectedPart!.selector))
+    : -1;
+
+  const changePress = (toPress: number) => {
+    if (!selectedPart || !timelineModel) return;
+    const change = changePartPress(template, parts, timelineModel, selectedPart.selector, selectedPress, toPress);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch }); // one undoable apply — same as the gutter
+    requestReplay();
+  };
   // The corner scale handle anchors to the hovered root — or to the selection while the
   // WHOLE GRAPHIC is selected, so the chip's one existing root action stays reachable.
   const handleRect = hoverRect ?? (selectedPart?.kind === 'root' ? selRect : null);
@@ -491,7 +521,9 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
       onPointerLeave={() => setHoverPart(null)}
       onDoubleClick={onDoubleClick}
     >
-      {/* Selection outline + naming chip, and the hover preview — editor UI state only. */}
+      {/* Selection outline + naming chip, and the hover preview — editor UI state only
+          (the chip's press control is the one action that writes code, via the same
+          patch the timeline gutter writes). */}
       {!ghost && !editing && (
         <CanvasSelection
           scale={scale}
@@ -501,13 +533,36 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
               ? {
                   rect: selRect,
                   label: selectedPart.label,
-                  // The chip surfaces only actions that ALREADY exist where they apply.
-                  hint:
-                    selectedPart.kind === 'line'
+                  // The chip surfaces only actions that ALREADY exist where they apply
+                  // (the press control replaces the passive hint when both would show).
+                  hint: pressEligible
+                    ? undefined
+                    : selectedPart.kind === 'line'
                       ? 'Double-click to edit'
                       : selectedPart.kind === 'root'
                         ? 'Corner handle resizes'
                         : undefined,
+                  action: pressEligible ? (
+                    <select
+                      className="canvas-appears"
+                      value={selectedPress}
+                      onChange={(e) => changePress(Number(e.target.value))}
+                      title="When this part appears — with ▶ Play, or revealed by a press of » Next (the timeline gutter's control, from the canvas)"
+                      data-testid="canvas-appears"
+                    >
+                      <option value={-1}>appears with ▶ Play</option>
+                      {timelineModel!.steps.map((_, k) => (
+                        <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
+                      ))}
+                      {/* The last press's only part moving to "a new press" would re-create
+                          the same press — the gutter hides the option; so does the chip. */}
+                      {!(
+                        selectedPress === timelineModel!.steps.length - 1 &&
+                        selectedPress >= 0 &&
+                        timelineModel!.steps[selectedPress].targets.length === 1
+                      ) && <option value={timelineModel!.steps.length}>appears on a new press</option>}
+                    </select>
+                  ) : undefined,
                 }
               : null
           }
