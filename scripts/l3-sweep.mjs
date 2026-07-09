@@ -224,7 +224,9 @@ const results = await page.evaluate(async (CATEGORY) => {
       return { wrapped: longRect.height > shortH * 1.5, boxW: Math.round(boxRect.width) };
     });
     // The cap differs per category — read it from the generated CSS (max-width on the box).
-    const cap = Number((t4.css.match(/max-width:\s*(\d+)px/) || [])[1] ?? 830);
+    // Matches both the plain `806px` form and the scale-aware `min(calc(806px * var(--scale)), …)`
+    // form; the sweep creates at default scale 1, where both mean the same width.
+    const cap = Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
     row.checks.autoFit = !r4.fatal && !!r4.wrapped && r4.boxW <= cap + 2;
     if (!row.checks.autoFit) row.issues.push('autofit: ' + JSON.stringify({ fatal: r4.fatal, wrapped: r4.wrapped, boxW: r4.boxW, cap }));
     out.push(row);

@@ -35,6 +35,21 @@ export function computeMaxTextWidth(res: Resolution): number {
   return Math.round(Math.min(res.width * 0.42, res.width - 2 * (res.width * 0.0625)));
 }
 
+/**
+ * The auto-fit cap as emitted CSS. The measure follows --scale, so resizing the graphic
+ * (Style panel size, canvas corner handle) widens the box instead of wrapping the same
+ * pixel width tighter — but it never grows past the frame's horizontal safe area.
+ * `maxPx` is the category cap at this resolution's default scale; dividing by the
+ * resolution factor normalizes it to "px per unit of --scale" (--scale already carries
+ * that factor, see computeScale).
+ */
+export function maxTextWidthCss(res: Resolution, maxPx: number): string {
+  const resFactor = Math.min(res.width / 1920, res.height / 1080);
+  const perScaleUnit = Math.round(maxPx / resFactor);
+  const safeMax = Math.round(res.width - 2 * (res.width * 0.0625));
+  return `min(calc(${perScaleUnit}px * var(--scale)), ${safeMax}px)`;
+}
+
 // ── Positioning: 9 zones snapped to safe areas ───────────────────────────────
 
 export interface ZoneDecl {

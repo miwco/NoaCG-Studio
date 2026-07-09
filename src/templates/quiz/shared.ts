@@ -35,6 +35,7 @@ import {
   baseSettings,
   computeScale,
   documentHtml,
+  maxTextWidthCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -195,7 +196,7 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 /* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
 .quiz-box {
   width: fit-content;              /* the panel hugs the question and answers */
-  max-width: ${maxTextWidth}px;             /* never wider than this — text wraps instead */
+  max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
 .quiz-mask {
