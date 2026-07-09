@@ -441,6 +441,23 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       selectors). This is the contract the canvas selection layer and step generalization
       build on — canvas session must consume it, never fork it. E2E pins the Hairline
       part map + the selector shape rule.
+- [x] **T4.1 any part on any press (2026-07-09)** — steps stop being lines-only: accents,
+      logo/image slots, and any line but the first can be assigned to a » Next press.
+      Emit changes (animPresets stepsBlock): a `stepReveals` map says HOW each part appears
+      ('mask' slides within its line mask, 'rise' fades+rises — channel from the registry,
+      never guessed from the selector); pre-hiding is `hidePendingSteps()` DERIVED from
+      stepGroups at runtime, so "removed from every group ⇒ appears with ▶ Play" is true by
+      construction; per-part reveals are positioned tweens in one timeline (mixed channels
+      per press work). Patch split: moving between existing presses stays patchStepRegroup
+      (array patch, keeps tuning); assigning/unassigning re-emits the IN phase
+      (`applyStepChain`) because the entrance choreography changes (an assigned accent's
+      intro draw drops; it returns on unassign). The step view lists unassigned parts with
+      an "appears with ▶ Play" menu — pick a press to move them; assigned rows can go back.
+      Emptied presses disappear; the last part leaving turns steps off. Validation warns on
+      dangling step selectors. Deferred: block elements outside the root (opacity-gate
+      problem); entering the steps world still needs 2+ lines (»+ gate) — a logo-only
+      first step is a follow-up. E2E: accent onto its own press → hidden through Play,
+      revealed on press 2, definition steps follow → unassigned back into the entrance.
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

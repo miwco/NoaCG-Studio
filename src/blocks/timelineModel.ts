@@ -182,8 +182,13 @@ function parseSteps(region: string, animSpeed: number): TimelineStep[] {
   if (!durations || !eases) return [];
   const durs = durations.split(',').map((s) => Number(s.trim()));
   const easeTokens = eases.split(',').map((s) => s.trim());
-  // The group reveal's per-line stagger (one value for the whole steps block).
-  const stagger = Number(region.match(/function revealNextStep[\s\S]*?stagger:\s*([\d.]+)\s*\/\s*animSpeed/)?.[1] ?? 0);
+  // The group reveal's per-part stagger (one value for the whole steps block). The current
+  // emit positions each part at `i * N / animSpeed`; older emits used a stagger: var.
+  const stagger = Number(
+    region.match(/function revealNextStep[\s\S]*?i \* ([\d.]+) \/ animSpeed/)?.[1] ??
+      region.match(/function revealNextStep[\s\S]*?stagger:\s*([\d.]+)\s*\/\s*animSpeed/)?.[1] ??
+      0,
+  );
   const step = (targets: string[], i: number, groupable: boolean): TimelineStep => ({
     targets,
     duration: (Number.isFinite(durs[i]) ? durs[i] : 0.45) / animSpeed,

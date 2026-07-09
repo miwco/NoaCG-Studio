@@ -1349,9 +1349,15 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 }
 .timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-ease-spacer { width: 96px; flex-shrink: 0; }
+/* Parts still appearing with ▶ Play, listed under a step's rows so they can move onto a
+   press — dimmed, with an empty dashed lane (nothing plays for them in this segment). */
+.timeline-row-unassigned { opacity: 0.7; }
+.timeline-row-unassigned:hover { opacity: 1; }
+.timeline-lane-empty { background: transparent; border: 1px dashed var(--border); }
+
 /* The step row's when-control: which » Next press the line appears on. */
 .timeline-appears {
-  width: 132px;
+  width: 142px;
   flex-shrink: 0;
   font-family: "JetBrains Mono", Consolas, monospace;
   font-size: 10px;

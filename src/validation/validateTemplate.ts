@@ -178,6 +178,27 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
     errors.push({ rule: 'syntax', message: `JavaScript syntax error: ${syntax}` });
   }
 
+  // 5b. Step reveal targets: every selector in stepGroups should exist in the HTML. A
+  //     dangling one is a WARNING, not an error — GSAP tweens an empty target list, so the
+  //     press is a harmless no-op, but the operator would wonder why a Continue does nothing.
+  const groupsLiteral = template.js.match(/var stepGroups = \[([\s\S]*?)\];/)?.[1];
+  if (groupsLiteral) {
+    const selectors = [...groupsLiteral.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    for (const sel of selectors) {
+      const exists = sel.startsWith('#')
+        ? new RegExp(`id="${sel.slice(1)}"`).test(template.html)
+        : sel.startsWith('.')
+          ? new RegExp(`class="[^"]*\\b${sel.slice(1)}\\b[^"]*"`).test(template.html)
+          : true; // an exotic selector — leave it to the author
+      if (!exists) {
+        warnings.push({
+          rule: 'step-target',
+          message: `Step reveal targets "${sel}", which no longer exists in the HTML — that » Next press will do nothing for it.`,
+        });
+      }
+    }
+  }
+
   // 6. Runtime error captured from the live preview.
   if (options.runtimeError) {
     errors.push({ rule: 'preview', message: `Preview reported a runtime error: ${options.runtimeError}` });

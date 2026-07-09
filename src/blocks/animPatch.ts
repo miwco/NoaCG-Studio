@@ -14,7 +14,7 @@ import { QUIZ_PRESETS } from '../templates/quiz/quizPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
-import { countLines, detectPrefix } from '../model/structure';
+import { countLines, detectPrefix, getTemplateParts } from '../model/structure';
 
 /** The presets that apply to a template, by its category. */
 export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
@@ -93,29 +93,48 @@ export function setAnimKnob(js: string, knob: 'animSpeed' | 'easeIn' | 'easeOut'
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** The parts a » press may reveal (with their channels): lines, image slots, the accent.
+ *  The root and panel are load-bearing containers; block elements outside the root are
+ *  deferred (they sit outside the root's opacity gate). */
+function assignableParts(template: SpxTemplate): Map<string, 'mask' | 'rise'> {
+  return new Map(
+    getTemplateParts(template.html, template.fields)
+      .filter((p) => p.kind === 'line' || p.kind === 'image' || p.kind === 'accent')
+      .map((p) => [p.selector, p.channel]),
+  );
+}
+
 /**
  * Read the template's existing Continue chain as re-emittable RAW literals, filtered to the
- * lines that still exist. Null when there is no (groupable) chain — the emitter then writes
- * its defaults. This is what keeps a preset swap from resetting the user's regrouping.
+ * parts that still exist (channels come from the registry — self-healing if the HTML moved
+ * under the chain). Null when there is no (groupable) chain — the emitter then writes its
+ * defaults. This is what keeps a preset swap from resetting the user's regrouping.
  */
-function stepChainFromTemplate(js: string, lineCount: number): StepChain | null {
-  const model = parseTimeline(js);
+export function currentStepChain(template: SpxTemplate): StepChain | null {
+  const model = parseTimeline(template.js);
   if (!model || model.steps.length === 0 || !model.steps.every((s) => s.groupable)) return null;
-  const valid = new Set(Array.from({ length: Math.max(0, lineCount - 1) }, (_, i) => `#f${i + 1}`));
-  const chain: StepChain = { groups: [], durations: [], eases: [] };
+  const valid = assignableParts(template);
+  const chain: StepChain = { groups: [], durations: [], eases: [], reveals: {} };
   for (const step of model.steps) {
     const targets = step.targets.filter((t) => valid.has(t));
-    if (targets.length === 0) continue; // its lines are gone — the press goes with them
+    if (targets.length === 0) continue; // its parts are gone — the press goes with them
     chain.groups.push(targets);
     // The model's values are post-division seconds; write back the pre-division literals.
     chain.durations.push(String(round2(step.duration * model.animSpeed)));
     chain.eases.push(step.ease === null ? 'easeIn' : `'${step.ease}'`);
+    for (const t of targets) chain.reveals[t] = valid.get(t)!;
   }
   return chain.groups.length > 0 ? chain : null;
 }
 
-/** Derive the PresetConfig for re-emitting the region from the current template code. */
-export function presetConfigFromTemplate(template: SpxTemplate, steps: boolean): PresetConfig {
+/** Derive the PresetConfig for re-emitting the region from the current template code.
+ *  `chainOverride`: undefined = carry the template's existing chain; a StepChain = use it
+ *  (the assign/unassign paths); null = force the defaults. */
+export function presetConfigFromTemplate(
+  template: SpxTemplate,
+  steps: boolean,
+  chainOverride?: StepChain | null,
+): PresetConfig {
   const info = readAnimationInfo(template.js);
   // Every category uses the same structure contract with its own class prefix.
   const prefix = detectPrefix(template.html) ?? 'lower-third';
@@ -123,12 +142,17 @@ export function presetConfigFromTemplate(template: SpxTemplate, steps: boolean):
   const lineCount = Math.max(1, countLines(template.html));
   const fallbackId = info.inPresetId ?? info.outPresetId;
   const preset = fallbackId ? anyPresetById(fallbackId) : ANIM_PRESETS[0];
+  const chain = !steps ? null : chainOverride !== undefined ? chainOverride : currentStepChain(template);
+  // A part assigned to a press must not ALSO play in the entrance choreography: the accent
+  // is the one structural part presets animate, so its intro/exit tweens drop while it is
+  // assigned (it still leaves with the whole graphic — the exit hides the root).
+  const assigned = new Set(chain ? chain.groups.flat() : []);
   return {
     prefix,
     lineCount,
-    hasAccent: template.html.includes(`${prefix}-accent`),
-    steps: steps && lineCount > 1,
-    stepChain: steps ? stepChainFromTemplate(template.js, lineCount) ?? undefined : undefined,
+    hasAccent: template.html.includes(`${prefix}-accent`) && !assigned.has(`.${prefix}-accent`),
+    steps: steps && (lineCount > 1 || !!chain),
+    stepChain: chain ?? undefined,
     speed: info.speed,
     easeIn: info.easeIn ?? preset.autoEase.easeIn,
     easeOut: info.easeOut ?? preset.autoEase.easeOut,
@@ -152,6 +176,26 @@ export function setStepsMode(
   // SPX steps counts STATES: the entrance plus one per Continue press (reveal group).
   const groupCount = cfg.steps ? (cfg.stepChain?.groups.length ?? cfg.lineCount - 1) : 0;
   const settings = { ...template.settings, steps: String(groupCount + 1) };
+  const html = replaceDefinitionInHtml(template.html, settings, template.fields);
+  return { js, html, settings };
+}
+
+/**
+ * Re-emit the IN phase with a MODIFIED Continue chain — the assign/unassign paths (a part
+ * entering or leaving the steps world changes the entrance choreography, so an array patch
+ * is not enough; moving parts BETWEEN existing presses stays patchStepRegroup's job).
+ * A null/empty chain degrades to turning steps off entirely.
+ */
+export function applyStepChain(
+  template: SpxTemplate,
+  chain: StepChain | null,
+): Pick<SpxTemplate, 'js' | 'html' | 'settings'> {
+  if (!chain || chain.groups.length === 0) return setStepsMode(template, false);
+  const info = readAnimationInfo(template.js);
+  const cfg = presetConfigFromTemplate(template, true, chain);
+  const presetId = info.inPresetId ?? 'slide-fade';
+  const js = swapAnimationPhase(template.js, presetId, cfg, 'in');
+  const settings = { ...template.settings, steps: String(chain.groups.length + 1) };
   const html = replaceDefinitionInHtml(template.html, settings, template.fields);
   return { js, html, settings };
 }

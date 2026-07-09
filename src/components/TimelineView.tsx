@@ -9,7 +9,7 @@ import {
   patchTweenTiming,
   type TimelineTween,
 } from '../blocks/timelineModel';
-import { readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
+import { applyStepChain, currentStepChain, readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
 import { countLines, detectPrefix, getTemplateParts } from '../model/structure';
 import { EASINGS } from '../model/easings';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -359,6 +359,43 @@ export default function TimelineView({ iframeRef }: Props) {
     requestReplay();
   };
 
+  /** Assign an on-with-the-graphic part to a » Next press (a new one when toStep points
+   *  past the chain) — the entrance choreography changes, so this re-emits the IN phase. */
+  const assignPartToPress = (selector: string, toStep: number) => {
+    const chain = currentStepChain(template);
+    if (!chain) return; // steps are on whenever this UI is reachable
+    if (toStep >= chain.groups.length) {
+      chain.groups.push([selector]);
+      chain.durations.push('0.45');
+      chain.eases.push('easeIn');
+    } else {
+      chain.groups[toStep].push(selector);
+    }
+    chain.reveals[selector] = parts.find((p) => p.selector === selector)?.channel ?? 'rise';
+    applyTemplate({ ...template, ...applyStepChain(template, chain) });
+    requestReplay();
+    setPhaseId(`step-${Math.min(toStep, chain.groups.length - 1) + 2}`);
+  };
+
+  /** Send an assigned part back to "appears with the graphic" — removed from every press
+   *  (an emptied press disappears; the last part leaving turns steps off entirely). */
+  const unassignPart = (selector: string) => {
+    const chain = currentStepChain(template);
+    if (!chain) return;
+    chain.groups = chain.groups.map((g) => g.filter((t) => t !== selector));
+    for (let i = chain.groups.length - 1; i >= 0; i--) {
+      if (chain.groups[i].length === 0) {
+        chain.groups.splice(i, 1);
+        chain.durations.splice(i, 1);
+        chain.eases.splice(i, 1);
+      }
+    }
+    delete chain.reveals[selector];
+    applyTemplate({ ...template, ...applyStepChain(template, chain.groups.length ? chain : null) });
+    requestReplay();
+    if (seg.stepIndex === undefined || seg.stepIndex >= chain.groups.length) setPhaseId('in');
+  };
+
   /** The "appears on" menu (a step row's when-control): move a line to another » Next
    *  press — or give it its own — with a plain dropdown. Exactly the patch that dropping
    *  the row on a » tab writes, minus the drag. */
@@ -447,14 +484,28 @@ export default function TimelineView({ iframeRef }: Props) {
   };
   const label = (targets: string[]) => targets.map(friendlyTarget).join(' + ');
 
-  /** The rows shown for the selected segment: the phase's tweens, or ONE ROW PER LINE of
+  /** The rows shown for the selected segment: the phase's tweens, or ONE ROW PER PART of
    *  the step's reveal group (each offset by the group stagger — drag a row to regroup). */
   const step = seg.kind === 'step' ? model.steps[seg.stepIndex!] : null;
+  const channelOf = (t: string) => parts.find((p) => p.selector === t)?.channel ?? 'mask';
+  // Parts still appearing WITH the graphic that could move onto a press. The first line
+  // anchors the entrance (▶ Play must always show something); root/panel are load-bearing
+  // containers; block elements outside the root are deferred.
+  const assignedSelectors = new Set(model.steps.flatMap((s) => s.targets));
+  const firstLine = parts.find((p) => p.kind === 'line')?.selector;
+  const unassignedParts = step
+    ? parts.filter(
+        (p) =>
+          (p.kind === 'line' || p.kind === 'image' || p.kind === 'accent') &&
+          p.selector !== firstLine &&
+          !assignedSelectors.has(p.selector),
+      )
+    : [];
   const rows = step
     ? step.targets.map((t, li) => ({
         targets: [t],
         kind: 'to' as const,
-        props: ['yPercent'],
+        props: channelOf(t) === 'rise' ? ['opacity', 'y'] : ['yPercent'],
         duration: step.duration,
         stagger: 0,
         start: li * step.stagger,
@@ -630,15 +681,20 @@ export default function TimelineView({ iframeRef }: Props) {
                     )}
                   </div>
                 </div>
-                {/* A step row's when-control: which » Next press this line appears on. */}
+                {/* A step row's when-control: which » Next press this part appears on. */}
                 {step?.groupable && (
                   <select
                     className="timeline-appears"
                     value={seg.stepIndex}
-                    onChange={(e) => moveLineTo(tw.targets[0], Number(e.target.value))}
-                    title="Which press of » Next reveals this line — pick another press to move it there"
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v === -1) unassignPart(tw.targets[0]);
+                      else moveLineTo(tw.targets[0], v);
+                    }}
+                    title="Which press of » Next reveals this part — pick another press to move it there, or send it back to appearing with the graphic"
                     data-testid={`timeline-appears-${i}`}
                   >
+                    <option value={-1}>appears with ▶ Play</option>
                     {model.steps.map((_, k) => (
                       <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
                     ))}
@@ -672,6 +728,31 @@ export default function TimelineView({ iframeRef }: Props) {
               </div>
             );
           })}
+          {/* Parts that still appear with ▶ Play — each can move onto a press from here. */}
+          {step?.groupable &&
+            unassignedParts.map((p, i) => (
+              <div className="timeline-row timeline-row-unassigned" key={p.selector}>
+                <span className="timeline-label" title={p.selector}>{p.label}</span>
+                <div className="timeline-lane timeline-lane-empty" title="Appears with the graphic (▶ Play)" />
+                <select
+                  className="timeline-appears"
+                  value={-1}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (v >= 0) assignPartToPress(p.selector, v);
+                  }}
+                  title="This part appears with ▶ Play — pick a press of » Next to reveal it later instead"
+                  data-testid={`timeline-appears-add-${i}`}
+                >
+                  <option value={-1}>appears with ▶ Play</option>
+                  {model.steps.map((_, k) => (
+                    <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
+                  ))}
+                  <option value={model.steps.length}>appears on a new press</option>
+                </select>
+                <span className="timeline-ease-spacer" aria-hidden="true" />
+              </div>
+            ))}
           {/* The playhead — spans the lane area (between the label and ease columns). */}
           <div
             className="timeline-playhead"

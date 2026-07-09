@@ -547,6 +547,60 @@ test('corner bug: steps are not offered — the logo is not a text line', async 
   await expect(addStep).toHaveAttribute('title', /at least two text lines/);
 });
 
+test('any part can move onto a press: the accent joins the Continue chain and back', async ({ page }) => {
+  await createHairline(page); // two lines + the accent, steps off
+  const templateJs = async () =>
+    page
+      .frameLocator('iframe.preview-frame')
+      .locator('body')
+      .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+  const definitionSteps = async () =>
+    (
+      await page
+        .frameLocator('iframe.preview-frame')
+        .locator('body')
+        .evaluate(() => document.documentElement.outerHTML)
+    ).match(/"steps": "(\d+)"/)?.[1];
+  const accentOpacity = () =>
+    frame(page).locator('.lower-third-accent').evaluate((el) => getComputedStyle(el).opacity);
+
+  // Turn steps on: Title takes press 1; the accent still enters with the graphic and is
+  // listed under the step's rows as an assignable part.
+  await page.getByTestId('timeline-seg-new').click();
+  await page.waitForTimeout(650);
+  await page.getByTestId('timeline-seg-step-2').click();
+  const addMenu = page.getByTestId('timeline-appears-add-0');
+  await expect(addMenu).toContainText('appears with ▶ Play');
+
+  // Give the accent its own new press: the chain grows, the reveal map says 'rise', the
+  // SPX definition follows, and the entrance no longer draws the accent in.
+  await addMenu.selectOption('1');
+  await page.waitForTimeout(650);
+  let js = await templateJs();
+  expect(js).toContain("var stepGroups = [['#f1'], ['.lower-third-accent']];");
+  expect(js).toContain("'.lower-third-accent': 'rise'");
+  expect(await definitionSteps()).toBe('3');
+
+  // On air: Play parks the accent hidden; the 2nd » Next press reveals it.
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await page.waitForTimeout(1200);
+  expect(await accentOpacity()).toBe('0');
+  await page.getByRole('button', { name: '» Next' }).click(); // press 1 — the Title
+  await page.getByRole('button', { name: '» Next' }).click(); // press 2 — the accent
+  await expect.poll(accentOpacity, { timeout: 3000 }).toBe('1');
+
+  // Send it back to appearing with the graphic: the emptied press disappears, the reveal
+  // map entry goes with it, and the entrance draws the accent again.
+  await page.getByTestId('timeline-seg-step-3').click();
+  await page.getByTestId('timeline-appears-0').selectOption('-1');
+  await page.waitForTimeout(650);
+  js = await templateJs();
+  expect(js).toContain("var stepGroups = [['#f1']];");
+  expect(js).not.toContain("'.lower-third-accent': 'rise'");
+  expect(js).toMatch(/tl\.fromTo\('\.lower-third-accent'/); // back in the entrance
+  expect(await definitionSteps()).toBe('2');
+});
+
 test('the part registry names the template structure — the shared identity contract', async ({ page }) => {
   await createHairline(page);
   const parts = await page.evaluate(async () => {

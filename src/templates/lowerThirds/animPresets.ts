@@ -20,9 +20,13 @@ import type { AnimPresetId } from '../../model/wizard';
  *  resets the user's regrouping or per-step timing. Values are the RAW literals the arrays
  *  are written with (durations pre-division, eases 'easeIn' or a quoted string). */
 export interface StepChain {
+  /** Parts revealed per » Next press — any registry part selector, not just lines. */
   groups: string[][];
   durations: string[];
   eases: string[];
+  /** Reveal channel per assigned selector: 'mask' slides within a line mask, 'rise' is the
+   *  generic fade+rise for everything else (accents, logos). Lines default to 'mask'. */
+  reveals: Record<string, 'mask' | 'rise'>;
 }
 
 export interface PresetConfig {
@@ -62,9 +66,22 @@ function lineList(count: number): string {
   return Array.from({ length: count }, (_, i) => `'#f${i}'`).join(', ');
 }
 
-/** In steps mode only line 1 enters with the in-timeline; the rest wait for next(). */
+/** The selectors a preset's steps world currently assigns to presses (empty = defaults). */
+function assignedSet(cfg: PresetConfig): Set<string> {
+  if (!cfg.steps) return new Set();
+  if (cfg.stepChain) return new Set(cfg.stepChain.groups.flat());
+  return new Set(Array.from({ length: Math.max(0, cfg.lineCount - 1) }, (_, i) => `#f${i + 1}`));
+}
+
+/** The lines that enter WITH the in-timeline: everything not assigned to a » press.
+ *  (Default steps mode: only line 1 enters; the rest wait for next().) */
 function linesInIntro(cfg: PresetConfig): string {
-  return cfg.steps ? lineList(1) : lineList(cfg.lineCount);
+  if (!cfg.steps) return lineList(cfg.lineCount);
+  const assigned = assignedSet(cfg);
+  return Array.from({ length: cfg.lineCount }, (_, i) => `#f${i}`)
+    .filter((s) => !assigned.has(s))
+    .map((s) => `'${s}'`)
+    .join(', ');
 }
 
 /**
@@ -77,50 +94,70 @@ var easeIn = '${cfg.easeIn}';${' '.repeat(Math.max(1, 18 - cfg.easeIn.length))}/
 var easeOut = '${cfg.easeOut}';${' '.repeat(Math.max(1, 17 - cfg.easeOut.length))}// exit ease — starts naturally, leaves quickly`;
 }
 
-/** The multi-step block: each next() (SPX Continue) reveals the next GROUP of lines.
- *  Groups + per-step timing/ease live in the arrays — the timeline strip edits those
- *  literals (drag a line between step segments to regroup). */
+/** The multi-step block: each next() (SPX Continue) reveals the next GROUP of parts.
+ *  Groups + per-step timing/ease live in the arrays; each part's reveal style lives in
+ *  stepReveals — the timeline strip edits these literals. Pre-hiding is DERIVED from
+ *  stepGroups at runtime (hidePendingSteps), so a part removed from every group appears
+ *  with the graphic again, by construction. */
 function stepsBlock(cfg: PresetConfig): string {
-  if (!cfg.steps || cfg.lineCount < 2) return '';
-  // An existing chain (regrouped presses, tuned timings) survives the re-emit; without one,
-  // the default is one line per press in document order. Note hideStepLines/linesInIntro
-  // stay line-count-derived: every line 1..N-1 is in SOME group, so the union is identical.
+  if (!cfg.steps) return '';
+  // An existing chain (regrouped presses, tuned timings, assigned parts) survives the
+  // re-emit; without one, the default is one line per press in document order.
   const chain = cfg.stepChain && cfg.stepChain.groups.length > 0 ? cfg.stepChain : null;
+  if (!chain && cfg.lineCount < 2) return '';
   const count = chain ? chain.groups.length : cfg.lineCount - 1;
   const groups = chain
     ? chain.groups.map((g) => `[${g.map((t) => `'${t}'`).join(', ')}]`).join(', ')
     : Array.from({ length: count }, (_, i) => `['#f${i + 1}']`).join(', ');
   const durations = (chain ? chain.durations : Array.from({ length: count }, () => '0.45')).join(', ');
   const eases = (chain ? chain.eases : Array.from({ length: count }, () => 'easeIn')).join(', ');
+  const revealEntries = chain
+    ? chain.groups.flat().map((sel) => `'${sel}': '${chain.reveals[sel] ?? 'mask'}'`)
+    : Array.from({ length: count }, (_, i) => `'#f${i + 1}': 'mask'`);
   return `
 
-// Multi-step: the in animation shows only the first line; each Continue (next())
-// reveals the next GROUP of lines. Groups + per-step timing below — the timeline
-// strip edits these (drag a line between step segments to regroup).
+// Multi-step: the in animation shows only the parts that are NOT on a » press; each
+// Continue (next()) reveals the next GROUP. Groups + per-step timing below — the
+// timeline strip edits these. stepReveals says HOW each part appears: 'mask' slides
+// up within its line mask, 'rise' fades and rises (accents, logos, shapes).
 var currentStep = 0;
-var stepGroups = [${groups}];  // lines revealed per Continue, in order
+var stepGroups = [${groups}];  // parts revealed per Continue, in order
 var stepDurations = [${durations}];  // seconds per step (divided by animSpeed)
 var stepEases = [${eases}];  // ease per step (a quoted string overrides the knob)
+var stepReveals = { ${revealEntries.join(', ')} };
+function hidePendingSteps(tl) {
+  currentStep = 0;                         // a fresh play restarts the step sequence
+  stepGroups.forEach(function (group) { group.forEach(function (sel) {
+    tl.set(sel, stepReveals[sel] === 'rise' ? { opacity: 0, y: 14 } : { yPercent: 110 });
+  }); });
+}
 function revealNextStep() {
   var group = stepGroups[currentStep];
   if (group === undefined) return null;    // no more steps
   var duration = stepDurations[currentStep] || 0.45;
   var ease = stepEases[currentStep] || easeIn;
   currentStep += 1;
-  return gsap.fromTo(group,
-    { yPercent: 110 },
-    { yPercent: 0, duration: duration / animSpeed, stagger: 0.08 / animSpeed, ease: ease }
-  );
+  var tl = gsap.timeline();
+  group.forEach(function (sel, i) {
+    var rise = stepReveals[sel] === 'rise';
+    tl.fromTo(sel,
+      rise ? { opacity: 0, y: 14 } : { yPercent: 110 },
+      rise ? { opacity: 1, y: 0, duration: duration / animSpeed, ease: ease }
+           : { yPercent: 0, duration: duration / animSpeed, ease: ease },
+      i * 0.08 / animSpeed                 // per-part stagger within the press
+    );
+  });
+  return tl;
 }`;
 }
 
-/** In steps mode, hide the not-yet-revealed lines at the start of the in-timeline. */
+/** In steps mode, park the press-assigned parts hidden at the start of the in-timeline.
+ *  The set of parts and HOW each hides live with the steps block (derived from stepGroups),
+ *  so regrouping and unassigning never leave a part stuck hidden. */
 function hideStepLines(cfg: PresetConfig): string {
-  if (!cfg.steps || cfg.lineCount < 2) return '';
-  const rest = Array.from({ length: cfg.lineCount - 1 }, (_, i) => `'#f${i + 1}'`).join(', ');
+  if (stepsBlock(cfg) === '') return '';
   return `
-  currentStep = 0;                                 // a fresh play restarts the step sequence
-  tl.set([${rest}], { yPercent: 110 });  // step lines start hidden below their mask`;
+  hidePendingSteps(tl);                            // parts on a » press start hidden`;
 }
 
 export const ANIM_PRESETS: AnimPreset[] = [
