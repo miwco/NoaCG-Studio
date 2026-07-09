@@ -357,6 +357,10 @@ Always `npm run build` (typecheck + build) after changes.
 **Gotchas:**
 - After many edits the Vite dev server can serve a **stale module** (HMR lag) — restart it if a
   change isn't reflected.
+- The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
+  matching `<meta name="color-scheme" content="dark">` into the preview srcdoc. **Keep them
+  paired** — Chromium paints an iframe opaque (white stage) when embedder and iframe schemes
+  disagree. Exported packages get neither.
 - The e2e suite pins **offline mode** via `webServer.env` in playwright.config.ts, but
   `reuseExistingServer: true` means a dev server already running on THIS checkout's port
   (started by hand, with the real `.env`) gets reused — backend-sensitive specs then fail

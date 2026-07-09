@@ -53,6 +53,12 @@
   --amber-glow: 0 0 24px rgba(246, 166, 35, 0.35);
 
   font-family: var(--font-ui);
+  /* Tell the browser the app IS dark, so native controls (select popups, scrollbars,
+     pickers) render dark too — without this, Windows Chrome paints option popups light
+     while the options inherit our near-white text (unreadable white-on-white).
+     The preview srcdoc declares the same scheme (composeDocument.ts) — Chromium disables
+     iframe transparency when embedder and iframe color-schemes disagree. */
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -1286,6 +1292,18 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   pointer-events: none;       /* the bar underneath owns the drag */
   user-select: none;
 }
+/* An inline text-action inside the hint line (e.g. "Turn off step reveal"). */
+.timeline-hint-action {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 10px;
+  color: var(--amber);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.timeline-hint-action:hover { background: transparent; color: var(--glow); }
+
 /* The one-line gesture hint under the tracks — discoverability without hovering. */
 .timeline-hint {
   margin: 4px 0 0;
@@ -1322,7 +1340,7 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-ease-spacer { width: 96px; flex-shrink: 0; }
 /* The step row's when-control: which » Next press the line appears on. */
 .timeline-appears {
-  width: 118px;
+  width: 132px;
   flex-shrink: 0;
   font-family: "JetBrains Mono", Consolas, monospace;
   font-size: 10px;

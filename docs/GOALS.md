@@ -409,6 +409,16 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       honest one-liner; the header ease readout speaks the vocabulary's names (raw GSAP pair
       in the tooltip). Next (needs approval): converge the Motion panel into the In/Out cards
       and make the On air card edit `settings.out`.
+- [x] **T3.6 step-workflow honesty fixes (2026-07-09, second tester round)** — app declares
+      `color-scheme: dark` + the preview srcdoc gets the matching meta (native select popups
+      were white-on-white on Windows; the pairing keeps the stage transparent); the appears-on
+      menu is self-labeling ("appears on press 2") and cards/ghost/tooltips share the "press"
+      vocabulary; a "Turn off step reveal" action on the strip (the Motion checkbox's
+      counterpart); `countLines` no longer counts `<img>` logo fields as text lines — corner
+      bugs and card03 stop offering a broken unmasked step reveal. Bigger rethink planned and
+      approved separately (element→press assignment, derived part registry, cue-segmented
+      strip): fix B1/B2 step-sync bugs next, generalize steps to non-text parts after the
+      registry; timeline overview and canvas assignment wait for the Era-6 selection model.
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

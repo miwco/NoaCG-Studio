@@ -11,7 +11,9 @@ export function detectPrefix(html: string): string | null {
   return html.match(ROOT_PREFIX_RE)?.[1] ?? null;
 }
 
-/** Visible text lines: the id="fN" elements wrapped in the standard line masks. */
+/** Visible text lines: the id="fN" elements wrapped in the standard line masks.
+ *  <img> fields (logo slots) are NOT lines — they have no mask, so the step reveal's
+ *  mask-slide would shove them visibly instead of revealing them. */
 export function countLines(html: string): number {
-  return (html.match(/id="f\d+"[^>]*class="[\w-]+-/g) || []).length;
+  return (html.match(/<(?!img\b)\w+\s[^>]*id="f\d+"[^>]*class="[\w-]+-/g) || []).length;
 }

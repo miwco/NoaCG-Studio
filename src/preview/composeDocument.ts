@@ -78,8 +78,14 @@ window.addEventListener('unhandledrejection', function (ev) {
 });
 </script>`;
 
+  // Preview-only: match the editor's color-scheme (styles.css :root). Chromium disables
+  // iframe TRANSPARENCY when the embedder's and the iframe's color-schemes disagree — a
+  // dark app around an undeclared (light) srcdoc would paint the stage opaque white.
+  // Exported packages don't get this tag; playout servers control their own background.
+  const colorSchemeTag = `<meta name="color-scheme" content="dark">`;
+
   // GSAP must load before the template JS. Put both at the end of <head> if possible.
-  const headInjection = `${assetShimTag}${gsapTag}\n${styleTag}\n`;
+  const headInjection = `${colorSchemeTag}\n${assetShimTag}${gsapTag}\n${styleTag}\n`;
   if (/<\/head>/i.test(html)) {
     html = html.replace(/<\/head>/i, `${headInjection}</head>`);
   } else {

@@ -308,8 +308,9 @@ test('the appears-on menu regroups the Continue chain without dragging', async (
       .locator('body')
       .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
 
-  // MERGE: on »3, the line's menu says which press it plays on — pick the 1st.
+  // MERGE: on »3, the line's menu says which press it plays on — pick press 1.
   await page.getByTestId('timeline-seg-step-3').click();
+  await expect(page.getByTestId('timeline-appears-0')).toContainText('appears on press'); // self-labeling
   await page.getByTestId('timeline-appears-0').selectOption('0');
   await page.waitForTimeout(650);
   expect(await templateJs()).toContain("var stepGroups = [['#f1', '#f2']];");
@@ -422,6 +423,69 @@ test('the On air card names the hold and pauses the preview at the settled state
   // A real run reclaims the strip from the hold selection.
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect(hold).not.toHaveClass(/active/, { timeout: 3000 });
+});
+
+test('dark color-scheme reaches the app root and the preview stays transparent', async ({ page }) => {
+  await createHairline(page);
+  // The app declares itself dark, so native select popups render dark-on-dark readable.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toContain('dark');
+  // The composed preview declares the SAME scheme (Chromium disables iframe transparency
+  // on a mismatch) and its body stays transparent so the stage shows through.
+  await expect(frame(page).locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark');
+  const bodyBg = await frame(page)
+    .locator('body')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(bodyBg).toBe('rgba(0, 0, 0, 0)');
+});
+
+test('the strip can turn step reveal off without the Motion tab detour', async ({ page }) => {
+  // Soft Stack with steps on.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
+  await page.locator('.wz-variant', { hasText: 'Soft Stack' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.locator('.wz-step input[type="checkbox"]').check();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+
+  // The action lives in the step segment's hint line.
+  await page.getByTestId('timeline-seg-step-2').click();
+  await page.getByTestId('timeline-steps-off').click();
+  await page.waitForTimeout(650);
+
+  const js = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+  expect(js).not.toContain('function revealNextStep');
+  // The SPX definition drops back to a single state; the step cards are gone.
+  const html = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.documentElement.outerHTML);
+  expect(html).toContain('"steps": "1"');
+  await expect(page.getByTestId('timeline-seg-step-2')).toHaveCount(0);
+  await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);
+});
+
+test('corner bug: steps are not offered — the logo is not a text line', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Corner bug' }).click();
+  await page.locator('.wz-variant', { hasText: 'Glass Mark' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+  // One text line + a logo slot: »+ Step is offered but disabled, with the reason.
+  const addStep = page.getByTestId('timeline-seg-new');
+  await expect(addStep).toBeDisabled();
+  await expect(addStep).toHaveAttribute('title', /at least two text lines/);
 });
 
 test('a hand-edited region the parser cannot read gets an honest note, not a vanished strip', async ({ page }) => {

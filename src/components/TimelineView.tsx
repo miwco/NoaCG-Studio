@@ -77,16 +77,6 @@ function actionLabel(tween: Pick<TimelineTween, 'kind' | 'props'>): string {
   return verbs.slice(0, 2).join(' + ');
 }
 
-/** 1 → '1st', 2 → '2nd', 3 → '3rd', 4 → '4th', … (11–13 stay 'th'). */
-function ordinal(n: number): string {
-  const rem10 = n % 10;
-  const rem100 = n % 100;
-  if (rem10 === 1 && rem100 !== 11) return `${n}st`;
-  if (rem10 === 2 && rem100 !== 12) return `${n}nd`;
-  if (rem10 === 3 && rem100 !== 13) return `${n}rd`;
-  return `${n}th`;
-}
-
 /** A GSAP ease string in plain words: the vocabulary name when the curve is one of ours
  *  ('expo.out' → 'Expo'), else the title-cased family ('power3.in' → 'Power3'). The raw
  *  string stays available in tooltips. */
@@ -232,7 +222,7 @@ export default function TimelineView({ iframeRef }: Props) {
     outMode === 'none' ? 'stays — no out' : /^\d+$/.test(outMode) ? `auto-out ${Number(outMode) / 1000}s` : 'until ■ Stop';
   /** The moment's cue, written under each card — the operator button that plays it. */
   const segSub = (s: Segment): string =>
-    s.kind === 'in' ? 'on ▶ Play' : s.kind === 'out' ? 'on ■ Stop' : `on ${ordinal(s.stepIndex! + 1)} » Next`;
+    s.kind === 'in' ? 'on ▶ Play' : s.kind === 'out' ? 'on ■ Stop' : `on press ${s.stepIndex! + 1}`;
 
   const pickHold = () => {
     setPhaseId('hold');
@@ -341,6 +331,14 @@ export default function TimelineView({ iframeRef }: Props) {
     setPhaseId(`step-${dest + 2}`);
   };
 
+  /** Turn step reveal off from the strip (the Motion checkbox's counterpart) — everything
+   *  goes back to appearing with ▶ Play. */
+  const turnOffSteps = () => {
+    applyTemplate({ ...template, ...setStepsMode(template, false) });
+    setPhaseId('in'); // the selected step segment ceases to exist
+    requestReplay();
+  };
+
   /** The "appears on" menu (a step row's when-control): move a line to another » Next
    *  press — or give it its own — with a plain dropdown. Exactly the patch that dropping
    *  the row on a » tab writes, minus the drag. */
@@ -381,7 +379,7 @@ export default function TimelineView({ iframeRef }: Props) {
       : 'Steps need at least two text lines — add another field in the Data tab first'
     : splitFrom !== -1
       ? null
-      : 'Every line already has its own » Next press — drag a row onto another » step to merge lines first';
+      : 'Every line already has its own press — merge lines first (a line\'s "appears on" menu, or drag its row onto another » card)';
   const canAddStep = stepsSupported && !addStepBlocked;
 
   const addStep = () => {
@@ -475,7 +473,7 @@ export default function TimelineView({ iframeRef }: Props) {
                 }
               >
                 <span className="timeline-seg-main"><span className="timeline-marker">»</span> + Step</span>
-                <span className="timeline-seg-sub" aria-hidden="true">another » Next</span>
+                <span className="timeline-seg-sub" aria-hidden="true">adds a press</span>
               </button>
             )}
             {/* ● On air — the hold between the last reveal and the exit, made visible. */}
@@ -497,7 +495,7 @@ export default function TimelineView({ iframeRef }: Props) {
               onClick={() => pickSegment(s.id)}
               title={
                 s.kind === 'step'
-                  ? `Continue step ${s.label} — plays on the ${ordinal(Number(s.label) - 1)} » Next press`
+                  ? `Continue step ${s.label} — plays on press ${Number(s.label) - 1} of the » Next button`
                   : s.kind === 'in'
                     ? 'The entrance — plays on ▶ Play'
                     : `The exit — plays on ■ Stop${outBadge ? ` (${outBadge})` : ''}`
@@ -613,15 +611,15 @@ export default function TimelineView({ iframeRef }: Props) {
                     className="timeline-appears"
                     value={seg.stepIndex}
                     onChange={(e) => moveLineTo(tw.targets[0], Number(e.target.value))}
-                    title="When this line appears — pick another » Next press to move it there"
+                    title="Which press of » Next reveals this line — pick another press to move it there"
                     data-testid={`timeline-appears-${i}`}
                   >
                     {model.steps.map((_, k) => (
-                      <option key={k} value={k}>{`on ${ordinal(k + 1)} » Next`}</option>
+                      <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
                     ))}
                     {/* "Its own press" — hidden when that would re-create this same step. */}
                     {!(step.targets.length === 1 && seg.stepIndex === model.steps.length - 1) && (
-                      <option value={model.steps.length}>on a new » Next</option>
+                      <option value={model.steps.length}>appears on a new press</option>
                     )}
                   </select>
                 )}
@@ -662,18 +660,28 @@ export default function TimelineView({ iframeRef }: Props) {
       {/* One line of context so the gestures are discoverable without hovering. */}
       {!collapsed && !holdSelected && (
         <p className="timeline-hint" data-testid="timeline-hint">
-          {step
-            ? 'Plays on one » Next press — the "on …" menu moves a line to another press (dragging its row onto a » tab works too).'
-            : seg.kind === 'out'
-              ? 'The exit (■ Stop) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'
-              : 'The entrance (▶ Play) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'}
+          {step ? (
+            <>
+              {'Plays on one press of the » button — the "appears on" menu moves a line to another press. '}
+              <button
+                className="timeline-hint-action"
+                onClick={turnOffSteps}
+                title="Remove all Continue steps — every line appears with ▶ Play again (undo with Ctrl+Z)"
+                data-testid="timeline-steps-off"
+              >
+                Turn off step reveal
+              </button>
+            </>
+          ) : seg.kind === 'out'
+            ? 'The exit (■ Stop) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'
+            : 'The entrance (▶ Play) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'}
         </p>
       )}
 
       {/* T3.3 — the line chip following the pointer while regrouping. */}
       {regroup && (
         <div className="regroup-ghost" style={{ left: regroup.x + 10, top: regroup.y - 24 }}>
-          {friendlyTarget(regroup.target)} → {regroup.overStep === null ? 'drop on a » step' : regroup.overStep === model.steps.length ? 'new step' : `step ${regroup.overStep + 2}`}
+          {friendlyTarget(regroup.target)} → {regroup.overStep === null ? 'drop on a » card' : regroup.overStep === model.steps.length ? 'a new press' : `press ${regroup.overStep + 1}`}
         </div>
       )}
     </div>
