@@ -37,31 +37,36 @@ interface EditState {
 /** W2 — a corner scale-handle drag: live --scale preview, one patch on release. */
 interface ScaleDrag {
   startX: number;
+  startY: number;
   origScale: number;
-  /** The root's width at drag start, in screen px (the drag's scaling reference). */
+  /** The root's size at drag start, in screen px (the drag's scaling reference). */
   rootWidth: number;
+  rootHeight: number;
   value: number;
 }
 
 // A real drag, not a shaky click (screen px).
 const DRAG_THRESHOLD = 4;
-// The Style panel's size range, continuous (S 0.85 · M 1 · L 1.2 are its presets).
-const SCALE_MIN = 0.5;
-const SCALE_MAX = 2;
+// Sanity bounds for the drag, not a design limit — the Style panel accepts any typed
+// value. Generous on purpose: the graphic's own max-width keeps huge scales inside the
+// safe area, and 0.25 stops a wild drag from collapsing the graphic to nothing.
+const SCALE_MIN = 0.25;
+const SCALE_MAX = 4;
 
 /**
  * The direct-manipulation layer over the preview (Era 6 — no modes): hover shows what's
  * grabbable (hand cursor on the graphic, text cursor on editable text), dragging the graphic
  * re-anchors it (nearest 9-zone + residual nudge — the SAME zoneDecls patch the Style panel
  * writes), and double-clicking a text line edits it in place (live sample value + the field's
- * SPX-definition default, one undoable patch). Broadcast templates take no pointer input of
- * their own, so this layer never competes with the graphic.
+ * SPX-definition default). Every gesture commits as ONE undoable applyTemplate and then jumps
+ * the code editor to the changed tab, where the patched lines are highlighted — canvas editing
+ * always shows the code it wrote. Broadcast templates take no pointer input of their own, so
+ * this layer never competes with the graphic.
  */
 export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   const template = useTemplateStore((s) => s.template);
-  const setCss = useTemplateStore((s) => s.setCss);
-  const patchCss = useTemplateStore((s) => s.patchCss);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
+  const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const setSampleValue = useTemplateStore((s) => s.setSampleValue);
   const sampleData = useTemplateStore((s) => s.sampleData);
 
@@ -192,19 +197,31 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const orig = currentScale();
-    setScaleDrag({ startX: e.clientX, origScale: orig, rootWidth: hoverRect.width * scale, value: orig });
+    setScaleDrag({
+      startX: e.clientX,
+      startY: e.clientY,
+      origScale: orig,
+      rootWidth: hoverRect.width * scale,
+      rootHeight: hoverRect.height * scale,
+      value: orig,
+    });
   };
 
   const moveScaleDrag = (e: React.PointerEvent) => {
     const d = scaleDragRef.current;
     if (!d) return;
     e.stopPropagation();
-    // Dragging the corner right/left grows/shrinks proportionally to the root's width.
-    const factor = 1 + (e.clientX - d.startX) / Math.max(40, d.rootWidth);
+    // Corner-drag growth: horizontal AND vertical movement count, proportionally to the
+    // root's size at drag start — dragging along the box's diagonal tracks the pointer.
+    const gesture = e.clientX - d.startX + (e.clientY - d.startY);
+    const factor = 1 + gesture / Math.max(80, d.rootWidth + d.rootHeight);
     const value = Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, d.origScale * factor)) * 100) / 100;
     setScaleDrag({ ...d, value });
     // Live preview: an inline :root override on the preview document (the rebuild clears it).
     doc()?.documentElement.style.setProperty('--scale', String(value));
+    // The handle follows the graphic's REAL corner while it grows/shrinks.
+    const r = rootEl()?.getBoundingClientRect();
+    if (r) setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
   };
 
   const endScaleDrag = (e: React.PointerEvent) => {
@@ -214,8 +231,10 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     e.stopPropagation();
     doc()?.documentElement.style.removeProperty('--scale');
     if (d.value === d.origScale) return;
-    // The SAME write the Style panel's size control makes: the :root --scale variable.
-    patchCss(setCssVariable(template.css, 'scale', String(d.value)));
+    // The SAME write the Style panel's size control makes (the :root --scale variable),
+    // committed as one undoable apply; the editor highlights it and jumps to it.
+    applyTemplate({ ...template, css: setCssVariable(template.css, 'scale', String(d.value)) });
+    setActiveTab('css');
   };
 
   const onPointerUp = () => {
@@ -257,7 +276,9 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     for (const decl of zoneDecls(zone, nudge, res)) {
       css = setCssDeclaration(css, rootSelector, decl.prop, decl.value);
     }
-    setCss(css);
+    // One undoable apply — the editor highlights the patched root rule and jumps to it.
+    applyTemplate({ ...template, css });
+    setActiveTab('css');
   };
 
   const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -283,6 +304,7 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     if ((sampleData[ed.field] ?? '') === ed.value) return; // nothing changed
     applyTemplate(setFieldDefault(template, ed.field, ed.value)); // definition + static text
     setSampleValue(ed.field, ed.value); // the live operator value follows the edit
+    setActiveTab('html'); // the edit lives in the markup — show it highlighted
   };
 
   const cancelEdit = () => {

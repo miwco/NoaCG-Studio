@@ -32,12 +32,22 @@ clocks/loops stay idle), never a blank canvas.
 - Guardrails unchanged: zone snap ALWAYS (freeform absolute positions stay out — wrapped-text
   growth and safe areas depend on anchoring).
 
-### W2 — Resize (scale) handle — ✅ SHIPPED (2026-07-08)
+### W2 — Resize (scale) handle — ✅ SHIPPED (2026-07-08), revised 2026-07-09
 Hovering the graphic reveals a corner handle at the root's bottom-right (a small halo keeps
 it reachable just outside the rect); dragging it live-previews `--scale` via an inline :root
-override on the preview document (cleared on release/rebuild), with a ×N badge. Release =
-one `patchCss` write of `--scale` (the Style panel's size control, continuous), clamped
-0.5–2, rounded to 2 decimals.
+override on the preview document (cleared on release/rebuild), with a ×N badge. The handle
+tracks the graphic's real corner while it grows, and horizontal + vertical movement both
+count (dragging along the box's diagonal tracks the pointer). Release = one undoable
+`applyTemplate` writing `--scale` (the Style panel's size control, continuous), clamped
+0.25–4 (a sanity bound, not a design limit), rounded to 2 decimals. The generated auto-fit
+cap (`max-width` on the box) follows `--scale` via `min(calc(Npx * var(--scale)), safePx)`,
+so resizing widens the box instead of wrapping the text at a fixed pixel width.
+
+### W1+W2 follow-up — the editor follows the canvas (2026-07-09)
+Every canvas gesture (drag, resize, inline text edit) commits as ONE undoable
+`applyTemplate`, switches the code editor to the changed tab, and the changed lines get the
+standard highlight + reveal. Tabs the last apply touched but that aren't showing carry a
+change dot (CodeEditor), so a Style/Motion/AI patch in another tab is one click away.
 
 ### W3 — Edit text in place — ✅ SHIPPED (2026-07-08), stronger than planned
 Double-click a visible `#fN` element (text cursor on hover) → an overlay input over it.

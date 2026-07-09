@@ -186,13 +186,16 @@ src/
                 chatGraphicBlock (polling graphic block), chatData.ts
   components/    AppShell (two-pane layout: code left; preview stacked over the tool tabs
                  right — the stage's aspect-ratio comes from the template resolution),
-                 CodeEditor (Monaco + change-highlight decorations + hover explanations),
+                 CodeEditor (Monaco + change-highlight decorations + change dots on
+                 inactive tabs the last apply touched + hover explanations),
                  PreviewFrame, CanvasInteraction (Era 6 — always-on direct manipulation:
                  hover cursors, drag the root → nearest zone + residual nudge → the SAME
                  zoneDecls patch the Style panel writes; dblclick a visible #fN → inline
                  edit → sample value + definition default via blocks/edit.ts
-                 setFieldDefault; corner handle → live --scale preview + one patchCss
-                 write, clamped 0.5–2; root detected via model/structure.ts detectPrefix), CanvasGuides,
+                 setFieldDefault; corner handle → live --scale preview, diagonal-aware,
+                 clamped 0.25–4; every gesture commits as ONE undoable applyTemplate and
+                 jumps the editor to the changed tab, highlighted; root detected via
+                 model/structure.ts detectPrefix), CanvasGuides,
                  PlayoutSimulator (owns the running preview timeline __activeTl; settles
                  the design view after every rebuild — progress(1, true) + a second
                  update(); auto-replays on replayNonce; playNext owns each Continue's

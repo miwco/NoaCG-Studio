@@ -234,6 +234,16 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   border: 1px solid transparent;
 }
 .tab.active { background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); color: var(--text); }
+/* The last apply changed code in this (inactive) tab — same blue as the line highlight. */
+.tab .change-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--accent-2, #5eafff);
+  vertical-align: 1px;
+}
 
 /* ---------- Editor ---------- */
 .editor-host { flex: 1; min-height: 0; }

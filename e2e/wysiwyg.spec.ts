@@ -43,7 +43,8 @@ async function waitSettled(page: Page) {
 
 test('dragging the graphic re-anchors it via a zone+nudge code patch (no mode)', async ({ page }) => {
   await createHairline(page); // default zone: bottom-left
-  expect((await rootAnchor(page)).bottom).not.toBe('auto');
+  const before = await rootAnchor(page);
+  expect(before.bottom).not.toBe('auto');
   await waitSettled(page); // the canvas layer is always on; the graphic is visible at rest
 
   // Drag from the graphic's home (bottom-left) up to the top-right third.
@@ -61,10 +62,17 @@ test('dragging the graphic re-anchors it via a zone+nudge code patch (no mode)',
   expect(anchor.left).toBe('auto');
   expect(anchor.bottom).toBe('auto');
 
-  // Undo restores the previous anchoring (the patch went through the normal history).
+  // The editor followed the gesture: the CSS tab is active with the patched rule highlighted,
+  // and switching away marks the CSS tab with a change dot until the user sees the change.
+  await expect(page.locator('.tabs .tab.active')).toHaveText('CSS');
+  await expect(page.locator('.editor-host .changed-line').first()).toBeVisible({ timeout: 5000 });
+  await page.locator('.tabs .tab', { hasText: 'HTML' }).click();
+  await expect(page.locator('.tabs .tab', { hasText: 'CSS' }).locator('.change-dot')).toBeVisible();
+
+  // Undo restores the exact previous anchoring — the drag itself is one undoable apply.
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(650);
-  expect((await rootAnchor(page)).bottom).not.toBe('auto');
+  expect(await rootAnchor(page)).toEqual(before);
 });
 
 test('W2: dragging the corner handle writes the --scale variable', async ({ page }) => {
@@ -77,11 +85,13 @@ test('W2: dragging the corner handle writes the --scale variable', async ({ page
   const handle = page.getByTestId('scale-handle');
   await expect(handle).toBeVisible();
 
-  // Drag it to the right — the graphic grows.
+  // Drag it to the right — the graphic grows, and the handle tracks its real corner.
   const hb = (await handle.boundingBox())!;
   await page.mouse.move(hb.x + 5, hb.y + 5);
   await page.mouse.down();
   await page.mouse.move(hb.x + 5 + box.width * 0.15, hb.y + 5, { steps: 6 });
+  const mid = (await handle.boundingBox())!;
+  expect(mid.x).toBeGreaterThan(hb.x + 10); // the handle followed the growing corner
   await page.mouse.up();
 
   // One --scale patch (the Style panel's size mechanism), visible in the rebuilt preview.
@@ -91,7 +101,27 @@ test('W2: dragging the corner handle writes the --scale variable', async ({ page
     .locator('body')
     .evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--scale').trim());
   expect(Number(scaleVar)).toBeGreaterThan(1);
-  expect(Number(scaleVar)).toBeLessThanOrEqual(2); // clamped to the Style panel's range
+  expect(Number(scaleVar)).toBeLessThanOrEqual(4); // the drag's sanity clamp
+
+  // The generated wrap cap follows --scale, so resizing widens the box instead of wrapping it.
+  const boxMax = await page.frameLocator('iframe.preview-frame').locator('body').evaluate(() => {
+    for (const sheet of Array.from(document.styleSheets)) {
+      for (const rule of Array.from(sheet.cssRules)) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === '.lower-third-box') return rule.style.maxWidth;
+      }
+    }
+    return '';
+  });
+  expect(boxMax).toContain('var(--scale)');
+
+  // The resize is one undoable apply: Ctrl+Z returns the graphic to its original size.
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(650);
+  const undone = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--scale').trim());
+  expect(Number(undone)).toBe(1);
 });
 
 test('a drag starting on empty canvas does nothing', async ({ page }) => {
