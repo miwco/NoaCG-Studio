@@ -35,15 +35,21 @@ test('timeline strip lives under the preview and renders the preset structure', 
   const timeline = page.locator('.preview-wrap [data-testid="timeline"]');
   await expect(timeline).toBeVisible();
   await expect(timeline).toContainText('Expo'); // line-reveal's auto ease pair, in plain words
-  const rows = timeline.locator('.timeline-row');
-  await expect(rows).toHaveCount(3);
-  // Rows are labelled in plain words (the raw selector lives in the tooltip)…
-  await expect(rows.nth(0)).toContainText('Whole graphic');
-  await expect(rows.nth(1)).toContainText('Accent line');
-  await expect(rows.nth(2)).toContainText('Name + Title');
-  // …and each bar says what it does (line-reveal: the accent draws, the lines slide).
-  await expect(rows.nth(1).locator('.timeline-bar-verb')).toHaveText('draw');
-  await expect(rows.nth(2).locator('.timeline-bar-verb')).toHaveText('slide');
+  // The overview: one strip, part rows spanning every section (set-only rows dropped).
+  const labels = timeline.locator('.timeline-ov-labels .timeline-label');
+  await expect(labels).toHaveCount(3);
+  await expect(labels.nth(0)).toHaveText('Accent line');
+  await expect(labels.nth(1)).toHaveText('Name');
+  await expect(labels.nth(2)).toHaveText('Title');
+  // The section chain reads the playout story: In · hold · Out (no steps yet).
+  await expect(timeline.getByTestId('timeline-ov-sec-in')).toContainText('In');
+  await expect(timeline.getByTestId('timeline-ov-sec-hold')).toContainText('hold');
+  await expect(timeline.getByTestId('timeline-ov-sec-out')).toContainText('Out');
+  // Bars say what they do (line-reveal: the accent draws, the lines slide) — and both the
+  // entrance AND the exit are visible at once, no segment switching.
+  await expect(timeline.getByTestId('timeline-bar-in-1').locator('.timeline-bar-verb')).toHaveText('draw');
+  await expect(timeline.getByTestId('timeline-bar-in-2').locator('.timeline-bar-verb')).toHaveText('slide');
+  await expect(timeline.getByTestId('timeline-bar-out-0')).toBeVisible();
   // The gesture hint makes retime/stretch/ease discoverable without hovering.
   await expect(timeline.getByTestId('timeline-hint')).toContainText('drag a bar to retime');
   // Both phases offered, with real durations; idle playhead parks at the END of In.
@@ -52,6 +58,22 @@ test('timeline strip lives under the preview and renders the preset structure', 
   const inLabel = (await timeline.locator('[data-testid="timeline-seg-in"]').textContent())!;
   const inDuration = inLabel.match(/([\d.]+)s/)![1];
   await expect(page.getByTestId('timeline-time')).toHaveText(`${inDuration}s`);
+});
+
+test('the overview zooms and scrolls without losing the story', async ({ page }) => {
+  await createHairline(page);
+  const canvas = page.locator('.timeline-ov-canvas');
+  const before = (await canvas.boundingBox())!.width;
+  await page.getByTestId('timeline-zoom-in').click();
+  await page.getByTestId('timeline-zoom-in').click();
+  const after = (await canvas.boundingBox())!.width;
+  expect(after).toBeGreaterThan(before * 1.3); // sections scale with the zoom…
+  // …while the hold stays a fixed break (it waits for a cue, it has no clock).
+  const hold = await page.getByTestId('timeline-ov-sec-hold').boundingBox();
+  expect(hold!.width).toBeLessThan(80);
+  // Clicking a section header selects that moment (same as its card).
+  await page.getByTestId('timeline-ov-sec-out').click();
+  await expect(page.getByTestId('timeline-seg-out')).toHaveClass(/active/);
 });
 
 test('the playhead follows Play and the phase follows Stop', async ({ page }) => {
@@ -100,12 +122,11 @@ test('T2: stretching a bar rewrites the duration literal in the marked region', 
   await expect(inTab).toContainText('In 0.95s');
 
   // Drag the accent bar's right-edge handle to the right — the entrance gets longer.
-  const handle = page.getByTestId('timeline-handle-1');
+  const handle = page.getByTestId('timeline-handle-in-1');
   const box = (await handle.boundingBox())!;
-  const lane = (await page.locator('.timeline-lane').first().boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box.x + lane.width * 0.4, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 6 });
   await page.mouse.up();
 
   // The code changed (one undoable patch): the phase re-parses longer than before…
@@ -126,13 +147,12 @@ test('T2: stretching a bar rewrites the duration literal in the marked region', 
 
 test('T2: moving a bar writes an explicit start position', async ({ page }) => {
   await createHairline(page); // line-reveal: bar 2 = the staggered lines, starts at 0.30
-  // Drag the lines bar to the right (later start).
-  const bar = page.getByTestId('timeline-bar-2');
+  // Drag the lines bar (its first member row) to the right (later start).
+  const bar = page.getByTestId('timeline-bar-in-2');
   const before = (await bar.boundingBox())!;
-  const lane = (await page.locator('.timeline-lane').nth(2).boundingBox())!;
   await page.mouse.move(before.x + 10, before.y + before.height / 2);
   await page.mouse.down();
-  await page.mouse.move(before.x + 10 + lane.width * 0.25, before.y + before.height / 2, { steps: 6 });
+  await page.mouse.move(before.x + 10 + 100, before.y + before.height / 2, { steps: 6 });
   await page.mouse.up();
 
   await page.waitForTimeout(650);
@@ -198,7 +218,7 @@ test('T3: Continue steps appear as segments — live playhead + editable per-ste
   await page.getByRole('button', { name: '▶ Play' }).click();
   await page.waitForTimeout(1100); // let the entrance finish
   await page.getByRole('button', { name: '» Next' }).click();
-  await expect(page.locator('[data-testid="timeline"] button.tab.active')).toContainText('2');
+  await expect(page.locator('[data-testid="timeline"] button.tab.active')).toContainText('» 1');
 
   const templateJs = async () =>
     page
@@ -208,12 +228,12 @@ test('T3: Continue steps appear as segments — live playhead + editable per-ste
 
   // T3.2: stretch the step's reveal bar — the stepDurations literal grows.
   await page.getByTestId('timeline-seg-step-2').click();
-  const handle = page.getByTestId('timeline-handle-0');
+  const handle = page.getByTestId('timeline-handle-step-2-r0');
+  await handle.scrollIntoViewIfNeeded();
   const hb = (await handle.boundingBox())!;
-  const lane = (await page.locator('.timeline-lane').first().boundingBox())!;
   await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
   await page.mouse.down();
-  await page.mouse.move(hb.x + lane.width * 0.5, hb.y + hb.height / 2, { steps: 6 });
+  await page.mouse.move(hb.x + hb.width / 2 + 120, hb.y + hb.height / 2, { steps: 6 });
   await page.mouse.up();
   await page.waitForTimeout(650);
   const durations = (await templateJs()).match(/var stepDurations = \[([^\]]*)\]/)?.[1] ?? '';
@@ -248,12 +268,13 @@ test('T3.3: dragging a line onto another step regroups the Continue chain (and b
       .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
   expect(await templateJs()).toContain("var stepGroups = [['#f1'], ['#f2']];");
 
-  // MERGE: open »3 and drag its line's bar onto the »2 tab — one press reveals both lines.
-  await page.getByTestId('timeline-seg-step-3').click();
-  const bar = page.getByTestId('timeline-bar-0');
+  // MERGE: drag »3's reveal bar onto the »2 card — one press reveals both lines. (No
+  // segment switching needed — the overview shows every press at once.)
+  const bar = page.getByTestId('timeline-bar-step-3-r0');
+  await bar.scrollIntoViewIfNeeded(); // narrow panes scroll the overview horizontally
   const bb = (await bar.boundingBox())!;
   const tab2 = (await page.getByTestId('timeline-seg-step-2').boundingBox())!;
-  await page.mouse.move(bb.x + 20, bb.y + bb.height / 2);
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
   await page.mouse.down();
   await page.mouse.move(tab2.x + tab2.width / 2, tab2.y + tab2.height / 2, { steps: 8 });
   await page.mouse.up();
@@ -272,11 +293,11 @@ test('T3.3: dragging a line onto another step regroups the Continue chain (and b
     .poll(async () => frame(page).locator('#f2').evaluate((el) => getComputedStyle(el).transform))
     .not.toBe(f2Before);
 
-  // SPLIT: drag #f2 out to the »+ target — the chain grows back to two steps.
-  await page.getByTestId('timeline-seg-step-2').click();
-  const row2 = page.getByTestId('timeline-bar-1'); // second row of the group = #f2
+  // SPLIT: drag #f2's reveal bar out to the »+ target — the chain grows back to two steps.
+  const row2 = page.getByTestId('timeline-bar-step-2-r1'); // the group's second part = #f2
+  await row2.scrollIntoViewIfNeeded();
   const rb = (await row2.boundingBox())!;
-  await page.mouse.move(rb.x + 20, rb.y + rb.height / 2);
+  await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2);
   await page.mouse.down();
   await page.mouse.move(rb.x + 40, rb.y - 10, { steps: 2 }); // start the drag → »+ appears
   const plus = (await page.getByTestId('timeline-seg-new').boundingBox())!;
@@ -446,11 +467,11 @@ test('the »+ Step button splits the last multi-line reveal into its own step', 
   await expect(page.getByTestId('timeline-seg-new')).toBeDisabled();
 
   // Merge »3 into »2 by dragging (T3.3) — now one multi-line group exists.
-  await page.getByTestId('timeline-seg-step-3').click();
-  const bar = page.getByTestId('timeline-bar-0');
+  const bar = page.getByTestId('timeline-bar-step-3-r0');
+  await bar.scrollIntoViewIfNeeded(); // narrow panes scroll the overview horizontally
   const bb = (await bar.boundingBox())!;
   const tab2 = (await page.getByTestId('timeline-seg-step-2').boundingBox())!;
-  await page.mouse.move(bb.x + 20, bb.y + bb.height / 2);
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
   await page.mouse.down();
   await page.mouse.move(tab2.x + tab2.width / 2, tab2.y + tab2.height / 2, { steps: 8 });
   await page.mouse.up();
@@ -473,7 +494,7 @@ test('the On air card names the hold and pauses the preview at the settled state
   await expect(hold).toContainText('until ■ Stop'); // manual out — the default
   await hold.click();
   await expect(hold).toHaveClass(/active/);
-  // The tracks area explains the hold instead of charting tween rows.
+  // A note under the overview explains the hold (the hold section itself has no clock).
   await expect(page.getByTestId('timeline-hold-note')).toContainText('holds here');
   // The preview shows the settled on-air look (the end of the entrance).
   await expect

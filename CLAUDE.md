@@ -211,21 +211,23 @@ src/
                  the design view after every rebuild — progress(1, true) + a second
                  update(); auto-replays on replayNonce; playNext owns each Continue's
                  reveal tween as __activeTl step-N), TimelineView (collapsible strip
-                 under the preview: the playout chain as MOMENT CARDS ▶In · »2 · »3 ·
-                 »+Step · ●On air · ■Out from blocks/timelineModel.ts, each carrying its
-                 operator cue underneath (aria-hidden — getByRole('▶ Play') must stay
-                 unique in specs); ●On air is a read-only pseudo-card (phaseId 'hold')
-                 naming the settled hold + out mode, click = park on the settled look;
-                 »+Step disables with a tooltip reason instead of vanishing; an
-                 unparsable marked region gets an honest one-liner (blank/imported
-                 templates get no strip); steps parsed from the stepGroups/stepDurations/
-                 stepEases knob arrays (legacy stepLines reads read-only); scrub pauses any
-                 segment, live rAF playhead follows __activeTl; bars drag/stretch,
-                 per-tween/per-step ease chips, and a step row's "appears on" menu (or
-                 dragging it onto another » tab / »+) regroups what each Continue reveals →
-                 patchTweenTiming/patchTweenEase/patchStepTiming/patchStepEase/
-                 patchStepRegroup rewrite literals in the marked region — one undoable
-                 apply + auto-replay),
+                 under the preview: MOMENT CARDS ▶In · »1 · »2 · »+Step · ●On air · ■Out
+                 (step cards numbered by PRESS; cue subtitles aria-hidden —
+                 getByRole('▶ Play') must stay unique in specs) over the CUE-SEGMENTED
+                 OVERVIEW (timelineModel.ts buildOverview): ONE strip, all sections side
+                 by side each on its own real local clock (widths = duration × zoom,
+                 zoom +/- buttons fit once per template.name), the hold a fixed hatched
+                 break, registry-part rows spanning every section (multi-target tweens
+                 expand onto member rows at their stagger offsets; set()-only rows drop);
+                 every bar edits in place (drag/stretch via patchTweenTiming/
+                 patchStepTiming; reveal bars drag onto » cards/headers to regroup via
+                 patchStepRegroup); the gutter has each part's "appears on press" menu
+                 (assign/unassign re-emit via applyStepChain) + the selected moment's
+                 ease chips (patchTweenEase/patchStepEase); ●On air = pseudo-card
+                 (phaseId 'hold'), click parks on the settled look; »+Step disables with
+                 a tooltip reason; an unparsable marked region gets an honest one-liner
+                 (blank/imported templates get no strip) — one undoable apply +
+                 auto-replay per edit, the code always the truth),
                  SidePanel (six tabs: Data / Control / Style / Motion / AI / Export),
                  SampleDataPanel (sample values + add-field), ControlPanel (operator view from
                  control/ engine; live-drives the preview via store.sendControl → simulator;

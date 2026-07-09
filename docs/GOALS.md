@@ -458,6 +458,20 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       problem); entering the steps world still needs 2+ lines (»+ gate) — a logo-only
       first step is a follow-up. E2E: accent onto its own press → hidden through Play,
       revealed on press 2, definition steps follow → unassigned back into the entrance.
+- [x] **T4.2 the cue-segmented overview (2026-07-09, user-ratified over a global time
+      axis)** — the strip's tracks area becomes ONE overview of the whole playout: every
+      section (▶ In · each » press · ● hold · ■ Out) side by side, each on its own REAL
+      local clock (a single global ruler would fabricate times for operator-driven cues);
+      widths = duration × zoom (+/- buttons; fit once per template, min-width-aware), the
+      hold a fixed hatched break; rows are registry parts spanning every section —
+      multi-target tweens expand onto member rows at their true stagger offsets, set()-only
+      bookkeeping rows drop. Every bar edits in place (the same literal patchers); reveal
+      bars drag onto » cards to regroup; the gutter shows each part's "appears on press"
+      menu at a glance + the selected moment's ease chips. Cards renumbered by PRESS ("» 1"
+      = the 1st » Next) so headers, cards, menus, and tooltips finally share ONE numbering.
+      timelineModel.buildOverview = the pure matrix derivation. E2E: overview structure,
+      zoom scaling (hold fixed), header-click selection; the whole regroup/retime suite
+      re-pinned on overview geometry (bars scroll into view in narrow panes).
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

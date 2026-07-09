@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, useMemo, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import {
+  buildOverview,
   parseTimeline,
   patchStepEase,
   patchStepRegroup,
   patchStepTiming,
   patchTweenEase,
   patchTweenTiming,
+  type OverviewSection,
   type TimelineTween,
 } from '../blocks/timelineModel';
 import { applyStepChain, currentStepChain, readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
@@ -31,12 +33,15 @@ interface Segment {
   stepIndex?: number;
 }
 
-/** A bar drag in progress (T2/T3.2): move = slide the start, resize = stretch the duration. */
+/** A bar drag in progress (T2/T3.2): move = slide the start, resize = stretch the duration.
+ *  Identified by (sectionId, tweenIndex) so every member bar of a multi-target tween moves
+ *  together while dragging. */
 interface BarDrag {
-  index: number;
+  sectionId: string;
+  tweenIndex: number;
   mode: 'move' | 'resize';
   startClientX: number;
-  laneWidth: number;
+  pxPerSec: number;
   origStart: number;
   origDuration: number;
   /** Live values while dragging (committed to code on release). */
@@ -45,6 +50,13 @@ interface BarDrag {
 }
 
 const SNAP = 0.05; // timing grid — keeps the emitted literals readable (two decimals)
+
+// T4.2 — overview geometry. The hold is a fixed-width break (it waits for a cue, so it has
+// no clock to scale); real sections scale by duration × zoom.
+const HOLD_PX = 64;
+const SEC_MIN_PX = 72;
+const ROW_H = 20;
+const OV_HEAD_H = 22;
 
 /** T3.3 — a line being dragged toward another » segment (regroup). */
 interface RegroupDrag {
@@ -152,6 +164,12 @@ export default function TimelineView({ iframeRef }: Props) {
     if (!stepsOn) setStepsNotice(false);
   }, [stepsOn]);
 
+  // T4.2 — the overview's zoom: pixels per second on every section's LOCAL clock. Fitted
+  // to the visible width once per template; the +/- buttons take over from there.
+  const [pxPerSec, setPxPerSec] = useState(140);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const fittedRef = useRef<string | null>(null);
+
   // Collapsed state: explicit preference wins; otherwise expanded on desktop, collapsed on phones.
   const isMobile = useIsMobile();
   const [collapsed, setCollapsed] = useState<boolean>(() => loadPrefs().timelineCollapsed ?? isMobile);
@@ -161,6 +179,32 @@ export default function TimelineView({ iframeRef }: Props) {
       return !c;
     });
   };
+
+  // Fit the whole playout into the visible strip, once per TEMPLATE (a create/import gets
+  // a fresh fit; timing tweaks and the zoom buttons don't refit under the user). An
+  // unmeasured layout (clientWidth ~0) does not lock the fit — the next change retries.
+  useEffect(() => {
+    if (!model || collapsed || fittedRef.current === template.name) return;
+    const el = scrollRef.current;
+    if (!el || el.clientWidth < 120) return;
+    const durations = [
+      model.phases[0]?.duration ?? 0,
+      ...model.steps.map((s) => s.duration + s.stagger * Math.max(0, s.targets.length - 1)),
+      model.phases[model.phases.length - 1]?.duration ?? 0,
+    ];
+    // Two passes: sections pinned at SEC_MIN_PX don't scale, so give the remaining width
+    // to the sections that do (a single refinement is enough for a fit).
+    const available = el.clientWidth - HOLD_PX - 16;
+    const px0 = available / Math.max(0.5, durations.reduce((a, b) => a + b, 0));
+    const pinned = durations.filter((d) => d * px0 < SEC_MIN_PX);
+    const scaling = durations.filter((d) => d * px0 >= SEC_MIN_PX);
+    const px1 =
+      scaling.length > 0
+        ? (available - pinned.length * SEC_MIN_PX) / Math.max(0.5, scaling.reduce((a, b) => a + b, 0))
+        : px0;
+    fittedRef.current = template.name;
+    setPxPerSec(Math.min(400, Math.max(40, px1)));
+  }, [model, collapsed, template.name]);
 
   // The live playhead: follow the simulator's running timeline (window.__activeTl) through
   // In, every Continue step, and Out. Parks at the END of In when idle — the settled state.
@@ -213,13 +257,14 @@ export default function TimelineView({ iframeRef }: Props) {
 
   const inPhase = model.phases.find((p) => p.id === 'in') ?? model.phases[0];
   const outPhase = model.phases.find((p) => p.id === 'out') ?? model.phases[model.phases.length - 1];
-  // The playout segment chain — what each operator button plays.
+  // The playout segment chain — what each operator button plays. Step cards are numbered
+  // by PRESS (the 1st » Next is "» 1") — the one numbering scheme every control shares.
   const segments: Segment[] = [
     { id: 'in', marker: '▶', label: 'In', duration: inPhase.duration, infinite: inPhase.infinite, kind: 'in' },
     ...model.steps.map((s, k) => ({
       id: `step-${k + 2}`,
       marker: '»',
-      label: String(k + 2),
+      label: String(k + 1),
       duration: s.duration + s.stagger * Math.max(0, s.targets.length - 1),
       infinite: false,
       kind: 'step' as const,
@@ -239,9 +284,10 @@ export default function TimelineView({ iframeRef }: Props) {
   const outBadge = outMode === 'none' ? 'no out' : /^\d+$/.test(outMode) ? `auto ${outMode}ms` : null;
   const holdSub =
     outMode === 'none' ? 'stays — no out' : /^\d+$/.test(outMode) ? `auto-out ${Number(outMode) / 1000}s` : 'until ■ Stop';
-  /** The moment's cue, written under each card — the operator button that plays it. */
+  /** The moment's cue, written under each card — the operator button that plays it (the
+   *  step card's main line already carries its press number). */
   const segSub = (s: Segment): string =>
-    s.kind === 'in' ? 'on ▶ Play' : s.kind === 'out' ? 'on ■ Stop' : `on press ${s.stepIndex! + 1}`;
+    s.kind === 'in' ? 'on ▶ Play' : s.kind === 'out' ? 'on ■ Stop' : 'press of » Next';
 
   const pickHold = () => {
     setPhaseId('hold');
@@ -253,16 +299,22 @@ export default function TimelineView({ iframeRef }: Props) {
   // ── T2/T3.2: draggable timing bars ─────────────────────────────────────────
   const snap = (n: number) => Math.round(n / SNAP) * SNAP;
 
-  const startBarDrag = (e: React.PointerEvent, index: number, mode: BarDrag['mode'], orig: { start: number; duration: number }) => {
+  const startBarDrag = (
+    e: React.PointerEvent,
+    sectionId: string,
+    tweenIndex: number,
+    mode: BarDrag['mode'],
+    orig: { start: number; duration: number },
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    const lane = (e.currentTarget as HTMLElement).closest('.timeline-lane') as HTMLElement;
     setBarDrag({
-      index,
+      sectionId,
+      tweenIndex,
       mode,
       startClientX: e.clientX,
-      laneWidth: lane?.getBoundingClientRect().width || 1,
+      pxPerSec,
       origStart: orig.start,
       origDuration: orig.duration,
       start: orig.start,
@@ -273,7 +325,7 @@ export default function TimelineView({ iframeRef }: Props) {
   const moveBarDrag = (e: React.PointerEvent) => {
     const d = barDragRef.current;
     if (!d) return;
-    const dxSec = ((e.clientX - d.startClientX) / d.laneWidth) * total;
+    const dxSec = (e.clientX - d.startClientX) / d.pxPerSec;
     setBarDrag(
       d.mode === 'move'
         ? { ...d, start: Math.max(0, snap(d.origStart + dxSec)) }
@@ -287,13 +339,12 @@ export default function TimelineView({ iframeRef }: Props) {
     setBarDrag(null);
     if (!d) return;
     if (d.start === d.origStart && d.duration === d.origDuration) return;
-    const js =
-      seg.kind === 'step'
-        ? patchStepTiming(template.js, seg.stepIndex!, d.duration)
-        : patchTweenTiming(template.js, seg.id as 'in' | 'out', d.index, {
-            start: d.mode === 'move' ? d.start : undefined,
-            duration: d.mode === 'resize' ? d.duration : undefined,
-          });
+    const js = d.sectionId.startsWith('step-')
+      ? patchStepTiming(template.js, d.tweenIndex, d.duration)
+      : patchTweenTiming(template.js, d.sectionId as 'in' | 'out', d.tweenIndex, {
+          start: d.mode === 'move' ? d.start : undefined,
+          duration: d.mode === 'resize' ? d.duration : undefined,
+        });
     if (!js) return; // not patchable after all — leave the code untouched
     applyTemplate({ ...template, js });
     requestReplay(); // hear the new timing immediately (plays after the rebuild settles)
@@ -396,11 +447,10 @@ export default function TimelineView({ iframeRef }: Props) {
     if (seg.stepIndex === undefined || seg.stepIndex >= chain.groups.length) setPhaseId('in');
   };
 
-  /** The "appears on" menu (a step row's when-control): move a line to another » Next
+  /** The "appears on" menu (a part row's when-control): move a part to another » Next
    *  press — or give it its own — with a plain dropdown. Exactly the patch that dropping
-   *  the row on a » tab writes, minus the drag. */
-  const moveLineTo = (target: string, toStep: number) => {
-    const fromStep = seg.stepIndex!;
+   *  the row on a » card writes, minus the drag. */
+  const moveLineTo = (target: string, fromStep: number, toStep: number) => {
     if (toStep === fromStep) return;
     const emptied = model.steps[fromStep].targets.length === 1;
     // Moving the LAST step's only line to "a new press" would just re-create the same step.
@@ -482,38 +532,78 @@ export default function TimelineView({ iframeRef }: Props) {
     }
     return t;
   };
-  const label = (targets: string[]) => targets.map(friendlyTarget).join(' + ');
 
-  /** The rows shown for the selected segment: the phase's tweens, or ONE ROW PER PART of
-   *  the step's reveal group (each offset by the group stagger — drag a row to regroup). */
   const step = seg.kind === 'step' ? model.steps[seg.stepIndex!] : null;
-  const channelOf = (t: string) => parts.find((p) => p.selector === t)?.channel ?? 'mask';
-  // Parts still appearing WITH the graphic that could move onto a press. The first line
-  // anchors the entrance (▶ Play must always show something); root/panel are load-bearing
-  // containers; block elements outside the root are deferred.
-  const assignedSelectors = new Set(model.steps.flatMap((s) => s.targets));
+
+  // ── T4.2: the cue-segmented overview — the whole playout as one strip ─────────
+  // Parts eligible for a » press: the first line anchors the entrance (▶ Play must always
+  // show something); root/panel are load-bearing containers; blocks outside the root are
+  // deferred. Which press a part is on (or -1 = appears with the graphic):
   const firstLine = parts.find((p) => p.kind === 'line')?.selector;
-  const unassignedParts = step
-    ? parts.filter(
-        (p) =>
-          (p.kind === 'line' || p.kind === 'image' || p.kind === 'accent') &&
-          p.selector !== firstLine &&
-          !assignedSelectors.has(p.selector),
-      )
-    : [];
-  const rows = step
-    ? step.targets.map((t, li) => ({
-        targets: [t],
-        kind: 'to' as const,
-        props: channelOf(t) === 'rise' ? ['opacity', 'y'] : ['yPercent'],
-        duration: step.duration,
-        stagger: 0,
-        start: li * step.stagger,
-        end: li * step.stagger + step.duration,
-        editable: true,
-        ease: step.ease,
-      }))
-    : (seg.kind === 'in' ? inPhase : outPhase).tweens;
+  const eligibleParts = parts.filter(
+    (p) => (p.kind === 'line' || p.kind === 'image' || p.kind === 'accent') && p.selector !== firstLine,
+  );
+  const pressOf = new Map<string, number>();
+  model.steps.forEach((s, k) => s.targets.forEach((t) => pressOf.set(t, k)));
+  const chainGroupable = model.steps.length > 0 && model.steps.every((s) => s.groupable);
+
+  const overview = buildOverview(
+    model,
+    parts.map((p) => p.selector),
+    stepsOn && chainGroupable ? eligibleParts.map((p) => p.selector) : [],
+  );
+  const secPx = (sec: OverviewSection) =>
+    sec.kind === 'hold' ? HOLD_PX : Math.max(SEC_MIN_PX, sec.duration * pxPerSec);
+  const secOffsets = new Map<string, number>();
+  let offset = 0;
+  for (const sec of overview.sections) {
+    secOffsets.set(sec.id, offset);
+    offset += secPx(sec);
+  }
+  const canvasPx = offset;
+  // The playhead lives on the SELECTED section's local clock (the tick keeps phaseId on
+  // the running phase); the hold has no clock — park at the settled end of the entrance.
+  const playheadLeft = holdSelected
+    ? (secOffsets.get('in') ?? 0) + secPx(overview.sections[0]) - 1
+    : (secOffsets.get(seg.id) ?? 0) + Math.min(frac, 1) * (seg.duration || 0) * pxPerSec;
+
+  /** Bars of one row, with live drag values applied to every member of the dragged tween
+   *  (raw values kept — pointer-down captures its originals from them). */
+  const rowBars = (key: string) =>
+    overview.bars
+      .filter((b) => b.rowKey === key)
+      .map((b) => {
+        const d = barDrag && barDrag.sectionId === b.sectionId && barDrag.tweenIndex === b.tweenIndex ? barDrag : null;
+        return {
+          ...b,
+          raw: { start: b.start, span: b.span },
+          start: d ? b.start + (d.start - d.origStart) : b.start,
+          span: d && d.mode === 'resize' ? d.duration : b.span,
+          dragging: !!d,
+        };
+      });
+  // Reveal-bar testids count members within their group (r0, r1 …) — the regroup drag needs
+  // a stable handle per PART, not per tween.
+  const revealMemberIndex = (b: { sectionId: string; rowKey: string }) => {
+    const sec = overview.sections.find((s) => s.id === b.sectionId);
+    return sec?.stepIndex !== undefined ? model.steps[sec.stepIndex].targets.indexOf(b.rowKey) : 0;
+  };
+  // Unassigned eligible parts in row order — keeps the appears-add-N testids stable.
+  const unassignedOrder = overview.rowKeys.filter(
+    (k) => eligibleParts.some((p) => p.selector === k) && !pressOf.has(k),
+  );
+  /** The ease chip for a row, scoped to the SELECTED moment (a step's ease belongs to the
+   *  whole group — one chip on its first part's row). */
+  const easeChipFor = (key: string): { index: number; ease: string | null } | null => {
+    if (holdSelected) return null;
+    if (seg.kind === 'step') {
+      if (!step || step.targets[0] !== key) return null;
+      return { index: 0, ease: step.ease };
+    }
+    const phase = seg.kind === 'in' ? inPhase : outPhase;
+    const idx = phase.tweens.findIndex((tw) => tw.editable && tw.targets[0] === key);
+    return idx === -1 ? null : { index: idx, ease: phase.tweens[idx].ease };
+  };
 
   return (
     <div className={`timeline-strip${collapsed ? ' collapsed' : ''}`} data-testid="timeline">
@@ -563,7 +653,7 @@ export default function TimelineView({ iframeRef }: Props) {
               onClick={() => pickSegment(s.id)}
               title={
                 s.kind === 'step'
-                  ? `Continue step ${s.label} — plays on press ${Number(s.label) - 1} of the » Next button`
+                  ? `Plays on press ${s.label} of the » Next button (SPX Continue)`
                   : s.kind === 'in'
                     ? 'The entrance — plays on ▶ Play'
                     : `The exit — plays on ■ Stop${outBadge ? ` (${outBadge})` : ''}`
@@ -592,6 +682,28 @@ export default function TimelineView({ iframeRef }: Props) {
         />
         <span className="mono muted timeline-time" data-testid="timeline-time">{shown.toFixed(2)}s</span>
         {!collapsed && (
+          <span className="timeline-zoom" aria-hidden="false">
+            <button
+              className="timeline-zoom-btn"
+              onClick={() => setPxPerSec((z) => Math.max(40, z / 1.3))}
+              title="Zoom out — more of the playout per screen"
+              data-testid="timeline-zoom-out"
+            >
+              −
+            </button>
+            <button
+              className="timeline-zoom-btn"
+              onClick={() => setPxPerSec((z) => Math.min(400, z * 1.3))}
+              title="Zoom in — finer timing"
+              data-testid="timeline-zoom-in"
+            >
+              +
+            </button>
+          </span>
+        )}
+        {/* Last on purpose: the knobs readout is the one flexible-width item — it may
+            ellipsize when the head is tight; the zoom buttons must not fall off. */}
+        {!collapsed && (
           <span
             className="hint timeline-knobs"
             title={`animSpeed ×${model.animSpeed} · easeIn ${model.easeIn} · easeOut ${model.easeOut}`}
@@ -609,158 +721,260 @@ export default function TimelineView({ iframeRef }: Props) {
         </p>
       )}
 
-      {/* The hold has no tracks — nothing animates; say what happens instead. */}
-      {!collapsed && holdSelected && (
-        <div className="timeline-tracks">
-          <p className="timeline-hold-note" data-testid="timeline-hold-note">
-            The graphic holds here, settled,{' '}
-            {outMode === 'none'
-              ? 'and never leaves on its own (no out is set).'
-              : /^\d+$/.test(outMode)
-                ? `then leaves by itself after ${Number(outMode) / 1000}s.`
-                : 'until ■ Stop plays the exit.'}
-            {model.steps.length > 0 && ' Each » Next press plays during this hold.'}
-          </p>
+      {/* T4.2 — the cue-segmented overview: the WHOLE playout as one strip. Sections keep
+          their own real local clocks; the hold is a fixed break (it waits, it has no
+          clock); part rows span every section. */}
+      {!collapsed && (
+        <div className="timeline-tracks timeline-ov" data-testid="timeline-overview">
+          {/* Left: the part names, outside the scroll. */}
+          <div className="timeline-ov-labels">
+            <div className="timeline-ov-corner" style={{ height: OV_HEAD_H }} aria-hidden="true" />
+            {overview.rowKeys.map((key) => (
+              <span className="timeline-label" key={key} title={key} style={{ height: ROW_H, lineHeight: `${ROW_H}px` }}>
+                {friendlyTarget(key)}
+              </span>
+            ))}
+          </div>
+
+          {/* Middle: the zoomable, scrollable section canvas. */}
+          <div className="timeline-ov-scroll" ref={scrollRef}>
+            <div
+              className="timeline-ov-canvas"
+              style={{
+                width: canvasPx,
+                height: OV_HEAD_H + overview.rowKeys.length * ROW_H,
+                paddingTop: OV_HEAD_H, // the header/ruler row is absolute — keep rows below it
+              }}
+            >
+              {/* Section backdrops (selection tint, hold hatch) + quarter-second ticks. */}
+              {overview.sections.map((sec) => (
+                <div
+                  key={`bg-${sec.id}`}
+                  className={`timeline-ov-secbg${sec.kind === 'hold' ? ' hold' : ''}${
+                    (sec.kind === 'hold' ? holdSelected : sec.id === phaseId) ? ' active' : ''
+                  }`}
+                  style={{ left: secOffsets.get(sec.id), width: secPx(sec) }}
+                  aria-hidden="true"
+                />
+              ))}
+              {pxPerSec >= 60 &&
+                overview.sections
+                  .filter((s) => s.kind !== 'hold')
+                  .flatMap((sec) => {
+                    const ticks: number[] = [];
+                    for (let t = 0.25; t < sec.duration - 0.01 && ticks.length < 80; t += 0.25) ticks.push(t);
+                    return ticks.map((t) => (
+                      <div
+                        key={`tick-${sec.id}-${t}`}
+                        className={`timeline-ov-tick${Math.abs(t % 1) < 0.001 ? ' whole' : ''}`}
+                        style={{ left: (secOffsets.get(sec.id) ?? 0) + t * pxPerSec }}
+                        aria-hidden="true"
+                      />
+                    ));
+                  })}
+
+              {/* Section headers — the ruler row; clicking selects the moment. */}
+              {overview.sections.map((sec) => {
+                const selected = sec.kind === 'hold' ? holdSelected : sec.id === phaseId;
+                const dur = sec.infinite ? '∞' : `${sec.duration.toFixed(2)}s`;
+                const head =
+                  sec.kind === 'in'
+                    ? `▶ In · ${dur}`
+                    : sec.kind === 'out'
+                      ? `■ Out · ${dur}`
+                      : sec.kind === 'hold'
+                        ? '● hold'
+                        : `» ${sec.stepIndex! + 1} · ${dur}`;
+                return (
+                  <button
+                    key={`sec-${sec.id}`}
+                    className={`timeline-ov-sec${selected ? ' active' : ''}${
+                      regroup && sec.kind === 'step' && regroup.overStep === sec.stepIndex ? ' drop-target' : ''
+                    }`}
+                    style={{ left: secOffsets.get(sec.id), width: secPx(sec), height: OV_HEAD_H }}
+                    onClick={() => (sec.kind === 'hold' ? pickHold() : pickSegment(sec.id))}
+                    title={
+                      sec.kind === 'in'
+                        ? 'The entrance — plays on ▶ Play'
+                        : sec.kind === 'out'
+                          ? `The exit — plays on ■ Stop${outBadge ? ` (${outBadge})` : ''}`
+                          : sec.kind === 'hold'
+                            ? `The hold — the graphic sits settled on air (${holdSub}); » presses play during it`
+                            : `Plays on press ${sec.stepIndex! + 1} of the » Next button`
+                    }
+                    data-testid={`timeline-ov-sec-${sec.id}`}
+                    {...(sec.kind === 'step' ? { 'data-step-drop': sec.stepIndex } : {})}
+                  >
+                    {head}
+                  </button>
+                );
+              })}
+
+              {/* Part rows — bars across every section, on each section's local clock. */}
+              {overview.rowKeys.map((key) => (
+                <div className="timeline-ov-row" key={key} style={{ height: ROW_H }}>
+                  {rowBars(key).map((b) => {
+                    const sec = overview.sections.find((s) => s.id === b.sectionId)!;
+                    const isReveal = b.kind === 'reveal';
+                    const mi = isReveal ? revealMemberIndex(b) : 0;
+                    const left = (secOffsets.get(b.sectionId) ?? 0) + b.start * pxPerSec;
+                    const verb = isReveal
+                      ? 'reveal'
+                      : actionLabel({ kind: b.kind as TimelineTween['kind'], props: b.props });
+                    const canDrag = b.editable && (isReveal || b.firstMember);
+                    const groupable = isReveal && model.steps[sec.stepIndex!]?.groupable;
+                    return (
+                      <div
+                        key={`${b.sectionId}-${b.tweenIndex}-${mi}-${b.firstMember ? 'f' : 'm'}`}
+                        className={`timeline-bar ${isReveal ? 'to' : b.kind}${canDrag ? ' editable' : ''}${b.dragging ? ' dragging' : ''}`}
+                        style={{
+                          left,
+                          width: b.kind === 'set' ? undefined : Math.max(6, b.span * pxPerSec),
+                        }}
+                        title={
+                          b.kind === 'set'
+                            ? `instant set · ${b.props.join(', ')}`
+                            : `${verb || 'animate'}${b.props.length ? ` (${b.props.join(', ')})` : ''} · ${b.start.toFixed(2)}–${(b.start + b.span).toFixed(2)}s${
+                                groupable
+                                  ? ' — drag onto another » card to move it to that press, edge to stretch'
+                                  : canDrag
+                                    ? ' — drag to retime, edge to stretch'
+                                    : ''
+                              }`
+                        }
+                        data-testid={
+                          isReveal
+                            ? `timeline-bar-${b.sectionId}-r${mi}`
+                            : b.firstMember
+                              ? `timeline-bar-${b.sectionId}-${b.tweenIndex}`
+                              : undefined
+                        }
+                        onPointerDown={
+                          !canDrag
+                            ? undefined
+                            : groupable
+                              ? (e) => startRegroup(e, b.rowKey, sec.stepIndex!)
+                              : isReveal
+                                ? (e) => startBarDrag(e, b.sectionId, b.tweenIndex, 'resize', { start: b.raw.start, duration: b.raw.span })
+                                : (e) => startBarDrag(e, b.sectionId, b.tweenIndex, 'move', { start: b.raw.start, duration: b.raw.span })
+                        }
+                        onPointerMove={(e) => { moveBarDrag(e); moveRegroup(e); }}
+                        onPointerUp={() => { endBarDrag(); endRegroup(); }}
+                        onPointerCancel={() => { setBarDrag(null); setRegroup(null); }}
+                      >
+                        {b.kind !== 'set' && (b.firstMember || isReveal) && (
+                          <span className="timeline-bar-verb" aria-hidden="true">{verb}</span>
+                        )}
+                        {canDrag && b.kind !== 'set' && (
+                          <span
+                            className="timeline-bar-handle"
+                            data-testid={
+                              isReveal
+                                ? `timeline-handle-${b.sectionId}-r${mi}`
+                                : `timeline-handle-${b.sectionId}-${b.tweenIndex}`
+                            }
+                            onPointerDown={(e) =>
+                              startBarDrag(e, b.sectionId, b.tweenIndex, 'resize', { start: b.raw.start, duration: b.raw.span })
+                            }
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {/* The playhead — travels the whole strip through Play, every press, and Stop. */}
+              <div
+                className="timeline-playhead"
+                data-testid="timeline-playhead"
+                style={{ left: playheadLeft, top: OV_HEAD_H }}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          {/* Right gutter: each part's press assignment + the selected moment's ease. */}
+          <div className="timeline-ov-gutter">
+            <div className="timeline-ov-corner" style={{ height: OV_HEAD_H }} aria-hidden="true" />
+            {overview.rowKeys.map((key) => {
+              const eligible = stepsOn && chainGroupable && eligibleParts.some((p) => p.selector === key);
+              const press = pressOf.has(key) ? pressOf.get(key)! : -1;
+              const soloLast =
+                press === model.steps.length - 1 && press >= 0 && model.steps[press].targets.length === 1;
+              const appearsTestId =
+                step && press === seg.stepIndex
+                  ? `timeline-appears-${model.steps[seg.stepIndex!].targets.indexOf(key)}`
+                  : press === -1
+                    ? `timeline-appears-add-${unassignedOrder.indexOf(key)}`
+                    : `timeline-appears-p${press}-${model.steps[press].targets.indexOf(key)}`;
+              const chip = easeChipFor(key);
+              return (
+                <div className="timeline-ov-gutter-row" key={key} style={{ height: ROW_H }}>
+                  {eligible ? (
+                    <select
+                      className="timeline-appears"
+                      value={press}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (v === press) return;
+                        if (press === -1) {
+                          if (v >= 0) assignPartToPress(key, v);
+                        } else if (v === -1) {
+                          unassignPart(key);
+                        } else {
+                          moveLineTo(key, press, v);
+                        }
+                      }}
+                      title="When this part appears — with ▶ Play, or revealed by a press of » Next"
+                      data-testid={appearsTestId}
+                    >
+                      <option value={-1}>appears with ▶ Play</option>
+                      {model.steps.map((_, k) => (
+                        <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
+                      ))}
+                      {!soloLast && <option value={model.steps.length}>appears on a new press</option>}
+                    </select>
+                  ) : (
+                    stepsOn && chainGroupable && <span className="timeline-appears-spacer" aria-hidden="true" />
+                  )}
+                  {chip ? (
+                    <select
+                      className="timeline-ease"
+                      value={chip.ease ?? 'auto'}
+                      onChange={(e) => pickEase(chip.index, e.target.value)}
+                      title={`How this move accelerates in the selected moment (its ease) — 'auto' follows the phase's easing knob`}
+                      data-testid={`timeline-ease-${chip.index}`}
+                    >
+                      <option value="auto">ease · auto</option>
+                      {easeOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                      {chip.ease && !easeOptions.some((o) => o.value === chip.ease) && (
+                        <option value={chip.ease}>{chip.ease}</option>
+                      )}
+                    </select>
+                  ) : (
+                    <span className="timeline-ease-spacer" aria-hidden="true" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {!collapsed && !holdSelected && (
-        <div className="timeline-tracks">
-          {rows.map((tw, i) => {
-            // While a bar is being dragged, render its live values instead of the parsed ones.
-            const d = barDrag?.index === i ? barDrag : null;
-            const start = d ? d.start : tw.start;
-            const span = d ? d.duration + tw.stagger * Math.max(0, tw.targets.length - 1) : tw.end - tw.start;
-            return (
-              <div className="timeline-row" key={i}>
-                <span className="timeline-label" title={label(tw.targets)}>{label(tw.targets)}</span>
-                <div className="timeline-lane">
-                  <div
-                    className={`timeline-bar ${tw.kind}${tw.editable ? ' editable' : ''}${d ? ' dragging' : ''}`}
-                    style={{
-                      left: `${(start / total) * 100}%`,
-                      width: tw.kind === 'set' ? undefined : `${Math.max(1.5, (span / total) * 100)}%`,
-                    }}
-                    title={
-                      tw.kind === 'set'
-                        ? `instant set · ${tw.props.join(', ')}`
-                        : `${(step ? 'reveal' : actionLabel(tw)) || 'animate'} (${tw.props.join(', ')}) · ${(d ? start : tw.start).toFixed(2)}–${(d ? start + span : tw.end).toFixed(2)}s${tw.stagger ? ` · stagger ${tw.stagger.toFixed(2)}s` : ''}${
-                            step?.groupable
-                              ? ' — drag onto another » step to regroup, edge to stretch'
-                              : tw.editable
-                                ? ' — drag to retime, edge to stretch'
-                                : ''
-                          }`
-                    }
-                    data-testid={`timeline-bar-${i}`}
-                    onPointerDown={
-                      !tw.editable
-                        ? undefined
-                        : step?.groupable
-                          ? (e) => startRegroup(e, tw.targets[0], seg.stepIndex!) // drag onto another » tab
-                          : step
-                            ? (e) => startBarDrag(e, i, 'resize', { start: tw.start, duration: tw.duration })
-                            : (e) => startBarDrag(e, i, 'move', { start: tw.start, duration: tw.duration })
-                    }
-                    onPointerMove={(e) => { moveBarDrag(e); moveRegroup(e); }}
-                    onPointerUp={() => { endBarDrag(); endRegroup(); }}
-                    onPointerCancel={() => { setBarDrag(null); setRegroup(null); }}
-                  >
-                    {/* What this bar does, in plain words — steps are always reveals. */}
-                    {tw.kind !== 'set' && (
-                      <span className="timeline-bar-verb" aria-hidden="true">
-                        {step ? 'reveal' : actionLabel(tw)}
-                      </span>
-                    )}
-                    {tw.editable && tw.kind !== 'set' && (
-                      <span
-                        className="timeline-bar-handle"
-                        data-testid={`timeline-handle-${i}`}
-                        onPointerDown={(e) => startBarDrag(e, i, 'resize', { start: tw.start, duration: tw.duration })}
-                      />
-                    )}
-                  </div>
-                </div>
-                {/* A step row's when-control: which » Next press this part appears on. */}
-                {step?.groupable && (
-                  <select
-                    className="timeline-appears"
-                    value={seg.stepIndex}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (v === -1) unassignPart(tw.targets[0]);
-                      else moveLineTo(tw.targets[0], v);
-                    }}
-                    title="Which press of » Next reveals this part — pick another press to move it there, or send it back to appearing with the graphic"
-                    data-testid={`timeline-appears-${i}`}
-                  >
-                    <option value={-1}>appears with ▶ Play</option>
-                    {model.steps.map((_, k) => (
-                      <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
-                    ))}
-                    {/* "Its own press" — hidden when that would re-create this same step. */}
-                    {!(step.targets.length === 1 && seg.stepIndex === model.steps.length - 1) && (
-                      <option value={model.steps.length}>appears on a new press</option>
-                    )}
-                  </select>
-                )}
-                {/* The tween's own ease; 'auto' inherits the phase knob. In a step segment
-                    the ease belongs to the GROUP — one chip on the first row. */}
-                {tw.editable && (!step || i === 0) ? (
-                  <select
-                    className="timeline-ease"
-                    value={tw.ease ?? 'auto'}
-                    onChange={(e) => pickEase(i, e.target.value)}
-                    title="How this move accelerates (its ease) — 'auto' follows the phase's easing knob"
-                    data-testid={`timeline-ease-${i}`}
-                  >
-                    <option value="auto">ease · auto</option>
-                    {easeOptions.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                    {tw.ease && !easeOptions.some((o) => o.value === tw.ease) && (
-                      <option value={tw.ease}>{tw.ease}</option>
-                    )}
-                  </select>
-                ) : (
-                  <span className="timeline-ease-spacer" aria-hidden="true" />
-                )}
-              </div>
-            );
-          })}
-          {/* Parts that still appear with ▶ Play — each can move onto a press from here. */}
-          {step?.groupable &&
-            unassignedParts.map((p, i) => (
-              <div className="timeline-row timeline-row-unassigned" key={p.selector}>
-                <span className="timeline-label" title={p.selector}>{p.label}</span>
-                <div className="timeline-lane timeline-lane-empty" title="Appears with the graphic (▶ Play)" />
-                <select
-                  className="timeline-appears"
-                  value={-1}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (v >= 0) assignPartToPress(p.selector, v);
-                  }}
-                  title="This part appears with ▶ Play — pick a press of » Next to reveal it later instead"
-                  data-testid={`timeline-appears-add-${i}`}
-                >
-                  <option value={-1}>appears with ▶ Play</option>
-                  {model.steps.map((_, k) => (
-                    <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
-                  ))}
-                  <option value={model.steps.length}>appears on a new press</option>
-                </select>
-                <span className="timeline-ease-spacer" aria-hidden="true" />
-              </div>
-            ))}
-          {/* The playhead — spans the lane area (between the label and ease columns). */}
-          <div
-            className="timeline-playhead"
-            data-testid="timeline-playhead"
-            style={{ left: `calc(110px + (100% - 110px - 104px) * ${frac})` }}
-            aria-hidden="true"
-          />
-        </div>
+      {/* The hold explained, when it is the selected moment. */}
+      {!collapsed && holdSelected && (
+        <p className="timeline-hold-note" data-testid="timeline-hold-note">
+          The graphic holds here, settled,{' '}
+          {outMode === 'none'
+            ? 'and never leaves on its own (no out is set).'
+            : /^\d+$/.test(outMode)
+              ? `then leaves by itself after ${Number(outMode) / 1000}s.`
+              : 'until ■ Stop plays the exit.'}
+          {model.steps.length > 0 && ' Each » Next press plays during this hold.'}
+        </p>
       )}
 
       {/* One line of context so the gestures are discoverable without hovering. */}

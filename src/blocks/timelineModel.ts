@@ -65,6 +65,122 @@ export interface TimelineModel {
   steps: TimelineStep[];
 }
 
+// ── The cue-segmented overview (Era 6 T4.2) ─────────────────────────────────
+// One strip, the whole playout in order: In · each » press · the hold · Out. Every
+// segment keeps its own REAL local clock (holds and presses wait for operator cues, so a
+// single global time axis would fabricate times that don't exist on air). Rows are the
+// template's parts; a multi-target tween expands onto each member's row at its true
+// stagger offset. Pure derivation from the parsed model — the view stays declarative.
+
+export interface OverviewSection {
+  id: string; // 'in' | 'step-N' | 'hold' | 'out'
+  kind: 'in' | 'step' | 'hold' | 'out';
+  stepIndex?: number;
+  /** Local-clock length in seconds (0 for the hold — it waits, it has no clock). */
+  duration: number;
+  infinite: boolean;
+}
+
+export interface OverviewBar {
+  sectionId: string;
+  /** The part/selector row this bar sits on. */
+  rowKey: string;
+  /** Tween index within its phase (the patchers' handle), or the step index for reveals. */
+  tweenIndex: number;
+  kind: 'set' | 'to' | 'fromTo' | 'reveal';
+  /** Start/span on the section's local clock, member stagger applied. */
+  start: number;
+  span: number;
+  editable: boolean;
+  ease: string | null;
+  props: string[];
+  /** True on the tween's first target row — owns the ease chip and the drag testid. */
+  firstMember: boolean;
+}
+
+export interface OverviewModel {
+  sections: OverviewSection[];
+  /** Row keys in display order: real bars first (registry order decided by the caller),
+   *  set()-only targets dropped. */
+  rowKeys: string[];
+  bars: OverviewBar[];
+}
+
+/**
+ * Flatten the parsed timeline into the overview matrix. `partOrder` (the registry's
+ * selector order) sorts known rows first; unknown tween targets follow in first-seen
+ * order. Rows whose only bars are set() ticks are dropped (bookkeeping, not choreography);
+ * `alwaysRows` (e.g. assignable parts) survive even without bars.
+ */
+export function buildOverview(model: TimelineModel, partOrder: string[], alwaysRows: string[] = []): OverviewModel {
+  const sections: OverviewSection[] = [
+    { id: 'in', kind: 'in', duration: model.phases[0]?.duration ?? 0, infinite: model.phases[0]?.infinite ?? false },
+    ...model.steps.map((s, k) => ({
+      id: `step-${k + 2}`,
+      kind: 'step' as const,
+      stepIndex: k,
+      duration: s.duration + s.stagger * Math.max(0, s.targets.length - 1),
+      infinite: false,
+    })),
+    { id: 'hold', kind: 'hold', duration: 0, infinite: true },
+    {
+      id: 'out',
+      kind: 'out',
+      duration: model.phases[model.phases.length - 1]?.duration ?? 0,
+      infinite: model.phases[model.phases.length - 1]?.infinite ?? false,
+    },
+  ];
+
+  const bars: OverviewBar[] = [];
+  for (const phase of model.phases) {
+    phase.tweens.forEach((tw, tweenIndex) => {
+      tw.targets.forEach((t, m) => {
+        bars.push({
+          sectionId: phase.id,
+          rowKey: t,
+          tweenIndex,
+          kind: tw.kind,
+          start: tw.start + m * tw.stagger,
+          span: tw.kind === 'set' ? 0 : tw.duration,
+          editable: tw.editable,
+          ease: tw.ease,
+          props: tw.props,
+          firstMember: m === 0,
+        });
+      });
+    });
+  }
+  model.steps.forEach((s, k) => {
+    s.targets.forEach((t, m) => {
+      bars.push({
+        sectionId: `step-${k + 2}`,
+        rowKey: t,
+        tweenIndex: k,
+        kind: 'reveal',
+        start: m * s.stagger,
+        span: s.duration,
+        editable: true,
+        ease: s.ease,
+        props: [],
+        firstMember: m === 0,
+      });
+    });
+  });
+
+  // Row order: registry parts first, then unknown targets as encountered.
+  const withRealBars = new Set(bars.filter((b) => b.kind !== 'set').map((b) => b.rowKey));
+  const keep = new Set([...withRealBars, ...alwaysRows]);
+  const seen = new Set<string>();
+  const rowKeys: string[] = [];
+  for (const key of [...partOrder, ...bars.map((b) => b.rowKey), ...alwaysRows]) {
+    if (keep.has(key) && !seen.has(key)) {
+      seen.add(key);
+      rowKeys.push(key);
+    }
+  }
+  return { sections, rowKeys, bars: bars.filter((b) => keep.has(b.rowKey)) };
+}
+
 const BOOKKEEPING_PROPS = new Set(['duration', 'stagger', 'ease', 'transformOrigin', 'clearProps', 'repeat', 'delay', 'onComplete']);
 
 const REGION_RE = /\/\* == ANIMATION[\s\S]*?== END ANIMATION == \*\//;
