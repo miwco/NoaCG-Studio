@@ -302,7 +302,12 @@ function splitRegion(region: string): RegionParts | null {
   // The exit's descriptive comment ("// buildOutTimeline(): …") belongs to the exit part.
   const fnIdx = region.indexOf(OUT_FN);
   const commentIdx = region.indexOf('// buildOutTimeline');
-  const outIdx = commentIdx !== -1 && commentIdx < fnIdx ? commentIdx : fnIdx;
+  let outIdx = commentIdx !== -1 && commentIdx < fnIdx ? commentIdx : fnIdx;
+  // A previously mixed region carries its "// Out preset:" tag just above that comment —
+  // it belongs to the exit too (leaving it in the head would strand a stale duplicate
+  // when the exit is swapped again, and the stale one would win the readback).
+  const tagIdx = region.indexOf('// Out preset:');
+  if (tagIdx !== -1 && tagIdx < outIdx) outIdx = tagIdx;
   const closeIdx = region.indexOf(ANIMATION_MARK_CLOSE);
   if (fnIdx === -1 || closeIdx === -1 || outIdx > closeIdx) return null;
   const zone = region.slice(outIdx, closeIdx);
