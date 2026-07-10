@@ -1,7 +1,17 @@
 # Timeline v2 — the step timeline
 
-**Status: RATIFIED (2026-07-10) with twelve review adjustments, integrated below.**
-Implementation starts at Phase 1. The governing principle, stated at ratification:
+**Status: phases 1-7 LANDED (2026-07-11), plus the lower-thirds creation flip and a
+CapCut-conventions polish pass (playhead cap + auto-follow scroll, deep zoom, per-keyframe
+and per-step ease menus, ◀◆▶ keyframe navigation, label drag-scrubbing). Phase 8
+(deleting the literal patchers and the classic strip) is DEFERRED BY DESIGN until the
+remaining categories migrate off the legacy region — info cards, scoreboards, corner bug,
+starting-soon, game timers, quiz next (standard contract, the importer already handles
+them); credits/tickers/infographics last (their endless loops need a loop representation
+in the data model first). The classic strip's spec suite now runs on info cards
+(Hairline Card) so both surfaces stay covered until then.**
+
+**Ratified (2026-07-10) with twelve review adjustments, integrated below.**
+The governing principle, stated at ratification:
 *NoaCG Studio is both a visual editor and a code editor. The visual tools must generate
 code a human is genuinely happy to open, understand, modify, and learn from. The timeline
 must not hide the code, and the code must not fight the timeline.*

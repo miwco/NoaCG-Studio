@@ -273,8 +273,10 @@ src/
                  leaves-to dissolves into it); root never gets a drawer, press-assigned
                  parts have none on In but do on Out (leaving is independent of entering);
                  ●On air = pseudo-card (phaseId 'hold'), click parks on the settled
-                 look; »+Step disables with a tooltip reason; THE STRIP IS THE ONE
-                 MOTION SURFACE (the Motion side-tab is retired): the selected ▶In/■Out
+                 look; »+Step disables with a tooltip reason; SERVES LEGACY-REGION
+                 CATEGORIES ONLY since Timeline v2 (lower thirds create as data blocks
+                 and get StepTimeline instead — see TimelineDock below); the selected
+                 ▶In/■Out
                  card's inspector row holds that phase's preset picker + easing choice
                  (swapAnimationPhase / setAnimKnob — phase-correct halves per the
                  easing doctrine; the Out card names presets in their exit direction,
@@ -289,6 +291,21 @@ src/
                  the truth; row LABELS are the shared-selection handles: clicking one
                  (or a bar, without dragging) selects that element on the canvas too
                  (store selectedPart), the selected row washes amber),
+                 StepTimeline (Timeline v2 — TimelineDock picks the surface per template:
+                 a NOACG_ANIM data region gets the clip-style step timeline outright,
+                 legacy regions keep TimelineView with a '⧉ new timeline' peek chip and
+                 an undoable '◆ use keyframes' conversion; the ribbon = ruler with cue
+                 markers (▶ » ● ■), step clips (right-edge resize preserve/Alt-stretch,
+                 context menu Duplicate/Rename/Delete + step ease, »+ add, hold popover
+                 for settings.out, speed select), layer rows (EVERY registry layer has a
+                 row) with aggregate keyframe diamonds (drag to retime, Delete, right-
+                 click for the per-keyframe ease), a draggable playhead with a grab cap
+                 + auto-follow scroll and 1000px/s deep zoom, Space to play, arrow-nudge;
+                 all edits are pure data mutations in blocks/animEdit.ts spliced by
+                 blocks/animData.ts — one undoable apply each, playhead/scrub/selection
+                 never write history; the engine lives in blocks/animData+animEval+
+                 animImport + templates/shared/animRuntime, parity-pinned by
+                 e2e/anim-engine.spec.ts),
                  Inspector (Timeline v2 — the persistent panel RIGHT of the preview,
                  the shared selection's third consumer: identity + resolved property
                  values at the settled state via parseAnimData→importAnimData→

@@ -584,19 +584,24 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       blur-out to()), and splitTween still separates a joint tween first so only the grabbed
       layer blurs. The simulator's reset already clears leaked filter, so blur leaves cleanly.
       E2E: the drawer exposes blur on both cards and an exit blur round-trips + resets.
-- [ ] **T7 Timeline v2 — the step timeline (RATIFIED 2026-07-10; phases 1-6 landed:
-      engine + parity harness; Inspector column + redo; the read-first ribbon; keyframe
-      editing with the undoable "use keyframes" conversion; presets as keyframe
-      generators — the Animations tab applies In/Out/Both with declared-props-only
-      replacement and layer-relative In targeting, and the canvas chip's press control
-      works on data templates through setLayerActivation; and steps as full clips —
-      right-edge duration drag (preserve-timing default, Alt stretches, shrink clamps at
-      the last keyframe), a context menu with Duplicate/Rename/Delete (deleted presses
-      send their reveals back to Play), a »+ authoring step, the hold popover editing
-      the SPX out setting, Space to play, arrow-nudge for the selected keyframe, with
-      settings.steps always derived. The lower-thirds CREATION default still emits
-      legacy (dataRegion machinery is in place; it flips together with the classic-strip
-      spec migration). Next: the flip slice, then Phase 7 parity polish)** — the
+- [x] **T7 Timeline v2 — the step timeline (2026-07-11; phases 1-7 + the creation flip +
+      the CapCut polish pass; Phase 8 deferred, see below)**: the declarative engine
+      (NOACG_ANIM data block + interpreter, canonical serializer, importer, golden parity
+      harness); the Inspector column + redo; the clip-style ribbon (cue markers, ruler,
+      scrub); keyframes (arm/auto-key at the playhead, diamond drag/delete); presets as
+      keyframe generators (In/Out/Both, declared props only, layer-relative In); steps as
+      clips (preserve/stretch resize, duplicate/rename/delete, »+, hold popover, speed);
+      LOWER THIRDS CREATE AS DATA natively — the classic-strip spec suite moved to its
+      still-legacy sibling (info cards' Hairline Card, 34 tests); Phase 7 parity (the
+      OBS/vMix overlay honors auto-out with a measured entrance, data-block validation
+      warnings, the AI prompt teaches the data shape, l3-sweep updated); and the polish
+      pass — playhead grab cap + auto-follow scroll, 1000 px/s deep zoom, per-keyframe
+      and per-step ease menus (right-click), ◀◆▶ keyframe navigation, label
+      drag-scrubbing. **Phase 8 (delete the literal patchers + the classic strip) waits
+      for the remaining category migrations**: standard-contract categories next (info
+      cards, scoreboards, corner bug, starting-soon, timers, quiz — the importer already
+      converts them), loop categories (credits/tickers/infographics) after a loop
+      representation lands in the data model. Original plan entry follows — the
       CapCut-style rethink: steps as clips, a real playhead/ruler, an Inspector panel,
       proper keyframes, presets as keyframe generators with In/Out/Both. The audit
       concluded the parse-by-construction patcher architecture is at end of life for this
