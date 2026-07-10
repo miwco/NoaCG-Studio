@@ -30,7 +30,17 @@ export interface TimelineTween {
    * the phase knob (the `ease: easeIn/easeOut` variables or the timeline defaults).
    */
   ease: string | null;
+  /** T5: the numeric transform values in a fromTo's FROM object (the "enters from" state —
+   *  only the drawer-editable props; absent for set()/to() calls). */
+  fromVars?: Partial<Record<TransformProp, number>>;
 }
+
+/** T5 — the basic transform properties the per-layer drawer edits. Deliberately small:
+ *  where an element enters FROM, settling to its designed position/state. */
+export const TRANSFORM_PROPS = ['x', 'y', 'scale', 'opacity', 'rotation'] as const;
+export type TransformProp = (typeof TRANSFORM_PROPS)[number];
+/** The settled state — a from-value equal to its identity is a no-op and gets removed. */
+export const TRANSFORM_IDENTITY: Record<TransformProp, number> = { x: 0, y: 0, scale: 1, opacity: 1, rotation: 0 };
 
 export interface TimelinePhase {
   id: 'in' | 'out';
@@ -94,7 +104,10 @@ export interface OverviewBar {
   editable: boolean;
   ease: string | null;
   props: string[];
-  /** True on the tween's first target row — owns the ease chip and the drag testid. */
+  /** This bar's index within its tween's target list (0 = first). Splitting a joint tween
+   *  by target needs it; reveal testids count it (r0, r1 …). */
+  member: number;
+  /** True on the tween's first target row — owns the ease chip. */
   firstMember: boolean;
 }
 
@@ -145,6 +158,7 @@ export function buildOverview(model: TimelineModel, partOrder: string[], alwaysR
           editable: tw.editable,
           ease: tw.ease,
           props: tw.props,
+          member: m,
           firstMember: m === 0,
         });
       });
@@ -162,6 +176,7 @@ export function buildOverview(model: TimelineModel, partOrder: string[], alwaysR
         editable: true,
         ease: s.ease,
         props: [],
+        member: m,
         firstMember: m === 0,
       });
     });
@@ -206,6 +221,17 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
   const vars = objects[objects.length - 1] ?? '';
   const props = [...vars.matchAll(/(\w+)\s*:/g)].map((m) => m[1]).filter((p) => !BOOKKEEPING_PROPS.has(p));
 
+  // T5: the FROM object's drawer-editable transform values (fromTo only — a to() has none).
+  let fromVars: Partial<Record<TransformProp, number>> | undefined;
+  const fromObj = objects[0];
+  if (kind === 'fromTo' && objects.length >= 2 && fromObj) {
+    fromVars = {};
+    for (const prop of TRANSFORM_PROPS) {
+      const m = fromObj.match(new RegExp(`(?:^|[,{\\s])${prop}:\\s*(-?[\\d.]+)`));
+      if (m) fromVars[prop] = Number(m[1]);
+    }
+  }
+
   const durationMatch = vars.match(/duration:\s*([\d.]+)\s*\/\s*animSpeed/);
   const staggerMatch = vars.match(/stagger:\s*([\d.]+)\s*\/\s*animSpeed/);
   // A quoted ease is a per-tween override; `ease: easeIn/easeOut` inherits the phase knob.
@@ -229,6 +255,7 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
       : null,
     editable: kind !== 'set' && !!durationMatch,
     ease: easeMatch ? easeMatch[1] : null,
+    fromVars,
   };
 }
 
@@ -256,6 +283,7 @@ function parsePhase(id: TimelinePhase['id'], body: string, animSpeed: number): T
       end,
       editable: parsed.editable,
       ease: parsed.ease,
+      fromVars: parsed.fromVars,
     });
   }
   return {
@@ -516,4 +544,165 @@ export function patchStepRegroup(js: string, target: string, fromStep: number, t
   out = out.replace(/var stepDurations = \[[^\]]*\];/, `var stepDurations = [${durs.join(', ')}];`);
   out = out.replace(/var stepEases = \[[^\]]*\];/, `var stepEases = [${easeTokens.join(', ')}];`);
   return out;
+}
+
+/**
+ * T5.1: split a multi-target tween into one call PER TARGET, so each layer edits
+ * independently. Every member keeps its exact current timing: absolute positions replace
+ * the shared stagger (member m starts at tweenStart + m·stagger), and the emitted calls
+ * stay the plain readable shape everything else parses. The phase's total length is
+ * unchanged, so following '-=' overlaps keep their meaning. Returns null when the tween
+ * isn't a splittable shape (single target, set(), or unparsable).
+ */
+export function splitTween(js: string, phaseId: 'in' | 'out', tweenIndex: number): string | null {
+  const loc = locateCall(js, phaseId, tweenIndex);
+  if (!loc) return null;
+  const phase = parsePhase(phaseId, loc.body, loc.animSpeed);
+  const tween = phase.tweens[tweenIndex];
+  if (!tween || tween.kind === 'set' || !tween.editable || tween.targets.length < 2) return null;
+
+  // The call's own indentation — member calls line up under the original.
+  const lineStart = loc.body.lastIndexOf('\n', loc.callIndex) + 1;
+  const indent = loc.body.slice(lineStart, loc.callIndex).match(/^\s*$/)
+    ? loc.body.slice(lineStart, loc.callIndex)
+    : '  ';
+
+  const memberCalls = tween.targets.map((target, m) => {
+    let call = loc.call;
+    // The target array becomes this member's single selector.
+    call = call.replace(/\(\s*\[[^\]]*\]/, `('${target}'`);
+    // The shared stagger goes — each member gets its own absolute start instead.
+    call = call.replace(/,?\s*stagger:\s*[\d.]+\s*\/\s*animSpeed/, '').replace(/,\s*}/g, ' }');
+    // Absolute position (replace any existing position arg, or append one).
+    const literal = round2((tween.start + m * tween.stagger) * loc.animSpeed);
+    const position = `${literal} / animSpeed`;
+    const tailAt = call.lastIndexOf('}') + 1;
+    const head = call.slice(0, tailAt);
+    let tail = call.slice(tailAt);
+    if (/,\s*('-=[\d.]+'|[\d.]+(\s*\/\s*animSpeed)?)/.test(tail)) {
+      tail = tail.replace(/,\s*('-=[\d.]+'|[\d.]+(\s*\/\s*animSpeed)?)/, `, ${position}`);
+    } else {
+      tail = tail.replace(/\);$/, `,\n${indent}  ${position}\n${indent});`);
+    }
+    return head + tail;
+  });
+
+  return spliceCall(loc, memberCalls.join(`\n${indent}`));
+}
+
+/**
+ * T5.2: set one tween's "enters from" transform values — the per-layer drawer's patch.
+ * Each prop is written into the FROM object with its identity counterpart ensured in the
+ * TO object (the element settles at its designed state); a value equal to its identity
+ * removes the pair again, keeping the emitted code minimal. A `to()` call gains an empty
+ * FROM object first (becoming a fromTo) so there is always somewhere to enter from.
+ */
+export function patchTweenVars(
+  js: string,
+  phaseId: 'in' | 'out',
+  tweenIndex: number,
+  changes: Partial<Record<TransformProp, number>>,
+): string | null {
+  const loc = locateCall(js, phaseId, tweenIndex);
+  if (!loc) return null;
+  let call = loc.call;
+
+  if (/^tl\.set\(/.test(call)) return null;
+  if (/^tl\.to\(/.test(call)) {
+    // Convert to fromTo with an empty FROM: unlisted props keep tweening from the current
+    // state, exactly like the to() did.
+    const afterTarget = call.indexOf(',');
+    if (afterTarget === -1) return null;
+    call = `tl.fromTo(${call.slice('tl.to('.length, afterTarget)}, { },${call.slice(afterTarget + 1)}`;
+  }
+
+  // The FROM object is the first {...}; the TO object is the last.
+  const objects = [...call.matchAll(/\{[^{}]*\}/g)];
+  if (objects.length < 2) return null;
+
+  const setProp = (obj: string, prop: string, value: number | null): string => {
+    if (value === null) {
+      // Remove the prop (and one adjacent comma), then tidy any leftover braces.
+      return obj
+        .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+\\s*,\\s*`), '')
+        .replace(new RegExp(`,\\s*\\b${prop}:\\s*-?[\\d.]+`), '')
+        .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), '')
+        .replace(/\{\s*,/, '{ ')
+        .replace(/,\s*\}/, ' }');
+    }
+    if (new RegExp(`\\b${prop}:\\s*-?[\\d.]+`).test(obj)) {
+      return obj.replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), `${prop}: ${value}`);
+    }
+    // Insert after the opening brace (an empty {} gets its first pair).
+    return obj.replace(/\s/g, '') === '{}'
+      ? `{ ${prop}: ${value} }`
+      : obj.replace(/\{\s*/, `{ ${prop}: ${value}, `);
+  };
+
+  let fromObj = objects[0][0];
+  let toObj = objects[objects.length - 1][0];
+  for (const [prop, raw] of Object.entries(changes)) {
+    const value = round2(raw as number);
+    const identity = TRANSFORM_IDENTITY[prop as TransformProp];
+    if (value === identity) {
+      fromObj = setProp(fromObj, prop, null);
+      // Only strip the TO counterpart when it IS the identity we manage (never a preset's
+      // own differing to-value).
+      if (new RegExp(`\\b${prop}:\\s*${identity}(?![\\d.])`).test(toObj)) toObj = setProp(toObj, prop, null);
+    } else {
+      fromObj = setProp(fromObj, prop, value);
+      if (!new RegExp(`\\b${prop}:`).test(toObj)) toObj = setProp(toObj, prop, identity);
+    }
+  }
+
+  // Splice the objects back (from first, then re-find the to — its offset moved with the
+  // from object's new length).
+  const fromStart = objects[0].index!;
+  call = call.slice(0, fromStart) + fromObj + call.slice(fromStart + objects[0][0].length);
+  const toMatches = [...call.matchAll(/\{[^{}]*\}/g)];
+  const last = toMatches[toMatches.length - 1];
+  call = call.slice(0, last.index!) + toObj + call.slice(last.index! + last[0].length);
+
+  return spliceCall(loc, call);
+}
+
+/**
+ * T5.3: give a part its own entrance tween when it has none (e.g. a logo slot that just
+ * appears with the graphic) — the drawer's insert path. Appended at the end of
+ * buildInTimeline's choreography, entering at position 0, plain and commented.
+ */
+export function insertPartTween(
+  js: string,
+  selector: string,
+  changes: Partial<Record<TransformProp, number>>,
+): string | null {
+  const regionMatch = js.match(REGION_RE);
+  if (!regionMatch || regionMatch.index === undefined) return null;
+  const region = regionMatch[0];
+  const bodyMatch = region.match(fnBodyRe('buildInTimeline'));
+  if (!bodyMatch || bodyMatch.index === undefined) return null;
+  const body = bodyMatch[1];
+  const returnAt = body.lastIndexOf('return tl;');
+  if (returnAt === -1) return null;
+
+  const fromPairs: string[] = [];
+  const toPairs: string[] = [];
+  for (const [prop, raw] of Object.entries(changes)) {
+    const value = round2(raw as number);
+    if (value === TRANSFORM_IDENTITY[prop as TransformProp]) continue;
+    fromPairs.push(`${prop}: ${value}`);
+    toPairs.push(`${prop}: ${TRANSFORM_IDENTITY[prop as TransformProp]}`);
+  }
+  if (fromPairs.length === 0) return null; // all identity — nothing to animate
+
+  const insert = `tl.fromTo('${selector}',
+    { ${fromPairs.join(', ')} },
+    { ${toPairs.join(', ')}, duration: 0.5 / animSpeed },
+    0  // enters with the graphic (layer-drawer added)
+  );
+  `;
+  const newBody = body.slice(0, returnAt) + insert + body.slice(returnAt);
+  const bodyStart = bodyMatch.index + bodyMatch[0].indexOf(body);
+  const newRegion = region.slice(0, bodyStart) + newBody + region.slice(bodyStart + body.length);
+  return js.slice(0, regionMatch.index) + newRegion + js.slice(regionMatch.index + region.length);
 }

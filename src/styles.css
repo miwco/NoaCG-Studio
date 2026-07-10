@@ -97,6 +97,13 @@ input, select, textarea {
   font-size: 13px;
   width: 100%;
 }
+/* Native select popups: paint options EXPLICITLY. `color-scheme: dark` alone proved
+   unreliable on some Windows/Chromium builds (white popup, light-grey text — unreadable);
+   explicit option colors hold wherever option styling is honored at all. */
+select option {
+  background-color: var(--bg-2);
+  color: var(--text);
+}
 textarea { resize: vertical; }
 label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 4px; }
 
@@ -1273,6 +1280,8 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   );
 }
 .timeline-ov-secbg.hold.active { background-color: rgba(246, 166, 35, 0.07); }
+/* A drag is armed over this section: dropping moves WHEN the grabbed part appears. */
+.timeline-ov-secbg.drop { background: rgba(246, 166, 35, 0.14); }
 .timeline-ov-tick {
   position: absolute;
   top: 22px;                  /* below the header row */
@@ -1306,6 +1315,46 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 
 .timeline-ov-row { position: relative; border-top: 1px solid rgba(232, 237, 242, 0.04); }
 .timeline-appears-spacer { width: 142px; flex-shrink: 0; }
+
+/* T5 — the per-layer "enters from" drawer: an expand arrow on the label, a sticky row of
+   basic transform inputs underneath (properties, not bars — they don't ride the clock). */
+.timeline-expand {
+  background: transparent;
+  border: none;
+  padding: 0 3px 0 0;
+  font-size: 9px;
+  color: var(--text-dim);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.timeline-expand:hover { color: var(--amber); background: transparent; }
+.timeline-expand-spacer { display: inline-block; width: 12px; }
+.timeline-drawer-label { color: rgba(246, 166, 35, 0.8); padding-left: 12px; }
+.timeline-drawer { background: rgba(246, 166, 35, 0.04); }
+.timeline-drawer-fields {
+  position: sticky;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+.timeline-drawer-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+.timeline-drawer-field input {
+  width: 52px;
+  height: 18px;
+  padding: 1px 4px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10px;
+}
 .timeline-bar {
   position: absolute;
   top: 2px;
@@ -1314,10 +1363,14 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   background: linear-gradient(90deg, var(--amber), rgba(246, 166, 35, 0.55));
   min-width: 3px;
 }
-/* T2 — editable bars: drag the body to retime, the right edge to stretch. */
+/* T2 — editable bars: drag the body to retime, the edges to stretch either end. */
 .timeline-bar.editable { cursor: grab; touch-action: none; }
 .timeline-bar.editable:hover { box-shadow: 0 0 8px rgba(246, 166, 35, 0.5); }
-.timeline-bar.dragging { cursor: grabbing; box-shadow: 0 0 10px rgba(246, 166, 35, 0.7); }
+.timeline-bar.dragging {
+  cursor: grabbing;
+  box-shadow: 0 0 10px rgba(246, 166, 35, 0.7);
+  pointer-events: none;   /* hit-test through the moving bar so drop zones resolve */
+}
 .timeline-bar-handle {
   position: absolute;
   top: 0;
@@ -1327,6 +1380,17 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   cursor: ew-resize;
   border-right: 2px solid rgba(10, 12, 16, 0.55);  /* a visible grip on the bar's end */
   border-radius: 0 3px 3px 0;
+}
+/* The start-side grip: dragging it moves WHEN the move begins; the end stays pinned. */
+.timeline-bar-handle-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  border-left: 2px solid rgba(10, 12, 16, 0.55);
+  border-radius: 3px 0 0 3px;
 }
 .timeline-bar.set {
   width: 3px;
@@ -1395,10 +1459,10 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   font-size: 10px;
   padding: 1px 4px;
   height: 18px;
-  background: rgba(232, 237, 242, 0.04);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text-dim);
+  color: var(--text);
 }
 .timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-ease-spacer { width: 96px; flex-shrink: 0; }
@@ -1411,10 +1475,10 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   font-size: 10px;
   padding: 1px 4px;
   height: 18px;
-  background: rgba(232, 237, 242, 0.04);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text-dim);
+  color: var(--text);
 }
 .timeline-appears:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-scrub { accent-color: var(--amber); }

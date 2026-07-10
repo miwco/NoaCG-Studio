@@ -2,14 +2,20 @@ import { useEffect, useRef, useState, useMemo, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import {
   buildOverview,
+  insertPartTween,
   parseTimeline,
   patchStepEase,
   patchStepRegroup,
   patchStepTiming,
   patchTweenEase,
   patchTweenTiming,
+  patchTweenVars,
+  splitTween,
+  TRANSFORM_IDENTITY,
+  TRANSFORM_PROPS,
   type OverviewSection,
   type TimelineTween,
+  type TransformProp,
 } from '../blocks/timelineModel';
 import { readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
 import { changePartPress } from '../blocks/stepAssign';
@@ -34,13 +40,21 @@ interface Segment {
   stepIndex?: number;
 }
 
-/** A bar drag in progress (T2/T3.2): move = slide the start, resize = stretch the duration.
- *  Identified by (sectionId, tweenIndex) so every member bar of a multi-target tween moves
- *  together while dragging. */
+/** A bar drag in progress: move = slide the start, resize = stretch the end,
+ *  resize-start = move the start with the end pinned. Identified down to the MEMBER of a
+ *  multi-target tween — releasing a member drag splits the tween so only that layer moves. */
 interface BarDrag {
   sectionId: string;
   tweenIndex: number;
-  mode: 'move' | 'resize';
+  /** Index within the tween's target list; the split-on-release target. */
+  member: number;
+  /** True when the tween has several targets — release splits it first. */
+  multiTarget: boolean;
+  /** The dragged bar's part selector (cross-section drops move WHEN it appears). */
+  selector: string;
+  /** Whether this part may move onto a » press at all (registry-eligible). */
+  assignable: boolean;
+  mode: 'move' | 'resize' | 'resize-start';
   startClientX: number;
   pxPerSec: number;
   origStart: number;
@@ -48,6 +62,11 @@ interface BarDrag {
   /** Live values while dragging (committed to code on release). */
   start: number;
   duration: number;
+  /** Cross-section drop target while dragging: a » press index, steps.length = a new
+   *  press, null = none (plain retime). */
+  dropStep: number | null;
+  x: number;
+  y: number;
 }
 
 const SNAP = 0.05; // timing grid — keeps the emitted literals readable (two decimals)
@@ -58,6 +77,7 @@ const HOLD_PX = 64;
 const SEC_MIN_PX = 72;
 const ROW_H = 20;
 const OV_HEAD_H = 22;
+const DRAWER_H = 26; // the expanded layer's "enters from" sub-row
 
 /** T3.3 — a line being dragged toward another » segment (regroup). */
 interface RegroupDrag {
@@ -152,6 +172,9 @@ export default function TimelineView({ iframeRef }: Props) {
   const [regroup, setRegroup] = useState<RegroupDrag | null>(null);
   const regroupRef = useRef<RegroupDrag | null>(null);
   regroupRef.current = regroup;
+  // T5 — which part row has its "enters from" drawer open (one at a time keeps it calm).
+  const [expandedPart, setExpandedPart] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   // Announce the moment steps turn ON (via »+, the Motion checkbox, or undo/redo) — ▶ Play
   // behaves differently from that moment on, and silent behavior changes tested badly.
@@ -305,8 +328,7 @@ export default function TimelineView({ iframeRef }: Props) {
 
   const startBarDrag = (
     e: React.PointerEvent,
-    sectionId: string,
-    tweenIndex: number,
+    bar: { sectionId: string; tweenIndex: number; member: number; multiTarget: boolean; selector: string },
     mode: BarDrag['mode'],
     orig: { start: number; duration: number },
   ) => {
@@ -314,8 +336,8 @@ export default function TimelineView({ iframeRef }: Props) {
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setBarDrag({
-      sectionId,
-      tweenIndex,
+      ...bar,
+      assignable: stepsOn && eligibleParts.some((p) => p.selector === bar.selector),
       mode,
       startClientX: e.clientX,
       pxPerSec,
@@ -323,6 +345,9 @@ export default function TimelineView({ iframeRef }: Props) {
       origDuration: orig.duration,
       start: orig.start,
       duration: orig.duration,
+      dropStep: null,
+      x: e.clientX,
+      y: e.clientY,
     });
   };
 
@@ -330,25 +355,58 @@ export default function TimelineView({ iframeRef }: Props) {
     const d = barDragRef.current;
     if (!d) return;
     const dxSec = (e.clientX - d.startClientX) / d.pxPerSec;
-    setBarDrag(
-      d.mode === 'move'
-        ? { ...d, start: Math.max(0, snap(d.origStart + dxSec)) }
-        : { ...d, duration: Math.max(SNAP, snap(d.origDuration + dxSec)) },
-    );
+    // Dragging an ENTRANCE bar over a » press means "reveal this layer there instead" —
+    // the timing preview freezes and the drop takes over (never a stretched phase).
+    const raw = d.assignable && d.sectionId === 'in' && d.mode === 'move' ? dropTargetAt(e.clientX, e.clientY) : null;
+    const dropStep = raw !== null && raw >= 0 ? raw : null;
+    const next: BarDrag = { ...d, dropStep, x: e.clientX, y: e.clientY };
+    if (dropStep === null) {
+      if (d.mode === 'move') next.start = Math.max(0, snap(d.origStart + dxSec));
+      else if (d.mode === 'resize') next.duration = Math.max(SNAP, snap(d.origDuration + dxSec));
+      else {
+        // resize-start: the END stays pinned; the start moves and the duration compensates.
+        const end = d.origStart + d.origDuration;
+        const start = Math.min(Math.max(0, snap(d.origStart + dxSec)), end - SNAP);
+        next.start = start;
+        next.duration = end - start;
+      }
+    }
+    setBarDrag(next);
   };
 
-  /** Release: rewrite the timing literals in the marked region — one undoable patch. */
+  /** Release: ONE undoable patch — a cross-section drop moves WHEN the layer appears; a
+   *  member of a joint tween splits first so only that layer retimes; a plain drag
+   *  rewrites the timing literals; and a click (nothing changed) selects the element. */
   const endBarDrag = () => {
     const d = barDragRef.current;
     setBarDrag(null);
     if (!d) return;
-    if (d.start === d.origStart && d.duration === d.origDuration) return;
-    const js = d.sectionId.startsWith('step-')
-      ? patchStepTiming(template.js, d.tweenIndex, d.duration)
-      : patchTweenTiming(template.js, d.sectionId as 'in' | 'out', d.tweenIndex, {
-          start: d.mode === 'move' ? d.start : undefined,
-          duration: d.mode === 'resize' ? d.duration : undefined,
-        });
+    if (d.dropStep !== null) {
+      const change = changePartPress(template, parts, model, d.selector, -1, d.dropStep);
+      if (!change) return;
+      applyTemplate({ ...template, ...change.patch });
+      requestReplay();
+      if (change.destStep !== null) setPhaseId(`step-${change.destStep + 2}`);
+      return;
+    }
+    if (d.start === d.origStart && d.duration === d.origDuration) {
+      setSelectedPart(d.selector); // a plain click — select the element (canvas too)
+      return;
+    }
+    const timing = {
+      start: d.mode !== 'resize' ? d.start : undefined,
+      duration: d.mode !== 'move' ? d.duration : undefined,
+    };
+    let js: string | null;
+    if (d.sectionId.startsWith('step-')) {
+      js = patchStepTiming(template.js, d.tweenIndex, d.duration);
+    } else if (d.multiTarget) {
+      // Independent layers: split the joint tween, then retime ONLY the dragged member.
+      js = splitTween(template.js, d.sectionId as 'in' | 'out', d.tweenIndex);
+      if (js) js = patchTweenTiming(js, d.sectionId as 'in' | 'out', d.tweenIndex + d.member, timing);
+    } else {
+      js = patchTweenTiming(template.js, d.sectionId as 'in' | 'out', d.tweenIndex, timing);
+    }
     if (!js) return; // not patchable after all — leave the code untouched
     applyTemplate({ ...template, js });
     requestReplay(); // hear the new timing immediately (plays after the rebuild settles)
@@ -379,31 +437,20 @@ export default function TimelineView({ iframeRef }: Props) {
   const moveRegroup = (e: React.PointerEvent) => {
     const r = regroupRef.current;
     if (!r) return;
-    const under = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-step-drop]');
-    setRegroup({
-      ...r,
-      x: e.clientX,
-      y: e.clientY,
-      overStep: under ? Number(under.getAttribute('data-step-drop')) : null,
-    });
+    setRegroup({ ...r, x: e.clientX, y: e.clientY, overStep: dropTargetAt(e.clientX, e.clientY) });
   };
 
+  /** Release a reveal-bar drag: dropped on a » press/card = regroup; dropped on the In
+   *  section/card = back to "appears with ▶ Play". One shared transition, one undo. */
   const endRegroup = () => {
     const r = regroupRef.current;
     setRegroup(null);
     if (!r || r.overStep === null || r.overStep === r.fromStep) return;
-    const emptied = model.steps[r.fromStep].targets.length === 1;
-    // Dropping the LAST step's only line on »+ would just re-create the same step.
-    if (r.overStep === model.steps.length && emptied && r.fromStep === model.steps.length - 1) return;
-    const js = patchStepRegroup(template.js, r.target, r.fromStep, r.overStep);
-    if (!js) return;
-    // withStepsSetting: a merge/split changes the press count — the SPX definition follows.
-    applyTemplate({ ...template, ...withStepsSetting(template, js) });
+    const change = changePartPress(template, parts, model, r.target, r.fromStep, r.overStep);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch });
     requestReplay();
-    // Follow the moved line to its destination segment (indices shift when a step empties).
-    let dest = Math.min(r.overStep, model.steps.length);
-    if (emptied && r.fromStep < dest) dest -= 1;
-    setPhaseId(`step-${dest + 2}`);
+    setPhaseId(change.destStep !== null ? `step-${change.destStep + 2}` : 'in');
   };
 
   /** Turn step reveal off from the strip (the Motion checkbox's counterpart) — everything
@@ -548,26 +595,58 @@ export default function TimelineView({ iframeRef }: Props) {
     ? (secOffsets.get('in') ?? 0) + secPx(overview.sections[0]) - 1
     : (secOffsets.get(seg.id) ?? 0) + Math.min(frac, 1) * (seg.duration || 0) * pxPerSec;
 
-  /** Bars of one row, with live drag values applied to every member of the dragged tween
-   *  (raw values kept — pointer-down captures its originals from them). */
+  /** Where a drag would drop: a [data-step-drop] element under the pointer (cards, the
+   *  »+ card, headers), else the SECTION BODY the point is over — a » press index, -1 for
+   *  the entrance, null elsewhere. Rows sit on top of the section backdrops, so bodies
+   *  resolve geometrically, not through elementFromPoint. */
+  const dropTargetAt = (x: number, y: number): number | null => {
+    const el = document.elementFromPoint(x, y)?.closest('[data-step-drop]');
+    if (el) return Number(el.getAttribute('data-step-drop'));
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const r = canvas.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null;
+    const px = x - r.left;
+    for (const sec of overview.sections) {
+      const off = secOffsets.get(sec.id) ?? 0;
+      if (px >= off && px < off + secPx(sec)) {
+        if (sec.kind === 'step') return sec.stepIndex!;
+        if (sec.kind === 'in') return -1;
+        return null; // the hold and the exit don't reveal anything
+      }
+    }
+    return null;
+  };
+
+  /** Bars of one row, with live drag values applied — only to the dragged MEMBER when the
+   *  tween is multi-target (independent layers), and frozen while a cross-section drop is
+   *  armed (the ghost communicates; the phase must not look stretched). */
   const rowBars = (key: string) =>
     overview.bars
       .filter((b) => b.rowKey === key)
       .map((b) => {
-        const d = barDrag && barDrag.sectionId === b.sectionId && barDrag.tweenIndex === b.tweenIndex ? barDrag : null;
+        const d =
+          barDrag &&
+          barDrag.sectionId === b.sectionId &&
+          barDrag.tweenIndex === b.tweenIndex &&
+          (!barDrag.multiTarget || barDrag.member === b.member) &&
+          barDrag.dropStep === null
+            ? barDrag
+            : null;
         return {
           ...b,
           raw: { start: b.start, span: b.span },
           start: d ? b.start + (d.start - d.origStart) : b.start,
-          span: d && d.mode === 'resize' ? d.duration : b.span,
-          dragging: !!d,
+          span: d && d.mode !== 'move' ? d.duration : b.span,
+          dragging: !!d || (barDrag?.sectionId === b.sectionId && barDrag?.tweenIndex === b.tweenIndex && barDrag?.member === b.member),
         };
       });
-  // Reveal-bar testids count members within their group (r0, r1 …) — the regroup drag needs
-  // a stable handle per PART, not per tween.
-  const revealMemberIndex = (b: { sectionId: string; rowKey: string }) => {
-    const sec = overview.sections.find((s) => s.id === b.sectionId);
-    return sec?.stepIndex !== undefined ? model.steps[sec.stepIndex].targets.indexOf(b.rowKey) : 0;
+  /** Whether a phase bar belongs to a joint multi-target tween (a drag then splits it so
+   *  only the grabbed layer moves). */
+  const isMultiTarget = (b: { sectionId: string; tweenIndex: number; kind: string }) => {
+    if (b.kind === 'reveal') return false;
+    const phase = b.sectionId === 'in' ? inPhase : outPhase;
+    return (phase.tweens[b.tweenIndex]?.targets.length ?? 1) > 1;
   };
   // Unassigned eligible parts in row order — keeps the appears-add-N testids stable.
   const unassignedOrder = overview.rowKeys.filter(
@@ -585,6 +664,53 @@ export default function TimelineView({ iframeRef }: Props) {
     const idx = phase.tweens.findIndex((tw) => tw.editable && tw.targets[0] === key);
     return idx === -1 ? null : { index: idx, ease: phase.tweens[idx].ease };
   };
+
+  // ── T5: the per-layer "enters from" drawer — basic transforms, kept deliberately small ──
+  const drawerFor = (key: string) => {
+    const idx = inPhase.tweens.findIndex((tw) => tw.kind !== 'set' && tw.editable && tw.targets.includes(key));
+    const tw = idx >= 0 ? inPhase.tweens[idx] : null;
+    const values = Object.fromEntries(
+      TRANSFORM_PROPS.map((p) => [p, tw?.fromVars?.[p] ?? TRANSFORM_IDENTITY[p]]),
+    ) as Record<TransformProp, number>;
+    return { idx, tw, values };
+  };
+
+  /** Write one "enters from" value: ensure the part has its OWN entrance tween (split a
+   *  joint one / insert a fresh one), then patch the from/to literals — one undoable apply. */
+  const setEnterFrom = (key: string, prop: TransformProp, value: number) => {
+    if (!Number.isFinite(value)) return;
+    let js: string | null = template.js;
+    const { idx, tw } = drawerFor(key);
+    if (idx === -1 || !tw) {
+      js = insertPartTween(js, key, { [prop]: value });
+    } else {
+      let target = idx;
+      if (tw.targets.length > 1) {
+        js = splitTween(js, 'in', idx);
+        if (!js) return;
+        target = idx + tw.targets.indexOf(key);
+      }
+      js = patchTweenVars(js, 'in', target, { [prop]: value });
+    }
+    if (!js || js === template.js) return;
+    applyTemplate({ ...template, js });
+    requestReplay();
+  };
+
+  // Which rows can open the drawer: registry parts entering WITH the graphic (an assigned
+  // part's entry belongs to its » press) — the root's entrance is the preset's whole job.
+  const canDrawer = (key: string) => {
+    const part = parts.find((p) => p.selector === key);
+    return !!part && part.kind !== 'root' && !pressOf.has(key);
+  };
+  const drawerOpen = expandedPart && overview.rowKeys.includes(expandedPart) && canDrawer(expandedPart) ? expandedPart : null;
+  const DRAWER_FIELDS: { prop: TransformProp; label: string; step: number; min?: number; max?: number }[] = [
+    { prop: 'x', label: 'X', step: 1 },
+    { prop: 'y', label: 'Y', step: 1 },
+    { prop: 'scale', label: 'Scale', step: 0.05, min: 0 },
+    { prop: 'opacity', label: 'Opacity', step: 0.1, min: 0, max: 1 },
+    { prop: 'rotation', label: 'Rot°', step: 1 },
+  ];
 
   return (
     <div className={`timeline-strip${collapsed ? ' collapsed' : ''}`} data-testid="timeline">
@@ -641,6 +767,7 @@ export default function TimelineView({ iframeRef }: Props) {
               }
               data-testid={`timeline-seg-${s.id}`}
               {...(s.kind === 'step' ? { 'data-step-drop': s.stepIndex } : {})}
+              {...(s.kind === 'in' ? { 'data-step-drop': -1 } : {})}
             >
               <span className="timeline-seg-main">
                 <span className="timeline-marker">{s.marker}</span> {s.label} {s.infinite ? '∞' : `${s.duration.toFixed(2)}s`}
@@ -716,15 +843,40 @@ export default function TimelineView({ iframeRef }: Props) {
               const isPart = parts.some((p) => p.selector === key);
               const isSelected = selectedPart === key;
               return (
-                <span
-                  className={`timeline-label${isPart ? ' clickable' : ''}${isSelected ? ' selected' : ''}`}
-                  key={key}
-                  data-part={key}
-                  title={isPart ? `${key} — click to select this element (on the canvas too)` : key}
-                  style={{ height: ROW_H, lineHeight: `${ROW_H}px` }}
-                  onClick={isPart ? () => setSelectedPart(isSelected ? null : key) : undefined}
-                >
-                  {friendlyTarget(key)}
+                <span key={key} style={{ display: 'contents' }}>
+                  <span
+                    className={`timeline-label${isPart ? ' clickable' : ''}${isSelected ? ' selected' : ''}`}
+                    data-part={key}
+                    title={isPart ? `${key} — click to select this element (on the canvas too)` : key}
+                    style={{ height: ROW_H, lineHeight: `${ROW_H}px` }}
+                    onClick={isPart ? () => setSelectedPart(isSelected ? null : key) : undefined}
+                  >
+                    {/* T5 — the layer's basic animation controls live behind this arrow. */}
+                    {canDrawer(key) ? (
+                      <button
+                        className="timeline-expand"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedPart(drawerOpen === key ? null : key);
+                        }}
+                        title="Basic animation — where this element enters from (X, Y, scale, opacity, rotation)"
+                        data-testid={`timeline-expand-${key.replace(/[^\w-]/g, '')}`}
+                      >
+                        {drawerOpen === key ? '▾' : '▸'}
+                      </button>
+                    ) : (
+                      <span className="timeline-expand-spacer" aria-hidden="true" />
+                    )}
+                    {friendlyTarget(key)}
+                  </span>
+                  {drawerOpen === key && (
+                    <span
+                      className="timeline-label timeline-drawer-label"
+                      style={{ height: DRAWER_H, lineHeight: `${DRAWER_H}px` }}
+                    >
+                      ↳ enters from
+                    </span>
+                  )}
                 </span>
               );
             })}
@@ -734,23 +886,31 @@ export default function TimelineView({ iframeRef }: Props) {
           <div className="timeline-ov-scroll" ref={scrollRef}>
             <div
               className="timeline-ov-canvas"
+              ref={canvasRef}
               style={{
                 width: canvasPx,
-                height: OV_HEAD_H + overview.rowKeys.length * ROW_H,
+                height: OV_HEAD_H + overview.rowKeys.length * ROW_H + (drawerOpen ? DRAWER_H : 0),
                 paddingTop: OV_HEAD_H, // the header/ruler row is absolute — keep rows below it
               }}
             >
-              {/* Section backdrops (selection tint, hold hatch) + quarter-second ticks. */}
-              {overview.sections.map((sec) => (
-                <div
-                  key={`bg-${sec.id}`}
-                  className={`timeline-ov-secbg${sec.kind === 'hold' ? ' hold' : ''}${
-                    (sec.kind === 'hold' ? holdSelected : sec.id === phaseId) ? ' active' : ''
-                  }`}
-                  style={{ left: secOffsets.get(sec.id), width: secPx(sec) }}
-                  aria-hidden="true"
-                />
-              ))}
+              {/* Section backdrops (selection tint, hold hatch, drop highlight) + ticks. */}
+              {overview.sections.map((sec) => {
+                const dropArmed =
+                  sec.kind === 'step' &&
+                  ((regroup && regroup.overStep === sec.stepIndex) ||
+                    (barDrag && barDrag.dropStep === sec.stepIndex));
+                const backToPlay = sec.kind === 'in' && !!regroup && regroup.overStep === -1;
+                return (
+                  <div
+                    key={`bg-${sec.id}`}
+                    className={`timeline-ov-secbg${sec.kind === 'hold' ? ' hold' : ''}${
+                      (sec.kind === 'hold' ? holdSelected : sec.id === phaseId) ? ' active' : ''
+                    }${dropArmed || backToPlay ? ' drop' : ''}`}
+                    style={{ left: secOffsets.get(sec.id), width: secPx(sec) }}
+                    aria-hidden="true"
+                  />
+                );
+              })}
               {pxPerSec >= 60 &&
                 overview.sections
                   .filter((s) => s.kind !== 'hold')
@@ -798,6 +958,7 @@ export default function TimelineView({ iframeRef }: Props) {
                     }
                     data-testid={`timeline-ov-sec-${sec.id}`}
                     {...(sec.kind === 'step' ? { 'data-step-drop': sec.stepIndex } : {})}
+                    {...(sec.kind === 'in' ? { 'data-step-drop': -1 } : {})}
                   >
                     {head}
                   </button>
@@ -806,80 +967,129 @@ export default function TimelineView({ iframeRef }: Props) {
 
               {/* Part rows — bars across every section, on each section's local clock. */}
               {overview.rowKeys.map((key) => (
-                <div
-                  className={`timeline-ov-row${selectedPart === key ? ' selected' : ''}`}
-                  key={key}
-                  style={{ height: ROW_H }}
-                >
-                  {rowBars(key).map((b) => {
-                    const sec = overview.sections.find((s) => s.id === b.sectionId)!;
-                    const isReveal = b.kind === 'reveal';
-                    const mi = isReveal ? revealMemberIndex(b) : 0;
-                    const left = (secOffsets.get(b.sectionId) ?? 0) + b.start * pxPerSec;
-                    const verb = isReveal
-                      ? 'reveal'
-                      : actionLabel({ kind: b.kind as TimelineTween['kind'], props: b.props });
-                    const canDrag = b.editable && (isReveal || b.firstMember);
-                    const groupable = isReveal && model.steps[sec.stepIndex!]?.groupable;
-                    return (
-                      <div
-                        key={`${b.sectionId}-${b.tweenIndex}-${mi}-${b.firstMember ? 'f' : 'm'}`}
-                        className={`timeline-bar ${isReveal ? 'to' : b.kind}${canDrag ? ' editable' : ''}${b.dragging ? ' dragging' : ''}`}
-                        style={{
-                          left,
-                          width: b.kind === 'set' ? undefined : Math.max(6, b.span * pxPerSec),
-                        }}
-                        title={
-                          b.kind === 'set'
-                            ? `instant set · ${b.props.join(', ')}`
-                            : `${verb || 'animate'}${b.props.length ? ` (${b.props.join(', ')})` : ''} · ${b.start.toFixed(2)}–${(b.start + b.span).toFixed(2)}s${
-                                groupable
-                                  ? ' — drag onto another » card to move it to that press, edge to stretch'
-                                  : canDrag
-                                    ? ' — drag to retime, edge to stretch'
-                                    : ''
-                              }`
-                        }
-                        data-testid={
-                          isReveal
-                            ? `timeline-bar-${b.sectionId}-r${mi}`
-                            : b.firstMember
-                              ? `timeline-bar-${b.sectionId}-${b.tweenIndex}`
-                              : undefined
-                        }
-                        onPointerDown={
-                          !canDrag
-                            ? undefined
-                            : groupable
-                              ? (e) => startRegroup(e, b.rowKey, sec.stepIndex!)
-                              : isReveal
-                                ? (e) => startBarDrag(e, b.sectionId, b.tweenIndex, 'resize', { start: b.raw.start, duration: b.raw.span })
-                                : (e) => startBarDrag(e, b.sectionId, b.tweenIndex, 'move', { start: b.raw.start, duration: b.raw.span })
-                        }
-                        onPointerMove={(e) => { moveBarDrag(e); moveRegroup(e); }}
-                        onPointerUp={() => { endBarDrag(); endRegroup(); }}
-                        onPointerCancel={() => { setBarDrag(null); setRegroup(null); }}
-                      >
-                        {b.kind !== 'set' && (b.firstMember || isReveal) && (
-                          <span className="timeline-bar-verb" aria-hidden="true">{verb}</span>
-                        )}
-                        {canDrag && b.kind !== 'set' && (
-                          <span
-                            className="timeline-bar-handle"
-                            data-testid={
-                              isReveal
-                                ? `timeline-handle-${b.sectionId}-r${mi}`
-                                : `timeline-handle-${b.sectionId}-${b.tweenIndex}`
-                            }
-                            onPointerDown={(e) =>
-                              startBarDrag(e, b.sectionId, b.tweenIndex, 'resize', { start: b.raw.start, duration: b.raw.span })
-                            }
-                          />
-                        )}
+                <span key={key} style={{ display: 'contents' }}>
+                  <div
+                    className={`timeline-ov-row${selectedPart === key ? ' selected' : ''}`}
+                    style={{ height: ROW_H }}
+                  >
+                    {rowBars(key).map((b) => {
+                      const sec = overview.sections.find((s) => s.id === b.sectionId)!;
+                      const isReveal = b.kind === 'reveal';
+                      const left = (secOffsets.get(b.sectionId) ?? 0) + b.start * pxPerSec;
+                      const verb = isReveal
+                        ? 'reveal'
+                        : actionLabel({ kind: b.kind as TimelineTween['kind'], props: b.props });
+                      const canDrag = b.editable;
+                      const groupable = isReveal && model.steps[sec.stepIndex!]?.groupable;
+                      const barRef = {
+                        sectionId: b.sectionId,
+                        tweenIndex: b.tweenIndex,
+                        member: b.member,
+                        multiTarget: isMultiTarget(b),
+                        selector: b.rowKey,
+                      };
+                      const barTestId = isReveal
+                        ? `timeline-bar-${b.sectionId}-r${b.member}`
+                        : b.firstMember
+                          ? `timeline-bar-${b.sectionId}-${b.tweenIndex}`
+                          : `timeline-bar-${b.sectionId}-${b.tweenIndex}-m${b.member}`;
+                      return (
+                        <div
+                          key={`${b.sectionId}-${b.tweenIndex}-${b.member}`}
+                          className={`timeline-bar ${isReveal ? 'to' : b.kind}${canDrag ? ' editable' : ''}${b.dragging ? ' dragging' : ''}`}
+                          style={{
+                            left,
+                            width: b.kind === 'set' ? undefined : Math.max(6, b.span * pxPerSec),
+                          }}
+                          title={
+                            b.kind === 'set'
+                              ? `instant set · ${b.props.join(', ')}`
+                              : `${verb || 'animate'}${b.props.length ? ` (${b.props.join(', ')})` : ''} · ${b.start.toFixed(2)}–${(b.start + b.span).toFixed(2)}s${
+                                  groupable
+                                    ? ' — drag onto a » card or the entrance to change when it appears, edge to stretch'
+                                    : canDrag
+                                      ? ' — drag to retime (or onto a » press to reveal it there), edges to stretch either end'
+                                      : ''
+                                }`
+                          }
+                          data-testid={barTestId}
+                          onPointerDown={
+                            !canDrag
+                              ? undefined
+                              : groupable
+                                ? (e) => startRegroup(e, b.rowKey, sec.stepIndex!)
+                                : isReveal
+                                  ? (e) => startBarDrag(e, barRef, 'resize', { start: b.raw.start, duration: b.raw.span })
+                                  : (e) => startBarDrag(e, barRef, 'move', { start: b.raw.start, duration: b.raw.span })
+                          }
+                          onPointerMove={(e) => { moveBarDrag(e); moveRegroup(e); }}
+                          onPointerUp={() => { endBarDrag(); endRegroup(); }}
+                          onPointerCancel={() => { setBarDrag(null); setRegroup(null); }}
+                        >
+                          {b.kind !== 'set' && (b.firstMember || isReveal) && (
+                            <span className="timeline-bar-verb" aria-hidden="true">{verb}</span>
+                          )}
+                          {/* Left edge — move the START, the end stays pinned (phase bars only:
+                              a reveal's start belongs to its press). */}
+                          {canDrag && b.kind !== 'set' && !isReveal && (
+                            <span
+                              className="timeline-bar-handle-left"
+                              data-testid={`timeline-handle-left-${b.sectionId}-${b.tweenIndex}${b.firstMember ? '' : `-m${b.member}`}`}
+                              onPointerDown={(e) =>
+                                startBarDrag(e, barRef, 'resize-start', { start: b.raw.start, duration: b.raw.span })
+                              }
+                            />
+                          )}
+                          {canDrag && b.kind !== 'set' && (
+                            <span
+                              className="timeline-bar-handle"
+                              data-testid={
+                                isReveal
+                                  ? `timeline-handle-${b.sectionId}-r${b.member}`
+                                  : `timeline-handle-${b.sectionId}-${b.tweenIndex}${b.firstMember ? '' : `-m${b.member}`}`
+                              }
+                              onPointerDown={(e) =>
+                                startBarDrag(e, barRef, 'resize', { start: b.raw.start, duration: b.raw.span })
+                              }
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* T5 — the expanded layer's basic animation controls (sticky, not on the
+                      time axis: these are properties, not bars). */}
+                  {drawerOpen === key && (
+                    <div className="timeline-ov-row timeline-drawer" style={{ height: DRAWER_H }}>
+                      <div className="timeline-drawer-fields">
+                        {DRAWER_FIELDS.map((f) => {
+                          const value = drawerFor(key).values[f.prop];
+                          return (
+                            <label className="timeline-drawer-field" key={f.prop}>
+                              <span>{f.label}</span>
+                              <input
+                                type="number"
+                                key={`${key}-${f.prop}-${value}`}
+                                defaultValue={value}
+                                step={f.step}
+                                min={f.min}
+                                max={f.max}
+                                data-testid={`timeline-from-${f.prop}`}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                                }}
+                                onBlur={(e) => {
+                                  const v = Number(e.currentTarget.value);
+                                  if (Number.isFinite(v) && v !== value) setEnterFrom(key, f.prop, v);
+                                }}
+                              />
+                            </label>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  )}
+                </span>
               ))}
 
               {/* The playhead — travels the whole strip through Play, every press, and Stop. */}
@@ -908,7 +1118,16 @@ export default function TimelineView({ iframeRef }: Props) {
                     : `timeline-appears-p${press}-${model.steps[press].targets.indexOf(key)}`;
               const chip = easeChipFor(key);
               return (
-                <div className="timeline-ov-gutter-row" key={key} style={{ height: ROW_H }}>
+                <div
+                  className="timeline-ov-gutter-row"
+                  key={key}
+                  // The drawer's sub-row lives in the canvas; box-sizing keeps the selects
+                  // centered in the top ROW_H while the row grows underneath.
+                  style={{
+                    height: drawerOpen === key ? ROW_H + DRAWER_H : ROW_H,
+                    paddingBottom: drawerOpen === key ? DRAWER_H : 0,
+                  }}
+                >
                   {eligible ? (
                     <select
                       className="timeline-appears"
@@ -996,10 +1215,23 @@ export default function TimelineView({ iframeRef }: Props) {
         </p>
       )}
 
-      {/* T3.3 — the line chip following the pointer while regrouping. */}
+      {/* The chip following the pointer while a drag changes WHEN a part appears. */}
       {regroup && (
         <div className="regroup-ghost" style={{ left: regroup.x + 10, top: regroup.y - 24 }}>
-          {friendlyTarget(regroup.target)} → {regroup.overStep === null ? 'drop on a » card' : regroup.overStep === model.steps.length ? 'a new press' : `press ${regroup.overStep + 1}`}
+          {friendlyTarget(regroup.target)} →{' '}
+          {regroup.overStep === null
+            ? 'drop on a » card (or the entrance)'
+            : regroup.overStep === -1
+              ? 'appears with ▶ Play'
+              : regroup.overStep === model.steps.length
+                ? 'a new press'
+                : `press ${regroup.overStep + 1}`}
+        </div>
+      )}
+      {barDrag && barDrag.dropStep !== null && (
+        <div className="regroup-ghost" style={{ left: barDrag.x + 10, top: barDrag.y - 24 }}>
+          {friendlyTarget(barDrag.selector)} →{' '}
+          {barDrag.dropStep === model.steps.length ? 'a new press' : `press ${barDrag.dropStep + 1}`}
         </div>
       )}
     </div>

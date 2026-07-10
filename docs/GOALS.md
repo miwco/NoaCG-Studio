@@ -472,6 +472,26 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       timelineModel.buildOverview = the pure matrix derivation. E2E: overview structure,
       zoom scaling (hold fixed), header-click selection; the whole regroup/retime suite
       re-pinned on overview geometry (bars scroll into view in narrow panes).
+- [x] **T5 independent layers + basic per-layer animation (2026-07-10, third tester round)** —
+      the interaction rethink the tester asked for, as ONE coherent drag model:
+      (1) layers edit INDEPENDENTLY — dragging any member of a joint multi-target tween
+      splits it into per-target calls first (`splitTween`: exact stagger offsets become
+      explicit positions, phase length unchanged) so only the grabbed layer retimes;
+      (2) bars resize from BOTH edges (left handle moves the start, end pinned);
+      (3) dragging a bar ACROSS sections moves WHEN the part appears — entrance bar onto a
+      » press assigns it there, reveal bar onto the entrance un-assigns — all through the
+      canvas-shared `changePartPress`, with section bodies as drop zones and a ghost chip
+      naming the destination (dropping outside a bar's section can never stretch a phase);
+      (4) each layer row's ▸ arrow opens the ENTERS-FROM drawer: X / Y / Scale / Opacity /
+      Rotation from-values that settle to the design position (`patchTweenVars` edits
+      from/to literals minimally, `insertPartTween` gives partless layers a tween) — the
+      deliberately small basic-animation set (slide-ins etc.), NOT a keyframe system (the
+      future Flow mode owns advanced logic); (5) select options painted explicitly
+      (color-scheme alone failed on the tester's Chromium — white popup, grey text) and
+      the timeline selects go solid/full-contrast; clicking a bar (without dragging)
+      selects the element, extending the canvas↔code↔timeline sync. E2E: split-on-drag,
+      both-edge resize, drop-to-press round-trip, drawer literal round-trip, explicit
+      option colors.
 - [x] **W4.1 the canvas selection model (2026-07-09)** — click a structural element in the
       preview to select it: registry-backed hit-testing (`getTemplateParts` selectors via an
       elementFromPoint closest-ancestor walk, rect-containment fallback for pointer-events:

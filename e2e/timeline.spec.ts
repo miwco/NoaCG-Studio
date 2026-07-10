@@ -38,9 +38,9 @@ test('timeline strip lives under the preview and renders the preset structure', 
   // The overview: one strip, part rows spanning every section (set-only rows dropped).
   const labels = timeline.locator('.timeline-ov-labels .timeline-label');
   await expect(labels).toHaveCount(3);
-  await expect(labels.nth(0)).toHaveText('Accent line');
-  await expect(labels.nth(1)).toHaveText('Name');
-  await expect(labels.nth(2)).toHaveText('Title');
+  await expect(labels.nth(0)).toContainText('Accent line'); // (labels carry the ▸ drawer arrow)
+  await expect(labels.nth(1)).toContainText('Name');
+  await expect(labels.nth(2)).toContainText('Title');
   // The section chain reads the playout story: In · hold · Out (no steps yet).
   await expect(timeline.getByTestId('timeline-ov-sec-in')).toContainText('In');
   await expect(timeline.getByTestId('timeline-ov-sec-hold')).toContainText('hold');
@@ -145,14 +145,14 @@ test('T2: stretching a bar rewrites the duration literal in the marked region', 
   await expect(inTab).toContainText('In 0.95s');
 });
 
-test('T2: moving a bar writes an explicit start position', async ({ page }) => {
-  await createHairline(page); // line-reveal: bar 2 = the staggered lines, starts at 0.30
-  // Drag the lines bar (its first member row) to the right (later start).
-  const bar = page.getByTestId('timeline-bar-in-2');
+test('T2/T5.1: dragging ONE layer of a joint tween splits it and retimes only that layer', async ({ page }) => {
+  await createHairline(page); // line-reveal: Name+Title share one staggered tween at 0.30
+  // Drag TITLE's bar (the joint tween's second member) to the right.
+  const bar = page.getByTestId('timeline-bar-in-2-m1');
   const before = (await bar.boundingBox())!;
-  await page.mouse.move(before.x + 10, before.y + before.height / 2);
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
   await page.mouse.down();
-  await page.mouse.move(before.x + 10 + 100, before.y + before.height / 2, { steps: 6 });
+  await page.mouse.move(before.x + before.width / 2 + 100, before.y + before.height / 2, { steps: 6 });
   await page.mouse.up();
 
   await page.waitForTimeout(650);
@@ -160,15 +160,114 @@ test('T2: moving a bar writes an explicit start position', async ({ page }) => {
     .frameLocator('iframe.preview-frame')
     .locator('body')
     .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
-  // The '-=0.15' overlap became an absolute `N / animSpeed` position on the lines tween.
-  const linesCall = js.match(/tl\.fromTo\(\['#f0', '#f1'\][\s\S]*?\);/)?.[0] ?? '';
-  expect(linesCall).not.toContain("'-=");
-  expect(linesCall).toMatch(/,\s*[\d.]+ \/ animSpeed/);
-  // And the graphic still plays to a settled visible state with the new choreography.
+  // The joint ENTRANCE call became per-layer calls with explicit positions (the exit's
+  // joint tween is deliberately untouched — only the dragged phase splits)…
+  expect(js).not.toContain("tl.fromTo(['#f0', '#f1']");
+  const nameCall = js.match(/tl\.fromTo\('#f0'[\s\S]*?\);/)?.[0] ?? '';
+  const titleCall = js.match(/tl\.fromTo\('#f1'[\s\S]*?\);/)?.[0] ?? '';
+  expect(nameCall).toMatch(/,\s*0\.3 \/ animSpeed/); // Name kept its exact old start
+  const titleStart = Number(titleCall.match(/,\s*([\d.]+) \/ animSpeed/)?.[1] ?? 0);
+  expect(titleStart).toBeGreaterThan(0.5); // …and only Title moved (0.40 + ~drag)
+  // The stagger is gone (each layer owns its start) and nothing staggers jointly anymore.
+  expect(nameCall).not.toContain('stagger');
+  // The graphic still plays to a settled visible state with the new choreography.
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
     .poll(async () => frame(page).locator('.lower-third').evaluate((el) => getComputedStyle(el).opacity))
     .toBe('1');
+});
+
+test('T5.2: a bar resizes from its start edge — the end stays pinned', async ({ page }) => {
+  await createHairline(page); // the accent draws 0.00–0.45s
+  const handle = page.getByTestId('timeline-handle-left-in-1');
+  const hb = (await handle.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + hb.width / 2 + 60, hb.y + hb.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(650);
+  const js = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+  const accent = js.match(/tl\.fromTo\('\.lower-third-accent'[\s\S]*?\);/)?.[0] ?? '';
+  const start = Number(accent.match(/,\s*([\d.]+) \/ animSpeed/)?.[1] ?? -1);
+  const duration = Number(accent.match(/duration:\s*([\d.]+)\s*\/\s*animSpeed/)?.[1] ?? -1);
+  expect(start).toBeGreaterThan(0); // the start moved right…
+  expect(duration).toBeLessThan(0.45); // …the duration compensated…
+  expect(Math.round((start + duration) * 100) / 100).toBe(0.45); // …and the END stayed pinned.
+});
+
+test('T5.3: dragging an entrance bar onto a » press reveals that layer there instead', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('timeline-seg-new').click(); // steps on: Title → press 1
+  await page.waitForTimeout(650);
+  const templateJs = async () =>
+    page
+      .frameLocator('iframe.preview-frame')
+      .locator('body')
+      .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+
+  // Drag the ACCENT's entrance bar onto the » 1 card — it should join that press, not
+  // retime the entrance.
+  const bar = page.getByTestId('timeline-bar-in-1');
+  await bar.scrollIntoViewIfNeeded();
+  const bb = (await bar.boundingBox())!;
+  const card = (await page.getByTestId('timeline-seg-step-2').boundingBox())!;
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(card.x + card.width / 2, card.y + card.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(650);
+  let js = await templateJs();
+  expect(js).toContain("var stepGroups = [['#f1', '.lower-third-accent']];");
+  expect(js).toContain("'.lower-third-accent': 'rise'");
+
+  // And drag its reveal bar back onto the entrance card — appears with ▶ Play again.
+  const reveal = page.getByTestId('timeline-bar-step-2-r1');
+  await reveal.scrollIntoViewIfNeeded();
+  const rb = (await reveal.boundingBox())!;
+  const inCard = (await page.getByTestId('timeline-seg-in').boundingBox())!;
+  await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(inCard.x + inCard.width / 2, inCard.y + inCard.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(650);
+  js = await templateJs();
+  expect(js).toContain("var stepGroups = [['#f1']];");
+  expect(js).toMatch(/tl\.fromTo\('\.lower-third-accent'/); // drawn by the entrance again
+});
+
+test('T5.4: the layer drawer writes an enters-from transform as clean fromTo literals', async ({ page }) => {
+  await createHairline(page);
+  // Expand the Name row's basic animation controls.
+  await page.getByTestId('timeline-expand-f0').click();
+  const x = page.getByTestId('timeline-from-x');
+  await expect(x).toHaveValue('0');
+  await x.fill('-40');
+  await x.press('Enter');
+  await page.waitForTimeout(650);
+  const js = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+  // Name got its OWN tween (split from the joint lines tween) with the from/to pair.
+  const nameCall = js.match(/tl\.fromTo\('#f0'[\s\S]*?\);/)?.[0] ?? '';
+  expect(nameCall).toContain('x: -40');
+  expect(nameCall).toMatch(/\bx: 0\b/); // settles at the design position
+  const titleCall = js.match(/tl\.fromTo\('#f1'[\s\S]*?\);/)?.[0] ?? '';
+  expect(titleCall).not.toContain('x: -40'); // the sibling layer is untouched
+  // The drawer reads the value back from the code.
+  await expect(page.getByTestId('timeline-from-x')).toHaveValue('-40');
+  // Setting it back to 0 removes the pair again — minimal code.
+  await page.getByTestId('timeline-from-x').fill('0');
+  await page.getByTestId('timeline-from-x').press('Enter');
+  await page.waitForTimeout(650);
+  const cleaned = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('body')
+    .evaluate(() => document.getElementById('spx-template-js')?.textContent ?? '');
+  expect(cleaned.match(/tl\.fromTo\('#f0'[\s\S]*?\);/)?.[0] ?? '').not.toContain('x: -40');
 });
 
 test('T2.5: the ease picker writes and clears a per-tween ease literal', async ({ page }) => {
@@ -516,6 +615,17 @@ test('dark color-scheme reaches the app root and the preview stays transparent',
     .locator('body')
     .evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(bodyBg).toBe('rgba(0, 0, 0, 0)');
+  // Select options are painted EXPLICITLY — some Windows/Chromium builds ignore
+  // color-scheme for the native popup and rendered light-grey text on white.
+  const option = await page
+    .locator('.timeline-ease option')
+    .first()
+    .evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { bg: s.backgroundColor, color: s.color };
+    });
+  expect(option.bg).toBe('rgb(20, 25, 34)'); // --bg-2
+  expect(option.color).toBe('rgb(232, 237, 242)'); // --text
 });
 
 test('the strip can turn step reveal off without the Motion tab detour', async ({ page }) => {

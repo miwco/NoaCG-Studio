@@ -244,17 +244,26 @@ src/
                  zoom +/- buttons fit once per template.name), the hold a fixed hatched
                  break, registry-part rows spanning every section (multi-target tweens
                  expand onto member rows at their stagger offsets; set()-only rows drop);
-                 every bar edits in place (drag/stretch via patchTweenTiming/
-                 patchStepTiming; reveal bars drag onto » cards/headers to regroup via
-                 patchStepRegroup); the gutter has each part's "appears on press" menu
-                 (assign/unassign re-emit via applyStepChain) + the selected moment's
-                 ease chips (patchTweenEase/patchStepEase); ●On air = pseudo-card
-                 (phaseId 'hold'), click parks on the settled look; »+Step disables with
-                 a tooltip reason; an unparsable marked region gets an honest one-liner
-                 (blank/imported templates get no strip) — one undoable apply +
-                 auto-replay per edit, the code always the truth; row LABELS are the
-                 shared-selection handles: clicking one selects that element on the
-                 canvas too (store selectedPart), the selected row washes amber),
+                 every bar edits in place AND independently: dragging a member of a
+                 joint multi-target tween SPLITS it per target first (splitTween) so
+                 only that layer retimes; bars resize from BOTH edges (left = start
+                 with the end pinned); dragging any eligible bar across sections moves
+                 WHEN the part appears (entrance bar → » press = assign, reveal bar →
+                 entrance = unassign — all through stepAssign.changePartPress, section
+                 bodies + cards are drop zones, dragged bars get pointer-events:none so
+                 hit-testing sees through); the gutter has each part's "appears on
+                 press" menu + the selected moment's ease chips (patchTweenEase/
+                 patchStepEase); each part row's ▸ arrow opens the ENTERS-FROM drawer
+                 (X/Y/scale/opacity/rotation from-values settling to identity —
+                 patchTweenVars edits from/to literals, insertPartTween adds a tween to
+                 partless layers; press-assigned parts and the root have no drawer);
+                 ●On air = pseudo-card (phaseId 'hold'), click parks on the settled
+                 look; »+Step disables with a tooltip reason; an unparsable marked
+                 region gets an honest one-liner (blank/imported templates get no
+                 strip) — one undoable apply + auto-replay per edit, the code always
+                 the truth; row LABELS are the shared-selection handles: clicking one
+                 (or a bar, without dragging) selects that element on the canvas too
+                 (store selectedPart), the selected row washes amber),
                  SidePanel (six tabs: Data / Control / Style / Motion / AI / Export),
                  SampleDataPanel (sample values + add-field), ControlPanel (operator view from
                  control/ engine; live-drives the preview via store.sendControl → simulator;
