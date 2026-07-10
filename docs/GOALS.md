@@ -584,7 +584,7 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       blur-out to()), and splitTween still separates a joint tween first so only the grabbed
       layer blurs. The simulator's reset already clears leaked filter, so blur leaves cleanly.
       E2E: the drawer exposes blur on both cards and an exit blur round-trips + resets.
-- [ ] **T7 Timeline v2 — the step timeline (planned, awaiting ratification)** — the
+- [ ] **T7 Timeline v2 — the step timeline (RATIFIED 2026-07-10, in progress)** — the
       CapCut-style rethink: steps as clips, a real playhead/ruler, an Inspector panel,
       proper keyframes, presets as keyframe generators with In/Out/Both. The audit
       concluded the parse-by-construction patcher architecture is at end of life for this
