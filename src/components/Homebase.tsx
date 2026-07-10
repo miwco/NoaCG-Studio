@@ -25,8 +25,8 @@ export default function Homebase({ email, onClose }: Props) {
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const openGallery = useTemplateStore((s) => s.openGallery);
 
-  const packets = useMemo(loadPackets, []);
-  const looks = useMemo(loadLooks, []);
+  const packets = useMemo(() => loadPackets(), []);
+  const looks = useMemo(() => loadLooks(), []);
   const rows = useMemo<HomeRow[]>(
     () =>
       packets

@@ -244,7 +244,7 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
   // A code edit can remove the selected element — selection follows the registry.
   useEffect(() => {
     if (selected && !parts.some((p) => p.selector === selected)) setSelected(null);
-  }, [parts, selected]);
+  }, [parts, selected, setSelected]);
 
   // Track the selected element's on-screen rect. rAF on purpose: animations, preview
   // rebuilds, and the scale handle all move the element, and the loop re-resolves the
@@ -288,7 +288,7 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selected]);
+  }, [selected, setSelected]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (editing) return; // the editor overlay handles its own events

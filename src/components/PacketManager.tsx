@@ -128,9 +128,8 @@ export default function PacketManager({ onClose }: Props) {
 
   const saveCurrent = () => {
     let packetId = targetPacket;
-    let list = packets;
     if (packetId === 'new') {
-      list = createPacket(newPacketName || 'My show');
+      const list = createPacket(newPacketName || 'My show');
       packetId = list[list.length - 1].id;
       setTargetPacket(packetId);
       setNewPacketName('');

@@ -446,7 +446,7 @@ export function patchTweenEase(
 ): string | null {
   const loc = locateCall(js, phaseId, tweenIndex);
   if (!loc) return null;
-  let call = loc.call;
+  const call = loc.call;
 
   if (ease === null) {
     // Remove a quoted per-tween override; `ease: easeIn/easeOut` refs ARE the default.

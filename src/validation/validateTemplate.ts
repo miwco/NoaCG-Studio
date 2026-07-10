@@ -87,7 +87,6 @@ function classifyRefs(html: string, css: string): { external: string[]; absolute
 /** Check the template JS compiles (catches obvious syntax errors). */
 function jsCompiles(js: string): string | null {
   try {
-    // eslint-disable-next-line no-new-func
     new Function(js);
     return null;
   } catch (e) {

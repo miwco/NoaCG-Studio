@@ -334,7 +334,7 @@ for (const [id, brief] of selected) {
       `${OUT}/${id}-${key}.code.txt`,
       `=== index.html ===\n${tpl.html}\n\n=== template.css ===\n${tpl.css}\n\n=== template.js ===\n${tpl.js}\n`,
     );
-    let overlaps = [];
+    let overlaps;
     try {
       overlaps = await shoot(key, id, tpl);
     } catch (e) {

@@ -45,7 +45,8 @@ keep it checked off as work lands).
 ```bash
 npm install
 npm run dev      # Vite dev server (landing at /, THE EDITOR AT /app)
-npm run build    # tsc (typecheck) && vite build -> dist/   <-- run this after changes; it's the CI gate
+npm run build    # tsc && eslint && vite build -> dist/   <-- run this after changes; it's the CI gate
+npm run lint     # eslint . --max-warnings 0 (also part of build; config in eslint.config.js)
 npm run preview  # serve the production build
 ```
 
@@ -179,7 +180,8 @@ with `resetSampleData: true` so a new project starts from its own field defaults
 
 ## Verifying changes
 
-Always `npm run build` (typecheck + build) after changes.
+Always `npm run build` (typecheck + lint + build) after changes. The tree stays lint-clean:
+fix findings properly rather than sprinkling eslint-disable comments.
 
 - **UI flows -> use Playwright.** Verify user-facing flows with the E2E suite in `e2e/` (specs
   drive the real dev server). Run `npm run test:e2e`. Add a spec for any new user-facing flow
