@@ -1619,6 +1619,19 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   box-shadow: 0 0 6px rgba(232, 237, 242, 0.35);
   pointer-events: none;
 }
+/* The playhead's grab cap — a flag in the ruler, kinder to grab than the 1px line. */
+.tlv2-playhead-cap {
+  position: absolute;
+  top: 0;
+  width: 11px;
+  height: 12px;
+  transform: translateX(-6px);
+  background: rgba(232, 237, 242, 0.9);
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.tlv2-playhead-cap:hover { background: var(--amber); }
 .tlv2-side { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; align-items: center; }
 .tlv2-time { font-size: 10px; color: var(--text-dim); }
 /* Phase 6 — steps as clips: the duration handle, the context menu, the hold popover. */
@@ -1760,6 +1773,20 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .inspector-kf:hover { color: var(--amber); background: transparent; }
 .inspector-kf.armed { color: var(--amber); }
 .inspector-kf.at-kf { text-shadow: 0 0 6px rgba(246, 166, 35, 0.9); }
+/* ◀ ▶ — jump to the property's previous/next keyframe (the CapCut/AE convention). */
+.inspector-kf-nav {
+  background: transparent;
+  border: none;
+  padding: 0 1px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.inspector-kf-nav:hover { color: var(--amber); background: transparent; }
+/* Armed labels scrub: drag horizontally to change the value. */
+.inspector-row-label.scrubbable { cursor: ew-resize; touch-action: none; user-select: none; }
+.inspector-row-label.scrubbable:hover { color: var(--text); }
 /* Phase 5 — the Animations tab's preset row: style · In/Out/Both · Apply. */
 .inspector-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .inspector-preset-select {

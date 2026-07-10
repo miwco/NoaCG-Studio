@@ -190,6 +190,37 @@ export function setLayerActivation(
   return next;
 }
 
+/** Set (or clear — back to the step's default) the ease INTO every property keyframe of a
+ *  layer at one time. The aggregate diamond's ease menu: one moment, one curve. */
+export function setKeyframeEase(
+  data: AnimData,
+  stepIndex: number,
+  selector: string,
+  time: number,
+  ease: string | null,
+): AnimData | null {
+  const next = clone(data);
+  const tracks = next.steps[stepIndex]?.layers[selector];
+  if (!tracks) return null;
+  let touched = false;
+  for (const kfs of Object.values(tracks)) {
+    const kf = kfs.find((k) => Math.abs(k.time - time) < EPS);
+    if (!kf) continue;
+    if (ease === null) delete kf.ease;
+    else kf.ease = ease;
+    touched = true;
+  }
+  return touched ? next : null;
+}
+
+/** Set a step's DEFAULT ease (what keyframes without their own ease inherit). */
+export function setStepEase(data: AnimData, stepIndex: number, ease: string): AnimData | null {
+  if (!data.steps[stepIndex] || data.steps[stepIndex].ease === ease) return null;
+  const next = clone(data);
+  next.steps[stepIndex].ease = ease;
+  return next;
+}
+
 // ── Phase 6: steps as clips ──────────────────────────────────────────────────
 
 /** The latest keyframe time in a step (0 when it animates nothing). */

@@ -416,6 +416,84 @@ test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({
   expect(Math.min(...after)).toBeCloseTo(Math.min(...before) + 0.05, 2);
 });
 
+test('v2 polish: the playhead cap drags; the view follows playback when zoomed in', async ({ page }) => {
+  await createHairline(page);
+  // Zoom far in so the ribbon outgrows its viewport, then Play: the scroll follows.
+  for (let i = 0; i < 6; i++) await page.getByTestId('tlv2-zoom-in').click();
+  const scrollLeft = () => page.locator('.tlv2-scroll').evaluate((el) => el.scrollLeft);
+  expect(await scrollLeft()).toBe(0);
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await expect.poll(scrollLeft, { timeout: 4000 }).toBeGreaterThan(50);
+
+  // The cap is a real grab handle: dragging it scrubs (and never writes history).
+  const historyLen = () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      return useTemplateStore.getState().history.length;
+    });
+  const before = await historyLen();
+  const cap = (await page.getByTestId('tlv2-playhead-cap').boundingBox())!;
+  await page.mouse.move(cap.x + cap.width / 2, cap.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(cap.x + cap.width / 2 - 80, cap.y + 4, { steps: 6 });
+  await page.mouse.up();
+  const parked = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().playhead;
+  });
+  expect(parked).not.toBeNull();
+  expect(await historyLen()).toBe(before);
+});
+
+test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label scrubbing', async ({ page }) => {
+  test.setTimeout(60_000);
+  await createHairline(page);
+  await page.getByTestId('toggle-inspector').click();
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+
+  // Right-clicking a diamond opens its ease menu — the curve INTO that keyframe.
+  await page.getByTestId('tlv2-kf-f0').first().click({ button: 'right' });
+  await page.getByTestId('tlv2-kf-ease').selectOption('back.out(1.6)');
+  await page.waitForTimeout(400);
+  let data = await animData(page);
+  const eased = data!.steps[0].layers['#f0'].yPercent.find((k: { ease?: string }) => k.ease === 'back.out(1.6)');
+  expect(eased).toBeTruthy();
+
+  // The clip menu carries the step's DEFAULT ease.
+  await page.getByTestId('tlv2-clip-0').click({ button: 'right' });
+  await page.getByTestId('tlv2-menu-ease').selectOption('power2.out');
+  await page.waitForTimeout(400);
+  data = await animData(page);
+  expect(data!.steps[0].ease).toBe('power2.out');
+
+  // ◀ jumps the playhead to the property's previous keyframe.
+  const clip = (await page.getByTestId('tlv2-clip-0').boundingBox())!;
+  await page.mouse.click(clip.x + clip.width * 0.65, clip.y + 40); // park mid-step
+  await page.getByTestId('inspector-prev-yPercent').click();
+  const speed = data!.speed || 1;
+  const kfTimes = data!.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time / speed);
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const { useTemplateStore } = await import('/src/store/templateStore.ts');
+        return useTemplateStore.getState().playhead?.t ?? -1;
+      }),
+    )
+    .toBeCloseTo(Math.max(...kfTimes.filter((t: number) => t < 0.6)), 1);
+
+  // Dragging the LABEL scrubs the armed value and keys it at the playhead on release.
+  const label = page.locator('.inspector-row-label.scrubbable', { hasText: 'Y (mask %)' });
+  const lb = (await label.boundingBox())!;
+  await page.mouse.move(lb.x + 10, lb.y + lb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(lb.x + 10 + 40, lb.y + lb.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  data = await animData(page);
+  const values = data!.steps[0].layers['#f0'].yPercent.map((k: { value: number | string }) => k.value);
+  expect(values.some((v: number | string) => v === 40 || v === 150)).toBe(true); // 0+40 or 110+40
+});
+
 test('v2: legacy categories keep the classic strip, can peek at v2, and convert on demand', async ({ page }) => {
   // Info cards have not migrated: classic is their default editing surface.
   await page.goto('/app');

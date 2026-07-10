@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { getTemplateParts } from '../model/structure';
 import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
@@ -52,8 +52,11 @@ export default function Inspector() {
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const requestReplay = useTemplateStore((s) => s.requestReplay);
   const sendScrub = useTemplateStore((s) => s.sendScrub);
+  const setPlayhead = useTemplateStore((s) => s.setPlayhead);
   const selectedPart = useTemplateStore((s) => s.selectedPart);
   const playhead = useTemplateStore((s) => s.playhead);
+  // A label drag-scrub in progress (the familiar drag-the-label-to-change-the-value).
+  const scrubDrag = useRef<{ prop: string; startX: number; startValue: number; value: number } | null>(null);
   const [tab, setTab] = useState<'properties' | 'animations'>('properties');
   const [presetId, setPresetId] = useState<AnimPresetId | ''>('');
   const [presetPhase, setPresetPhase] = useState<'in' | 'out' | 'both'>('in');
@@ -139,6 +142,31 @@ export default function Inspector() {
     return typeof v === 'number' ? String(Math.round(v * 100) / 100) : v;
   };
 
+  /** Every keyframe moment of one property, across all steps in playout order. */
+  const kfPlaces = (track: string): { step: number; tRel: number }[] => {
+    if (!data) return [];
+    const out: { step: number; tRel: number }[] = [];
+    data.steps.forEach((step, si) => {
+      for (const kf of step.layers[part.selector]?.[track] ?? []) out.push({ step: si, tRel: kf.time });
+    });
+    return out;
+  };
+
+  /** ◀ ▶ — jump the playhead to a property's previous/next keyframe (the familiar
+   *  navigation arrows beside the diamond). */
+  const jumpKf = (track: string, dir: -1 | 1) => {
+    if (!data || !at) return;
+    const places = kfPlaces(track);
+    const target =
+      dir === -1
+        ? [...places].reverse().find((p) => p.step < at.step || (p.step === at.step && p.tRel < at.tRel - 0.005))
+        : places.find((p) => p.step > at.step || (p.step === at.step && p.tRel > at.tRel + 0.005));
+    if (!target) return;
+    const t = target.tRel / speed;
+    setPlayhead({ step: target.step, t });
+    sendScrub(phaseIdOf(data, target.step), t);
+  };
+
   return (
     <div className="inspector" data-testid="inspector">
       <div className="inspector-head">Inspector</div>
@@ -165,10 +193,49 @@ export default function Inspector() {
                 const isArmed = armed.has(row.track);
                 const atKf = kfAt(row.track);
                 const value = display(row);
+                const scrubbable = native && isArmed && value !== '—';
                 return (
                   <div className="inspector-row" key={row.prop}>
-                    <span className="inspector-row-label">{row.label}</span>
+                    <span
+                      className={`inspector-row-label${scrubbable ? ' scrubbable' : ''}`}
+                      title={scrubbable ? 'Drag left/right to change the value (keys at the playhead)' : undefined}
+                      onPointerDown={(e) => {
+                        if (!scrubbable) return;
+                        e.preventDefault();
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                        scrubDrag.current = { prop: row.prop, startX: e.clientX, startValue: Number(value), value: Number(value) };
+                      }}
+                      onPointerMove={(e) => {
+                        const d = scrubDrag.current;
+                        if (!d || d.prop !== row.prop || e.buttons !== 1) return;
+                        d.value = Math.round((d.startValue + (e.clientX - d.startX) * row.step) * 100) / 100;
+                        if (row.min !== undefined) d.value = Math.max(row.min, d.value);
+                        if (row.max !== undefined) d.value = Math.min(row.max, d.value);
+                        // Live feedback in the (uncontrolled) input; the commit lands on release.
+                        const input = (e.currentTarget as HTMLElement)
+                          .closest('.inspector-row')
+                          ?.querySelector<HTMLInputElement>('input');
+                        if (input) input.value = String(d.value);
+                      }}
+                      onPointerUp={() => {
+                        const d = scrubDrag.current;
+                        scrubDrag.current = null;
+                        if (d && d.prop === row.prop && d.value !== d.startValue) commitValue(row, d.value);
+                      }}
+                    >
+                      {row.label}
+                    </span>
                     <span className="inspector-row-edit">
+                      {native && isArmed && (
+                        <button
+                          className="inspector-kf-nav"
+                          onClick={() => jumpKf(row.track, -1)}
+                          title="Jump to this property's previous keyframe"
+                          data-testid={`inspector-prev-${row.prop}`}
+                        >
+                          ‹
+                        </button>
+                      )}
                       {native && isArmed ? (
                         <input
                           className="inspector-input"
@@ -210,6 +277,16 @@ export default function Inspector() {
                           data-testid={`inspector-kf-${row.prop}`}
                         >
                           {isArmed ? '◆' : '◇'}
+                        </button>
+                      )}
+                      {native && isArmed && (
+                        <button
+                          className="inspector-kf-nav"
+                          onClick={() => jumpKf(row.track, 1)}
+                          title="Jump to this property's next keyframe"
+                          data-testid={`inspector-next-${row.prop}`}
+                        >
+                          ›
                         </button>
                       )}
                     </span>

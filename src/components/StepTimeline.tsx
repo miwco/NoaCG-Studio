@@ -10,7 +10,10 @@ import {
   moveLayerKeyframes,
   renameStep,
   resizeStep,
+  setKeyframeEase,
+  setStepEase,
 } from '../blocks/animEdit';
+import { EASINGS } from '../model/easings';
 import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
 import { stepSeconds } from '../blocks/animEval';
 import { getTemplateParts } from '../model/structure';
@@ -138,6 +141,11 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     });
   }, [data, pxPerSec, holdW, clipDrag]);
   const canvasW = segs.length ? segs[segs.length - 1].x + segs[segs.length - 1].w : 0;
+  // Live refs for the rAF playhead tick (its effect deps deliberately exclude geometry).
+  const segsRef = useRef(segs);
+  segsRef.current = segs;
+  const pxRef = useRef(pxPerSec);
+  pxRef.current = pxPerSec;
 
   // Fit the whole playout once per template (the zoom buttons take over from there).
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -177,11 +185,22 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   const headRef = useRef(head);
   headRef.current = head;
 
+  /** Keep the playhead comfortably in view — gentle margins, no jarring jumps. */
+  const followScroll = (x: number) => {
+    const el = scrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const margin = 60;
+    if (x < el.scrollLeft + margin) el.scrollLeft = Math.max(0, x - margin);
+    else if (x > el.scrollLeft + el.clientWidth - margin) el.scrollLeft = x - el.clientWidth + margin;
+  };
+
   const scrubTo = (place: { step: number; t: number }) => {
     setHead(place);
     setPlayhead(place); // the Inspector stamps keyframes at the parked playhead
     setScrubbing(true);
     sendScrub(phaseIdOf(data, place.step), place.t);
+    const seg = segs[place.step];
+    if (seg) followScroll(seg.x + Math.min(place.t, stepSeconds(data, place.step)) * pxPerSec);
   };
 
   /** ONE undoable apply per edit, then re-park the preview at the playhead once the
@@ -237,7 +256,12 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           : active.phase === 'out' ? data.steps.length - 1
           : active.phase.startsWith('step-') ? parseInt(active.phase.slice(5), 10) - 1
           : 0;
-        if (idx >= 0 && idx < data.steps.length) setHead({ step: idx, t: active.tl.time() });
+        if (idx >= 0 && idx < data.steps.length) {
+          setHead({ step: idx, t: active.tl.time() });
+          // The view follows the playhead through the run (zoomed-in timelines scroll).
+          const seg = segsRef.current[idx];
+          if (seg) followScroll(seg.x + Math.min(active.tl.time(), stepSeconds(data, idx)) * pxRef.current);
+        }
       } else if (headRef.current.step !== 0 || headRef.current.t !== stepSeconds(data, 0)) {
         setHead({ step: 0, t: stepSeconds(data, 0) }); // idle = the settled entrance end
       }
@@ -357,19 +381,34 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     if (next) applyData(next);
   };
 
-  /** The clip context menu (Duplicate / Rename / Delete) + the hold's out-mode popover. */
+  /** The clip context menu (Duplicate / Rename / Delete / step ease), the hold's out-mode
+   *  popover, and the keyframe ease menu (right-click a diamond). */
   const [menu, setMenu] = useState<{ x: number; y: number; step: number; rename?: boolean } | null>(null);
   const [holdMenu, setHoldMenu] = useState<{ x: number; y: number } | null>(null);
+  const [kfMenu, setKfMenu] = useState<{ x: number; y: number; ref: KfRef } | null>(null);
   useEffect(() => {
-    if (!menu && !holdMenu) return;
+    if (!menu && !holdMenu && !kfMenu) return;
     const close = (e: PointerEvent) => {
       if ((e.target as HTMLElement).closest('.tlv2-menu')) return;
       setMenu(null);
       setHoldMenu(null);
+      setKfMenu(null);
     };
     window.addEventListener('pointerdown', close);
     return () => window.removeEventListener('pointerdown', close);
-  }, [menu, holdMenu]);
+  }, [menu, holdMenu, kfMenu]);
+
+  /** The ease vocabulary for one step, phase-correct: entrances settle (Out-direction
+   *  halves), the Out step leaves quickly (In-direction halves). */
+  const easeOptionsForStep = (stepIndex: number): { value: string; label: string }[] => {
+    const dir = stepIndex === data.steps.length - 1 ? 'out' : 'in';
+    const seen = new Map<string, string>();
+    for (const e of EASINGS) {
+      const value = dir === 'in' ? e.gsapIn : e.gsapOut;
+      if (!seen.has(value)) seen.set(value, e.tag === 'standard' ? e.name : `${e.name} ·${e.tag}`);
+    }
+    return [...seen.entries()].map(([value, label]) => ({ value, label }));
+  };
 
   const channelOf = (sel: string): 'mask' | 'rise' =>
     parts.find((p) => p.selector === sel)?.channel === 'mask' ? 'mask' : 'rise';
@@ -557,6 +596,15 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                       onPointerMove={moveKfDrag}
                       onPointerUp={endKfDrag}
                       onPointerCancel={() => setKfDrag(null)}
+                      onContextMenu={(e) => {
+                        if (!editable) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const ref = { key: r.key, step: d.step, tRel: d.tRel };
+                        setKfSel(ref);
+                        setSelectedPart(r.key);
+                        setKfMenu({ x: e.clientX, y: e.clientY, ref });
+                      }}
                     >
                       ◆
                     </span>
@@ -565,15 +613,35 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
               </div>
             ))}
 
-            {/* The playhead — spans ruler to rows; drag it, or click anywhere to move it. */}
+            {/* The playhead — spans ruler to rows; drag it (the cap is the grab handle),
+                or click anywhere on the ribbon to move it. */}
             <div className="tlv2-playhead" style={{ left: headX }} data-testid="tlv2-playhead" />
+            <div
+              className="tlv2-playhead-cap"
+              style={{ left: headX }}
+              title="The playhead — drag to scrub (the preview follows)"
+              data-testid="tlv2-playhead-cap"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => {
+                if (e.buttons !== 1) return;
+                e.stopPropagation();
+                const rect = (e.currentTarget as HTMLElement).closest('.tlv2-canvas')!.getBoundingClientRect();
+                const place = xToPlace(e.clientX - rect.left);
+                if (place) scrubTo(place);
+              }}
+            />
           </div>
         </div>
 
         {/* Zoom + step tools. */}
         <div className="tlv2-side">
+          {/* Deep zoom on purpose: 1000 px/s puts 50 px between 0.05 s grid ticks — enough
+              to place keyframes precisely in a 0.3 s move. */}
           <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.max(40, z / 1.3))} title="Zoom out" data-testid="tlv2-zoom-out">−</button>
-          <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.min(400, z * 1.3))} title="Zoom in" data-testid="tlv2-zoom-in">+</button>
+          <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.min(1000, z * 1.3))} title="Zoom in" data-testid="tlv2-zoom-in">+</button>
           {editable && (
             <button
               className="timeline-zoom-btn tlv2-add-step"
@@ -655,8 +723,62 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                   Delete step
                 </button>
               )}
+              {/* The step's default ease — what keyframes without their own curve inherit. */}
+              <select
+                className="tlv2-out-mode"
+                value={data.steps[menu.step]?.ease ?? ''}
+                onChange={(e) => {
+                  const next = setStepEase(data, menu.step, e.target.value);
+                  setMenu(null);
+                  if (next) applyData(next);
+                }}
+                title="The step's default ease — keyframes without their own curve follow it"
+                data-testid="tlv2-menu-ease"
+              >
+                {!easeOptionsForStep(menu.step).some((o) => o.value === data.steps[menu.step]?.ease) && (
+                  <option value={data.steps[menu.step]?.ease ?? ''} disabled>
+                    {data.steps[menu.step]?.ease}
+                  </option>
+                )}
+                {easeOptionsForStep(menu.step).map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </>
           )}
+        </div>
+      )}
+
+      {/* The keyframe's ease menu (right-click a diamond): how motion arrives INTO this
+          moment — Auto inherits the step's curve. Applies to every property keyed here. */}
+      {kfMenu && (
+        <div className="tlv2-menu" style={{ left: kfMenu.x, top: kfMenu.y }} data-testid="tlv2-kf-menu">
+          <select
+            className="tlv2-out-mode"
+            value={(() => {
+              const tracks = data.steps[kfMenu.ref.step]?.layers[kfMenu.ref.key] ?? {};
+              for (const kfs of Object.values(tracks)) {
+                const kf = kfs.find((k) => Math.abs(k.time - kfMenu.ref.tRel) < 0.005);
+                if (kf) return kf.ease ?? 'auto';
+              }
+              return 'auto';
+            })()}
+            onChange={(e) => {
+              const next = setKeyframeEase(
+                data, kfMenu.ref.step, kfMenu.ref.key, kfMenu.ref.tRel,
+                e.target.value === 'auto' ? null : e.target.value,
+              );
+              setKfMenu(null);
+              if (next) applyData(next);
+            }}
+            title="The ease INTO this keyframe — Auto follows the step's default curve"
+            data-testid="tlv2-kf-ease"
+          >
+            <option value="auto">Auto — the step's curve</option>
+            {easeOptionsForStep(kfMenu.ref.step).map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       )}
 
