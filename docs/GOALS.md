@@ -584,14 +584,19 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       blur-out to()), and splitTween still separates a joint tween first so only the grabbed
       layer blurs. The simulator's reset already clears leaked filter, so blur leaves cleanly.
       E2E: the drawer exposes blur on both cards and an exit blur round-trips + resets.
-- [ ] **T7 Timeline v2 — the step timeline (RATIFIED 2026-07-10; phases 1-5 landed:
-      engine + parity harness, Inspector column + redo, the read-first ribbon, keyframe
-      editing with the undoable "use keyframes" conversion, and presets as keyframe
+- [ ] **T7 Timeline v2 — the step timeline (RATIFIED 2026-07-10; phases 1-6 landed:
+      engine + parity harness; Inspector column + redo; the read-first ribbon; keyframe
+      editing with the undoable "use keyframes" conversion; presets as keyframe
       generators — the Animations tab applies In/Out/Both with declared-props-only
-      replacement and layer-relative In targeting; the canvas chip's press control works
-      on data templates through setLayerActivation. The lower-thirds CREATION default
-      still emits legacy (dataRegion machinery is in place; it flips together with the
-      classic-strip spec migration). Next: Phase 6 steps-as-clips editing)** — the
+      replacement and layer-relative In targeting, and the canvas chip's press control
+      works on data templates through setLayerActivation; and steps as full clips —
+      right-edge duration drag (preserve-timing default, Alt stretches, shrink clamps at
+      the last keyframe), a context menu with Duplicate/Rename/Delete (deleted presses
+      send their reveals back to Play), a »+ authoring step, the hold popover editing
+      the SPX out setting, Space to play, arrow-nudge for the selected keyframe, with
+      settings.steps always derived. The lower-thirds CREATION default still emits
+      legacy (dataRegion machinery is in place; it flips together with the classic-strip
+      spec migration). Next: the flip slice, then Phase 7 parity polish)** — the
       CapCut-style rethink: steps as clips, a real playhead/ruler, an Inspector panel,
       proper keyframes, presets as keyframe generators with In/Out/Both. The audit
       concluded the parse-by-construction patcher architecture is at end of life for this

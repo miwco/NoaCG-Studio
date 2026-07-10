@@ -1621,6 +1621,67 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 }
 .tlv2-side { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; align-items: center; }
 .tlv2-time { font-size: 10px; color: var(--text-dim); }
+/* Phase 6 — steps as clips: the duration handle, the context menu, the hold popover. */
+.tlv2-clip-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  border-right: 2px solid rgba(246, 166, 35, 0.55);
+  border-radius: 0 4px 4px 0;
+  touch-action: none;
+}
+.tlv2-hold.editable { cursor: pointer; }
+.tlv2-hold.editable:hover { color: var(--amber); }
+.tlv2-add-step { font-size: 10px; letter-spacing: 0.03em; color: var(--amber); border-color: rgba(246, 166, 35, 0.4); }
+.tlv2-menu {
+  position: fixed;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.tlv2-menu-item {
+  text-align: left;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+}
+.tlv2-menu-item:hover { background: rgba(246, 166, 35, 0.12); color: var(--text); }
+.tlv2-menu-item.danger:hover { background: rgba(220, 70, 70, 0.15); }
+.tlv2-menu-input,
+.tlv2-out-mode {
+  font-size: 11px;
+  height: 22px;
+  padding: 1px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+.tlv2-out-ms-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-dim); padding: 2px 2px 0; }
+.tlv2-out-ms {
+  width: 70px;
+  height: 20px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
 
 /* ---------- Inspector (Timeline v2 — the selection's properties, right of the preview) ---------- */
 .inspector-pane { overflow-y: auto; min-width: 0; }

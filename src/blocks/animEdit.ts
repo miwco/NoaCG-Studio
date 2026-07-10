@@ -175,15 +175,134 @@ export function setLayerActivation(
     if (dest.duration < maxT) dest.duration = round(maxT);
   }
 
-  // A press that neither reveals nor animates anything is a dead Continue — drop it.
-  for (let i = next.steps.length - 2; i >= 1; i--) {
-    const s = next.steps[i];
-    if ((s.reveals ?? []).length === 0 && Object.keys(s.layers).length === 0) next.steps.splice(i, 1);
+  // The press the layer LEFT may now be a dead Continue (nothing revealed or animated) —
+  // drop it. Only the source step: a deliberately added empty step (the + button) stays.
+  if (fromPress > -1) {
+    const s = next.steps[fromIdx];
+    if (s && (s.reveals ?? []).length === 0 && Object.keys(s.layers).length === 0) {
+      next.steps.splice(fromIdx, 1);
+    }
   }
   // Default names follow their position (a user's rename is left alone).
   for (let i = 1; i < next.steps.length - 1; i++) {
     if (/^Step \d+$/.test(next.steps[i].name)) next.steps[i].name = `Step ${i + 1}`;
   }
+  return next;
+}
+
+// ── Phase 6: steps as clips ──────────────────────────────────────────────────
+
+/** The latest keyframe time in a step (0 when it animates nothing). */
+function lastKeyframeTime(step: AnimStep): number {
+  let last = 0;
+  for (const tracks of Object.values(step.layers)) {
+    for (const kfs of Object.values(tracks)) {
+      for (const kf of kfs) last = Math.max(last, kf.time);
+    }
+  }
+  return last;
+}
+
+/**
+ * Resize a step (the clip's right-edge drag). Default 'preserve' keeps every keyframe's
+ * timing — extending leaves settled air, shrinking clamps at the last keyframe (motion
+ * never silently truncates). 'stretch' (Alt-drag) scales all keyframe times
+ * proportionally — "make this step faster/slower". Returns null on a no-op.
+ */
+export function resizeStep(
+  data: AnimData,
+  stepIndex: number,
+  duration: number,
+  mode: 'preserve' | 'stretch' = 'preserve',
+): AnimData | null {
+  const next = clone(data);
+  const step = next.steps[stepIndex];
+  if (!step) return null;
+  const to =
+    mode === 'preserve'
+      ? round(Math.max(0.05, Math.max(duration, lastKeyframeTime(step))))
+      : round(Math.max(0.05, duration));
+  if (Math.abs(to - step.duration) < EPS) return null;
+  if (mode === 'stretch' && step.duration > 0) {
+    const f = to / step.duration;
+    for (const tracks of Object.values(step.layers)) {
+      for (const kfs of Object.values(tracks)) {
+        for (const kf of kfs) kf.time = round(kf.time * f);
+      }
+    }
+  }
+  step.duration = to;
+  return next;
+}
+
+/** Renumber default "Step N" names after a structural change (renames are left alone). */
+function renumberSteps(data: AnimData): void {
+  for (let i = 1; i < data.steps.length - 1; i++) {
+    if (/^Step \d+( copy)?$/.test(data.steps[i].name)) data.steps[i].name = `Step ${i + 1}`;
+  }
+}
+
+/**
+ * Duplicate a step: keyframes copy verbatim in local time (the duplicate's resolved
+ * starting state comes from its new predecessor — correct by construction). Its
+ * `reveals` are NOT copied: a layer activates once, and a second reveal of an
+ * already-visible layer would replay its hidden state on air. The copy lands right
+ * after the original — duplicating Out lands the copy before it, as a content step.
+ */
+export function duplicateStep(data: AnimData, stepIndex: number): AnimData | null {
+  const src = data.steps[stepIndex];
+  if (!src) return null;
+  const next = clone(data);
+  const copy = JSON.parse(JSON.stringify(src)) as AnimStep;
+  delete copy.reveals;
+  copy.name = /^Step \d+$/.test(src.name) ? src.name : `${src.name} copy`;
+  const at = Math.min(stepIndex + 1, next.steps.length - 1); // never after Out
+  next.steps.splice(at, 0, copy);
+  renumberSteps(next);
+  return next;
+}
+
+/** Rename a step (any step — Enter and Out included). */
+export function renameStep(data: AnimData, stepIndex: number, name: string): AnimData | null {
+  const trimmed = name.trim();
+  if (!data.steps[stepIndex] || !trimmed || data.steps[stepIndex].name === trimmed) return null;
+  const next = clone(data);
+  next.steps[stepIndex].name = trimmed;
+  return next;
+}
+
+/**
+ * Delete a content step (never the entrance or Out). Layers it revealed return to
+ * "appears with ▶ Play" with the channel's default motion, so nothing ends up visible
+ * on air without an entrance.
+ */
+export function deleteStep(
+  data: AnimData,
+  stepIndex: number,
+  channelOf: (selector: string) => 'mask' | 'rise',
+): AnimData | null {
+  if (stepIndex <= 0 || stepIndex >= data.steps.length - 1) return null;
+  const next = clone(data);
+  const [removed] = next.steps.splice(stepIndex, 1);
+  for (const selector of removed.reveals ?? []) {
+    next.steps[0].layers[selector] = channelTracks(channelOf(selector), 0.45);
+  }
+  renumberSteps(next);
+  return next;
+}
+
+/** Add an empty content step just before Out — an authoring target for the next reveal
+ *  or keyframes (a press that still does nothing when the show airs is the user's call). */
+export function addStep(data: AnimData): AnimData {
+  const next = clone(data);
+  const step: AnimStep = {
+    name: `Step ${next.steps.length}`,
+    duration: 0.45,
+    ease: next.steps[0].ease,
+    layers: {},
+  };
+  next.steps.splice(next.steps.length - 1, 0, step);
+  renumberSteps(next);
   return next;
 }
 

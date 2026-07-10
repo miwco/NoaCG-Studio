@@ -2,10 +2,19 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
 import { importAnimData } from '../blocks/animImport';
-import { deleteLayerKeyframes, moveLayerKeyframes } from '../blocks/animEdit';
+import {
+  addStep,
+  deleteLayerKeyframes,
+  deleteStep,
+  duplicateStep,
+  moveLayerKeyframes,
+  renameStep,
+  resizeStep,
+} from '../blocks/animEdit';
 import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
 import { stepSeconds } from '../blocks/animEval';
 import { getTemplateParts } from '../model/structure';
+import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import TimelineView from './TimelineView';
 import type { SpxWindow } from './PlayoutSimulator';
@@ -95,6 +104,7 @@ export function phaseIdOf(data: AnimData, stepIndex: number): string {
 function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; editable: boolean }) {
   const template = useTemplateStore((s) => s.template);
   const sendScrub = useTemplateStore((s) => s.sendScrub);
+  const sendControl = useTemplateStore((s) => s.sendControl);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const selectedPart = useTemplateStore((s) => s.selectedPart);
   const setSelectedPart = useTemplateStore((s) => s.setSelectedPart);
@@ -108,6 +118,11 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   // ── Geometry: steps side by side (each on its real local clock), the hold between the
   //    last content step and Out — a real segment when auto-out gives it a duration.
   const [pxPerSec, setPxPerSec] = useState(140);
+  // A clip resize in progress: the dragged step's LIVE width (everything right of it
+  // reflows with it, exactly like a video editor's ripple).
+  const [clipDrag, setClipDrag] = useState<{ i: number; w: number; alt: boolean } | null>(null);
+  const clipDragRef = useRef<typeof clipDrag>(null);
+  clipDragRef.current = clipDrag;
   const outMs = /^\d+$/.test(template.settings.out ?? '') ? Number(template.settings.out) : null;
   const holdW = outMs !== null ? Math.max(HOLD_PX, (outMs / 1000) * pxPerSec) : HOLD_PX;
   const segs = useMemo(() => {
@@ -115,12 +130,13 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     return data.steps.map((step, i) => {
       const isOut = i === data.steps.length - 1;
       if (isOut) x += holdW; // the hold sits just before Out
-      const w = Math.max(56, stepSeconds(data, i) * pxPerSec);
+      const w =
+        clipDrag && clipDrag.i === i ? clipDrag.w : Math.max(56, stepSeconds(data, i) * pxPerSec);
       const seg = { step, i, isOut, x, w, holdX: isOut ? x - holdW : null };
       x += w;
       return seg;
     });
-  }, [data, pxPerSec, holdW]);
+  }, [data, pxPerSec, holdW, clipDrag]);
   const canvasW = segs.length ? segs[segs.length - 1].x + segs[segs.length - 1].w : 0;
 
   // Fit the whole playout once per template (the zoom buttons take over from there).
@@ -168,14 +184,29 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     sendScrub(phaseIdOf(data, place.step), place.t);
   };
 
-  /** ONE undoable apply per keyframe edit, then re-park the preview at the playhead once
-   *  the debounced rebuild settles — the interpolation is immediately visible in place. */
+  /** ONE undoable apply per edit, then re-park the preview at the playhead once the
+   *  debounced rebuild settles. Structural edits (duplicate/delete/add a step) change the
+   *  Continue count, so the SPX `steps` setting stays derived — same invariant as always. */
   const applyData = (next: AnimData) => {
     const js = spliceAnimData(template.js, next);
     if (!js || js === template.js) return;
-    applyTemplate({ ...template, js });
+    const steps = String(next.steps.length - 1);
+    if (template.settings.steps !== steps) {
+      const settings = { ...template.settings, steps };
+      applyTemplate({ ...template, js, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
+    } else {
+      applyTemplate({ ...template, js });
+    }
     const place = headRef.current;
     setTimeout(() => sendScrub(phaseIdOf(data, place.step), place.t), 650);
+  };
+
+  /** The SPX `out` setting — the hold's popover writes it (until ■ Stop / auto-out N ms /
+   *  stays), synced into the definition exactly like the classic strip's On air card. */
+  const setOutMode = (out: string) => {
+    if (out === (template.settings.out ?? 'manual')) return;
+    const settings = { ...template.settings, out };
+    applyTemplate({ ...template, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
   };
 
   const onCanvasPointer = (e: React.PointerEvent, drag = false) => {
@@ -290,18 +321,87 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     setKfSel({ ...d, tRel: toRel });
   };
 
-  // Delete removes the selected diamond's keyframes (never while typing in a field).
-  useEffect(() => {
+  // ── Steps as clips (Phase 6): right-edge resize, context menu, hold popover ─────
+  // The clip's left edge IS the cue boundary — steps start when the operator presses, so
+  // only the duration (the right edge) is draggable. Default preserves keyframe timing
+  // (extending leaves settled air, shrinking clamps at the last keyframe); Alt stretches
+  // everything proportionally.
+  const startClipDrag = (e: React.PointerEvent, i: number, w: number) => {
     if (!editable) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setClipDrag({ i, w, alt: e.altKey });
+  };
+  const moveClipDrag = (e: React.PointerEvent) => {
+    const d = clipDragRef.current;
+    if (!d || e.buttons !== 1) return;
+    e.stopPropagation();
+    const seg = segs[d.i];
+    const rect = (e.currentTarget as HTMLElement).closest('.tlv2-canvas')!.getBoundingClientRect();
+    setClipDrag({ ...d, w: Math.max(24, e.clientX - rect.left - seg.x), alt: e.altKey });
+  };
+  const endClipDrag = (e: React.PointerEvent) => {
+    const d = clipDragRef.current;
+    setClipDrag(null);
+    if (!d) return;
+    e.stopPropagation();
+    const speed = data.speed || 1;
+    const durEff = Math.round(Math.max(0.05, d.w / pxPerSec) / 0.05) * 0.05; // the 0.05 s grid
+    const next = resizeStep(data, d.i, Math.round(durEff * speed * 1000) / 1000, d.alt ? 'stretch' : 'preserve');
+    if (next) applyData(next);
+  };
+
+  /** The clip context menu (Duplicate / Rename / Delete) + the hold's out-mode popover. */
+  const [menu, setMenu] = useState<{ x: number; y: number; step: number; rename?: boolean } | null>(null);
+  const [holdMenu, setHoldMenu] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!menu && !holdMenu) return;
+    const close = (e: PointerEvent) => {
+      if ((e.target as HTMLElement).closest('.tlv2-menu')) return;
+      setMenu(null);
+      setHoldMenu(null);
+    };
+    window.addEventListener('pointerdown', close);
+    return () => window.removeEventListener('pointerdown', close);
+  }, [menu, holdMenu]);
+
+  const channelOf = (sel: string): 'mask' | 'rise' =>
+    parts.find((p) => p.selector === sel)?.channel === 'mask' ? 'mask' : 'rise';
+
+  // Keyboard: Delete removes the selected diamond's keyframes; ←/→ nudge it on the 0.05 s
+  // grid; Space plays the graphic. Never while typing in a field or the code editor.
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      const sel = kfSel;
-      if (!sel) return;
       const el = document.activeElement as HTMLElement | null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.closest('.monaco-editor'))) return;
-      e.preventDefault();
-      setKfSel(null);
-      applyData(deleteLayerKeyframes(data, sel.step, sel.key, sel.tRel));
+      if (
+        el &&
+        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.closest('.monaco-editor'))
+      ) {
+        return;
+      }
+      if (e.key === ' ') {
+        e.preventDefault();
+        sendControl('play');
+        return;
+      }
+      if (!editable || !kfSel) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        setKfSel(null);
+        applyData(deleteLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const speed = data.speed || 1;
+        const delta = (e.key === 'ArrowLeft' ? -0.05 : 0.05) * speed;
+        const to = Math.round(Math.max(0, kfSel.tRel + delta) * 1000) / 1000;
+        if (to === kfSel.tRel) return;
+        const next = moveLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel, to);
+        if (next !== data) {
+          setKfSel({ ...kfSel, tRel: to });
+          applyData(next);
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -361,14 +461,23 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                 <span key={seg.i} style={{ display: 'contents' }}>
                   {seg.holdX !== null && (
                     <span
-                      className="tlv2-hold"
+                      className={`tlv2-hold${editable ? ' editable' : ''}`}
                       style={{ left: seg.holdX, width: seg.x - seg.holdX }}
                       title={
-                        outMs !== null
+                        (outMs !== null
                           ? `The hold — on air for ${outMs} ms, then the graphic leaves by itself`
-                          : 'The hold — the graphic sits on air until the ■ Stop cue'
+                          : template.settings.out === 'none'
+                            ? 'The hold — the graphic stays (no out is set)'
+                            : 'The hold — the graphic sits on air until the ■ Stop cue') +
+                        (editable ? '. Click to change how it leaves.' : '')
                       }
                       data-testid="tlv2-hold"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        if (!editable) return;
+                        e.stopPropagation();
+                        setHoldMenu({ x: e.clientX, y: e.clientY });
+                      }}
                     >
                       ●
                     </span>
@@ -377,16 +486,34 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                     className={`tlv2-clip${head.step === seg.i ? ' active' : ''}`}
                     style={{ left: seg.x, width: seg.w }}
                     title={
-                      seg.i === 0
+                      (seg.i === 0
                         ? 'Plays on ▶ Play'
                         : seg.isOut
                           ? 'Plays on ■ Stop'
-                          : `Plays on press ${seg.i} of » Next`
+                          : `Plays on press ${seg.i} of » Next`) +
+                      (editable ? '. Right-click for step actions; drag the right edge to retime.' : '')
                     }
                     data-testid={`tlv2-clip-${seg.i}`}
+                    onContextMenu={(e) => {
+                      if (!editable) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenu({ x: e.clientX, y: e.clientY, step: seg.i });
+                    }}
                   >
                     <span className="tlv2-cue">{cueOf(seg)}</span> {seg.step.name}
                     <span className="tlv2-clip-dur"> {stepSeconds(data, seg.i).toFixed(2)}s</span>
+                    {editable && (
+                      <span
+                        className="tlv2-clip-handle"
+                        title="Drag to change this step's duration (keyframes keep their timing; hold Alt to stretch them with it)"
+                        data-testid={`tlv2-clip-handle-${seg.i}`}
+                        onPointerDown={(e) => startClipDrag(e, seg.i, seg.w)}
+                        onPointerMove={moveClipDrag}
+                        onPointerUp={endClipDrag}
+                        onPointerCancel={() => setClipDrag(null)}
+                      />
+                    )}
                   </span>
                 </span>
               ))}
@@ -438,13 +565,118 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           </div>
         </div>
 
-        {/* Zoom — buttons now; Ctrl+wheel arrives with the editing phases. */}
+        {/* Zoom + step tools. */}
         <div className="tlv2-side">
           <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.max(40, z / 1.3))} title="Zoom out" data-testid="tlv2-zoom-out">−</button>
           <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.min(400, z * 1.3))} title="Zoom in" data-testid="tlv2-zoom-in">+</button>
+          {editable && (
+            <button
+              className="timeline-zoom-btn tlv2-add-step"
+              onClick={() => applyData(addStep(data))}
+              title="Add a step — a new » Next press before Out, ready for reveals and keyframes"
+              data-testid="tlv2-add-step"
+            >
+              »+
+            </button>
+          )}
           <span className="tlv2-time mono" data-testid="tlv2-time">{head.t.toFixed(2)}s</span>
         </div>
       </div>
+
+      {/* The clip context menu — Duplicate / Rename / Delete (steps are the clips). */}
+      {menu && (
+        <div className="tlv2-menu" style={{ left: menu.x, top: menu.y }} data-testid="tlv2-menu">
+          {menu.rename ? (
+            <input
+              className="tlv2-menu-input"
+              autoFocus
+              defaultValue={data.steps[menu.step]?.name ?? ''}
+              data-testid="tlv2-rename-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setMenu(null);
+                if (e.key !== 'Enter') return;
+                const next = renameStep(data, menu.step, (e.currentTarget as HTMLInputElement).value);
+                setMenu(null);
+                if (next) applyData(next);
+              }}
+            />
+          ) : (
+            <>
+              <button
+                className="tlv2-menu-item"
+                data-testid="tlv2-menu-duplicate"
+                onClick={() => {
+                  const next = duplicateStep(data, menu.step);
+                  setMenu(null);
+                  if (next) applyData(next);
+                }}
+              >
+                Duplicate step
+              </button>
+              <button
+                className="tlv2-menu-item"
+                data-testid="tlv2-menu-rename"
+                onClick={() => setMenu({ ...menu, rename: true })}
+              >
+                Rename…
+              </button>
+              {menu.step > 0 && menu.step < data.steps.length - 1 && (
+                <button
+                  className="tlv2-menu-item danger"
+                  data-testid="tlv2-menu-delete"
+                  onClick={() => {
+                    const next = deleteStep(data, menu.step, channelOf);
+                    setMenu(null);
+                    if (next) applyData(next);
+                  }}
+                >
+                  Delete step
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* The hold's popover — how the graphic leaves air (the SPX out setting). */}
+      {holdMenu && (
+        <div className="tlv2-menu" style={{ left: holdMenu.x, top: holdMenu.y }} data-testid="tlv2-hold-menu">
+          <select
+            className="tlv2-out-mode"
+            value={template.settings.out === 'none' ? 'none' : outMs !== null ? 'auto' : 'manual'}
+            onChange={(e) =>
+              setOutMode(e.target.value === 'auto' ? (outMs !== null ? String(outMs) : '5000') : e.target.value)
+            }
+            title="How the graphic leaves air — the SPX out setting in the template definition"
+            data-testid="tlv2-out-mode"
+          >
+            <option value="manual">until ■ Stop plays the exit</option>
+            <option value="auto">leaving by itself, after…</option>
+            <option value="none">forever — it stays (no out)</option>
+          </select>
+          {outMs !== null && (
+            <span className="tlv2-out-ms-row">
+              <input
+                className="tlv2-out-ms"
+                type="number"
+                min={100}
+                step={100}
+                key={outMs}
+                defaultValue={outMs}
+                data-testid="tlv2-out-ms"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                }}
+                onBlur={(e) => {
+                  const v = Math.round(Number(e.currentTarget.value));
+                  if (Number.isFinite(v) && v >= 100) setOutMode(String(v));
+                }}
+              />{' '}
+              ms
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -273,6 +273,167 @@ test('v2: the canvas chip moves a layer between presses on a data template', asy
   expect(steps).toBe('1');
 });
 
+test('v2 clips: right-edge resize preserves keyframe timing; Alt-drag stretches it', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  const enter = async () => {
+    const data = await animData(page);
+    return {
+      duration: data!.steps[0].duration,
+      times: data!.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time),
+    };
+  };
+  const before = await enter();
+
+  // Default drag: the step gets LONGER, keyframes stay put (settled air at the end).
+  const handle = page.getByTestId('tlv2-clip-handle-0');
+  let bb = (await handle.boundingBox())!;
+  await page.mouse.move(bb.x + 3, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + 3 + 60, bb.y + bb.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const extended = await enter();
+  expect(extended.duration).toBeGreaterThan(before.duration);
+  expect(extended.times).toEqual(before.times);
+
+  // Shrinking clamps at the step's LAST keyframe across every layer — motion never
+  // silently truncates (Hairline's second line settles later than the first).
+  const lastKf = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const d = parseAnimData(useTemplateStore.getState().template.js)!;
+    let last = 0;
+    for (const tracks of Object.values(d.steps[0].layers))
+      for (const kfs of Object.values(tracks as Record<string, { time: number }[]>))
+        for (const kf of kfs) last = Math.max(last, kf.time);
+    return last;
+  });
+  bb = (await page.getByTestId('tlv2-clip-handle-0').boundingBox())!;
+  await page.mouse.move(bb.x + 3, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + 3 - 500, bb.y + bb.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const clamped = await enter();
+  expect(clamped.duration).toBeCloseTo(lastKf, 2);
+
+  // Alt-drag stretches: duration AND keyframe times scale together.
+  bb = (await page.getByTestId('tlv2-clip-handle-0').boundingBox())!;
+  await page.keyboard.down('Alt');
+  await page.mouse.move(bb.x + 3, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + 3 + 80, bb.y + bb.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.keyboard.up('Alt');
+  await page.waitForTimeout(400);
+  const stretched = await enter();
+  expect(stretched.duration).toBeGreaterThan(clamped.duration);
+  expect(Math.max(...stretched.times)).toBeGreaterThan(Math.max(...clamped.times));
+});
+
+test('v2 clips: context menu duplicates, renames, deletes; the definition follows', async ({ page }) => {
+  test.setTimeout(60_000);
+  await createHairline(page, true); // Enter · Step 2 (reveals #f1) · Out
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  const stepsSetting = () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      return useTemplateStore.getState().template.settings.steps;
+    });
+  expect(await stepsSetting()).toBe('2');
+
+  // Duplicate the reveal step: its keyframes copy, its reveals do NOT (a layer activates
+  // once), and the SPX steps count follows the longer chain.
+  await page.getByTestId('tlv2-clip-1').click({ button: 'right' });
+  await page.getByTestId('tlv2-menu-duplicate').click();
+  await page.waitForTimeout(400);
+  let data = await animData(page);
+  expect(data!.steps).toHaveLength(4);
+  expect(Object.keys(data!.steps[2].layers)).toContain('#f1'); // copied keyframes
+  expect(data!.steps[2].reveals ?? []).toHaveLength(0); // reveals cleared
+  expect(await stepsSetting()).toBe('3');
+
+  // Rename the duplicate.
+  await page.getByTestId('tlv2-clip-2').click({ button: 'right' });
+  await page.getByTestId('tlv2-menu-rename').click();
+  await page.getByTestId('tlv2-rename-input').fill('Answer B');
+  await page.getByTestId('tlv2-rename-input').press('Enter');
+  await page.waitForTimeout(400);
+  await expect(page.getByTestId('tlv2-clip-2')).toContainText('Answer B');
+
+  // Delete the ORIGINAL reveal press: #f1 returns to ▶ Play with an entrance of its own.
+  await page.getByTestId('tlv2-clip-1').click({ button: 'right' });
+  await page.getByTestId('tlv2-menu-delete').click();
+  await page.waitForTimeout(400);
+  data = await animData(page);
+  expect(data!.steps).toHaveLength(3);
+  expect(Object.keys(data!.steps[0].layers)).toContain('#f1');
+  expect(await stepsSetting()).toBe('2');
+
+  // Undo restores the deleted press (structural edits are one apply each).
+  await page.keyboard.press('Control+z');
+  data = await animData(page);
+  expect(data!.steps).toHaveLength(4);
+});
+
+test('v2 clips: »+ adds an authoring step; the hold popover edits how the graphic leaves', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+
+  // »+ adds an empty content step before Out (an authoring target), definition synced.
+  await page.getByTestId('tlv2-add-step').click();
+  await page.waitForTimeout(400);
+  const data = await animData(page);
+  expect(data!.steps).toHaveLength(3);
+  expect(data!.steps[1].name).toBe('Step 2');
+  await expect(page.getByTestId('tlv2-clip-1')).toContainText('Step 2');
+
+  // The hold popover writes the SPX out setting; auto-out widens the hold to real time.
+  const holdBefore = (await page.getByTestId('tlv2-hold').boundingBox())!;
+  await page.getByTestId('tlv2-hold').click();
+  await page.getByTestId('tlv2-out-mode').selectOption('auto');
+  await page.waitForTimeout(500);
+  const out = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.settings.out;
+  });
+  expect(out).toBe('5000');
+  const holdAfter = (await page.getByTestId('tlv2-hold').boundingBox())!;
+  expect(holdAfter.width).toBeGreaterThan(holdBefore.width + 40);
+});
+
+test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  // Space = ▶ Play (never while typing): the simulator owns a fresh running timeline.
+  await page.keyboard.press(' ');
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const w = (document.querySelector('iframe.preview-frame') as HTMLIFrameElement)
+          .contentWindow as { __activeTl?: unknown } | null;
+        return !!w?.__activeTl;
+      }),
+    )
+    .toBe(true);
+  // Select a diamond and nudge it right one grid step (0.05 s).
+  const times = async () => {
+    const data = await animData(page);
+    return data!.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time);
+  };
+  const before = await times();
+  await page.getByTestId('tlv2-kf-f0').first().click();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(400);
+  const after = await times();
+  expect(Math.min(...after)).toBeCloseTo(Math.min(...before) + 0.05, 2);
+});
+
 test('v2: the dock toggle swaps surfaces and persists; classic remains the default', async ({ page }) => {
   await createHairline(page); // helper already toggled INTO v2
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
