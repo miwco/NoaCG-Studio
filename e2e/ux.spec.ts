@@ -1,7 +1,8 @@
 import { test, expect, type Page, type FrameLocator } from '@playwright/test';
 
-// The UX overhaul: preview-over-tabs layout, validation inside Export, Motion phase
-// control + auto-replay, add-field in Data, and the editor's change highlighting.
+// The UX overhaul: preview-over-tabs layout, validation inside Export, motion phase
+// control + auto-replay (on the timeline strip — the Motion tab is retired), add-field
+// in Data, and the editor's change highlighting.
 
 async function createHairline(page: Page) {
   await page.goto('/app');
@@ -29,8 +30,9 @@ test('layout: code pane left, preview above the tool tabs on the right', async (
   // …and the preview sits ABOVE the panel tabs in the same column.
   expect(stage!.y + stage!.height).toBeLessThanOrEqual(tabs!.y + 2);
   expect(Math.abs(stage!.x - tabs!.x)).toBeLessThan(40);
-  // The focused tabs — Blocks/Learn/Validate are gone; Control is the operator view.
-  await expect(page.locator('.panel-tabs .tab')).toHaveText(['Data', 'Control', 'Style', 'Motion', 'AI', 'Export']);
+  // The focused tabs — Blocks/Learn/Validate are gone; Control is the operator view;
+  // Motion lives on the timeline strip's moment cards, not in a tab.
+  await expect(page.locator('.panel-tabs .tab')).toHaveText(['Data', 'Control', 'Style', 'AI', 'Export']);
 });
 
 test('export: validation shows inline and gates the download on a broken template', async ({ page }) => {
@@ -46,11 +48,13 @@ test('export: validation shows inline and gates the download on a broken templat
   await expect(page.getByRole('button', { name: /Validate & download/ })).toBeDisabled();
 });
 
-test('motion: In-only preset swap keeps the exit and auto-replays', async ({ page }) => {
+test('motion: an In-only preset swap from the ▶ In card keeps the exit and auto-replays', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Motion' }).click();
-  await page.getByRole('button', { name: 'In only' }).click();
-  await page.locator('.wz-anim', { hasText: 'Pop spring' }).click();
+  // The ▶ In card is the selected moment by default; its inspector row (under the tracks)
+  // carries THAT phase's preset picker — the strip is the one motion surface.
+  await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);
+  await expect(page.getByTestId('timeline-phase-preset')).toHaveValue('line-reveal'); // Hairline's default
+  await page.getByTestId('timeline-phase-preset').selectOption('pop-spring');
   // The phase mix is recorded in the marker comments…
   const js = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
@@ -59,8 +63,8 @@ test('motion: In-only preset swap keeps the exit and auto-replays', async ({ pag
   expect(js).toContain('// In preset: Pop spring');
   expect(js).toContain('// Out preset: Line reveal'); // Hairline's default preset, untouched
   expect(js).toContain('function buildOutTimeline');
-  // …the header reflects it…
-  await expect(page.locator('.panel-body .hint').first()).toContainText('In Pop spring');
+  // …the editor jumps to the JS tab (the swap is real, readable code)…
+  await expect(page.locator('.tabs .tab.active')).toHaveText('JS');
   // …and the auto-replay makes the graphic visible without pressing Play.
   await expect
     .poll(async () => frame(page).locator('.lower-third').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })

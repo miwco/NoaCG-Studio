@@ -116,12 +116,12 @@ test('style panel: accent retints the live preview', async ({ page }) => {
     .toBe('rgb(255, 45, 120)');
 });
 
-test('motion panel: preset swap jumps to the JS tab and still plays', async ({ page }) => {
+test('timeline strip: preset swap jumps to the JS tab and still plays', async ({ page }) => {
   await toVariantStep(page, 'Frosted Card');
   await createFromCurrentStep(page);
 
-  await page.locator('.panel-tabs .tab', { hasText: 'Motion' }).click();
-  await page.locator('.wz-anim', { hasText: 'Mask wipe' }).click();
+  // The ▶ In card is selected by default — its preset picker swaps the entrance.
+  await page.getByTestId('timeline-phase-preset').selectOption('mask-wipe');
   await expect(page.locator('.tabs .tab.active')).toHaveText('JS');
 
   const frame = previewFrame(page);

@@ -263,17 +263,26 @@ src/
                  patchTweenVars edits from/to literals, insertPartTween adds a tween to
                  partless layers; press-assigned parts and the root have no drawer);
                  ●On air = pseudo-card (phaseId 'hold'), click parks on the settled
-                 look; »+Step disables with a tooltip reason; an unparsable marked
-                 region gets an honest one-liner (blank/imported templates get no
-                 strip) — one undoable apply + auto-replay per edit, the code always
+                 look; »+Step disables with a tooltip reason; THE STRIP IS THE ONE
+                 MOTION SURFACE (the Motion side-tab is retired): the selected ▶In/■Out
+                 card's inspector row holds that phase's preset picker + easing choice
+                 (swapAnimationPhase / setAnimKnob — phase-correct halves per the
+                 easing doctrine), the header holds the animSpeed knob, and the
+                 selected ●On air card's note edits the SPX `out` setting (until-Stop /
+                 auto-out N ms / stays — synced into the definition like
+                 withStepsSetting); an unparsable marked region gets an honest
+                 one-liner PLUS a start-over preset select — the one Motion-tab duty
+                 that state still needs; a 'both' swap re-emits the whole region and
+                 brings the timeline back (blank/imported templates get no strip) —
+                 one undoable apply + auto-replay per edit, the code always
                  the truth; row LABELS are the shared-selection handles: clicking one
                  (or a bar, without dragging) selects that element on the canvas too
                  (store selectedPart), the selected row washes amber),
-                 SidePanel (six tabs: Data / Control / Style / Motion / AI / Export),
+                 SidePanel (five tabs: Data / Control / Style / AI / Export),
                  SampleDataPanel (sample values + add-field), ControlPanel (operator view from
                  control/ engine; live-drives the preview via store.sendControl → simulator;
                  downloads controlpanel.html; adds the Google-Sheets live-data block),
-                 StylePanel, AnimationPanel (In/Out/Both phase control), AIPromptPanel,
+                 StylePanel, AIPromptPanel,
                  ExportPanel (validation inline), PacketManager (📦 topbar modal),
                  CommunityGallery (🌐), ModerationQueue (🛡), SyncStatus,
                  Homebase (signed-in dashboard: all saved graphics across packets, one
@@ -307,20 +316,23 @@ allowlist). Don't reintroduce an app-wide gate.
 
 New projects go through the **CreationWizard** (Entry → Category → Template → Fields → Style →
 Animation, persistent live preview). Creating calls `variant.create(options)` which generates the
-complete, commented template. After creation, code is the source of truth and two **live panels**
-keep working via deterministic patches:
+complete, commented template. After creation, code is the source of truth and two **live
+surfaces** keep working via deterministic patches:
 
 - **Style panel** — reads/writes the `:root` style contract (`--accent`, `--text-color`,
   `--text-dim`, `--panel-bg`, `--font-heading`, `--scale`), swaps the marked `@font-face` block
   (bundled or imported), re-anchors the root element via `zoneDecls`, and can import a font
   post-creation.
-- **Motion panel** — only touches the marked region
+- **Motion = the timeline strip** (there is no Motion tab; the wizard's Animation step is the
+  other, create-time surface) — only ever touches the marked region
   (`/* == ANIMATION … == */ … /* == END ANIMATION == */`) and its three knob variables
   (`animSpeed`, `easeIn`, `easeOut`). Presets are per-category (`blocks/animPatch.ts
-  presetsForType`); the root prefix is detected via `model/structure.ts` (hyphen-safe). Preset/steps swaps
-  re-emit the region (undoable); user code outside the markers is never modified. The steps
-  toggle only shows for line-based categories (lower thirds, info cards, scoreboards, corner
-  bug) — continuous, clock, and data-driven formats hide it.
+  presetsForType`, offered on the selected In/Out card and on the unparsable-region fallback);
+  the root prefix is detected via `model/structure.ts` (hyphen-safe). Preset/steps swaps
+  re-emit the region (undoable); user code outside the markers is never modified. Steps
+  live on the strip (»+ Step / the step hint's turn-off action) and only exist for line-based
+  categories (lower thirds, info cards, scoreboards, corner bug) — continuous, clock, and
+  data-driven formats don't offer them.
 
 **Sample data on create:** `applyTemplate(template, { resetSampleData: true })` is used by the
 wizard so a new project starts from ITS field defaults — plain `applyTemplate` (blocks, panels,

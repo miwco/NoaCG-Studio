@@ -1467,6 +1467,35 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-ease-spacer { width: 96px; flex-shrink: 0; }
 
+/* The selected In/Out card's controls row — the Motion panel's per-phase preset + easing,
+   converged onto the strip (one motion surface). Same slim height as the gesture hint. */
+.timeline-inspector { display: flex; align-items: center; gap: 6px; }
+.timeline-inspector-label {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.timeline-inspector-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Content-sized selects: the preset/easing/speed/out pickers carry words, not curves. */
+.timeline-preset,
+.timeline-phase-ease,
+.timeline-speed { width: auto; max-width: 190px; }
+.timeline-out-mode { width: auto; max-width: 230px; }
+/* The auto-out delay, in milliseconds — a sibling of the out-mode select. */
+.timeline-out-ms {
+  width: 64px;
+  height: 18px;
+  padding: 1px 4px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
 /* The part row's when-control: which » Next press the part appears on. */
 .timeline-appears {
   width: 142px;

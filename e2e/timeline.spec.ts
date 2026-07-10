@@ -34,7 +34,10 @@ test('timeline strip lives under the preview and renders the preset structure', 
   // Under the preview (inside .preview-wrap), NOT in the Motion tab.
   const timeline = page.locator('.preview-wrap [data-testid="timeline"]');
   await expect(timeline).toBeVisible();
-  await expect(timeline).toContainText('Expo'); // line-reveal's auto ease pair, in plain words
+  // The selected ▶ In card's inspector speaks the vocabulary: line-reveal's tuned
+  // entrance ease (expo.out) shows as Expo; the header speed knob reads Normal.
+  await expect(timeline.getByTestId('timeline-phase-ease')).toHaveValue('expo');
+  await expect(timeline.getByTestId('timeline-speed')).toHaveValue('1');
   // The overview: one strip, part rows spanning every section (set-only rows dropped).
   const labels = timeline.locator('.timeline-ov-labels .timeline-label');
   await expect(labels).toHaveCount(3);
@@ -489,12 +492,9 @@ test('a Motion preset swap keeps the regrouped Continue chain and its tuning', a
   await page.waitForTimeout(650);
   expect(await templateJs()).toMatch(/var stepEases = \['back\.out\(1\.6\)'\]/);
 
-  // Swap the entrance preset in the Motion panel — the chain must NOT reset.
-  await page.getByRole('button', { name: 'Motion' }).click();
-  await page
-    .locator('.wz-anim')
-    .filter({ has: page.locator('strong', { hasText: /^Pop spring$/ }) })
-    .click();
+  // Swap the entrance preset from the ▶ In card — the chain must NOT reset.
+  await page.getByTestId('timeline-seg-in').click();
+  await page.getByTestId('timeline-phase-preset').selectOption('pop-spring');
   await page.waitForTimeout(650);
   const js = await templateJs();
   expect(js).toContain('Pop spring');
@@ -604,6 +604,121 @@ test('the On air card names the hold and pauses the preview at the settled state
   await expect(hold).not.toHaveClass(/active/, { timeout: 3000 });
 });
 
+test('the On air card edits how the graphic leaves air, syncing the SPX definition', async ({ page }) => {
+  await createHairline(page);
+  const readOut = async () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const t = useTemplateStore.getState().template;
+      return { setting: t.settings.out, def: t.html.match(/"out": "([^"]+)"/)?.[1] ?? null };
+    });
+  expect(await readOut()).toEqual({ setting: 'manual', def: 'manual' });
+
+  // Selecting ● On air surfaces the out-mode control in the hold note.
+  await page.getByTestId('timeline-seg-hold').click();
+  const mode = page.getByTestId('timeline-out-mode');
+  await expect(mode).toHaveValue('manual');
+
+  // stays — no out: the setting AND the serialized definition follow, so exports agree.
+  await mode.selectOption('none');
+  expect(await readOut()).toEqual({ setting: 'none', def: 'none' });
+  await expect(page.getByTestId('timeline-seg-hold')).toContainText('stays');
+
+  // Auto-out with an editable delay in milliseconds.
+  await mode.selectOption('auto');
+  expect(await readOut()).toEqual({ setting: '5000', def: '5000' });
+  const ms = page.getByTestId('timeline-out-ms');
+  await expect(ms).toHaveValue('5000');
+  await ms.fill('3000');
+  await ms.press('Enter');
+  expect(await readOut()).toEqual({ setting: '3000', def: '3000' });
+  await expect(page.getByTestId('timeline-seg-hold')).toContainText('auto-out 3s');
+
+  // One undoable apply per edit, like every strip control.
+  await page.keyboard.press('Control+z');
+  expect((await readOut()).setting).toBe('5000');
+});
+
+/** Wait until the edit's auto-replay has run to completion — a replay CLAIMS the strip's
+ *  selection when it starts, so a spec must let it pass before picking another card. */
+async function replayDone(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const w = (document.querySelector('iframe.preview-frame') as HTMLIFrameElement)
+            .contentWindow as { __activeTl?: { tl: { progress: () => number } } } | null;
+          return w?.__activeTl ? w.__activeTl.tl.progress() : null;
+        }),
+      { timeout: 8000 },
+    )
+    .toBe(1);
+}
+
+test('the ■ Out card swaps just the exit — repeated phase mixing never strands a stale tag', async ({ page }) => {
+  await createHairline(page);
+  // First mix the entrance (Pop spring in, Line reveal out kept)…
+  await page.getByTestId('timeline-phase-preset').selectOption('pop-spring');
+  await replayDone(page); // the auto-replay reclaims the selection — let it pass
+  // …then swap the exit from its own card.
+  await page.getByTestId('timeline-seg-out').click();
+  await expect(page.getByTestId('timeline-phase-preset')).toHaveValue('line-reveal');
+  await page.getByTestId('timeline-phase-preset').selectOption('drop-in');
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js).toContain('// In preset: Pop spring'); // the entrance survived
+  // Exactly ONE out tag, and it names the new exit (the splitRegion head/tail fix).
+  expect(js.match(/\/\/ Out preset: /g)).toHaveLength(1);
+  expect(js).toContain('// Out preset: Drop in');
+  expect(js).toContain("var easeIn = 'back.out(1.6)'"); // pop-spring's tuned entrance ease, kept
+  expect(js).toContain("var easeOut = 'power2.in'"); // drop-in's designed exit ease
+});
+
+test('the In and Out cards carry the phase easing choice (phase-correct halves)', async ({ page }) => {
+  await createHairline(page);
+  // The ▶ In card writes the easeIn knob with the vocabulary's In-direction curve.
+  await page.getByTestId('timeline-phase-ease').selectOption('back');
+  const js1 = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js1).toContain("var easeIn = 'back.out(1.6)'"); // entrances settle (Out-direction curve)
+  expect(js1).toContain("var easeOut = 'power3.in'"); // the exit knob untouched
+  await replayDone(page); // the auto-replay reclaims the selection — let it pass
+  // The ■ Out card writes the easeOut knob with the exit-correct half.
+  await page.getByTestId('timeline-seg-out').click();
+  await page.getByTestId('timeline-phase-ease').selectOption('expo');
+  const js2 = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js2).toContain("var easeIn = 'back.out(1.6)'"); // still the In pick
+  expect(js2).toContain("var easeOut = 'expo.in'"); // exits leave quickly (In-direction curve)
+});
+
+test('the strip header speed knob writes animSpeed and auto-replays', async ({ page }) => {
+  await createHairline(page);
+  const inDuration = async () =>
+    Number((await page.getByTestId('timeline-seg-in').textContent())!.match(/([\d.]+)s/)![1]);
+  const before = await inDuration();
+  await expect(page.getByTestId('timeline-speed')).toHaveValue('1');
+  await page.getByTestId('timeline-speed').selectOption('1.5');
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js).toContain('var animSpeed = 1.5;');
+  // The moment cards' REAL durations follow the knob (tween durations are X / animSpeed;
+  // overlap positions stay literal, so the total shrinks without dividing exactly).
+  expect(await inDuration()).toBeLessThan(before);
+  // …and the auto-replay shows the faster motion without pressing Play.
+  await expect
+    .poll(async () => frame(page).locator('.lower-third').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })
+    .toBe('1');
+});
+
 test('dark color-scheme reaches the app root and the preview stays transparent', async ({ page }) => {
   await createHairline(page);
   // The app declares itself dark, so native select popups render dark-on-dark readable.
@@ -628,7 +743,7 @@ test('dark color-scheme reaches the app root and the preview stays transparent',
   expect(option.color).toBe('rgb(232, 237, 242)'); // --text
 });
 
-test('the strip can turn step reveal off without the Motion tab detour', async ({ page }) => {
+test('the strip can turn step reveal off (the step hint carries the action)', async ({ page }) => {
   // Soft Stack with steps on.
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
@@ -754,7 +869,7 @@ test('the part registry names the template structure — the shared identity con
   for (const p of parts) expect(p.selector).toMatch(/^[.#][\w-]+$/);
 });
 
-test('a hand-edited region the parser cannot read gets an honest note, not a vanished strip', async ({ page }) => {
+test('a hand-edited region the parser cannot read gets an honest note plus a preset fallback', async ({ page }) => {
   await createHairline(page);
   await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toBeVisible();
   // Mangle the marked region beyond the parser's shapes (rename the build functions).
@@ -765,6 +880,17 @@ test('a hand-edited region the parser cannot read gets an honest note, not a van
   });
   await expect(page.getByTestId('timeline-unreadable')).toContainText('hand-crafted');
   await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toHaveCount(0);
+  // With the Motion tab retired, this state keeps its one remaining duty here: starting
+  // over from a preset re-emits the whole marked region and brings the timeline back.
+  await page.getByTestId('timeline-preset-reset').selectOption('slide-fade');
+  await expect(page.getByTestId('timeline').locator('.timeline-tracks')).toBeVisible();
+  await expect(page.getByTestId('timeline-seg-in')).toBeVisible();
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js).toContain('// Preset: Slide + fade');
+  expect(js).toContain('function buildInTimeline');
 });
 
 test('timeline strip collapses to a slim bar and remembers it', async ({ page }) => {

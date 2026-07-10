@@ -17,10 +17,20 @@ import {
   type TimelineTween,
   type TransformProp,
 } from '../blocks/timelineModel';
-import { readAnimationInfo, setStepsMode, withStepsSetting } from '../blocks/animPatch';
+import {
+  presetConfigFromTemplate,
+  presetsForType,
+  readAnimationInfo,
+  setAnimKnob,
+  setStepsMode,
+  swapAnimationPhase,
+  withStepsSetting,
+} from '../blocks/animPatch';
 import { changePartPress } from '../blocks/stepAssign';
 import { countLines, detectPrefix, getTemplateParts } from '../model/structure';
-import { EASINGS } from '../model/easings';
+import { replaceDefinitionInHtml } from '../model/spxDefinition';
+import { EASINGS, resolveEasing, type EasingId } from '../model/easings';
+import type { AnimPresetId } from '../model/wizard';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { useIsMobile } from './useIsMobile';
 import type { SpxWindow } from './PlayoutSimulator';
@@ -70,6 +80,13 @@ interface BarDrag {
 }
 
 const SNAP = 0.05; // timing grid — keeps the emitted literals readable (two decimals)
+
+/** The strip header's speed knob choices — the same three stops the Motion panel offered. */
+const SPEEDS = [
+  { label: 'Slower ×0.75', value: 0.75 },
+  { label: 'Normal ×1', value: 1 },
+  { label: 'Faster ×1.5', value: 1.5 },
+];
 
 // T4.2 — overview geometry. The hold is a fixed-width break (it waits for a cue, so it has
 // no clock to scale); real sections scale by duration × zoom.
@@ -146,6 +163,7 @@ export default function TimelineView({ iframeRef }: Props) {
   const sendScrub = useTemplateStore((s) => s.sendScrub);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const requestReplay = useTemplateStore((s) => s.requestReplay);
+  const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   // Shared selection (Era 6): the canvas and this strip highlight the SAME element.
   const selectedPart = useTemplateStore((s) => s.selectedPart);
   const setSelectedPart = useTemplateStore((s) => s.setSelectedPart);
@@ -266,17 +284,86 @@ export default function TimelineView({ iframeRef }: Props) {
     return () => cancelAnimationFrame(raf);
   }, [model, iframeRef]);
 
+  // ── The strip IS the motion surface (the Motion side-tab is retired) ────────
+  // The controls below write the exact deterministic patches the panel wrote:
+  // swapAnimationPhase for preset swaps, setAnimKnob for the speed/easing knobs — one
+  // undoable apply + auto-replay each, the new code brought to front in the JS tab.
+  const info = readAnimationInfo(template.js);
+  const categoryPresets = presetsForType(template.type);
+
+  const applyMotion = (js: string) => {
+    if (js === template.js) return;
+    applyTemplate({ ...template, js });
+    setActiveTab('js');
+    requestReplay();
+  };
+
+  /** Swap one phase's preset (or both, for the unparsable-region reset). The swapped phase
+   *  gets the preset's designed ease; the untouched phase keeps its current knob. */
+  const swapPhasePreset = (phase: 'in' | 'out' | 'both', presetId: AnimPresetId) => {
+    const preset = categoryPresets.find((p) => p.id === presetId) ?? categoryPresets[0];
+    const cfg = {
+      ...presetConfigFromTemplate(template, info.steps),
+      easeIn: phase === 'out' ? info.easeIn ?? preset.autoEase.easeIn : preset.autoEase.easeIn,
+      easeOut: phase === 'in' ? info.easeOut ?? preset.autoEase.easeOut : preset.autoEase.easeOut,
+    };
+    applyMotion(swapAnimationPhase(template.js, preset.id, cfg, phase));
+  };
+
+  const setSpeed = (value: string) => applyMotion(setAnimKnob(template.js, 'animSpeed', value));
+
+  /** One phase's easing knob (easeIn on the ▶ In card, easeOut on ■ Out). Vocabulary ids
+   *  resolve to their phase-correct GSAP half (doctrine: entrances settle, exits leave
+   *  quickly); 'auto' returns to the phase preset's hand-tuned curve. */
+  const setPhaseEasing = (phase: 'in' | 'out', easing: EasingId) => {
+    const presetId = phase === 'in' ? info.inPresetId : info.outPresetId;
+    const auto =
+      (presetId && categoryPresets.find((p) => p.id === presetId)?.autoEase) ||
+      { easeIn: 'power2.out', easeOut: 'power2.in' };
+    const pair = resolveEasing(easing, auto);
+    applyMotion(setAnimKnob(template.js, phase === 'in' ? 'easeIn' : 'easeOut', phase === 'in' ? pair.easeIn : pair.easeOut));
+  };
+
+  /** The SPX `out` setting — how the graphic leaves air (the ● On air card's control):
+   *  'manual' = until ■ Stop, digits = auto-out after N ms, 'none' = stays. Synced into
+   *  the definition the same way withStepsSetting keeps `steps` honest. */
+  const setOutMode = (out: string) => {
+    if (out === (template.settings.out ?? 'manual')) return;
+    const settings = { ...template.settings, out };
+    applyTemplate({ ...template, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
+    setActiveTab('html');
+  };
+
   if (!model) {
     // Blank/imported templates (no managed region) get no strip at all. A marked region the
-    // parser can't read gets an honest one-liner instead of silently vanishing.
-    if (!readAnimationInfo(template.js).hasRegion) return null;
+    // parser can't read gets an honest one-liner instead of silently vanishing — plus the
+    // one Motion-tab duty this state still needs: starting over from a preset (a 'both'
+    // swap re-emits the whole marked region, which brings the timeline back; undo restores
+    // the hand-written code).
+    if (!info.hasRegion) return null;
     return (
       <div className="timeline-strip collapsed" data-testid="timeline">
         <div className="timeline-head">
           <p className="timeline-hint" data-testid="timeline-unreadable">
             This animation is hand-crafted beyond what the timeline can chart — the JS code is
-            in charge. Applying a Motion preset brings the timeline back.
+            in charge. Starting over from a preset brings the timeline back.
           </p>
+          <select
+            className="timeline-ease timeline-preset"
+            value=""
+            onChange={(e) => e.target.value && swapPhasePreset('both', e.target.value as AnimPresetId)}
+            title="Replace the whole marked animation region with a preset's code — undo with Ctrl+Z brings the hand-written version back"
+            data-testid="timeline-preset-reset"
+          >
+            <option value="" disabled>
+              Start over with a preset…
+            </option>
+            {categoryPresets.map((p) => (
+              <option key={p.id} value={p.id} title={p.description}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     );
@@ -812,15 +899,25 @@ export default function TimelineView({ iframeRef }: Props) {
             </button>
           </span>
         )}
-        {/* Last on purpose: the knobs readout is the one flexible-width item — it may
-            ellipsize when the head is tight; the zoom buttons must not fall off. */}
+        {/* The speed knob — animSpeed scales every duration, so it belongs to the whole
+            strip, not one card (the per-phase preset/easing live under the In/Out cards). */}
         {!collapsed && (
-          <span
-            className="hint timeline-knobs"
-            title={`animSpeed ×${model.animSpeed} · easeIn ${model.easeIn} · easeOut ${model.easeOut}`}
+          <select
+            className="timeline-ease timeline-speed"
+            value={SPEEDS.some((s) => s.value === info.speed) ? String(info.speed) : 'custom'}
+            onChange={(e) => e.target.value !== 'custom' && setSpeed(e.target.value)}
+            title={`Motion speed — the animSpeed knob scales every duration (currently ×${info.speed})`}
+            data-testid="timeline-speed"
           >
-            ×{model.animSpeed} · {easeName(model.easeIn, 'in')} / {easeName(model.easeOut, 'out')}
-          </span>
+            {SPEEDS.map((s) => (
+              <option key={s.value} value={String(s.value)}>
+                {s.label}
+              </option>
+            ))}
+            {!SPEEDS.some((s) => s.value === info.speed) && (
+              <option value="custom" disabled>{`×${info.speed}`}</option>
+            )}
+          </select>
         )}
       </div>
 
@@ -1184,38 +1281,130 @@ export default function TimelineView({ iframeRef }: Props) {
         </div>
       )}
 
-      {/* The hold explained, when it is the selected moment. */}
+      {/* The hold explained AND edited, when it is the selected moment: the select writes
+          the SPX `out` setting (playout truth — the On air card's subtitle follows it). */}
       {!collapsed && holdSelected && (
         <p className="timeline-hold-note" data-testid="timeline-hold-note">
-          The graphic holds here, settled,{' '}
-          {outMode === 'none'
-            ? 'and never leaves on its own (no out is set).'
-            : /^\d+$/.test(outMode)
-              ? `then leaves by itself after ${Number(outMode) / 1000}s.`
-              : 'until ■ Stop plays the exit.'}
-          {model.steps.length > 0 && ' Each » Next press plays during this hold.'}
+          The graphic holds here, settled —{' '}
+          <select
+            className="timeline-ease timeline-out-mode"
+            value={outMode === 'none' ? 'none' : /^\d+$/.test(outMode) ? 'auto' : 'manual'}
+            onChange={(e) =>
+              setOutMode(e.target.value === 'auto' ? (/^\d+$/.test(outMode) ? outMode : '5000') : e.target.value)
+            }
+            title="How it leaves air — the SPX `out` setting in the template definition (■ Stop, an auto-out timer, or no out at all)"
+            data-testid="timeline-out-mode"
+          >
+            <option value="manual">until ■ Stop plays the exit</option>
+            <option value="auto">leaving by itself, after…</option>
+            <option value="none">forever — it stays (no out)</option>
+          </select>
+          {/^\d+$/.test(outMode) && (
+            <>
+              {' '}
+              <input
+                className="timeline-out-ms"
+                type="number"
+                min={100}
+                step={100}
+                key={outMode}
+                defaultValue={Number(outMode)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                }}
+                onBlur={(e) => {
+                  const v = Math.round(Number(e.currentTarget.value));
+                  if (Number.isFinite(v) && v >= 100) setOutMode(String(v));
+                }}
+                title="Auto-out delay in milliseconds"
+                data-testid="timeline-out-ms"
+              />
+              {' ms'}
+            </>
+          )}
+          {model.steps.length > 0 && ' — each » Next press plays during this hold.'}
         </p>
       )}
 
-      {/* One line of context so the gestures are discoverable without hovering. */}
-      {!collapsed && !holdSelected && (
+      {/* The selected moment's controls + one line of gesture context. A » step keeps its
+          hint (its ease lives in the gutter; »+ Step / turn-off own the chain); the In and
+          Out cards grow the retired Motion panel's per-phase preset and easing choice. */}
+      {!collapsed && !holdSelected && step && (
         <p className="timeline-hint" data-testid="timeline-hint">
-          {step ? (
-            <>
-              {'Plays on one press of the » button — the "appears on" menu moves a line to another press. '}
-              <button
-                className="timeline-hint-action"
-                onClick={turnOffSteps}
-                title="Remove all Continue steps — every line appears with ▶ Play again (undo with Ctrl+Z)"
-                data-testid="timeline-steps-off"
-              >
-                Turn off step reveal
-              </button>
-            </>
-          ) : seg.kind === 'out'
-            ? 'The exit (■ Stop) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'
-            : 'The entrance (▶ Play) — drag a bar to retime it, drag its right edge to stretch, the menu sets its ease.'}
+          {'Plays on one press of the » button — the "appears on" menu moves a line to another press. '}
+          <button
+            className="timeline-hint-action"
+            onClick={turnOffSteps}
+            title="Remove all Continue steps — every line appears with ▶ Play again (undo with Ctrl+Z)"
+            data-testid="timeline-steps-off"
+          >
+            Turn off step reveal
+          </button>
         </p>
+      )}
+      {!collapsed && !holdSelected && !step && (
+        <div className="timeline-hint timeline-inspector" data-testid="timeline-hint">
+          <span className="timeline-inspector-label">{seg.kind === 'in' ? '▶ entrance' : '■ exit'}</span>
+          <select
+            className="timeline-ease timeline-preset"
+            value={(seg.kind === 'in' ? info.inPresetId : info.outPresetId) ?? ''}
+            onChange={(e) => e.target.value && swapPhasePreset(seg.kind as 'in' | 'out', e.target.value as AnimPresetId)}
+            title={`This phase's preset — picking one re-emits only the ${
+              seg.kind === 'in' ? 'entrance' : 'exit'
+            }'s half of the marked animation region (undo with Ctrl+Z)`}
+            data-testid="timeline-phase-preset"
+          >
+            {!(seg.kind === 'in' ? info.inPresetId : info.outPresetId) && (
+              <option value="" disabled>
+                Custom
+              </option>
+            )}
+            {categoryPresets.map((p) => (
+              <option key={p.id} value={p.id} title={p.description}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          {(() => {
+            const dir = seg.kind as 'in' | 'out';
+            const knob = dir === 'in' ? model.easeIn : model.easeOut;
+            const knobId = EASINGS.find((e) => (dir === 'in' ? e.gsapIn : e.gsapOut) === knob)?.id ?? null;
+            return (
+              <select
+                className="timeline-ease timeline-phase-ease"
+                value={knobId ?? '__custom'}
+                onChange={(e) => !e.target.value.startsWith('__') && setPhaseEasing(dir, e.target.value as EasingId)}
+                title={`This phase's easing knob (${dir === 'in' ? 'easeIn' : 'easeOut'} = '${knob}') — entrances settle smoothly, exits leave quickly; Auto is the preset's tuned curve`}
+                data-testid="timeline-phase-ease"
+              >
+                <option value="auto">Auto — the preset's curve</option>
+                <optgroup label="Standard">
+                  {EASINGS.filter((e) => e.tag === 'standard').map((e) => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Playful (use sparingly)">
+                  {EASINGS.filter((e) => e.tag === 'playful').map((e) => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Continuous motion only">
+                  {EASINGS.filter((e) => e.tag === 'continuous').map((e) => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </optgroup>
+                {!knobId && (
+                  <option value="__custom" disabled>{`${easeName(knob, dir)} (${knob})`}</option>
+                )}
+              </select>
+            );
+          })()}
+          <span className="timeline-inspector-hint">
+            {seg.kind === 'out'
+              ? 'Plays on ■ Stop — drag a bar to retime it, its edges to stretch; the gutter menu sets one move\'s ease.'
+              : 'Plays on ▶ Play — drag a bar to retime it, its edges to stretch; the gutter menu sets one move\'s ease.'}
+          </span>
+        </div>
       )}
 
       {/* The chip following the pointer while a drag changes WHEN a part appears. */}

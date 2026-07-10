@@ -540,6 +540,23 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       Logo block, give it its own press from the chip, and pin the whole lifecycle (hidden
       settled → revealed on press 2 → fades on ■ Stop → always-on again after unassign, gate
       code gone).
+- [x] **T6 one motion surface (2026-07-10, the approved T3.5 follow-up)** — the Motion
+      side-tab is retired; the strip's moment cards ARE the motion surface (SidePanel: five
+      tabs). The selected ▶ In / ■ Out card grows an inspector row with that phase's preset
+      picker (presetsForType, per-category) and easing choice (the vocabulary's phase-correct
+      half — doctrine intact), writing the panel's exact patches (`swapAnimationPhase` /
+      `setAnimKnob`); the animSpeed knob lives on the strip header (Slower/Normal/Faster);
+      the ● On air card's note now EDITS the SPX `out` setting (until ■ Stop / auto-out N ms
+      with an editable delay / stays-no-out), synced into the definition like
+      `withStepsSetting`. The unparsable-region fallback keeps the Motion tab's one remaining
+      duty: an honest one-liner plus a start-over preset select (a 'both'-phase swap re-emits
+      the whole region and brings the timeline back). Found & fixed on the way: `splitRegion`
+      left the "// Out preset:" tag in the head slice, so an In-swap followed by an Out-swap
+      stranded a stale duplicate tag that won the readback (the panel had the same bug).
+      Steps stay where T3.6 put them (»+ Step / turn-off on the strip); the wizard's
+      Animation STEP is untouched (a different surface for a different moment). E2E: the
+      motion specs re-pinned on the strip + new coverage (per-phase swap from a card, speed
+      knob, out-mode sync, fallback).
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/
