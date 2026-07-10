@@ -49,11 +49,20 @@ test('export: validation shows inline and gates the download on a broken templat
 });
 
 test('motion: an In-only preset swap from the ▶ In card keeps the exit and auto-replays', async ({ page }) => {
-  await createHairline(page);
+  // The classic strip's phase controls — pinned on a not-yet-migrated category (info
+  // cards); lower thirds create as data blocks and use the step timeline instead.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
+  await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
   // The ▶ In card is the selected moment by default; its inspector row (under the tracks)
   // carries THAT phase's preset picker — the strip is the one motion surface.
   await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);
-  await expect(page.getByTestId('timeline-phase-preset')).toHaveValue('line-reveal'); // Hairline's default
+  await expect(page.getByTestId('timeline-phase-preset')).toHaveValue('line-reveal'); // the card's default
   await page.getByTestId('timeline-phase-preset').selectOption('pop-spring');
   // The phase mix is recorded in the marker comments…
   const js = await page.evaluate(async () => {
@@ -61,13 +70,13 @@ test('motion: an In-only preset swap from the ▶ In card keeps the exit and aut
     return useTemplateStore.getState().template.js;
   });
   expect(js).toContain('// In preset: Pop spring');
-  expect(js).toContain('// Out preset: Line reveal'); // Hairline's default preset, untouched
+  expect(js).toContain('// Out preset: Line reveal'); // the default preset, untouched
   expect(js).toContain('function buildOutTimeline');
   // …the editor jumps to the JS tab (the swap is real, readable code)…
   await expect(page.locator('.tabs .tab.active')).toHaveText('JS');
   // …and the auto-replay makes the graphic visible without pressing Play.
   await expect
-    .poll(async () => frame(page).locator('.lower-third').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })
+    .poll(async () => frame(page).locator('.info-card').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })
     .toBe('1');
 });
 
@@ -105,14 +114,19 @@ test('wizard: direction control mixes a different exit preset at create', async 
   await expect(page.locator('.wz-step .hint').first()).toContainText('Out Drop in');
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
-  // The created code carries the phase mix in the marker comments…
-  const js = await page.evaluate(async () => {
+  // Lower thirds create as data blocks: the mix is real keyframe data — the entrance
+  // keeps Line reveal's choreography (the accent draws in) while the Out step carries
+  // Drop in's exit (the box lifts away: y + opacity keyframes).
+  const data = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
-    return useTemplateStore.getState().template.js;
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js);
   });
-  expect(js).toContain('// In preset: Line reveal'); // Hairline's default entrance, kept
-  expect(js).toContain('// Out preset: Drop in'); // the mixed-in exit
-  // …and the spliced runtime still plays.
+  expect(data).not.toBeNull();
+  expect(Object.keys(data!.steps[0].layers['.lower-third-accent'] ?? {})).toContain('scaleX');
+  const outBox = data!.steps[data!.steps.length - 1].layers['.lower-third-box'] ?? {};
+  expect(Object.keys(outBox)).toEqual(expect.arrayContaining(['y', 'opacity']));
+  // …and the mixed runtime still plays.
   await page.waitForTimeout(650); // debounced preview rebuild
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect

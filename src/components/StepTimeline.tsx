@@ -246,16 +246,21 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     return () => cancelAnimationFrame(raf);
   }, [data, iframeRef]);
 
-  // ── Rows: registry layers that animate or reveal anywhere in the data.
+  // ── Rows: EVERY visual layer has its own row (the ratified rule) — registry parts in
+  //    registry order (except the root, whose motion is the preset's whole job), plus any
+  //    unregistered selectors the data animates (hand-added tracks).
   const rows = useMemo(() => {
-    const active = new Set<string>();
+    const animated = new Set<string>();
     for (const step of data.steps) {
-      Object.keys(step.layers).forEach((s) => active.add(s));
-      (step.reveals ?? []).forEach((s) => active.add(s));
+      Object.keys(step.layers).forEach((s) => animated.add(s));
+      (step.reveals ?? []).forEach((s) => animated.add(s));
     }
-    active.delete(data.root);
-    const ordered = parts.filter((p) => active.has(p.selector)).map((p) => ({ key: p.selector, label: p.label }));
-    for (const key of active) if (!ordered.some((r) => r.key === key)) ordered.push({ key, label: key });
+    const ordered = parts
+      .filter((p) => p.kind !== 'root')
+      .map((p) => ({ key: p.selector, label: p.label }));
+    for (const key of animated) {
+      if (key !== data.root && !ordered.some((r) => r.key === key)) ordered.push({ key, label: key });
+    }
     return ordered;
   }, [data, parts]);
 
@@ -578,6 +583,23 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
             >
               »+
             </button>
+          )}
+          {editable && (
+            <select
+              className="tlv2-speed"
+              value={[0.75, 1, 1.5].includes(data.speed) ? String(data.speed) : 'custom'}
+              onChange={(e) => {
+                if (e.target.value === 'custom') return;
+                applyData({ ...data, speed: Number(e.target.value) });
+              }}
+              title={`Motion speed — scales every duration and keyframe (currently ×${data.speed})`}
+              data-testid="tlv2-speed"
+            >
+              <option value="0.75">×0.75</option>
+              <option value="1">×1</option>
+              <option value="1.5">×1.5</option>
+              {![0.75, 1, 1.5].includes(data.speed) && <option value="custom" disabled>{`×${data.speed}`}</option>}
+            </select>
           )}
           <span className="tlv2-time mono" data-testid="tlv2-time">{head.t.toFixed(2)}s</span>
         </div>

@@ -1636,6 +1636,17 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .tlv2-hold.editable { cursor: pointer; }
 .tlv2-hold.editable:hover { color: var(--amber); }
 .tlv2-add-step { font-size: 10px; letter-spacing: 0.03em; color: var(--amber); border-color: rgba(246, 166, 35, 0.4); }
+.tlv2-speed {
+  width: 54px;
+  height: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  padding: 0 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
 .tlv2-menu {
   position: fixed;
   z-index: 320;

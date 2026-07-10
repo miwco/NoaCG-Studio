@@ -48,8 +48,9 @@ test('inspector: selecting a timeline row shows that layer — selection synced 
   await page.locator('.timeline-label[data-part="#f0"]').click();
   await expect(page.getByTestId('inspector-part-label')).toHaveText('Name');
   await expect(page.getByTestId('inspector')).toContainText('#f0');
-  // The settled mask value resolves from the imported animation data (yPercent ends at 0).
-  await expect(page.getByTestId('inspector-value-yPercent')).toHaveText('0');
+  // Lower thirds create as data blocks: the animated mask property is ARMED, so it
+  // renders as an editable input resolved at the settled state (yPercent ends at 0).
+  await expect(page.getByTestId('inspector-input-yPercent')).toHaveValue('0');
   // The same selection washes the timeline row (the existing shared-selection pin).
   await expect(page.locator('.timeline-label[data-part="#f0"]')).toHaveClass(/selected/);
   // The Animations tab reports which steps move this layer.
@@ -79,21 +80,23 @@ test('inspector: canvas clicks drive it too (select it to affect it)', async ({ 
 
 test('redo: Ctrl+Shift+Z restores an undone edit; a new edit clears the redo branch', async ({ page }) => {
   await createHairline(page);
-  const speedLine = async () =>
+  // The speed knob writes the data block's speed field (one undoable apply per pick).
+  const speed = async () =>
     page.evaluate(async () => {
       const { useTemplateStore } = await import('/src/store/templateStore.ts');
-      return useTemplateStore.getState().template.js.match(/var animSpeed = [^;]+;/)?.[0];
+      const { parseAnimData } = await import('/src/blocks/animData.ts');
+      return parseAnimData(useTemplateStore.getState().template.js)?.speed;
     });
-  await page.getByTestId('timeline-speed').selectOption('1.5');
-  expect(await speedLine()).toBe('var animSpeed = 1.5;');
+  await page.getByTestId('tlv2-speed').selectOption('1.5');
+  expect(await speed()).toBe(1.5);
   await page.keyboard.press('Control+z');
-  expect(await speedLine()).toBe('var animSpeed = 1;');
+  expect(await speed()).toBe(1);
   await page.keyboard.press('Control+Shift+z');
-  expect(await speedLine()).toBe('var animSpeed = 1.5;');
+  expect(await speed()).toBe(1.5);
   // Undo again, make a DIFFERENT edit — the redo branch is gone (the classic cut).
   await page.keyboard.press('Control+z');
-  await page.getByTestId('timeline-speed').selectOption('0.75');
-  expect(await speedLine()).toBe('var animSpeed = 0.75;');
+  await page.getByTestId('tlv2-speed').selectOption('0.75');
+  expect(await speed()).toBe(0.75);
   await page.keyboard.press('Control+Shift+z');
-  expect(await speedLine()).toBe('var animSpeed = 0.75;'); // no stale redo applied
+  expect(await speed()).toBe(0.75); // no stale redo applied
 });

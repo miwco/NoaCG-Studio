@@ -19,7 +19,7 @@ async function createHairline(page: Page, steps = false) {
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await page.waitForTimeout(650);
-  await page.getByTestId('timeline-v2-toggle').click(); // opt in (read view)
+  // Lower thirds create AS data blocks — the step timeline is their native surface.
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
 }
 
@@ -93,8 +93,6 @@ async function animData(page: Page) {
 test('v2 keyframes: convert, arm at the playhead, auto-key, interpolate — the ratified workflow', async ({ page }) => {
   await createHairline(page);
   // "use keyframes" rewrites the region as the data block + interpreter — one undoable apply.
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   let data = await animData(page);
   expect(data).not.toBeNull();
   expect(data!.steps[0].name).toBe('Enter');
@@ -149,8 +147,6 @@ test('v2 keyframes: convert, arm at the playhead, auto-key, interpolate — the 
 
 test('v2 keyframes: dragging a diamond retimes it; Delete removes it; undo restores', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   const times = async () => {
     const data = await animData(page);
     return data!.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time);
@@ -185,8 +181,6 @@ test('v2 keyframes: dragging a diamond retimes it; Delete removes it; undo resto
 test('v2 presets: In and Out apply independently; undeclared manual keyframes survive', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   await page.getByTestId('toggle-inspector').click();
 
   // Give #f0 a MANUAL rotation keyframe — no preset declares rotation, so it must survive.
@@ -225,8 +219,6 @@ test('v2 presets: In and Out apply independently; undeclared manual keyframes su
 
 test('v2 presets: a single layer takes a preset into ITS activation step (In is layer-relative)', async ({ page }) => {
   await createHairline(page, true); // #f1 reveals on press 1 (step index 1)
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   await page.getByTestId('toggle-inspector').click();
   // Select the revealed Title line and apply a preset to its In.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f1"]').click();
@@ -249,8 +241,6 @@ test('v2 presets: a single layer takes a preset into ITS activation step (In is 
 
 test('v2: the canvas chip moves a layer between presses on a data template', async ({ page }) => {
   await createHairline(page, true);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   // Select the revealed line, then send it back to ▶ Play via the chip's appears-on menu
   // (the same changePartPress contract, now routed through the data mutator).
   await page.evaluate(async () => {
@@ -275,8 +265,6 @@ test('v2: the canvas chip moves a layer between presses on a data template', asy
 
 test('v2 clips: right-edge resize preserves keyframe timing; Alt-drag stretches it', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   const enter = async () => {
     const data = await animData(page);
     return {
@@ -336,8 +324,6 @@ test('v2 clips: right-edge resize preserves keyframe timing; Alt-drag stretches 
 test('v2 clips: context menu duplicates, renames, deletes; the definition follows', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page, true); // Enter · Step 2 (reveals #f1) · Out
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   const stepsSetting = () =>
     page.evaluate(async () => {
       const { useTemplateStore } = await import('/src/store/templateStore.ts');
@@ -381,8 +367,6 @@ test('v2 clips: context menu duplicates, renames, deletes; the definition follow
 
 test('v2 clips: »+ adds an authoring step; the hold popover edits how the graphic leaves', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
 
   // »+ adds an empty content step before Out (an authoring target), definition synced.
   await page.getByTestId('tlv2-add-step').click();
@@ -408,8 +392,6 @@ test('v2 clips: »+ adds an authoring step; the hold popover edits how the graph
 
 test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
   // Space = ▶ Play (never while typing): the simulator owns a fresh running timeline.
   await page.keyboard.press(' ');
   await expect
@@ -434,11 +416,34 @@ test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({
   expect(Math.min(...after)).toBeCloseTo(Math.min(...before) + 0.05, 2);
 });
 
-test('v2: the dock toggle swaps surfaces and persists; classic remains the default', async ({ page }) => {
-  await createHairline(page); // helper already toggled INTO v2
-  await expect(page.getByTestId('timeline-v2')).toBeVisible();
-  await expect(page.getByTestId('timeline')).toHaveCount(0);
-  await page.getByTestId('timeline-v2-toggle').click(); // back to classic
+test('v2: legacy categories keep the classic strip, can peek at v2, and convert on demand', async ({ page }) => {
+  // Info cards have not migrated: classic is their default editing surface.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
+  await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
   await expect(page.getByTestId('timeline')).toBeVisible();
   await expect(page.getByTestId('timeline-v2')).toHaveCount(0);
+  // The chip opens the v2 read view…
+  await page.getByTestId('timeline-v2-toggle').click();
+  await expect(page.getByTestId('timeline-v2')).toBeVisible();
+  // …and "use keyframes" converts the region — one undoable apply; the chips retire.
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  expect(js).toContain('var NOACG_ANIM');
+  await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
+  // Undo restores the legacy code — the chips return (the v2 preference persists), and
+  // one more toggle goes back to the classic strip.
+  await page.keyboard.press('Control+z');
+  await expect(page.getByTestId('timeline-v2-convert')).toBeVisible();
+  await page.getByTestId('timeline-v2-toggle').click();
+  await expect(page.getByTestId('timeline')).toBeVisible();
 });

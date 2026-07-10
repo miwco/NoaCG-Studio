@@ -192,12 +192,12 @@ test('selection is shared: a canvas click highlights the timeline row, a row lab
   await expect(page.locator('.change-dot')).toHaveCount(0);
 });
 
-test('the chip assigns the selected part to a press — the gutter control, from the canvas', async ({ page }) => {
-  await createHairline(page);
+test('the chip assigns the selected part to a press — the data chain, from the canvas', async ({ page }) => {
+  await createHairline(page); // lower thirds create as data blocks now
   await waitSettled(page);
 
-  // Turn step reveal on from the strip (»+): press 1 now reveals the Title line.
-  await page.getByTestId('timeline-seg-new').click();
+  // Enter the steps world from the step timeline (»+ adds the first press).
+  await page.getByTestId('tlv2-add-step').click();
   await page.waitForTimeout(650);
 
   // Select the accent via its timeline row label (shared selection — and a click target
@@ -210,20 +210,31 @@ test('the chip assigns the selected part to a press — the gutter control, from
   const appears = page.getByTestId('canvas-appears');
   await expect(appears).toHaveValue('-1');
 
-  // Assign it to press 1 — the SAME applyStepChain patch the timeline gutter writes.
+  // Assign it to press 1 — the data twin of the gutter's patch (a reveals move).
   await appears.selectOption('0');
   await page.waitForTimeout(650);
   await expect(page.getByTestId('canvas-appears')).toHaveValue('0'); // re-parsed from the code
   // The write landed in the code (the JS tab shows its change dot; HTML is the active tab).
   await expect(page.locator('.tabs .tab', { hasText: 'JS' }).locator('.change-dot')).toBeVisible();
-  // The timeline gutter agrees — both surfaces read the same emitted chain (the accent is
-  // the second part of press 1's group).
-  await expect(page.getByTestId('timeline-appears-p0-1')).toHaveValue('0');
+  const reveals = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js)!.steps[1].reveals;
+  });
+  expect(reveals).toContain('.lower-third-accent');
 
-  // And back to the entrance, from the canvas too (an emptied press disappears).
+  // And back to the entrance, from the canvas too. The emptied press disappears —
+  // with no presses left, the graphic exits the steps world and the control retires.
   await page.getByTestId('canvas-appears').selectOption('-1');
   await page.waitForTimeout(650);
-  await expect(page.getByTestId('canvas-appears')).toHaveValue('-1');
+  await expect(page.getByTestId('canvas-appears')).toHaveCount(0);
+  const data = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js);
+  });
+  expect(data!.steps).toHaveLength(2);
+  expect(Object.keys(data!.steps[0].layers)).toContain('.lower-third-accent');
 });
 
 test('a block element outside the root joins the press chain: hidden until its press, gone with the exit', async ({ page }) => {
@@ -243,7 +254,12 @@ test('a block element outside the root joins the press chain: hidden until its p
   });
   await page.waitForTimeout(650);
 
-  await page.getByTestId('timeline-seg-new').click(); // steps on: press 1 reveals the Title
+  // Enter the steps world (»+ on the step timeline), then put the Title on press 1 so
+  // the chain matches the classic flow this test pinned before the data flip.
+  await page.getByTestId('tlv2-add-step').click();
+  await page.waitForTimeout(650);
+  await page.locator('[data-part="#f1"]').click();
+  await page.getByTestId('canvas-appears').selectOption('0');
   await page.waitForTimeout(650);
 
   // The block's row exists now; select it and give it its OWN press from the canvas chip.
@@ -253,12 +269,14 @@ test('a block element outside the root joins the press chain: hidden until its p
   await page.waitForTimeout(650);
   await expect(page.getByTestId('canvas-appears')).toHaveValue('1');
 
-  // The emitted code carries BOTH halves of the outside gate.
-  const js = await page.evaluate(async () =>
-    (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js,
-  );
-  expect(js).toContain("var stepOutsideParts = ['#logo'];");
-  expect(js).toContain('press-revealed parts outside the root leave with the exit');
+  // The data chain carries the reveal; the outside gate is the INTERPRETER's job now
+  // (containment checked live at runtime — no emitted gate code to drift).
+  const revealData = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js)!.steps.map((s) => s.reveals ?? []);
+  });
+  expect(revealData[2]).toContain('#logo');
 
   // The gate, behaviorally. Settled design view (the entrance played out): still hidden.
   const logoOpacity = () =>
@@ -276,13 +294,15 @@ test('a block element outside the root joins the press chain: hidden until its p
   await page.getByRole('button', { name: '■ Stop' }).click();
   await expect.poll(logoOpacity).toBe('0');
 
-  // Unassigning removes the gate: the block is an always-on decoration again.
+  // Unassigning removes the reveal: the block is an always-on decoration again.
   await page.getByTestId('canvas-appears').selectOption('-1');
   await page.waitForTimeout(650);
-  const js2 = await page.evaluate(async () =>
-    (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js,
-  );
-  expect(js2).not.toContain('stepOutsideParts');
-  expect(js2).not.toContain('press-revealed parts outside the root leave with the exit');
+  const revealsAfter = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js)!
+      .steps.flatMap((s) => s.reveals ?? []);
+  });
+  expect(revealsAfter).not.toContain('#logo');
   await expect.poll(logoOpacity).toBe('1');
 });

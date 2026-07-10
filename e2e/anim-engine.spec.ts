@@ -1,18 +1,18 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // Timeline v2 Phase 1 (docs/TIMELINE_V2_PLAN.md) — the golden parity harness for the
-// declarative animation engine. No UI exists yet: these are browser logic-checks (the
-// house fast path — import source modules straight from the dev server) proving that a
-// legacy emitted region, converted to NOACG_ANIM data and played by the interpreter,
-// behaves exactly like the original: same durations, same settled states, same press
-// chain, and a playhead resolver that agrees with the real playback.
+// declarative animation engine. Lower thirds now CREATE as data blocks, so the harness
+// builds each preset's LEGACY twin explicitly (the preset's emitted region spliced into
+// the same template) and proves the two representations behave identically: same
+// durations, same settled states, same press chain, and a playhead resolver that agrees
+// with real playback.
 
 async function toApp(page: Page) {
   await page.goto('/app');
   await page.keyboard.press('Escape'); // the wizard modal — these tests don't need a project
 }
 
-/** Runs in the page: boot a template into a hidden iframe, return its window handle. */
+/** Runs in the page: boot templates into hidden iframes; build legacy twins. */
 const HARNESS = `
   async function boot(tpl) {
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
@@ -40,17 +40,33 @@ const HARNESS = `
     }
     return true;
   }
-  async function convert(tpl) {
-    const { importAnimData } = await import('/src/blocks/animImport.ts');
-    const { replaceRegionWithAnimData } = await import('/src/templates/shared/animRuntime.ts');
-    const data = importAnimData(tpl);
-    if (!data) return null;
-    const js = replaceRegionWithAnimData(tpl.js, data);
-    return js ? { data, tpl: { ...tpl, js } } : null;
+  // The preset's ORIGINAL emitted region, spliced over the data region — the legacy twin.
+  async function legacyTwin(tpl, presetId, steps) {
+    const { anyPresetById } = await import('/src/blocks/animPatch.ts');
+    const { detectPrefix, countLines } = await import('/src/model/structure.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const preset = anyPresetById(presetId);
+    const prefix = detectPrefix(tpl.html);
+    const data = parseAnimData(tpl.js);
+    const region = preset.emit({
+      prefix,
+      lineCount: Math.max(1, countLines(tpl.html)),
+      hasAccent: tpl.html.includes(prefix + '-accent'),
+      steps: !!steps,
+      stepOutsideParts: [],
+      speed: data ? data.speed : 1,
+      easeIn: preset.autoEase.easeIn,
+      easeOut: preset.autoEase.easeOut,
+    });
+    const OPEN = '/* == ANIMATION';
+    const CLOSE = '/* == END ANIMATION == */';
+    const start = tpl.js.indexOf(OPEN);
+    const end = tpl.js.indexOf(CLOSE) + CLOSE.length;
+    return { ...tpl, js: tpl.js.slice(0, start) + region + tpl.js.slice(end) };
   }
 `;
 
-test('parity: converted data + interpreter matches the legacy emit across preset styles', async ({ page }) => {
+test('parity: created data templates match each preset\'s legacy emit', async ({ page }) => {
   test.setTimeout(120_000);
   await toApp(page);
   // One variant × six presets covers every value type the emits use: mask reveals
@@ -58,17 +74,12 @@ test('parity: converted data + interpreter matches the legacy emit across preset
   const failures = await page.evaluate(`(async () => {
     ${HARNESS}
     const { variantById } = await import('/src/templates/catalog.ts');
-    const { swapAnimationPreset, presetConfigFromTemplate, anyPresetById } = await import('/src/blocks/animPatch.ts');
     const failures = [];
     for (const presetId of ['line-reveal', 'slide-fade', 'pop-spring', 'mask-wipe', 'blur-in', 'snap-stinger']) {
-      const base = variantById('lt01').create({});
-      const preset = anyPresetById(presetId);
-      const cfg = { ...presetConfigFromTemplate(base, false), easeIn: preset.autoEase.easeIn, easeOut: preset.autoEase.easeOut };
-      const tpl = { ...base, js: swapAnimationPreset(base.js, presetId, cfg) };
-      const converted = await convert(tpl);
-      if (!converted) { failures.push(presetId + ': importer returned null'); continue; }
-      const wOld = await boot(tpl);
-      const wNew = await boot(converted.tpl);
+      const tpl = variantById('lt01').create({ animation: { presetId } });
+      if (!tpl.js.includes('var NOACG_ANIM')) { failures.push(presetId + ': creation did not emit the data block'); continue; }
+      const wNew = await boot(tpl);
+      const wOld = await boot(await legacyTwin(tpl, presetId, false));
       // Entrance: same length, same settled look.
       const inOld = wOld.buildInTimeline(); inOld.pause();
       const inNew = wNew.buildInTimeline(); inNew.pause();
@@ -100,11 +111,12 @@ test('parity: the press chain — pre-hidden reveals, per-press timelines, exhau
   const result = await page.evaluate(`(async () => {
     ${HARNESS}
     const { variantById } = await import('/src/templates/catalog.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
     const tpl = variantById('lt01').create({ animation: { steps: true } });
-    const converted = await convert(tpl);
-    if (!converted) return { fail: 'importer returned null' };
-    const wOld = await boot(tpl);
-    const wNew = await boot(converted.tpl);
+    const data = parseAnimData(tpl.js);
+    if (!data) return { fail: 'creation did not emit the data block' };
+    const wNew = await boot(tpl);
+    const wOld = await boot(await legacyTwin(tpl, 'line-reveal', true));
     const run = (w) => {
       w.buildInTimeline().pause().progress(1, true);
       const hidden = styleOf(w, '#f1');
@@ -116,13 +128,12 @@ test('parity: the press chain — pre-hidden reveals, per-press timelines, exhau
     const a = run(wOld);
     const b = run(wNew);
     return {
-      // The revealed line is parked identically before its press, and lands identically.
       hiddenMatch: sameStyle(a.hidden, b.hidden),
       shownMatch: sameStyle(a.shown, b.shown),
       pressesOld: a.presses.length,
       pressesNew: b.presses.length,
       durationsClose: a.presses.every((d, i) => Math.abs(d - b.presses[i]) < 0.03),
-      dataReveals: converted.data.steps[1].reveals,
+      dataReveals: data.steps[1].reveals,
     };
   })()`);
   expect(result).toMatchObject({
@@ -140,16 +151,14 @@ test('resolver: agrees with the real interpreter at keyframe times', async ({ pa
   const mismatches = await page.evaluate(`(async () => {
     ${HARNESS}
     const { variantById } = await import('/src/templates/catalog.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
     const { resolveValue } = await import('/src/blocks/animEval.ts');
     const tpl = variantById('lt01').create({});
-    const converted = await convert(tpl);
-    const { data } = converted;
-    const w = await boot(converted.tpl);
+    const data = parseAnimData(tpl.js);
+    const w = await boot(tpl);
     const tl = w.buildInTimeline(); tl.pause();
     const speed = data.speed || 1;
     const mismatches = [];
-    // At every numeric keyframe the eased playback and the resolver agree exactly
-    // (linear display interpolation only differs BETWEEN keyframes, by design).
     const step = data.steps[0];
     for (const selector of Object.keys(step.layers)) {
       for (const prop of Object.keys(step.layers[selector])) {
@@ -181,12 +190,10 @@ test('serializer: canonical fixed point, lossless splice, hand-edit round-trip',
   const result = await page.evaluate(`(async () => {
     ${HARNESS}
     const { variantById } = await import('/src/templates/catalog.ts');
-    const { importAnimData } = await import('/src/blocks/animImport.ts');
-    const { replaceRegionWithAnimData } = await import('/src/templates/shared/animRuntime.ts');
     const { parseAnimData, serializeAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
     const tpl = variantById('lt01').create({});
-    const data = importAnimData(tpl);
-    const js = replaceRegionWithAnimData(tpl.js, data);
+    const js = tpl.js; // created AS a data block now
+    const data = parseAnimData(js);
     // Fixed point: parse(serialize) then serialize again is byte-identical.
     const once = serializeAnimData(data);
     const twice = serializeAnimData(parseAnimData('var NOACG_ANIM = ' + once + ';'));
