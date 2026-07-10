@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import { parseAnimData, type AnimData } from '../blocks/animData';
+import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
 import { importAnimData } from '../blocks/animImport';
+import { deleteLayerKeyframes, moveLayerKeyframes } from '../blocks/animEdit';
+import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
 import { stepSeconds } from '../blocks/animEval';
 import { getTemplateParts } from '../model/structure';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -25,46 +27,78 @@ interface Props {
   iframeRef: RefObject<HTMLIFrameElement>;
 }
 
-/** The dock: the classic strip and the v2 timeline share the slot under the preview;
- *  the corner chip switches (persisted). V2 needs readable data — otherwise the classic
- *  strip keeps its honest legacy behavior (banner / no strip). */
+/** The dock: the classic strip and the v2 timeline share the slot under the preview.
+ *  A template whose region IS the data block gets the step timeline outright (the classic
+ *  strip's literal patchers cannot read it). Legacy templates keep the classic strip as
+ *  the default editing surface, with the v2 read view one chip away — and from there,
+ *  "use keyframes" converts the region (one undoable apply, the importer's writer). */
 export default function TimelineDock({ iframeRef }: Props) {
   const template = useTemplateStore((s) => s.template);
+  const applyTemplate = useTemplateStore((s) => s.applyTemplate);
+  const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const [v2, setV2] = useState<boolean>(() => loadPrefs().timelineV2);
-  const data = useMemo(() => parseAnimData(template.js) ?? importAnimData(template), [template]);
+  const native = useMemo(() => parseAnimData(template.js), [template.js]);
+  const imported = useMemo(() => (native ? null : importAnimData(template)), [native, template]);
+  const data = native ?? imported;
+  const showV2 = native !== null || (v2 && data !== null);
   const toggle = () => {
     savePrefs({ timelineV2: !v2 });
     setV2(!v2);
   };
+  const convert = () => {
+    if (!imported) return;
+    const js = replaceRegionWithAnimData(template.js, imported);
+    if (!js) return;
+    applyTemplate({ ...template, js });
+    setActiveTab('js'); // the rewritten region is real, highlighted code
+  };
   return (
     <div className="timeline-dock">
-      {v2 && data ? <StepTimeline iframeRef={iframeRef} data={data} /> : <TimelineView iframeRef={iframeRef} />}
-      {data && (
-        <button
-          className="timeline-dock-toggle"
-          onClick={toggle}
-          title={v2 ? 'Back to the classic strip' : 'Try the new step timeline (in progress — read view for now)'}
-          data-testid="timeline-v2-toggle"
-        >
-          {v2 ? '⧉ classic strip' : '⧉ new timeline'}
-        </button>
+      {showV2 && data ? (
+        <StepTimeline iframeRef={iframeRef} data={data} editable={native !== null} />
+      ) : (
+        <TimelineView iframeRef={iframeRef} />
+      )}
+      {native === null && data && (
+        <span className="timeline-dock-chips">
+          {showV2 && (
+            <button
+              className="timeline-dock-toggle convert"
+              onClick={convert}
+              title="Rewrite the animation code as an editable keyframe data block — the timeline and Inspector then edit it directly (undo with Ctrl+Z)"
+              data-testid="timeline-v2-convert"
+            >
+              ◆ use keyframes
+            </button>
+          )}
+          <button
+            className="timeline-dock-toggle"
+            onClick={toggle}
+            title={showV2 ? 'Back to the classic strip' : 'Try the new step timeline'}
+            data-testid="timeline-v2-toggle"
+          >
+            {showV2 ? '⧉ classic strip' : '⧉ new timeline'}
+          </button>
+        </span>
       )}
     </div>
   );
 }
 
 /** Map a step index onto the simulator scrub protocol's phase ids. */
-function phaseIdOf(data: AnimData, stepIndex: number): string {
+export function phaseIdOf(data: AnimData, stepIndex: number): string {
   if (stepIndex === 0) return 'in';
   if (stepIndex === data.steps.length - 1) return 'out';
   return `step-${stepIndex + 1}`;
 }
 
-function StepTimeline({ iframeRef, data }: Props & { data: AnimData }) {
+function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; editable: boolean }) {
   const template = useTemplateStore((s) => s.template);
   const sendScrub = useTemplateStore((s) => s.sendScrub);
+  const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const selectedPart = useTemplateStore((s) => s.selectedPart);
   const setSelectedPart = useTemplateStore((s) => s.setSelectedPart);
+  const setPlayhead = useTemplateStore((s) => s.setPlayhead);
 
   const parts = useMemo(
     () => getTemplateParts(template.html, template.fields),
@@ -124,10 +158,24 @@ function StepTimeline({ iframeRef, data }: Props & { data: AnimData }) {
     return px >= canvasW ? { step: data.steps.length - 1, t: stepSeconds(data, data.steps.length - 1) } : null;
   };
 
+  const headRef = useRef(head);
+  headRef.current = head;
+
   const scrubTo = (place: { step: number; t: number }) => {
     setHead(place);
+    setPlayhead(place); // the Inspector stamps keyframes at the parked playhead
     setScrubbing(true);
     sendScrub(phaseIdOf(data, place.step), place.t);
+  };
+
+  /** ONE undoable apply per keyframe edit, then re-park the preview at the playhead once
+   *  the debounced rebuild settles — the interpolation is immediately visible in place. */
+  const applyData = (next: AnimData) => {
+    const js = spliceAnimData(template.js, next);
+    if (!js || js === template.js) return;
+    applyTemplate({ ...template, js });
+    const place = headRef.current;
+    setTimeout(() => sendScrub(phaseIdOf(data, place.step), place.t), 650);
   };
 
   const onCanvasPointer = (e: React.PointerEvent, drag = false) => {
@@ -159,7 +207,7 @@ function StepTimeline({ iframeRef, data }: Props & { data: AnimData }) {
           : active.phase.startsWith('step-') ? parseInt(active.phase.slice(5), 10) - 1
           : 0;
         if (idx >= 0 && idx < data.steps.length) setHead({ step: idx, t: active.tl.time() });
-      } else {
+      } else if (headRef.current.step !== 0 || headRef.current.t !== stepSeconds(data, 0)) {
         setHead({ step: 0, t: stepSeconds(data, 0) }); // idle = the settled entrance end
       }
     };
@@ -181,23 +229,84 @@ function StepTimeline({ iframeRef, data }: Props & { data: AnimData }) {
   }, [data, parts]);
 
   /** Aggregate keyframe diamonds for one layer: the union of keyframe times across props,
-   *  per step (one diamond may stand for several properties — the Inspector splits them). */
-  const diamondsFor = (key: string): { x: number; n: number }[] => {
-    const out: { x: number; n: number }[] = [];
+   *  per step (one diamond may stand for several properties — the Inspector splits them).
+   *  tRel is the STORED (speed-relative) time — the mutators' clock. */
+  const diamondsFor = (key: string): { x: number; tRel: number; step: number; n: number }[] => {
+    const out: { x: number; tRel: number; step: number; n: number }[] = [];
     for (const seg of segs) {
       const tracks = seg.step.layers[key];
       if (!tracks) continue;
       const byTime = new Map<number, number>();
       for (const kfs of Object.values(tracks)) {
-        for (const kf of kfs) {
-          const t = Math.round((kf.time / (data.speed || 1)) * 1000) / 1000;
-          byTime.set(t, (byTime.get(t) ?? 0) + 1);
-        }
+        for (const kf of kfs) byTime.set(kf.time, (byTime.get(kf.time) ?? 0) + 1);
       }
-      for (const [t, n] of byTime) out.push({ x: seg.x + t * pxPerSec, n });
+      for (const [tRel, n] of byTime) {
+        out.push({ x: seg.x + (tRel / (data.speed || 1)) * pxPerSec, tRel, step: seg.i, n });
+      }
     }
     return out;
   };
+
+  // ── Keyframe interactions (data-block templates only): drag an aggregate diamond to
+  //    retime every property keyframe at that moment; click selects it; Delete removes it.
+  interface KfRef { key: string; step: number; tRel: number }
+  const [kfSel, setKfSel] = useState<KfRef | null>(null);
+  const [kfDrag, setKfDrag] = useState<(KfRef & { x: number; moved: boolean }) | null>(null);
+  const kfDragRef = useRef<typeof kfDrag>(null);
+  kfDragRef.current = kfDrag;
+
+  const startKfDrag = (e: React.PointerEvent, ref: KfRef, x: number) => {
+    if (!editable) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setKfDrag({ ...ref, x, moved: false });
+  };
+  const moveKfDrag = (e: React.PointerEvent) => {
+    const d = kfDragRef.current;
+    if (!d || e.buttons !== 1) return;
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).closest('.tlv2-canvas')!.getBoundingClientRect();
+    setKfDrag({ ...d, x: e.clientX - rect.left, moved: true });
+  };
+  const endKfDrag = (e: React.PointerEvent) => {
+    const d = kfDragRef.current;
+    setKfDrag(null);
+    if (!d) return;
+    e.stopPropagation();
+    if (!d.moved) {
+      // A plain click: select the diamond (and its layer — shared selection).
+      setKfSel(d);
+      setSelectedPart(d.key);
+      return;
+    }
+    const seg = segs[d.step];
+    const speed = data.speed || 1;
+    // Snap to the same 0.05 s grid every timing edit uses (effective seconds).
+    const tEff = Math.round(Math.max(0, (d.x - seg.x) / pxPerSec) / 0.05) * 0.05;
+    const toRel = Math.round(tEff * speed * 1000) / 1000;
+    if (Math.abs(toRel - d.tRel) < 0.005) return;
+    applyData(moveLayerKeyframes(data, d.step, d.key, d.tRel, toRel));
+    setKfSel({ ...d, tRel: toRel });
+  };
+
+  // Delete removes the selected diamond's keyframes (never while typing in a field).
+  useEffect(() => {
+    if (!editable) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const sel = kfSel;
+      if (!sel) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.closest('.monaco-editor'))) return;
+      e.preventDefault();
+      setKfSel(null);
+      applyData(deleteLayerKeyframes(data, sel.step, sel.key, sel.tRel));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editable, kfSel, data, template]);
 
   const cueOf = (seg: (typeof segs)[number]) => (seg.i === 0 ? '▶' : seg.isOut ? '■' : '»');
 
@@ -297,17 +406,30 @@ function StepTimeline({ iframeRef, data }: Props & { data: AnimData }) {
                     </span>
                   ) : null,
                 )}
-                {diamondsFor(r.key).map((d, di) => (
-                  <span
-                    key={di}
-                    className="tlv2-diamond"
-                    style={{ left: d.x }}
-                    title={d.n > 1 ? `${d.n} property keyframes` : 'keyframe'}
-                    data-testid={`tlv2-kf-${r.key.replace(/[^\w-]/g, '')}`}
-                  >
-                    ◆
-                  </span>
-                ))}
+                {diamondsFor(r.key).map((d, di) => {
+                  const dragging =
+                    kfDrag && kfDrag.key === r.key && kfDrag.step === d.step && kfDrag.tRel === d.tRel && kfDrag.moved;
+                  const selected =
+                    kfSel && kfSel.key === r.key && kfSel.step === d.step && Math.abs(kfSel.tRel - d.tRel) < 0.005;
+                  return (
+                    <span
+                      key={di}
+                      className={`tlv2-diamond${editable ? ' editable' : ''}${selected ? ' selected' : ''}${dragging ? ' dragging' : ''}`}
+                      style={{ left: dragging ? kfDrag!.x : d.x }}
+                      title={
+                        (d.n > 1 ? `${d.n} property keyframes` : 'keyframe') +
+                        (editable ? ' — drag to retime, click to select (Delete removes)' : '')
+                      }
+                      data-testid={`tlv2-kf-${r.key.replace(/[^\w-]/g, '')}`}
+                      onPointerDown={(e) => startKfDrag(e, { key: r.key, step: d.step, tRel: d.tRel }, d.x)}
+                      onPointerMove={moveKfDrag}
+                      onPointerUp={endKfDrag}
+                      onPointerCancel={() => setKfDrag(null)}
+                    >
+                      ◆
+                    </span>
+                  );
+                })}
               </div>
             ))}
 

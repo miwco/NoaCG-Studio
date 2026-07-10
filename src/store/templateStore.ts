@@ -95,6 +95,9 @@ interface TemplateState {
    *  Canvas and timeline highlight the SAME element through this. Editor UI state only —
    *  it is never written into the template and takes no history snapshot. */
   selectedPart: string | null;
+  /** The step timeline's parked playhead (step index + local time in effective seconds).
+   *  The Inspector stamps keyframes here. UI state only — no history, never in code. */
+  playhead: { step: number; t: number } | null;
 
   setActiveTab: (tab: EditorTab) => void;
   setPreviewBg: (bg: PreviewBg) => void;
@@ -121,6 +124,8 @@ interface TemplateState {
   sendScrub: (phase: string, time: number) => void;
   /** Select an element by its TemplatePart selector (null deselects) — see selectedPart. */
   setSelectedPart: (selector: string | null) => void;
+  /** Park the step timeline's playhead (see playhead). */
+  setPlayhead: (playhead: { step: number; t: number } | null) => void;
   resetToDefault: () => void;
 
   setSampleValue: (field: string, value: string) => void;
@@ -180,6 +185,7 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   controlCommand: null,
   scrubCommand: null,
   selectedPart: null,
+  playhead: null,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPreviewBg: (bg) => set({ previewBg: bg }),
@@ -264,6 +270,8 @@ export const useTemplateStore = create<TemplateState>((set) => ({
   sendScrub: (phase, time) => set((s) => ({ scrubCommand: { phase, time, nonce: (s.scrubCommand?.nonce ?? 0) + 1 } })),
 
   setSelectedPart: (selectedPart) => set({ selectedPart }),
+
+  setPlayhead: (playhead) => set({ playhead }),
 
   resetToDefault: () =>
     set(() => {

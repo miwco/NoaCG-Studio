@@ -1601,6 +1601,14 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   text-shadow: 0 0 4px rgba(246, 166, 35, 0.5);
   pointer-events: none;
 }
+/* Data-block templates: diamonds are live — drag to retime, click to select. */
+.tlv2-diamond.editable { pointer-events: auto; cursor: grab; touch-action: none; padding: 4px; }
+.tlv2-diamond.editable:hover { text-shadow: 0 0 8px rgba(246, 166, 35, 0.9); }
+.tlv2-diamond.selected { color: var(--paper, #fff); text-shadow: 0 0 8px rgba(246, 166, 35, 1); }
+.tlv2-diamond.dragging { cursor: grabbing; }
+.timeline-dock-chips { position: absolute; top: -1px; right: 14px; display: inline-flex; gap: 6px; }
+.timeline-dock-chips .timeline-dock-toggle { position: static; }
+.timeline-dock-toggle.convert { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
 .tlv2-reveal { position: absolute; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 9px; pointer-events: none; }
 .tlv2-playhead {
   position: absolute;
@@ -1654,6 +1662,32 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   overflow-wrap: anywhere;
 }
 .inspector-hint { margin-top: 10px; font-size: 10.5px; line-height: 1.5; }
+/* Phase 4 — editable properties: value/input + the keyframe diamond side by side. */
+.inspector-row-edit { display: inline-flex; align-items: center; gap: 6px; }
+.inspector-input {
+  width: 64px;
+  height: 20px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  text-align: right;
+}
+.inspector-kf {
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  line-height: 1;
+}
+.inspector-kf:hover { color: var(--amber); background: transparent; }
+.inspector-kf.armed { color: var(--amber); }
+.inspector-kf.at-kf { text-shadow: 0 0 6px rgba(246, 166, 35, 0.9); }
 
 /* Cloud sync status pill (Era 5.2) */
 .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; }

@@ -81,6 +81,107 @@ test('v2: zoom scales the clips; row labels drive the shared selection', async (
   expect(selected).toBe('#f0');
 });
 
+/** Parse the live template's animation data in the page (null when not a data block). */
+async function animData(page: Page) {
+  return page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js);
+  });
+}
+
+test('v2 keyframes: convert, arm at the playhead, auto-key, interpolate — the ratified workflow', async ({ page }) => {
+  await createHairline(page);
+  // "use keyframes" rewrites the region as the data block + interpreter — one undoable apply.
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  let data = await animData(page);
+  expect(data).not.toBeNull();
+  expect(data!.steps[0].name).toBe('Enter');
+  // The chips are gone — a data template's editing surface IS the step timeline.
+  await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
+
+  // Open the Inspector, select the Name line, park the playhead early in Enter.
+  await page.getByTestId('toggle-inspector').click();
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  const clip = (await page.getByTestId('tlv2-clip-0').boundingBox())!;
+  await page.mouse.click(clip.x + 8, clip.y + 40);
+
+  // Arm Position X: ◇ stamps the first keyframe at the playhead with the current value.
+  await page.getByTestId('inspector-kf-x').click();
+  await page.waitForTimeout(300);
+  data = await animData(page);
+  const track1 = data!.steps[0].layers['#f0'].x;
+  expect(track1).toHaveLength(1);
+
+  // Move the playhead later (70% into the clip — the tail can sit past the scroll edge
+  // when the Inspector narrows the column), then change the ARMED value: auto-key
+  // creates a second keyframe at the new playhead.
+  await page.mouse.click(clip.x + clip.width * 0.7, clip.y + 40);
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const { useTemplateStore } = await import('/src/store/templateStore.ts');
+        return useTemplateStore.getState().playhead?.t ?? -1;
+      }),
+    )
+    .toBeGreaterThan(0.4);
+  await page.getByTestId('inspector-input-x').fill('-50');
+  await page.getByTestId('inspector-input-x').press('Enter');
+  await page.waitForTimeout(700);
+  data = await animData(page);
+  const track2 = data!.steps[0].layers['#f0'].x;
+  expect(track2).toHaveLength(2);
+  expect(track2.some((k: { value: number | string }) => k.value === -50)).toBe(true);
+  // The re-parked preview shows the interpolated truth at the playhead: the matrix's
+  // translate-x sits at (or a scrub-float hair before) the keyed -50.
+  await expect
+    .poll(
+      async () =>
+        page
+          .frameLocator('iframe.preview-frame')
+          .locator('#f0')
+          .evaluate((el) => Number(getComputedStyle(el).transform.match(/-?[\d.]+/g)?.[4] ?? 0)),
+      { timeout: 4000 },
+    )
+    .toBeLessThan(-40);
+});
+
+test('v2 keyframes: dragging a diamond retimes it; Delete removes it; undo restores', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('timeline-v2-convert').click();
+  await page.waitForTimeout(650);
+  const times = async () => {
+    const data = await animData(page);
+    return data!.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time);
+  };
+  const before = await times();
+  expect(before).toHaveLength(2);
+
+  // Drag the SECOND Enter diamond (the settle keyframe) further right.
+  const diamond = page.getByTestId('tlv2-kf-f0').nth(1);
+  const bb = (await diamond.boundingBox())!;
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + bb.width / 2 + 45, bb.y + bb.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  const after = await times();
+  expect(after[1]).toBeGreaterThan(before[1]);
+
+  // Undo restores the original timing (one apply per drag).
+  await page.keyboard.press('Control+z');
+  expect(await times()).toEqual(before);
+
+  // Click a diamond (no drag) to select it, Delete removes every keyframe at that moment.
+  await page.getByTestId('tlv2-kf-f0').first().click();
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(400);
+  expect(await times()).toHaveLength(1);
+  await page.keyboard.press('Control+z');
+  expect(await times()).toEqual(before);
+});
+
 test('v2: the dock toggle swaps surfaces and persists; classic remains the default', async ({ page }) => {
   await createHairline(page); // helper already toggled INTO v2
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
