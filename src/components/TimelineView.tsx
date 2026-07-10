@@ -565,11 +565,14 @@ export default function TimelineView({ iframeRef }: Props) {
 
   // ── T4.2: the cue-segmented overview — the whole playout as one strip ─────────
   // Parts eligible for a » press: the first line anchors the entrance (▶ Play must always
-  // show something); root/panel are load-bearing containers; blocks outside the root are
-  // deferred. Which press a part is on (or -1 = appears with the graphic):
+  // show something); root/panel are load-bearing containers. Building-block elements
+  // qualify too — the emitted outside gate gives them the root's hidden-at-rest lifecycle.
+  // Which press a part is on (or -1 = appears with the graphic):
   const firstLine = parts.find((p) => p.kind === 'line')?.selector;
   const eligibleParts = parts.filter(
-    (p) => (p.kind === 'line' || p.kind === 'image' || p.kind === 'accent') && p.selector !== firstLine,
+    (p) =>
+      (p.kind === 'line' || p.kind === 'image' || p.kind === 'accent' || p.kind === 'block') &&
+      p.selector !== firstLine,
   );
   const pressOf = new Map<string, number>();
   model.steps.forEach((s, k) => s.targets.forEach((t) => pressOf.set(t, k)));

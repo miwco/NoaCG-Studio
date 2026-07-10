@@ -130,7 +130,10 @@ export default function CanvasInteraction({ iframeRef, width, height }: Props) {
     stepsOn &&
     chainGroupable &&
     !!selectedPart &&
-    (selectedPart.kind === 'line' || selectedPart.kind === 'image' || selectedPart.kind === 'accent') &&
+    (selectedPart.kind === 'line' ||
+      selectedPart.kind === 'image' ||
+      selectedPart.kind === 'accent' ||
+      selectedPart.kind === 'block') &&
     selectedPart.selector !== firstLine;
   /** Which press the selected part is on (-1 = appears with ▶ Play). */
   const selectedPress = pressEligible

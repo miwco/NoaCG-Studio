@@ -93,15 +93,28 @@ export function setAnimKnob(js: string, knob: 'animSpeed' | 'easeIn' | 'easeOut'
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** The parts a » press may reveal (with their channels): lines, image slots, the accent.
- *  The root and panel are load-bearing containers; block elements outside the root are
- *  deferred (they sit outside the root's opacity gate). */
+/** The parts a » press may reveal (with their channels): lines, image slots, the accent,
+ *  and building-block elements. The root and panel stay out — they are load-bearing
+ *  containers. Blocks live OUTSIDE the root's opacity gate; the emitted outside gate
+ *  (stepsBlock + patchOutsideExit) gives them the same hidden-at-rest lifecycle. */
 function assignableParts(template: SpxTemplate): Map<string, 'mask' | 'rise'> {
   return new Map(
     getTemplateParts(template.html, template.fields)
-      .filter((p) => p.kind === 'line' || p.kind === 'image' || p.kind === 'accent')
+      .filter((p) => p.kind === 'line' || p.kind === 'image' || p.kind === 'accent' || p.kind === 'block')
       .map((p) => [p.selector, p.channel]),
   );
+}
+
+/** Chain selectors whose element lives OUTSIDE the root — they miss its opacity gate.
+ *  Decided by real DOM containment, not part kind: where the element actually sits is
+ *  the truth (an id-carrying element pasted INSIDE the root needs no gate). */
+function outsideChainParts(html: string, prefix: string, chain: StepChain): string[] {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const root = doc.querySelector(`.${prefix}`);
+  return chain.groups.flat().filter((sel) => {
+    const el = doc.querySelector(sel);
+    return !!el && (!root || !root.contains(el));
+  });
 }
 
 /**
@@ -153,6 +166,7 @@ export function presetConfigFromTemplate(
     hasAccent: template.html.includes(`${prefix}-accent`) && !assigned.has(`.${prefix}-accent`),
     steps: steps && (lineCount > 1 || !!chain),
     stepChain: chain ?? undefined,
+    stepOutsideParts: chain ? outsideChainParts(template.html, prefix, chain) : [],
     speed: info.speed,
     easeIn: info.easeIn ?? preset.autoEase.easeIn,
     easeOut: info.easeOut ?? preset.autoEase.easeOut,
@@ -223,7 +237,48 @@ export function swapAnimationPreset(js: string, presetId: AnimPresetId, cfg: Pre
   if (start === -1 || end === -1) return js;
   const preset = anyPresetById(presetId);
   const block = preset.emit(cfg);
-  return js.slice(0, start) + block + js.slice(end + ANIMATION_MARK_CLOSE.length);
+  const swapped = js.slice(0, start) + block + js.slice(end + ANIMATION_MARK_CLOSE.length);
+  return patchOutsideExit(swapped, cfg.stepOutsideParts ?? []);
+}
+
+// ── The outside gate's exit side ─────────────────────────────────────────────
+// Press-revealed parts OUTSIDE the root must also LEAVE with the exit — the presets only
+// hide the root. Rather than teaching every preset's out emitter about them, the ONE
+// recognizable line below is kept in sync surgically, so assign/unassign never resets the
+// user's out-phase tuning (and the line's own tuned duration/position survives updates).
+
+const OUTSIDE_EXIT_MARK = '// press-revealed parts outside the root leave with the exit';
+const OUTSIDE_EXIT_LINE_RE =
+  /[ \t]*tl\.to\([^\n]*\);[ \t]*\/\/ press-revealed parts outside the root leave with the exit\n/;
+
+/** Insert, update, or remove the outside-parts exit line in buildOutTimeline. */
+export function patchOutsideExit(js: string, selectors: string[]): string {
+  const start = js.indexOf(ANIMATION_MARK_OPEN);
+  const end = js.indexOf(ANIMATION_MARK_CLOSE);
+  if (start === -1 || end === -1) return js;
+  let region = js.slice(start, end);
+  const existing = region.match(OUTSIDE_EXIT_LINE_RE)?.[0];
+
+  if (selectors.length === 0) {
+    if (!existing) return js;
+    region = region.replace(OUTSIDE_EXIT_LINE_RE, '');
+  } else {
+    // Keep the line's tuned timing when only its selector list changes.
+    const dur = existing?.match(/duration:\s*([\d.]+)\s*\/\s*animSpeed/)?.[1] ?? '0.3';
+    const pos = existing?.match(/\},\s*([\d.]+(?:\s*\/\s*animSpeed)?)\s*\);/)?.[1] ?? '0';
+    const line = `  tl.to([${selectors.map((s) => `'${s}'`).join(', ')}], { opacity: 0, duration: ${dur} / animSpeed }, ${pos});  ${OUTSIDE_EXIT_MARK}\n`;
+    if (existing) {
+      region = region.replace(OUTSIDE_EXIT_LINE_RE, line);
+    } else {
+      const outIdx = region.indexOf(OUT_FN);
+      if (outIdx === -1) return js;
+      const retRel = region.slice(outIdx).search(/\n[ \t]*return tl;/);
+      if (retRel === -1) return js;
+      const at = outIdx + retRel + 1; // just after the newline, before `return tl;`
+      region = region.slice(0, at) + line + region.slice(at);
+    }
+  }
+  return js.slice(0, start) + region + js.slice(end);
 }
 
 // ── Phase-scoped swaps (In / Out / Both) ─────────────────────────────────────
@@ -320,5 +375,6 @@ export function swapAnimationPhase(js: string, presetId: AnimPresetId, cfg: Pres
   out = setAnimKnob(out, 'animSpeed', String(cfg.speed));
   out = setAnimKnob(out, 'easeIn', cfg.easeIn);
   out = setAnimKnob(out, 'easeOut', cfg.easeOut);
-  return out;
+  // The outside gate's exit line follows the chain through every phase mix.
+  return patchOutsideExit(out, cfg.stepOutsideParts ?? []);
 }

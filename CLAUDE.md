@@ -162,7 +162,12 @@ src/
                 stepAssign.ts (changePartPress — the ONE "appears on press" transition,
                 shared by the timeline gutter's menu and the canvas chip: entrance→press
                 and press→entrance re-emit the IN phase via applyStepChain, press→press
-                stays the tuning-preserving patchStepRegroup literal patch)
+                stays the tuning-preserving patchStepRegroup literal patch; blocks
+                (data-gfx + id, OUTSIDE the root) are assignable too — the emitted
+                outside gate hides them from first paint (steps block, DOM-ready
+                guarded) and patchOutsideExit keeps ONE surgical buildOutTimeline
+                fade line in sync at the animPatch swap choke points, so they leave
+                with the exit without resetting out-phase tuning)
   ai/           provider.ts (AIProvider + GenerateContext), claudeProvider.ts (real provider:
                 system prompt = SPX + house contracts + lt01's generated code as the canonical
                 example; forced emit_template tool; validate + one repair round), anthropic.ts

@@ -526,6 +526,20 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       surfaces cannot drift. The chip opts into pointer input only while it carries the
       control and swallows its events (the gesture layer under it never fires). E2E:
       canvas-selection +1 (assign via chip → code + gutter agree → back to the entrance).
+- [x] **T4.5 blocks join the press chain (2026-07-10, closes T4.1's deferral)** — building-
+      block elements (data-gfx + id, siblings of the root) can now appear on a » press. The
+      opacity-gate problem solved with an emitted OUTSIDE GATE, both halves derived from the
+      chain: (load side) the steps block hides `stepOutsideParts` from first paint, DOM-ready-
+      guarded, so nothing shows before ▶ Play; (exit side) ONE recognizable `tl.to(...)` line
+      in buildOutTimeline — kept in sync surgically by `patchOutsideExit` at the swap choke
+      points, so assign/unassign never resets out-phase tuning and the line's own dragged
+      timing survives updates (it parses as a normal editable fade bar in the overview).
+      Outside-ness decided by real DOM containment, not part kind. `assignableParts` now
+      includes blocks (chains round-trip through preset swaps without dropping them); the
+      gutter menu and the canvas chip both offer them. E2E: canvas-selection +1 — insert the
+      Logo block, give it its own press from the chip, and pin the whole lifecycle (hidden
+      settled → revealed on press 2 → fades on ■ Stop → always-on again after unassign, gate
+      code gone).
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

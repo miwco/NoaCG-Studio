@@ -40,6 +40,11 @@ export interface PresetConfig {
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */
   stepChain?: StepChain;
+  /** Assigned chain selectors whose element lives OUTSIDE the .<prefix> root (building-block
+   *  elements sit next to the root, not inside it) — they miss the root's opacity gate, so
+   *  the steps block hides them from first paint and the exit fades them out
+   *  (blocks/animPatch.ts patchOutsideExit keeps the out-phase line in sync). */
+  stepOutsideParts?: string[];
   /** Initial animSpeed value (0.75 slower · 1 normal · 1.5 faster). */
   speed: number;
   /** GSAP ease string for entrance tweens (e.g. 'power3.out', 'back.out(1.6)'). */
@@ -148,7 +153,27 @@ function revealNextStep() {
     );
   });
   return tl;
-}`;
+}${outsideGate(cfg)}`;
+}
+
+/** The load-side of the outside gate: press-assigned parts that live OUTSIDE the root are
+ *  not covered by its rest-hide (the root is CSS-hidden until play; its children with it),
+ *  so they must hide themselves from the first paint. The exit side is the patched
+ *  buildOutTimeline line (blocks/animPatch.ts patchOutsideExit). */
+function outsideGate(cfg: PresetConfig): string {
+  const outside = cfg.stepOutsideParts ?? [];
+  if (!cfg.steps || outside.length === 0) return '';
+  return `
+
+// Parts on a » press that live OUTSIDE the graphic's root miss its opacity gate (the
+// root is CSS-hidden until play, and its children with it). Hide them from the first
+// paint so nothing shows before play — DOM-ready-safe: this file loads in <head>.
+var stepOutsideParts = [${outside.map((s) => `'${s}'`).join(', ')}];
+function hideOutsideStepParts() {
+  stepOutsideParts.forEach(function (sel) { gsap.set(sel, { opacity: 0, y: 14 }); });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideOutsideStepParts);
+else hideOutsideStepParts();`;
 }
 
 /** In steps mode, park the press-assigned parts hidden at the start of the in-timeline.

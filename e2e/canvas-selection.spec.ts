@@ -225,3 +225,64 @@ test('the chip assigns the selected part to a press — the gutter control, from
   await page.waitForTimeout(650);
   await expect(page.getByTestId('canvas-appears')).toHaveValue('-1');
 });
+
+test('a block element outside the root joins the press chain: hidden until its press, gone with the exit', async ({ page }) => {
+  await createHairline(page);
+  await waitSettled(page);
+
+  // Insert the Logo building block — a data-gfx element OUTSIDE the graphic's root, so it
+  // misses the root's opacity gate entirely.
+  await page.evaluate(async () => {
+    const [{ useTemplateStore }, { BUILDING_BLOCKS }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/blocks/registry.ts'),
+    ]);
+    const s = useTemplateStore.getState();
+    const logo = BUILDING_BLOCKS.find((b: { id: string }) => b.id === 'logo')!;
+    s.applyTemplate(logo.apply(s.template));
+  });
+  await page.waitForTimeout(650);
+
+  await page.getByTestId('timeline-seg-new').click(); // steps on: press 1 reveals the Title
+  await page.waitForTimeout(650);
+
+  // The block's row exists now; select it and give it its OWN press from the canvas chip.
+  await page.locator('[data-part="#logo"]').click();
+  await expect(page.getByTestId('selection-chip')).toContainText('logo');
+  await page.getByTestId('canvas-appears').selectOption('1'); // "appears on a new press"
+  await page.waitForTimeout(650);
+  await expect(page.getByTestId('canvas-appears')).toHaveValue('1');
+
+  // The emitted code carries BOTH halves of the outside gate.
+  const js = await page.evaluate(async () =>
+    (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js,
+  );
+  expect(js).toContain("var stepOutsideParts = ['#logo'];");
+  expect(js).toContain('press-revealed parts outside the root leave with the exit');
+
+  // The gate, behaviorally. Settled design view (the entrance played out): still hidden.
+  const logoOpacity = () =>
+    page.frameLocator('iframe.preview-frame').locator('#logo').evaluate((el) => getComputedStyle(el).opacity);
+  await expect.poll(logoOpacity).toBe('0');
+
+  // Play, then press » Next twice — the second press reveals the block.
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await page.waitForTimeout(900);
+  await page.getByRole('button', { name: '» Next' }).click(); // press 1: the Title line
+  await page.getByRole('button', { name: '» Next' }).click(); // press 2: the block
+  await expect.poll(logoOpacity).toBe('1');
+
+  // ■ Stop: the exit fades the block too — it leaves with the graphic, not after it.
+  await page.getByRole('button', { name: '■ Stop' }).click();
+  await expect.poll(logoOpacity).toBe('0');
+
+  // Unassigning removes the gate: the block is an always-on decoration again.
+  await page.getByTestId('canvas-appears').selectOption('-1');
+  await page.waitForTimeout(650);
+  const js2 = await page.evaluate(async () =>
+    (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js,
+  );
+  expect(js2).not.toContain('stepOutsideParts');
+  expect(js2).not.toContain('press-revealed parts outside the root leave with the exit');
+  await expect.poll(logoOpacity).toBe('1');
+});
