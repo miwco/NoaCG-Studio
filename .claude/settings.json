@@ -1,5 +1,10 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "node scripts/hooks/session-start.mjs" }]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash|PowerShell",

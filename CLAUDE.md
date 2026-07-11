@@ -162,7 +162,7 @@ public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports;
 scripts/       dev-port.mjs (per-checkout port), l3-sweep.mjs (catalog sweep - see Verifying),
                hooks/ (Claude Code guard hooks wired in .claude/settings.json: commit-message
                style, protected generated files, per-file lint on edit, dev-server policy,
-               e2e port preflight)
+               e2e port preflight, session-start worktree sanity check + port orientation)
 docs/          GOALS.md (north star + milestones), DESIGN_LANGUAGE.md (taste rulebook),
                SPX_TEMPLATE_FORMAT.md (SPX contract)
 ```
