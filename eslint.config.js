@@ -10,8 +10,9 @@ export default tseslint.config(
   {
     ignores: [
       'dist/',
-      'node_modules/',
+      '**/node_modules/',
       '.claude/',
+      '.render-dev/',
       'src/assets/gsap.min.js',
       'example_projects/', // vendored SPX reference packs, not ours to lint
       'playwright-report/',
@@ -47,6 +48,23 @@ export default tseslint.config(
     extends: [js.configs.recommended],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
+    },
+  },
+
+  // The Remotion render worker (its own package; the composition runs in a browser bundle,
+  // the .mjs entrypoints under Node).
+  {
+    files: ['render-worker/**/*.{ts,tsx}'],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended, reactHooks.configs.flat.recommended],
+    languageOptions: {
+      globals: { ...globals.browser },
+    },
+  },
+  {
+    files: ['render-worker/**/*.mjs'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 );

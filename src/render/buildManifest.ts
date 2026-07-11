@@ -5,6 +5,7 @@
 import { composeRenderDocument } from './composeRenderDocument';
 import { measureRenderDocument } from './measure';
 import { RENDER_CONFIG } from './limits';
+import { defaultStillTimeMs } from './schedule';
 import {
   RENDER_MANIFEST_VERSION,
   type MeasuredDurations,
@@ -25,6 +26,8 @@ export interface RenderRequestOptions {
   backgroundColor?: string;
   vp9?: boolean;
   stillTimeMs?: number;
+  /** Virtual wall clock at t=0. Default: now. Fixtures pin it for byte-stable renders. */
+  epochMs?: number;
 }
 
 /** Compose the document, run the client measurement pass, and assemble the manifest. */
@@ -37,6 +40,12 @@ export async function buildRenderManifest(
   const fps = options.fps ?? template.fps;
   const measured = await measureRenderDocument(documentHtml, template.resolution, fps, sampleData);
 
+  const timing = {
+    totalDurationMs: options.totalDurationMs,
+    outMode: options.outMode ?? (template.settings.out === 'none' ? 'none' as const : 'auto' as const),
+    minHoldMs: RENDER_CONFIG.minHoldMs,
+    epochMs: options.epochMs ?? Date.now(),
+  };
   const manifest: RenderManifest = {
     version: RENDER_MANIFEST_VERSION,
     projectName: template.name,
@@ -45,18 +54,17 @@ export async function buildRenderManifest(
     height: template.resolution.height,
     fps,
     scale: options.scale ?? 1,
-    timing: {
-      totalDurationMs: options.totalDurationMs,
-      outMode: options.outMode ?? (template.settings.out === 'none' ? 'none' : 'auto'),
-      minHoldMs: RENDER_CONFIG.minHoldMs,
-      epochMs: Date.now(),
-    },
+    timing,
     data: { ...sampleData },
     output: {
       format: options.format,
       backgroundColor: options.backgroundColor,
       vp9: options.vp9,
-      stillTimeMs: options.stillTimeMs,
+      // The still moment is resolved HERE (client-side, where the measurement lives) so
+      // the renderer never needs duration knowledge for a still.
+      stillTimeMs: options.format === 'png-still'
+        ? (options.stillTimeMs ?? defaultStillTimeMs(measured, timing))
+        : options.stillTimeMs,
     },
     estimatedDurations: measured,
   };
