@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import CodeEditor from './CodeEditor';
 import PreviewFrame from './PreviewFrame';
 import PlayoutSimulator from './PlayoutSimulator';
 import TimelineDock from './StepTimeline';
@@ -21,6 +20,19 @@ import { useIsModerator } from '../community/useIsModerator';
 import { useIsMobile } from './useIsMobile';
 import { useSplitter, type Splitter } from './useSplitter';
 import { clampRatio, loadLayout, saveLayout, type LayoutPrefs } from '../model/layout';
+
+// Monaco (bundled inside CodeEditor via monacoSetup) is by far the heaviest chunk in the app,
+// and the code VIEW is optional — many users never open it. Loading it lazily keeps the shell,
+// preview, and wizard off the Monaco download: the editor pane streams in beside them, and the
+// mobile layout never fetches it until "Show code".
+const CodeEditorLazy = lazy(() => import('./CodeEditor'));
+function CodeEditor() {
+  return (
+    <Suspense fallback={<div className="code-editor-loading">Loading the code editor…</div>}>
+      <CodeEditorLazy />
+    </Suspense>
+  );
+}
 
 /** A drag handle between two regions (vertical between columns, horizontal between rows). */
 function Divider({ orient, splitter, testid }: { orient: 'v' | 'h'; splitter: Splitter; testid: string }) {
