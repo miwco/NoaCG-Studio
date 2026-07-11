@@ -76,6 +76,20 @@ export interface CategorySpec {
   dataRegion?: boolean;
 }
 
+/**
+ * Timeline v2: convert a freshly assembled template's legacy ANIMATION region into the
+ * NOACG_ANIM data block + interpreter (the golden parity harness pins the two as
+ * identical). Only the marked region changes — category-owned runtime around it (score
+ * pops, clock painters) is untouched. A conversion failure keeps the legacy emit:
+ * never a broken template.
+ */
+export function convertToDataRegion(template: SpxTemplate): SpxTemplate {
+  const data = importAnimData(template);
+  const converted = data ? replaceRegionWithAnimData(template.js, data) : null;
+  if (converted) template.js = converted;
+  return template;
+}
+
 /** Class name for the Nth line of a category (0 = heading/name, 1 = title/body, 2+ = extra). */
 export function lineClassFor(prefix: string, index: number): string {
   return [`${prefix}-name`, `${prefix}-title`, `${prefix}-extra`][index] ?? `${prefix}-extra`;
@@ -190,15 +204,8 @@ ${design.css}
     })),
   };
 
-  // Timeline v2 flip: convert the freshly emitted legacy region into the data block +
-  // interpreter (the golden parity harness pins the two as identical). A conversion
-  // failure keeps the legacy emit — never a broken template.
-  if (cat.dataRegion) {
-    const data = importAnimData(template);
-    const converted = data ? replaceRegionWithAnimData(template.js, data) : null;
-    if (converted) template.js = converted;
-  }
-  return template;
+  // Timeline v2 flip: categories convert one by one (see convertToDataRegion above).
+  return cat.dataRegion ? convertToDataRegion(template) : template;
 }
 
 /** The authoring factory: a category gets its own defineVariant with everything wired. */

@@ -528,6 +528,42 @@ test('v2: corner bugs create as data blocks — the step timeline is their nativ
   expect(steps).toBe('2');
 });
 
+test('v2: scoreboards create as data blocks — the score pop keeps working around the region', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Scoreboards' }).click();
+  await page.locator('.wz-variant', { hasText: 'Match Strip' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+  // The step timeline outright; scoreboards never step (Enter + Out only).
+  await expect(page.getByTestId('timeline-v2')).toBeVisible();
+  await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
+  const data = await animData(page);
+  expect(data!.steps).toHaveLength(2);
+  // The scoreboard-owned runtime OUTSIDE the region survived the conversion verbatim.
+  // Drive the REAL SPX contract (the editor's simulator owns the builders directly and
+  // never sets onAir): play(), then update() with a changed score — the pop scales the
+  // mask up briefly, exactly as before the flip.
+  const frame = page.frameLocator('iframe.preview-frame');
+  await frame.locator('body').evaluate(() => (window as unknown as { play: () => void }).play());
+  await expect
+    .poll(async () => frame.locator('.scoreboard').evaluate((el) => getComputedStyle(el).opacity))
+    .toBe('1');
+  await frame
+    .locator('body')
+    .evaluate(() => (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f1: '7' })));
+  await expect
+    .poll(async () =>
+      frame.locator('#f1').evaluate((el) => {
+        const m = getComputedStyle(el.parentElement!).transform.match(/matrix\(([\d.]+)/);
+        return m ? Number(m[1]) : 1;
+      }),
+    )
+    .toBeGreaterThan(1.05);
+});
+
 test('v2: legacy categories keep the classic strip, can peek at v2, and convert on demand', async ({ page }) => {
   // Info cards have not migrated: classic is their default editing surface.
   await page.goto('/app');

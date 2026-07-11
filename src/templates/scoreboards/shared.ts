@@ -40,6 +40,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
+import { convertToDataRegion } from '../shared/standard';
 
 export interface SbDesign {
   /** Inner HTML of .scoreboard — must contain .scoreboard-box with the four .scoreboard-mask > span#fN lines. */
@@ -72,6 +73,14 @@ function sbRuntimeJs(name: string, animationBlock: string): string {
 var onAir = false;               // true between play() and stop() — pops only happen on air
 var scoreIds = ['f1', 'f3'];     // the two score fields (f0/f2 are the team names)
 
+// motionSpeed(): the template's speed knob. The NOACG_ANIM data block owns it; a legacy
+// animSpeed variable is honored too, and hand-written animation code defaults to 1.
+function motionSpeed() {
+  if (typeof NOACG_ANIM !== 'undefined' && NOACG_ANIM.speed) return NOACG_ANIM.speed;
+  if (typeof animSpeed !== 'undefined' && animSpeed) return animSpeed;
+  return 1;
+}
+
 ${setFieldValueJs}
 
 // update(data): SPX sends field values as JSON, e.g. {"f0":"HOME","f1":"2"}.
@@ -91,7 +100,7 @@ function update(data) {
       // No preset ever tweens a mask, so the pop can't collide with an entrance or exit.
       gsap.fromTo(el.parentNode,
         { scale: 1.35 },
-        { scale: 1, duration: 0.4 / animSpeed, ease: 'back.out(1.7)' }
+        { scale: 1, duration: 0.4 / motionSpeed(), ease: 'back.out(1.7)' }
       );
     }
   }
@@ -196,7 +205,10 @@ ${design.css}
 
   const js = sbRuntimeJs(meta.name, preset.emit(cfg));
 
-  return {
+  // Timeline v2: scoreboards create as animation data blocks. Only the marked region
+  // converts — the score-pop runtime wrapping it (onAir, update()'s mask pop) is
+  // scoreboard-owned code outside the markers and stays byte-identical.
+  return convertToDataRegion({
     name: meta.name,
     type: 'scoreboard',
     resolution: o.resolution,
@@ -215,7 +227,7 @@ ${design.css}
       text: f.value,
       styles: {},
     })),
-  };
+  });
 }
 
 /** The authoring API for scoreboard variant modules. */
