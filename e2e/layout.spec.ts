@@ -93,6 +93,37 @@ test('the step timeline reads at an editing scale — comfortable rows and label
   expect(labelSize).toBeGreaterThanOrEqual(12);
 });
 
+test('the timeline refits and condenses when the Inspector narrows it — manual zoom wins', async ({ page }) => {
+  await createHairline(page);
+  await expect(page.getByTestId('timeline-v2')).toBeVisible();
+  const labelW = async () => (await page.locator('.tlv2-labels').boundingBox())!.width;
+  const ribbonFits = async () => {
+    const canvas = (await page.getByTestId('tlv2-canvas').boundingBox())!;
+    const scroll = (await page.locator('.tlv2-scroll').boundingBox())!;
+    return canvas.width <= scroll.width + 2;
+  };
+  // Comfortable width: full-size labels and the whole ribbon fits (the initial auto-fit).
+  expect(await labelW()).toBeGreaterThanOrEqual(140);
+  expect(await ribbonFits()).toBe(true);
+
+  // Opening the Inspector narrows the strip: the auto zoom REFITS (the whole ribbon
+  // still fits) and the label column condenses — rows keep their editing height.
+  await page.getByTestId('toggle-inspector').click();
+  await expect.poll(labelW).toBeLessThan(120);
+  await expect.poll(ribbonFits).toBe(true);
+  const row = (await page.locator('.tlv2-row').first().boundingBox())!;
+  expect(row.height).toBeGreaterThanOrEqual(26);
+
+  // A manual zoom is a deliberate framing choice — a later layout change must not
+  // override it.
+  await page.getByTestId('tlv2-zoom-in').click();
+  const zoomed = (await page.getByTestId('tlv2-canvas').boundingBox())!.width;
+  await page.getByTestId('toggle-inspector').click(); // wider again
+  await page.waitForTimeout(250);
+  const after = (await page.getByTestId('tlv2-canvas').boundingBox())!.width;
+  expect(Math.abs(after - zoomed)).toBeLessThan(4);
+});
+
 test('"preview on top" mode makes the preview full-width, above code, and persists', async ({ page }) => {
   await createHairline(page);
   const workspaceW = (await page.locator('.workspace').boundingBox())!.width;

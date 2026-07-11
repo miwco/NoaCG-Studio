@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
 import { importAnimData } from '../blocks/animImport';
@@ -150,17 +150,54 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   const pxRef = useRef(pxPerSec);
   pxRef.current = pxPerSec;
 
-  // Fit the whole playout once per template (the zoom buttons take over from there).
+  // Fit the whole playout once per template — and keep re-fitting when the VIEWPORT
+  // resizes (the Inspector opening, the code pane collapsing, a window resize), for as
+  // long as the zoom is still the automatic one. A manual zoom is a deliberate framing
+  // choice; a layout change must never override it (the zoom buttons take over for good).
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const fittedRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (fittedRef.current === template.name) return;
+  const manualZoomRef = useRef(false);
+  const fitZoom = useCallback(() => {
     const el = scrollRef.current;
     if (!el || el.clientWidth < 120) return;
     const totalSec = data.steps.reduce((a, _s, i) => a + stepSeconds(data, i), 0);
-    fittedRef.current = template.name;
     setPxPerSec(Math.min(400, Math.max(40, (el.clientWidth - HOLD_PX - 12) / Math.max(0.5, totalSec))));
-  }, [data, template.name]);
+  }, [data]);
+  useEffect(() => {
+    if (fittedRef.current === template.name) return;
+    if (!scrollRef.current || scrollRef.current.clientWidth < 120) return;
+    fittedRef.current = template.name;
+    manualZoomRef.current = false;
+    fitZoom();
+  }, [data, template.name, fitZoom]);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    let lastW = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (Math.abs(w - lastW) < 8) return; // ignore sub-pixel churn
+      lastW = w;
+      if (!manualZoomRef.current) fitZoom();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitZoom]);
+
+  // Density: when the strip itself is squeezed (Inspector open on a laptop width), the
+  // label column condenses so the ribbon keeps room to edit in. Row height stays put —
+  // the editing targets are the point of the scale.
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [tight, setTight] = useState(false);
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const check = () => setTight(el.clientWidth < 560);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // ── The playhead: (stepIndex, localT in effective seconds). Clicking/dragging anywhere
   //    on the ruler or rows moves it and PAUSES the preview there (no undo history — this
@@ -458,7 +495,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   const cueOf = (seg: (typeof segs)[number]) => (seg.i === 0 ? '▶' : seg.isOut ? '■' : '»');
 
   return (
-    <div className="timeline-strip tlv2" data-testid="timeline-v2">
+    <div className={`timeline-strip tlv2${tight ? ' tight' : ''}`} ref={stripRef} data-testid="timeline-v2">
       <div className="tlv2-body">
         {/* Left: layer names — the shared-selection handles, same as the classic strip. */}
         <div className="tlv2-labels">
@@ -643,8 +680,28 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
         <div className="tlv2-side">
           {/* Deep zoom on purpose: 1000 px/s puts 50 px between 0.05 s grid ticks — enough
               to place keyframes precisely in a 0.3 s move. */}
-          <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.max(40, z / 1.3))} title="Zoom out" data-testid="tlv2-zoom-out">−</button>
-          <button className="timeline-zoom-btn" onClick={() => setPxPerSec((z) => Math.min(1000, z * 1.3))} title="Zoom in" data-testid="tlv2-zoom-in">+</button>
+          <button
+            className="timeline-zoom-btn"
+            onClick={() => {
+              manualZoomRef.current = true; // the user owns the zoom from here on
+              setPxPerSec((z) => Math.max(40, z / 1.3));
+            }}
+            title="Zoom out"
+            data-testid="tlv2-zoom-out"
+          >
+            −
+          </button>
+          <button
+            className="timeline-zoom-btn"
+            onClick={() => {
+              manualZoomRef.current = true;
+              setPxPerSec((z) => Math.min(1000, z * 1.3));
+            }}
+            title="Zoom in"
+            data-testid="tlv2-zoom-in"
+          >
+            +
+          </button>
           {editable && (
             <button
               className="timeline-zoom-btn tlv2-add-step"

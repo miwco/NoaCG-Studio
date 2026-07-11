@@ -1564,6 +1564,10 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
    compact readout scale). */
 .tlv2-labels { display: flex; flex-direction: column; flex-shrink: 0; width: 150px; }
 .tlv2 .timeline-label { width: 150px; font-size: 12px; }
+/* Squeezed strip (Inspector open on a laptop width): the label column condenses so the
+   ribbon keeps editing room — rows and diamonds hold their size. */
+.tlv2.tight .tlv2-labels { width: 104px; }
+.tlv2.tight .timeline-label { width: 104px; font-size: 11px; }
 .tlv2-scroll { flex: 1; min-width: 0; overflow-x: auto; }
 .tlv2-canvas { position: relative; cursor: crosshair; }
 .tlv2-ruler { position: relative; border-bottom: 1px solid rgba(232, 237, 242, 0.1); }
