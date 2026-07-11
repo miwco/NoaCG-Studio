@@ -860,21 +860,6 @@ test('the strip can turn step reveal off (the step hint carries the action)', as
   await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);
 });
 
-test('corner bug: steps are not offered — the logo is not a text line', async ({ page }) => {
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Corner bug' }).click();
-  await page.locator('.wz-variant', { hasText: 'Glass Mark' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650);
-  // One text line + a logo slot: »+ Step is offered but disabled, with the reason.
-  const addStep = page.getByTestId('timeline-seg-new');
-  await expect(addStep).toBeDisabled();
-  await expect(addStep).toHaveAttribute('title', /at least two text lines/);
-});
-
 test('any part can move onto a press: the accent joins the Continue chain and back', async ({ page }) => {
   await createHairlineCard(page); // three lines + the accent, steps off
   const templateJs = async () =>

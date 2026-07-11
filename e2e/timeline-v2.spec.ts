@@ -499,6 +499,35 @@ test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label sc
   expect(values.some((v: number | string) => v === 40 || v === 150)).toBe(true); // 0+40 or 110+40
 });
 
+test('v2: corner bugs create as data blocks — the step timeline is their native surface', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Corner bug' }).click();
+  await page.locator('.wz-variant', { hasText: 'Glass Mark' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+  // The step timeline outright — no classic strip, no convert chips.
+  await expect(page.getByTestId('timeline-v2')).toBeVisible();
+  await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
+  // A bug is a two-step playout: Enter on ▶, Out on ■ (bugs don't step by default).
+  let data = await animData(page);
+  expect(data!.steps).toHaveLength(2);
+  // »+ still offers an authoring press (the v2 model is generic — a press that reveals
+  // nothing until the user assigns something is the user's call); the SPX steps setting
+  // stays derived from the data.
+  await page.getByTestId('tlv2-add-step').click();
+  await page.waitForTimeout(650);
+  data = await animData(page);
+  expect(data!.steps).toHaveLength(3);
+  const steps = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.settings.steps;
+  });
+  expect(steps).toBe('2');
+});
+
 test('v2: legacy categories keep the classic strip, can peek at v2, and convert on demand', async ({ page }) => {
   // Info cards have not migrated: classic is their default editing surface.
   await page.goto('/app');

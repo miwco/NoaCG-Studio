@@ -33,6 +33,10 @@ const BUG_CATEGORY: CategorySpec = {
   rootComment: 'Corner bug — a persistent on-air logo mark.',
   // A bug stays a small mark: the caption never grows past ~20% of the frame width.
   maxTextWidth: (res: Resolution) => Math.round(res.width * 0.2),
+  // Timeline v2: corner bugs create as animation data blocks — the step timeline,
+  // keyframes, and Inspector editing are their native surface. Previously saved bugs
+  // stay legacy until their owner presses "use keyframes".
+  dataRegion: true,
 };
 
 export function bugLineClass(index: number): string {
