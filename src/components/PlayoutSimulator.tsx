@@ -22,6 +22,8 @@ export type SpxWindow = Window & {
   gsap?: {
     killTweensOf: (target: string) => void;
     set: (targets: unknown, vars: Record<string, unknown>) => void;
+    /** Read a live transform channel (the canvas keyframe drag samples x/y with it). */
+    getProperty?: (target: unknown, prop: string) => number | string;
   };
   buildInTimeline?: () => GsapTimeline;
   buildOutTimeline?: () => GsapTimeline;
