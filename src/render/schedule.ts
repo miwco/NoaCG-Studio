@@ -33,7 +33,9 @@ export interface ScheduleResult {
   issues: ScheduleIssue[];
 }
 
-const fmtSec = (ms: number) => (ms / 1000).toFixed(1).replace(/\.0$/, '') + ' s';
+// Ceil to 0.1 s so "needs X s" is never displayed lower than the real requirement
+// (14 039 ms must read 14.1 s, not "14 s" next to a 14 s total).
+const fmtSec = (ms: number) => (Math.ceil(ms / 100) / 10).toFixed(1).replace(/\.0$/, '') + ' s';
 
 /** Snap a cue time onto the frame grid (half-up) so cues land exactly on rendered frames. */
 function snapToFrame(ms: number, fps: number): number {

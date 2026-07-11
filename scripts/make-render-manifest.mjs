@@ -1,9 +1,10 @@
 // Generate a render-manifest fixture from a REAL catalog template — the l3-sweep pattern:
 // drive the running dev server, import source modules in-page, write the manifest JSON.
 //
-//   node scripts/make-render-manifest.mjs <out.json> <variantId> [totalSec] [format] [fps] [scale]
+//   node scripts/make-render-manifest.mjs <out.json> <variantId> [totalSec] [format] [fps] [scale] [createOptionsJson]
 //
 // e.g. node scripts/make-render-manifest.mjs .render-dev/lt01.json lt01 6 mp4
+//      node scripts/make-render-manifest.mjs .render-dev/steps.json lt01 12 mp4 25 1 '{"animation":{"steps":true}}'
 // Formats: mp4 | webm | png-still | png-sequence | prores4444
 // The dev server must be running (npm run dev). epochMs is pinned to 0 so repeated renders
 // of the same fixture are byte-comparable.
@@ -13,9 +14,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { devPort } from './dev-port.mjs';
 
-const [out, variantId, totalSec = '6', format = 'mp4', fpsArg = '', scaleArg = '1'] = process.argv.slice(2);
+const [out, variantId, totalSec = '6', format = 'mp4', fpsArg = '', scaleArg = '1', createOptionsJson = ''] = process.argv.slice(2);
 if (!out || !variantId) {
-  console.error('usage: node scripts/make-render-manifest.mjs <out.json> <variantId> [totalSec] [format] [fps] [scale]');
+  console.error('usage: node scripts/make-render-manifest.mjs <out.json> <variantId> [totalSec] [format] [fps] [scale] [createOptionsJson]');
   process.exit(1);
 }
 
@@ -25,12 +26,12 @@ try {
   page.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
   await page.goto(`http://localhost:${devPort()}/`, { waitUntil: 'domcontentloaded' });
 
-  const manifest = await page.evaluate(async ({ variantId, totalMs, format, fps, scale }) => {
+  const manifest = await page.evaluate(async ({ variantId, totalMs, format, fps, scale, createOptions }) => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const variant = Object.values(CATALOG).flat().find((v) => v.id === variantId);
     if (!variant) throw new Error(`unknown variant "${variantId}" — ids: ` +
       Object.values(CATALOG).flat().map((v) => v.id).join(', '));
-    const tpl = variant.create();
+    const tpl = variant.create(createOptions || undefined);
     const data = {};
     for (const f of tpl.fields) data[f.field] = f.value;
     const { buildRenderManifest } = await import('/src/render/buildManifest.ts');
@@ -43,7 +44,11 @@ try {
     });
     console.log('measured', JSON.stringify(measured));
     return manifest;
-  }, { variantId, totalMs: Number(totalSec) * 1000, format, fps: Number(fpsArg) || 0, scale: Number(scaleArg) || 1 });
+  }, {
+    variantId, totalMs: Number(totalSec) * 1000, format,
+    fps: Number(fpsArg) || 0, scale: Number(scaleArg) || 1,
+    createOptions: createOptionsJson ? JSON.parse(createOptionsJson) : null,
+  });
 
   const outPath = resolve(out);
   mkdirSync(dirname(outPath), { recursive: true });
