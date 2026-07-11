@@ -10,14 +10,32 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
 
 - **shared/base.ts** - generic assembler pieces: :root vars, zones, auto-fit, runtime scaffold.
 - **shared/standard.ts** - CategorySpec, assembleStandard, makeDefineVariant.
+  `CategorySpec.dataRegion` is the Timeline v2 flip: when true, assembleStandard converts the
+  freshly emitted legacy ANIMATION region into the NOACG_ANIM data block + interpreter through
+  the parity-proven importer (blocks/animImport.ts) at create - the preset still authors the
+  motion; a conversion failure keeps the legacy emit, never a broken template. Lower thirds
+  are flipped (`dataRegion: true`); the other categories stay legacy until they migrate
+  (docs/TIMELINE_V2_PLAN.md).
+- **shared/animRuntime.ts** - the emitted ES5 interpreter (Timeline v2), identical in every
+  data-driven template: reads the NOACG_ANIM literal and defines the SAME builder globals the
+  whole platform depends on (buildInTimeline / buildOutTimeline / revealNextStep), so the
+  simulator, wizard thumbnails, control engine, and every export work unchanged. It pre-hides
+  press-revealed layers (their reveal step's first keyframe values; plain opacity 0 fallback),
+  shows/hides the CSS-hidden root, fades press-revealed layers OUTSIDE the root with the exit
+  (unless the Out step animates them itself), and divides every duration and keyframe time by
+  `speed`. `emitAnimRegion` emits the full marked region (data header + literal +
+  interpreter); `replaceRegionWithAnimData` swaps a template's region for the data-driven
+  emit (the converter's writer).
 - **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS + `{prefix}-done` at zero;
   DOM-ready-safe.
 
 ## Categories
 
-- **lowerThirds/** - lt01…lt13 on shared.ts (prefix 'lower-third') + animPresets.ts (9
-  marked-region GSAP presets, prefix-parameterized - they animate any category's `.{prefix}-box`
-  structure).
+- **lowerThirds/** - lt01…lt13 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
+  first category to create as NOACG_ANIM data blocks) + animPresets.ts (9 marked-region GSAP
+  presets, prefix-parameterized - they animate any category's `.{prefix}-box` structure; on a
+  data category the preset's emit is converted at create, and blocks/presetApply.ts derives
+  keyframes from the same emitters after).
 - **infoCards/** - card01…card05 (prefix 'info-card').
 - **endCredits/** - cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
   credits-pages / credits-crawl); data-driven: a hidden #f0 textarea holds "Role | Name" lines,

@@ -30,9 +30,16 @@ export interface TimelineTween {
    * the phase knob (the `ease: easeIn/easeOut` variables or the timeline defaults).
    */
   ease: string | null;
-  /** T5: the numeric transform values in a fromTo's FROM object (the "enters from" state —
-   *  only the drawer-editable props; absent for set()/to() calls). */
-  fromVars?: Partial<Record<TransformProp, number>>;
+  /** T5: the drawer-editable values in a fromTo's FROM object (the "enters from" state —
+   *  transforms as numbers, blur as a px amount; absent for set()/to() calls). */
+  fromVars?: Partial<Record<DrawerProp, number>>;
+  /** T6: the drawer-editable values in the LAST object (the "leaves to" state for an exit
+   *  to()/fromTo — drives the out drawer; absent for set() ticks). */
+  toVars?: Partial<Record<DrawerProp, number>>;
+  /** Timeline v2 importer: EVERY animated value in the FROM/TO objects (numbers and
+   *  quoted strings, bookkeeping stripped) — the legacy→data converter reads these. */
+  fromAll?: Record<string, number | string>;
+  toAll?: Record<string, number | string>;
 }
 
 /** T5 — the basic transform properties the per-layer drawer edits. Deliberately small:
@@ -41,6 +48,13 @@ export const TRANSFORM_PROPS = ['x', 'y', 'scale', 'opacity', 'rotation'] as con
 export type TransformProp = (typeof TRANSFORM_PROPS)[number];
 /** The settled state — a from-value equal to its identity is a no-op and gets removed. */
 export const TRANSFORM_IDENTITY: Record<TransformProp, number> = { x: 0, y: 0, scale: 1, opacity: 1, rotation: 0 };
+
+/** T6.2 — the full drawer vocabulary: the transforms plus `blur`. Blur is a filter effect,
+ *  not a transform, so it is edited as a px amount but serializes to `filter: 'blur(Npx)'`
+ *  (identity 0 = no blur). Everything else in the drawer is a plain numeric transform. */
+export const DRAWER_PROPS = ['x', 'y', 'scale', 'opacity', 'rotation', 'blur'] as const;
+export type DrawerProp = (typeof DRAWER_PROPS)[number];
+export const DRAWER_IDENTITY: Record<DrawerProp, number> = { x: 0, y: 0, scale: 1, opacity: 1, rotation: 0, blur: 0 };
 
 export interface TimelinePhase {
   id: 'in' | 'out';
@@ -221,8 +235,8 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
   const vars = objects[objects.length - 1] ?? '';
   const props = [...vars.matchAll(/(\w+)\s*:/g)].map((m) => m[1]).filter((p) => !BOOKKEEPING_PROPS.has(p));
 
-  // T5: the FROM object's drawer-editable transform values (fromTo only — a to() has none).
-  let fromVars: Partial<Record<TransformProp, number>> | undefined;
+  // T5/T6.2: the FROM object's drawer-editable values (fromTo only — a to() has none).
+  let fromVars: Partial<Record<DrawerProp, number>> | undefined;
   const fromObj = objects[0];
   if (kind === 'fromTo' && objects.length >= 2 && fromObj) {
     fromVars = {};
@@ -230,7 +244,37 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
       const m = fromObj.match(new RegExp(`(?:^|[,{\\s])${prop}:\\s*(-?[\\d.]+)`));
       if (m) fromVars[prop] = Number(m[1]);
     }
+    const fb = fromObj.match(/filter:\s*'blur\((-?[\d.]+)px\)'/);
+    if (fb) fromVars.blur = Number(fb[1]);
   }
+
+  // T6/T6.2: the TO object's drawer-editable values — the "leaves to" state the out drawer
+  // edits (present for any animating tween; identity for props it doesn't move).
+  let toVars: Partial<Record<DrawerProp, number>> | undefined;
+  if (kind !== 'set') {
+    toVars = {};
+    for (const prop of TRANSFORM_PROPS) {
+      const m = vars.match(new RegExp(`(?:^|[,{\\s])${prop}:\\s*(-?[\\d.]+)`));
+      if (m) toVars[prop] = Number(m[1]);
+    }
+    const tb = vars.match(/filter:\s*'blur\((-?[\d.]+)px\)'/);
+    if (tb) toVars.blur = Number(tb[1]);
+  }
+
+  // Timeline v2 importer: capture every `key: number` / `key: 'string'` pair of an
+  // object literal (bookkeeping stripped) — the full from/to values, not just the
+  // drawer subset above.
+  const allPairs = (obj: string | undefined): Record<string, number | string> => {
+    const out: Record<string, number | string> = {};
+    if (!obj) return out;
+    for (const m of obj.matchAll(/(\w+)\s*:\s*(?:'([^']*)'|(-?[\d.]+))/g)) {
+      if (BOOKKEEPING_PROPS.has(m[1])) continue;
+      out[m[1]] = m[2] !== undefined ? m[2] : Number(m[3]);
+    }
+    return out;
+  };
+  const fromAll = kind === 'fromTo' && objects.length >= 2 ? allPairs(objects[0]) : undefined;
+  const toAll = kind !== 'set' ? allPairs(vars) : allPairs(objects[objects.length - 1]);
 
   const durationMatch = vars.match(/duration:\s*([\d.]+)\s*\/\s*animSpeed/);
   const staggerMatch = vars.match(/stagger:\s*([\d.]+)\s*\/\s*animSpeed/);
@@ -238,8 +282,10 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
   const easeMatch = vars.match(/ease:\s*'([^']+)'/);
 
   // The position argument sits after the LAST object literal: '-=N' (overlap) or an
-  // absolute `N / animSpeed` / bare number (what T2 writes).
-  const tail = args.slice(args.lastIndexOf('}') + 1);
+  // absolute `N / animSpeed` / bare number (what T2 writes). Inline comments between the
+  // object and the position arg are stripped first — mask-wipe's exit writes
+  // `{...},  // …and wipe closed\n  '-=0.1');` and the overlap must still be seen.
+  const tail = args.slice(args.lastIndexOf('}') + 1).replace(/\/\/[^\n]*/g, '');
   const overlapMatch = tail.match(/,\s*'-=([\d.]+)'/);
   const absoluteMatch = tail.match(/,\s*([\d.]+)(\s*\/\s*animSpeed)?/);
 
@@ -256,6 +302,9 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
     editable: kind !== 'set' && !!durationMatch,
     ease: easeMatch ? easeMatch[1] : null,
     fromVars,
+    toVars,
+    fromAll,
+    toAll,
   };
 }
 
@@ -284,6 +333,9 @@ function parsePhase(id: TimelinePhase['id'], body: string, animSpeed: number): T
       editable: parsed.editable,
       ease: parsed.ease,
       fromVars: parsed.fromVars,
+      toVars: parsed.toVars,
+      fromAll: parsed.fromAll,
+      toAll: parsed.toAll,
     });
   }
   return {
@@ -355,6 +407,46 @@ function parseSteps(region: string, animSpeed: number): TimelineStep[] {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Set, replace, or remove one numeric prop inside a GSAP vars object literal (shared by the
+ *  enters-from and leaves-to drawer patchers). A null value removes the prop and tidies the
+ *  adjacent comma/braces so the emitted literal stays clean. */
+function setObjProp(obj: string, prop: string, value: number | null): string {
+  if (value === null) {
+    return obj
+      .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+\\s*,\\s*`), '')
+      .replace(new RegExp(`,\\s*\\b${prop}:\\s*-?[\\d.]+`), '')
+      .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), '')
+      .replace(/\{\s*,/, '{ ')
+      .replace(/,\s*\}/, ' }');
+  }
+  if (new RegExp(`\\b${prop}:\\s*-?[\\d.]+`).test(obj)) {
+    return obj.replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), `${prop}: ${value}`);
+  }
+  return obj.replace(/\s/g, '') === '{}'
+    ? `{ ${prop}: ${value} }`
+    : obj.replace(/\{\s*/, `{ ${prop}: ${value}, `);
+}
+
+/** Set, replace, or remove the blur filter inside a GSAP vars object literal. Blur lives as
+ *  `filter: 'blur(Npx)'` (a quoted string, not a bare number), so it needs its own writer;
+ *  a null px removes it and tidies the braces. */
+function setObjBlur(obj: string, px: number | null): string {
+  const has = /filter:\s*'blur\([^']*\)'/.test(obj);
+  if (px === null) {
+    if (!has) return obj;
+    return obj
+      .replace(/filter:\s*'blur\([^']*\)'\s*,\s*/, '')
+      .replace(/,\s*filter:\s*'blur\([^']*\)'/, '')
+      .replace(/filter:\s*'blur\([^']*\)'/, '')
+      .replace(/\{\s*,/, '{ ')
+      .replace(/,\s*\}/, ' }');
+  }
+  if (has) return obj.replace(/filter:\s*'blur\([^']*\)'/, `filter: 'blur(${px}px)'`);
+  return obj.replace(/\s/g, '') === '{}'
+    ? `{ filter: 'blur(${px}px)' }`
+    : obj.replace(/\{\s*/, `{ filter: 'blur(${px}px)', `);
+}
 
 /** Locate the Nth tl call of a phase's build function inside the marked region. */
 function locateCall(js: string, phaseId: 'in' | 'out', tweenIndex: number) {
@@ -601,7 +693,7 @@ export function patchTweenVars(
   js: string,
   phaseId: 'in' | 'out',
   tweenIndex: number,
-  changes: Partial<Record<TransformProp, number>>,
+  changes: Partial<Record<DrawerProp, number>>,
 ): string | null {
   const loc = locateCall(js, phaseId, tweenIndex);
   if (!loc) return null;
@@ -620,38 +712,31 @@ export function patchTweenVars(
   const objects = [...call.matchAll(/\{[^{}]*\}/g)];
   if (objects.length < 2) return null;
 
-  const setProp = (obj: string, prop: string, value: number | null): string => {
-    if (value === null) {
-      // Remove the prop (and one adjacent comma), then tidy any leftover braces.
-      return obj
-        .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+\\s*,\\s*`), '')
-        .replace(new RegExp(`,\\s*\\b${prop}:\\s*-?[\\d.]+`), '')
-        .replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), '')
-        .replace(/\{\s*,/, '{ ')
-        .replace(/,\s*\}/, ' }');
-    }
-    if (new RegExp(`\\b${prop}:\\s*-?[\\d.]+`).test(obj)) {
-      return obj.replace(new RegExp(`\\b${prop}:\\s*-?[\\d.]+`), `${prop}: ${value}`);
-    }
-    // Insert after the opening brace (an empty {} gets its first pair).
-    return obj.replace(/\s/g, '') === '{}'
-      ? `{ ${prop}: ${value} }`
-      : obj.replace(/\{\s*/, `{ ${prop}: ${value}, `);
-  };
-
   let fromObj = objects[0][0];
   let toObj = objects[objects.length - 1][0];
   for (const [prop, raw] of Object.entries(changes)) {
     const value = round2(raw as number);
-    const identity = TRANSFORM_IDENTITY[prop as TransformProp];
+    const identity = DRAWER_IDENTITY[prop as DrawerProp];
+    if (prop === 'blur') {
+      // Enters from a blur, settling to blur(0px). Removing the from-blur also drops the
+      // managed settle counterpart, so a zeroed blur leaves the code clean.
+      if (value === 0) {
+        fromObj = setObjBlur(fromObj, null);
+        if (/filter:\s*'blur\(0px\)'/.test(toObj)) toObj = setObjBlur(toObj, null);
+      } else {
+        fromObj = setObjBlur(fromObj, value);
+        if (!/filter:/.test(toObj)) toObj = setObjBlur(toObj, 0);
+      }
+      continue;
+    }
     if (value === identity) {
-      fromObj = setProp(fromObj, prop, null);
+      fromObj = setObjProp(fromObj, prop, null);
       // Only strip the TO counterpart when it IS the identity we manage (never a preset's
       // own differing to-value).
-      if (new RegExp(`\\b${prop}:\\s*${identity}(?![\\d.])`).test(toObj)) toObj = setProp(toObj, prop, null);
+      if (new RegExp(`\\b${prop}:\\s*${identity}(?![\\d.])`).test(toObj)) toObj = setObjProp(toObj, prop, null);
     } else {
-      fromObj = setProp(fromObj, prop, value);
-      if (!new RegExp(`\\b${prop}:`).test(toObj)) toObj = setProp(toObj, prop, identity);
+      fromObj = setObjProp(fromObj, prop, value);
+      if (!new RegExp(`\\b${prop}:`).test(toObj)) toObj = setObjProp(toObj, prop, identity);
     }
   }
 
@@ -674,7 +759,7 @@ export function patchTweenVars(
 export function insertPartTween(
   js: string,
   selector: string,
-  changes: Partial<Record<TransformProp, number>>,
+  changes: Partial<Record<DrawerProp, number>>,
 ): string | null {
   const regionMatch = js.match(REGION_RE);
   if (!regionMatch || regionMatch.index === undefined) return null;
@@ -689,9 +774,14 @@ export function insertPartTween(
   const toPairs: string[] = [];
   for (const [prop, raw] of Object.entries(changes)) {
     const value = round2(raw as number);
-    if (value === TRANSFORM_IDENTITY[prop as TransformProp]) continue;
-    fromPairs.push(`${prop}: ${value}`);
-    toPairs.push(`${prop}: ${TRANSFORM_IDENTITY[prop as TransformProp]}`);
+    if (value === DRAWER_IDENTITY[prop as DrawerProp]) continue;
+    if (prop === 'blur') {
+      fromPairs.push(`filter: 'blur(${value}px)'`);
+      toPairs.push(`filter: 'blur(0px)'`); // materialises sharp
+    } else {
+      fromPairs.push(`${prop}: ${value}`);
+      toPairs.push(`${prop}: ${TRANSFORM_IDENTITY[prop as TransformProp]}`);
+    }
   }
   if (fromPairs.length === 0) return null; // all identity — nothing to animate
 
@@ -700,6 +790,84 @@ export function insertPartTween(
     { ${toPairs.join(', ')}, duration: 0.5 / animSpeed },
     0  // enters with the graphic (layer-drawer added)
   );
+  `;
+  const newBody = body.slice(0, returnAt) + insert + body.slice(returnAt);
+  const bodyStart = bodyMatch.index + bodyMatch[0].indexOf(body);
+  const newRegion = region.slice(0, bodyStart) + newBody + region.slice(bodyStart + body.length);
+  return js.slice(0, regionMatch.index) + newRegion + js.slice(regionMatch.index + region.length);
+}
+
+/**
+ * T6: set one out tween's "leaves to" transform values — the per-layer drawer, exit side.
+ * Edits the LAST object literal (the exit's to-vars). A transform prop equal to its identity
+ * is removed (a no-op leave direction), but opacity is never stripped — it is the fade that
+ * makes the exit actually leave. Returns null when the tween is a set() or unlocatable.
+ */
+export function patchTweenToVars(
+  js: string,
+  phaseId: 'in' | 'out',
+  tweenIndex: number,
+  changes: Partial<Record<DrawerProp, number>>,
+): string | null {
+  const loc = locateCall(js, phaseId, tweenIndex);
+  if (!loc) return null;
+  const call = loc.call;
+  if (/^tl\.set\(/.test(call)) return null;
+
+  const objects = [...call.matchAll(/\{[^{}]*\}/g)];
+  if (objects.length === 0) return null;
+  const last = objects[objects.length - 1];
+  let toObj = last[0];
+  for (const [prop, raw] of Object.entries(changes)) {
+    const value = round2(raw as number);
+    if (prop === 'blur') {
+      toObj = setObjBlur(toObj, value === 0 ? null : value); // leaves toward a blur (0 = none)
+      continue;
+    }
+    const identity = TRANSFORM_IDENTITY[prop as TransformProp];
+    toObj = setObjProp(toObj, prop, value === identity && prop !== 'opacity' ? null : value);
+  }
+
+  const patched = call.slice(0, last.index!) + toObj + call.slice(last.index! + last[0].length);
+  return spliceCall(loc, patched);
+}
+
+/**
+ * T6: give a part its own EXIT tween when it has none — the out drawer's insert path. The
+ * part leaves toward the given transform offset and fades (opacity 0 unless the caller set
+ * it), entering at position 0 of buildOutTimeline so it runs with the rest of the exit. The
+ * root's own hide (the trailing set) still fires after, so nothing lingers.
+ */
+export function insertPartOutTween(
+  js: string,
+  selector: string,
+  changes: Partial<Record<DrawerProp, number>>,
+): string | null {
+  const regionMatch = js.match(REGION_RE);
+  if (!regionMatch || regionMatch.index === undefined) return null;
+  const region = regionMatch[0];
+  const bodyMatch = region.match(fnBodyRe('buildOutTimeline'));
+  if (!bodyMatch || bodyMatch.index === undefined) return null;
+  const body = bodyMatch[1];
+  const returnAt = body.lastIndexOf('return tl;');
+  if (returnAt === -1) return null;
+
+  // Setting a transform to its identity on a layer that has no exit tween is a no-op —
+  // there is nothing to leave toward, so don't manufacture a bare fade.
+  const meaningful = Object.entries(changes).some(
+    ([prop, raw]) => prop === 'opacity' || round2(raw as number) !== DRAWER_IDENTITY[prop as DrawerProp],
+  );
+  if (!meaningful) return null;
+
+  const pairs: string[] = [];
+  for (const [prop, raw] of Object.entries(changes)) {
+    const value = round2(raw as number);
+    if (value === DRAWER_IDENTITY[prop as DrawerProp] && prop !== 'opacity') continue;
+    pairs.push(prop === 'blur' ? `filter: 'blur(${value}px)'` : `${prop}: ${value}`);
+  }
+  if (!pairs.some((p) => p.startsWith('opacity'))) pairs.push('opacity: 0'); // it must actually leave
+
+  const insert = `tl.to('${selector}', { ${pairs.join(', ')}, duration: 0.35 / animSpeed }, 0);  // leaves with the exit (layer-drawer added)
   `;
   const newBody = body.slice(0, returnAt) + insert + body.slice(returnAt);
   const bodyStart = bodyMatch.index + bodyMatch[0].indexOf(body);

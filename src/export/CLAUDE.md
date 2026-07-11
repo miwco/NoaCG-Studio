@@ -11,7 +11,10 @@ validation gates every export (root non-negotiables 3 and 4).
 - **targets/spxStarter.ts** - the one SPX export = spxTarget, id 'spx'; + buildStarterInto,
   reused by packets.
 - **targets/htmlOverlay.ts** - OBS/vMix browser source: an autoplay block fills fields from baked
-  sampleData -> definition defaults, then play(); receiver + controlpanel.html bundled.
+  sampleData -> definition defaults, then play(). An auto-out `out` = N ms setting rides
+  along: the block measures the entrance from a paused throwaway timeline and schedules
+  stop() at entrance + delay (the bundled control panel's Stop still works sooner). Receiver
+  + controlpanel.html bundled.
 - **targets/h2r.ts** - H2R Custom HTML: GDD block from DataFields + play()-toggle shim.
 - **targets/casparcg.ts** - selfContained + JSON/XML data shim.
 - **targets/ograf.ts** - EBU OGraf v1: manifest from DataFields + graphic.mjs Web Component;

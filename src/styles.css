@@ -1467,6 +1467,35 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-ease-spacer { width: 96px; flex-shrink: 0; }
 
+/* The selected In/Out card's controls row — the Motion panel's per-phase preset + easing,
+   converged onto the strip (one motion surface). Same slim height as the gesture hint. */
+.timeline-inspector { display: flex; align-items: center; gap: 6px; }
+.timeline-inspector-label {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+.timeline-inspector-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Content-sized selects: the preset/easing/speed/out pickers carry words, not curves. */
+.timeline-preset,
+.timeline-phase-ease,
+.timeline-speed { width: auto; max-width: 190px; }
+.timeline-out-mode { width: auto; max-width: 230px; }
+/* The auto-out delay, in milliseconds — a sibling of the out-mode select. */
+.timeline-out-ms {
+  width: 64px;
+  height: 18px;
+  padding: 1px 4px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
 /* The part row's when-control: which » Next press the part appears on. */
 .timeline-appears {
   width: 142px;
@@ -1496,6 +1525,293 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   color: var(--text-dim);
 }
 .timeline-zoom-btn:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); background: transparent; }
+
+/* ---------- Timeline v2 — the step timeline (read-first; opt-in via the dock chip) ---------- */
+.timeline-dock { position: relative; }
+.timeline-dock-toggle {
+  position: absolute;
+  top: -1px;
+  right: 14px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  color: var(--text-dim);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  border-top: none;
+}
+.timeline-dock-toggle:hover { color: var(--amber); border-color: rgba(246, 166, 35, 0.4); }
+.tlv2-body { display: flex; align-items: stretch; gap: 8px; margin-top: 2px; }
+.tlv2-labels { display: flex; flex-direction: column; flex-shrink: 0; width: 102px; }
+.tlv2-scroll { flex: 1; min-width: 0; overflow-x: auto; }
+.tlv2-canvas { position: relative; cursor: crosshair; }
+.tlv2-ruler { position: relative; border-bottom: 1px solid rgba(232, 237, 242, 0.1); }
+.tlv2-tick {
+  position: absolute;
+  bottom: 0;
+  border-left: 1px solid rgba(232, 237, 242, 0.14);
+  padding-left: 3px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 8.5px;
+  color: var(--text-dim);
+  height: 7px;
+  line-height: 0.4;
+  white-space: nowrap;
+}
+.tlv2-tick.whole { height: 11px; }
+.tlv2-clips { position: absolute; left: 0; right: 0; }
+.tlv2-clip {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border: 1px solid rgba(246, 166, 35, 0.35);
+  border-radius: 4px;
+  background: rgba(246, 166, 35, 0.08);
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10px;
+  color: var(--text);
+  padding: 1px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tlv2-clip.active { border-color: var(--amber); background: rgba(246, 166, 35, 0.16); }
+.tlv2-cue { color: var(--amber); }
+.tlv2-clip-dur { color: var(--text-dim); font-size: 9px; }
+.tlv2-hold {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--text-dim);
+  line-height: 18px;
+  background: repeating-linear-gradient(-45deg, rgba(232, 237, 242, 0.06) 0 4px, transparent 4px 9px);
+  border-radius: 3px;
+}
+.tlv2-row { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(232, 237, 242, 0.05); }
+.tlv2-row.selected { background: rgba(246, 166, 35, 0.06); }
+.tlv2-diamond {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--amber);
+  font-size: 9px;
+  text-shadow: 0 0 4px rgba(246, 166, 35, 0.5);
+  pointer-events: none;
+}
+/* Data-block templates: diamonds are live — drag to retime, click to select. */
+.tlv2-diamond.editable { pointer-events: auto; cursor: grab; touch-action: none; padding: 4px; }
+.tlv2-diamond.editable:hover { text-shadow: 0 0 8px rgba(246, 166, 35, 0.9); }
+.tlv2-diamond.selected { color: var(--paper, #fff); text-shadow: 0 0 8px rgba(246, 166, 35, 1); }
+.tlv2-diamond.dragging { cursor: grabbing; }
+.timeline-dock-chips { position: absolute; top: -1px; right: 14px; display: inline-flex; gap: 6px; }
+.timeline-dock-chips .timeline-dock-toggle { position: static; }
+.timeline-dock-toggle.convert { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
+.tlv2-reveal { position: absolute; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 9px; pointer-events: none; }
+.tlv2-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(232, 237, 242, 0.85);
+  box-shadow: 0 0 6px rgba(232, 237, 242, 0.35);
+  pointer-events: none;
+}
+/* The playhead's grab cap — a flag in the ruler, kinder to grab than the 1px line. */
+.tlv2-playhead-cap {
+  position: absolute;
+  top: 0;
+  width: 11px;
+  height: 12px;
+  transform: translateX(-6px);
+  background: rgba(232, 237, 242, 0.9);
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.tlv2-playhead-cap:hover { background: var(--amber); }
+.tlv2-side { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; align-items: center; }
+.tlv2-time { font-size: 10px; color: var(--text-dim); }
+/* Phase 6 — steps as clips: the duration handle, the context menu, the hold popover. */
+.tlv2-clip-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: ew-resize;
+  border-right: 2px solid rgba(246, 166, 35, 0.55);
+  border-radius: 0 4px 4px 0;
+  touch-action: none;
+}
+.tlv2-hold.editable { cursor: pointer; }
+.tlv2-hold.editable:hover { color: var(--amber); }
+.tlv2-add-step { font-size: 10px; letter-spacing: 0.03em; color: var(--amber); border-color: rgba(246, 166, 35, 0.4); }
+.tlv2-speed {
+  width: 54px;
+  height: 18px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  padding: 0 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+.tlv2-menu {
+  position: fixed;
+  z-index: 320;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.tlv2-menu-item {
+  text-align: left;
+  font-size: 11px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+}
+.tlv2-menu-item:hover { background: rgba(246, 166, 35, 0.12); color: var(--text); }
+.tlv2-menu-item.danger:hover { background: rgba(220, 70, 70, 0.15); }
+.tlv2-menu-input,
+.tlv2-out-mode {
+  font-size: 11px;
+  height: 22px;
+  padding: 1px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+.tlv2-out-ms-row { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-dim); padding: 2px 2px 0; }
+.tlv2-out-ms {
+  width: 70px;
+  height: 20px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+/* ---------- Inspector (Timeline v2 — the selection's properties, right of the preview) ---------- */
+.inspector-pane { overflow-y: auto; min-width: 0; }
+.inspector { padding: 10px 12px; }
+.inspector-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+.inspector-identity { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.inspector-label { font-size: 14px; font-weight: 700; }
+.inspector-kind { font-size: 10.5px; letter-spacing: 0.06em; color: var(--amber); }
+.inspector-selector {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+.inspector-empty { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.inspector-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+.inspector-tabs .tab { font-size: 11px; padding: 3px 10px; }
+.inspector-body { display: flex; flex-direction: column; gap: 2px; }
+.inspector-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(232, 237, 242, 0.05);
+}
+.inspector-row-label { font-size: 11.5px; color: var(--text-dim); }
+.inspector-row-value {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.inspector-hint { margin-top: 10px; font-size: 10.5px; line-height: 1.5; }
+/* Phase 4 — editable properties: value/input + the keyframe diamond side by side. */
+.inspector-row-edit { display: inline-flex; align-items: center; gap: 6px; }
+.inspector-input {
+  width: 64px;
+  height: 20px;
+  padding: 1px 5px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  text-align: right;
+}
+.inspector-kf {
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  line-height: 1;
+}
+.inspector-kf:hover { color: var(--amber); background: transparent; }
+.inspector-kf.armed { color: var(--amber); }
+.inspector-kf.at-kf { text-shadow: 0 0 6px rgba(246, 166, 35, 0.9); }
+/* ◀ ▶ — jump to the property's previous/next keyframe (the CapCut/AE convention). */
+.inspector-kf-nav {
+  background: transparent;
+  border: none;
+  padding: 0 1px;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.inspector-kf-nav:hover { color: var(--amber); background: transparent; }
+/* Armed labels scrub: drag horizontally to change the value. */
+.inspector-row-label.scrubbable { cursor: ew-resize; touch-action: none; user-select: none; }
+.inspector-row-label.scrubbable:hover { color: var(--text); }
+/* Phase 5 — the Animations tab's preset row: style · In/Out/Both · Apply. */
+.inspector-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.inspector-preset-select {
+  flex: 1 1 100%;
+  height: 22px;
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+.inspector-preset-phase { display: inline-flex; gap: 2px; }
+.inspector-preset-phase .tab { font-size: 10px; padding: 2px 8px; }
+.inspector-preset-apply {
+  margin-left: auto;
+  font-size: 10.5px;
+  padding: 2px 10px;
+  color: var(--amber);
+  border: 1px solid rgba(246, 166, 35, 0.45);
+  border-radius: 4px;
+  background: transparent;
+}
+.inspector-preset-apply:disabled { opacity: 0.4; }
+.inspector-preset-apply:not(:disabled):hover { background: rgba(246, 166, 35, 0.1); }
 
 /* Cloud sync status pill (Era 5.2) */
 .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; }

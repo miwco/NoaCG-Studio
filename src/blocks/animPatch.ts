@@ -232,6 +232,9 @@ export function withStepsSetting(
 
 /** Replace the managed region with a freshly emitted block for `presetId`. */
 export function swapAnimationPreset(js: string, presetId: AnimPresetId, cfg: PresetConfig): string {
+  // A data-block region (Timeline v2) is edited through blocks/presetApply — the legacy
+  // splicers must never write choreography into the interpreter.
+  if (js.includes('var NOACG_ANIM')) return js;
   const start = js.indexOf(ANIMATION_MARK_OPEN);
   const end = js.indexOf(ANIMATION_MARK_CLOSE);
   if (start === -1 || end === -1) return js;
@@ -302,7 +305,12 @@ function splitRegion(region: string): RegionParts | null {
   // The exit's descriptive comment ("// buildOutTimeline(): …") belongs to the exit part.
   const fnIdx = region.indexOf(OUT_FN);
   const commentIdx = region.indexOf('// buildOutTimeline');
-  const outIdx = commentIdx !== -1 && commentIdx < fnIdx ? commentIdx : fnIdx;
+  let outIdx = commentIdx !== -1 && commentIdx < fnIdx ? commentIdx : fnIdx;
+  // A previously mixed region carries its "// Out preset:" tag just above that comment —
+  // it belongs to the exit too (leaving it in the head would strand a stale duplicate
+  // when the exit is swapped again, and the stale one would win the readback).
+  const tagIdx = region.indexOf('// Out preset:');
+  if (tagIdx !== -1 && tagIdx < outIdx) outIdx = tagIdx;
   const closeIdx = region.indexOf(ANIMATION_MARK_CLOSE);
   if (fnIdx === -1 || closeIdx === -1 || outIdx > closeIdx) return null;
   const zone = region.slice(outIdx, closeIdx);
@@ -334,6 +342,7 @@ function tagOutPhase(tail: string, name: string): string {
  * (pass the current value in cfg for the phase that isn't being swapped).
  */
 export function swapAnimationPhase(js: string, presetId: AnimPresetId, cfg: PresetConfig, phase: AnimPhase): string {
+  if (js.includes('var NOACG_ANIM')) return js; // data regions: blocks/presetApply owns this
   if (phase === 'both') return swapAnimationPreset(js, presetId, cfg);
 
   const start = js.indexOf(ANIMATION_MARK_OPEN);

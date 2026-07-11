@@ -540,6 +540,75 @@ Sub-phases (see ERA5_PLAN.md for full scope + per-phase live-verify checklists):
       Logo block, give it its own press from the chip, and pin the whole lifecycle (hidden
       settled → revealed on press 2 → fades on ■ Stop → always-on again after unassign, gate
       code gone).
+- [x] **T6 one motion surface (2026-07-10, the approved T3.5 follow-up)** — the Motion
+      side-tab is retired; the strip's moment cards ARE the motion surface (SidePanel: five
+      tabs). The selected ▶ In / ■ Out card grows an inspector row with that phase's preset
+      picker (presetsForType, per-category) and easing choice (the vocabulary's phase-correct
+      half — doctrine intact), writing the panel's exact patches (`swapAnimationPhase` /
+      `setAnimKnob`); the animSpeed knob lives on the strip header (Slower/Normal/Faster);
+      the ● On air card's note now EDITS the SPX `out` setting (until ■ Stop / auto-out N ms
+      with an editable delay / stays-no-out), synced into the definition like
+      `withStepsSetting`. The unparsable-region fallback keeps the Motion tab's one remaining
+      duty: an honest one-liner plus a start-over preset select (a 'both'-phase swap re-emits
+      the whole region and brings the timeline back). Found & fixed on the way: `splitRegion`
+      left the "// Out preset:" tag in the head slice, so an In-swap followed by an Out-swap
+      stranded a stale duplicate tag that won the readback (the panel had the same bug).
+      Steps stay where T3.6 put them (»+ Step / turn-off on the strip); the wizard's
+      Animation STEP is untouched (a different surface for a different moment). E2E: the
+      motion specs re-pinned on the strip + new coverage (per-phase swap from a card, speed
+      knob, out-mode sync, fallback).
+- [x] **T6.1 motion-surface tester fixes (2026-07-10, first round on the converged strip)** —
+      four issues from trying the build: (1) an EXIT could leak its end state into the next
+      playback — most visibly a Blur exit leaves filter:blur on the box that a non-blur
+      entrance never resets, so the replay started blurred; the simulator now `resetGraphic`s
+      (clears GSAP inline props on the root subtree) before every entrance, so play → hold →
+      exit → clean reset → play again always starts from the true initial state. (2) The SPX
+      `out` = N ms auto-out never fired in the editor preview (only export); the simulator now
+      schedules the exit after the entrance settles + the hold, cancelled by any manual
+      play/stop/next/scrub. (3) The In and Out cards showed identical preset labels; the Out
+      card now names presets in their exit direction (Blur in → Blur out, Drop in → Drop out;
+      direction-neutral names like Mask wipe unchanged). (4) The per-layer transform drawer
+      was entrance-only; it is now PHASE-AWARE — enters-from on the In card, leaves-to on the
+      Out card (patchTweenToVars edits the exit's to-vars, insertPartOutTween gives a partless
+      layer its own exit tween; opacity never auto-stripped so the exit still fades). E2E:
+      leak-free replay, auto-out in preview, in/out naming, the leaves-to drawer round-trip.
+      (Also answered: the missing Login/Community menus were an env artifact — this worktree
+      has no `.env`, so the app runs offline and both account surfaces stay hidden by design.)
+- [x] **T6.2 per-layer blur (2026-07-10, second tester round)** — the per-layer drawer gains
+      a Blur field on BOTH phases: enters-from materialises a layer out of a blur, leaves-to
+      dissolves it into one. Blur is the one non-transform in the drawer — it serializes to
+      `filter: 'blur(Npx)'` (a string literal, not a bare number), so it has its own reader/
+      writer (`setObjBlur`, a `DRAWER_PROPS`/`DRAWER_IDENTITY` vocabulary alongside the
+      transforms). All four drawer patchers handle it (patchTweenVars/patchTweenToVars edit
+      the from/to objects; insertPartTween gives a blur-in fromTo, insertPartOutTween a
+      blur-out to()), and splitTween still separates a joint tween first so only the grabbed
+      layer blurs. The simulator's reset already clears leaked filter, so blur leaves cleanly.
+      E2E: the drawer exposes blur on both cards and an exit blur round-trips + resets.
+- [x] **T7 Timeline v2 — the step timeline (2026-07-11; phases 1-7 + the creation flip +
+      the CapCut polish pass; Phase 8 deferred, see below)**: the declarative engine
+      (NOACG_ANIM data block + interpreter, canonical serializer, importer, golden parity
+      harness); the Inspector column + redo; the clip-style ribbon (cue markers, ruler,
+      scrub); keyframes (arm/auto-key at the playhead, diamond drag/delete); presets as
+      keyframe generators (In/Out/Both, declared props only, layer-relative In); steps as
+      clips (preserve/stretch resize, duplicate/rename/delete, »+, hold popover, speed);
+      LOWER THIRDS CREATE AS DATA natively — the classic-strip spec suite moved to its
+      still-legacy sibling (info cards' Hairline Card, 34 tests); Phase 7 parity (the
+      OBS/vMix overlay honors auto-out with a measured entrance, data-block validation
+      warnings, the AI prompt teaches the data shape, l3-sweep updated); and the polish
+      pass — playhead grab cap + auto-follow scroll, 1000 px/s deep zoom, per-keyframe
+      and per-step ease menus (right-click), ◀◆▶ keyframe navigation, label
+      drag-scrubbing. **Phase 8 (delete the literal patchers + the classic strip) waits
+      for the remaining category migrations**: standard-contract categories next (info
+      cards, scoreboards, corner bug, starting-soon, timers, quiz — the importer already
+      converts them), loop categories (credits/tickers/infographics) after a loop
+      representation lands in the data model. Original plan entry follows — the
+      CapCut-style rethink: steps as clips, a real playhead/ruler, an Inspector panel,
+      proper keyframes, presets as keyframe generators with In/Out/Both. The audit
+      concluded the parse-by-construction patcher architecture is at end of life for this
+      feature set; the marked region moves to a declarative data literal + fixed
+      interpreter while keeping the builder-globals contract (so the simulator and every
+      export are untouched). Full plan, data model, the twelve design decisions, risks,
+      and 8 phases: **docs/TIMELINE_V2_PLAN.md**.
 Drag/move/scale writes the SAME deterministic patches the panels write today (zone +
 nudge + --scale foundations already exist) — code stays the source of truth. Timeline UI
 for in/out timings + step triggers maps onto the marked ANIMATION region + animSpeed/

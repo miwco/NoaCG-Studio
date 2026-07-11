@@ -10,15 +10,23 @@ templateStore.ts (zustand) holds the template plus editor UI state.
   template's field defaults; plain applyTemplate intentionally preserves typed sample values for
   matching field ids. Don't drop the flag from the wizard path: the old template's values would
   leak into the new graphic's fields.
-- **undo()** - restores the snapshot. Global Ctrl/Cmd+Z (bound in AppShell) calls undo() unless
-  focus is in Monaco or a form field.
+- **undo() / redo()** - undo() restores the snapshot and pushes the undone state onto the
+  `future` stack; redo() re-applies from it. Any NEW edit (apply, patchCss, manual typing)
+  clears `future` - the classic undo-tree cut. Global Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z
+  (+ Ctrl+Y), bound in AppShell, unless focus is in Monaco or a form field.
 - **setHtml/setCss/setJs** - editor edits; editing HTML re-parses the definition so
   `fields`/`settings` stay in sync. The preview rebuilds on a ~350 ms debounce.
 - **lastChange** - per-tab changed-line ranges from every apply (drives the editor's
   change-highlight decorations).
-- **replayNonce** - Motion applies auto-replay via PlayoutSimulator.
+- **replayNonce** - motion applies (timeline/Inspector edits) auto-replay via PlayoutSimulator.
 - **patchCss** - Style-panel patches: highlight without history spam.
 - **sendScrub** - timeline view -> simulator pauses the preview's in/out timeline at a time.
 - **sendControl** - the Control panel live-drives the preview through the simulator.
-- **selectedPart** - the SHARED SELECTION (Era 6): one TemplatePart selector that the canvas and
-  the timeline strip both highlight. UI state only - no history, never written into the template.
+- **selectedPart** - the SHARED SELECTION (Era 6): one TemplatePart selector that the canvas,
+  the timeline, and the Inspector all highlight. UI state only - no history, never written
+  into the template.
+- **playhead / setPlayhead** - the step timeline's parked playhead `{ step, t }` (step index +
+  local time in effective seconds). UI state only - no history; the Inspector stamps
+  keyframes at it.
+- **activePanel** (`SidePanel` type) - the side panel's tab: FIVE ids
+  (data/control/style/ai/export). Motion is not a tab - it lives on the timeline.

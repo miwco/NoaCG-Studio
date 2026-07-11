@@ -33,6 +33,11 @@ const L3_CATEGORY: CategorySpec = {
   type: 'lower-third',
   prefix: 'lower-third',
   rootComment: 'Lower third. Hidden until play(); positioned by the .lower-third rule in the CSS.',
+  // Timeline v2: lower thirds are the first category on the data-block region — new
+  // lower thirds get the keyframe timeline natively. The classic strip (and its literal
+  // patchers) still serves every not-yet-migrated category; previously saved lower
+  // thirds stay legacy until their owner presses "use keyframes".
+  dataRegion: true,
 };
 
 /** Class name for the Nth line (line 0 = name, 1 = title, 2 = kicker/extra). */

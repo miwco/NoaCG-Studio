@@ -6,10 +6,12 @@ in src/blocks/CLAUDE.md.
 
 ## Shell & editor
 
-- **AppShell** - two-pane layout: code left; preview stacked over the tool tabs right - the
-  stage's aspect-ratio comes from the template resolution. Binds global Ctrl/Cmd+Z to undo()
-  (skipped when focus is in Monaco or a form field). Desktop layout modes + splitters persist
-  via model/layout.ts; useIsMobile/useSplitter support the mobile and resizable layouts.
+- **AppShell** - the workspace layout: code left; preview stacked over the tool tabs in the
+  middle; the Inspector column right (both desktop layout modes) - the stage's aspect-ratio
+  comes from the template resolution. Binds global Ctrl/Cmd+Z to undo() and
+  Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a form field).
+  Desktop layout modes + splitters persist via model/layout.ts; useIsMobile/useSplitter
+  support the mobile and resizable layouts.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
   Learn tab).
@@ -27,8 +29,8 @@ in src/blocks/CLAUDE.md.
   (registry-driven closest-ancestor hit test, rect-containment fallback); clicking the selected
   part again climbs to its container; hover previews the name; Escape or empty canvas deselects;
   the corner handle stays anchored while the whole graphic is selected. Selection is editor UI
-  state ONLY - the selector lives in store selectedPart so the timeline strip highlights the
-  same element - never written into the template.
+  state ONLY - the selector lives in store selectedPart so the timeline and the Inspector
+  track the same element - never written into the template.
 - **CanvasSelection** - the presentational selection/hover overlay: amber outline + a chip
   speaking part.label - the registry's words, same as the timeline strip. Chips hint only
   actions that already exist: dblclick-to-edit on text lines, corner resize on the root. An
@@ -40,8 +42,43 @@ in src/blocks/CLAUDE.md.
 
 - **PlayoutSimulator** - owns the running preview timeline `__activeTl`; settles the design view
   after every rebuild (progress(1, true) + a second update()); auto-replays on replayNonce;
-  playNext owns each Continue's reveal tween as `__activeTl` step-N.
-- **TimelineView** - the collapsible strip under the preview. MOMENT CARDS
+  playNext owns each Continue's reveal tween as `__activeTl` step-N. resetGraphic clears GSAP
+  inline props on the root subtree before every entrance so a prior exit never leaks its end
+  state (e.g. a Blur exit's filter into a Slide entrance that never resets it). Honors the SPX
+  `out` = N ms setting by scheduling the exit after the entrance settles + the hold - cancelled
+  by any manual play/stop/next/scrub.
+- **TimelineDock / StepTimeline** (Timeline v2, both in StepTimeline.tsx) - the dock picks the
+  timeline surface per template: a NOACG_ANIM data region gets the clip-style STEP TIMELINE
+  outright (the classic strip's literal patchers cannot read it); a legacy region keeps
+  TimelineView, with a '⧉ new timeline' peek chip and an undoable '◆ use keyframes' conversion
+  (blocks/animImport.ts + the animRuntime writer).
+  The step timeline's vocabulary: a time ruler with the operator's cue markers (▶ » ● ■) at
+  every boundary; step CLIPS - right-edge resize (default PRESERVES keyframe timing: extending
+  leaves settled air, shrinking clamps at the last keyframe; Alt-drag STRETCHES times
+  proportionally), context menu Duplicate/Rename/Delete + the step's default ease, »+ adds a
+  step, a hold popover edits the SPX `out` setting, a speed select scales everything; LAYER
+  ROWS - every registry part gets a row - with aggregate keyframe diamonds (drag to retime,
+  Delete removes, right-click sets the per-keyframe ease); a draggable playhead with a grab
+  cap + auto-follow scroll and deep zoom (up to 1000 px/s); Space plays, ←/→ nudge the
+  selected diamond on the 0.05 s grid (never while typing).
+  Every edit is a pure data mutation (blocks/animEdit.ts) spliced back by
+  blocks/animData.ts - ONE undoable apply each; playhead/scrub/selection never write history.
+  Parity between editor and runtime is pinned by e2e/anim-engine.spec.ts.
+- **Inspector** (Timeline v2) - the persistent panel RIGHT of the preview and the shared
+  selection's third consumer (canvas <-> timeline <-> Inspector): identity + resolved property
+  values at the settled state (parseAnimData -> importAnimData -> animEval resolveValue). On a
+  data-block template the Properties tab EDITS: each property carries a ◇/◆ diamond - arm it
+  to stamp a keyframe at the store playhead, edit an armed value to auto-key there, click a
+  diamond sitting ON a keyframe to remove it; ‹ › navigate the layer's keyframes, labels
+  drag-scrub the value, and blur is the one non-transform (its keyframes live on `filter` as
+  'blur(Npx)'). The Animations tab names which steps move the layer and holds the preset
+  picker (preset + In/Out/Both + Apply - blocks/presetApply.ts). Legacy templates get a
+  read-only shell (the timeline's convert chip arms editing). Its column lives in both
+  desktop layout modes with a splitter + the topbar ◨ Inspector toggle (layout prefs
+  inspectorRatio/inspectorCollapsed); it defaults open only on wide screens (>= 1500 px).
+- **TimelineView** - the classic collapsible strip under the preview; since Timeline v2 it
+  serves LEGACY-REGION categories only (data-block templates get StepTimeline via
+  TimelineDock, and lower thirds now create as data blocks). MOMENT CARDS
   `▶In · »1 · »2 · »+Step · ●On air · ■Out` (step cards numbered by PRESS; cue subtitles
   aria-hidden - getByRole('▶ Play') must stay unique in specs) over the CUE-SEGMENTED OVERVIEW
   (blocks/timelineModel.ts buildOverview): ONE strip, all sections side by side, each on its own
@@ -55,18 +92,31 @@ in src/blocks/CLAUDE.md.
   through stepAssign.changePartPress; section bodies + cards are drop zones; dragged bars get
   pointer-events:none so hit-testing sees through).
   The gutter has each part's "appears on press" menu + the selected moment's ease chips
-  (patchTweenEase/patchStepEase). Each part row's ▸ arrow opens the ENTERS-FROM drawer
-  (X/Y/scale/opacity/rotation from-values settling to identity - patchTweenVars edits from/to
-  literals, insertPartTween adds a tween to partless layers; press-assigned parts and the root
-  have no drawer).
+  (patchTweenEase/patchStepEase). Each part row's ▸ arrow opens the PHASE-AWARE transform
+  drawer (X/Y/scale/opacity/rotation + blur): on ▶In it edits ENTERS-FROM (in tween
+  from-values settling to identity - patchTweenVars, insertPartTween for partless layers); on
+  ■Out it edits LEAVES-TO (out tween to-values - patchTweenToVars, insertPartOutTween;
+  opacity never auto-stripped so the exit still fades). Blur is the one non-transform
+  (serializes to filter:'blur(Npx)' via setObjBlur). The root never gets a drawer;
+  press-assigned parts have none on In but do on Out (leaving is independent of entering).
+  THE STRIP IS THE ONE MOTION SURFACE for legacy templates (the Motion side-tab is retired):
+  the selected ▶In/■Out card's inspector row holds that phase's preset picker + easing choice
+  (swapAnimationPhase / setAnimKnob - phase-correct halves per the easing doctrine; the Out
+  card names presets in their exit direction, Blur in -> Blur out), the header holds the
+  animSpeed knob, and the selected ●On air card's note edits the SPX `out` setting
+  (until-Stop / auto-out N ms / stays - synced into the definition like withStepsSetting).
   ●On air = a pseudo-card (phaseId 'hold'); clicking it parks on the settled look. »+Step
-  disables with a tooltip reason. An unparsable marked region gets an honest one-liner
-  (blank/imported templates get no strip). One undoable apply + auto-replay per edit - the code
-  always the truth. Row LABELS are the shared-selection handles: clicking one (or a bar, without
-  dragging) selects that element on the canvas too (store selectedPart); the selected row washes
-  amber.
+  disables with a tooltip reason. An unparsable marked region gets an honest one-liner PLUS a
+  start-over preset select (blank/imported templates get no strip); a 'both' swap re-emits the
+  whole region and brings the timeline back. One undoable apply + auto-replay per edit - the
+  code always the truth. Row LABELS are the shared-selection handles: clicking one (or a bar,
+  without dragging) selects that element on the canvas too (store selectedPart); the selected
+  row washes amber.
 
-## Panels (SidePanel: Data / Control / Style / Motion / AI / Export)
+## Panels (SidePanel: five tabs - Data / Control / Style / AI / Export)
+
+There is no Motion tab: motion editing lives on the timeline under the preview (StepTimeline
+or TimelineView via TimelineDock) plus the Inspector.
 
 - **SampleDataPanel** - sample values + add-field.
 - **ControlPanel** - operator view from the control/ engine; live-drives the preview via
@@ -74,9 +124,6 @@ in src/blocks/CLAUDE.md.
   block.
 - **StylePanel** - reads/writes the :root style contract (src/templates/CLAUDE.md): colors,
   font swap, zone re-anchoring, post-creation font import.
-- **AnimationPanel** (the Motion tab) - In/Out/Both phase control over the marked ANIMATION
-  region via blocks/animPatch.ts (src/blocks/CLAUDE.md has the region rules and the
-  steps-toggle visibility rule).
 - **AIPromptPanel**; **ExportPanel** (validation inline; remembers the last-picked target via
   model/prefs.ts).
 - **PacketManager** (📦 topbar modal), **CommunityGallery** (🌐), **ModerationQueue** (🛡),

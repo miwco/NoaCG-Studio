@@ -115,8 +115,10 @@ src/
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
                (plus a preview-only images/ -> data-URL shim, see src/templates/CLAUDE.md)
   blocks/ *    deterministic template transforms: the block registry (the offline AI stub's
-               vocabulary), field editing, the marked-ANIMATION-region patchers (animPatch,
-               stepAssign), and timelineModel.ts (the timeline's overview builder + patchers)
+               vocabulary), field editing, the Timeline v2 animation-data engine (animData
+               schema/serializer, animEdit mutators, animEval resolver, animImport legacy
+               converter, presetApply generators), and the LEGACY-region patchers (animPatch,
+               stepAssign, timelineModel) still serving not-yet-migrated categories
   ai/          provider.ts (AIProvider + GenerateContext), claudeProvider.ts (the real provider:
                system prompt = SPX + house contracts + lt01's generated code as the canonical
                example; forced emit_template tool; validate + one repair round), anthropic.ts
@@ -148,9 +150,12 @@ src/
                bench at publish AND import), useIsModerator.ts
   showchat/    audience send-in: SendIn page (?chat=<slug>), ModerationPanel, chatGraphicBlock
                (polling graphic block), chatData.ts
-  components/ * the React app: AppShell, CodeEditor (Monaco), canvas direct manipulation +
-               selection, PlayoutSimulator, TimelineView, the six-tab SidePanel
-               (Data / Control / Style / Motion / AI / Export), wizard/, auth/
+  components/ * the React app: AppShell (code | preview | Inspector), CodeEditor (Monaco),
+               canvas direct manipulation + selection, PlayoutSimulator, the timeline dock
+               (StepTimeline for data-block templates, the classic TimelineView for legacy
+               ones), Inspector (properties + keyframes + Animations), the five-tab SidePanel
+               (Data / Control / Style / AI / Export - Motion lives on the timeline), wizard/,
+               auth/
 public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports;
                jetbrains-mono.woff2 doubles as the app UI's mono face)
 scripts/       dev-port.mjs (per-checkout port), l3-sweep.mjs (catalog sweep - see Verifying)
@@ -173,7 +178,8 @@ New projects go through the **CreationWizard** (Entry -> Category -> Template ->
 -> Animation, persistent live preview); `variant.create(options)` generates the complete,
 commented template. After creation, code is the source of truth and two **live panels** keep
 working via deterministic patches: the **Style panel** writes the `:root` style contract
-(src/templates/CLAUDE.md) and the **Motion panel** touches ONLY the marked ANIMATION region
+(src/templates/CLAUDE.md) and **the timeline under the preview** — the step timeline for
+data-block templates, the classic strip for legacy ones — touches ONLY the marked ANIMATION region
 (src/blocks/CLAUDE.md) - user code outside the markers is never modified. The wizard applies
 with `resetSampleData: true` so a new project starts from its own field defaults
 (src/store/CLAUDE.md).
