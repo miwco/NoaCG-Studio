@@ -6,21 +6,25 @@ in src/blocks/CLAUDE.md.
 
 ## Shell & editor
 
-- **AppShell** - the workspace layout. code-left mode: code on the left; the RIGHT REGION
-  stacks the preview row (stage + timeline | Inspector) over the FULL-WIDTH tool panels -
-  the Inspector column is exactly as tall as the preview block (its content scrolls within),
-  so no dead corner sits under it and the panels get the whole width beside the code column.
-  preview-top mode: full-width preview row (stage | Inspector) over a code | panels row.
-  The stage's aspect-ratio comes from the template resolution. `inspectorRatio` is a
-  fraction of the WORKSPACE width in both modes (code-left converts it to a row-relative
-  fraction when rendering). A NEW selection (any surface) auto-opens a collapsed Inspector -
-  DEFERRED half a second past the double-click window: any new pointer press cancels the
-  pending open and a live canvas gesture (store canvasGestureActive) skips it at fire time,
-  so the workspace never resizes between the two clicks of a text double-click or under a
-  drag (e2e/inline-edit.spec.ts pins this). An explicit ◨ collapse holds while the selection
-  stays the same. Binds global Ctrl/Cmd+Z
-  to undo() and Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a
-  form field). Desktop layout modes + splitters persist via model/layout.ts;
+- **AppShell** - the workspace layout: a flexible DOCKABLE-PANEL model (model/layout.ts). The
+  centre is fixed - the canvas (stage + transport) over the timeline, split by a draggable
+  divider - and three docks (LEFT, RIGHT, BOTTOM) flank it, each hosting any panels
+  (`code`, `inspector`, `data`, `control`, `style`, `ai`, `export`) as tabs. Default: code left,
+  Inspector + the tool panels right, timeline roomy in the centre, bottom empty. Each dock renders
+  only when it holds panels; the splitters resize the adjacent region. A tab can be MOVED to
+  another dock or CLOSED via its ▾ menu; a dock's "+" re-adds any hidden panel (a closed panel
+  stays closed across reloads and is offered there). The DockState (panels/active/size) +
+  timelineSize persist via model/layout.ts (loadLayout migrates any non-v2 layout to the default).
+  The dock component is **WorkspaceDock**; the panel bodies come from AppShell's `renderPanel`
+  (the tool panels wrapped in `.panel-body`); MOBILE keeps the fused preview column + SidePanel.
+  A NEW selection (any surface) reveals the Inspector - activates its tab, or re-docks it if it
+  was closed - DEFERRED half a second past the double-click window: any new pointer press cancels
+  the pending reveal and a live canvas gesture (store canvasGestureActive) skips it at fire time,
+  so the workspace never resizes between the two clicks of a text double-click or under a drag
+  (e2e/inline-edit.spec.ts pins this). The store's `activePanel` is a "reveal this panel" signal
+  (the wizard shows Export after an import) - honoured in the docks, but not on mount. The topbar
+  ◨/code toggles close-or-reveal those panels. Binds global Ctrl/Cmd+Z to undo() and
+  Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a form field).
   useIsMobile/useSplitter support the mobile and resizable layouts.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
@@ -120,11 +124,10 @@ in src/blocks/CLAUDE.md.
   picker (preset + In/Out/Both + easing dropdown + per-direction duration + Apply -
   blocks/presetApply.ts); Apply is a CLEAN SWAP of the targeted direction's motion (it never
   blends with the previous preset), and re-parks the preview at the playhead. Legacy templates get a
-  read-only shell (the timeline's convert chip arms editing). Its column lives in both
-  desktop layout modes with a splitter + the topbar ◨ Inspector toggle (layout prefs
-  inspectorRatio/inspectorCollapsed); it defaults open only on wide screens (>= 1500 px),
-  and any NEW selection auto-opens it (an explicit collapse holds while the selection is
-  unchanged - see AppShell).
+  read-only shell (the timeline's convert chip arms editing). It is a dockable panel (default:
+  the active tab of the RIGHT dock) - shown/hidden/resized/moved like any panel; any NEW
+  selection reveals it (activates its tab, or re-docks it if closed - an explicit close holds
+  while the selection is unchanged, see AppShell).
 - **TimelineView** - the classic collapsible strip under the preview; since Timeline v2 it
   serves LEGACY-REGION categories only (data-block templates get StepTimeline via
   TimelineDock, and lower thirds now create as data blocks). MOMENT CARDS
@@ -162,10 +165,11 @@ in src/blocks/CLAUDE.md.
   without dragging) selects that element on the canvas too (store selectedPart); the selected
   row washes amber.
 
-## Panels (SidePanel: five tabs - Data / Control / Style / AI / Export)
+## Panels (the five tool panels - Data / Control / Style / AI / Export)
 
-There is no Motion tab: motion editing lives on the timeline under the preview (StepTimeline
-or TimelineView via TimelineDock) plus the Inspector.
+On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
+**SidePanel** (the five-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
+editing lives on the timeline (StepTimeline or TimelineView via TimelineDock) plus the Inspector.
 
 - **SampleDataPanel** - sample values + add-field.
 - **ControlPanel** - operator view from the control/ engine; live-drives the preview via

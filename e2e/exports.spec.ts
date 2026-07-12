@@ -18,7 +18,7 @@ async function createHairline(page: Page) {
 }
 
 async function downloadTarget(page: Page, label: string): Promise<JSZip> {
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   await page.locator('.issue', { hasText: label }).click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -29,7 +29,7 @@ async function downloadTarget(page: Page, label: string): Promise<JSZip> {
 
 test('export panel offers all six targets', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   for (const label of ['SPX export', 'HTML overlay (OBS / vMix)', 'H2R Graphics export', 'CasparCG export', 'OGraf (EBU) export', 'LiveOS (NetOn.Live) export']) {
     await expect(page.locator('.issue', { hasText: label })).toBeVisible();
   }
@@ -73,20 +73,20 @@ test('h2r: GDD fields embedded, and the play() toggle drives entrance then exit'
 
 test('export target choice is remembered as the default across reloads', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   await page.locator('.issue', { hasText: 'CasparCG export' }).click();
   // Fresh load: the wizard opens; behind it the Export tab must preselect the remembered target.
   await page.reload();
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   await expect(page.locator('.issue', { hasText: 'CasparCG export' }).locator('input[type="radio"]')).toBeChecked();
 });
 
 test('html overlay: self-contained, autoplays with the Data panel values, control panel bundled', async ({ page }) => {
   await createHairline(page);
   // Type a custom value in the Data panel — the export must bake it in.
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   const nameInput = page.locator('.panel-body input').first();
   await nameInput.fill('Overlay Works');
   const zip = await downloadTarget(page, 'HTML overlay (OBS / vMix)');

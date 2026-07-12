@@ -17,7 +17,7 @@ async function createHairline(page: Page) {
 }
 
 async function openRenderPanel(page: Page) {
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   await expect(page.getByTestId('render-panel')).toBeVisible();
   // The panel measures the graphic in a hidden iframe before it can render.
   await expect(page.getByTestId('render-breakdown')).not.toContainText('Measuring', { timeout: 15_000 });

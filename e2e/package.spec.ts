@@ -62,7 +62,7 @@ test('imported font: embedded, applied, and bundled into the export', async ({ p
   await create(page);
 
   // The generated code carries the embedded font; the export bundles the binary.
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),
@@ -117,7 +117,7 @@ test('end credits: text field drives the parsed roll', async ({ page }) => {
   await expect(track.locator('.credits-row').first()).toBeAttached();
   await expect(track.locator('.credits-end')).toBeAttached(); // logo + year block
   // Editing the credits in the Data panel + ⟳ Update re-renders the rows.
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await page.locator('.panel-body textarea').first().fill('CREW\nShowrunner | Nova Reyes');
   await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
   await expect(track.locator('.credits-row')).toHaveCount(1);

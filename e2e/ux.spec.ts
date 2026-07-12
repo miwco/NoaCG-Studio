@@ -19,25 +19,26 @@ function frame(page: Page): FrameLocator {
   return page.frameLocator('iframe.preview-frame');
 }
 
-test('layout: code pane left, preview above the tool tabs on the right', async ({ page }) => {
+test('layout: code dock left, canvas + timeline in the centre, tool tabs in the right dock', async ({ page }) => {
   await createHairline(page);
   const editor = await page.locator('.editor-host').boundingBox();
   const stage = await page.locator('.preview-stage').boundingBox();
-  const tabs = await page.locator('.panel-tabs').boundingBox();
-  expect(editor && stage && tabs).toBeTruthy();
-  // Code on the left of the preview column…
+  const rightTabs = await page.locator('[data-testid="dock-right"] .dock-tabs').boundingBox();
+  expect(editor && stage && rightTabs).toBeTruthy();
+  // Code on the left of the centre stage…
   expect(editor!.x + editor!.width).toBeLessThanOrEqual(stage!.x + 2);
-  // …and the preview sits ABOVE the panel tabs in the same column.
-  expect(stage!.y + stage!.height).toBeLessThanOrEqual(tabs!.y + 2);
-  expect(Math.abs(stage!.x - tabs!.x)).toBeLessThan(40);
-  // The focused tabs — Blocks/Learn/Validate are gone; Control is the operator view;
-  // Motion lives on the timeline strip's moment cards, not in a tab.
-  await expect(page.locator('.panel-tabs .tab')).toHaveText(['Data', 'Control', 'Style', 'AI', 'Export']);
+  // …and the tool tabs are a dock to the RIGHT of the stage.
+  expect(rightTabs!.x).toBeGreaterThanOrEqual(stage!.x + stage!.width - 4);
+  // The right dock holds the Inspector plus the focused tool panels — Blocks/Learn/Validate
+  // are gone; Control is the operator view; Motion lives on the timeline, not in a tab.
+  await expect(page.locator('[data-testid="dock-right"] .dock-tab-label')).toHaveText([
+    'Inspector', 'Data', 'Control', 'Style', 'AI', 'Export',
+  ]);
 });
 
 test('export: validation shows inline and gates the download on a broken template', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   await expect(page.locator('.panel-body .status-ok')).toContainText('valid and ready');
   // Break the runtime: blank the JS in the editor.
   await page.locator('.tabs .tab', { hasText: 'JS' }).click();
@@ -82,7 +83,7 @@ test('motion: an In-only preset swap from the ▶ In card keeps the exit and aut
 
 test('data: add-field appends to the SPX definition and highlights the HTML', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await page.getByPlaceholder(/Label the operator sees/).fill('Sponsor');
   await page.getByRole('button', { name: '+ Add' }).click();
   // The field landed in the definition (f2 after the two lines)…
@@ -136,7 +137,7 @@ test('wizard: direction control mixes a different exit preset at create', async 
 
 test('style: a color change highlights the changed CSS lines', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Style' }).click();
+  await page.getByTestId('dock-tab-style').click();
   const accentRow = page.locator('.field-row', { hasText: '--accent' }).first();
   await accentRow.locator('input[type="color"]').evaluate((el) => {
     const input = el as HTMLInputElement;

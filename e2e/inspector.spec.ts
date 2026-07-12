@@ -16,29 +16,29 @@ async function createHairline(page: Page) {
   await page.waitForTimeout(650);
 }
 
-/** The Inspector defaults open only on wide screens (three real columns); at the e2e
- *  viewport it starts collapsed — open it the way a user would, via the topbar toggle. */
+/** The Inspector is a tab in the right dock (active by default). Ensure it is docked and the
+ *  active tab, so its body shows — the way a user would via the topbar toggle / its tab. */
 async function openInspector(page: Page) {
-  if ((await page.getByTestId('inspector-pane').count()) === 0) {
-    await page.getByTestId('toggle-inspector').click();
+  if ((await page.getByTestId('dock-tab-inspector').count()) === 0) {
+    await page.getByTestId('toggle-inspector').click(); // re-dock it if it was closed
   }
-  await expect(page.getByTestId('inspector-pane')).toBeVisible();
+  await page.getByTestId('dock-tab-inspector').click(); // make it the active tab
+  await expect(page.getByTestId('inspector')).toBeVisible();
 }
 
-test('inspector: sits right of the preview, empty until something is selected', async ({ page }) => {
+test('inspector: sits in the right dock, empty until something is selected', async ({ page }) => {
   await createHairline(page);
   await openInspector(page);
-  const pane = page.getByTestId('inspector-pane');
   await expect(page.getByTestId('inspector-empty')).toContainText('Select an element');
-  // Geometry: the Inspector is a true right column — never covering the preview.
+  // Geometry: the right dock is a true right column — never covering the centre stage.
   const stage = (await page.locator('.preview-stage').boundingBox())!;
-  const insp = (await pane.boundingBox())!;
+  const insp = (await page.getByTestId('dock-slot-right').boundingBox())!;
   expect(insp.x).toBeGreaterThanOrEqual(stage.x + stage.width - 2);
-  // The toolbar toggle collapses and restores it.
+  // The topbar toggle closes and restores the Inspector.
   await page.getByTestId('toggle-inspector').click();
-  await expect(pane).toHaveCount(0);
+  await expect(page.getByTestId('dock-tab-inspector')).toHaveCount(0);
   await page.getByTestId('toggle-inspector').click();
-  await expect(page.getByTestId('inspector-pane')).toBeVisible();
+  await expect(page.getByTestId('inspector')).toBeVisible();
 });
 
 test('inspector: selecting a timeline row shows that layer — selection synced all around', async ({ page }) => {
@@ -65,36 +65,38 @@ test('inspector: selecting a timeline row shows that layer — selection synced 
 test('inspector: canvas clicks drive it too (select it to affect it)', async ({ page }) => {
   await createHairline(page);
   await openInspector(page);
-  // Click the Name line on the CANVAS (the same coordinates trick canvas-selection uses).
+  // Click the Name line on the CANVAS. Map through the interaction overlay (the canvas-layer),
+  // which is exactly the canvas scaled — the stage may letterbox it in the dock centre.
   const frame = page.frameLocator('iframe.preview-frame');
   await expect(frame.locator('#f0')).toBeVisible();
-  const stage = (await page.locator('.preview-stage').boundingBox())!;
+  const layer = (await page.getByTestId('canvas-layer').boundingBox())!;
   const rect = await frame.locator('#f0').evaluate((el) => {
     const r = el.getBoundingClientRect();
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: window.innerWidth };
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: document.body.getBoundingClientRect().width };
   });
-  const scale = stage.width / rect.w;
-  await page.mouse.click(stage.x + rect.x * scale, stage.y + rect.y * scale);
+  const scale = layer.width / rect.w;
+  await page.mouse.click(layer.x + rect.x * scale, layer.y + rect.y * scale);
   await expect(page.getByTestId('inspector-part-label')).toHaveText('Name');
 });
 
-test('inspector: a new selection opens it; an explicit collapse holds until the selection changes', async ({ page }) => {
+test('inspector: a new selection reveals it; an explicit close holds until the selection changes', async ({ page }) => {
   await createHairline(page);
-  // At this viewport (< 1500 px) the Inspector starts collapsed.
-  await expect(page.getByTestId('inspector-pane')).toHaveCount(0);
-  // Selecting a layer (timeline row label here — canvas clicks and diamond clicks run
-  // through the same store selection) un-collapses it.
-  await page.locator('.timeline-label[data-part="#f0"]').click();
-  await expect(page.getByTestId('inspector-pane')).toBeVisible();
-  await expect(page.getByTestId('inspector-part-label')).toHaveText('Name');
-  // An explicit ◨ collapse is respected while the selection stays the same.
+  // Close the Inspector explicitly (it is open by default in the right dock).
   await page.getByTestId('toggle-inspector').click();
-  await expect(page.getByTestId('inspector-pane')).toHaveCount(0);
+  await expect(page.getByTestId('dock-tab-inspector')).toHaveCount(0);
+  // Selecting a layer (timeline row label here — canvas clicks and diamond clicks run
+  // through the same store selection) re-reveals it.
+  await page.locator('.timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector')).toBeVisible();
+  await expect(page.getByTestId('inspector-part-label')).toHaveText('Name');
+  // An explicit close is respected while the selection stays the same.
+  await page.getByTestId('toggle-inspector').click();
+  await expect(page.getByTestId('dock-tab-inspector')).toHaveCount(0);
   await page.waitForTimeout(250);
-  await expect(page.getByTestId('inspector-pane')).toHaveCount(0);
-  // A DIFFERENT selection is a new request to inspect — it opens again.
+  await expect(page.getByTestId('dock-tab-inspector')).toHaveCount(0);
+  // A DIFFERENT selection is a new request to inspect — it reveals again.
   await page.locator('.timeline-label[data-part="#f1"]').click();
-  await expect(page.getByTestId('inspector-pane')).toBeVisible();
+  await expect(page.getByTestId('inspector')).toBeVisible();
 });
 
 test('redo: Ctrl+Shift+Z restores an undone edit; a new edit clears the redo branch', async ({ page }) => {

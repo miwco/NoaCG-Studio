@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// Desktop collapse + resize layout. Runs at Playwright's default 1280×720 viewport, which is desktop
-// (> 768px → !isMobile), so the two-pane split view with the divider is active.
+// The flexible dockable-panel workspace (model/layout.ts): the canvas over the timeline in the
+// centre, flanked by left/right docks (plus an optional bottom dock), each hosting any panels as
+// tabs that can be shown, hidden, resized, and moved between docks. Runs at Playwright's default
+// 1280×720 viewport (> 768px → the desktop dock layout, not the mobile stack).
 
 async function createHairline(page: Page) {
   await page.goto('/app');
@@ -14,135 +16,109 @@ async function createHairline(page: Page) {
   await page.waitForTimeout(650); // debounced preview rebuild
 }
 
-test('hide code widens the preview, and the collapsed state persists across reload', async ({ page }) => {
+test('the default framing: code on the left, Inspector + tools on the right, timeline in the centre', async ({ page }) => {
   await createHairline(page);
-
-  // Default: code pane + divider present.
-  await expect(page.locator('[data-testid="code-pane"]')).toBeVisible();
-  await expect(page.locator('[data-testid="workspace-divider"]')).toBeVisible();
-  const previewBefore = (await page.locator('.preview-stage').boundingBox())!.width;
-
-  // Collapse → code pane + divider gone, preview widens.
-  await page.getByTestId('toggle-code').click();
-  await expect(page.locator('[data-testid="code-pane"]')).toHaveCount(0);
-  await expect(page.locator('[data-testid="workspace-divider"]')).toHaveCount(0);
-  const previewAfter = (await page.locator('.preview-stage').boundingBox())!.width;
-  expect(previewAfter).toBeGreaterThan(previewBefore);
-
-  // Persists across a reload (the wizard reopens on load — close it to keep the current graphic).
-  await page.reload();
-  await page.locator('.gallery-close').click();
-  await expect(page.locator('[data-testid="code-pane"]')).toHaveCount(0);
-  await expect(page.getByTestId('toggle-code')).toHaveText(/Show code/);
+  // Left dock holds the code editor; the right dock holds the Inspector (active) + tool panels.
+  await expect(page.getByTestId('dock-slot-left')).toBeVisible();
+  await expect(page.getByTestId('dock-tab-code')).toBeVisible();
+  await expect(page.locator('[data-testid="dock-right"] .dock-tab.active .dock-tab-label')).toHaveText('Inspector');
+  for (const id of ['data', 'control', 'style', 'ai', 'export']) {
+    await expect(page.getByTestId(`dock-tab-${id}`)).toBeVisible();
+  }
+  // The timeline lives in the centre below the canvas — it spans the whole centre width.
+  const stage = (await page.getByTestId('center-stage').boundingBox())!;
+  const timeline = (await page.getByTestId('center-timeline').boundingBox())!;
+  expect(Math.abs(timeline.width - stage.width)).toBeLessThan(4);
+  expect(timeline.y).toBeGreaterThanOrEqual(stage.y + stage.height - 8);
 });
 
-test('dragging the divider resizes the columns, and the ratio persists', async ({ page }) => {
+test('closing a panel removes its dock and widens the centre; the closed state persists', async ({ page }) => {
   await createHairline(page);
-  const codeBefore = (await page.locator('[data-testid="code-pane"]').boundingBox())!.width;
+  const centerBefore = (await page.getByTestId('center-stage').boundingBox())!.width;
 
-  // Drag the divider LEFT by 150px. Use raw mouse move/down/move/up (not dragTo) — pointer capture
-  // needs real intermediate move events.
-  const div = (await page.locator('[data-testid="workspace-divider"]').boundingBox())!;
+  // Close the code editor — the left dock disappears and the centre widens.
+  await page.getByTestId('toggle-code').click();
+  await expect(page.getByTestId('dock-slot-left')).toHaveCount(0);
+  const centerAfter = (await page.getByTestId('center-stage').boundingBox())!.width;
+  expect(centerAfter).toBeGreaterThan(centerBefore);
+
+  // It stays closed across a reload, and is offered again from a dock's "+" menu.
+  await page.reload();
+  await page.locator('.gallery-close').click();
+  await expect(page.getByTestId('dock-slot-left')).toHaveCount(0);
+  await page.getByTestId('dock-add-right').click();
+  await expect(page.locator('[data-testid="dock-right"] .dock-menu')).toContainText('Code');
+});
+
+test('dragging a dock divider resizes it, and the size persists', async ({ page }) => {
+  await createHairline(page);
+  const leftBefore = (await page.getByTestId('dock-slot-left').boundingBox())!.width;
+
+  // Drag the left divider RIGHT by 120px (raw move/down/move/up — pointer capture needs real moves).
+  const div = (await page.getByTestId('left-divider').boundingBox())!;
   const cx = div.x + div.width / 2;
   const cy = div.y + div.height / 2;
   await page.mouse.move(cx, cy);
   await page.mouse.down();
-  await page.mouse.move(cx - 150, cy, { steps: 8 });
+  await page.mouse.move(cx + 120, cy, { steps: 8 });
   await page.mouse.up();
 
-  const codeAfter = (await page.locator('[data-testid="code-pane"]').boundingBox())!.width;
-  expect(codeAfter).toBeLessThan(codeBefore - 40);
+  const leftAfter = (await page.getByTestId('dock-slot-left').boundingBox())!.width;
+  expect(leftAfter).toBeGreaterThan(leftBefore + 40);
 
-  // The narrower ratio survives a reload.
+  // The wider size survives a reload.
   await page.reload();
   await page.locator('.gallery-close').click();
-  const codeReload = (await page.locator('[data-testid="code-pane"]').boundingBox())!.width;
-  expect(Math.abs(codeReload - codeAfter)).toBeLessThan(30);
+  const leftReload = (await page.getByTestId('dock-slot-left').boundingBox())!.width;
+  expect(Math.abs(leftReload - leftAfter)).toBeLessThan(30);
 });
 
-test('code-left: the tool panels span the full width under preview and Inspector — no dead corner', async ({ page }) => {
+test('a panel moves between docks via its tab menu', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
-  await expect(page.getByTestId('inspector-pane')).toBeVisible();
-
-  const panel = (await page.getByTestId('panel-pane').boundingBox())!;
-  const insp = (await page.getByTestId('inspector-pane').boundingBox())!;
-  const stage = (await page.locator('.preview-stage').boundingBox())!;
-  const code = (await page.getByTestId('code-pane').boundingBox())!;
-  // The Inspector column ends exactly where the panel row begins — nothing dead under it.
-  expect(insp.y + insp.height).toBeLessThanOrEqual(panel.y + 2);
-  // The panel row spans the whole right region: from the code column's edge to the
-  // Inspector's right edge.
-  expect(panel.x).toBeGreaterThanOrEqual(code.x + code.width - 2);
-  expect(panel.x + panel.width).toBeGreaterThanOrEqual(insp.x + insp.width - 4);
-  // The Inspector still sits right of the preview, never over it.
-  expect(insp.x).toBeGreaterThanOrEqual(stage.x + stage.width - 2);
+  // The Style tool starts in the right dock; move it to the left dock.
+  await expect(page.locator('[data-testid="dock-left"] [data-testid="dock-tab-style"]')).toHaveCount(0);
+  await page.getByTestId('dock-tab-menu-style').click();
+  await page.locator('[data-testid="dock-right"] .dock-menu', { hasText: 'Move to left' }).getByText('Move to left').click();
+  await expect(page.locator('[data-testid="dock-left"] [data-testid="dock-tab-style"]')).toBeVisible();
+  // It became the active tab in its new dock (its body shows).
+  await expect(page.locator('[data-testid="dock-left"] .dock-tab.active .dock-tab-label')).toHaveText('Style');
 });
 
-test('the step timeline reads at an editing scale — comfortable rows and labels', async ({ page }) => {
+test('the timeline sits in the centre at an editing scale with real room', async ({ page }) => {
   await createHairline(page);
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
-  // Layer rows are real editing targets, not a status readout.
+  // Layer rows are real editing targets, and read at UI size.
   const row = (await page.locator('.tlv2-row').first().boundingBox())!;
   expect(row.height).toBeGreaterThanOrEqual(26);
-  // Row labels read at UI size (the classic strip keeps its compact 10.5px scale).
   const labelSize = await page
     .locator('.tlv2-labels .timeline-label')
     .first()
     .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(labelSize).toBeGreaterThanOrEqual(12);
+  // The timeline area is a substantial slice of the centre height (not a thin strip).
+  const center = (await page.getByTestId('center-stage').boundingBox())!;
+  const timeline = (await page.getByTestId('center-timeline').boundingBox())!;
+  expect(timeline.height).toBeGreaterThan(center.height * 0.3);
 });
 
-test('the timeline refits and condenses when the Inspector narrows it — manual zoom wins', async ({ page }) => {
+test('the timeline height is resizable via the centre divider, and persists', async ({ page }) => {
   await createHairline(page);
-  await expect(page.getByTestId('timeline-v2')).toBeVisible();
-  const labelW = async () => (await page.locator('.tlv2-labels').boundingBox())!.width;
-  const ribbonFits = async () => {
-    const canvas = (await page.getByTestId('tlv2-canvas').boundingBox())!;
-    const scroll = (await page.locator('.tlv2-scroll').boundingBox())!;
-    return canvas.width <= scroll.width + 2;
-  };
-  // Comfortable width: full-size labels and the whole ribbon fits (the initial auto-fit).
-  expect(await labelW()).toBeGreaterThanOrEqual(140);
-  expect(await ribbonFits()).toBe(true);
+  const tlBefore = (await page.getByTestId('center-timeline').boundingBox())!.height;
 
-  // Opening the Inspector narrows the strip: the auto zoom REFITS (the whole ribbon
-  // still fits) and the label column condenses — rows keep their editing height.
-  await page.getByTestId('toggle-inspector').click();
-  await expect.poll(labelW).toBeLessThan(120);
-  await expect.poll(ribbonFits).toBe(true);
-  const row = (await page.locator('.tlv2-row').first().boundingBox())!;
-  expect(row.height).toBeGreaterThanOrEqual(26);
+  // Drag the timeline divider UP by 100px to give the timeline more room.
+  const div = (await page.getByTestId('timeline-divider').boundingBox())!;
+  const cx = div.x + div.width / 2;
+  const cy = div.y + div.height / 2;
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx, cy - 100, { steps: 8 });
+  await page.mouse.up();
 
-  // A manual zoom is a deliberate framing choice — a later layout change must not
-  // override it.
-  await page.getByTestId('tlv2-zoom-in').click();
-  const zoomed = (await page.getByTestId('tlv2-canvas').boundingBox())!.width;
-  await page.getByTestId('toggle-inspector').click(); // wider again
-  await page.waitForTimeout(250);
-  const after = (await page.getByTestId('tlv2-canvas').boundingBox())!.width;
-  expect(Math.abs(after - zoomed)).toBeLessThan(4);
-});
+  const tlAfter = (await page.getByTestId('center-timeline').boundingBox())!.height;
+  expect(tlAfter).toBeGreaterThan(tlBefore + 40);
 
-test('"preview on top" mode makes the preview full-width, above code, and persists', async ({ page }) => {
-  await createHairline(page);
-  const workspaceW = (await page.locator('.workspace').boundingBox())!.width;
-  const stageBefore = (await page.locator('.preview-stage').boundingBox())!.width;
-
-  await page.getByTestId('toggle-layout').click();
-
-  // The preview now spans (nearly) the full workspace width and sits ABOVE the code/panels row.
-  const previewPane = (await page.locator('.preview-pane').boundingBox())!;
-  const codePane = (await page.locator('[data-testid="code-pane"]').boundingBox())!;
-  expect(previewPane.width).toBeGreaterThan(workspaceW - 20);
-  expect(previewPane.y + previewPane.height).toBeLessThanOrEqual(codePane.y + 5);
-  // The stage is wider than in code-left mode (where it had ~half the width).
-  const stageAfter = (await page.locator('.preview-stage').boundingBox())!.width;
-  expect(stageAfter).toBeGreaterThan(stageBefore);
-
-  // The mode persists across a reload.
   await page.reload();
   await page.locator('.gallery-close').click();
-  await expect(page.locator('.preview-pane')).toBeVisible();
-  await expect(page.getByTestId('toggle-layout')).toHaveText(/Code left/);
+  const tlReload = (await page.getByTestId('center-timeline').boundingBox())!.height;
+  expect(Math.abs(tlReload - tlAfter)).toBeLessThan(30);
 });

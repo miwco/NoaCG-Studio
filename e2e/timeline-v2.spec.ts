@@ -100,7 +100,7 @@ test('v2 keyframes: convert, arm at the playhead, auto-key, interpolate — the 
   await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
 
   // Open the Inspector, select the Name line, park the playhead early in Enter.
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
   // Zoom out so the WHOLE Enter clip fits the narrowed scroll viewport (Inspector open,
   // editing-scale labels) — later clicks at 70% must land on the ribbon, not past its edge.
@@ -186,7 +186,7 @@ test('v2 keyframes: dragging a diamond retimes it; Delete removes it; undo resto
 test('v2 presets: In and Out apply independently; applying a preset cleanly swaps the targeted motion', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
 
   // Give #f0 a MANUAL rotation keyframe. Ratified interaction model: applying a preset is a
   // CLEAN SWAP of the targeted layer's motion in that direction, so this rotation is replaced
@@ -227,7 +227,7 @@ test('v2 presets: In and Out apply independently; applying a preset cleanly swap
 
 test('v2 presets: a single layer takes a preset into ITS activation step (In is layer-relative)', async ({ page }) => {
   await createHairline(page, true); // #f1 reveals on press 1 (step index 1)
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   // Select the revealed Title line and apply a preset to its In.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f1"]').click();
   await page.getByTestId('inspector').getByRole('button', { name: 'Animations' }).click();
@@ -458,7 +458,7 @@ test('v2 polish: the playhead cap drags; the view follows playback when zoomed i
 test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label scrubbing', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
 
   // Right-clicking a diamond opens its ease menu — the curve INTO that keyframe.
@@ -541,7 +541,7 @@ test('v2 layer blocks: the existence span renders; its left edge drags the activ
 test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the playhead', async ({ page }) => {
   await createHairline(page);
   // Open the Inspector up front so the auto-open never resizes the stage mid-test.
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.getByTestId('tlv2-zoom-out').click();
   await page.getByTestId('tlv2-zoom-out').click();
 
@@ -599,7 +599,7 @@ test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the play
 
 test('v2 keyframe lasso: a marquee over the rows selects diamonds; Ctrl/Cmd+D duplicates them', async ({ page }) => {
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.getByTestId('tlv2-zoom-out').click();
   await page.getByTestId('tlv2-zoom-out').click();
 

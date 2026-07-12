@@ -20,7 +20,7 @@ async function createScoreboard(page: Page) {
 
 test('control tab live-drives the preview from a field control', async ({ page }) => {
   await createScoreboard(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Control' }).click();
+  await page.getByTestId('dock-tab-control').click();
 
   // Score A (f1) is a bound text field; editing it drives the preview live (Live is on).
   await page.locator('.field-row', { hasText: 'Score A' }).locator('input').first().fill('7');
@@ -37,12 +37,12 @@ test('control tab live-drives the preview from a field control', async ({ page }
 test('a number field becomes a +/- stepper (no per-template code)', async ({ page }) => {
   await createScoreboard(page);
   // Add a genuine number field through the Data panel.
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await page.getByPlaceholder(/Label the operator sees/).fill('Points');
   await page.locator('.panel-body select').selectOption('number');
   await page.getByRole('button', { name: '+ Add' }).click();
 
-  await page.locator('.panel-tabs .tab', { hasText: 'Control' }).click();
+  await page.getByTestId('dock-tab-control').click();
   const row = page.locator('.field-row', { hasText: 'Points' });
   await expect(row.locator('.ctl-step')).toHaveCount(2); // − and +
   await row.getByRole('button', { name: '+', exact: true }).click();
@@ -51,7 +51,7 @@ test('a number field becomes a +/- stepper (no per-template code)', async ({ pag
 
 test('export bundles controlpanel.html + injects the receiver into index.html', async ({ page }) => {
   await createScoreboard(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),
@@ -83,7 +83,7 @@ async function createHairline(page: Page) {
 
 test('live data: adding a Google Sheet appends an editable polling block, remove strips it', async ({ page }) => {
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Control' }).click();
+  await page.getByTestId('dock-tab-control').click();
   await page.getByPlaceholder(/pub\?output=csv/).fill('https://docs.google.com/x/pub?output=csv');
   await page.getByRole('button', { name: 'Add live data' }).click();
 
@@ -114,7 +114,7 @@ test('live data: a published CSV drives the graphic (mocked sheet)', async ({ pa
     }),
   );
   await createHairline(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Control' }).click();
+  await page.getByTestId('dock-tab-control').click();
   await page.getByPlaceholder(/pub\?output=csv/).fill('http://sheet-test.local/data.csv');
   await page.locator('.panel-section', { hasText: 'Live data' }).locator('input[type="number"]').fill('1');
   await page.getByRole('button', { name: 'Add live data' }).click();
@@ -127,7 +127,7 @@ test('live data: a published CSV drives the graphic (mocked sheet)', async ({ pa
 
 test('round-trip: the exported control panel drives the exported graphic over the channel', async ({ page, context }) => {
   await createScoreboard(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),

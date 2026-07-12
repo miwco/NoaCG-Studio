@@ -30,7 +30,7 @@ function frame(page: Page): FrameLocator {
 
 /** Upload a png through the Data panel's image field control (by field label). */
 async function uploadImage(page: Page, fieldLabel: string, fileName: string) {
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   const row = page.locator('.panel-body .field-row', { hasText: fieldLabel });
   await row.locator('input[type="file"]').setInputFiles({
     name: fileName,
@@ -45,7 +45,7 @@ async function uploadImage(page: Page, fieldLabel: string, fileName: string) {
 test('data panel: the add-field types are the broadcast set, and Image becomes a filelist field', async ({ page }) => {
   await createFrom(page, 'Lower thirds', 'Hairline');
   await create(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   const addSection = page.locator('.panel-section', { hasText: 'Add a field' });
   const select = addSection.locator('select');
   await expect(select.locator('option')).toHaveText(['Text', 'Long text', 'Number', 'Image']);
@@ -92,7 +92,7 @@ test('export: the zip is [project]/index.html with images under [project]/images
   await createFrom(page, 'End credits', 'Classic Roll');
   await create(page);
   await uploadImage(page, 'Logo', 'station_logo.png');
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),

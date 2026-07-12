@@ -52,7 +52,7 @@ test('wizard: field titles flow into the Data panel', async ({ page }) => {
   await rows.first().locator('input').first().fill('Guest name');
   await createFromCurrentStep(page);
 
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await expect(page.locator('.panel-body')).toContainText('Guest name');
 });
 
@@ -79,14 +79,18 @@ test('reset: the topbar button restores the original state, undoably', async ({ 
   await createFromCurrentStep(page);
 
   // Creating the project captured the pristine baseline. Observe through the live preview:
-  // the accent's original tint.
+  // the accent's original tint. Tolerate the transient "context destroyed" while the preview
+  // iframe rebuilds (reset/undo swap the whole document) — poll simply retries.
   const accent = () =>
-    previewFrame(page).locator('.lower-third-accent').evaluate((el) => getComputedStyle(el).backgroundColor);
+    previewFrame(page)
+      .locator('.lower-third-accent')
+      .evaluate((el) => getComputedStyle(el).backgroundColor)
+      .catch(() => '');
   await expect.poll(accent).not.toBe('');
   const original = await accent();
 
   // Edit the accent via the Style panel — the preview retints.
-  await page.locator('.panel-tabs .tab', { hasText: 'Style' }).click();
+  await page.getByTestId('dock-tab-style').click();
   await page.locator('.field-row', { hasText: '--accent' }).locator('input.grow').fill('#ff2d78');
   await expect.poll(accent).toBe('rgb(255, 45, 120)');
 
@@ -136,7 +140,7 @@ test('style panel: accent retints the live preview', async ({ page }) => {
   await toVariantStep(page, 'Hairline');
   await createFromCurrentStep(page);
 
-  await page.locator('.panel-tabs .tab', { hasText: 'Style' }).click();
+  await page.getByTestId('dock-tab-style').click();
   const accentRow = page.locator('.field-row', { hasText: '--accent' });
   await accentRow.locator('input.grow').fill('#ff2d78');
   // The preview rebuilds (debounced) with the new accent on the hairline.
@@ -172,7 +176,7 @@ test('timeline strip: preset swap jumps to the JS tab and still plays', async ({
 test('export: downloads a plug-and-play SPX zip', async ({ page }) => {
   await toVariantStep(page, 'Hairline');
   await createFromCurrentStep(page);
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),

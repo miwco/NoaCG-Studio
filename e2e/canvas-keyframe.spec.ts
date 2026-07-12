@@ -35,23 +35,25 @@ async function historyLen(page: Page) {
   });
 }
 
-/** An element's center in PAGE coordinates plus the screen→canvas scale. */
+/** An element's center in PAGE coordinates plus the screen→canvas scale. Maps through the
+ *  interaction overlay (canvas-layer), which is exactly the canvas scaled — the dock stage
+ *  may letterbox it, so the stage's own width is not the canvas width. */
 async function centerOf(page: Page, selector: string) {
   const frame = page.frameLocator('iframe.preview-frame');
   await expect(frame.locator(selector)).toBeVisible();
-  const stage = (await page.locator('.preview-stage').boundingBox())!;
+  const layer = (await page.getByTestId('canvas-layer').boundingBox())!;
   const rect = await frame.locator(selector).evaluate((el) => {
     const r = el.getBoundingClientRect();
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: window.innerWidth };
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: document.body.getBoundingClientRect().width };
   });
-  const scale = stage.width / rect.w; // screen px per canvas px
-  return { x: stage.x + rect.x * scale, y: stage.y + rect.y * scale, scale };
+  const scale = layer.width / rect.w; // screen px per canvas px
+  return { x: layer.x + rect.x * scale, y: layer.y + rect.y * scale, scale };
 }
 
 /** Select the Name line via its row label and park the playhead mid-Enter. */
 async function selectAndPark(page: Page) {
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
-  await expect(page.getByTestId('inspector-pane')).toBeVisible({ timeout: 3000 });
+  await expect(page.getByTestId('inspector')).toBeVisible({ timeout: 3000 });
   // Zoom out so the clip midpoint sits inside the narrowed scroll viewport.
   await page.getByTestId('tlv2-zoom-out').click();
   await page.getByTestId('tlv2-zoom-out').click();
