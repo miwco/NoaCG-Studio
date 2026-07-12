@@ -2087,3 +2087,32 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   border-radius: 3px;
   color: var(--text);
 }
+
+/* ---------- Video editor shell (the AI Remotion project kind) ---------- */
+/* Desktop: [ code | divider | right ]; the right column stacks the player stage over the
+   tabbed panel (Chat / Settings / Assets / Export). Columns come from inline styles
+   (videoCodeRatio), same pattern as the SPX workspace. */
+.video-workspace { grid-template-columns: 1fr; }
+.video-right { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.video-right .preview-wrap { flex: 0 0 auto; }
+.video-panel-pane { flex: 1; min-height: 0; border-right: none; border-top: 1px solid var(--border); }
+.video-panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+.video-panel-body > * { max-width: 1080px; }
+
+/* The placeholder stage note (until the player host mounts). */
+.video-stage-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.video-preview-error { padding: 6px 12px; font-size: 12px; border-top: 1px solid var(--border); }
+
+/* The AI chat: history scrolls, the input row stays pinned below it. */
+.video-chat { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.video-chat-scroll { flex: 1; min-height: 120px; overflow-y: auto; padding-right: 4px; }
+.video-chat-input { margin-top: 8px; gap: 6px; }
+
+.video-asset-list, .video-saved-list { list-style: none; margin: 0; padding: 0; }
+.video-asset-list li, .video-saved-list li { border-bottom: 1px solid var(--border); padding: 6px 0; }
+.video-asset-list li:last-child, .video-saved-list li:last-child { border-bottom: none; }

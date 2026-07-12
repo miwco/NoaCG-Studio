@@ -23,6 +23,10 @@ export interface LayoutPrefs {
   inspectorCollapsed: boolean;
   /** The Inspector column's width as a fraction of its row (0..1). */
   inspectorRatio: number;
+  /** Video shell: the code column's width as a fraction of the workspace (0..1). */
+  videoCodeRatio: number;
+  /** Video shell: whether the code pane is collapsed. */
+  videoCodeCollapsed: boolean;
 }
 
 export const DEFAULT_LAYOUT: LayoutPrefs = {
@@ -33,6 +37,8 @@ export const DEFAULT_LAYOUT: LayoutPrefs = {
   bottomRatio: 0.5,
   inspectorCollapsed: false,
   inspectorRatio: 0.2,
+  videoCodeRatio: 0.45,
+  videoCodeCollapsed: false,
 };
 
 /** Clamp a split fraction to usable bounds so no region becomes unusable. Column splits use the tight
@@ -66,6 +72,8 @@ export function loadLayout(): LayoutPrefs {
     inspectorCollapsed:
       saved.inspectorCollapsed ?? (typeof window !== 'undefined' ? window.innerWidth < 1500 : false),
     inspectorRatio: num(saved.inspectorRatio, DEFAULT_LAYOUT.inspectorRatio, 0.12, 0.35),
+    videoCodeRatio: num(saved.videoCodeRatio, DEFAULT_LAYOUT.videoCodeRatio, 0.2, 0.7),
+    videoCodeCollapsed: saved.videoCodeCollapsed ?? DEFAULT_LAYOUT.videoCodeCollapsed,
   };
 }
 
