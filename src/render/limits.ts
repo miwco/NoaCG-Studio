@@ -9,8 +9,8 @@
 // in v1 — introducing billing later means changing resolveTier() to read an entitlements
 // table, nothing else moves.
 
-import { RENDER_FORMATS, type RenderFormatId, type RenderManifest } from './manifest';
-import { durationInFrames } from './manifest';
+import { RENDER_FORMATS, type RenderFormatId, type RenderManifest } from './manifest.js';
+import { durationInFrames } from './manifest.js';
 
 export type RenderTier = 'anonymous' | 'free' | 'paid';
 

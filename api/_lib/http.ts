@@ -3,7 +3,7 @@
 // middleware (scripts/renderDevPlugin.mjs). Files under api/_lib are not routed.
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { RenderApiError } from '../../src/render/types';
+import type { RenderApiError } from '../../src/render/types.js';
 
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {

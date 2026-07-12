@@ -7,9 +7,9 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { RENDER_FORMATS, type RenderManifest } from '../../src/render/manifest';
-import type { JobError, JobOutput, JobState } from '../../src/render/types';
-import type { JobRecord } from './jobStore';
+import { RENDER_FORMATS, type RenderManifest } from '../../src/render/manifest.js';
+import type { JobError, JobOutput, JobState } from '../../src/render/types.js';
+import type { JobRecord } from './jobStore.js';
 
 export interface ExecutorProgress {
   state: Extract<JobState, 'provisioning' | 'rendering' | 'encoding' | 'uploading' | 'complete' | 'failed'>;
@@ -125,7 +125,7 @@ export function localOutputPath(job: JobRecord): string {
 /** The executor for this deployment: Vercel Sandbox when configured, else local. */
 export async function getExecutor(): Promise<RenderExecutor> {
   if ((process.env.RENDER_EXECUTOR ?? '').trim() === 'sandbox') {
-    const { SandboxExecutor } = await import('./executorSandbox');
+    const { SandboxExecutor } = await import('./executorSandbox.js');
     return new SandboxExecutor();
   }
   return new LocalExecutor();

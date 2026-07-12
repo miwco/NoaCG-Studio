@@ -19,11 +19,11 @@
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { RENDER_FORMATS, type RenderManifest } from '../../src/render/manifest';
-import { slug } from '../../src/export/slug';
-import type { JobOutput } from '../../src/render/types';
-import type { JobRecord } from './jobStore';
-import type { ExecutorProgress, ExecutorStartResult, RenderExecutor } from './executor';
+import { RENDER_FORMATS, type RenderManifest } from '../../src/render/manifest.js';
+import { slug } from '../../src/export/slug.js';
+import type { JobOutput } from '../../src/render/types.js';
+import type { JobRecord } from './jobStore.js';
+import type { ExecutorProgress, ExecutorStartResult, RenderExecutor } from './executor.js';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BUNDLE_DIR = path.join(REPO_ROOT, 'render-worker', 'bundle');

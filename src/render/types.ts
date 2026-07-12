@@ -2,7 +2,7 @@
 // PURE MODULE (no DOM, no import.meta): imported by src/render/client.ts (browser) and
 // by the api/ functions (Node).
 
-import type { RenderFormatId } from './manifest';
+import type { RenderFormatId } from './manifest.js';
 
 export type JobState =
   | 'pending'        // row created, executor not yet started

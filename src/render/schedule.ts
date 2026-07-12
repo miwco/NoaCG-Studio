@@ -19,7 +19,7 @@ import type {
   RenderSchedule,
   RenderSegment,
   RenderTiming,
-} from './manifest';
+} from './manifest.js';
 
 export interface ScheduleIssue {
   level: 'error' | 'warning';

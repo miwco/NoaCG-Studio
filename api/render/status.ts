@@ -2,10 +2,10 @@
 // executor's live progress through the reconciler (which also finalizes completion and
 // times out lost jobs), and answers the RenderJobStatus DTO the UI polls on.
 
-import { apiError, bearerToken, json, methodGuard, secretMatches } from '../_lib/http';
-import { getJobStore } from '../_lib/jobStore';
-import { getExecutor } from '../_lib/executor';
-import { reconcileJob, toStatus } from '../_lib/reconcile';
+import { apiError, bearerToken, json, methodGuard, secretMatches } from '../_lib/http.js';
+import { getJobStore } from '../_lib/jobStore.js';
+import { getExecutor } from '../_lib/executor.js';
+import { reconcileJob, toStatus } from '../_lib/reconcile.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {

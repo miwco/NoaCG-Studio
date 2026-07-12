@@ -5,10 +5,10 @@
 // The local executor doesn't need it (the status reconciler reads its files directly),
 // but the route works identically for both.
 
-import { RENDER_CONFIG } from '../../src/render/limits';
-import type { JobError } from '../../src/render/types';
-import { apiError, json, methodGuard, readJson, secretMatches } from '../_lib/http';
-import { getJobStore } from '../_lib/jobStore';
+import { RENDER_CONFIG } from '../../src/render/limits.js';
+import type { JobError } from '../../src/render/types.js';
+import { apiError, json, methodGuard, readJson, secretMatches } from '../_lib/http.js';
+import { getJobStore } from '../_lib/jobStore.js';
 
 interface CompleteBody {
   jobId?: string;

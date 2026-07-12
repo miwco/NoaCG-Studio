@@ -3,10 +3,10 @@
 // All writes go through these stores from the api handlers only — the browser never
 // touches job rows directly.
 
-import type { RenderFormatId } from '../../src/render/manifest';
-import type { RenderTier } from '../../src/render/limits';
-import type { JobError, JobOutput, JobState } from '../../src/render/types';
-import { TERMINAL_STATES } from '../../src/render/types';
+import type { RenderFormatId } from '../../src/render/manifest.js';
+import type { RenderTier } from '../../src/render/limits.js';
+import type { JobError, JobOutput, JobState } from '../../src/render/types.js';
+import { TERMINAL_STATES } from '../../src/render/types.js';
 
 export interface JobProgressSnapshot {
   state: JobState;
@@ -129,7 +129,7 @@ class MemoryJobStore implements JobStore {
 /** The store for this deployment: Supabase when the service key is present, else memory. */
 export async function getJobStore(): Promise<JobStore> {
   if ((process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim()) {
-    const { SupabaseJobStore } = await import('./jobStoreSupabase');
+    const { SupabaseJobStore } = await import('./jobStoreSupabase.js');
     return new SupabaseJobStore();
   }
   return new MemoryJobStore();

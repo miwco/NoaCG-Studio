@@ -3,13 +3,13 @@
 // render; progress flows through /api/render/status.
 
 import { randomUUID } from 'node:crypto';
-import { durationInFrames, RENDER_MANIFEST_VERSION, type RenderManifest } from '../../src/render/manifest';
-import { jobTimeoutMs, RENDER_CONFIG, resolveTier, RENDER_LIMITS, validateRenderRequest } from '../../src/render/limits';
-import type { StartRenderResponse } from '../../src/render/types';
-import { apiError, bearerToken, ipHash, json, methodGuard, newSecret, readJson, sha256 } from '../_lib/http';
-import { verifyUser } from '../_lib/auth';
-import { getJobStore, type JobRecord } from '../_lib/jobStore';
-import { getExecutor } from '../_lib/executor';
+import { durationInFrames, RENDER_MANIFEST_VERSION, type RenderManifest } from '../../src/render/manifest.js';
+import { jobTimeoutMs, RENDER_CONFIG, resolveTier, RENDER_LIMITS, validateRenderRequest } from '../../src/render/limits.js';
+import type { StartRenderResponse } from '../../src/render/types.js';
+import { apiError, bearerToken, ipHash, json, methodGuard, newSecret, readJson, sha256 } from '../_lib/http.js';
+import { verifyUser } from '../_lib/auth.js';
+import { getJobStore, type JobRecord } from '../_lib/jobStore.js';
+import { getExecutor } from '../_lib/executor.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {

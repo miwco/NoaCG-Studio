@@ -4,8 +4,8 @@
 
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import { localOutputPath } from './executor';
-import type { JobRecord } from './jobStore';
+import { localOutputPath } from './executor.js';
+import type { JobRecord } from './jobStore.js';
 
 /** Delete a finished job's output file (TTL expiry). Best-effort, never throws. */
 export async function deleteOutput(job: JobRecord): Promise<void> {

@@ -1,10 +1,10 @@
 // POST /api/render/cancel — { jobId }, Bearer <jobToken>. Stops the executor and marks
 // the job cancelled. Idempotent: cancelling a finished job just reports its final state.
 
-import { apiError, bearerToken, json, methodGuard, readJson, secretMatches } from '../_lib/http';
-import { getJobStore, isTerminal } from '../_lib/jobStore';
-import { getExecutor } from '../_lib/executor';
-import { toStatus } from '../_lib/reconcile';
+import { apiError, bearerToken, json, methodGuard, readJson, secretMatches } from '../_lib/http.js';
+import { getJobStore, isTerminal } from '../_lib/jobStore.js';
+import { getExecutor } from '../_lib/executor.js';
+import { toStatus } from '../_lib/reconcile.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {

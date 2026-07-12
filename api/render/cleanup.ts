@@ -4,10 +4,10 @@
 // accounting). Inline finalization in status/complete is the primary path — this only
 // has to be eventually right.
 
-import { apiError, json, methodGuard } from '../_lib/http';
-import { getJobStore, isTerminal } from '../_lib/jobStore';
-import { getExecutor } from '../_lib/executor';
-import { deleteOutput } from '../_lib/outputStorage';
+import { apiError, json, methodGuard } from '../_lib/http.js';
+import { getJobStore, isTerminal } from '../_lib/jobStore.js';
+import { getExecutor } from '../_lib/executor.js';
+import { deleteOutput } from '../_lib/outputStorage.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {

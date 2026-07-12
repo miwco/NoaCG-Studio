@@ -3,10 +3,10 @@
 // reaches an honest terminal state no matter which path looks at it first. All finalizing
 // updates are guarded (no-op once terminal) — duplicate polls and late callbacks are safe.
 
-import { RENDER_CONFIG } from '../../src/render/limits';
-import type { JobFrames, RenderJobStatus } from '../../src/render/types';
-import type { RenderExecutor } from './executor';
-import { isTerminal, type JobRecord, type JobStore } from './jobStore';
+import { RENDER_CONFIG } from '../../src/render/limits.js';
+import type { JobFrames, RenderJobStatus } from '../../src/render/types.js';
+import type { RenderExecutor } from './executor.js';
+import { isTerminal, type JobRecord, type JobStore } from './jobStore.js';
 
 /** Overall percent for the UI: honest bands per stage. */
 function percentOf(job: JobRecord): number {

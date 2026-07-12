@@ -3,11 +3,11 @@
 // SUPABASE_SERVICE_ROLE_KEY is present; without it the in-memory store serves dev.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { RenderFormatId } from '../../src/render/manifest';
-import type { RenderTier } from '../../src/render/limits';
-import type { JobError, JobOutput, JobState } from '../../src/render/types';
-import { TERMINAL_STATES } from '../../src/render/types';
-import type { JobProgressSnapshot, JobRecord, JobStore } from './jobStore';
+import type { RenderFormatId } from '../../src/render/manifest.js';
+import type { RenderTier } from '../../src/render/limits.js';
+import type { JobError, JobOutput, JobState } from '../../src/render/types.js';
+import { TERMINAL_STATES } from '../../src/render/types.js';
+import type { JobProgressSnapshot, JobRecord, JobStore } from './jobStore.js';
 
 const TABLE = 'render_jobs';
 
