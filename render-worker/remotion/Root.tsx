@@ -24,23 +24,28 @@ const PLACEHOLDER: RenderManifest = {
 };
 
 export const Root: React.FC = () => (
+  // Remotion's <Composition> constrains input props to Record<string, unknown>, which the
+  // RenderManifest interface does not satisfy (TypeScript gives interfaces no implicit index
+  // signature). RenderManifest stays the real prop type inside NoaCGGraphic; only this thin
+  // registry adapts at the boundary and recovers the manifest by cast in calculateMetadata.
   <Composition
     id="noacg"
-    component={NoaCGGraphic}
-    defaultProps={PLACEHOLDER}
+    component={NoaCGGraphic as unknown as React.FC<Record<string, unknown>>}
+    defaultProps={PLACEHOLDER as unknown as Record<string, unknown>}
     durationInFrames={100}
     width={1920}
     height={1080}
     fps={50}
     calculateMetadata={({ props }) => {
-      if (props.version !== RENDER_MANIFEST_VERSION) {
-        throw new Error(`manifest version ${props.version} is not supported (expected ${RENDER_MANIFEST_VERSION})`);
+      const manifest = props as unknown as RenderManifest;
+      if (manifest.version !== RENDER_MANIFEST_VERSION) {
+        throw new Error(`manifest version ${manifest.version} is not supported (expected ${RENDER_MANIFEST_VERSION})`);
       }
       return {
-        durationInFrames: durationInFrames(props),
-        fps: props.fps,
-        width: props.width,
-        height: props.height,
+        durationInFrames: durationInFrames(manifest),
+        fps: manifest.fps,
+        width: manifest.width,
+        height: manifest.height,
         props,
       };
     }}
