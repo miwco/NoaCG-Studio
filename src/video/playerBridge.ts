@@ -25,6 +25,10 @@ export interface ProbeResult {
   errors: { frame: number; message: string }[];
 }
 
+/** load() outcome. `disposed` = this bridge was torn down (a newer player exists) -
+ *  callers must treat it as "ignore me / retry on the fresh bridge", never as a module error. */
+export type LoadResult = { ok: true } | { ok: false; message: string; disposed?: boolean };
+
 interface HostEvent {
   channel: string;
   v: number;
@@ -55,9 +59,13 @@ export class PlayerBridge {
   private ready = false;
   private queue: object[] = [];
   private loadId = 0;
+  private disposedFlag = false;
+  /** Serializes load/probe operations: exactly one is in flight at a time (the preview's
+   *  debounced reloads, the validator's candidate loads, and probes never race). */
+  private chain: Promise<unknown> = Promise.resolve();
   private pendingLoad: {
     id: number;
-    resolve: (r: { ok: true } | { ok: false; message: string; superseded?: boolean }) => void;
+    resolve: (r: LoadResult) => void;
   } | null = null;
   private pendingProbe: { id: number; resolve: (r: ProbeResult) => void } | null = null;
   private callbacks: PlayerBridgeCallbacks;
@@ -77,11 +85,22 @@ export class PlayerBridge {
     this.iframe = iframe;
   }
 
+  /** Tear down. In-flight and queued operations resolve `disposed` immediately - nothing
+   *  may hang on a replaced bridge (StrictMode remounts create then dispose one). */
   dispose(): void {
+    this.disposedFlag = true;
     window.removeEventListener('message', this.onMessage);
     this.iframe = null;
     this.ready = false;
     this.queue = [];
+    this.pendingLoad?.resolve({ ok: false, message: 'the player was replaced', disposed: true });
+    this.pendingLoad = null;
+    this.pendingProbe?.resolve({ ok: false, errors: [{ frame: 0, message: 'the player was replaced' }] });
+    this.pendingProbe = null;
+  }
+
+  get disposed(): boolean {
+    return this.disposedFlag;
   }
 
   /** The current load generation (host events from older loads are dropped). */
@@ -90,48 +109,61 @@ export class PlayerBridge {
   }
 
   /** Load a compiled module; resolves when mounted (or with the eval/mount error).
-   *  A load overtaken by a newer one resolves `superseded` - callers must treat that as
-   *  "ignore me", NOT as an error (a stale effect must never overwrite newer state). */
+   *  Loads are SERIALIZED - each waits for the previous load/probe to finish. */
   load(
     compiledJs: string,
     settings: VideoCompSettings,
     inputProps: Record<string, unknown>,
     assets: AssetFile[],
     opts: { autoplay?: boolean } = {},
-  ): Promise<{ ok: true } | { ok: false; message: string; superseded?: boolean }> {
-    const id = ++this.loadId;
-    const payload = assets.map((a) => assetPayload(a));
-    return new Promise((resolve) => {
-      this.pendingLoad?.resolve({ ok: false, message: 'superseded by a newer load', superseded: true });
-      this.pendingLoad = { id, resolve };
-      this.post(
-        {
-          type: 'load',
-          id,
-          compiledJs,
-          settings: {
-            width: settings.width,
-            height: settings.height,
-            fps: settings.fps,
-            durationInFrames: settings.durationInFrames,
+  ): Promise<LoadResult> {
+    const run = (): Promise<LoadResult> => {
+      if (this.disposedFlag) {
+        return Promise.resolve({ ok: false, message: 'the player was replaced', disposed: true });
+      }
+      const id = ++this.loadId;
+      const payload = assets.map((a) => assetPayload(a));
+      return new Promise((resolve) => {
+        this.pendingLoad = { id, resolve };
+        this.post(
+          {
+            type: 'load',
+            id,
+            compiledJs,
+            settings: {
+              width: settings.width,
+              height: settings.height,
+              fps: settings.fps,
+              durationInFrames: settings.durationInFrames,
+            },
+            inputProps,
+            assets: payload,
+            autoplay: opts.autoplay ?? true,
           },
-          inputProps,
-          assets: payload,
-          autoplay: opts.autoplay ?? true,
-        },
-        payload.map((p) => p.bytes),
-      );
-    });
+          payload.map((p) => p.bytes),
+        );
+      });
+    };
+    const op = this.chain.then(run, run);
+    this.chain = op;
+    return op;
   }
 
-  /** Probe frames on the currently loading/loaded module (validation). */
+  /** Probe frames on the current module (validation). Serialized like load. */
   probe(frames: number[]): Promise<ProbeResult> {
-    const id = this.loadId;
-    return new Promise((resolve) => {
-      this.pendingProbe?.resolve({ ok: false, errors: [{ frame: 0, message: 'superseded' }] });
-      this.pendingProbe = { id, resolve };
-      this.post({ type: 'probe', id, frames });
-    });
+    const run = (): Promise<ProbeResult> => {
+      if (this.disposedFlag) {
+        return Promise.resolve({ ok: false, errors: [{ frame: 0, message: 'the player was replaced' }] });
+      }
+      const id = this.loadId;
+      return new Promise((resolve) => {
+        this.pendingProbe = { id, resolve };
+        this.post({ type: 'probe', id, frames });
+      });
+    };
+    const op = this.chain.then(run, run);
+    this.chain = op;
+    return op;
   }
 
   play(): void {

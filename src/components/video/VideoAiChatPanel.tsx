@@ -28,7 +28,18 @@ function settingsOf(project: VideoProject) {
 }
 
 function contextFor(project: VideoProject) {
-  return { settings: settingsOf(project), assets: describeAssets(project.assets) };
+  const infos = describeAssets(project.assets);
+  const assetData = new Map<string, string>();
+  for (const info of infos) {
+    const asset = project.assets.find((a) => a.path === info.path);
+    if (asset && typeof asset.data === 'string') assetData.set(info.name, asset.data);
+  }
+  return {
+    settings: settingsOf(project),
+    assets: infos,
+    assetData,
+    model: project.aiModel || undefined,
+  };
 }
 
 /** The live validate pipeline for candidate modules, bound to the mounted player. */

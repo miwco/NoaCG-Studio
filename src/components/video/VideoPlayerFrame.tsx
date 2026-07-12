@@ -78,8 +78,9 @@ export default function VideoPlayerFrame() {
         assets,
         { autoplay: true },
       );
-      // A superseded load means a newer edit took over - never overwrite its state.
-      if (!res.ok && !res.superseded) setPreviewError(res.message);
+      // A disposed result means this bridge was replaced mid-flight - never overwrite
+      // the successor's state.
+      if (!res.ok && !res.disposed) setPreviewError(res.message);
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [tsx, assets, width, height, fps, durationInFrames, transparent, replayNonce, bridge, setPreviewError]);

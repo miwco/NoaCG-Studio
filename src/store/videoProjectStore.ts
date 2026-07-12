@@ -64,8 +64,13 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
   busy: null,
   autosaveFailed: false,
 
-  loadProject: (project) =>
-    set({ project, history: [], future: [], previewError: null, busy: null, activePanel: 'chat' }),
+  loadProject: (project) => {
+    // Creation/reopen persists IMMEDIATELY (not on the typing debounce): a reload right
+    // after creating must restore the new project, and docKind's boot guard checks the
+    // slot synchronously.
+    saveCurrentVideoProject(project);
+    set({ project, history: [], future: [], previewError: null, busy: null, activePanel: 'chat' });
+  },
 
   applyProject: (next) =>
     set((s) => ({

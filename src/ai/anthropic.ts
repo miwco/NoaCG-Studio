@@ -26,6 +26,9 @@ export interface ClaudeRequest {
   maxTokens?: number;
   /** Force a specific tool call (structured output). */
   tool?: ClaudeTool;
+  /** Override the settings model for this call (cheap classification stages pin Haiku;
+   *  a video project can pin its own model). */
+  model?: string;
 }
 
 interface ClaudeResponse {
@@ -38,7 +41,7 @@ export async function callClaude(req: ClaudeRequest): Promise<unknown> {
   const s = loadAiSettings();
 
   const body = {
-    model: s.model,
+    model: req.model ?? s.model,
     max_tokens: req.maxTokens ?? 16000,
     system: req.system,
     messages: req.messages,

@@ -3,9 +3,9 @@
 
 import { aiConfigured } from '../settings';
 import type { VideoAIProvider } from './provider';
+import { claudeVideoProvider } from './claudeVideoProvider';
 import { stubVideoProvider } from './stubVideoProvider';
 
 export function getVideoAiProvider(): VideoAIProvider {
-  // The Claude harness lands with the AI slice; until then every mode uses the stub.
-  return aiConfigured() ? stubVideoProvider : stubVideoProvider;
+  return aiConfigured() ? claudeVideoProvider : stubVideoProvider;
 }

@@ -9,6 +9,10 @@ import type { VideoAssetInfo, VideoCompSettings, VideoValidationResult } from '.
 export interface VideoGenerateContext {
   settings: VideoCompSettings;
   assets: VideoAssetInfo[];
+  /** Raw asset data URLs by logical name - image assets become vision blocks. */
+  assetData?: Map<string, string>;
+  /** Model id override for this project (undefined/'' = the global AI setting). */
+  model?: string;
 }
 
 /** The injected validate pipeline (bound to the live player bridge by the chat panel). */

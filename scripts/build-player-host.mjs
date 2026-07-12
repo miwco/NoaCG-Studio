@@ -8,7 +8,7 @@
 
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,6 +66,28 @@ if (!statSync(join(outDir, 'index.html')).isFile()) {
   console.error('[player-host] build produced no index.html');
   process.exit(1);
 }
+
+// Inline the (single) JS chunk into index.html. LOAD-BEARING: the host runs in a
+// sandboxed iframe WITHOUT allow-same-origin, so its origin is opaque ('null') - and
+// module <script src> fetches are CORS-mode requests, which every ordinary static server
+// rejects for a null origin. Inlining means the page needs zero subresource fetches and
+// works under any server with no header configuration.
+const indexPath = join(outDir, 'index.html');
+let html = readFileSync(indexPath, 'utf8');
+html = html.replace(/<script type="module"[^>]*src="\.\/(assets\/[^"]+)"[^>]*><\/script>/g, (_, rel) => {
+  const js = readFileSync(join(outDir, rel), 'utf8')
+    // Escape sequences that would terminate/confuse the inline script context.
+    .replaceAll('</script', '<\\/script')
+    .replaceAll('<!--', '<\\!--');
+  return `<script type="module">${js}</script>`;
+});
+if (/src="\.\/assets\//.test(html)) {
+  console.error('[player-host] inlining failed - external asset references remain');
+  process.exit(1);
+}
+writeFileSync(indexPath, html);
+rmSync(join(outDir, 'assets'), { recursive: true, force: true });
+
 mkdirSync(outDir, { recursive: true });
 writeFileSync(hashFile, sourceHash());
-console.log('[player-host] built into public/player-host/');
+console.log('[player-host] built into public/player-host/ (single self-contained page)');

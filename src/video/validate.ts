@@ -7,6 +7,7 @@
 import type { ValidationIssue } from '../validation/validateTemplate';
 import { compileTsx, staticValidate, WARNING_RULES } from './compile';
 import type { PlayerBridge } from './playerBridge';
+import { getActiveBridge } from './bridgeRegistry';
 import type { AssetFile } from '../model/types';
 import { describeAssets, type VideoCompSettings, type VideoValidationResult } from './types';
 
@@ -33,23 +34,26 @@ export async function validateVideoModule(
   }
 
   // Live probe (skipped when no player is mounted - e.g. the offline stub in tests).
-  if (bridge) {
-    const loaded = await bridge.load(compiled.js, settings, {}, assets, { autoplay: false });
+  // A disposed bridge (the player remounted mid-validation - dev StrictMode, layout
+  // changes) retries once on the CURRENT bridge instead of failing the module.
+  let probeBridge = bridge;
+  for (let attempt = 0; probeBridge && attempt < 2; attempt++) {
+    const loaded = await probeBridge.load(compiled.js, settings, {}, assets, { autoplay: false });
+    if (!loaded.ok && loaded.disposed) {
+      const fresh = getActiveBridge();
+      probeBridge = fresh && fresh !== probeBridge ? fresh : null;
+      continue;
+    }
     if (!loaded.ok) {
-      if (loaded.superseded) {
-        // A newer load took over mid-validation (fast follow-up edit) - report honestly
-        // without inventing a module error.
-        errors.push({ rule: 'runtime', message: 'validation was interrupted by a newer change - try again' });
-        return { ok: false, errors, warnings, compiledJs: compiled.js };
-      }
       errors.push({ rule: 'runtime', message: loaded.message });
       return { ok: false, errors, warnings, compiledJs: compiled.js };
     }
     const d = settings.durationInFrames;
-    const probe = await bridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)]);
+    const probe = await probeBridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)]);
     for (const e of probe.errors) {
       errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
     }
+    break;
   }
 
   return { ok: errors.length === 0, errors, warnings, compiledJs: compiled.js };
