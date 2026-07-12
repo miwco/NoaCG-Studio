@@ -8,6 +8,7 @@ import {
   deleteLayerKeyframes,
   deleteStep,
   duplicateStep,
+  layerPress,
   moveKeyframe,
   moveLayerKeyframes,
   renameStep,
@@ -18,7 +19,8 @@ import {
 } from '../blocks/animEdit';
 import { EASINGS } from '../model/easings';
 import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
-import { animatedProps, stepSeconds } from '../blocks/animEval';
+import { activationStep, animatedProps, stepSeconds } from '../blocks/animEval';
+import { changePartPress } from '../blocks/stepAssign';
 import { getTemplateParts } from '../model/structure';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -530,6 +532,76 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     );
   };
 
+  // ── Layer state blocks (the interaction model §2 "State"): each layer row renders
+  //    its existence span — activation step start → the end of Out — with its keyframed
+  //    ENTERING and EXITING phases emphasized. The block's LEFT edge is "which press
+  //    reveals this layer": dragging it snaps to step boundaries and lands as the same
+  //    activation move the gutter menu and canvas chip make. There is no right-edge
+  //    trim — an explicit early-exit needs the `hides` model extension first (the
+  //    timeline never fakes what the data cannot say). ──
+  /** The keyframed span [minT, maxT] of a layer within one step (stored clock). */
+  const kfSpan = (stepIndex: number, key: string): [number, number] | null => {
+    const tracks = data.steps[stepIndex]?.layers[key];
+    if (!tracks) return null;
+    let min = Infinity;
+    let max = -Infinity;
+    for (const kfs of Object.values(tracks)) {
+      for (const kf of kfs) {
+        min = Math.min(min, kf.time);
+        max = Math.max(max, kf.time);
+      }
+    }
+    return min <= max ? [min, max] : null;
+  };
+
+  /** The block edge drags only where the activation move exists: the same eligibility
+   *  as the gutter menu and the canvas chip (line/image/accent/block, never the first
+   *  line), and only while the graphic has presses to move between. */
+  const blockEligible = (key: string): boolean => {
+    if (!editable || data.steps.length <= 2) return false;
+    const part = parts.find((p) => p.selector === key);
+    if (!part || !['line', 'image', 'accent', 'block'].includes(part.kind)) return false;
+    return key !== parts.find((p) => p.kind === 'line')?.selector;
+  };
+
+  const [blockDrag, setBlockDrag] = useState<{ key: string; x: number; moved: boolean } | null>(null);
+  const blockDragRef = useRef<typeof blockDrag>(null);
+  blockDragRef.current = blockDrag;
+
+  const startBlockDrag = (e: React.PointerEvent, key: string, x: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setBlockDrag({ key, x, moved: false });
+  };
+  const moveBlockDrag = (e: React.PointerEvent) => {
+    const d = blockDragRef.current;
+    if (!d || e.buttons !== 1) return;
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).closest('.tlv2-canvas')!.getBoundingClientRect();
+    const raw = e.clientX - rect.left;
+    // The edge lives ON step boundaries — snap to the nearest content-step start.
+    let best = segs[0].x;
+    for (const seg of segs.slice(0, -1)) {
+      if (Math.abs(seg.x - raw) < Math.abs(best - raw)) best = seg.x;
+    }
+    setBlockDrag({ ...d, x: best, moved: true });
+  };
+  const endBlockDrag = (e: React.PointerEvent) => {
+    const d = blockDragRef.current;
+    setBlockDrag(null);
+    if (!d || !d.moved) return;
+    e.stopPropagation();
+    const seg = segs.slice(0, -1).find((s) => Math.abs(s.x - d.x) < 1);
+    if (!seg) return;
+    const toPress = seg.i - 1; // step 0 = "appears with ▶ Play" (press -1)
+    const fromPress = layerPress(data, d.key);
+    if (toPress === fromPress) return;
+    const change = changePartPress(template, parts, null, d.key, fromPress, toPress);
+    if (!change) return;
+    applyTemplate({ ...template, ...change.patch }); // one undoable apply — same as the chip
+  };
+
   // ── Steps as clips (Phase 6): right-edge resize, context menu, hold popover ─────
   // The clip's left edge IS the cue boundary — steps start when the operator presses, so
   // only the duration (the right edge) is draggable. Default preserves keyframe timing
@@ -833,6 +905,61 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                   className={`tlv2-row${isProp ? ' prop' : ''}${!isProp && selectedParts.includes(r.key) ? ' selected' : ''}`}
                   style={{ top: RULER_H + CLIPS_H + r.top, height: r.height }}
                 >
+                  {!isProp &&
+                    (() => {
+                      // The layer's existence block: activation → the end of Out, with
+                      // its keyframed entering/exiting phases emphasized.
+                      const act = activationStep(data, r.key);
+                      const actSeg = segs[act];
+                      const outSeg = segs[segs.length - 1];
+                      if (!actSeg || !outSeg) return null;
+                      const speed = data.speed || 1;
+                      const dragging = blockDrag?.moved && blockDrag.key === r.key;
+                      const x0 = dragging ? blockDrag!.x : actSeg.x;
+                      const spanIn = kfSpan(act, r.key);
+                      const spanOut = act === segs.length - 1 ? null : kfSpan(segs.length - 1, r.key);
+                      return (
+                        <>
+                          <span
+                            className="tlv2-block"
+                            style={{ left: x0, width: Math.max(0, outSeg.x + outSeg.w - x0) }}
+                            data-testid={`tlv2-block-${r.key.replace(/[^\w-]/g, '')}`}
+                          />
+                          {spanIn && !dragging && (
+                            <span
+                              className="tlv2-block-phase"
+                              style={{
+                                left: actSeg.x + (spanIn[0] / speed) * pxPerSec,
+                                width: Math.max(3, ((spanIn[1] - spanIn[0]) / speed) * pxPerSec),
+                              }}
+                              title="Entering — this layer's keyframed motion in its first step"
+                            />
+                          )}
+                          {spanOut && (
+                            <span
+                              className="tlv2-block-phase"
+                              style={{
+                                left: outSeg.x + (spanOut[0] / speed) * pxPerSec,
+                                width: Math.max(3, ((spanOut[1] - spanOut[0]) / speed) * pxPerSec),
+                              }}
+                              title="Exiting — this layer's keyframed motion in Out"
+                            />
+                          )}
+                          {blockEligible(r.key) && (
+                            <span
+                              className="tlv2-block-edge"
+                              style={{ left: x0 }}
+                              title="When this layer appears — drag to a step boundary (▶ Play or a » press), same move as the canvas chip"
+                              data-testid={`tlv2-block-edge-${r.key.replace(/[^\w-]/g, '')}`}
+                              onPointerDown={(e) => startBlockDrag(e, r.key, actSeg.x)}
+                              onPointerMove={moveBlockDrag}
+                              onPointerUp={endBlockDrag}
+                              onPointerCancel={() => setBlockDrag(null)}
+                            />
+                          )}
+                        </>
+                      );
+                    })()}
                   {!isProp &&
                     segs.map((seg) =>
                       seg.step.reveals?.includes(r.key) ? (

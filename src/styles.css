@@ -1628,6 +1628,40 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .tlv2-row.selected { background: rgba(246, 166, 35, 0.06); }
 /* Property sub-rows (an expanded layer): quieter separators, a whisper of inset. */
 .tlv2-row.prop { border-top: 1px dashed rgba(232, 237, 242, 0.04); background: rgba(232, 237, 242, 0.015); }
+/* The layer's existence block — activation → the end of Out; keyframed entering/exiting
+   phases glow a little warmer. Chrome only: all pointer input stays on the edge handle. */
+.tlv2-block {
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  background: rgba(232, 237, 242, 0.05);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.tlv2-block-phase {
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  background: rgba(246, 166, 35, 0.13);
+  border-radius: 3px;
+  pointer-events: none;
+}
+/* The block's left edge = which press reveals the layer; drags between step boundaries.
+   It lives entirely LEFT of the boundary and stacks above the diamonds — a keyframe at
+   t=0 sits exactly ON the boundary and must stay grabbable on its own side. */
+.tlv2-block-edge {
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  width: 6px;
+  margin-left: -6px;
+  z-index: 3;
+  cursor: ew-resize;
+  touch-action: none;
+  border-right: 2px solid rgba(246, 166, 35, 0.45);
+  border-radius: 2px;
+}
+.tlv2-block-edge:hover { border-right-color: var(--amber); }
 /* The layer's expand caret — one row per animated property behind it. */
 .tlv2-expand {
   background: transparent;

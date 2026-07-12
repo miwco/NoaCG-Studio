@@ -79,13 +79,23 @@ in src/blocks/CLAUDE.md.
   leaves settled air, shrinking clamps at the last keyframe; Alt-drag STRETCHES times
   proportionally), context menu Duplicate/Rename/Delete + the step's default ease, »+ adds a
   step, a hold popover edits the SPX `out` setting, a speed select scales everything; LAYER
-  ROWS - every registry part gets a row - with aggregate keyframe diamonds (drag to retime,
-  Delete removes, right-click sets the per-keyframe ease); a draggable playhead with a grab
-  cap + auto-follow scroll and deep zoom (up to 1000 px/s); Space plays, ←/→ nudge the
-  selected diamond on the 0.05 s grid (never while typing).
+  ROWS - every registry part gets a row - with aggregate keyframe diamonds, a ▸ caret that
+  EXPANDS the layer into per-property sub-rows (each track's own diamonds; drag/Delete/ease
+  scoped to that property via moveKeyframe/deleteKeyframe/setKeyframeEase's prop arg), and a
+  LAYER STATE BLOCK: the existence span (activation step -> the end of Out) with the
+  keyframed entering/exiting phases emphasized - its LEFT edge drags between step boundaries
+  as the same activation move the gutter/chip make (no right-edge trim until the `hides`
+  model extension exists). KEYFRAME SETS: click selects a diamond, shift-click builds a set,
+  dragging any selected diamond moves the WHOLE set (magnetic snap to playhead/step
+  edges/other keyframes within ~7px, Alt free, 0.05s grid fallback), Delete clears the set,
+  ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead. A draggable
+  playhead with a grab cap + auto-follow scroll and deep zoom (up to 1000 px/s); Space plays
+  (never while typing).
   Every edit is a pure data mutation (blocks/animEdit.ts) spliced back by
-  blocks/animData.ts - ONE undoable apply each; playhead/scrub/selection never write history.
-  Parity between editor and runtime is pinned by e2e/anim-engine.spec.ts.
+  blocks/animData.ts - ONE undoable apply each (a group drag/delete/paste chains mutations
+  into one apply); playhead/scrub/selection never write history.
+  Parity between editor and runtime is pinned by e2e/anim-engine.spec.ts; the interaction
+  contract lives in docs/TIMELINE_INTERACTION_MODEL.md.
 - **Inspector** (Timeline v2) - the persistent panel RIGHT of the preview and the shared
   selection's third consumer (canvas <-> timeline <-> Inspector): identity + resolved property
   values at the settled state (parseAnimData -> importAnimData -> animEval resolveValue). On a

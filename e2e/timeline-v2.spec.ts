@@ -499,6 +499,40 @@ test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label sc
   expect(values.some((v: number | string) => v === 40 || v === 150)).toBe(true); // 0+40 or 110+40
 });
 
+test('v2 layer blocks: the existence span renders; its left edge drags the activation', async ({ page }) => {
+  await createHairline(page, true); // Enter · Step 2 (reveals the Title) · Out
+  // The Name exists from ▶ Play: its block starts at the ribbon origin.
+  const b0 = (await page.getByTestId('tlv2-block-f0').boundingBox())!;
+  const clip0 = (await page.getByTestId('tlv2-clip-0').boundingBox())!;
+  expect(Math.abs(b0.x - clip0.x)).toBeLessThan(4);
+  // The Title appears on the press: its block starts where Step 2 starts.
+  const b1 = (await page.getByTestId('tlv2-block-f1').boundingBox())!;
+  const clip1 = (await page.getByTestId('tlv2-clip-1').boundingBox())!;
+  expect(Math.abs(b1.x - clip1.x)).toBeLessThan(4);
+
+  // Drag the Title block's edge to the ribbon origin: it now appears with ▶ Play, and
+  // the emptied press disappears — the same activation move the canvas chip makes.
+  const before = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().history.length;
+  });
+  const edge = (await page.getByTestId('tlv2-block-edge-f1').boundingBox())!;
+  await page.mouse.move(edge.x + 3, edge.y + edge.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(clip0.x + 2, edge.y + edge.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  const data = await animData(page);
+  expect(data!.steps).toHaveLength(2);
+  expect(Object.keys(data!.steps[0].layers)).toContain('#f1');
+  const after = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().history.length;
+  });
+  expect(after).toBe(before + 1); // one undoable apply, same as the chip
+});
+
 test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the playhead', async ({ page }) => {
   await createHairline(page);
   // Open the Inspector up front so the auto-open never resizes the stage mid-test.
