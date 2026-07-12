@@ -13,27 +13,31 @@ import { useAuthState } from '../auth/useAuthState';
 import SignInPrompt from '../auth/SignInPrompt';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { describeAssets } from '../../video/types';
+import { validateVideoModule } from '../../video/validate';
+import { getActiveBridge } from '../../video/bridgeRegistry';
 import type { VideoProject } from '../../model/videoTypes';
 
-interface Props {
-  /** The live validate pipeline, bound to the mounted player (undefined until it exists). */
-  validate?: VideoValidator;
-}
-
-function contextFor(project: VideoProject) {
+function settingsOf(project: VideoProject) {
   return {
-    settings: {
-      width: project.width,
-      height: project.height,
-      fps: project.fps,
-      durationInFrames: project.durationInFrames,
-      transparent: project.transparent,
-    },
-    assets: describeAssets(project.assets),
+    width: project.width,
+    height: project.height,
+    fps: project.fps,
+    durationInFrames: project.durationInFrames,
+    transparent: project.transparent,
   };
 }
 
-export default function VideoAiChatPanel({ validate }: Props) {
+function contextFor(project: VideoProject) {
+  return { settings: settingsOf(project), assets: describeAssets(project.assets) };
+}
+
+/** The live validate pipeline for candidate modules, bound to the mounted player. */
+const validate: VideoValidator = (tsx) => {
+  const p = useVideoProjectStore.getState().project;
+  return validateVideoModule(tsx, settingsOf(p), p.assets, getActiveBridge());
+};
+
+export default function VideoAiChatPanel() {
   const { needsSignIn } = useAuthState();
   const project = useVideoProjectStore((s) => s.project);
   const busy = useVideoProjectStore((s) => s.busy);
@@ -70,13 +74,16 @@ export default function VideoAiChatPanel({ validate }: Props) {
 
   const handleResult = (result: VideoGenerateResult) => {
     if (result.validation && !result.validation.ok) {
-      // Keep the previous working composition; surface the broken module + errors.
+      // Keep the previous working composition; surface the broken module + errors. The
+      // replay bump makes the player reload the CURRENT project code - validation left
+      // the failed candidate mounted in the host.
       setFailed(result);
       appendChat({
         role: 'assistant',
         text: `${result.summary} - but the result failed validation, so I kept your previous version. (${result.validation.errors.length} error(s) below.)`,
         at: new Date().toISOString(),
       });
+      requestReplay();
     } else {
       setFailed(null);
       applyResult(result);

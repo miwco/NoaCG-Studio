@@ -2116,3 +2116,19 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .video-asset-list, .video-saved-list { list-style: none; margin: 0; padding: 0; }
 .video-asset-list li, .video-saved-list li { border-bottom: 1px solid var(--border); padding: 6px 0; }
 .video-asset-list li:last-child, .video-saved-list li:last-child { border-bottom: none; }
+
+/* The player host iframe fills the stage; the stage box already carries the aspect. */
+.video-player-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+
+/* Transport bar under the stage: play/replay, scrubber, timecode. */
+.video-transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.video-transport button { padding: 3px 10px; }
+.video-scrubber { accent-color: var(--accent); min-width: 60px; }
+.video-timecode { font-size: 11px; white-space: nowrap; }
