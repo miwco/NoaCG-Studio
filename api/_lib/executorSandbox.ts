@@ -1,20 +1,22 @@
-// The Vercel Sandbox executor — the hosted rendering backend, built on the official
-// @remotion/vercel integration: createSandbox() provisions an ephemeral Firecracker VM
-// with Chrome + FFmpeg + the pinned renderer, addBundleToSandbox() uploads the PREBUILT
-// composition bundle (render-worker/bundle, built at deploy time — no npm install of our
-// code in the sandbox), renderMediaOnVercel() runs DETACHED and uploads the finished file
-// to Vercel Blob itself, getRenderProgress() polls across function invocations.
+// The Vercel Sandbox executor — the hosted rendering backend. It uses @remotion/vercel
+// only to PROVISION: createSandbox() spins up a Firecracker VM with Chrome + FFmpeg + the
+// pinned @remotion/renderer + @vercel/blob, and addBundleToSandbox() uploads the prebuilt
+// composition bundle (render-worker/bundle, built at deploy time) to
+// /vercel/sandbox/remotion-bundle. The render itself runs through render-worker/
+// sandbox-job.mjs, a detached command that reads the manifest from a FILE and renders
+// programmatically with @remotion/renderer.
+//
+// Why NOT @remotion/vercel's renderMediaOnVercel: it passes inputProps as a single CLI
+// argument, and our manifest embeds the whole self-contained document (inlined GSAP +
+// assets) — well over the OS 128 KB single-argument limit (E2BIG). A file + in-process
+// inputProps sidesteps that entirely, and one worker serves all five formats.
+//
 // Selected by RENDER_EXECUTOR=sandbox. @vercel/sandbox is pinned to the version
-// @remotion/vercel is developed against (its compiled code uses the sandboxId API).
+// @remotion/vercel is built against (its compiled code uses the sandboxId API).
 //
 // Because provisioning takes minutes, api/render/start launches this executor UNDER
-// waitUntil after answering 202 — no request ever waits on a sandbox boot.
-//
-// Formats: mp4/webm/prores4444 = renderMediaOnVercel detached; png-still = inline
-// renderStillOnVercel + uploadToVercelBlob (seconds once provisioned, completes within
-// the launch); png-sequence = a custom detached command (render-worker/seq-job.mjs:
-// renderFrames + store-only zip + Blob REST upload) reporting through a progress file —
-// the least field-proven path, first on the deployment checklist (docs/RENDER.md).
+// waitUntil after answering 202 — no request ever waits on a sandbox boot. Progress and
+// the finished Blob URL flow back through a progress.json the worker writes in the sandbox.
 
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -27,7 +29,8 @@ import type { ExecutorProgress, ExecutorStartResult, RenderExecutor } from './ex
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const BUNDLE_DIR = path.join(REPO_ROOT, 'render-worker', 'bundle');
-const SEQ_PROGRESS = 'noacg-job/progress.json';
+const SANDBOX_DIR = '/vercel/sandbox/noacg-job';
+const PROGRESS_PATH = `${SANDBOX_DIR}/progress.json`;
 
 function blobToken(): string {
   const token = (process.env.BLOB_READ_WRITE_TOKEN ?? '').trim();
@@ -40,149 +43,65 @@ function blobPathFor(job: JobRecord): string {
   return `renders/${job.id}/${slug(job.projectName)}_${job.format}.${RENDER_FORMATS[job.format].ext}`;
 }
 
-/** executorRef formats: `media:<sandboxId>:<cmdId>` | `seq:<sandboxId>` | `done:<sandboxId>`. */
-function parseRef(job: JobRecord): { kind: string; sandboxId: string; cmdId?: string } | null {
-  const parts = job.executorRef?.split(':') ?? [];
-  if (parts.length < 2) return null;
-  return { kind: parts[0], sandboxId: parts[1], cmdId: parts[2] };
+interface ProgressFile extends ExecutorProgress {
+  blobUrl?: string;
+  contentType?: string;
 }
 
 export class SandboxExecutor implements RenderExecutor {
   id = 'sandbox' as const;
 
   async start(job: JobRecord, manifest: RenderManifest): Promise<ExecutorStartResult> {
-    const { createSandbox, addBundleToSandbox, renderMediaOnVercel, renderStillOnVercel, uploadToVercelBlob } =
-      await import('@remotion/vercel');
+    const { createSandbox, addBundleToSandbox } = await import('@remotion/vercel');
     const timeoutMs = Math.max(60_000, job.deadlineAt - Date.now());
     const sandbox = await createSandbox({ resources: { vcpus: 4 }, timeoutInMilliseconds: timeoutMs });
     await addBundleToSandbox({ sandbox, bundleDir: BUNDLE_DIR });
-    const inputProps = manifest as unknown as Record<string, unknown>;
 
-    if (manifest.output.format === 'png-still') {
-      // Stills are seconds once the sandbox is up — render inline, upload, release the VM.
-      const stillMs = manifest.output.stillTimeMs ?? manifest.timing.totalDurationMs / 2;
-      const frame = Math.max(0, Math.round((stillMs / 1000) * manifest.fps));
-      const { sandboxFilePath, contentType } = await renderStillOnVercel({
-        sandbox, compositionId: 'noacg', inputProps, frame, imageFormat: 'png', scale: manifest.scale,
-      });
-      const { url, size } = await uploadToVercelBlob({
-        sandbox, sandboxFilePath, blobPath: blobPathFor(job), contentType, blobToken: blobToken(), access: 'public',
-      });
-      await sandbox.stop();
-      return {
-        executorRef: `done:${sandbox.sandboxId}`,
-        immediateOutput: { url, bytes: size, contentType },
-      };
-    }
-
-    if (manifest.output.format === 'png-sequence') {
-      const script = readFileSync(path.join(REPO_ROOT, 'render-worker', 'seq-job.mjs'), 'utf8');
-      await sandbox.writeFiles([
-        { path: 'noacg-job/manifest.json', content: Buffer.from(JSON.stringify(manifest)) },
-        { path: 'noacg-job/seq-job.mjs', content: Buffer.from(script) },
-      ]);
-      await sandbox.runCommand({
-        cmd: 'node',
-        args: ['noacg-job/seq-job.mjs', 'noacg-job/manifest.json', SEQ_PROGRESS, blobPathFor(job)],
-        env: { BLOB_READ_WRITE_TOKEN: blobToken() },
-        detached: true,
-      });
-      return { executorRef: `seq:${sandbox.sandboxId}` };
-    }
-
-    const codecOpts =
-      manifest.output.format === 'mp4'
-        ? { codec: 'h264' as const, crf: manifest.output.crf ?? null }
-        : manifest.output.format === 'webm'
-          ? { codec: (manifest.output.vp9 ? 'vp9' : 'vp8') as 'vp8' | 'vp9', pixelFormat: 'yuva420p' as const, crf: manifest.output.crf ?? null }
-          : { codec: 'prores' as const, proResProfile: '4444' as const, pixelFormat: 'yuva444p10le' as const };
-
-    const { sandboxId, cmdId } = await renderMediaOnVercel({
-      sandbox,
-      compositionId: 'noacg',
-      inputProps,
-      imageFormat: 'png', // parity beats speed: broadcast gradients band under jpeg capture
-      scale: manifest.scale,
+    const workerScript = readFileSync(path.join(REPO_ROOT, 'render-worker', 'sandbox-job.mjs'), 'utf8');
+    await sandbox.writeFiles([
+      { path: 'noacg-job/manifest.json', content: Buffer.from(JSON.stringify(manifest)) },
+      { path: 'noacg-job/sandbox-job.mjs', content: Buffer.from(workerScript) },
+    ]);
+    await sandbox.runCommand({
+      cmd: 'node',
+      args: [`${SANDBOX_DIR}/sandbox-job.mjs`, `${SANDBOX_DIR}/manifest.json`, PROGRESS_PATH, blobPathFor(job)],
+      env: { BLOB_READ_WRITE_TOKEN: blobToken() },
       detached: true,
-      detachedSandboxTimeoutInMilliseconds: timeoutMs,
-      vercelBlob: { blobToken: blobToken(), access: 'public', blobPath: blobPathFor(job) },
-      ...codecOpts,
     });
-    return { executorRef: `media:${sandboxId}:${cmdId}` };
+    return { executorRef: sandbox.sandboxId };
   }
 
   async readProgress(job: JobRecord): Promise<ExecutorProgress | null> {
-    const ref = parseRef(job);
-    if (!ref) return null;
-    if (ref.kind === 'done') return null; // stills complete inside start(); nothing to poll
-    if (ref.kind === 'seq') return this.readSeqProgress(ref.sandboxId, job);
-
-    const { getRenderProgress } = await import('@remotion/vercel');
-    try {
-      const p = await getRenderProgress({ sandboxId: ref.sandboxId, cmdId: ref.cmdId! });
-      switch (p.stage) {
-        case 'starting':
-        case 'opening-browser':
-        case 'selecting-composition':
-          return { state: 'provisioning', progress: p.overallProgress };
-        case 'render-progress':
-          return {
-            state: p.progress.stitchStage === 'muxing' ? 'encoding' : 'rendering',
-            progress: p.progress.progress,
-            renderedFrames: p.progress.renderedFrames,
-            encodedFrames: p.progress.encodedFrames,
-            totalFrames: job.totalFrames,
-          };
-        case 'uploading':
-          return { state: 'uploading', progress: p.overallProgress };
-        case 'done':
-          return {
-            state: 'complete',
-            progress: 1,
-            outputBytes: p.size,
-            output: { url: p.url, bytes: p.size, contentType: p.contentType },
-          };
-        case 'error':
-          return { state: 'failed', progress: 0, error: { code: 'render_failed', message: p.message.slice(0, 2000) } };
-        case 'expired':
-          return { state: 'failed', progress: 0, error: { code: 'sandbox_lost', message: 'The render environment expired.' } };
-      }
-    } catch {
-      return null; // sandbox unreachable — the reconciler's deadline logic decides
-    }
-  }
-
-  private async readSeqProgress(sandboxId: string, job: JobRecord): Promise<ExecutorProgress | null> {
+    const sandboxId = job.executorRef;
+    if (!sandboxId) return null;
     try {
       const { Sandbox } = await import('@vercel/sandbox');
       const sandbox = await Sandbox.get({ sandboxId });
-      const buf = await sandbox.readFileToBuffer({ path: SEQ_PROGRESS });
-      if (!buf) return null;
-      const p = JSON.parse(buf.toString('utf8')) as ExecutorProgress & { blobUrl?: string; contentType?: string };
+      const buf = await sandbox.readFileToBuffer({ path: PROGRESS_PATH });
+      if (!buf) return { state: 'provisioning', progress: 0 }; // worker not writing yet
+      const p = JSON.parse(buf.toString('utf8')) as ProgressFile;
       if (p.state === 'complete' && p.blobUrl) {
         return { ...p, output: { url: p.blobUrl, bytes: p.outputBytes ?? 0, contentType: p.contentType ?? RENDER_FORMATS[job.format].mime } };
       }
       return p;
     } catch {
-      return null;
+      return null; // sandbox unreachable — the reconciler's deadline logic decides
     }
   }
 
   async finalizeOutput(job: JobRecord): Promise<JobOutput | null> {
-    // Every sandbox path delivers the final URL through readProgress().output or
-    // immediateOutput — reaching this means the progress channel already had it.
-    const progress = await this.readProgress(job);
-    return progress?.output
-      ? { url: progress.output.url, downloadUrl: progress.output.url, bytes: progress.output.bytes, contentType: progress.output.contentType, expiresAt: null }
+    const p = await this.readProgress(job);
+    return p?.output
+      ? { url: p.output.url, downloadUrl: p.output.url, bytes: p.output.bytes, contentType: p.output.contentType, expiresAt: null }
       : null;
   }
 
   async stop(job: JobRecord): Promise<void> {
-    const ref = parseRef(job);
-    if (!ref || ref.kind === 'done') return;
+    const sandboxId = job.executorRef;
+    if (!sandboxId) return;
     try {
       const { Sandbox } = await import('@vercel/sandbox');
-      const sandbox = await Sandbox.get({ sandboxId: ref.sandboxId });
+      const sandbox = await Sandbox.get({ sandboxId });
       await sandbox.stop();
     } catch {
       // already stopped/expired — stop is idempotent

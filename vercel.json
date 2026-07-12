@@ -4,7 +4,7 @@
   "functions": {
     "api/render/start.ts": {
       "maxDuration": 300,
-      "includeFiles": "render-worker/{bundle/**,seq-job.mjs}"
+      "includeFiles": "render-worker/{bundle/**,sandbox-job.mjs}"
     },
     "api/render/status.ts": { "maxDuration": 60 },
     "api/render/cancel.ts": { "maxDuration": 60 },
