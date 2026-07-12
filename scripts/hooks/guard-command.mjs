@@ -60,8 +60,9 @@ if (isCommit) {
   const escaped = /ALLOW_AI_MENTION\s*=\s*1/.test(command);
   if (!escaped) {
     const STYLE_VIOLATIONS = [
-      // (?![./-]) lets file/branch references through: CLAUDE.md, .claude/, claude/branch-name.
-      [/\bclaude\b(?![./-])/i, 'mentions Claude'],
+      // (?![./\\-]) lets file/branch/path references through: CLAUDE.md, .claude/,
+      // claude/branch-name, and Windows paths like C:\claude\repo (backslash separator).
+      [/\bclaude\b(?![./\\-])/i, 'mentions Claude'],
       [/\bcodex\b/i, 'mentions Codex'],
       [/\bchatgpt\b/i, 'mentions ChatGPT'],
       [/\bcopilot\b/i, 'mentions Copilot'],
