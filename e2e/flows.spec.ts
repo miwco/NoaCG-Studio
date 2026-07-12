@@ -74,6 +74,37 @@ test('wizard: steps mode reveals lines on Next', async ({ page }) => {
     .not.toBe(before);
 });
 
+test('reset: the topbar button restores the original state, undoably', async ({ page }) => {
+  await toVariantStep(page, 'Hairline');
+  await createFromCurrentStep(page);
+
+  // Creating the project captured the pristine baseline. Observe through the live preview:
+  // the accent's original tint.
+  const accent = () =>
+    previewFrame(page).locator('.lower-third-accent').evaluate((el) => getComputedStyle(el).backgroundColor);
+  await expect.poll(accent).not.toBe('');
+  const original = await accent();
+
+  // Edit the accent via the Style panel — the preview retints.
+  await page.locator('.panel-tabs .tab', { hasText: 'Style' }).click();
+  await page.locator('.field-row', { hasText: '--accent' }).locator('input.grow').fill('#ff2d78');
+  await expect.poll(accent).toBe('rgb(255, 45, 120)');
+
+  // Reset is a two-step inline confirm (arm, then confirm) — no blocking dialog.
+  const reset = page.getByTestId('reset-project');
+  await reset.click();
+  await expect(reset).toHaveText(/Confirm reset/);
+  await reset.click();
+  await expect(reset).toHaveText('↺ Reset'); // disarmed
+
+  // The preview returns to the original accent — the graphic is restored.
+  await expect.poll(accent).toBe(original);
+
+  // The reset is one undoable apply — undo brings the edit back.
+  await page.keyboard.press('Control+z');
+  await expect.poll(accent).toBe('rgb(255, 45, 120)');
+});
+
 test('import graphics: image lands in the logo slot', async ({ page }) => {
   await page.goto('/app');
   await page.locator('[data-entry="import"]').click();

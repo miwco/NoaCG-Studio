@@ -61,7 +61,11 @@ export default function AppShell() {
   const openGallery = useTemplateStore((s) => s.openGallery);
   const undo = useTemplateStore((s) => s.undo);
   const redo = useTemplateStore((s) => s.redo);
+  const resetToBaseline = useTemplateStore((s) => s.resetToBaseline);
   const [packetsOpen, setPacketsOpen] = useState(false);
+  // The topbar Reset control uses a two-step inline confirm (arm, then confirm).
+  const [resetArmed, setResetArmed] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Community gallery (Era 5.5) — only offered when a backend is configured (offline shows nothing).
   // Browsing needs an account (the RPCs are authenticated-only), so signed-out visitors get the
@@ -277,6 +281,30 @@ export default function AppShell() {
             🛡 Moderate
           </button>
         )}
+        <button
+          className={resetArmed ? 'reset-armed' : ''}
+          onClick={() => {
+            if (resetArmed) {
+              if (resetTimer.current) clearTimeout(resetTimer.current);
+              setResetArmed(false);
+              resetToBaseline();
+            } else {
+              // Two-step confirm — a whole-project reset deserves a beat, and it stays
+              // undoable (Ctrl+Z). Auto-disarms if the second click doesn't come.
+              setResetArmed(true);
+              if (resetTimer.current) clearTimeout(resetTimer.current);
+              resetTimer.current = setTimeout(() => setResetArmed(false), 3500);
+            }
+          }}
+          onBlur={() => {
+            if (resetTimer.current) clearTimeout(resetTimer.current);
+            setResetArmed(false);
+          }}
+          data-testid="reset-project"
+          title={resetArmed ? 'Click again to restore the original — undoable' : 'Restore this graphic to how it was first created — undoable'}
+        >
+          {resetArmed ? '↺ Confirm reset?' : '↺ Reset'}
+        </button>
         <button onClick={openGallery} title="Start a new project from a template">
           + New project
         </button>

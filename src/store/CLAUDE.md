@@ -10,6 +10,13 @@ templateStore.ts (zustand) holds the template plus editor UI state.
   template's field defaults; plain applyTemplate intentionally preserves typed sample values for
   matching field ids. Don't drop the flag from the wizard path: the old template's values would
   leak into the new graphic's fields.
+- **baseline / resetToBaseline()** - `baseline` is the pristine template as the project was
+  created/imported/opened; every whole-project swap (applyTemplate with `resetSampleData`)
+  captures it, and it persists in the SavedProject (model/project.ts) so a reload keeps a real
+  Reset target (pre-baseline projects fall back to the loaded template). `resetToBaseline()`
+  restores it through applyTemplate (ONE undoable apply) + resetSampleData. Distinct from
+  `resetToDefault()` (a blank createDefaultTemplate, unused in the UI). The topbar `↺ Reset`
+  button calls it behind a confirm.
 - **undo() / redo()** - undo() restores the snapshot and pushes the undone state onto the
   `future` stack; redo() re-applies from it. Any NEW edit (apply, patchCss, manual typing)
   clears `future` - the classic undo-tree cut. Global Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z
