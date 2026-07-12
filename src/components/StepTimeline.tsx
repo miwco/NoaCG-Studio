@@ -290,13 +290,8 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     applyTemplate({ ...template, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
   };
 
-  const onCanvasPointer = (e: React.PointerEvent, drag = false) => {
-    if (drag && e.buttons !== 1) return;
-    // The canvas element scrolls WITH its content, so client-to-canvas is one subtraction.
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const place = xToPlace(e.clientX - rect.left);
-    if (place) scrubTo(place);
-  };
+  // Canvas pointer handling (scrub vs. keyframe lasso) is defined below, once the row
+  // geometry and diamond helpers are in scope — see onCanvasDown / onCanvasMove / onCanvasUp.
 
   // Live follow: the simulator's running timeline reclaims the playhead from a scrub.
   const lastActiveRef = useRef<unknown>(null);
@@ -443,6 +438,84 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   /** Copied keyframes: selector + property + time offset from the earliest + value/ease.
    *  Session-local; paste lands the group at the playhead's moment. */
   const kfClipboard = useRef<{ selector: string; prop: string; dt: number; value: number | string; ease?: string }[]>([]);
+
+  // ── Keyframe LASSO — the same amber marquee the canvas draws, extended to the timeline.
+  //    A drag on the empty rows area boxes keyframes; shift adds to the current set. The
+  //    ruler/clips band keeps its scrub, and diamonds/blocks/handles stop propagation so a
+  //    lasso only ever starts on empty space.
+  const [tlLasso, setTlLasso] = useState<{ x0: number; y0: number; x1: number; y1: number; active: boolean; additive: boolean } | null>(null);
+  const tlLassoRef = useRef<typeof tlLasso>(null);
+  tlLassoRef.current = tlLasso;
+  const ROWS_TOP = RULER_H + CLIPS_H;
+
+  const canvasXY = (e: React.PointerEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const onCanvasDown = (e: React.PointerEvent) => {
+    const { x, y } = canvasXY(e);
+    // A drag that begins over the rows lassos keyframes; the ruler/clips band scrubs.
+    if (editable && y >= ROWS_TOP) {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      setTlLasso({ x0: x, y0: y, x1: x, y1: y, active: false, additive: e.shiftKey });
+      return;
+    }
+    const place = xToPlace(x);
+    if (place) scrubTo(place);
+  };
+
+  const onCanvasMove = (e: React.PointerEvent) => {
+    if (e.buttons !== 1) return;
+    const ls = tlLassoRef.current;
+    if (ls) {
+      const { x, y } = canvasXY(e);
+      const active = ls.active || Math.hypot(x - ls.x0, y - ls.y0) > 4;
+      setTlLasso({ ...ls, x1: x, y1: y, active });
+      return;
+    }
+    const place = xToPlace(canvasXY(e).x);
+    if (place) scrubTo(place);
+  };
+
+  /** Select every diamond the marquee touches: x maps to time, y to the row bands. */
+  const commitTlLasso = (ls: NonNullable<typeof tlLasso>) => {
+    const left = Math.min(ls.x0, ls.x1), right = Math.max(ls.x0, ls.x1);
+    const top = Math.min(ls.y0, ls.y1), bottom = Math.max(ls.y0, ls.y1);
+    const hits: KfRef[] = [];
+    for (const r of displayRows.list) {
+      // An expanded layer is worked per property — skip its aggregate row so a keyframe
+      // isn't picked up twice (aggregate diamond + its sub-row diamond).
+      if (r.prop === undefined && expanded.has(r.layerKey)) continue;
+      const rowTop = ROWS_TOP + r.top;
+      if (rowTop + r.height < top || rowTop > bottom) continue;
+      const diamonds = r.prop !== undefined ? propDiamonds(r.layerKey, r.prop) : diamondsFor(r.layerKey);
+      for (const d of diamonds) {
+        if (d.x >= left && d.x <= right) hits.push({ key: r.layerKey, step: d.step, tRel: d.tRel, prop: r.prop });
+      }
+    }
+    setKfSels((prev) => {
+      if (!ls.additive) return hits;
+      const merged = [...prev];
+      for (const h of hits) if (!merged.some((s) => sameRef(s, h))) merged.push(h);
+      return merged;
+    });
+    if (hits.length > 0) setSelectedPart(hits[0].key); // mirror the primary layer, shared
+  };
+
+  const onCanvasUp = (e: React.PointerEvent) => {
+    const ls = tlLassoRef.current;
+    if (!ls) return;
+    setTlLasso(null);
+    if (ls.active) {
+      commitTlLasso(ls);
+    } else {
+      // A plain click on the empty rows: scrub there and clear the keyframe selection.
+      const place = xToPlace(canvasXY(e).x);
+      if (place) scrubTo(place);
+      setKfSels([]);
+    }
+  };
 
   /** Magnetic snap for a dragged diamond: the playhead, step edges, and every OTHER
    *  keyframe within ~7px win over the raw pointer (Alt bypasses — free placement). */
@@ -666,8 +739,9 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     parts.find((p) => p.selector === sel)?.channel === 'mask' ? 'mask' : 'rise';
 
   // Keyboard: Delete removes the selected keyframe SET; ←/→ nudge the whole set on the
-  // 0.05 s grid; Ctrl/Cmd+C copies it and Ctrl/Cmd+V pastes at the playhead; Space plays
-  // the graphic. Never while typing in a field or the code editor.
+  // 0.05 s grid; Ctrl/Cmd+C copies it, Ctrl/Cmd+V pastes at the playhead, Ctrl/Cmd+D
+  // duplicates it in place; Space plays the graphic. (The set is built by clicking,
+  // shift-clicking, or lassoing diamonds.) Never while typing in a field or the code editor.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = document.activeElement as HTMLElement | null;
@@ -713,6 +787,42 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           next = setKeyframe(next, head.step, en.selector, en.prop, baseT + en.dt, en.value, en.ease);
         }
         applyData(next);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && kfSels.length > 0) {
+        // Duplicate: drop a copy of the set just after itself (same layers, properties,
+        // values, easing), then select the copies so they can be dragged straight away.
+        e.preventDefault();
+        const items: { key: string; step: number; prop: string; tRel: number; value: number | string; ease?: string }[] = [];
+        let minT = Infinity;
+        let maxT = -Infinity;
+        for (const ref of kfSels) {
+          const tracks = data.steps[ref.step]?.layers[ref.key] ?? {};
+          for (const [prop, kfs] of Object.entries(tracks)) {
+            if (ref.prop !== undefined && prop !== ref.prop) continue;
+            const kf = kfs.find((k) => Math.abs(k.time - ref.tRel) < 0.005);
+            if (kf) {
+              items.push({ key: ref.key, step: ref.step, prop, tRel: kf.time, value: kf.value, ease: kf.ease });
+              minT = Math.min(minT, kf.time);
+              maxT = Math.max(maxT, kf.time);
+            }
+          }
+        }
+        if (items.length === 0) return;
+        const offset = Math.round((Math.max(maxT - minT, 0) + 0.1 * speed) * 1000) / 1000;
+        let next = data;
+        for (const it of items) {
+          const to = Math.round((it.tRel + offset) * 1000) / 1000;
+          next = setKeyframe(next, it.step, it.key, it.prop, to, it.value, it.ease);
+        }
+        if (next === data) return;
+        applyData(next);
+        setKfSels(
+          kfSels.map((ref) => ({
+            ...ref,
+            tRel: Math.round(Math.min(ref.tRel + offset, data.steps[ref.step].duration) * 1000) / 1000,
+          })),
+        );
         return;
       }
       if (kfSels.length === 0) return;
@@ -809,8 +919,10 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           <div
             className="tlv2-canvas"
             style={{ width: canvasW, height: RULER_H + CLIPS_H + displayRows.height }}
-            onPointerDown={(e) => onCanvasPointer(e)}
-            onPointerMove={(e) => onCanvasPointer(e, true)}
+            onPointerDown={onCanvasDown}
+            onPointerMove={onCanvasMove}
+            onPointerUp={onCanvasUp}
+            onPointerCancel={() => setTlLasso(null)}
             data-testid="tlv2-canvas"
           >
             {/* The time ruler — each step's local seconds (steps wait for cues between). */}
@@ -1007,6 +1119,20 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                 </div>
               );
             })}
+
+            {/* The keyframe lasso marquee — same amber box as the canvas selection. */}
+            {tlLasso?.active && (
+              <div
+                className="tlv2-lasso"
+                data-testid="tlv2-lasso"
+                style={{
+                  left: Math.min(tlLasso.x0, tlLasso.x1),
+                  top: Math.min(tlLasso.y0, tlLasso.y1),
+                  width: Math.abs(tlLasso.x1 - tlLasso.x0),
+                  height: Math.abs(tlLasso.y1 - tlLasso.y0),
+                }}
+              />
+            )}
 
             {/* The playhead — spans ruler to rows; drag it (the cap is the grab handle),
                 or click anywhere on the ribbon to move it. */}

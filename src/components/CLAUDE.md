@@ -88,7 +88,11 @@ in src/blocks/CLAUDE.md.
   model extension exists). KEYFRAME SETS: click selects a diamond, shift-click builds a set,
   dragging any selected diamond moves the WHOLE set (magnetic snap to playhead/step
   edges/other keyframes within ~7px, Alt free, 0.05s grid fallback), Delete clears the set,
-  ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead. A draggable
+  ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead, Ctrl/Cmd+D
+  duplicates it in place. A drag on the empty rows area draws the SAME amber marquee the canvas
+  lasso uses (.tlv2-lasso) and boxes every diamond it touches (x -> time, y -> the row bands;
+  shift adds; an expanded layer is boxed per-property); the ruler/clips band keeps its scrub.
+  A draggable
   playhead with a grab cap + auto-follow scroll and deep zoom (up to 1000 px/s); Space plays
   (never while typing).
   Every edit is a pure data mutation (blocks/animEdit.ts) spliced back by

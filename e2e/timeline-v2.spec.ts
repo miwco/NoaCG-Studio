@@ -597,6 +597,54 @@ test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the play
   expect(now[1] - now[0]).toBeCloseTo(original[1] - original[0], 2);
 });
 
+test('v2 keyframe lasso: a marquee over the rows selects diamonds; Ctrl/Cmd+D duplicates them', async ({ page }) => {
+  await createHairline(page);
+  await page.getByTestId('toggle-inspector').click();
+  await page.getByTestId('tlv2-zoom-out').click();
+  await page.getByTestId('tlv2-zoom-out').click();
+
+  const canvas = (await page.getByTestId('tlv2-canvas').boundingBox())!;
+  // The #f0 diamonds, screen-space centres, left-to-right.
+  const boxes = (
+    await page.getByTestId('tlv2-kf-f0').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }),
+    )
+  ).sort((a, b) => a.x - b.x);
+  expect(boxes.length).toBeGreaterThanOrEqual(2);
+  // The widest gap is the hold between the entrance and the out keyframes; box the entrance
+  // group (everything left of the gap) with an amber marquee.
+  let gapIdx = 1;
+  let gap = -1;
+  for (let i = 1; i < boxes.length; i++) {
+    if (boxes[i].x - boxes[i - 1].x > gap) {
+      gap = boxes[i].x - boxes[i - 1].x;
+      gapIdx = i;
+    }
+  }
+  const rowY = boxes[0].y;
+  const rightBound = (boxes[gapIdx - 1].x + boxes[gapIdx].x) / 2; // inside the empty hold gap
+
+  await page.mouse.move(rightBound, rowY - 6);
+  await page.mouse.down(); // starts on empty space, so the canvas lassos rather than scrubs
+  await page.mouse.move((rightBound + canvas.x) / 2, rowY, { steps: 6 });
+  await page.mouse.move(canvas.x + 3, rowY + 6, { steps: 6 });
+  await page.mouse.up();
+
+  // The marquee selected the entrance diamonds (gapIdx of them) — the same amber highlight
+  // a canvas lasso gives.
+  const selected = await page.locator('[data-testid="tlv2-kf-f0"].selected').count();
+  expect(selected).toBe(gapIdx);
+
+  // Ctrl/Cmd+D duplicates the selected set — new diamonds appear on the row.
+  const before = await page.getByTestId('tlv2-kf-f0').count();
+  await page.keyboard.press('Control+d');
+  await page.waitForTimeout(700);
+  expect(await page.getByTestId('tlv2-kf-f0').count()).toBeGreaterThan(before);
+});
+
 test('v2 property rows: a layer expands into per-property sub-rows with their own diamonds', async ({ page }) => {
   await createHairline(page);
   // The Name line animates yPercent — its caret expands one sub-row for that track.

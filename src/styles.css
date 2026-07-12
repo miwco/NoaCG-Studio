@@ -1700,6 +1700,15 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .tlv2-diamond.editable:hover { text-shadow: 0 0 8px rgba(246, 166, 35, 0.9); }
 .tlv2-diamond.selected { color: var(--paper, #fff); text-shadow: 0 0 8px rgba(246, 166, 35, 1); }
 .tlv2-diamond.dragging { cursor: grabbing; }
+/* The keyframe lasso — same amber marquee as the canvas selection (.canvas-lasso). */
+.tlv2-lasso {
+  position: absolute;
+  border: 1px solid rgba(246, 166, 35, 0.7);
+  background: rgba(246, 166, 35, 0.07);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 6;
+}
 .timeline-dock-chips { position: absolute; top: -1px; right: 14px; display: inline-flex; gap: 6px; }
 .timeline-dock-chips .timeline-dock-toggle { position: static; }
 .timeline-dock-toggle.convert { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
