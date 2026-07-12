@@ -39,8 +39,9 @@ export const REMOTION_CONTRACT = `## The composition contract (hard requirements
   fetch/network, no window/document/globalThis access, no useState for animation.
 - The component receives assets as a prop: \`{ assets = {} }: { assets?: Record<string,
   string> }\` mapping logical asset names to URLs. Use <Img src={assets['name']}/> from
-  remotion for images and <OffthreadVideo src={assets['name']}/> (or <Video>) for video
-  assets. NEVER invent URLs or file paths; only use the asset names you were given. Guard
+  remotion for images and <Video src={assets['name']}/> for video assets - NEVER
+  OffthreadVideo (asset URLs are data/blob URLs, which its frame extractor cannot read).
+  NEVER invent URLs or file paths; only use the asset names you were given. Guard
   gracefully when an asset is missing.
 - Transparent projects: the root <AbsoluteFill> paints NO background. Opaque projects:
   paint a deliberate background (a designed dark gradient beats flat black).

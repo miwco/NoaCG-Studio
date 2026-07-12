@@ -39,6 +39,7 @@ const FORBIDDEN: { re: RegExp; what: string; instead: string }[] = [
   { re: /\bwindow\s*\./, what: 'window.*', instead: 'compositions render through React only - no direct globals' },
   { re: /\bglobalThis\s*\./, what: 'globalThis.*', instead: 'compositions render through React only - no direct globals' },
   { re: /\bdocument\s*\./, what: 'document.*', instead: 'render everything through JSX - no direct DOM access' },
+  { re: /\bOffthreadVideo\b/, what: 'OffthreadVideo', instead: 'use <Video> - project assets are data/blob URLs, which OffthreadVideo’s frame extractor cannot read' },
 ];
 
 export type CompileResult = { ok: true; js: string } | { ok: false; error: string };

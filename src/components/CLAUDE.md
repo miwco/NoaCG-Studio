@@ -179,11 +179,14 @@ wizard flips that switch. Layout: TSX code pane (lazy Monaco, **VideoCodeEditor*
 TSX diagnostics from monacoSetup.ts) | splitter (`videoCodeRatio` pref) | right column =
 **VideoPlayerFrame** (the player stage; the sandboxed Remotion Player iframe host) over a
 tabbed panel: **VideoAiChatPanel** (the primary authoring surface - auto-runs the FIRST
-generation when chat holds exactly one unanswered user turn; every AI result applies as ONE
-undoable applyProject; failed validation keeps the previous working code and offers "Apply
-anyway"), **VideoSettingsPanel** (undoable patchSettings; duration edits in seconds, fps
-changes preserve seconds), **VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the
-render manifest budget), **VideoExportPanel**. **SavedVideoProjects** = the 📁 My videos modal
+generation when chat holds exactly one unanswered user turn, guarded PER PROJECT ID with a
+retry button on failure; every AI result applies as ONE undoable applyProject; failed
+validation keeps the previous working code and offers "Apply anyway"), **VideoSettingsPanel**
+(undoable patchSettings; duration edits in seconds, fps changes preserve seconds),
+**VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the render manifest budget),
+**VideoExportPanel** (mounts **VideoRenderPanel** when isRenderConfigured() - kind:'remotion'
+manifests through the shared render service, with an upload-budget meter; plus the .tsx
+source download). **SavedVideoProjects** = the 📁 My videos modal
 (explicit saves; the current slot autosaves separately). The shell binds the same global
 undo/redo keys as AppShell with the same Monaco/form-field guard. AI chat gates on
 `needsSignIn` (hosted mode) exactly like AIPromptPanel; everything else stays open.

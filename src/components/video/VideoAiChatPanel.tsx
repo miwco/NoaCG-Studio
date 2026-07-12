@@ -186,7 +186,25 @@ export default function VideoAiChatPanel() {
           </div>
         ))}
         {busy && <p className="hint">⏳ {busy}</p>}
-        {error && <p className="status-bad">✗ {error}</p>}
+        {error && (
+          <p className="status-bad">
+            ✗ {error}
+            {/* A failed FIRST generation leaves an unanswered brief - offer the retry
+                the auto-run guard won't repeat on its own. */}
+            {project.chat.length === 1 && project.chat[0].role === 'user' && !busy && (
+              <button
+                style={{ marginLeft: 8 }}
+                onClick={() => {
+                  setError(null);
+                  void runGenerate(project.chat[0].text);
+                }}
+                data-testid="video-retry-generate"
+              >
+                ↻ Try again
+              </button>
+            )}
+          </p>
+        )}
         {failed && (
           <div className="change-preview" style={{ marginTop: 8 }}>
             <p className="status-bad">✗ {failed.validation?.errors.length} validation error(s):</p>

@@ -5,9 +5,11 @@
 //
 // Security note: the module executes in the render page (headless Chrome inside the
 // per-job sandbox microVM, or the self-hoster's own machine) - the microVM/self-host IS
-// the security boundary, unchanged from the html kind. The JS network stubs below are a
-// DETERMINISM guardrail (assets ride as data URLs; nothing should fetch), not a security
-// control - DOM-initiated loads (<img src>) bypass them.
+// the security boundary, unchanged from the html kind. Network is deliberately NOT
+// stubbed here: Remotion's own machinery (OffthreadVideo frame extraction, delayRender
+// asset loading) shares this page and needs fetch. Determinism guardrails live in the
+// editor's static validator (no fetch/XHR/network URLs in user SOURCE); a hostile
+// client can bypass that, which is exactly why the boundary is the sandbox.
 
 import React from 'react';
 import * as JsxRuntime from 'react/jsx-runtime';
@@ -15,31 +17,12 @@ import * as Remotion from 'remotion';
 import { AbsoluteFill, cancelRender } from 'remotion';
 import type { RemotionRenderManifest } from '../../src/render/manifest';
 
-function stubNetwork(): void {
-  const w = window as unknown as Record<string, unknown> & { __noacgNetStubbed?: boolean };
-  if (w.__noacgNetStubbed) return;
-  w.__noacgNetStubbed = true;
-  const deny = (what: string) => () => {
-    throw new Error(`${what} is disabled in renders - pass assets via inputProps`);
-  };
-  w.fetch = deny('fetch');
-  w.XMLHttpRequest = deny('XMLHttpRequest');
-  w.WebSocket = deny('WebSocket');
-  w.EventSource = deny('EventSource');
-  try {
-    (navigator as unknown as Record<string, unknown>).sendBeacon = deny('sendBeacon');
-  } catch {
-    // read-only in some builds - best effort
-  }
-}
-
 type UserComponent = React.ComponentType<Record<string, unknown>>;
 const moduleCache = new Map<string, UserComponent>();
 
 function evalUserModule(compiledJs: string): UserComponent {
   const hit = moduleCache.get(compiledJs);
   if (hit) return hit;
-  stubNetwork();
   // Keep this map in lockstep with player-host/src/moduleEval.ts.
   const modules: Record<string, unknown> = {
     react: React,

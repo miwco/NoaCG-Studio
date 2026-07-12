@@ -107,13 +107,16 @@ async function directMotion(
   model?: string,
 ): Promise<EmittedMotionPlan> {
   const text = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nThe brief:\n${prompt}`;
-  return (await callClaude({
+  const plan = (await callClaude({
     system: directorSystem(skills),
     messages: [{ role: 'user', content: [...vision, { type: 'text', text }] }],
     tool: MOTION_PLAN_TOOL,
-    maxTokens: 2000,
+    maxTokens: 4000,
     model,
   })) as EmittedMotionPlan;
+  // Defensive: schema-required or not, never let a malformed plan crash the pipeline.
+  if (!Array.isArray(plan.phases)) plan.phases = [];
+  return plan;
 }
 
 // ── Stage c: the Remotion coder ──────────────────────────────────────────────
