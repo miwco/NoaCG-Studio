@@ -499,6 +499,41 @@ test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label sc
   expect(values.some((v: number | string) => v === 40 || v === 150)).toBe(true); // 0+40 or 110+40
 });
 
+test('v2 property rows: a layer expands into per-property sub-rows with their own diamonds', async ({ page }) => {
+  await createHairline(page);
+  // The Name line animates yPercent — its caret expands one sub-row for that track.
+  await page.getByTestId('tlv2-expand-f0').click();
+  const propRow = page.locator('[data-proprow="#f0::yPercent"]');
+  await expect(propRow).toBeVisible();
+  await expect(propRow).toHaveText('Y (mask %)');
+  // The sub-row carries the track's own diamonds (two keyframes in Enter).
+  const propKfs = page.getByTestId('tlv2-kf-f0-yPercent');
+  expect(await propKfs.count()).toBeGreaterThanOrEqual(2);
+
+  // Dragging a sub-row diamond retimes ONLY that property's keyframe.
+  const times = async () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const { parseAnimData } = await import('/src/blocks/animData.ts');
+      const d = parseAnimData(useTemplateStore.getState().template.js)!;
+      return d.steps[0].layers['#f0'].yPercent.map((k: { time: number }) => k.time);
+    });
+  const before = await times();
+  const kf = (await propKfs.first().boundingBox())!;
+  await page.mouse.move(kf.x + kf.width / 2, kf.y + kf.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(kf.x + kf.width / 2 + 40, kf.y + kf.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+  const after = await times();
+  expect(after[0]).toBeGreaterThan(before[0]);
+  expect(after[1]).toBe(before[1]); // the other keyframe of the SAME track held
+
+  // Collapse hides the sub-rows again.
+  await page.getByTestId('tlv2-expand-f0').click();
+  await expect(propRow).toHaveCount(0);
+});
+
 test('v2: corner bugs create as data blocks — the step timeline is their native surface', async ({ page }) => {
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();

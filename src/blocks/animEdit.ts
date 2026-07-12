@@ -103,6 +103,30 @@ export function moveLayerKeyframes(
   return moved ? next : data;
 }
 
+/** Move ONE property's keyframe — a property sub-row's diamond drag. Clamped to the
+ *  step; landing on another keyframe of the same track replaces it (the drag wins). */
+export function moveKeyframe(
+  data: AnimData,
+  stepIndex: number,
+  selector: string,
+  prop: string,
+  fromTime: number,
+  toTime: number,
+): AnimData {
+  const next = clone(data);
+  const step = next.steps[stepIndex];
+  const kfs = step?.layers[selector]?.[prop];
+  if (!kfs) return data;
+  const at = kfs.findIndex((k) => Math.abs(k.time - fromTime) < EPS);
+  if (at === -1) return data;
+  const to = round(Math.max(0, Math.min(toTime, step.duration)));
+  const landed = kfs.findIndex((k, i) => i !== at && Math.abs(k.time - to) < EPS);
+  kfs[at].time = to;
+  if (landed !== -1) kfs.splice(landed, 1);
+  kfs.sort((a, b) => a.time - b.time);
+  return next;
+}
+
 /** The reveal channel's default motion — the same keyframes the importer writes for a
  *  legacy press (mask lines slide up within their mask; everything else fades and rises). */
 function channelTracks(channel: 'mask' | 'rise', duration: number): AnimLayerTracks {
@@ -191,19 +215,22 @@ export function setLayerActivation(
 }
 
 /** Set (or clear — back to the step's default) the ease INTO every property keyframe of a
- *  layer at one time. The aggregate diamond's ease menu: one moment, one curve. */
+ *  layer at one time. The aggregate diamond's ease menu: one moment, one curve. A
+ *  property sub-row passes `prop` to curve only ITS keyframe at that moment. */
 export function setKeyframeEase(
   data: AnimData,
   stepIndex: number,
   selector: string,
   time: number,
   ease: string | null,
+  prop?: string,
 ): AnimData | null {
   const next = clone(data);
   const tracks = next.steps[stepIndex]?.layers[selector];
   if (!tracks) return null;
   let touched = false;
-  for (const kfs of Object.values(tracks)) {
+  for (const [trackProp, kfs] of Object.entries(tracks)) {
+    if (prop !== undefined && trackProp !== prop) continue;
     const kf = kfs.find((k) => Math.abs(k.time - time) < EPS);
     if (!kf) continue;
     if (ease === null) delete kf.ease;

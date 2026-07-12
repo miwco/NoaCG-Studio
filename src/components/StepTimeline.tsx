@@ -4,9 +4,11 @@ import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData
 import { importAnimData } from '../blocks/animImport';
 import {
   addStep,
+  deleteKeyframe,
   deleteLayerKeyframes,
   deleteStep,
   duplicateStep,
+  moveKeyframe,
   moveLayerKeyframes,
   renameStep,
   resizeStep,
@@ -15,7 +17,7 @@ import {
 } from '../blocks/animEdit';
 import { EASINGS } from '../model/easings';
 import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
-import { stepSeconds } from '../blocks/animEval';
+import { animatedProps, stepSeconds } from '../blocks/animEval';
 import { getTemplateParts } from '../model/structure';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import { loadPrefs, savePrefs } from '../model/prefs';
@@ -35,7 +37,22 @@ import type { SpxWindow } from './PlayoutSimulator';
 const RULER_H = 20;
 const CLIPS_H = 30;
 const ROW_H = 28;
+const PROP_ROW_H = 22; // property sub-rows: real targets, slightly denser than layers
 const HOLD_PX = 30; // the un-clocked hold break (manual/none) — a fixed visual pause
+
+/** Readable sub-row names for the animated properties (raw prop name for anything else) —
+ *  the same vocabulary the Inspector's property rows speak. */
+const PROP_LABELS: Record<string, string> = {
+  x: 'Position X',
+  y: 'Position Y',
+  yPercent: 'Y (mask %)',
+  scale: 'Scale',
+  scaleX: 'Scale X',
+  scaleY: 'Scale Y',
+  opacity: 'Opacity',
+  rotation: 'Rotation',
+  filter: 'Blur',
+};
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -330,8 +347,52 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     return ordered;
   }, [data, parts]);
 
+  // ── Per-property sub-rows (the interaction model, amendment 1): a layer expands into
+  //    one row per animated property; the collapsed layer row keeps the aggregate view.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  /** The rendered row list: layer rows plus the expanded layers' property sub-rows,
+   *  each with its computed offset (rows no longer share one fixed height). */
+  interface DisplayRow {
+    key: string;
+    layerKey: string;
+    label: string;
+    prop?: string;
+    top: number;
+    height: number;
+  }
+  const displayRows = useMemo(() => {
+    const list: DisplayRow[] = [];
+    let top = 0;
+    for (const r of rows) {
+      list.push({ key: r.key, layerKey: r.key, label: r.label, top, height: ROW_H });
+      top += ROW_H;
+      if (expanded.has(r.key)) {
+        for (const prop of animatedProps(data, r.key)) {
+          list.push({
+            key: `${r.key}::${prop}`,
+            layerKey: r.key,
+            prop,
+            label: PROP_LABELS[prop] ?? prop,
+            top,
+            height: PROP_ROW_H,
+          });
+          top += PROP_ROW_H;
+        }
+      }
+    }
+    return { list, height: top };
+  }, [rows, expanded, data]);
+
   /** Aggregate keyframe diamonds for one layer: the union of keyframe times across props,
-   *  per step (one diamond may stand for several properties — the Inspector splits them).
+   *  per step (one diamond may stand for several properties — the sub-rows split them).
    *  tRel is the STORED (speed-relative) time — the mutators' clock. */
   const diamondsFor = (key: string): { x: number; tRel: number; step: number; n: number }[] => {
     const out: { x: number; tRel: number; step: number; n: number }[] = [];
@@ -349,9 +410,21 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     return out;
   };
 
-  // ── Keyframe interactions (data-block templates only): drag an aggregate diamond to
-  //    retime every property keyframe at that moment; click selects it; Delete removes it.
-  interface KfRef { key: string; step: number; tRel: number }
+  /** One property's keyframe diamonds (a sub-row): each diamond is a single keyframe. */
+  const propDiamonds = (key: string, prop: string): { x: number; tRel: number; step: number; n: number }[] => {
+    const out: { x: number; tRel: number; step: number; n: number }[] = [];
+    for (const seg of segs) {
+      for (const kf of seg.step.layers[key]?.[prop] ?? []) {
+        out.push({ x: seg.x + (kf.time / (data.speed || 1)) * pxPerSec, tRel: kf.time, step: seg.i, n: 1 });
+      }
+    }
+    return out;
+  };
+
+  // ── Keyframe interactions (data-block templates only): drag a diamond to retime —
+  //    every property at that moment on a layer row, just ITS property on a sub-row;
+  //    click selects it; Delete removes it.
+  interface KfRef { key: string; step: number; tRel: number; prop?: string }
   const [kfSel, setKfSel] = useState<KfRef | null>(null);
   const [kfDrag, setKfDrag] = useState<(KfRef & { x: number; moved: boolean }) | null>(null);
   const kfDragRef = useRef<typeof kfDrag>(null);
@@ -388,7 +461,11 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     const tEff = Math.round(Math.max(0, (d.x - seg.x) / pxPerSec) / 0.05) * 0.05;
     const toRel = Math.round(tEff * speed * 1000) / 1000;
     if (Math.abs(toRel - d.tRel) < 0.005) return;
-    applyData(moveLayerKeyframes(data, d.step, d.key, d.tRel, toRel));
+    applyData(
+      d.prop !== undefined
+        ? moveKeyframe(data, d.step, d.key, d.prop, d.tRel, toRel)
+        : moveLayerKeyframes(data, d.step, d.key, d.tRel, toRel),
+    );
     setKfSel({ ...d, tRel: toRel });
   };
 
@@ -475,14 +552,21 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         setKfSel(null);
-        applyData(deleteLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel));
+        applyData(
+          kfSel.prop !== undefined
+            ? deleteKeyframe(data, kfSel.step, kfSel.key, kfSel.prop, kfSel.tRel)
+            : deleteLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel),
+        );
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
         const speed = data.speed || 1;
         const delta = (e.key === 'ArrowLeft' ? -0.05 : 0.05) * speed;
         const to = Math.round(Math.max(0, kfSel.tRel + delta) * 1000) / 1000;
         if (to === kfSel.tRel) return;
-        const next = moveLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel, to);
+        const next =
+          kfSel.prop !== undefined
+            ? moveKeyframe(data, kfSel.step, kfSel.key, kfSel.prop, kfSel.tRel, to)
+            : moveLayerKeyframes(data, kfSel.step, kfSel.key, kfSel.tRel, to);
         if (next !== data) {
           setKfSel({ ...kfSel, tRel: to });
           applyData(next);
@@ -499,30 +583,58 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   return (
     <div className={`timeline-strip tlv2${tight ? ' tight' : ''}`} ref={stripRef} data-testid="timeline-v2">
       <div className="tlv2-body">
-        {/* Left: layer names — the shared-selection handles, same as the classic strip. */}
+        {/* Left: layer names — the shared-selection handles, same as the classic strip.
+            A ▸ caret expands a layer into its property sub-rows. */}
         <div className="tlv2-labels">
           <div style={{ height: RULER_H + CLIPS_H }} aria-hidden="true" />
-          {rows.map((r) => (
-            <span
-              key={r.key}
-              className={`timeline-label clickable${selectedParts.includes(r.key) ? ' selected' : ''}`}
-              data-part={r.key}
-              title={`${r.key} — click to select this element (on the canvas too); shift-click adds to the selection`}
-              style={{ height: ROW_H, lineHeight: `${ROW_H}px` }}
-              onClick={(e) => {
-                if (e.shiftKey) toggleSelectedPart(r.key);
-                else setSelectedPart(selectedPart === r.key && selectedParts.length === 1 ? null : r.key);
-              }}
-            >
-              {r.label}
-            </span>
-          ))}
+          {displayRows.list.map((r) =>
+            r.prop !== undefined ? (
+              <span
+                key={r.key}
+                className="timeline-label tlv2-prop-label"
+                data-proprow={`${r.layerKey}::${r.prop}`}
+                title={`${r.layerKey} · ${r.prop}`}
+                style={{ height: r.height, lineHeight: `${r.height}px` }}
+              >
+                {r.label}
+              </span>
+            ) : (
+              <span
+                key={r.key}
+                className={`timeline-label clickable${selectedParts.includes(r.key) ? ' selected' : ''}`}
+                data-part={r.key}
+                title={`${r.key} — click to select this element (on the canvas too); shift-click adds to the selection`}
+                style={{ height: r.height, lineHeight: `${r.height}px` }}
+                onClick={(e) => {
+                  if (e.shiftKey) toggleSelectedPart(r.key);
+                  else setSelectedPart(selectedPart === r.key && selectedParts.length === 1 ? null : r.key);
+                }}
+              >
+                {animatedProps(data, r.key).length > 0 ? (
+                  <button
+                    className={`tlv2-expand${expanded.has(r.key) ? ' open' : ''}`}
+                    title={expanded.has(r.key) ? 'Collapse the property rows' : 'Expand into one row per animated property'}
+                    data-testid={`tlv2-expand-${r.key.replace(/[^\w-]/g, '')}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(r.key);
+                    }}
+                  >
+                    {expanded.has(r.key) ? '▾' : '▸'}
+                  </button>
+                ) : (
+                  <span className="tlv2-expand-spacer" aria-hidden="true" />
+                )}
+                {r.label}
+              </span>
+            ),
+          )}
         </div>
 
         <div className="tlv2-scroll" ref={scrollRef}>
           <div
             className="tlv2-canvas"
-            style={{ width: canvasW, height: RULER_H + CLIPS_H + rows.length * ROW_H }}
+            style={{ width: canvasW, height: RULER_H + CLIPS_H + displayRows.height }}
             onPointerDown={(e) => onCanvasPointer(e)}
             onPointerMove={(e) => onCanvasPointer(e, true)}
             data-testid="tlv2-canvas"
@@ -608,55 +720,70 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
               ))}
             </div>
 
-            {/* Layer rows with aggregate keyframe diamonds. */}
-            {rows.map((r, ri) => (
-              <div
-                key={r.key}
-                className={`tlv2-row${selectedParts.includes(r.key) ? ' selected' : ''}`}
-                style={{ top: RULER_H + CLIPS_H + ri * ROW_H, height: ROW_H }}
-              >
-                {segs.map((seg) =>
-                  seg.step.reveals?.includes(r.key) ? (
-                    <span key={`rv-${seg.i}`} className="tlv2-reveal" style={{ left: seg.x + 2 }} title="This layer first appears in this step">
-                      ▸
-                    </span>
-                  ) : null,
-                )}
-                {diamondsFor(r.key).map((d, di) => {
-                  const dragging =
-                    kfDrag && kfDrag.key === r.key && kfDrag.step === d.step && kfDrag.tRel === d.tRel && kfDrag.moved;
-                  const selected =
-                    kfSel && kfSel.key === r.key && kfSel.step === d.step && Math.abs(kfSel.tRel - d.tRel) < 0.005;
-                  return (
-                    <span
-                      key={di}
-                      className={`tlv2-diamond${editable ? ' editable' : ''}${selected ? ' selected' : ''}${dragging ? ' dragging' : ''}`}
-                      style={{ left: dragging ? kfDrag!.x : d.x }}
-                      title={
-                        (d.n > 1 ? `${d.n} property keyframes` : 'keyframe') +
-                        (editable ? ' — drag to retime, click to select (Delete removes)' : '')
-                      }
-                      data-testid={`tlv2-kf-${r.key.replace(/[^\w-]/g, '')}`}
-                      onPointerDown={(e) => startKfDrag(e, { key: r.key, step: d.step, tRel: d.tRel }, d.x)}
-                      onPointerMove={moveKfDrag}
-                      onPointerUp={endKfDrag}
-                      onPointerCancel={() => setKfDrag(null)}
-                      onContextMenu={(e) => {
-                        if (!editable) return;
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const ref = { key: r.key, step: d.step, tRel: d.tRel };
-                        setKfSel(ref);
-                        setSelectedPart(r.key);
-                        setKfMenu({ x: e.clientX, y: e.clientY, ref });
-                      }}
-                    >
-                      ◆
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
+            {/* Layer rows (aggregate diamonds) and their expanded property sub-rows
+                (single-property diamonds — the same interactions, scoped to one track). */}
+            {displayRows.list.map((r) => {
+              const isProp = r.prop !== undefined;
+              const diamonds = isProp ? propDiamonds(r.layerKey, r.prop!) : diamondsFor(r.layerKey);
+              return (
+                <div
+                  key={r.key}
+                  className={`tlv2-row${isProp ? ' prop' : ''}${!isProp && selectedParts.includes(r.key) ? ' selected' : ''}`}
+                  style={{ top: RULER_H + CLIPS_H + r.top, height: r.height }}
+                >
+                  {!isProp &&
+                    segs.map((seg) =>
+                      seg.step.reveals?.includes(r.key) ? (
+                        <span key={`rv-${seg.i}`} className="tlv2-reveal" style={{ left: seg.x + 2 }} title="This layer first appears in this step">
+                          ▸
+                        </span>
+                      ) : null,
+                    )}
+                  {diamonds.map((d, di) => {
+                    const dragging =
+                      kfDrag &&
+                      kfDrag.key === r.layerKey &&
+                      kfDrag.prop === r.prop &&
+                      kfDrag.step === d.step &&
+                      kfDrag.tRel === d.tRel &&
+                      kfDrag.moved;
+                    const selected =
+                      kfSel &&
+                      kfSel.key === r.layerKey &&
+                      kfSel.prop === r.prop &&
+                      kfSel.step === d.step &&
+                      Math.abs(kfSel.tRel - d.tRel) < 0.005;
+                    return (
+                      <span
+                        key={di}
+                        className={`tlv2-diamond${editable ? ' editable' : ''}${selected ? ' selected' : ''}${dragging ? ' dragging' : ''}`}
+                        style={{ left: dragging ? kfDrag!.x : d.x }}
+                        title={
+                          (isProp ? `${r.label} keyframe` : d.n > 1 ? `${d.n} property keyframes` : 'keyframe') +
+                          (editable ? ' — drag to retime, click to select (Delete removes)' : '')
+                        }
+                        data-testid={`tlv2-kf-${r.layerKey.replace(/[^\w-]/g, '')}${isProp ? `-${r.prop}` : ''}`}
+                        onPointerDown={(e) => startKfDrag(e, { key: r.layerKey, step: d.step, tRel: d.tRel, prop: r.prop }, d.x)}
+                        onPointerMove={moveKfDrag}
+                        onPointerUp={endKfDrag}
+                        onPointerCancel={() => setKfDrag(null)}
+                        onContextMenu={(e) => {
+                          if (!editable) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const ref = { key: r.layerKey, step: d.step, tRel: d.tRel, prop: r.prop };
+                          setKfSel(ref);
+                          setSelectedPart(r.layerKey);
+                          setKfMenu({ x: e.clientX, y: e.clientY, ref });
+                        }}
+                      >
+                        ◆
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })}
 
             {/* The playhead — spans ruler to rows; drag it (the cap is the grab handle),
                 or click anywhere on the ribbon to move it. */}
@@ -815,14 +942,16 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
       )}
 
       {/* The keyframe's ease menu (right-click a diamond): how motion arrives INTO this
-          moment — Auto inherits the step's curve. Applies to every property keyed here. */}
+          moment — Auto inherits the step's curve. A layer-row diamond curves every
+          property keyed here; a sub-row diamond curves only its own track. */}
       {kfMenu && (
         <div className="tlv2-menu" style={{ left: kfMenu.x, top: kfMenu.y }} data-testid="tlv2-kf-menu">
           <select
             className="tlv2-out-mode"
             value={(() => {
               const tracks = data.steps[kfMenu.ref.step]?.layers[kfMenu.ref.key] ?? {};
-              for (const kfs of Object.values(tracks)) {
+              for (const [trackProp, kfs] of Object.entries(tracks)) {
+                if (kfMenu.ref.prop !== undefined && trackProp !== kfMenu.ref.prop) continue;
                 const kf = kfs.find((k) => Math.abs(k.time - kfMenu.ref.tRel) < 0.005);
                 if (kf) return kf.ease ?? 'auto';
               }
@@ -832,6 +961,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
               const next = setKeyframeEase(
                 data, kfMenu.ref.step, kfMenu.ref.key, kfMenu.ref.tRel,
                 e.target.value === 'auto' ? null : e.target.value,
+                kfMenu.ref.prop, // a sub-row curves only its own track
               );
               setKfMenu(null);
               if (next) applyData(next);

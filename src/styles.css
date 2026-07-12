@@ -1626,6 +1626,26 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 }
 .tlv2-row { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(232, 237, 242, 0.05); }
 .tlv2-row.selected { background: rgba(246, 166, 35, 0.06); }
+/* Property sub-rows (an expanded layer): quieter separators, a whisper of inset. */
+.tlv2-row.prop { border-top: 1px dashed rgba(232, 237, 242, 0.04); background: rgba(232, 237, 242, 0.015); }
+/* The layer's expand caret — one row per animated property behind it. */
+.tlv2-expand {
+  background: transparent;
+  border: none;
+  padding: 0 4px 0 0;
+  font-size: 9px;
+  color: var(--text-dim);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.tlv2-expand:hover { color: var(--amber); background: transparent; }
+.tlv2-expand.open { color: var(--amber); }
+.tlv2-expand-spacer { display: inline-block; width: 13px; }
+.tlv2 .timeline-label.tlv2-prop-label {
+  padding-left: 22px;
+  font-size: 10.5px;
+  color: rgba(232, 237, 242, 0.45);
+}
 .tlv2-diamond {
   position: absolute;
   top: 50%;
