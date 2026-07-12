@@ -1,10 +1,11 @@
-// Export for video projects. The rendered-video path (MP4/WebM/PNG/sequence/ProRes via
-// the render service) plugs in with the render slice; source download is always available
-// so the project is portable from day one.
+// Export for video projects: render to media through the render service (only when
+// isRenderConfigured() - unconfigured builds grow zero render UI, same posture as the SPX
+// ExportPanel) plus the always-available source download.
 
 import { saveAs } from 'file-saver';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { isRenderConfigured } from '../../render/config';
+import VideoRenderPanel from './VideoRenderPanel';
 
 export default function VideoExportPanel() {
   const project = useVideoProjectStore((s) => s.project);
@@ -18,20 +19,17 @@ export default function VideoExportPanel() {
 
   return (
     <div className="video-export">
-      <div className="panel-section">
-        <h3>Render video</h3>
-        {isRenderConfigured() ? (
-          <p className="hint">
-            Video rendering for AI compositions is being wired to the render service - it lands
-            later in this branch.
-          </p>
-        ) : (
+      {isRenderConfigured() ? (
+        <VideoRenderPanel />
+      ) : (
+        <div className="panel-section">
+          <h3>Render video</h3>
           <p className="hint">
             Video rendering needs the render service (VITE_RENDER_API) - not configured in this
             build.
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="panel-section">
         <h3>Source</h3>
