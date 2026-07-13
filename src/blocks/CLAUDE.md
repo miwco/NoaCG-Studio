@@ -31,9 +31,11 @@ src/templates/shared/animRuntime.ts). These modules are the editor's side of tha
 editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 
 - **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps;
-  a step = name/duration/ease/reveals?/layers (durations and keyframe times are speed-relative:
-  playback divides by `speed`; `reveals` names the layers that FIRST become visible in that
-  step - activation is explicit data, never inferred from keyframes). A keyframe is
+  a step = name/duration/ease/reveals?/hides?/layers (durations and keyframe times are
+  speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become
+  visible in that step, `hides` the layers that LEAVE in it - the early-exit twin, its existence
+  span ends there instead of at the final Out; both are explicit data, never inferred from
+  keyframes). A keyframe is
   `{ time, value, ease? }` - value is a number or a string (filter/clipPath interpolate as
   strings); `ease` is the ease INTO the keyframe, defaulting to the step's. `locateAnimData`
   brace-matches respecting JSON strings (a hand-edited block need not match the canonical
@@ -52,7 +54,9 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   presses disappear and default step names renumber. Steps as clips: resizeStep ('preserve'
   keeps keyframe timing - extending leaves settled air, shrinking clamps at the last keyframe
   so motion never silently truncates; 'stretch' = Alt scales times proportionally),
-  duplicateStep (copies keyframes, NOT reveals; never lands after Out), renameStep,
+  setLayerHide - the early-exit twin: writes/clears a step's `hides` for a layer (clamped after
+  its activation; hiding at Out clears it), driven by the timeline block's RIGHT edge.
+  duplicateStep (copies keyframes, NOT reveals or hides; never lands after Out), renameStep,
   deleteStep (layers it revealed return to "appears with ▶ Play" with the channel's default
   motion), addStep (an empty content step just before Out).
 - **animEval.ts** - the editor-side playhead resolver, deliberately the ONLY logic duplicated
@@ -61,7 +65,8 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   (the eased in-between is the preview's job - at keyframe times the two agree exactly);
   strings hold the previous keyframe; a step without the track inherits the last keyframe
   value from an earlier step; null = the layer's design (CSS) state. Plus
-  stepSeconds/stepOffsets/activationStep helpers.
+  stepSeconds/stepOffsets/activationStep/hideStep helpers (hideStep = the step a layer leaves,
+  its `hides` step else the final Out).
 - **animImport.ts** - the one-time legacy converter: parses a legacy marked region via
   timelineModel's parseTimeline and converts the choreography into AnimData (a `to()`'s from
   values come from the settled DESIGN_STATE table). Used for read-only rendering of legacy

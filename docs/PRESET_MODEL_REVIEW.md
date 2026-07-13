@@ -51,9 +51,10 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   tween. This is the foundation for **canvas scale/rotate handles**: the handle writes scale (or
   rotation) keyframes plus the pivot. Editable via a small Inspector control (nine-box pivot +
   numeric).
-- **`hides?: string[]` on a step** (gap 9). The data twin of `reveals`: the layer's existence
-  span ends where it is hidden; the timeline layer-block gains its right-edge trim (today blocked
-  precisely because `hides` doesn't exist). Runtime hides the layer at the step boundary.
+- **`hides?: string[]` on a step** (gap 9) — **DONE**. The data twin of `reveals`: the layer's
+  existence span ends where it is hidden; the timeline layer-block's right edge drags to set it,
+  and the runtime hides the layer at the step boundary (setLayerHide + the block right edge +
+  hideStep; a template with a pre-hides interpreter is re-emitted on first use).
 - **`calls?: { time, call }[]` on a step** (gap 10). The drafted step-calls design
   (`docs/TIMELINE_V2_PLAN.md` §3b): the interpreter `tl.call`s `window[name]` at the local time,
   name-resolved (no eval). `resizeStep`/`duplicateStep`/`deleteStep` carry them; `parseTimeline`

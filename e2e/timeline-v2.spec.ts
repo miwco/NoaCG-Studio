@@ -538,6 +538,32 @@ test('v2 layer blocks: the existence span renders; its left edge drags the activ
   expect(after).toBe(before + 1); // one undoable apply, same as the chip
 });
 
+test('v2 layer blocks: the right edge sets an early exit (hides) and upgrades the interpreter', async ({ page }) => {
+  await createHairline(page, true); // Enter · Step 2 · Out (3 steps)
+  // Fit the whole ribbon so the Name's right-edge handle (at Out) is reachable, not clipped.
+  await page.getByTestId('tlv2-zoom-out').click();
+  await page.getByTestId('tlv2-zoom-out').click();
+  // The Name exists from ▶ Play through Out — drag its right edge (the early-exit handle)
+  // left onto the middle step so the layer LEAVES in Step 2.
+  const handle = page.getByTestId('tlv2-block-hide-f0');
+  await expect(handle).toBeVisible();
+  const clip1 = (await page.getByTestId('tlv2-clip-1').boundingBox())!; // the middle step (Step 2)
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(clip1.x + clip1.width / 2, box.y + box.height / 2, { steps: 10 });
+  await page.mouse.move(clip1.x + clip1.width - 2, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  // The middle step records the early exit…
+  const data = await animData(page);
+  expect(data!.steps[1].hides).toContain('#f0');
+  // …and the interpreter was re-emitted so the exit actually plays on air.
+  const js = await page.evaluate(async () => (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js);
+  expect(js).toContain('step.hides');
+});
+
 test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the playhead', async ({ page }) => {
   await createHairline(page);
   // Open the Inspector up front so the auto-open never resizes the stage mid-test.

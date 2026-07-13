@@ -94,10 +94,12 @@ in src/blocks/CLAUDE.md.
   ROWS - every registry part gets a row - with aggregate keyframe diamonds, a ▸ caret that
   EXPANDS the layer into per-property sub-rows (each track's own diamonds; drag/Delete/ease
   scoped to that property via moveKeyframe/deleteKeyframe/setKeyframeEase's prop arg), and a
-  LAYER STATE BLOCK: the existence span (activation step -> the end of Out) with the
-  keyframed entering/exiting phases emphasized - its LEFT edge drags between step boundaries
-  as the same activation move the gutter/chip make (no right-edge trim until the `hides`
-  model extension exists). KEYFRAME SETS: click selects a diamond, shift-click builds a set,
+  LAYER STATE BLOCK: the existence span (activation step -> the step it LEAVES: its `hides`
+  step, else the end of Out) with the keyframed entering/exiting phases emphasized - its LEFT
+  edge drags between step boundaries as the same activation move the gutter/chip make, and its
+  RIGHT edge drags to set an EARLY EXIT (blocks/animEdit setLayerHide writes the step's `hides`;
+  dragging to Out clears it). Setting a hide on a template whose interpreter predates the
+  feature re-emits the whole region so the exit actually plays. KEYFRAME SETS: click selects a diamond, shift-click builds a set,
   dragging any selected diamond moves the WHOLE set (magnetic snap to playhead/step
   edges/other keyframes within ~7px, Alt free, 0.05s grid fallback), Delete clears the set,
   ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead, Ctrl/Cmd+D

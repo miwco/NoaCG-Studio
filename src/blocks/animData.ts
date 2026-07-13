@@ -28,6 +28,10 @@ export interface AnimStep {
   /** Layers that FIRST become visible when this step plays (activation is explicit data,
    *  never inferred from keyframes). Only meaningful on the middle steps. */
   reveals?: string[];
+  /** Layers that LEAVE when this step plays — the early-exit twin of `reveals`. The layer
+   *  animates out with this step's keyframes and is hidden afterward (its existence span
+   *  ends here instead of at the final Out). Only meaningful on the middle steps. */
+  hides?: string[];
   layers: Record<string, AnimLayerTracks>;
 }
 
@@ -98,6 +102,7 @@ export function isAnimData(raw: unknown): raw is AnimData {
     if (typeof step.duration !== 'number' || !(step.duration > 0)) return false;
     if (typeof step.ease !== 'string') return false;
     if (step.reveals !== undefined && !Array.isArray(step.reveals)) return false;
+    if (step.hides !== undefined && !Array.isArray(step.hides)) return false;
     if (!step.layers || typeof step.layers !== 'object') return false;
     for (const tracks of Object.values(step.layers)) {
       if (!tracks || typeof tracks !== 'object') return false;
@@ -144,6 +149,9 @@ export function serializeAnimData(data: AnimData): string {
     lines.push(`      "ease": ${JSON.stringify(step.ease)},`);
     if (step.reveals && step.reveals.length > 0) {
       lines.push(`      "reveals": [${step.reveals.map((s) => JSON.stringify(s)).join(', ')}],`);
+    }
+    if (step.hides && step.hides.length > 0) {
+      lines.push(`      "hides": [${step.hides.map((s) => JSON.stringify(s)).join(', ')}],`);
     }
     // "layers" is always present (possibly empty) — one canonical shape, no comma games.
     const selectors = Object.keys(step.layers);

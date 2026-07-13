@@ -41,6 +41,13 @@ function buildStepTimeline(index) {
       }
     });
   });
+  // Layers that LEAVE in this step: hide them at the step's end. Their keyframes above
+  // animate the exit; this makes the departure definitive (the twin of reveals' pre-hide),
+  // so a layer can leave before the final Out. Replay re-arms it (resetGraphic clears the
+  // inline props, then step 0 shows it again).
+  (step.hides || []).forEach(function (selector) {
+    tl.set(selector, { opacity: 0 }, step.duration / speed);
+  });
   // Pad to the step's full duration — settled air at the end is part of the step.
   tl.set({ noacgPad: 0 }, { noacgPad: 1 }, step.duration / speed);
   return tl;
@@ -106,8 +113,9 @@ function buildOutTimeline() {
 const DATA_HEADER = `// The graphic's animation as DATA. Steps play in order — the first on ▶ play(), each
 // middle step on one » next() press (SPX Continue), the last on ■ stop(). Each layer's
 // properties are keyframe lists on the step's local clock: { "time", "value", "ease" }.
-// "reveals" names the layers that first become visible in that step. The timeline UI
-// reads and writes this block — and so can you: edit a number and press play.`;
+// "reveals" names the layers that first become visible in that step; "hides" names the
+// layers that leave in it. The timeline UI reads and writes this block — and so can you:
+// edit a number and press play.`;
 
 /** Emit the full marked ANIMATION region for a data-driven template. */
 export function emitAnimRegion(data: AnimData): string {

@@ -1753,6 +1753,13 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   border-radius: 2px;
 }
 .tlv2-block-edge:hover { border-right-color: var(--amber); }
+/* The RIGHT edge (the `hides` early-exit) sits at the block's end — border on its left. */
+.tlv2-block-edge.tlv2-block-edge-right {
+  margin-left: 0;
+  border-right: 0;
+  border-left: 2px solid rgba(246, 166, 35, 0.45);
+}
+.tlv2-block-edge.tlv2-block-edge-right:hover { border-left-color: var(--amber); }
 /* The layer's expand caret — one row per animated property behind it. */
 .tlv2-expand {
   background: transparent;
