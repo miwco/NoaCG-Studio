@@ -135,6 +135,24 @@ export default function Inspector() {
     );
   };
 
+  // The layer's transform PIVOT (where scale and rotation pivot from) — a static per-layer
+  // value stored as a single `transformOrigin` keyframe at the layer's activation step, so any
+  // keyframed scale/rotation pivots correctly (the model's transform-origin gap). Centre by
+  // default; the runtime honours it as an ordinary set().
+  const PIVOTS = ['0% 0%', '50% 0%', '100% 0%', '0% 50%', '50% 50%', '100% 50%', '0% 100%', '50% 100%', '100% 100%'];
+  const currentPivot = (): string => {
+    if (!data) return '50% 50%';
+    for (const step of data.steps) {
+      const kfs = step.layers[part.selector]?.transformOrigin;
+      if (kfs && kfs.length) return String(kfs[0].value);
+    }
+    return '50% 50%';
+  };
+  const setPivot = (value: string) => {
+    if (!native) return;
+    applyData(setKeyframe(native, activationStep(native, part.selector), part.selector, 'transformOrigin', 0, value));
+  };
+
   const commitValue = (row: (typeof PROP_ROWS)[number], raw: number) => {
     if (!native || !at || !Number.isFinite(raw)) return;
     applyData(
@@ -307,9 +325,25 @@ export default function Inspector() {
                   </div>
                 );
               })}
+              {native && part.kind !== 'root' && (
+                <div className="inspector-row inspector-pivot-row" data-testid="inspector-pivot">
+                  <span className="inspector-row-label" title="Where scale and rotation pivot from">Pivot</span>
+                  <span className="inspector-pivot-grid">
+                    {PIVOTS.map((p, i) => (
+                      <button
+                        key={p}
+                        className={`inspector-pivot-cell${currentPivot() === p ? ' active' : ''}`}
+                        onClick={() => setPivot(p)}
+                        title={`Pivot: ${p}`}
+                        data-testid={`inspector-pivot-${i}`}
+                      />
+                    ))}
+                  </span>
+                </div>
+              )}
               <p className="hint inspector-hint">
                 {native
-                  ? 'Values at the playhead. ◇ arms a property; editing an armed value keys it at the playhead.'
+                  ? 'Values at the playhead. ◇ arms a property; editing an armed value keys it at the playhead. Pivot sets where scale/rotation turn.'
                   : 'Values at the settled on-air state — press the timeline\'s "use keyframes" chip to edit them here.'}
               </p>
             </>

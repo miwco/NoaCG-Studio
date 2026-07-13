@@ -2033,6 +2033,12 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .inspector-preset-link { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-dim); cursor: pointer; }
 .inspector-preset-link input { accent-color: var(--amber); }
 .inspector-preset-msg { flex: 1 1 100%; margin: 2px 0 0; font-size: 10.5px; color: var(--amber); }
+/* The transform-pivot picker — a 3×3 of origin points for scale/rotation. */
+.inspector-pivot-row { align-items: center; }
+.inspector-pivot-grid { display: grid; grid-template-columns: repeat(3, 13px); grid-template-rows: repeat(3, 13px); gap: 2px; }
+.inspector-pivot-cell { width: 13px; height: 13px; padding: 0; border: 1px solid var(--border); border-radius: 2px; background: var(--bg); cursor: pointer; }
+.inspector-pivot-cell:hover { border-color: var(--amber); }
+.inspector-pivot-cell.active { background: var(--amber); border-color: var(--amber); }
 
 /* Cloud sync status pill (Era 5.2) */
 .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; }

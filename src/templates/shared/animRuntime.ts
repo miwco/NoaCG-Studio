@@ -67,7 +67,8 @@ function noacgApplyReveals(tl) {
         var vars = {};
         vars[prop] = tracks[prop][0].value;
         tl.set(selector, vars, 0);
-        hidden = true;
+        // transformOrigin is static pivot chrome, not entrance motion — it doesn't pre-hide.
+        if (prop !== 'transformOrigin') hidden = true;
       });
       if (!hidden) tl.set(selector, { opacity: 0 }, 0);
     });

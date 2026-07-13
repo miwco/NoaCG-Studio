@@ -99,6 +99,51 @@ test('inspector: a new selection reveals it; an explicit close holds until the s
   await expect(page.getByTestId('inspector')).toBeVisible();
 });
 
+test('inspector: the pivot sets the transform-origin, and the runtime honours it', async ({ page }) => {
+  await createHairline(page);
+  await openInspector(page);
+  await page.locator('.timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector-part-label')).toHaveText('Name');
+
+  // Pick the bottom-left pivot (index 6 = "0% 100%").
+  await page.getByTestId('inspector-pivot-6').click();
+  await expect(page.locator('[data-testid="inspector-pivot-6"]')).toHaveClass(/active/);
+
+  // The data records a transformOrigin track on #f0…
+  const origin = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const d = parseAnimData(useTemplateStore.getState().template.js)!;
+    for (const s of d.steps) {
+      const k = s.layers['#f0']?.transformOrigin;
+      if (k?.length) return String(k[0].value);
+    }
+    return null;
+  });
+  expect(origin).toBe('0% 100%');
+
+  // …and the runtime interpreter applies it (the entrance settles #f0's transform-origin to
+  // the left edge — the pivot the model previously couldn't express). Wait for the preview to
+  // rebuild with the new data before exercising its interpreter.
+  await expect
+    .poll(async () => {
+      const f = page.frames().find((fr) => fr.url().startsWith('about:srcdoc'));
+      return f ? f.evaluate(() => {
+        const w = window as unknown as { NOACG_ANIM?: { steps: { layers: Record<string, Record<string, unknown[]>> }[] } };
+        return (w.NOACG_ANIM?.steps ?? []).some((s) => (s.layers['#f0']?.transformOrigin?.length ?? 0) > 0);
+      }) : false;
+    })
+    .toBe(true);
+  const frame = page.frames().find((f) => f.url().startsWith('about:srcdoc'))!;
+  const applied = await frame.evaluate(() => {
+    const w = window as unknown as { gsap: { set: (t: string, v: object) => void }; buildInTimeline: () => { progress: (p: number, s: boolean) => void } };
+    w.gsap.set('#f0', { clearProps: 'all' });
+    w.buildInTimeline().progress(1, true);
+    return getComputedStyle(document.getElementById('f0')!).transformOrigin;
+  });
+  expect(applied).toMatch(/^0px /); // left-anchored (0%), not the default centre
+});
+
 test('redo: Ctrl+Shift+Z restores an undone edit; a new edit clears the redo branch', async ({ page }) => {
   await createHairline(page);
   // The speed knob writes the data block's speed field (one undoable apply per pick).

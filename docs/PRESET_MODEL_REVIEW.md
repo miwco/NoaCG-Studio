@@ -46,11 +46,13 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
 
 ### Tier 1 — extend the editable vocabulary (unlocks the ratified open items)
 
-- **`transformOrigin` as a per-layer static prop** (gap 2). Store `layer['transformOrigin']` as a
-  single-keyframe/const string (e.g. `"0% 100%"`). The runtime sets it once before the step's
-  tween. This is the foundation for **canvas scale/rotate handles**: the handle writes scale (or
-  rotation) keyframes plus the pivot. Editable via a small Inspector control (nine-box pivot +
-  numeric).
+- **`transformOrigin` as a per-layer static prop** (gap 2) — **DONE**. Stored as a single
+  `transformOrigin` keyframe on the layer's activation step (string, e.g. `"0% 100%"`); the
+  runtime honours it as an ordinary set (backward-compatible — no interpreter change needed).
+  The Inspector's Properties tab has a nine-box pivot picker. So any keyframed scale/rotation now
+  pivots correctly. The remaining convenience on top is the **canvas scale/rotate handles** (drag
+  a corner to scale, a handle to rotate — writing scale/rotation keyframes at the playhead around
+  this pivot, mirroring the existing position-keyframe drag in CanvasInteraction).
 - **`hides?: string[]` on a step** (gap 9) — **DONE**. The data twin of `reveals`: the layer's
   existence span ends where it is hidden; the timeline layer-block's right edge drags to set it,
   and the runtime hides the layer at the step boundary (setLayerHide + the block right edge +
