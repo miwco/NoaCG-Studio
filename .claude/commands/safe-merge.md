@@ -79,27 +79,30 @@ Run and summarize:
 ### If `main` is not checked out anywhere
 
 If no worktree in `git worktree list` has `main` checked out, do NOT assume the root is on
-`main`. Inspect the expected main checkout (`C:\claude\NoaCG-Studio`, referred to below as
-`<root>`) read-only and report all of:
+`main`. The root (`C:\claude\NoaCG-Studio`, referred to below as `<root>`) is our canonical
+`main` worktree, but the client parks it on a detached HEAD when it spins up a linked
+worktree - so it can drift off `main`.
 
-- Is HEAD detached, and at exactly which commit?
-  `git -C <root> symbolic-ref -q HEAD` (empty output = detached) and
-  `git -C <root> rev-parse HEAD`.
-- Uncommitted changes: `git -C <root> status --porcelain`.
-- Does the detached commit hold unique work not reachable from any branch?
-  `git -C <root> log --oneline HEAD --not --branches --remotes` should be EMPTY; also note
-  which branches already contain it: `git -C <root> branch --contains HEAD`.
-- Confirm `main` is genuinely free - not checked out in any other worktree (from step 2).
+The single, authoritative definition of "is it safe to reattach `<root>` to `main`?" lives
+in `scripts/reattach-main.mjs` - the SAME gate the SessionStart hook uses to self-heal, so
+this command and the hook can never disagree. Assess read-only:
+
+    node scripts/reattach-main.mjs --check <root>
+
+It prints `SAFE to reattach to main` or `will NOT reattach - <reason>`. Safe means ALL of:
+the checkout is clean, HEAD is detached with NO commits unreachable from any branch/remote,
+no git operation is in progress, and `main` exists and is free. For the human report, also
+surface the underlying facts: `git -C <root> rev-parse HEAD` (the detached commit),
+`git -C <root> status --porcelain` (cleanliness), and
+`git -C <root> branch --contains HEAD` (what already references it).
 
 **Decision:**
-- If ALL of these hold - the checkout is clean, the detached commit has no unique
-  unreferenced work, and `main` is free to be checked out - then plan to **reattach** the
-  root checkout to `main`. Because that is a state change, only REPORT the plan here;
-  perform the actual `git -C <root> switch main` (or `checkout main`) as the first action of
-  Phase 2, after the confirmation checkpoint.
-- If ANY of these is uncertain (dirty tree, unique unreferenced commits, `main` not free, or
-  anything you cannot positively confirm), STOP and report the exact situation. Never
-  switch, reset, stash, discard, or overwrite anything.
+- If the gate reports SAFE, plan to **reattach** `<root>` to `main`. Because that is a state
+  change, only REPORT the plan here; perform it as the first action of Phase 2, after the
+  confirmation checkpoint.
+- If the gate reports it will NOT reattach (dirty tree, unique unreferenced commits, `main`
+  not free, operation in progress, or anything uncertain), STOP and report the exact reason.
+  Never switch, reset, stash, discard, or overwrite anything.
 
 Then present a short plan: **the source branch and the target (`main`), stated explicitly**
 ("merge `<branch>` -> `main`"), how many commits, predicted conflict files (if any), any
@@ -115,9 +118,10 @@ The order matters: bring the latest main into the WORKTREE branch first, so all 
 resolution and testing happen on the branch. Main only ever receives an already-integrated,
 already-tested branch - it is never the place conflicts get resolved.
 
-1. If Phase 1 determined `main` is not checked out anywhere and the all-clear conditions
-   held, reattach now: `git -C <root> switch main`. (If the conditions did not hold, you
-   already stopped in Phase 1.)
+1. If Phase 1 determined `main` is not checked out anywhere and the gate reported SAFE,
+   reattach now with the shared gate, which re-verifies safety and only then switches:
+   `node scripts/reattach-main.mjs <root>`. (If the gate did not report SAFE, you already
+   stopped in Phase 1.)
 2. If the source worktree has uncommitted changes: ask the user - commit them there
    (with a proper message), or leave them out? Never silently stash.
 3. Update main in its checkout from the remote: `git pull --ff-only origin main`.

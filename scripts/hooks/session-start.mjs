@@ -13,6 +13,7 @@ import { existsSync, readdirSync, rmdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readHookInput } from './lib.mjs';
+import { reattachMainIfSafe } from '../reattach-main.mjs';
 
 const input = await readHookInput();
 const sessionCwd = normalize(input?.cwd ?? process.cwd());
@@ -50,6 +51,25 @@ try {
   }
 } catch {
   // Cleanup is best-effort and must never block session start.
+}
+
+// Keep the primary checkout on `main` - it is our canonical main worktree. The client parks
+// it on a detached HEAD (same commit, off the branch) whenever it spins up a linked worktree,
+// so `main` drifts off the root. Reattach it whenever that is unambiguously safe; the single
+// shared definition of "safe" lives in scripts/reattach-main.mjs (also used by /safe-merge).
+// This never touches a dirty tree, real detached work, or a main that is checked out elsewhere.
+try {
+  const { assessment, message } = reattachMainIfSafe(roots[0]);
+  if (message) {
+    console.log(message);
+  } else if (assessment.detached && !assessment.safe) {
+    console.log(
+      `Note: the primary checkout (${roots[0]}) is on a detached HEAD and was left as-is - ` +
+        `${assessment.reason}. Reattach it to main manually once that clears.`,
+    );
+  }
+} catch {
+  // Self-heal is best-effort and must never block session start.
 }
 
 const isUnder = (path, root) => path.toLowerCase() === root.toLowerCase() || path.toLowerCase().startsWith(root.toLowerCase() + '/');
