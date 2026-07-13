@@ -23,6 +23,57 @@ export interface VideoChatMessage {
   at: string; // ISO timestamp
 }
 
+/**
+ * An editable composition input - the video-project counterpart of an SPX DataField. The AI
+ * declares a handful (the headline, an accent colour, a score) so a non-technical user can
+ * change the content in the Content panel WITHOUT touching TSX. Deliberately shaped to mirror
+ * the SPX `ftype`s (textfield/number/color/dropdown) so a future shared Template Definition
+ * across Remotion/SPX/operator controls drops in naturally. The `key` is the prop name the
+ * composition reads: `fields.<key>` (always with a `?? default` fallback so the code still
+ * renders standalone). Values ride into both the preview and the render inside `inputProps`.
+ */
+export type VideoInputType = 'text' | 'number' | 'color' | 'select';
+
+export interface VideoInput {
+  /** The `fields.<key>` prop the composition reads (a plain identifier). */
+  key: string;
+  type: VideoInputType;
+  /** Human label shown in the Content panel. */
+  label: string;
+  /** The current value (edited by the panel). */
+  value: string | number;
+  /** The AI-declared default - the fallback in code and the per-field Reset target. */
+  default: string | number;
+  /** 'select' only: the allowed choices. */
+  options?: string[];
+  /** 'number' only: bounds + step for the control (advisory clamps). */
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+/** The `{ [key]: value }` bag passed to the composition as its `fields` prop (preview + render). */
+export function videoFieldValues(inputs: VideoInput[]): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  for (const i of inputs) out[i.key] = i.value;
+  return out;
+}
+
+/**
+ * Adopt a freshly generated input set while preserving values the user actually changed.
+ * For a key that persists across a regeneration/refinement AND whose current value differs
+ * from its old default (i.e. the user edited it), the user's value wins; otherwise the new
+ * default applies. New keys arrive at their default.
+ */
+export function mergeVideoInputs(prev: VideoInput[], next: VideoInput[]): VideoInput[] {
+  const prevByKey = new Map(prev.map((i) => [i.key, i]));
+  return next.map((n) => {
+    const p = prevByKey.get(n.key);
+    if (p && p.value !== p.default) return { ...n, value: p.value };
+    return { ...n, value: n.default };
+  });
+}
+
 /** One timed phase of the AI's structured motion plan ("0.0-0.4s: sweep enters"). */
 export interface MotionPlanPhase {
   name: string;
@@ -74,6 +125,9 @@ export interface VideoProject {
   /** Uploaded assets as {path, data-URL} - the exact SPX AssetFile shape, so the
    *  backend's shape-agnostic asset walker externalizes them unchanged when sync lands. */
   assets: AssetFile[];
+  /** Editable composition inputs (the video Template Definition) the AI declared and the
+   *  Content panel edits; their values ride into the preview and render via inputProps. */
+  inputs: VideoInput[];
   createdAt: string; // ISO
   updatedAt: string; // ISO - bumped by the autosaver
   exportPrefs: VideoExportPrefs | null;
@@ -86,14 +140,19 @@ export const DEFAULT_VIDEO_DURATION_SEC = 6;
 // follows the same contract the AI is held to (imports only react/remotion, everything
 // derived from useCurrentFrame/useVideoConfig, no timers or randomness). Monaco and the
 // preview always have something working before the first generation lands.
+const STARTER_HEADLINE = 'Your video starts here';
+
 const STARTER_TSX = `// Starter composition - replaced by your first AI generation, or edit it directly.
 // Everything derives from the current frame, so scrubbing and rendering are deterministic.
+// The headline is an editable input: change it in the Content panel (no code needed), or
+// edit the fallback here. Any value the panel exposes reaches the composition as \`fields\`.
 
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition() {
+export default function Composition({ fields = {} }: { fields?: Record<string, string | number> }) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+  const headline = fields.headline ?? '${STARTER_HEADLINE}';
 
   // Rise and fade in over the first half second; fade out over the last half second.
   const enter = interpolate(frame, [0, fps * 0.5], [0, 1], {
@@ -118,12 +177,17 @@ export default function Composition() {
           letterSpacing: '0.02em',
         }}
       >
-        Your video starts here
+        {headline}
       </div>
     </AbsoluteFill>
   );
 }
 `;
+
+/** The starter project's one editable input (mirrors the STARTER_TSX `fields.headline`). */
+const STARTER_INPUTS: VideoInput[] = [
+  { key: 'headline', type: 'text', label: 'Headline', value: STARTER_HEADLINE, default: STARTER_HEADLINE },
+];
 
 /** Build a fresh project; every field can be seeded (the wizard passes its form values). */
 export function createDefaultVideoProject(
@@ -160,6 +224,7 @@ export function createDefaultVideoProject(
     transparent: init.transparent ?? false,
     aiModel: init.aiModel ?? '',
     assets: init.assets ?? [],
+    inputs: STARTER_INPUTS.map((i) => ({ ...i })),
     createdAt: now,
     updatedAt: now,
     exportPrefs: null,

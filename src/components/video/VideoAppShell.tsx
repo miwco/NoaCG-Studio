@@ -19,6 +19,7 @@ import { loadVideoLayout, saveVideoLayout, type VideoLayout } from '../../model/
 import { useRef } from 'react';
 import VideoPlayerFrame from './VideoPlayerFrame';
 import VideoAiChatPanel from './VideoAiChatPanel';
+import VideoContentPanel from './VideoContentPanel';
 import VideoSettingsPanel from './VideoSettingsPanel';
 import VideoAssetsPanel from './VideoAssetsPanel';
 import VideoExportPanel from './VideoExportPanel';
@@ -50,6 +51,7 @@ function Divider({ splitter, testid }: { splitter: Splitter; testid: string }) {
 
 const PANEL_TABS: { id: VideoPanelTab; label: string }[] = [
   { id: 'chat', label: '✦ Chat' },
+  { id: 'content', label: 'Content' },
   { id: 'settings', label: 'Settings' },
   { id: 'assets', label: 'Assets' },
   { id: 'export', label: 'Export' },
@@ -133,6 +135,7 @@ export default function VideoAppShell() {
       </div>
       <div className="video-panel-body">
         {activePanel === 'chat' && <VideoAiChatPanel />}
+        {activePanel === 'content' && <VideoContentPanel />}
         {activePanel === 'settings' && <VideoSettingsPanel />}
         {activePanel === 'assets' && <VideoAssetsPanel />}
         {activePanel === 'export' && <VideoExportPanel />}

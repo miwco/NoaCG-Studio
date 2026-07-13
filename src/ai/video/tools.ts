@@ -3,6 +3,7 @@
 // the cheap skill classifier.
 
 import type { ClaudeTool } from '../anthropic';
+import type { VideoInputType } from '../../model/videoTypes';
 import { SKILLS } from './skills';
 
 export const MOTION_PLAN_TOOL: ClaudeTool = {
@@ -42,16 +43,48 @@ export const MOTION_PLAN_TOOL: ClaudeTool = {
 
 export const REMOTION_MODULE_TOOL: ClaudeTool = {
   name: 'emit_remotion_module',
-  description: 'Return the complete Remotion composition module.',
+  description: 'Return the complete Remotion composition module and its editable inputs.',
   input_schema: {
     type: 'object',
-    required: ['summary', 'tsx'],
+    required: ['summary', 'tsx', 'inputs'],
     additionalProperties: false,
     properties: {
       summary: { type: 'string', description: 'One sentence describing the composition for the user.' },
       tsx: {
         type: 'string',
         description: "The COMPLETE tsx module: imports only from 'react' and 'remotion', default-exports the composition component.",
+      },
+      inputs: {
+        type: 'array',
+        maxItems: 8,
+        description:
+          "The editable inputs a non-technical user should be able to change WITHOUT touching code (the headline text, a subtitle, an accent colour, a score). Declare each value the module reads from its `fields` prop; the code must fall back to `default` (`fields.key ?? default`). Keep purely structural/timing values in code - expose only real content choices. Return [] only when the piece genuinely has no user-editable content.",
+        items: {
+          type: 'object',
+          required: ['key', 'type', 'label', 'default'],
+          additionalProperties: false,
+          properties: {
+            key: {
+              type: 'string',
+              pattern: '^[a-z][a-zA-Z0-9]*$',
+              description: "The `fields.<key>` prop the module reads (a camelCase identifier, e.g. 'headline').",
+            },
+            type: { type: 'string', enum: ['text', 'number', 'color', 'select'] },
+            label: { type: 'string', description: 'Short human label for the Content panel (e.g. "Headline").' },
+            default: {
+              description: 'The default value - MUST equal the fallback in code. String for text/color/select; number for number.',
+              type: ['string', 'number'],
+            },
+            options: {
+              type: 'array',
+              items: { type: 'string' },
+              description: "'select' only: the allowed string choices.",
+            },
+            min: { type: 'number', description: "'number' only: minimum." },
+            max: { type: 'number', description: "'number' only: maximum." },
+            step: { type: 'number', description: "'number' only: step." },
+          },
+        },
       },
     },
   },
@@ -84,7 +117,19 @@ export interface EmittedMotionPlan {
   phases: { name: string; startSec: number; endSec: number; description: string }[];
 }
 
+export interface EmittedInput {
+  key: string;
+  type: VideoInputType;
+  label: string;
+  default: string | number;
+  options?: string[];
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
 export interface EmittedModule {
   summary: string;
   tsx: string;
+  inputs?: EmittedInput[];
 }

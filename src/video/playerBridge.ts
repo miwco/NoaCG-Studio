@@ -179,6 +179,14 @@ export class PlayerBridge {
     this.post({ type: 'seek', id: this.loadId, frame });
   }
 
+  /** Update the component's inputProps in place (no recompile, no remount): the host merges
+   *  these over the mounted module's props, preserving the current assets. Used for live
+   *  edits of the composition's `fields` so the preview reflects a headline/colour change
+   *  instantly. A no-op on the host when nothing is mounted yet. */
+  setProps(inputProps: Record<string, unknown>): void {
+    this.post({ type: 'set-props', id: this.loadId, inputProps });
+  }
+
   private post(msg: object, transfer: Transferable[] = []): void {
     const full = { channel: PLAYER_CHANNEL, v: PLAYER_PROTOCOL_V, nonce: this.nonce, ...msg };
     if (!this.ready) {

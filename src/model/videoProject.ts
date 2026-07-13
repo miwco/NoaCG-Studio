@@ -34,6 +34,11 @@ function isVideoProject(p: unknown): p is VideoProject {
   );
 }
 
+/** Fill in fields added after a record was stored (forward-compatible load). */
+function normalizeVideoProject(p: VideoProject): VideoProject {
+  return Array.isArray(p.inputs) ? p : { ...p, inputs: [] };
+}
+
 // ── Current slot ─────────────────────────────────────────────────────────────
 
 export function loadCurrentVideoProject(): VideoProject | null {
@@ -41,7 +46,7 @@ export function loadCurrentVideoProject(): VideoProject | null {
     const raw = localStorage.getItem(CURRENT_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw) as unknown;
-    return isVideoProject(p) ? p : null;
+    return isVideoProject(p) ? normalizeVideoProject(p) : null;
   } catch {
     return null;
   }
@@ -82,7 +87,9 @@ function readSaved(): SavedVideoRecord[] {
     if (!raw) return [];
     const list = JSON.parse(raw) as unknown;
     if (!Array.isArray(list)) return [];
-    return list.filter((r): r is SavedVideoRecord => !!r && isVideoProject((r as SavedVideoRecord).project));
+    return list
+      .filter((r): r is SavedVideoRecord => !!r && isVideoProject((r as SavedVideoRecord).project))
+      .map((r) => ({ ...r, project: normalizeVideoProject(r.project) }));
   } catch {
     return [];
   }

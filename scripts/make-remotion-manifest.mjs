@@ -5,9 +5,10 @@
 //   node scripts/make-remotion-manifest.mjs .render-dev/user.json [frames] [format] [fps] [scale]
 //   node render-worker/cli.mjs .render-dev/user.json .render-dev/user.mp4
 //
-// The fixture animates a bar + counter from useCurrentFrame (deterministic), reads text
-// from inputProps, and shows one tiny data-URL image asset - covering the module-eval,
-// props, and asset paths of the worker's UserComposition.
+// The fixture animates a bar + counter from useCurrentFrame (deterministic), reads editable
+// content from the `fields` prop (the video Template Definition) plus a title from
+// inputProps, and shows one tiny data-URL image asset - covering the module-eval, props,
+// fields, and asset paths of the worker's UserComposition.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -39,13 +40,15 @@ exports.default = function Fixture(props) {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
   const assets = props.assets || {};
+  const fields = props.fields || {};
+  const accent = fields.accent || '#f6a623';
   return React.createElement(R.AbsoluteFill, {
     style: { background: '#101318', alignItems: 'center', justifyContent: 'center', fontFamily: 'Arial, sans-serif' },
   },
     React.createElement('div', { style: { color: '#f4f4f5', fontSize: 72, fontWeight: 800 } },
-      (props.title || 'FIXTURE') + ' f' + frame),
+      (fields.headline || props.title || 'FIXTURE') + ' f' + frame),
     React.createElement('div', {
-      style: { width: barW, height: 12, background: '#f6a623', marginTop: 24, borderRadius: 6 },
+      style: { width: barW, height: 12, background: accent, marginTop: 24, borderRadius: 6 },
     }),
     assets.dot ? React.createElement(R.Img, {
       src: assets.dot,
@@ -60,7 +63,7 @@ const manifest = {
   kind: 'remotion',
   projectName: 'remotion-fixture',
   compiledJs: COMPILED_JS,
-  inputProps: { title: 'FIXTURE', assets: { dot: DOT_PNG } },
+  inputProps: { title: 'FIXTURE', fields: { headline: 'FIELDS OK', accent: '#f6a623' }, assets: { dot: DOT_PNG } },
   durationInFrames,
   transparent: format !== 'mp4',
   width: 1280,

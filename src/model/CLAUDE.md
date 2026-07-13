@@ -40,9 +40,19 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   sync.
 - **videoTypes.ts** - VideoProject, the canonical unit of the AI VIDEO editor ("Video or
   animation with AI"): a single-file React/Remotion composition (`tsx`) + duration/fps/size/
-  transparency + assets (the exact AssetFile shape, sync-ready) + AI chat history and motion
-  plan. Parallel to SpxTemplate - the two worlds never mix; `kind: 'video'` is the serialized
-  discriminant. Also DocKind and createDefaultVideoProject (starter composition).
+  transparency + assets (the exact AssetFile shape, sync-ready) + `inputs` (editable inputs,
+  below) + AI chat history and motion plan. Parallel to SpxTemplate - the two worlds never
+  mix; `kind: 'video'` is the serialized discriminant. Also DocKind and
+  createDefaultVideoProject (starter composition).
+  **VideoInput** = the video project's Template Definition, the counterpart of an SPX
+  DataField: `{ key, type: text|number|color|select, label, value, default, options?/min?/
+  max?/step? }`. The AI declares a handful (via the emit tool) so a non-technical user edits
+  the content in the Content panel WITHOUT touching TSX; the composition reads them from its
+  `fields` prop as `fields.<key> ?? default`. `videoFieldValues(inputs)` builds the `{key:
+  value}` bag passed as `fields` into BOTH the live preview (VideoPlayerFrame set-props) and
+  the render (buildVideoManifest inputProps). `mergeVideoInputs(prev, next)` adopts a
+  regenerated set while keeping values the user already edited. Shaped to mirror SPX `ftype`s
+  so a shared cross-format definition can converge later.
 - **videoProject.ts** - video persistence mirroring project.ts/packets.ts: current slot
   'spx-gfx-video-project' (autosave; returns false on quota so the shell can WARN - video
   assets are big) + saved list 'spx-gfx-video-saved' with soft-delete tombstones.

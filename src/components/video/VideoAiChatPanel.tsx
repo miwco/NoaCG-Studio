@@ -15,7 +15,7 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { describeAssets } from '../../video/types';
 import { validateVideoModule } from '../../video/validate';
 import { getActiveBridge } from '../../video/bridgeRegistry';
-import type { VideoProject } from '../../model/videoTypes';
+import { mergeVideoInputs, type VideoProject } from '../../model/videoTypes';
 
 function settingsOf(project: VideoProject) {
   return {
@@ -78,6 +78,9 @@ export default function VideoAiChatPanel() {
       ...p,
       tsx: result.tsx,
       motionPlan: result.motionPlan ?? p.motionPlan,
+      // Adopt the newly declared inputs, keeping any values the user already edited (a
+      // refinement re-declares them; null means the provider left them unchanged).
+      inputs: result.inputs ? mergeVideoInputs(p.inputs, result.inputs) : p.inputs,
       chat: [...p.chat, { role: 'assistant', text: result.summary, at: new Date().toISOString() }],
     });
     requestReplay();

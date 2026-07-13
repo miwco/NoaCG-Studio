@@ -9,6 +9,7 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useAuthState } from '../auth/useAuthState';
 import { compileTsx } from '../../video/compile';
 import { describeAssets } from '../../video/types';
+import { videoFieldValues } from '../../model/videoTypes';
 import { buildVideoManifest } from '../../render/buildVideoManifest';
 import { formatNeedsSignIn, resolveTier, validateRenderRequest, RENDER_CONFIG } from '../../render/limits';
 import { RENDER_FORMATS, type RenderFormatId } from '../../render/manifest';
@@ -59,7 +60,9 @@ export default function VideoRenderPanel() {
         fps: project.fps,
         durationInFrames: project.durationInFrames,
         compiledJs: compiled.js,
-        inputProps: { assets: assetProps },
+        // The composition's editable inputs ride alongside assets in inputProps - the same
+        // channel the live preview uses, so a render reproduces exactly what previews.
+        inputProps: { assets: assetProps, fields: videoFieldValues(project.inputs) },
         transparent: project.transparent,
       },
       {

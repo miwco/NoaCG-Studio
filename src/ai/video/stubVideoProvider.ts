@@ -10,6 +10,7 @@
 // When a logo is expected but none was uploaded, the reveal sets a typographic wordmark,
 // exactly as the contract requires of the real model.
 
+import type { VideoInput } from '../../model/videoTypes';
 import type {
   VideoAIProvider,
   VideoGenerateContext,
@@ -17,8 +18,13 @@ import type {
   VideoValidator,
 } from './provider';
 
-/** The `assets` prop convention every sample follows (same as generated code). */
-const ASSETS_PROP = '{ assets = {} }: { assets?: Record<string, string> }';
+/** The prop signature every sample follows (same as generated code): assets + editable fields. */
+const COMP_PROPS =
+  '{ assets = {}, fields = {} }: { assets?: Record<string, string>; fields?: Record<string, string | number> }';
+
+/** An accent-colour input every sample exposes (the one shared editable choice). */
+const ACCENT_INPUT: VideoInput = { key: 'accent', type: 'color', label: 'Accent colour', value: '#f6a623', default: '#f6a623' };
+const textInput = (key: string, label: string, value: string): VideoInput => ({ key, type: 'text', label, value, default: value });
 
 /** Background for the root fill - transparent projects paint nothing so the alpha survives. */
 function rootBackground(transparent: boolean, opaqueCss: string): string {
@@ -34,17 +40,19 @@ function stingerTsx(transparent: boolean): string {
 
 import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition(${ASSETS_PROP}) {
+export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
   const logo = Object.values(assets)[0]; // optional - the layout works with or without it
+  const title = String(fields.title ?? 'Game On');
+  const accent = String(fields.accent ?? '#f6a623');
 
   // ── Timing (frames, derived from fps so any rate works) ──────────────────
   const titleStart = Math.round(fps * 0.28);
   const exitStart = durationInFrames - Math.round(fps * 0.5);
 
   // Three full-width slabs sweep in with a tight stagger; they carry the entrance energy.
-  const slabColors = ['#f6a623', '#1d2634', '#2c3a52'];
+  const slabColors = [accent, '#1d2634', '#2c3a52'];
   const slabs = [0, 1, 2].map((i) => {
     const enter = spring({ frame: frame - i * 3, fps, config: { damping: 15, stiffness: 210 } });
     const exit = interpolate(frame, [exitStart + i * 2, exitStart + i * 2 + fps * 0.35], [0, 1], {
@@ -108,7 +116,7 @@ export default function Composition(${ASSETS_PROP}) {
             }}
           >
             {logo && <Img src={logo} style={{ height: '1em', objectFit: 'contain' }} />}
-            Game On
+            {title}
             <div
               style={{
                 position: 'absolute',
@@ -135,9 +143,12 @@ function newsTsx(transparent: boolean): string {
 
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition(${ASSETS_PROP}) {
+export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
+  const headline = String(fields.headline ?? 'Top Story');
+  const kicker = String(fields.kicker ?? 'Live · Tonight');
+  const accent = String(fields.accent ?? '#f6a623');
 
   const ruleGrow = spring({ frame, fps, config: { damping: 22, stiffness: 150 } });
   const textStart = Math.round(fps * 0.3);
@@ -173,13 +184,13 @@ export default function Composition(${ASSETS_PROP}) {
                 lineHeight: 1.02,
               }}
             >
-              Top Story
+              {headline}
             </div>
           </div>
 
           {/* Kicker + amber keyline land last */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: Math.round(height * 0.03), opacity: keyline }}>
-            <div style={{ width: Math.round(width * 0.05) * keyline, height: 4, background: '#f6a623' }} />
+            <div style={{ width: Math.round(width * 0.05) * keyline, height: 4, background: accent }} />
             <div
               style={{
                 color: 'rgba(255,255,255,0.7)',
@@ -190,7 +201,7 @@ export default function Composition(${ASSETS_PROP}) {
                 textTransform: 'uppercase',
               }}
             >
-              Live · Tonight
+              {kicker}
             </div>
           </div>
         </div>
@@ -211,10 +222,12 @@ function logoTsx(transparent: boolean): string {
 
 import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition(${ASSETS_PROP}) {
+export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, height } = useVideoConfig();
   const logo = Object.values(assets)[0];
+  const wordmark = String(fields.wordmark ?? 'Studio'); // shown when no logo image is uploaded
+  const accent = String(fields.accent ?? '#f6a623');
 
   const enter = spring({ frame, fps, config: { damping: 12, stiffness: 130 } }); // overshoots
   const sweep = interpolate(frame, [fps * 0.45, fps * 1.15], [-70, 170], {
@@ -257,8 +270,8 @@ export default function Composition(${ASSETS_PROP}) {
               lineHeight: 1,
             }}
           >
-            <span style={{ color: '#f5f7fa' }}>Studio</span>
-            <span style={{ color: '#f6a623' }}>.</span>
+            <span style={{ color: '#f5f7fa' }}>{wordmark}</span>
+            <span style={{ color: accent }}>.</span>
           </div>
         )}
         {/* Specular light sweep clipped to the mark */}
@@ -286,9 +299,10 @@ function countdownTsx(transparent: boolean): string {
 
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition(${ASSETS_PROP}) {
+export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, height } = useVideoConfig();
+  const accent = String(fields.accent ?? '#f6a623');
 
   const totalSeconds = Math.max(1, Math.floor(durationInFrames / fps));
   const second = Math.min(totalSeconds - 1, Math.floor(frame / fps));
@@ -310,7 +324,7 @@ export default function Composition(${ASSETS_PROP}) {
           width: ringSize,
           height: ringSize,
           borderRadius: '50%',
-          border: '4px solid #f6a623',
+          border: \`4px solid \${accent}\`,
           transform: \`scale(\${ring})\`,
           opacity: ringFade,
         }}
@@ -344,10 +358,13 @@ function titleTsx(transparent: boolean): string {
 
 import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition(${ASSETS_PROP}) {
+export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
   const logo = Object.values(assets)[0];
+  const title = String(fields.title ?? 'Main Title');
+  const subtitle = String(fields.subtitle ?? 'Subtitle Here');
+  const accent = String(fields.accent ?? '#f6a623');
 
   const bar = spring({ frame, fps, config: { damping: 20, stiffness: 170 } });
   const title = spring({ frame: frame - Math.round(fps * 0.22), fps, config: { damping: 16, stiffness: 140 } });
@@ -366,7 +383,7 @@ export default function Composition(${ASSETS_PROP}) {
           style={{
             width: Math.round(width * 0.34) * bar,
             height: 6,
-            background: '#f6a623',
+            background: accent,
             marginBottom: Math.round(height * 0.035),
             borderRadius: 3,
           }}
@@ -384,7 +401,7 @@ export default function Composition(${ASSETS_PROP}) {
               lineHeight: 1.02,
             }}
           >
-            Main Title
+            {title}
           </div>
         </div>
         <div
@@ -407,7 +424,7 @@ export default function Composition(${ASSETS_PROP}) {
               textTransform: 'uppercase',
             }}
           >
-            Subtitle Here
+            {subtitle}
           </span>
         </div>
       </div>
@@ -417,45 +434,51 @@ export default function Composition(${ASSETS_PROP}) {
 `;
 }
 
-function pickSample(prompt: string, transparent: boolean): { tsx: string; summary: string } {
+function pickSample(prompt: string, transparent: boolean): { tsx: string; summary: string; inputs: VideoInput[] } {
   const p = prompt.toLowerCase();
   if (/countdown|count\s*down|\bcount\b|timer/.test(p)) {
     return {
       tsx: countdownTsx(transparent),
       summary: 'A broadcast countdown - one bold number per second with a spring landing and a ring pulse, the final number amplified.',
+      inputs: [{ ...ACCENT_INPUT }],
     };
   }
   if (/sting|bumper|sport|match|team|derby|versus|\bvs\b|game\b|league/.test(p)) {
     return {
       tsx: stingerTsx(transparent),
       summary: 'A sports stinger - angled slabs slash across the frame, a condensed title snaps in with a light sweep, then a fast clear-out.',
+      inputs: [textInput('title', 'Title', 'Game On'), { ...ACCENT_INPUT }],
     };
   }
   if (/news|breaking|headline|bulletin|election|politic/.test(p)) {
     return {
       tsx: newsTsx(transparent),
       summary: 'A modern news intro - horizontal rules extend, a headline slides in from behind a mask, and an amber keyline lands last.',
+      inputs: [textInput('headline', 'Headline', 'Top Story'), textInput('kicker', 'Kicker', 'Live · Tonight'), { ...ACCENT_INPUT }],
     };
   }
   if (/logo|reveal|ident|\bmark\b|brand|wordmark/.test(p)) {
     return {
       tsx: logoTsx(transparent),
       summary: 'A premium logo reveal - the mark (or a designed wordmark) settles in with an overshoot, a light sweep crosses it, and it breathes before a clean close.',
+      inputs: [textInput('wordmark', 'Wordmark', 'Studio'), { ...ACCENT_INPUT }],
     };
   }
   return {
     tsx: titleTsx(transparent),
     summary: 'A clean title reveal - an accent bar sweeps in, the title rises behind it, a kicker fades up, and everything exits sharply.',
+    inputs: [textInput('title', 'Title', 'Main Title'), textInput('subtitle', 'Subtitle', 'Subtitle Here'), { ...ACCENT_INPUT }],
   };
 }
 
 async function finish(
   tsx: string,
   summary: string,
+  inputs: VideoInput[] | null,
   validate?: VideoValidator,
 ): Promise<VideoGenerateResult> {
   const validation = validate ? await validate(tsx) : null;
-  return { summary, tsx, motionPlan: null, skills: [], validation };
+  return { summary, tsx, motionPlan: null, inputs, skills: [], validation };
 }
 
 class StubVideoProvider implements VideoAIProvider {
@@ -464,8 +487,8 @@ class StubVideoProvider implements VideoAIProvider {
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult> {
-    const { tsx, summary } = pickSample(prompt, ctx.settings.transparent);
-    return finish(tsx, `${summary} (offline sample - add an AI key for real generation)`, validate);
+    const { tsx, summary, inputs } = pickSample(prompt, ctx.settings.transparent);
+    return finish(tsx, `${summary} (offline sample - add an AI key for real generation)`, inputs, validate);
   }
 
   refineVideo(
@@ -475,6 +498,7 @@ class StubVideoProvider implements VideoAIProvider {
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult> {
     // A couple of honest deterministic tweaks; anything else keeps the module unchanged.
+    // inputs: null - a refinement never re-declares them, so the current set is kept as-is.
     const r = request.toLowerCase();
     let tsx = current.tsx;
     let summary = 'No offline rule matches that request - add an AI key in settings for real edits.';
@@ -485,7 +509,7 @@ class StubVideoProvider implements VideoAIProvider {
       tsx = tsx.replace(/stiffness: (\d+)/g, (_, n) => `stiffness: ${Math.max(40, Math.round(Number(n) * 0.6))}`);
       summary = 'Calmed the motion down (softer springs). Offline sample edit.';
     }
-    return finish(tsx, summary, validate);
+    return finish(tsx, summary, null, validate);
   }
 }
 
