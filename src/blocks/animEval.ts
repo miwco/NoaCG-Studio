@@ -85,3 +85,12 @@ export function activationStep(data: AnimData, selector: string): number {
   }
   return 0;
 }
+
+/** The step where a layer LEAVES: its `hides` step, else the final Out step (a layer with
+ *  no early exit lives to the end). The existence span is [activationStep, hideStep]. */
+export function hideStep(data: AnimData, selector: string): number {
+  for (let s = 1; s < data.steps.length - 1; s++) {
+    if (data.steps[s].hides?.includes(selector)) return s;
+  }
+  return data.steps.length - 1;
+}

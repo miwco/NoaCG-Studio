@@ -53,8 +53,8 @@ test('design view: the canvas shows the settled graphic without pressing Play', 
 
 test('timeline strip lives under the preview and renders the preset structure', async ({ page }) => {
   await createHairlineCard(page); // card01 default preset: line-reveal (set + accent + lines)
-  // Under the preview (inside .preview-wrap), NOT in the Motion tab.
-  const timeline = page.locator('.preview-wrap [data-testid="timeline"]');
+  // In the centre below the canvas (the timeline dock), NOT in a Motion tab.
+  const timeline = page.locator('.center-timeline [data-testid="timeline"]');
   await expect(timeline).toBeVisible();
   // The selected ▶ In card's inspector speaks the vocabulary: line-reveal's tuned
   // entrance ease (expo.out) shows as Expo; the header speed knob reads Normal.

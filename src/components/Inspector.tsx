@@ -5,9 +5,10 @@ import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData
 import { importAnimData } from '../blocks/animImport';
 import { deleteKeyframe, setKeyframe } from '../blocks/animEdit';
 import { applyPresetData, presetDonor } from '../blocks/presetApply';
-import { presetsForType } from '../blocks/animPatch';
+import { presetsForType, anyPresetById } from '../blocks/animPatch';
 import { activationStep, animatedProps, resolveValue, stepSeconds } from '../blocks/animEval';
 import type { AnimPresetId } from '../model/wizard';
+import { EASINGS, resolveEasing, type EasingId } from '../model/easings';
 import { phaseIdOf } from './StepTimeline';
 
 // Timeline v2 Phase 2/4 (docs/TIMELINE_V2_PLAN.md) — the Inspector: the persistent,
@@ -61,6 +62,13 @@ export default function Inspector() {
   const [tab, setTab] = useState<'properties' | 'animations'>('properties');
   const [presetId, setPresetId] = useState<AnimPresetId | ''>('');
   const [presetPhase, setPresetPhase] = useState<'in' | 'out' | 'both'>('in');
+  const [presetEasing, setPresetEasing] = useState<EasingId>('auto');
+  // Duration overrides in effective seconds; '' = keep the current step length. In and Out
+  // are independent, with an optional link so "both" can be set from one field.
+  const [durIn, setDurIn] = useState<string>('');
+  const [durOut, setDurOut] = useState<string>('');
+  const [linkDur, setLinkDur] = useState(true);
+  const [presetMsg, setPresetMsg] = useState<string>('');
 
   const parts = useMemo(
     () => getTemplateParts(template.html, template.fields),
@@ -125,6 +133,24 @@ export default function Inspector() {
         row.prop === 'blur' ? `blur(${value}px)` : value,
       ),
     );
+  };
+
+  // The layer's transform PIVOT (where scale and rotation pivot from) — a static per-layer
+  // value stored as a single `transformOrigin` keyframe at the layer's activation step, so any
+  // keyframed scale/rotation pivots correctly (the model's transform-origin gap). Centre by
+  // default; the runtime honours it as an ordinary set().
+  const PIVOTS = ['0% 0%', '50% 0%', '100% 0%', '0% 50%', '50% 50%', '100% 50%', '0% 100%', '50% 100%', '100% 100%'];
+  const currentPivot = (): string => {
+    if (!data) return '50% 50%';
+    for (const step of data.steps) {
+      const kfs = step.layers[part.selector]?.transformOrigin;
+      if (kfs && kfs.length) return String(kfs[0].value);
+    }
+    return '50% 50%';
+  };
+  const setPivot = (value: string) => {
+    if (!native) return;
+    applyData(setKeyframe(native, activationStep(native, part.selector), part.selector, 'transformOrigin', 0, value));
   };
 
   const commitValue = (row: (typeof PROP_ROWS)[number], raw: number) => {
@@ -299,9 +325,25 @@ export default function Inspector() {
                   </div>
                 );
               })}
+              {native && part.kind !== 'root' && (
+                <div className="inspector-row inspector-pivot-row" data-testid="inspector-pivot">
+                  <span className="inspector-row-label" title="Where scale and rotation pivot from">Pivot</span>
+                  <span className="inspector-pivot-grid">
+                    {PIVOTS.map((p, i) => (
+                      <button
+                        key={p}
+                        className={`inspector-pivot-cell${currentPivot() === p ? ' active' : ''}`}
+                        onClick={() => setPivot(p)}
+                        title={`Pivot: ${p}`}
+                        data-testid={`inspector-pivot-${i}`}
+                      />
+                    ))}
+                  </span>
+                </div>
+              )}
               <p className="hint inspector-hint">
                 {native
-                  ? 'Values at the playhead. ◇ arms a property; editing an armed value keys it at the playhead.'
+                  ? 'Values at the playhead. ◇ arms a property; editing an armed value keys it at the playhead. Pivot sets where scale/rotation turn.'
                   : 'Values at the settled on-air state — press the timeline\'s "use keyframes" chip to edit them here.'}
               </p>
             </>
@@ -321,12 +363,20 @@ export default function Inspector() {
               graphic when the root is selected; just this layer otherwise ("In" targets
               the step where THIS layer becomes active). Declared properties only — a
               manually keyed rotation survives a slide preset. */}
-          {native && (
+          {native && data && (() => {
+            // Where each direction lands, so the duration fields can show the live value.
+            const presetScope = part.kind === 'root' ? 'all' : part.selector;
+            const inStepIdx = presetScope === 'all' ? 0 : activationStep(data, part.selector);
+            const inDefault = stepSeconds(data, inStepIdx);
+            const outDefault = stepSeconds(data, data.steps.length - 1);
+            const showIn = presetPhase !== 'out';
+            const showOut = presetPhase !== 'in';
+            return (
             <div className="inspector-preset" data-testid="inspector-preset">
               <select
                 className="inspector-preset-select"
                 value={presetId}
-                onChange={(e) => setPresetId(e.target.value as AnimPresetId)}
+                onChange={(e) => { setPresetId(e.target.value as AnimPresetId); setPresetMsg(''); }}
                 title={
                   part.kind === 'root'
                     ? "The whole graphic's motion style"
@@ -348,33 +398,121 @@ export default function Inspector() {
                   <button
                     key={ph}
                     className={`tab ${presetPhase === ph ? 'active' : ''}`}
-                    onClick={() => setPresetPhase(ph)}
+                    onClick={() => { setPresetPhase(ph); setPresetMsg(''); }}
                     data-testid={`inspector-preset-${ph}`}
                   >
                     {ph === 'in' ? 'In' : ph === 'out' ? 'Out' : 'Both'}
                   </button>
                 ))}
               </span>
+              <label className="inspector-preset-field">
+                <span>Easing</span>
+                <select
+                  className="inspector-preset-easing"
+                  value={presetEasing}
+                  onChange={(e) => setPresetEasing(e.target.value as EasingId)}
+                  title="The motion curve applied to this style"
+                  data-testid="inspector-preset-easing"
+                >
+                  <option value="auto">Auto (style default)</option>
+                  {EASINGS.map((e) => (
+                    <option key={e.id} value={e.id} title={e.description}>
+                      {e.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="inspector-preset-durations">
+                {showIn && (
+                  <label className="inspector-preset-field">
+                    <span>In&nbsp;(s)</span>
+                    <input
+                      className="inspector-preset-dur"
+                      type="number"
+                      min={0.05}
+                      step={0.05}
+                      value={durIn}
+                      placeholder={inDefault.toFixed(2)}
+                      onChange={(e) => {
+                        setDurIn(e.target.value);
+                        if (linkDur && presetPhase === 'both') setDurOut(e.target.value);
+                      }}
+                      data-testid="inspector-preset-dur-in"
+                    />
+                  </label>
+                )}
+                {showOut && (
+                  <label className="inspector-preset-field">
+                    <span>Out&nbsp;(s)</span>
+                    <input
+                      className="inspector-preset-dur"
+                      type="number"
+                      min={0.05}
+                      step={0.05}
+                      value={durOut}
+                      placeholder={outDefault.toFixed(2)}
+                      onChange={(e) => {
+                        setDurOut(e.target.value);
+                        if (linkDur && presetPhase === 'both') setDurIn(e.target.value);
+                      }}
+                      data-testid="inspector-preset-dur-out"
+                    />
+                  </label>
+                )}
+                {presetPhase === 'both' && (
+                  <label className="inspector-preset-link" title="Set In and Out together">
+                    <input
+                      type="checkbox"
+                      checked={linkDur}
+                      onChange={(e) => {
+                        setLinkDur(e.target.checked);
+                        if (e.target.checked) setDurOut(durIn);
+                      }}
+                      data-testid="inspector-preset-link"
+                    />
+                    <span>Link</span>
+                  </label>
+                )}
+              </div>
               <button
                 className="inspector-preset-apply"
                 disabled={!presetId}
                 onClick={() => {
                   if (!native || !presetId) return;
-                  const donor = presetDonor(template, native, presetId);
-                  const scope = part.kind === 'root' ? 'all' : part.selector;
-                  const next = donor && applyPresetData(native, donor, presetPhase, scope);
-                  const js = next && spliceAnimData(template.js, next);
-                  if (!js || js === template.js) return;
+                  const preset = anyPresetById(presetId);
+                  const eases = resolveEasing(presetEasing, preset.autoEase);
+                  const donor = presetDonor(template, native, presetId, eases);
+                  const durations = {
+                    inDuration: showIn && durIn.trim() ? Number(durIn) : undefined,
+                    outDuration: showOut && durOut.trim() ? Number(durOut) : undefined,
+                  };
+                  const next = donor && applyPresetData(native, donor, presetPhase, presetScope, durations);
+                  if (!next) {
+                    setPresetMsg('This style has no motion for this element.');
+                    return;
+                  }
+                  const js = spliceAnimData(template.js, next);
+                  if (!js || js === template.js) {
+                    setPresetMsg('No change — already at this style.');
+                    return;
+                  }
+                  setPresetMsg('');
                   applyTemplate({ ...template, js });
                   requestReplay(); // presets are motion — play them
+                  // Re-park the preview at the playhead after the debounced rebuild.
+                  if (playhead) setTimeout(() => sendScrub(phaseIdOf(native, playhead.step), playhead.t), 650);
                 }}
-                title="Write this style's keyframes into the chosen direction (undo with Ctrl+Z)"
+                title="Replace this element's motion in the chosen direction with this style (undo with Ctrl+Z)"
                 data-testid="inspector-preset-apply"
               >
                 Apply
               </button>
+              {presetMsg && (
+                <p className="inspector-preset-msg" data-testid="inspector-preset-msg">{presetMsg}</p>
+              )}
             </div>
-          )}
+            );
+          })()}
           {data ? (
             (() => {
               const rows = data.steps

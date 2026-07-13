@@ -6,26 +6,38 @@ in src/blocks/CLAUDE.md.
 
 ## Shell & editor
 
-- **AppShell** - the workspace layout. code-left mode: code on the left; the RIGHT REGION
-  stacks the preview row (stage + timeline | Inspector) over the FULL-WIDTH tool panels -
-  the Inspector column is exactly as tall as the preview block (its content scrolls within),
-  so no dead corner sits under it and the panels get the whole width beside the code column.
-  preview-top mode: full-width preview row (stage | Inspector) over a code | panels row.
-  The stage's aspect-ratio comes from the template resolution. `inspectorRatio` is a
-  fraction of the WORKSPACE width in both modes (code-left converts it to a row-relative
-  fraction when rendering). A NEW selection (any surface) auto-opens a collapsed Inspector -
-  DEFERRED half a second past the double-click window: any new pointer press cancels the
-  pending open and a live canvas gesture (store canvasGestureActive) skips it at fire time,
-  so the workspace never resizes between the two clicks of a text double-click or under a
-  drag (e2e/inline-edit.spec.ts pins this). An explicit ◨ collapse holds while the selection
-  stays the same. Binds global Ctrl/Cmd+Z
-  to undo() and Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a
-  form field). Desktop layout modes + splitters persist via model/layout.ts;
+- **AppShell** - the workspace layout: a flexible DOCKABLE-PANEL model (model/layout.ts). The
+  centre is fixed - the canvas (stage + transport) over the timeline, split by a draggable
+  divider - and three docks (LEFT, RIGHT, BOTTOM) flank it, each hosting any panels
+  (`code`, `inspector`, `data`, `control`, `style`, `ai`, `export`) as tabs. Default: code left,
+  Inspector + the tool panels right, timeline roomy in the centre, bottom empty. Each dock renders
+  only when it holds panels; the splitters resize the adjacent region. A tab can be MOVED to
+  another dock or CLOSED via its ▾ menu; a dock's "+" re-adds any hidden panel (a closed panel
+  stays closed across reloads and is offered there). The DockState (panels/active/size) +
+  timelineSize persist via model/layout.ts (loadLayout migrates any non-v2 layout to the default).
+  The dock component is **WorkspaceDock**; the panel bodies come from AppShell's `renderPanel`
+  (the tool panels wrapped in `.panel-body`); MOBILE keeps the fused preview column + SidePanel.
+  A NEW selection (any surface) reveals the Inspector - activates its tab, or re-docks it if it
+  was closed - DEFERRED half a second past the double-click window: any new pointer press cancels
+  the pending reveal and a live canvas gesture (store canvasGestureActive) skips it at fire time,
+  so the workspace never resizes between the two clicks of a text double-click or under a drag
+  (e2e/inline-edit.spec.ts pins this). The store's `activePanel` is a "reveal this panel" signal
+  (the wizard shows Export after an import) - honoured in the docks, but not on mount. The topbar
+  ◨/code toggles close-or-reveal those panels. Binds global Ctrl/Cmd+Z to undo() and
+  Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a form field).
   useIsMobile/useSplitter support the mobile and resizable layouts.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
   Learn tab).
-- **PreviewFrame**, **CanvasGuides**.
+- **PreviewFrame** - the stage: the iframe + overlays live in a `.canvas-world` centred in the
+  stage and translated by `pan`, scaled by fit × `zoom`. Zoom: the toolbar −/%/+ (the % resets
+  to fit), Ctrl/Cmd+wheel (and trackpad pinch) toward the cursor, clamped 0.2–8×. Pan: a plain
+  wheel when zoomed in, or a middle-mouse drag (captured before the overlay). Because the overlay
+  is sized `stageW × (fit×zoom)` and CanvasInteraction reads its live bounding rect, zoom and pan
+  need NO coordinate changes there — the gesture math follows automatically (pinned by the zoom
+  case in e2e/multi-select.spec.ts). Off-canvas VISIBILITY (a pasteboard so elements that start
+  off-screen render) is a separate step — it needs the iframe to render past the canvas bounds.
+- **CanvasGuides**.
 
 ## Canvas direct manipulation (Era 6)
 
@@ -35,6 +47,11 @@ in src/blocks/CLAUDE.md.
   corner handle -> live --scale preview, diagonal-aware, clamped 0.25-4. Every gesture commits as
   ONE undoable applyTemplate and jumps the editor to the changed tab, highlighted; the root is
   detected via model/structure.ts detectPrefix.
+  LAYER SCALE/ROTATE HANDLES (data-block, a single selected non-root layer): a corner scale
+  handle + a top rotate handle on the selection box; dragging previews live via GSAP and, on
+  release, keys `scale` / `rotation` at the playhead (keyframePlace + setKeyframe + spliceAnimData,
+  ONE undoable apply, re-parked) - pivoting around the layer's transform-origin (the Inspector
+  pivot). Escape springs it back. The root keeps its own --scale corner handle.
   CANVAS POSITION KEYFRAMING (docs/TIMELINE_INTERACTION_MODEL.md, amendment 3): on a
   data-block template, dragging any SELECTED non-root layer moves the WHOLE selection (layers
   contained in another dragged layer are excluded - the parent's transform carries them) and,
@@ -82,13 +99,19 @@ in src/blocks/CLAUDE.md.
   ROWS - every registry part gets a row - with aggregate keyframe diamonds, a ▸ caret that
   EXPANDS the layer into per-property sub-rows (each track's own diamonds; drag/Delete/ease
   scoped to that property via moveKeyframe/deleteKeyframe/setKeyframeEase's prop arg), and a
-  LAYER STATE BLOCK: the existence span (activation step -> the end of Out) with the
-  keyframed entering/exiting phases emphasized - its LEFT edge drags between step boundaries
-  as the same activation move the gutter/chip make (no right-edge trim until the `hides`
-  model extension exists). KEYFRAME SETS: click selects a diamond, shift-click builds a set,
+  LAYER STATE BLOCK: the existence span (activation step -> the step it LEAVES: its `hides`
+  step, else the end of Out) with the keyframed entering/exiting phases emphasized - its LEFT
+  edge drags between step boundaries as the same activation move the gutter/chip make, and its
+  RIGHT edge drags to set an EARLY EXIT (blocks/animEdit setLayerHide writes the step's `hides`;
+  dragging to Out clears it). Setting a hide on a template whose interpreter predates the
+  feature re-emits the whole region so the exit actually plays. KEYFRAME SETS: click selects a diamond, shift-click builds a set,
   dragging any selected diamond moves the WHOLE set (magnetic snap to playhead/step
   edges/other keyframes within ~7px, Alt free, 0.05s grid fallback), Delete clears the set,
-  ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead. A draggable
+  ←/→ nudges it, Ctrl/Cmd+C/V copies and pastes the group at the playhead, Ctrl/Cmd+D
+  duplicates it in place. A drag on the empty rows area draws the SAME amber marquee the canvas
+  lasso uses (.tlv2-lasso) and boxes every diamond it touches (x -> time, y -> the row bands;
+  shift adds; an expanded layer is boxed per-property); the ruler/clips band keeps its scrub.
+  A draggable
   playhead with a grab cap + auto-follow scroll and deep zoom (up to 1000 px/s); Space plays
   (never while typing).
   Every edit is a pure data mutation (blocks/animEdit.ts) spliced back by
@@ -105,12 +128,13 @@ in src/blocks/CLAUDE.md.
   drag-scrub the value, blur is the one non-transform (its keyframes live on `filter` as
   'blur(Npx)'), and arming BOTH Position X and Y also unlocks the canvas position-keyframe
   drag (see CanvasInteraction). The Animations tab names which steps move the layer and holds the preset
-  picker (preset + In/Out/Both + Apply - blocks/presetApply.ts). Legacy templates get a
-  read-only shell (the timeline's convert chip arms editing). Its column lives in both
-  desktop layout modes with a splitter + the topbar ◨ Inspector toggle (layout prefs
-  inspectorRatio/inspectorCollapsed); it defaults open only on wide screens (>= 1500 px),
-  and any NEW selection auto-opens it (an explicit collapse holds while the selection is
-  unchanged - see AppShell).
+  picker (preset + In/Out/Both + easing dropdown + per-direction duration + Apply -
+  blocks/presetApply.ts); Apply is a CLEAN SWAP of the targeted direction's motion (it never
+  blends with the previous preset), and re-parks the preview at the playhead. Legacy templates get a
+  read-only shell (the timeline's convert chip arms editing). It is a dockable panel (default:
+  the active tab of the RIGHT dock) - shown/hidden/resized/moved like any panel; any NEW
+  selection reveals it (activates its tab, or re-docks it if closed - an explicit close holds
+  while the selection is unchanged, see AppShell).
 - **TimelineView** - the classic collapsible strip under the preview; since Timeline v2 it
   serves LEGACY-REGION categories only (data-block templates get StepTimeline via
   TimelineDock, and lower thirds now create as data blocks). MOMENT CARDS
@@ -148,10 +172,11 @@ in src/blocks/CLAUDE.md.
   without dragging) selects that element on the canvas too (store selectedPart); the selected
   row washes amber.
 
-## Panels (SidePanel: five tabs - Data / Control / Style / AI / Export)
+## Panels (the five tool panels - Data / Control / Style / AI / Export)
 
-There is no Motion tab: motion editing lives on the timeline under the preview (StepTimeline
-or TimelineView via TimelineDock) plus the Inspector.
+On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
+**SidePanel** (the five-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
+editing lives on the timeline (StepTimeline or TimelineView via TimelineDock) plus the Inspector.
 
 - **SampleDataPanel** - sample values + add-field.
 - **ControlPanel** - operator view from the control/ engine; live-drives the preview via
@@ -176,7 +201,8 @@ or TimelineView via TimelineDock) plus the Inspector.
 The PARALLEL editor world for the AI video project kind (VideoProject, src/model/videoTypes.ts).
 App.tsx renders **VideoAppShell** instead of AppShell when docKindStore says 'video'; only the
 wizard flips that switch. Layout: TSX code pane (lazy Monaco, **VideoCodeEditor**, syntax-only
-TSX diagnostics from monacoSetup.ts) | splitter (`videoCodeRatio` pref) | right column =
+TSX diagnostics from monacoSetup.ts) | splitter (model/videoLayout.ts `codeRatio` pref,
+independent of the SPX dockable workspace) | right column =
 **VideoPlayerFrame** (the player stage; the sandboxed Remotion Player iframe host) over a
 tabbed panel: **VideoAiChatPanel** (the primary authoring surface - auto-runs the FIRST
 generation when chat holds exactly one unanswered user turn, guarded PER PROJECT ID with a

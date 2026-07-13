@@ -9,10 +9,11 @@
 // this checkout's dev/live ports). SessionStart stdout is added to the agent's context.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, rmdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readHookInput } from './lib.mjs';
+import { reattachMainIfSafe } from '../reattach-main.mjs';
 
 const input = await readHookInput();
 const sessionCwd = normalize(input?.cwd ?? process.cwd());
@@ -24,6 +25,52 @@ const roots = gitLines(['worktree', 'list', '--porcelain'], sessionCwd)
   .filter((line) => line.startsWith('worktree '))
   .map((line) => normalize(line.slice('worktree '.length)));
 if (roots.length === 0) process.exit(0); // not a git checkout - nothing to check
+
+// Sweep leftover EMPTY worktree folders. `git worktree remove` on Windows can't delete the
+// folder while a session is cwd'd inside it, so it deregisters the worktree and empties the
+// files but leaves the now-empty directory behind. Once that session ends the folder unlocks;
+// the next session removes it here. Strictly conservative: only a COMPLETELY EMPTY,
+// git-UNREGISTERED folder that isn't this session's own cwd is removed - a still-busy folder
+// stays locked (rmdir throws, we skip it), and any non-empty stub is left for the warning below.
+try {
+  const worktreesDir = join(roots[0], '.claude', 'worktrees');
+  if (existsSync(worktreesDir)) {
+    for (const name of readdirSync(worktreesDir)) {
+      const dir = normalize(join(worktreesDir, name));
+      if (roots.some((r) => r.toLowerCase() === dir.toLowerCase())) continue; // a registered worktree
+      if (dir.toLowerCase() === sessionCwd.toLowerCase()) continue; // never sweep our own cwd
+      try {
+        if (readdirSync(dir).length === 0) {
+          rmdirSync(dir); // rmdir refuses a non-empty dir, so this can only remove an empty one
+          console.log(`Cleaned up an empty leftover worktree folder: ${dir}`);
+        }
+      } catch {
+        // Locked (a live session still owns it) or already gone - leave it and move on.
+      }
+    }
+  }
+} catch {
+  // Cleanup is best-effort and must never block session start.
+}
+
+// Keep the primary checkout on `main` - it is our canonical main worktree. The client parks
+// it on a detached HEAD (same commit, off the branch) whenever it spins up a linked worktree,
+// so `main` drifts off the root. Reattach it whenever that is unambiguously safe; the single
+// shared definition of "safe" lives in scripts/reattach-main.mjs (also used by /safe-merge).
+// This never touches a dirty tree, real detached work, or a main that is checked out elsewhere.
+try {
+  const { assessment, message } = reattachMainIfSafe(roots[0]);
+  if (message) {
+    console.log(message);
+  } else if (assessment.detached && !assessment.safe) {
+    console.log(
+      `Note: the primary checkout (${roots[0]}) is on a detached HEAD and was left as-is - ` +
+        `${assessment.reason}. Reattach it to main manually once that clears.`,
+    );
+  }
+} catch {
+  // Self-heal is best-effort and must never block session start.
+}
 
 const isUnder = (path, root) => path.toLowerCase() === root.toLowerCase() || path.toLowerCase().startsWith(root.toLowerCase() + '/');
 

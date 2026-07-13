@@ -57,7 +57,7 @@ test('looks: capture the current look, apply it to another graphic, survive relo
   await create(page, 'Lower thirds', 'Hairline');
 
   // Tweak the accent through the Style panel, then capture the look.
-  await page.locator('.panel-tabs .tab', { hasText: 'Style' }).click();
+  await page.getByTestId('dock-tab-style').click();
   await page
     .locator('.field-row', { hasText: '--accent' })
     .first()

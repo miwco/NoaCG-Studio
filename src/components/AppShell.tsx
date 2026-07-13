@@ -5,6 +5,12 @@ import PlayoutSimulator from './PlayoutSimulator';
 import TimelineDock from './StepTimeline';
 import SidePanel from './SidePanel';
 import Inspector from './Inspector';
+import SampleDataPanel from './SampleDataPanel';
+import ControlPanel from './ControlPanel';
+import StylePanel from './StylePanel';
+import AIPromptPanel from './AIPromptPanel';
+import ExportPanel from './ExportPanel';
+import WorkspaceDock from './WorkspaceDock';
 import PacketManager from './PacketManager';
 import CommunityGallery from './CommunityGallery';
 import ModerationQueue from './ModerationQueue';
@@ -19,7 +25,15 @@ import { isBackendConfigured } from '../backend/config';
 import { useIsModerator } from '../community/useIsModerator';
 import { useIsMobile } from './useIsMobile';
 import { useSplitter, type Splitter } from './useSplitter';
-import { clampRatio, loadLayout, saveLayout, type LayoutPrefs } from '../model/layout';
+import {
+  ALL_PANELS,
+  clampRatio,
+  loadLayout,
+  saveLayout,
+  type DockId,
+  type PanelId,
+  type WorkspaceLayout,
+} from '../model/layout';
 
 // Monaco (bundled inside CodeEditor via monacoSetup) is by far the heaviest chunk in the app,
 // and the code VIEW is optional — many users never open it. Loading it lazily keeps the shell,
@@ -61,7 +75,11 @@ export default function AppShell() {
   const openGallery = useTemplateStore((s) => s.openGallery);
   const undo = useTemplateStore((s) => s.undo);
   const redo = useTemplateStore((s) => s.redo);
+  const resetToBaseline = useTemplateStore((s) => s.resetToBaseline);
   const [packetsOpen, setPacketsOpen] = useState(false);
+  // The topbar Reset control uses a two-step inline confirm (arm, then confirm).
+  const [resetArmed, setResetArmed] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Community gallery (Era 5.5) — only offered when a backend is configured (offline shows nothing).
   // Browsing needs an account (the RPCs are authenticated-only), so signed-out visitors get the
@@ -101,47 +119,67 @@ export default function AppShell() {
   const isMobile = useIsMobile();
   const [codeOpen, setCodeOpen] = useState(false);
 
-  // Desktop layout (the mobile branch ignores this). Two arrangements — code-on-the-left, or a
-  // full-width preview on top with code + panels below — plus a collapsible code pane and drag
-  // dividers between regions. Remembered in localStorage (the first persisted UI preference).
+  // Desktop layout (the mobile branch ignores this): a flexible dockable-panel model — the
+  // canvas over a roomy timeline in the centre, flanked by left/right docks with a bottom dock
+  // below, each hosting any panels as tabs. Persisted in localStorage (model/layout.ts).
   const workspaceRef = useRef<HTMLDivElement>(null);
-  const bottomRowRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<LayoutPrefs>(loadLayout);
-
-  const toggleCode = () =>
+  const mainRowRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<WorkspaceLayout>(loadLayout);
+  // Persist whatever the update produces (one localStorage write per change).
+  const setLayoutSaved = (fn: (l: WorkspaceLayout) => WorkspaceLayout) =>
     setLayout((l) => {
-      const codeCollapsed = !l.codeCollapsed;
-      saveLayout({ codeCollapsed });
-      return { ...l, codeCollapsed };
-    });
-  const toggleMode = () =>
-    setLayout((l) => {
-      const mode = l.mode === 'code-left' ? 'preview-top' : 'code-left';
-      saveLayout({ mode });
-      return { ...l, mode };
-    });
-  const toggleInspector = () =>
-    setLayout((l) => {
-      const inspectorCollapsed = !l.inspectorCollapsed;
-      saveLayout({ inspectorCollapsed });
-      return { ...l, inspectorCollapsed };
+      const next = fn(l);
+      if (next !== l) saveLayout(next);
+      return next;
     });
 
-  // Selecting an element ANYWHERE (canvas click, timeline row label, diamond click) is a
-  // request to inspect it — a NEW selection un-collapses the Inspector. An explicit ◨
-  // collapse is respected for as long as the selection stays the same; the next different
-  // selection opens it again. Deselecting never opens or closes anything.
-  //
-  // The open is DEFERRED past the double-click window and stands down for gestures: opening
-  // the Inspector resizes the workspace, and doing that mid-interaction moves the canvas
-  // under the pointer — most visibly on a text double-click, where the first click selects
-  // and an instant open would shift the element before the second click lands. So the open
-  // waits half a second, any new pointer press cancels it (the user is still gesturing),
-  // and a gesture that is live when the timer fires (inline edit, canvas drag) skips it.
-  // The layout only ever moves when the user's hands are still; the next new selection
-  // offers the Inspector again.
-  // Keyed on the WHOLE selection: shift-adding a layer is as much a request to inspect
-  // as a fresh click, even though the primary (first selected) stays the same.
+  const DOCKS: DockId[] = ['left', 'right', 'bottom'];
+  const dockOf = (id: PanelId): DockId | null => DOCKS.find((d) => layout.docks[d].panels.includes(id)) ?? null;
+  const hiddenPanels = ALL_PANELS.filter((id) => !dockOf(id));
+
+  const activatePanel = (dock: DockId, id: PanelId) =>
+    setLayoutSaved((l) =>
+      l.docks[dock].active === id ? l : { ...l, docks: { ...l.docks, [dock]: { ...l.docks[dock], active: id } } },
+    );
+
+  const closePanel = (id: PanelId) =>
+    setLayoutSaved((l) => {
+      const dock = DOCKS.find((d) => l.docks[d].panels.includes(id));
+      if (!dock) return l;
+      const panels = l.docks[dock].panels.filter((p) => p !== id);
+      const active = l.docks[dock].active === id ? panels[0] ?? null : l.docks[dock].active;
+      return { ...l, docks: { ...l.docks, [dock]: { ...l.docks[dock], panels, active } } };
+    });
+
+  // Add/move a panel: detach it from any current dock, then append it to the target as active.
+  const placePanel = (dock: DockId, id: PanelId) =>
+    setLayoutSaved((l) => {
+      const docks = { ...l.docks };
+      for (const d of DOCKS) {
+        if (!docks[d].panels.includes(id)) continue;
+        const panels = docks[d].panels.filter((p) => p !== id);
+        docks[d] = { ...docks[d], panels, active: docks[d].active === id ? panels[0] ?? null : docks[d].active };
+      }
+      docks[dock] = { ...docks[dock], panels: [...docks[dock].panels, id], active: id };
+      return { ...l, docks };
+    });
+
+  /** Make a panel visible and active — activate it where it lives, else drop it in a home dock. */
+  const revealPanel = (id: PanelId) => {
+    const dock = dockOf(id);
+    if (dock) activatePanel(dock, id);
+    else placePanel(id === 'code' ? 'left' : 'right', id);
+  };
+
+  // Selecting an element ANYWHERE (canvas click, timeline row label, diamond click) is a request
+  // to inspect it — a NEW selection reveals the Inspector (activates its tab, or re-docks it if
+  // it was closed). Deselecting never changes the layout. The reveal is DEFERRED past the
+  // double-click window and stands down for live gestures: activating a tab can resize the
+  // workspace, and doing that mid-interaction moves the canvas under the pointer — most visibly
+  // on a text double-click. So it waits half a second, any new pointer press cancels it, and a
+  // live gesture at fire time skips it. Keyed on the WHOLE selection: shift-adding a layer is as
+  // much a request to inspect as a fresh click.
   const selectedParts = useTemplateStore((s) => s.selectedParts);
   const selectionKey = selectedParts.join('\n');
   const prevSelectedRef = useRef<string>('');
@@ -156,39 +194,35 @@ export default function AppShell() {
     const timer = setTimeout(() => {
       cancel();
       if (useTemplateStore.getState().canvasGestureActive) return;
-      setLayout((l) => {
-        if (!l.inspectorCollapsed) return l;
-        saveLayout({ inspectorCollapsed: false });
-        return { ...l, inspectorCollapsed: false };
-      });
+      revealPanel('inspector');
     }, 500); // the OS double-click window — a quiet half-second means the gesture is over
     window.addEventListener('pointerdown', cancel, true);
     return cancel;
-  }, [selectionKey, isMobile]);
+    // revealPanel closes over `layout`; re-reading it each selection is intended.
+  }, [selectionKey, isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Drag dividers. Column splits use the tight [0.2,0.7] bounds; the preview HEIGHT split allows a
-  // wider range so the preview can dominate. Persist on release only (not on every move).
-  const codeWidth = useSplitter(
-    'x', workspaceRef,
-    (r) => setLayout((l) => ({ ...l, codeRatio: clampRatio(r, 0.2, 0.7) })),
-    (r) => saveLayout({ codeRatio: clampRatio(r, 0.2, 0.7) }),
+  // Drag dividers. Each resizes one region and persists on release. Left/right dock sizes are
+  // fractions of the main row; the timeline is a fraction of the centre column; the bottom dock
+  // is a fraction of the whole workspace — all measured from the edge the dock sits on.
+  const leftWidth = useSplitter(
+    'x', mainRowRef,
+    (r) => setLayout((l) => ({ ...l, docks: { ...l.docks, left: { ...l.docks.left, size: clampRatio(r) } } })),
+    (r) => setLayoutSaved((l) => ({ ...l, docks: { ...l.docks, left: { ...l.docks.left, size: clampRatio(r) } } })),
   );
-  const previewHeight = useSplitter(
+  const rightWidth = useSplitter(
+    'x', mainRowRef,
+    (r) => setLayout((l) => ({ ...l, docks: { ...l.docks, right: { ...l.docks.right, size: clampRatio(1 - r) } } })),
+    (r) => setLayoutSaved((l) => ({ ...l, docks: { ...l.docks, right: { ...l.docks.right, size: clampRatio(1 - r) } } })),
+  );
+  const timelineHeight = useSplitter(
+    'y', centerRef,
+    (r) => setLayout((l) => ({ ...l, timelineSize: clampRatio(1 - r, 0.15, 0.75) })),
+    (r) => setLayoutSaved((l) => ({ ...l, timelineSize: clampRatio(1 - r, 0.15, 0.75) })),
+  );
+  const bottomHeight = useSplitter(
     'y', workspaceRef,
-    (r) => setLayout((l) => ({ ...l, previewRatio: clampRatio(r, 0.25, 0.85) })),
-    (r) => saveLayout({ previewRatio: clampRatio(r, 0.25, 0.85) }),
-  );
-  const bottomWidth = useSplitter(
-    'x', bottomRowRef,
-    (r) => setLayout((l) => ({ ...l, bottomRatio: clampRatio(r, 0.2, 0.7) })),
-    (r) => saveLayout({ bottomRatio: clampRatio(r, 0.2, 0.7) }),
-  );
-  // The Inspector is the rightmost column of the full workspace width in both modes, so
-  // its ratio is measured from the RIGHT edge (1 - pointer fraction).
-  const inspectorWidth = useSplitter(
-    'x', workspaceRef,
-    (r) => setLayout((l) => ({ ...l, inspectorRatio: clampRatio(1 - r, 0.12, 0.35) })),
-    (r) => saveLayout({ inspectorRatio: clampRatio(1 - r, 0.12, 0.35) }),
+    (r) => setLayout((l) => ({ ...l, docks: { ...l.docks, bottom: { ...l.docks.bottom, size: clampRatio(1 - r) } } })),
+    (r) => setLayoutSaved((l) => ({ ...l, docks: { ...l.docks, bottom: { ...l.docks.bottom, size: clampRatio(1 - r) } } })),
   );
 
   // Global undo/redo for panel / timeline / AI actions: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z (and
@@ -216,9 +250,17 @@ export default function AppShell() {
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  // The preview block, shared across the mobile and both desktop arrangements (only one
-  // renders at a time, so the shared iframeRef is always attached to a single instance).
-  // Order matters: stage → timeline strip → transport, like every animation tool.
+  // The centre column, split into the stage (with its transport) over the timeline. Mobile
+  // keeps the single fused block; only one of these renders at a time, so the shared iframeRef
+  // is always attached to exactly one instance.
+  const stageBlock = (
+    <div className="stage-block">
+      <PreviewFrame iframeRef={iframeRef} />
+      <PlayoutSimulator iframeRef={iframeRef} />
+    </div>
+  );
+  const timelineBlock = <TimelineDock iframeRef={iframeRef} />;
+  // Mobile: the classic fused preview column.
   const preview = (
     <div className="preview-wrap">
       <PreviewFrame iframeRef={iframeRef} />
@@ -226,6 +268,49 @@ export default function AppShell() {
       <PlayoutSimulator iframeRef={iframeRef} />
     </div>
   );
+
+  // The dockable panel bodies, by id (the desktop docks render these; mobile keeps SidePanel).
+  const renderPanel = (id: PanelId) => {
+    // Code fills with Monaco; the Inspector scrolls itself; the tool panels want the shared
+    // padded, scrolling body SidePanel used to give them.
+    switch (id) {
+      case 'code': return <CodeEditor />;
+      case 'inspector': return <Inspector />;
+      case 'data': return <div className="panel-body"><SampleDataPanel /></div>;
+      case 'control': return <div className="panel-body"><ControlPanel /></div>;
+      case 'style': return <div className="panel-body"><StylePanel /></div>;
+      case 'ai': return <div className="panel-body"><AIPromptPanel /></div>;
+      case 'export': return <div className="panel-body"><ExportPanel /></div>;
+    }
+  };
+  const dockNode = (dock: DockId) =>
+    layout.docks[dock].panels.length > 0 ? (
+      <WorkspaceDock
+        dockId={dock}
+        state={layout.docks[dock]}
+        hidden={hiddenPanels}
+        render={renderPanel}
+        onActivate={(id) => activatePanel(dock, id)}
+        onClose={closePanel}
+        onMove={(id, to) => placePanel(to, id)}
+        onAdd={(id) => placePanel(dock, id)}
+      />
+    ) : null;
+
+  // The tool panels (data/control/style/ai/export) drive a "reveal me" signal via the store's
+  // activePanel (e.g. the wizard shows Export after an image import). Honour it in the docks —
+  // but not on mount, where activePanel is just its default and would override the layout's
+  // own active tab.
+  const activePanelSignal = useTemplateStore((s) => s.activePanel);
+  const prevPanelSignal = useRef(activePanelSignal);
+  useEffect(() => {
+    // Only a genuine CHANGE to activePanel is a reveal request — not mount, a StrictMode
+    // remount, or an unrelated re-render (which would clobber the layout's own active tab).
+    if (prevPanelSignal.current === activePanelSignal) return;
+    prevPanelSignal.current = activePanelSignal;
+    if (!isMobile) revealPanel(activePanelSignal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePanelSignal, isMobile]);
 
   return (
     <div className="app">
@@ -240,26 +325,21 @@ export default function AppShell() {
         </span>
         <div className="spacer" />
         {!isMobile && (
-          <button onClick={toggleMode} data-testid="toggle-layout" title="Switch the workspace arrangement">
-            {layout.mode === 'code-left' ? '⬒ Preview top' : '◧ Code left'}
-          </button>
-        )}
-        {!isMobile && (
           <button
-            className={layout.codeCollapsed ? '' : 'active'}
-            onClick={toggleCode}
+            className={dockOf('code') ? 'active' : ''}
+            onClick={() => (dockOf('code') ? closePanel('code') : placePanel('left', 'code'))}
             data-testid="toggle-code"
-            title={layout.codeCollapsed ? 'Show the code editor' : 'Collapse the code editor to give the preview full width'}
+            title={dockOf('code') ? 'Hide the code editor' : 'Show the code editor'}
           >
-            {layout.codeCollapsed ? '▸ Show code' : '▾ Hide code'}
+            {dockOf('code') ? '▾ Hide code' : '▸ Show code'}
           </button>
         )}
         {!isMobile && (
           <button
-            className={layout.inspectorCollapsed ? '' : 'active'}
-            onClick={toggleInspector}
+            className={dockOf('inspector') ? 'active' : ''}
+            onClick={() => (dockOf('inspector') ? closePanel('inspector') : revealPanel('inspector'))}
             data-testid="toggle-inspector"
-            title={layout.inspectorCollapsed ? 'Show the Inspector (the selected element’s properties)' : 'Collapse the Inspector'}
+            title={dockOf('inspector') ? 'Hide the Inspector' : 'Show the Inspector (the selected element’s properties)'}
           >
             ◨ Inspector
           </button>
@@ -277,6 +357,30 @@ export default function AppShell() {
             🛡 Moderate
           </button>
         )}
+        <button
+          className={resetArmed ? 'reset-armed' : ''}
+          onClick={() => {
+            if (resetArmed) {
+              if (resetTimer.current) clearTimeout(resetTimer.current);
+              setResetArmed(false);
+              resetToBaseline();
+            } else {
+              // Two-step confirm — a whole-project reset deserves a beat, and it stays
+              // undoable (Ctrl+Z). Auto-disarms if the second click doesn't come.
+              setResetArmed(true);
+              if (resetTimer.current) clearTimeout(resetTimer.current);
+              resetTimer.current = setTimeout(() => setResetArmed(false), 3500);
+            }
+          }}
+          onBlur={() => {
+            if (resetTimer.current) clearTimeout(resetTimer.current);
+            setResetArmed(false);
+          }}
+          data-testid="reset-project"
+          title={resetArmed ? 'Click again to restore the original — undoable' : 'Restore this graphic to how it was first created — undoable'}
+        >
+          {resetArmed ? '↺ Confirm reset?' : '↺ Reset'}
+        </button>
         <button onClick={openGallery} title="Start a new project from a template">
           + New project
         </button>
@@ -296,112 +400,65 @@ export default function AppShell() {
             {codeOpen && <CodeEditor />}
           </div>
         </div>
-      ) : layout.mode === 'preview-top' ? (
-        <div
-          className="workspace preview-top"
-          ref={workspaceRef}
-          style={{ gridTemplateRows: `${layout.previewRatio}fr 6px ${1 - layout.previewRatio}fr` }}
-        >
-          <section className="pane preview-pane">
-            <div
-              className="preview-row"
-              style={{
-                display: 'grid',
-                height: '100%',
-                minHeight: 0,
-                gridTemplateColumns: layout.inspectorCollapsed
-                  ? '1fr'
-                  : `${1 - layout.inspectorRatio}fr 6px ${layout.inspectorRatio}fr`,
-              }}
-            >
-              <div className="preview-cell">{preview}</div>
-              {!layout.inspectorCollapsed && (
-                <>
-                  <Divider orient="v" splitter={inspectorWidth} testid="inspector-divider" />
-                  <section className="pane inspector-pane" data-testid="inspector-pane">
-                    <Inspector />
-                  </section>
-                </>
-              )}
-            </div>
-          </section>
-          <Divider orient="h" splitter={previewHeight} testid="preview-divider" />
-          <div
-            className="bottom-row"
-            ref={bottomRowRef}
-            style={{
-              gridTemplateColumns: layout.codeCollapsed
-                ? '1fr'
-                : `${layout.bottomRatio}fr 6px ${1 - layout.bottomRatio}fr`,
-            }}
-          >
-            {!layout.codeCollapsed && (
-              <>
-                <section className="pane" data-testid="code-pane">
-                  <CodeEditor />
-                </section>
-                <Divider orient="v" splitter={bottomWidth} testid="bottom-divider" />
-              </>
-            )}
-            <section className="pane" data-testid="panel-pane">
-              <SidePanel />
-            </section>
-          </div>
-        </div>
       ) : (
-        // code-left: code on the left; the right region stacks the preview row (stage +
-        // timeline | Inspector) over the FULL-WIDTH tool panels. The Inspector column is
-        // exactly as tall as the preview block, so no dead corner sits under it, and the
-        // panels get the whole width beside the code column.
-        <div
-          className="workspace"
-          ref={workspaceRef}
-          style={{
-            gridTemplateColumns: layout.codeCollapsed
-              ? '1fr'
-              : `${layout.codeRatio}fr 6px ${1 - layout.codeRatio}fr`,
-          }}
-        >
-          {!layout.codeCollapsed && (
-            <>
-              <section className="pane" data-testid="code-pane">
-                <CodeEditor />
-              </section>
-              <Divider orient="v" splitter={codeWidth} testid="workspace-divider" />
-            </>
-          )}
-          <div className="workspace-right">
+        // Desktop: the canvas over the timeline in the centre, flanked by the left/right docks,
+        // with the bottom dock below. Each dock renders only when it holds panels; the splitters
+        // resize the adjacent region. This gives the timeline the whole centre width.
+        (() => {
+          const leftNode = dockNode('left');
+          const rightNode = dockNode('right');
+          const bottomNode = dockNode('bottom');
+          const L = leftNode ? layout.docks.left.size : 0;
+          const R = rightNode ? layout.docks.right.size : 0;
+          const C = Math.max(0.2, 1 - L - R);
+          const cols = [
+            leftNode ? `${L}fr` : null,
+            leftNode ? '6px' : null,
+            `${C}fr`,
+            rightNode ? '6px' : null,
+            rightNode ? `${R}fr` : null,
+          ]
+            .filter(Boolean)
+            .join(' ');
+          const B = bottomNode ? layout.docks.bottom.size : 0;
+          return (
             <div
-              className="preview-row"
-              style={{
-                gridTemplateColumns: layout.inspectorCollapsed
-                  ? '1fr'
-                  : (() => {
-                      // inspectorRatio is a fraction of the WORKSPACE width (both desktop
-                      // modes share the pref and the splitter measures the workspace);
-                      // this row spans only the right region — convert, and keep the
-                      // preview at least 40% of the row.
-                      const rightFrac = layout.codeCollapsed ? 1 : 1 - layout.codeRatio;
-                      const ins = Math.min(0.6, layout.inspectorRatio / rightFrac);
-                      return `${1 - ins}fr 6px ${ins}fr`;
-                    })(),
-              }}
+              className="workspace workspace-dock"
+              ref={workspaceRef}
+              style={{ gridTemplateRows: bottomNode ? `${1 - B}fr 6px ${B}fr` : '1fr' }}
             >
-              <div className="preview-cell">{preview}</div>
-              {!layout.inspectorCollapsed && (
+              <div className="workspace-main" ref={mainRowRef} style={{ gridTemplateColumns: cols }}>
+                {leftNode && (
+                  <>
+                    <section className="dock-slot dock-slot-left" data-testid="dock-slot-left">{leftNode}</section>
+                    <Divider orient="v" splitter={leftWidth} testid="left-divider" />
+                  </>
+                )}
+                <div
+                  className="workspace-center"
+                  ref={centerRef}
+                  style={{ gridTemplateRows: `${1 - layout.timelineSize}fr 6px ${layout.timelineSize}fr` }}
+                >
+                  <div className="center-stage" data-testid="center-stage">{stageBlock}</div>
+                  <Divider orient="h" splitter={timelineHeight} testid="timeline-divider" />
+                  <div className="center-timeline" data-testid="center-timeline">{timelineBlock}</div>
+                </div>
+                {rightNode && (
+                  <>
+                    <Divider orient="v" splitter={rightWidth} testid="right-divider" />
+                    <section className="dock-slot dock-slot-right" data-testid="dock-slot-right">{rightNode}</section>
+                  </>
+                )}
+              </div>
+              {bottomNode && (
                 <>
-                  <Divider orient="v" splitter={inspectorWidth} testid="inspector-divider" />
-                  <section className="pane inspector-pane" data-testid="inspector-pane">
-                    <Inspector />
-                  </section>
+                  <Divider orient="h" splitter={bottomHeight} testid="bottom-divider" />
+                  <section className="dock-slot dock-slot-bottom" data-testid="dock-slot-bottom">{bottomNode}</section>
                 </>
               )}
             </div>
-            <section className="pane panel-pane" data-testid="panel-pane">
-              <SidePanel />
-            </section>
-          </div>
-        </div>
+          );
+        })()
       )}
 
       {/* Creation wizard overlay — shown on startup and via "New project". */}

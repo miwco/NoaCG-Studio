@@ -28,8 +28,8 @@ const isEditorModule = (url: string) => /CodeEditor|monaco/i.test(url);
 
 test('desktop: the code pane streams Monaco in after the shell', async ({ page }) => {
   await createHairline(page);
-  // The lazy boundary must resolve into a real, working Monaco in the code pane.
-  await expect(page.getByTestId('code-pane')).toBeVisible();
+  // The lazy boundary must resolve into a real, working Monaco in the code dock.
+  await expect(page.getByTestId('dock-tab-code')).toBeVisible();
   await expect(page.locator('.monaco-editor').first()).toBeVisible();
   expect((await fetchedResources(page)).some(isEditorModule)).toBe(true);
 });

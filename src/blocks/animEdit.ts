@@ -203,13 +203,41 @@ export function setLayerActivation(
   // drop it. Only the source step: a deliberately added empty step (the + button) stays.
   if (fromPress > -1) {
     const s = next.steps[fromIdx];
-    if (s && (s.reveals ?? []).length === 0 && Object.keys(s.layers).length === 0) {
+    if (s && (s.reveals ?? []).length === 0 && (s.hides ?? []).length === 0 && Object.keys(s.layers).length === 0) {
       next.steps.splice(fromIdx, 1);
     }
   }
   // Default names follow their position (a user's rename is left alone).
   for (let i = 1; i < next.steps.length - 1; i++) {
     if (/^Step \d+$/.test(next.steps[i].name)) next.steps[i].name = `Step ${i + 1}`;
+  }
+  return next;
+}
+
+/**
+ * Set where a layer LEAVES (the early-exit twin of setLayerActivation). `toStep` is the step
+ * whose play hides the layer; passing the final Out step (or beyond) clears the early exit so
+ * the layer lives to the end. The target is clamped after the layer's activation — a layer
+ * can't leave before it appears. Empties the old `hides` list and prunes it away.
+ */
+export function setLayerHide(data: AnimData, selector: string, toStep: number): AnimData {
+  const next = clone(data);
+  const lastIdx = next.steps.length - 1;
+  // Remove the layer from every step's hides (start clean).
+  for (const step of next.steps) {
+    if (step.hides) {
+      step.hides = step.hides.filter((s) => s !== selector);
+      if (step.hides.length === 0) delete step.hides;
+    }
+  }
+  // A middle step earlier than its activation isn't a valid exit; only a real middle step
+  // records an early exit. Out (lastIdx) or beyond = no early exit (lives to the end).
+  let act = 0;
+  for (let s = 1; s < lastIdx; s++) {
+    if (next.steps[s].reveals?.includes(selector)) { act = s; break; }
+  }
+  if (toStep > act && toStep < lastIdx) {
+    (next.steps[toStep].hides ??= []).push(selector);
   }
   return next;
 }
@@ -313,6 +341,7 @@ export function duplicateStep(data: AnimData, stepIndex: number): AnimData | nul
   const next = clone(data);
   const copy = JSON.parse(JSON.stringify(src)) as AnimStep;
   delete copy.reveals;
+  delete copy.hides; // a layer leaves once — a duplicated hide would re-hide an absent layer
   copy.name = /^Step \d+$/.test(src.name) ? src.name : `${src.name} copy`;
   const at = Math.min(stepIndex + 1, next.steps.length - 1); // never after Out
   next.steps.splice(at, 0, copy);

@@ -14,7 +14,8 @@ import SignInDialog from '../auth/SignInDialog';
 import SyncStatus from '../SyncStatus';
 import { useIsMobile } from '../useIsMobile';
 import { useSplitter, type Splitter } from '../useSplitter';
-import { clampRatio, loadLayout, saveLayout, type LayoutPrefs } from '../../model/layout';
+import { clampRatio } from '../../model/layout';
+import { loadVideoLayout, saveVideoLayout, type VideoLayout } from '../../model/videoLayout';
 import { useRef } from 'react';
 import VideoPlayerFrame from './VideoPlayerFrame';
 import VideoAiChatPanel from './VideoAiChatPanel';
@@ -64,7 +65,7 @@ export default function VideoAppShell() {
   const openGallery = useTemplateStore((s) => s.openGallery);
 
   const isMobile = useIsMobile();
-  const [layout, setLayout] = useState<LayoutPrefs>(loadLayout);
+  const [layout, setLayout] = useState<VideoLayout>(loadVideoLayout);
   const [savedOpen, setSavedOpen] = useState(false);
   const [saveNote, setSaveNote] = useState<string | null>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -72,16 +73,16 @@ export default function VideoAppShell() {
 
   const toggleCode = () =>
     setLayout((l) => {
-      const videoCodeCollapsed = !l.videoCodeCollapsed;
-      saveLayout({ videoCodeCollapsed });
-      return { ...l, videoCodeCollapsed };
+      const codeCollapsed = !l.codeCollapsed;
+      saveVideoLayout({ codeCollapsed });
+      return { ...l, codeCollapsed };
     });
 
   const codeWidth = useSplitter(
     'x',
     workspaceRef,
-    (r) => setLayout((l) => ({ ...l, videoCodeRatio: clampRatio(r, 0.2, 0.7) })),
-    (r) => saveLayout({ videoCodeRatio: clampRatio(r, 0.2, 0.7) }),
+    (r) => setLayout((l) => ({ ...l, codeRatio: clampRatio(r, 0.2, 0.7) })),
+    (r) => saveVideoLayout({ codeRatio: clampRatio(r, 0.2, 0.7) }),
   );
 
   // Global undo/redo for AI/panel applies - same bindings and Monaco/form-field guard as
@@ -159,12 +160,12 @@ export default function VideoAppShell() {
         <div className="spacer" />
         {!isMobile && (
           <button
-            className={layout.videoCodeCollapsed ? '' : 'active'}
+            className={layout.codeCollapsed ? '' : 'active'}
             onClick={toggleCode}
             data-testid="video-toggle-code"
-            title={layout.videoCodeCollapsed ? 'Show the code editor' : 'Collapse the code editor'}
+            title={layout.codeCollapsed ? 'Show the code editor' : 'Collapse the code editor'}
           >
-            {layout.videoCodeCollapsed ? '▸ Show code' : '▾ Hide code'}
+            {layout.codeCollapsed ? '▸ Show code' : '▾ Hide code'}
           </button>
         )}
         <button onClick={saveToList} title="Keep this project in My videos" data-testid="video-save">
@@ -200,12 +201,12 @@ export default function VideoAppShell() {
           className="workspace video-workspace"
           ref={workspaceRef}
           style={{
-            gridTemplateColumns: layout.videoCodeCollapsed
+            gridTemplateColumns: layout.codeCollapsed
               ? '1fr'
-              : `${layout.videoCodeRatio}fr 6px ${1 - layout.videoCodeRatio}fr`,
+              : `${layout.codeRatio}fr 6px ${1 - layout.codeRatio}fr`,
           }}
         >
-          {!layout.videoCodeCollapsed && (
+          {!layout.codeCollapsed && (
             <>
               <section className="pane" data-testid="video-code-pane">
                 <VideoCodeEditor />

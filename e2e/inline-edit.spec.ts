@@ -58,7 +58,7 @@ test('double-click edits text in place: live value + definition default, undoabl
   // Live everywhere: the preview text, the Data panel value, and the definition default.
   await page.waitForTimeout(650); // the template patch rebuilds the preview
   await expect(page.frameLocator('iframe.preview-frame').locator('#f0')).toHaveText('Inline Name');
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await expect(page.locator('.panel-body input').first()).toHaveValue('Inline Name');
   expect(await definitionDefault(page, 'f0')).toBe('Inline Name');
 

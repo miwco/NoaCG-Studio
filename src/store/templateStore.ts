@@ -82,6 +82,9 @@ interface TemplateState {
   history: SpxTemplate[];
   /** Undone snapshots, for redo. Any NEW edit clears it (the classic undo-tree cut). */
   future: SpxTemplate[];
+  /** The pristine template as this project was first created / imported / opened — the
+   *  target of resetToBaseline(). Captured on every whole-project swap (resetSampleData). */
+  baseline: SpxTemplate;
   /** The lines the last apply changed (drives the editor's change highlight). */
   lastChange: LastChange | null;
   /** Bumped by panels after an apply to make the playout simulator replay the graphic. */
@@ -144,6 +147,9 @@ interface TemplateState {
   /** Mark a canvas gesture as started/ended (see canvasGestureActive). */
   setCanvasGestureActive: (active: boolean) => void;
   resetToDefault: () => void;
+  /** Restore this project to its pristine baseline (see baseline) as ONE undoable apply,
+   *  and reset sample data to the baseline's field defaults. */
+  resetToBaseline: () => void;
 
   setSampleValue: (field: string, value: string) => void;
   resetSampleData: () => void;
@@ -182,10 +188,15 @@ function withParsedFields(template: SpxTemplate): SpxTemplate {
 // Restore the last autosaved working project (Era 5.2b) so a reload doesn't lose it; fall back to
 // a fresh blank on first-ever load. The wizard still opens on top (galleryOpen below is unchanged) —
 // closing it reveals this restored graphic.
-const initialTemplate = loadProject()?.template ?? createDefaultTemplate();
+const initialProject = loadProject();
+const initialTemplate = initialProject?.template ?? createDefaultTemplate();
+// The pristine state Reset returns to: the saved baseline if we have one, else the loaded
+// template (so Reset on a pre-baseline project at least returns to how it opened).
+const initialBaseline = initialProject?.baseline ?? initialTemplate;
 
-export const useTemplateStore = create<TemplateState>((set) => ({
+export const useTemplateStore = create<TemplateState>((set, get) => ({
   template: initialTemplate,
+  baseline: initialBaseline,
   activeTab: 'html',
   previewBg: 'checkerboard',
   activePanel: 'data',
@@ -237,6 +248,9 @@ export const useTemplateStore = create<TemplateState>((set) => ({
       const synced = withParsedFields(template);
       return {
         template: synced,
+        // A whole-project swap (wizard create, community import, opening a saved graphic)
+        // establishes the new pristine baseline that Reset returns to.
+        baseline: opts?.resetSampleData ? synced : s.baseline,
         // In-place edits (panels, AI) keep typed sample values; creating a NEW project
         // must not leak the previous template's values into matching field ids.
         sampleData: syncSampleData(synced, opts?.resetSampleData ? {} : s.sampleData),
@@ -312,6 +326,12 @@ export const useTemplateStore = create<TemplateState>((set) => ({
       return { template, sampleData: syncSampleData(template, {}), validation: null };
     }),
 
+  // Restore the pristine baseline through the normal apply path so it is ONE undoable
+  // action; resetSampleData:true also returns the fields to the baseline's defaults. It
+  // does not overwrite the baseline (applyTemplate captures a NEW baseline, but restoring
+  // the same template leaves it unchanged).
+  resetToBaseline: () => get().applyTemplate(get().baseline, { resetSampleData: true }),
+
   setSampleValue: (field, value) => set((s) => ({ sampleData: { ...s.sampleData, [field]: value } })),
   resetSampleData: () => set((s) => ({ sampleData: syncSampleData(s.template, {}) })),
 
@@ -344,5 +364,8 @@ let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
 useTemplateStore.subscribe((state, prev) => {
   if (state.template === prev.template) return;
   if (projectSaveTimer) clearTimeout(projectSaveTimer);
-  projectSaveTimer = setTimeout(() => saveProject(useTemplateStore.getState().template), 800);
+  projectSaveTimer = setTimeout(() => {
+    const s = useTemplateStore.getState();
+    saveProject(s.template, s.baseline);
+  }, 800);
 });

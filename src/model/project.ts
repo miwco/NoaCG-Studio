@@ -12,6 +12,10 @@ export interface SavedProject {
   name: string;
   updatedAt: string; // ISO
   template: SpxTemplate;
+  /** The pristine template as this project was created/imported — the Reset target.
+   *  Optional so projects saved before this existed still load (Reset falls back to the
+   *  loaded template in that case). */
+  baseline?: SpxTemplate;
   /** Soft-delete tombstone (for cloud sync parity — see Packet.deleted). */
   deleted?: boolean;
 }
@@ -38,7 +42,7 @@ export function loadProject(): SavedProject | null {
  * Persist the working template as the current project, keeping the existing project id (so it stays
  * ONE slot / one cloud row). Non-fatal if storage is full — the working doc just won't persist.
  */
-export function saveProject(template: SpxTemplate): void {
+export function saveProject(template: SpxTemplate, baseline?: SpxTemplate): void {
   try {
     const existing = loadProject();
     const rec: SavedProject = {
@@ -46,6 +50,8 @@ export function saveProject(template: SpxTemplate): void {
       name: template.name,
       updatedAt: new Date().toISOString(),
       template,
+      // Keep the baseline stable across autosaves; fall back to the existing one.
+      baseline: baseline ?? existing?.baseline,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rec));
     notifyDataChanged();

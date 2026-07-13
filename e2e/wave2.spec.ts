@@ -43,7 +43,7 @@ test('scoreboard: all four fields bind and a score change lands', async ({ page 
     .poll(async () => frame(page).locator('.scoreboard').evaluate((el) => getComputedStyle(el).opacity))
     .toBe('1');
   // Change Score A in the Data panel and push it with ⟳ Update.
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   const scoreInput = page.locator('.panel-body .field-row', { hasText: 'Score A' }).locator('input').first();
   await scoreInput.fill('5');
   await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();

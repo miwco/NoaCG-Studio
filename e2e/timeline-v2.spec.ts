@@ -100,7 +100,7 @@ test('v2 keyframes: convert, arm at the playhead, auto-key, interpolate — the 
   await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
 
   // Open the Inspector, select the Name line, park the playhead early in Enter.
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
   // Zoom out so the WHOLE Enter clip fits the narrowed scroll viewport (Inspector open,
   // editing-scale labels) — later clicks at 70% must land on the ribbon, not past its edge.
@@ -183,12 +183,14 @@ test('v2 keyframes: dragging a diamond retimes it; Delete removes it; undo resto
   expect(await times()).toEqual(before);
 });
 
-test('v2 presets: In and Out apply independently; undeclared manual keyframes survive', async ({ page }) => {
+test('v2 presets: In and Out apply independently; applying a preset cleanly swaps the targeted motion', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
 
-  // Give #f0 a MANUAL rotation keyframe — no preset declares rotation, so it must survive.
+  // Give #f0 a MANUAL rotation keyframe. Ratified interaction model: applying a preset is a
+  // CLEAN SWAP of the targeted layer's motion in that direction, so this rotation is replaced
+  // by the preset's #f0 entrance (it does not blend or survive).
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
   await page.getByTestId('inspector-kf-rotation').click();
   await page.waitForTimeout(400);
@@ -208,8 +210,9 @@ test('v2 presets: In and Out apply independently; undeclared manual keyframes su
   expect(Object.keys(data!.steps[0].layers['.lower-third-box'])).toContain('scale');
   // …the exit is untouched (line-reveal's yPercent drop, no scale)…
   expect(data!.steps[1].layers['.lower-third-box']?.scale).toBeUndefined();
-  // …and the manual rotation keyframe survived (undeclared by the preset).
-  expect(data!.steps[0].layers['#f0'].rotation).toBeDefined();
+  // …and #f0's motion is now the preset's entrance — the manual rotation was cleanly swapped out.
+  expect(data!.steps[0].layers['#f0'].rotation).toBeUndefined();
+  expect(Object.keys(data!.steps[0].layers['#f0']).length).toBeGreaterThan(0);
 
   // Apply Blur to the Out only — the In keeps Pop spring.
   await page.getByTestId('inspector-preset-select').selectOption('blur-in');
@@ -224,7 +227,7 @@ test('v2 presets: In and Out apply independently; undeclared manual keyframes su
 
 test('v2 presets: a single layer takes a preset into ITS activation step (In is layer-relative)', async ({ page }) => {
   await createHairline(page, true); // #f1 reveals on press 1 (step index 1)
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   // Select the revealed Title line and apply a preset to its In.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f1"]').click();
   await page.getByTestId('inspector').getByRole('button', { name: 'Animations' }).click();
@@ -234,12 +237,14 @@ test('v2 presets: a single layer takes a preset into ITS activation step (In is 
   await page.waitForTimeout(650);
   const data = await animData(page);
   // Blur-in's LINE choreography (a y + opacity rise — the blur filter is the box's move)
-  // landed in STEP 2, the layer's reveal step — not the entrance. The reveal's own
-  // yPercent track survives untouched (undeclared by the preset's line motion).
+  // landed in STEP 2, the layer's reveal step — not the entrance. The layer still reveals
+  // there, but its entrance motion is now the preset's: a clean swap replaces the reveal
+  // channel's default mask (yPercent) with blur-in's y + opacity rise.
   expect(data!.steps[1].reveals).toContain('#f1');
   expect(Object.keys(data!.steps[1].layers['#f1'])).toEqual(
-    expect.arrayContaining(['y', 'opacity', 'yPercent']),
+    expect.arrayContaining(['y', 'opacity']),
   );
+  expect(data!.steps[1].layers['#f1']?.yPercent).toBeUndefined();
   expect(data!.steps[0].layers['#f1']?.y).toBeUndefined();
   expect(data!.steps[0].layers['#f1']?.opacity).toBeUndefined();
 });
@@ -453,7 +458,7 @@ test('v2 polish: the playhead cap drags; the view follows playback when zoomed i
 test('v2 polish: keyframe and step eases from the menus; ◀ ▶ jumps; label scrubbing', async ({ page }) => {
   test.setTimeout(60_000);
   await createHairline(page);
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
 
   // Right-clicking a diamond opens its ease menu — the curve INTO that keyframe.
@@ -533,10 +538,36 @@ test('v2 layer blocks: the existence span renders; its left edge drags the activ
   expect(after).toBe(before + 1); // one undoable apply, same as the chip
 });
 
+test('v2 layer blocks: the right edge sets an early exit (hides) and upgrades the interpreter', async ({ page }) => {
+  await createHairline(page, true); // Enter · Step 2 · Out (3 steps)
+  // Fit the whole ribbon so the Name's right-edge handle (at Out) is reachable, not clipped.
+  await page.getByTestId('tlv2-zoom-out').click();
+  await page.getByTestId('tlv2-zoom-out').click();
+  // The Name exists from ▶ Play through Out — drag its right edge (the early-exit handle)
+  // left onto the middle step so the layer LEAVES in Step 2.
+  const handle = page.getByTestId('tlv2-block-hide-f0');
+  await expect(handle).toBeVisible();
+  const clip1 = (await page.getByTestId('tlv2-clip-1').boundingBox())!; // the middle step (Step 2)
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(clip1.x + clip1.width / 2, box.y + box.height / 2, { steps: 10 });
+  await page.mouse.move(clip1.x + clip1.width - 2, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(700);
+
+  // The middle step records the early exit…
+  const data = await animData(page);
+  expect(data!.steps[1].hides).toContain('#f0');
+  // …and the interpreter was re-emitted so the exit actually plays on air.
+  const js = await page.evaluate(async () => (await import('/src/store/templateStore.ts')).useTemplateStore.getState().template.js);
+  expect(js).toContain('step.hides');
+});
+
 test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the playhead', async ({ page }) => {
   await createHairline(page);
   // Open the Inspector up front so the auto-open never resizes the stage mid-test.
-  await page.getByTestId('toggle-inspector').click();
+  // The Inspector is open by default in the right dock — no toggle needed.
   await page.getByTestId('tlv2-zoom-out').click();
   await page.getByTestId('tlv2-zoom-out').click();
 
@@ -590,6 +621,54 @@ test('v2 keyframe sets: shift-click, group nudge, delete, copy/paste at the play
   expect(now).toHaveLength(2);
   expect(now[0]).toBeCloseTo(playhead.t, 1);
   expect(now[1] - now[0]).toBeCloseTo(original[1] - original[0], 2);
+});
+
+test('v2 keyframe lasso: a marquee over the rows selects diamonds; Ctrl/Cmd+D duplicates them', async ({ page }) => {
+  await createHairline(page);
+  // The Inspector is open by default in the right dock — no toggle needed.
+  await page.getByTestId('tlv2-zoom-out').click();
+  await page.getByTestId('tlv2-zoom-out').click();
+
+  const canvas = (await page.getByTestId('tlv2-canvas').boundingBox())!;
+  // The #f0 diamonds, screen-space centres, left-to-right.
+  const boxes = (
+    await page.getByTestId('tlv2-kf-f0').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }),
+    )
+  ).sort((a, b) => a.x - b.x);
+  expect(boxes.length).toBeGreaterThanOrEqual(2);
+  // The widest gap is the hold between the entrance and the out keyframes; box the entrance
+  // group (everything left of the gap) with an amber marquee.
+  let gapIdx = 1;
+  let gap = -1;
+  for (let i = 1; i < boxes.length; i++) {
+    if (boxes[i].x - boxes[i - 1].x > gap) {
+      gap = boxes[i].x - boxes[i - 1].x;
+      gapIdx = i;
+    }
+  }
+  const rowY = boxes[0].y;
+  const rightBound = (boxes[gapIdx - 1].x + boxes[gapIdx].x) / 2; // inside the empty hold gap
+
+  await page.mouse.move(rightBound, rowY - 6);
+  await page.mouse.down(); // starts on empty space, so the canvas lassos rather than scrubs
+  await page.mouse.move((rightBound + canvas.x) / 2, rowY, { steps: 6 });
+  await page.mouse.move(canvas.x + 3, rowY + 6, { steps: 6 });
+  await page.mouse.up();
+
+  // The marquee selected the entrance diamonds (gapIdx of them) — the same amber highlight
+  // a canvas lasso gives.
+  const selected = await page.locator('[data-testid="tlv2-kf-f0"].selected').count();
+  expect(selected).toBe(gapIdx);
+
+  // Ctrl/Cmd+D duplicates the selected set — new diamonds appear on the row.
+  const before = await page.getByTestId('tlv2-kf-f0').count();
+  await page.keyboard.press('Control+d');
+  await page.waitForTimeout(700);
+  expect(await page.getByTestId('tlv2-kf-f0').count()).toBeGreaterThan(before);
 });
 
 test('v2 property rows: a layer expands into per-property sub-rows with their own diamonds', async ({ page }) => {

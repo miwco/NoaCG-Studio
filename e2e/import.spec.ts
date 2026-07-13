@@ -55,11 +55,11 @@ test('import .html: splits into panes, keeps the definition, validates, exports'
   expect(tpl.fields).toEqual(['f0']);
 
   // Landed on Export with the inline validation — this one is already valid.
-  await expect(page.locator('.panel-tabs .tab.active')).toHaveText('Export');
+  await expect(page.locator('[data-testid="dock-right"] .dock-tab.active .dock-tab-label')).toHaveText('Export');
   await expect(page.locator('.panel-body .status-ok')).toContainText('valid and ready');
 
   // The graphic actually works: update + play through the simulator.
-  await page.locator('.panel-tabs .tab', { hasText: 'Data' }).click();
+  await page.getByTestId('dock-tab-data').click();
   await page.locator('.field-row', { hasText: 'Score' }).locator('input').first().fill('2 - 1');
   await page.getByRole('button', { name: '▶ Play' }).click();
   const frame = page.frameLocator('iframe.preview-frame');
@@ -82,7 +82,7 @@ test('import round-trip: an exported Starter zip re-imports as the same code', a
     const t = useTemplateStore.getState().template;
     return { css: t.css, js: t.js };
   });
-  await page.locator('.panel-tabs .tab', { hasText: 'Export' }).click();
+  await page.getByTestId('dock-tab-export').click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: /Validate & download/ }).click(),

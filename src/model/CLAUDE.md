@@ -26,8 +26,12 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   into the editor's three panes; foreign templates rarely follow the house contracts, so the
   Style/Motion panels degrade gracefully, validation shows what's missing, and the AI panel's
   "Make SPX-ready" is the guided fix path.
-- **layout.ts** - desktop layout prefs (localStorage 'spx-gfx-layout'): 'code-left' |
-  'preview-top' + splitter ratios; the mobile layout ignores it.
+- **layout.ts** - the desktop DOCKABLE-PANEL layout (localStorage 'spx-gfx-layout', version 2):
+  three docks (left/right/bottom), each a `DockState` {panels, active, size}, plus `timelineSize`
+  (the centre's canvas/timeline split). `PanelId` = code | inspector | data | control | style |
+  ai | export. A panel not in any dock is intentionally CLOSED (not re-added on load - AppShell
+  offers it from a dock's "+"). loadLayout migrates any non-v2 layout to the default; the mobile
+  layout ignores all of this. See src/components/CLAUDE.md (AppShell / WorkspaceDock).
 - **prefs.ts** - small device-level workflow defaults (localStorage 'spx-gfx-prefs'):
   defaultExportTarget, timelineCollapsed. Not synced; keep it tiny.
 - **id.ts** - uuid() that ALWAYS returns a valid RFC-4122 v4, even where crypto.randomUUID is
@@ -44,3 +48,6 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   assets are big) + saved list 'spx-gfx-video-saved' with soft-delete tombstones.
 - **docKind.ts** - the persisted editor-world switch ('spx-gfx-doc-kind'); App.tsx branches
   AppShell vs VideoAppShell on it. Falls back to 'spx' when the video slot is empty.
+- **videoLayout.ts** - the video shell's own layout prefs (localStorage 'spx-gfx-video-layout'):
+  just codeRatio + codeCollapsed. Separate from layout.ts on purpose - the video shell has a
+  simple code|preview split, not the SPX dockable workspace.
