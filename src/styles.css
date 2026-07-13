@@ -356,6 +356,19 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   border: 1px solid transparent;
 }
 .tab.active { background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); color: var(--text); }
+/* Format button — pushed to the right edge of the code pane's tab bar. */
+.format-btn {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.format-btn:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+.format-btn:disabled { opacity: 0.4; cursor: default; }
+
 /* The last apply changed code in this (inactive) tab — same blue as the line highlight. */
 .tab .change-dot {
   display: inline-block;

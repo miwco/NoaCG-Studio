@@ -3,6 +3,7 @@ import '../monacoSetup'; // bundled Monaco + workers — no CDN, fully offline
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useTemplateStore, type EditorTab } from '../store/templateStore';
 import { explain, tokenAt } from '../teach/explain';
+import { formatCode, minimalTextChange, hasProtectedRegion, type CodeLang } from '../format/formatCode';
 
 const TABS: { id: EditorTab; label: string; language: string }[] = [
   { id: 'html', label: 'HTML', language: 'html' },
@@ -42,6 +43,46 @@ function registerHoverExplanations(monaco: Monaco) {
   }
 }
 
+// Register Prettier document formatting once per page (Monaco registries are global). This powers
+// the toolbar Format button, the right-click "Format Document", and Shift+Alt+F. The provider
+// returns a MINIMAL edit (only the changed span) so the cursor and selection stay put when the
+// reformat is elsewhere, and Monaco's own edit stack keeps it undoable.
+let formattersRegistered = false;
+interface FormattableModel { getValue(): string; getPositionAt(offset: number): HoverPosition }
+function registerFormatters(monaco: Monaco) {
+  if (formattersRegistered) return;
+  formattersRegistered = true;
+  const byLanguage: Record<string, CodeLang> = { html: 'html', css: 'css', javascript: 'js' };
+  for (const [language, lang] of Object.entries(byLanguage)) {
+    monaco.languages.registerDocumentFormattingEditProvider(language, {
+      async provideDocumentFormattingEdits(model: FormattableModel) {
+        const original = model.getValue();
+        let formatted: string;
+        try {
+          formatted = await formatCode(lang, original);
+        } catch {
+          return []; // never disrupt editing because the formatter failed
+        }
+        const change = minimalTextChange(original, formatted);
+        if (!change) return [];
+        const start = model.getPositionAt(change.start);
+        const end = model.getPositionAt(change.end);
+        return [
+          {
+            range: {
+              startLineNumber: start.lineNumber,
+              startColumn: start.column,
+              endLineNumber: end.lineNumber,
+              endColumn: end.column,
+            },
+            text: change.text,
+          },
+        ];
+      },
+    });
+  }
+}
+
 /** Monaco-based editor with HTML / CSS / JS tabs, bound to the template store. */
 export default function CodeEditor() {
   const activeTab = useTemplateStore((s) => s.activeTab);
@@ -60,11 +101,23 @@ export default function CodeEditor() {
   const current = TABS.find((t) => t.id === activeTab)!;
   const value = activeTab === 'html' ? template.html : activeTab === 'css' ? template.css : template.js;
 
+  // The JS animation region is owned by the timeline; formatting deliberately leaves it alone.
+  const formatProtected = activeTab === 'js' && hasProtectedRegion(template.js);
+
   const onChange = (next: string | undefined) => {
     const v = next ?? '';
     if (activeTab === 'html') setHtml(v);
     else if (activeTab === 'css') setCss(v);
     else setJs(v);
+  };
+
+  // Run Prettier on the active tab through Monaco's format action, so the edit goes onto Monaco's
+  // own undo stack and onChange carries the result into the store like any manual edit.
+  const formatActive = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    editor.getAction('editor.action.formatDocument')?.run();
   };
 
   // Highlight + reveal the lines the last panel/AI apply changed in this tab.
@@ -91,11 +144,12 @@ export default function CodeEditor() {
     return () => clearTimeout(handle);
   }, [lastChange, activeTab]);
 
-  // Report the token under the cursor (kept for future context-aware tools) and register
-  // the hover explanations.
+  // Report the token under the cursor (kept for future context-aware tools) and register the
+  // hover explanations + the Prettier formatters.
   const onMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     registerHoverExplanations(monaco);
+    registerFormatters(monaco);
     // When the editor mounts into a just-shown box (e.g. the mobile "Show code" panel), Monaco can
     // read a ~0 size at creation and stay collapsed at 5×5. Force a layout to the REAL container size
     // (bypassing Monaco's own measurement), after paint and once more shortly after, to fill it.
@@ -140,6 +194,18 @@ export default function CodeEditor() {
             </button>
           ))}
         </div>
+        <button
+          className="format-btn"
+          onClick={formatActive}
+          disabled={formatProtected}
+          title={
+            formatProtected
+              ? 'The animation region is edited on the timeline — formatting leaves it untouched'
+              : 'Format this file with Prettier (Shift+Alt+F)'
+          }
+        >
+          Format
+        </button>
       </div>
       <div className="editor-host">
         <Editor

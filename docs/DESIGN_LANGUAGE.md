@@ -115,6 +115,11 @@ use the tighter classic 120 px left inset for lower-left thirds). Zone sets the 
 
 ## 7. Generated-code style (readability & editability)
 
+- **Simplest clear code wins.** Prefer direct HTML/CSS/JS: descriptive names, simple top-to-bottom
+  control flow, minimal indirection - a few obvious lines over a clever abstraction. A beginner
+  should be able to locate the code that draws a thing and understand it. Add a helper, wrapper, or
+  generic pattern only when it clearly makes the code *simpler to read*. This is a preference, not a
+  ban on abstraction - reach for the simplest implementation that stays correct and maintainable.
 - **Naming:** one descriptive prefix per category — lower thirds use `lower-third` (`.lower-third`, `.lower-third-box`, `.lower-third-name`,
   `.lower-third-title`, `.lower-third-kicker`, `.lower-third-accent`, `.lower-third-logo`). Functions are verbs:
   `buildInTimeline()`, `buildOutTimeline()`, `update(data)`, `play()`, `stop()`, `next()`.

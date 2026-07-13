@@ -24,6 +24,7 @@
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "monaco-editor": "^0.55.1",
+    "prettier": "^3.9.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "sucrase": "^3.35.1",

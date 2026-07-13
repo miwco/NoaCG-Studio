@@ -5,6 +5,7 @@ import { useAuthState } from './auth/useAuthState';
 import SignInPrompt from './auth/SignInPrompt';
 import { useTemplateStore } from '../store/templateStore';
 import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
+import { formatTemplate } from '../format/formatCode';
 import type { TemplateChange } from '../model/types';
 
 type Pending = { change: TemplateChange; validation: ValidationResult } | null;
@@ -36,11 +37,16 @@ export default function AIPromptPanel() {
     );
   }
 
-  const runChange = async (fn: () => Promise<TemplateChange>) => {
+  // `autoFormat` runs Prettier on the result before it's shown for review. It's on only for a
+  // full Generate (a brand-new template, no cursor or surgical intent to preserve) and formats
+  // HTML only — CSS keeps its house comment alignment and JS keeps its timeline-owned animation
+  // region (see src/format/formatCode.ts). Modify/Fix stay byte-faithful to the AI's edit.
+  const runChange = async (fn: () => Promise<TemplateChange>, autoFormat = false) => {
     setBusy(true);
     setExplanation(null);
     try {
-      const change = await fn();
+      let change = await fn();
+      if (autoFormat) change = { ...change, template: await formatTemplate(change.template) };
       setPending({ change, validation: validateTemplate(change.template) });
     } finally {
       setBusy(false);
@@ -87,7 +93,7 @@ export default function AIPromptPanel() {
       />
 
       <div className="row wrap" style={{ marginTop: 8 }}>
-        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => getAiProvider().generate(prompt))}>
+        <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => getAiProvider().generate(prompt), true)}>
           Generate
         </button>
         <button disabled={busy || !prompt.trim()} onClick={() => runChange(() => getAiProvider().modify(prompt, template))}>

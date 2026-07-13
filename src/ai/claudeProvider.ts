@@ -111,8 +111,14 @@ marketplace-quality templates. The user is learning to code from what you write.
 - Bounce/elastic only if the user asks for playful.
 
 ## Code style
-- Teachable ES5 in template.js (var, function declarations), short useful comments that
-  explain WHY. Rich but commented CSS. No frameworks, no cleverness.
+- Write the SIMPLEST clear code that is correct. Prefer direct HTML, CSS, and JavaScript: a few
+  obvious lines over a clever abstraction. A beginner should be able to find the piece that draws
+  a thing and understand it without tracing through layers.
+- Descriptive names (name the thing it is), simple top-to-bottom control flow, minimal
+  indirection. Do NOT add helper functions, wrappers, config objects, generic patterns, or
+  clever one-liners unless they clearly make the code simpler to read — usually they do not here.
+- Teachable ES5 in template.js (var, function declarations), short useful comments that explain
+  WHY (not that something changed). Rich but commented CSS. No frameworks, no build steps.
 - Broadcast taste: one accent color doing sharp small work, generous whitespace, real
   typographic hierarchy, marketplace-grade composition — never a tutorial demo.
 
