@@ -66,7 +66,17 @@ export const REMOTION_CONTRACT = `## The composition contract (hard requirements
   no fields (the fallbacks). Expose only REAL content choices (typically 2-5); keep timing,
   layout, and animation constants in code - not every value becomes an input. Use types:
   text (copy), number (a score/count, with min/max), color (a hex accent), select (a small
-  set of choices). Declare [] only when the piece truly has no editable content.
+  set of choices), image (which uploaded asset fills a slot). Declare [] only when the piece
+  truly has no editable content.
+- IMAGE INPUTS let the operator choose WHICH uploaded asset fills a slot (a logo, a
+  background) without code. The field value is an asset's LOGICAL NAME, so read it against
+  the assets prop and branch on presence exactly like a directly-named asset:
+  \`const logoName = String(fields.logo ?? '');\` then
+  \`const logo = assets[logoName] || assets['knownName'];\` then
+  \`{logo ? <Img src={logo} .../> : <a designed wordmark/>}\`. The declared \`default\` is a
+  known asset name when one is uploaded, else \`''\`. NEVER put a URL or file data in the
+  field value - the URL always comes from the assets prop. Only declare an image input when a
+  real image slot exists; the "missing image -> designed substitute" rule above still applies.
 - Transparent projects: the root <AbsoluteFill> paints NO background. Opaque projects:
   paint a deliberate background (a designed dark gradient beats flat black).
 - Write clean, readable code a motion designer can edit: descriptive names, short comments
@@ -130,7 +140,8 @@ export default function Composition({
     extrapolateRight: 'clamp',
   });
 
-  const logo = assets['logo']; // optional - the layout works with or without it
+  const logoName = String(fields.logo ?? ''); // an image input: which uploaded asset is the logo
+  const logo = assets[logoName]; // optional - the layout works with or without it
 
   return (
     <AbsoluteFill style={{ background: 'linear-gradient(160deg, #0c0f14 30%, #141a24 100%)' }}>

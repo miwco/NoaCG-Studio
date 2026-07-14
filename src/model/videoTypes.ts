@@ -11,6 +11,7 @@
 // SAME compiled module drives the live preview and the final render.
 
 import type { AssetFile } from './types';
+import type { VideoFieldKind } from './fieldModel';
 import { uuid } from './id';
 
 /** Which editor world the app is showing: SPX live graphics or the video editor. */
@@ -25,14 +26,21 @@ export interface VideoChatMessage {
 
 /**
  * An editable composition input - the video-project counterpart of an SPX DataField. The AI
- * declares a handful (the headline, an accent colour, a score) so a non-technical user can
- * change the content in the Content panel WITHOUT touching TSX. Deliberately shaped to mirror
- * the SPX `ftype`s (textfield/number/color/dropdown) so a future shared Template Definition
- * across Remotion/SPX/operator controls drops in naturally. The `key` is the prop name the
- * composition reads: `fields.<key>` (always with a `?? default` fallback so the code still
- * renders standalone). Values ride into both the preview and the render inside `inputProps`.
+ * declares a handful (the headline, an accent colour, a score, a logo image) so a
+ * non-technical user can change the content in the Content panel WITHOUT touching TSX. The
+ * kinds are a subset of the shared field vocabulary (model/fieldModel.ts) - the same kinds
+ * the SPX operator controls speak - so one Template Definition across Remotion/SPX/operator
+ * controls drops in naturally. The `key` is the prop name the composition reads:
+ * `fields.<key>` (always with a `?? default` fallback so the code still renders standalone).
+ * Values ride into both the preview and the render inside `inputProps`.
+ *
+ * Value shape by type: text/color/select carry a string, number a number, and `image` carries
+ * the LOGICAL NAME of a project asset (the video counterpart of an SPX `filelist` filename) -
+ * the composition resolves it against the `assets` map it already receives, e.g.
+ * `assets[String(fields.logo ?? '')]`. An empty string means "none". Because the asset URL
+ * lives in `assets`, not the field value, an image input adds no bytes to the manifest budget.
  */
-export type VideoInputType = 'text' | 'number' | 'color' | 'select';
+export type VideoInputType = VideoFieldKind;
 
 export interface VideoInput {
   /** The `fields.<key>` prop the composition reads (a plain identifier). */
