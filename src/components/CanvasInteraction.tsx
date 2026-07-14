@@ -5,7 +5,6 @@ import { setCssDeclaration, setFieldDefault } from '../blocks/edit';
 import { getCssVariable, setCssVariable } from '../blocks/cssVars';
 import type { Zone9 } from '../model/wizard';
 import { detectPrefix, getTemplateParts, type TemplatePart } from '../model/structure';
-import { parseTimeline } from '../blocks/timelineModel';
 import { parseAnimData, spliceAnimData } from '../blocks/animData';
 import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
@@ -208,23 +207,17 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   const parts = useMemo(() => getTemplateParts(template.html, template.fields), [template.html, template.fields]);
   const selectedPart = selected ? parts.find((p) => p.selector === selected) ?? null : null;
 
-  // ── "Appears on press" from the chip — the SAME control the timeline gutter offers,
-  //    under the same conditions (steps on, chain groupable, part eligible), writing the
-  //    same patch (blocks/stepAssign.ts changePartPress). The code stays the one truth. ──
-  const timelineModel = useMemo(() => parseTimeline(template.js), [template.js]);
-  // Timeline v2: on a data-block template the press chain is the steps' reveals lists.
+  // ── "Appears on press" from the chip — the SAME control the timeline offers, under the
+  //    same conditions (steps on, part eligible), writing the same patch (blocks/stepAssign.ts
+  //    changePartPress). The code stays the one truth. A press is the middle steps' `reveals`;
+  //    a legacy region has no editable press chain at all (Phase 8 — it is read-only). ──
   const dataModel = useMemo(() => parseAnimData(template.js), [template.js]);
   const presses = useMemo(
-    () =>
-      dataModel
-        ? dataModel.steps.slice(1, -1).map((s) => s.reveals ?? [])
-        : timelineModel?.steps.map((s) => s.targets) ?? null,
-    [dataModel, timelineModel],
+    () => (dataModel ? dataModel.steps.slice(1, -1).map((s) => s.reveals ?? []) : null),
+    [dataModel],
   );
-  const stepsOn = dataModel ? dataModel.steps.length > 2 : template.js.includes('function revealNextStep');
-  const chainGroupable = dataModel
-    ? (presses?.length ?? 0) > 0
-    : !!timelineModel && timelineModel.steps.length > 0 && timelineModel.steps.every((s) => s.groupable);
+  const stepsOn = (dataModel?.steps.length ?? 0) > 2;
+  const chainGroupable = (presses?.length ?? 0) > 0;
   const firstLine = parts.find((p) => p.kind === 'line')?.selector;
   const pressEligible =
     stepsOn &&
@@ -294,8 +287,8 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   };
 
   const changePress = (toPress: number) => {
-    if (!selectedPart || (!timelineModel && !dataModel)) return;
-    const change = changePartPress(template, parts, timelineModel, selectedPart.selector, selectedPress, toPress);
+    if (!selectedPart || !dataModel) return;
+    const change = changePartPress(template, parts, selectedPart.selector, selectedPress, toPress);
     if (!change) return;
     applyTemplate({ ...template, ...change.patch }); // one undoable apply — same as the gutter
     requestReplay();

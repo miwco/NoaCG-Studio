@@ -42,7 +42,7 @@ const HARNESS = `
   }
   // The preset's ORIGINAL emitted region, spliced over the data region — the legacy twin.
   async function legacyTwin(tpl, presetId, steps) {
-    const { anyPresetById } = await import('/src/blocks/animPatch.ts');
+    const { anyPresetById } = await import('/src/blocks/presetRegistry.ts');
     const { detectPrefix, countLines } = await import('/src/model/structure.ts');
     const { parseAnimData } = await import('/src/blocks/animData.ts');
     const preset = anyPresetById(presetId);

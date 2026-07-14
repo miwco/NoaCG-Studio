@@ -19,11 +19,10 @@
 
 import type { SpxTemplate } from '../model/types';
 import type { AnimPresetId } from '../model/wizard';
-import { anyPresetById } from './animPatch';
+import { emitPresetRegion } from './presetRegistry';
 import { importAnimData } from './animImport';
 import { layerPress } from './animEdit';
 import { activationStep } from './animEval';
-import { countLines, detectPrefix } from '../model/structure';
 import type { AnimData } from './animData';
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -37,21 +36,8 @@ export function presetDonor(
   presetId: AnimPresetId,
   eases?: { easeIn?: string; easeOut?: string },
 ): AnimData | null {
-  const prefix = detectPrefix(template.html);
-  if (!prefix) return null;
-  const preset = anyPresetById(presetId);
-  const region = preset.emit({
-    prefix,
-    lineCount: Math.max(1, countLines(template.html)),
-    hasAccent: template.html.includes(`${prefix}-accent`),
-    hasBars: template.html.includes(`${prefix}-bar-fill`),
-    steps: false,
-    stepOutsideParts: [],
-    speed: data.speed,
-    easeIn: eases?.easeIn ?? preset.autoEase.easeIn,
-    easeOut: eases?.easeOut ?? preset.autoEase.easeOut,
-  });
-  return importAnimData({ ...template, js: region });
+  const region = emitPresetRegion(template, presetId, { speed: data.speed, ...eases });
+  return region ? importAnimData({ ...template, js: region }) : null;
 }
 
 export type PresetScope = 'all' | string; // 'all' = the whole graphic, else one selector

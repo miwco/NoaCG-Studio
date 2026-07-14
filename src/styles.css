@@ -1343,70 +1343,23 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   white-space: nowrap;
 }
 
-/* ---------- Timeline strip (Era 6 — under the preview, above the transport) ---------- */
+/* ---------- The LEGACY timeline (Phase 8: read-only) ----------
+   Every category creates as a data block, so this surface charts one thing only: a marked
+   region the importer REFUSES (measured motion written inline). It can never be auto-converted
+   and regenerating it would discard the owner's tuning, so it must still render truthfully —
+   and it offers no editing affordance, because there is none. The old strip's editing CSS (bar
+   drags and resize grips, the enters-from drawer, the moment cards, the phase inspector row,
+   the press gutter, the steps notice) went with the patchers. */
 .timeline-strip {
   flex: 0 0 auto;              /* never steals stage height by growing */
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(10, 12, 16, 0.5);
-  margin: 6px 8px 0;
-  padding: 4px 8px 6px;
+  background: var(--panel);
+  padding: 8px 10px;
 }
 .timeline-strip.collapsed { padding-bottom: 4px; }
 .timeline-head { display: flex; align-items: center; gap: 8px; }
-.timeline-head .tab { font-size: 11px; padding: 2px 8px; }
-.timeline-collapse {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  font-size: 11px;
-  padding: 2px 4px;
-}
-.timeline-collapse:hover { color: var(--text); background: transparent; border-color: transparent; }
 .timeline-time { font-size: 11px; min-width: 44px; text-align: right; }
-.timeline-knobs { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
-/* Moment cards: the cue line ("on ▶ Play") sits under each segment's title, so the chain
-   reads as the operator's story — arrive, hold, reveal, leave. */
-.timeline-seg { white-space: nowrap; display: flex; flex-direction: column; align-items: flex-start; padding: 3px 8px; }
-.timeline-seg-main { line-height: 1.25; }
-.timeline-seg-sub { font-size: 8.5px; letter-spacing: 0.05em; color: var(--text-dim); line-height: 1.3; }
-/* Collapsed strip stays one slim line — the cue subtitles fold away with the tracks. */
-.timeline-strip.collapsed .timeline-seg-sub { display: none; }
-.timeline-marker { color: var(--amber); font-size: 10px; }
-.timeline-seg.drop-target {
-  outline: 1.5px solid var(--amber);
-  outline-offset: 1px;
-  background: rgba(246, 166, 35, 0.12);
-}
-.timeline-newstep {
-  color: var(--text-dim);
-  background: transparent;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  cursor: pointer;
-}
-.timeline-newstep:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.5); }
-/* Unavailable (nothing to split / one line): stays visible, the tooltip says why. */
-.timeline-newstep:disabled { opacity: 0.45; cursor: default; }
-.timeline-newstep:disabled:hover { color: var(--text-dim); border-color: var(--border); }
-.regroup-ghost {
-  position: fixed;
-  z-index: 300;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--amber);
-  background: rgba(10, 12, 16, 0.92);
-  border: 1px solid rgba(246, 166, 35, 0.5);
-  border-radius: 4px;
-  padding: 3px 8px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-/* The hold's explainer — shown in the tracks area when ● On air is selected. */
-.timeline-hold-note { margin: 8px 0 4px; font-size: 11px; color: var(--text-dim); }
 
 .timeline-tracks {
   position: relative;
@@ -1423,110 +1376,55 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   white-space: nowrap;
 }
 
-/* ── T4.2: the cue-segmented overview — the whole playout as one strip ─────────
-   Three columns: sticky part names · the zoomable section canvas (scrolls) · the
-   per-row controls. Row heights are fixed so the columns stay aligned. */
+/* The cue-segmented overview — the whole playout as one strip: sticky part names beside a
+   zoomable section canvas. Each section keeps its own REAL local clock (holds and presses wait
+   for an operator cue, so one global axis would fabricate times that don't exist on air). */
 .timeline-ov { display: flex; align-items: flex-start; gap: 8px; }
 .timeline-ov-labels { display: flex; flex-direction: column; flex-shrink: 0; width: 102px; }
 .timeline-ov-scroll { flex: 1; min-width: 0; overflow-x: auto; }
 .timeline-ov-canvas { position: relative; }
-.timeline-ov-gutter { display: flex; flex-direction: column; flex-shrink: 0; }
-.timeline-ov-gutter-row { display: flex; align-items: center; gap: 6px; }
 .timeline-ov-corner { flex-shrink: 0; }
 
-/* Section backdrops: a whisper of separation; the selected moment tints amber; the hold
-   is a hatched break (it waits for a cue — it has no clock). */
+/* Section backdrops: a whisper of separation; the parked moment tints amber; the hold is a
+   hatched break (it waits for a cue — it has no clock). */
 .timeline-ov-secbg {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-right: 1px solid rgba(232, 237, 242, 0.12);
-  background: rgba(232, 237, 242, 0.025);
+  border-left: 1px solid rgba(232, 237, 242, 0.07);
 }
 .timeline-ov-secbg.active { background: rgba(246, 166, 35, 0.07); }
 .timeline-ov-secbg.hold {
-  background: repeating-linear-gradient(
-    -45deg,
-    rgba(232, 237, 242, 0.05) 0 4px,
-    transparent 4px 9px
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 4px,
+    rgba(232, 237, 242, 0.05) 4px, rgba(232, 237, 242, 0.05) 8px
   );
 }
 .timeline-ov-secbg.hold.active { background-color: rgba(246, 166, 35, 0.07); }
-/* A drag is armed over this section: dropping moves WHEN the grabbed part appears. */
-.timeline-ov-secbg.drop { background: rgba(246, 166, 35, 0.14); }
-.timeline-ov-tick {
-  position: absolute;
-  top: 22px;                  /* below the header row */
-  bottom: 0;
-  width: 1px;
-  background: rgba(232, 237, 242, 0.05);
-  pointer-events: none;
-}
-.timeline-ov-tick.whole { background: rgba(232, 237, 242, 0.1); }
 
-/* Section headers double as the ruler: name + real local duration; click selects. */
 .timeline-ov-sec {
   position: absolute;
   top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   padding: 0 6px;
-  border: none;
-  border-radius: 0;
   background: transparent;
+  border: none;
+  border-left: 1px solid rgba(232, 237, 242, 0.07);
   font-family: "JetBrains Mono", Consolas, monospace;
   font-size: 9.5px;
-  letter-spacing: 0.04em;
-  text-align: left;
+  letter-spacing: 0.05em;
   color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: pointer;
 }
 .timeline-ov-sec:hover { background: rgba(232, 237, 242, 0.05); color: var(--text); }
 .timeline-ov-sec.active { color: var(--amber); }
-.timeline-ov-sec.drop-target { outline: 1.5px solid var(--amber); outline-offset: -2px; }
-
 .timeline-ov-row { position: relative; border-top: 1px solid rgba(232, 237, 242, 0.04); }
-.timeline-appears-spacer { width: 142px; flex-shrink: 0; }
 
-/* T5 — the per-layer "enters from" drawer: an expand arrow on the label, a sticky row of
-   basic transform inputs underneath (properties, not bars — they don't ride the clock). */
-.timeline-expand {
-  background: transparent;
-  border: none;
-  padding: 0 3px 0 0;
-  font-size: 9px;
-  color: var(--text-dim);
-  cursor: pointer;
-  vertical-align: middle;
-}
-.timeline-expand:hover { color: var(--amber); background: transparent; }
-.timeline-expand-spacer { display: inline-block; width: 12px; }
-.timeline-drawer-label { color: rgba(246, 166, 35, 0.8); padding-left: 12px; }
-.timeline-drawer { background: rgba(246, 166, 35, 0.04); }
-.timeline-drawer-fields {
-  position: sticky;
-  left: 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 100%;
-}
-.timeline-drawer-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin: 0;
-  font-size: 9px;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-}
-.timeline-drawer-field input {
-  width: 52px;
-  height: 18px;
-  padding: 1px 4px;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 10px;
-}
+/* A bar is one tween the region plays — charted, never grabbable. */
 .timeline-bar {
   position: absolute;
   top: 2px;
@@ -1535,163 +1433,67 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   background: linear-gradient(90deg, var(--amber), rgba(246, 166, 35, 0.55));
   min-width: 3px;
 }
-/* T2 — editable bars: drag the body to retime, the edges to stretch either end. */
-.timeline-bar.editable { cursor: grab; touch-action: none; }
-.timeline-bar.editable:hover { box-shadow: 0 0 8px rgba(246, 166, 35, 0.5); }
-.timeline-bar.dragging {
-  cursor: grabbing;
-  box-shadow: 0 0 10px rgba(246, 166, 35, 0.7);
-  pointer-events: none;   /* hit-test through the moving bar so drop zones resolve */
-}
-.timeline-bar-handle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 7px;
-  cursor: ew-resize;
-  border-right: 2px solid rgba(10, 12, 16, 0.55);  /* a visible grip on the bar's end */
-  border-radius: 0 3px 3px 0;
-}
-/* The start-side grip: dragging it moves WHEN the move begins; the end stays pinned. */
-.timeline-bar-handle-left {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 7px;
-  cursor: ew-resize;
-  border-left: 2px solid rgba(10, 12, 16, 0.55);
-  border-radius: 3px 0 0 3px;
-}
 .timeline-bar.set {
   width: 3px;
   background: var(--paper);   /* an instant set() — a tick, not a span */
 }
-/* What the bar does, written on it ("fade + slide", "wipe", "reveal", …). */
+/* What the bar does, written on it ("fade", "wipe", "reveal", …). */
 .timeline-bar-verb {
   position: absolute;
   inset: 0;
-  padding: 0 9px 0 5px;       /* right padding keeps clear of the resize grip */
+  padding: 0 9px 0 5px;
   font-size: 8.5px;
   line-height: 10px;
   letter-spacing: 0.05em;
   color: rgba(10, 12, 16, 0.85);   /* dark ink on the amber bar */
   overflow: hidden;
   white-space: nowrap;
-  pointer-events: none;       /* the bar underneath owns the drag */
+  pointer-events: none;
   user-select: none;
 }
-/* The one-time announcement when step reveal turns on (▶ Play changes behavior). */
-.timeline-notice {
-  margin: 6px 0 0;
-  font-size: 10.5px;
-  color: var(--amber);
-  background: rgba(246, 166, 35, 0.08);
-  border: 1px solid rgba(246, 166, 35, 0.25);
-  border-radius: 4px;
-  padding: 3px 8px;
-}
 
-/* An inline text-action inside the hint line (e.g. "Turn off step reveal"). */
-.timeline-hint-action {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 10px;
-  color: var(--amber);
-  text-decoration: underline;
-  cursor: pointer;
-}
-.timeline-hint-action:hover { background: transparent; color: var(--glow); }
-
-/* The one-line gesture hint under the tracks — discoverability without hovering. */
+/* The read-only note. Its own full-width line above the controls — in the control row it
+   collapses to nothing, and this sentence is the whole point of the surface. */
 .timeline-hint {
-  margin: 4px 0 0;
-  font-size: 10px;
+  margin: 0 0 6px;
+  font-size: 10.5px;
+  line-height: 1.35;
   color: var(--text-dim);
-  opacity: 0.8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
+
 .timeline-playhead {
   position: absolute;
   bottom: 0;
   width: 1px;
-  background: rgba(232, 237, 242, 0.7);
+  background: var(--amber);
+  box-shadow: 0 0 6px rgba(246, 166, 35, 0.8);
   pointer-events: none;
 }
 
-/* T2.5 — the per-tween ease picker at the row's end ('auto' inherits the phase knob). */
+/* The "start over with a preset" select — the one write this surface offers, and it writes
+   DATA (the way out of unconvertible code leads forward, never to another legacy region). */
 .timeline-ease {
-  width: 96px;
-  flex-shrink: 0;
-  font-family: "JetBrains Mono", Consolas, monospace;
+  height: 22px;
+  padding: 0 6px;
   font-size: 10px;
-  padding: 1px 4px;
-  height: 18px;
+  letter-spacing: 0.04em;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text);
+  color: var(--text-dim);
+  cursor: pointer;
 }
 .timeline-ease:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
-.timeline-ease-spacer { width: 96px; flex-shrink: 0; }
+.timeline-preset { width: auto; max-width: 190px; }
 
-/* The selected In/Out card's controls row — the Motion panel's per-phase preset + easing,
-   converged onto the strip (one motion surface). Same slim height as the gesture hint. */
-.timeline-inspector { display: flex; align-items: center; gap: 6px; }
-.timeline-inspector-label {
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  color: var(--amber);
-  flex-shrink: 0;
-}
-.timeline-inspector-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Content-sized selects: the preset/easing/speed/out pickers carry words, not curves. */
-.timeline-preset,
-.timeline-phase-ease,
-.timeline-speed { width: auto; max-width: 190px; }
-.timeline-out-mode { width: auto; max-width: 230px; }
-/* The auto-out delay, in milliseconds — a sibling of the out-mode select. */
-.timeline-out-ms {
-  width: 64px;
-  height: 18px;
-  padding: 1px 4px;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-}
-
-/* The part row's when-control: which » Next press the part appears on. */
-.timeline-appears {
-  width: 142px;
-  flex-shrink: 0;
-  font-family: "JetBrains Mono", Consolas, monospace;
-  font-size: 10px;
-  padding: 1px 4px;
-  height: 18px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-}
-.timeline-appears:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); }
 .timeline-scrub { accent-color: var(--amber); }
 
-/* Overview zoom — scales every section's local seconds-to-pixels ratio. */
 .timeline-zoom { display: inline-flex; gap: 2px; }
 .timeline-zoom-btn {
-  padding: 0 7px;
-  height: 18px;
-  font-size: 12px;
-  line-height: 1;
-  background: transparent;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text-dim);

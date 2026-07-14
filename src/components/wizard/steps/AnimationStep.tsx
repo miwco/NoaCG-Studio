@@ -6,7 +6,7 @@ import { GT_PRESETS } from '../../../templates/gameTimers/gtPresets';
 import { IG_PRESETS } from '../../../templates/infographics/igPresets';
 import { QUIZ_PRESETS } from '../../../templates/quiz/quizPresets';
 import { EASINGS, type EasingId } from '../../../model/easings';
-import type { AnimPhase } from '../../../blocks/animPatch';
+import type { AnimPhase } from '../../../blocks/presetRegistry';
 import type { AnimPresetId, AnimSpeed, TemplateVariant } from '../../../model/wizard';
 import type { DraftPatch, WizardDraft } from '../draft';
 

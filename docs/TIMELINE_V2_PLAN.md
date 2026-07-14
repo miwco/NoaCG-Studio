@@ -39,7 +39,29 @@ strip actually still serves.
 
 **THE MIGRATION IS COMPLETE: every category creates as a NOACG_ANIM data block.** The legacy region
 survives only in saved/imported/hand-written templates, and the dock picks the editing surface from
-the CODE, never from the category — which is what keeps those working. **Phase 8 is unblocked.**
+the CODE, never from the category — which is what keeps those working.
+
+**PHASE 8 IS DONE (2026-07-15).** The literal-patch layer is deleted — `blocks/animPatch.ts` (phase
+splicers, knob setters, step-chain re-emits), timelineModel's patchers (`splitTween`,
+`patchTweenTiming/Ease/Vars`, `patchStep*`, `insertPart*`, `setObj*`), and `TimelineView.tsx`, the
+classic strip that drove them: about 2,000 lines, plus the strip's CSS and its 33-test suite. What
+replaced them:
+
+- **`blocks/presetRegistry.ts`** — what is left of animPatch: the preset library
+  (`presetsForType` / `anyPresetById`) plus `emitPresetRegion`, the ONE way to emit a preset's
+  region for a template. presetApply derives keyframes from it; the legacy timeline's "start over"
+  writes it, converted.
+- **`components/LegacyTimeline.tsx`** — the read-only chart §8.1 requires, for a region the importer
+  REFUSES (measured motion written inline). It renders the truth, follows the playhead, scrubs, and
+  offers no affordance it lacks. Its one write is "start over with a preset", which emits DATA — so
+  the way out of unconvertible code leads forward, never to another legacy region.
+- **`e2e/legacy-timeline.spec.ts`** — what the old strip's suite becomes: not its editing coverage
+  (that moved to the step timeline, pinned by `e2e/timeline-v2.spec.ts`) but the guarantee that a
+  template written before the migration still WORKS.
+
+`stepAssign.changePartPress` lost its two legacy re-emit paths and its literal array patch: a press
+is data now, so there is one path. `timelineModel` keeps only what READS a legacy region
+(`parseTimeline` for the importer, `buildOverview` for the chart).
 
 **Phase 8 scope, RATIFIED (DYNAMIC_MOTION_SCOPE §8.1):** it removes the classic strip's EDITING
 patchers but KEEPS a minimal read-only renderer. A saved template whose measured motion is
@@ -623,9 +645,11 @@ so nothing regresses mid-migration.
 - **Phase 7 — parity + migration polish.** Overlay auto-out fix; validation data checks;
   AI prompt update; l3-sweep update; convert-on-edit UX for saved templates; full-play
   hold semantics documented in-product.
-- **Phase 8 — retirement + tests.** Only now: remove the patcher layer, the old strip,
-  and the old specs; rewrite e2e coverage (the checklist below); update CLAUDE.md/GOALS/
-  DESIGN_LANGUAGE.
+- **Phase 8 — retirement + tests. DONE 2026-07-15.** The patcher layer, the old strip, its CSS and
+  its specs are gone; the read-only renderer §8.1 requires stayed (LegacyTimeline). One amendment
+  to the sketch above: an importable legacy region does NOT get a lesser second editor — it gets
+  the step timeline, read-only, with "use keyframes" one click away. The classic chart is only for
+  a region that can never be converted, which is the one case that genuinely needs it.
 
 ## 7. Test plan
 

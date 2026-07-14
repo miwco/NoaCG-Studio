@@ -217,7 +217,11 @@ zero-advance on the importer's clock but a real child on GSAP's, so a bare `'-=N
 differently in the two.
 
 The quiz then flipped on §3b calls (`docs/TIMELINE_V2_PLAN.md` §3c), and INFO CARDS last of all —
-so **every category now creates as a data block and the migration is complete**. Per §8.1, Phase 8
-retires the strip's *editing* patchers but keeps a read-only renderer for legacy templates that can
-never be auto-converted; that decision is what the classic strip's spec suite now pins, since its
-fixture became a SAVED LEGACY TEMPLATE (e2e/_legacy.ts) rather than a freshly created category.
+so **every category now creates as a data block and the migration is complete**.
+
+**Phase 8 then shipped (2026-07-15), and §8.1 held exactly as ratified**: the strip's *editing*
+patchers are deleted, and a read-only renderer stayed — `components/LegacyTimeline.tsx` — for the
+templates this document is about. A hand-written measured region is precisely the thing that can
+never be auto-converted, so it is the ONE case that still needs the classic chart; an importable
+legacy region gets the step timeline read-only instead, with "use keyframes" one click away.
+Coverage: `e2e/legacy-timeline.spec.ts`.

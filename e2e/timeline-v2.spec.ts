@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { applyLegacyRegion } from './_legacy';
 
 // Timeline v2 Phase 3 — the read-first step timeline behind the dock toggle: step clips
 // with cue markers on a time ruler, a click/drag playhead that scrubs the real preview
@@ -772,44 +771,6 @@ test('v2: scoreboards create as data blocks — the score pop keeps working arou
     .toBeGreaterThan(1.05);
 });
 
-test('v2: a legacy TEMPLATE keeps the classic strip, can peek at v2, and converts on demand', async ({ page }) => {
-  // Every category creates as a data block now, so the classic strip's remaining subject is a
-  // legacy TEMPLATE — a project saved before the migration, an import, hand-written GSAP. The
-  // dock picks the surface from the CODE, never from the category, which is what makes that
-  // work. Build one the way a saved project holds it: create, then write the preset's legacy
-  // emit back over the region.
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650);
-  await expect(page.getByTestId('timeline-v2')).toBeVisible(); // it created as a data block…
-  await applyLegacyRegion(page, { prefix: 'info-card', presetId: 'line-reveal' });
-  // …and now it is legacy code, so the dock hands it to the classic strip.
-  await expect(page.getByTestId('timeline')).toBeVisible();
-  await expect(page.getByTestId('timeline-v2')).toHaveCount(0);
-  // The chip opens the v2 read view…
-  await page.getByTestId('timeline-v2-toggle').click();
-  await expect(page.getByTestId('timeline-v2')).toBeVisible();
-  // …and "use keyframes" converts the region — one undoable apply; the chips retire.
-  await page.getByTestId('timeline-v2-convert').click();
-  await page.waitForTimeout(650);
-  const js = await page.evaluate(async () => {
-    const { useTemplateStore } = await import('/src/store/templateStore.ts');
-    return useTemplateStore.getState().template.js;
-  });
-  expect(js).toContain('var NOACG_ANIM');
-  await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
-  // Undo restores the legacy code — the chips return (the v2 preference persists), and
-  // one more toggle goes back to the classic strip.
-  await page.keyboard.press('Control+z');
-  await expect(page.getByTestId('timeline-v2-convert')).toBeVisible();
-  await page.getByTestId('timeline-v2-toggle').click();
-  await expect(page.getByTestId('timeline')).toBeVisible();
-});
 
 // ── Read-only, code-owned motion on the timeline ──
 // Three things in the animation data are NOT keyframes you can grab: a `loops` repeat (a

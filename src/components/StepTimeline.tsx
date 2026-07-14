@@ -24,8 +24,7 @@ import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/
 import { changePartPress } from '../blocks/stepAssign';
 import { getTemplateParts } from '../model/structure';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
-import { loadPrefs, savePrefs } from '../model/prefs';
-import TimelineView from './TimelineView';
+import LegacyTimeline from './LegacyTimeline';
 import type { SpxWindow } from './PlayoutSimulator';
 
 // Timeline v2 Phase 3 (docs/TIMELINE_V2_PLAN.md) — the step timeline, read-first.
@@ -67,24 +66,26 @@ interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
 }
 
-/** The dock: the classic strip and the v2 timeline share the slot under the preview.
- *  A template whose region IS the data block gets the step timeline outright (the classic
- *  strip's literal patchers cannot read it). Legacy templates keep the classic strip as
- *  the default editing surface, with the v2 read view one chip away — and from there,
- *  "use keyframes" converts the region (one undoable apply, the importer's writer). */
+/**
+ * The dock: it picks the editing surface from the CODE, never from the category — which is
+ * what lets a template saved years ago still open correctly (Phase 8).
+ *
+ * - the region IS a NOACG_ANIM data block  → the step timeline, editable. Every category
+ *   creates this way, so it is the normal case.
+ * - a LEGACY region the importer can read   → the same step timeline, READ-ONLY, with
+ *   "use keyframes" one click away (one undoable apply, the importer's writer). It shows the
+ *   real choreography — converted — rather than a second, lesser editing surface.
+ * - a legacy region it CANNOT read          → LegacyTimeline: charted, read-only, honest about
+ *   why (hand-written measured motion can never be auto-converted, and regenerating it would
+ *   throw away the owner's tuning — DYNAMIC_MOTION_SCOPE §8.1).
+ */
 export default function TimelineDock({ iframeRef }: Props) {
   const template = useTemplateStore((s) => s.template);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
-  const [v2, setV2] = useState<boolean>(() => loadPrefs().timelineV2);
   const native = useMemo(() => parseAnimData(template.js), [template.js]);
   const imported = useMemo(() => (native ? null : importAnimData(template)), [native, template]);
   const data = native ?? imported;
-  const showV2 = native !== null || (v2 && data !== null);
-  const toggle = () => {
-    savePrefs({ timelineV2: !v2 });
-    setV2(!v2);
-  };
   const convert = () => {
     if (!imported) return;
     const js = replaceRegionWithAnimData(template.js, imported);
@@ -94,30 +95,20 @@ export default function TimelineDock({ iframeRef }: Props) {
   };
   return (
     <div className="timeline-dock">
-      {showV2 && data ? (
+      {data ? (
         <StepTimeline iframeRef={iframeRef} data={data} editable={native !== null} />
       ) : (
-        <TimelineView iframeRef={iframeRef} />
+        <LegacyTimeline iframeRef={iframeRef} />
       )}
       {native === null && data && (
         <span className="timeline-dock-chips">
-          {showV2 && (
-            <button
-              className="timeline-dock-toggle convert"
-              onClick={convert}
-              title="Rewrite the animation code as an editable keyframe data block — the timeline and Inspector then edit it directly (undo with Ctrl+Z)"
-              data-testid="timeline-v2-convert"
-            >
-              ◆ use keyframes
-            </button>
-          )}
           <button
-            className="timeline-dock-toggle"
-            onClick={toggle}
-            title={showV2 ? 'Back to the classic strip' : 'Try the new step timeline'}
-            data-testid="timeline-v2-toggle"
+            className="timeline-dock-toggle convert"
+            onClick={convert}
+            title="Rewrite the animation code as an editable keyframe data block — the timeline and Inspector then edit it directly (undo with Ctrl+Z)"
+            data-testid="timeline-v2-convert"
           >
-            {showV2 ? '⧉ classic strip' : '⧉ new timeline'}
+            ◆ use keyframes
           </button>
         </span>
       )}
@@ -779,7 +770,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     const toPress = seg.i - 1; // step 0 = "appears with ▶ Play" (press -1)
     const fromPress = layerPress(data, d.key);
     if (toPress === fromPress) return;
-    const change = changePartPress(template, parts, null, d.key, fromPress, toPress);
+    const change = changePartPress(template, parts, d.key, fromPress, toPress);
     if (!change) return;
     applyTemplate({ ...template, ...change.patch }); // one undoable apply — same as the chip
   };
