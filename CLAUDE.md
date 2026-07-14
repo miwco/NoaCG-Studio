@@ -284,8 +284,12 @@ fix findings properly rather than sprinkling eslint-disable comments.
   asks.
 - The working rhythm in this repo: **commit each completed, verified phase/step** with a descriptive
   message. **Never add a `Co-Authored-By` trailer or any agent co-author** (the user's global rule).
-  The user likes GitHub kept up to date: push completed, verified work to `main` without asking
-  (standing permission, 2026-07-08).
+- **Never merge or push to `main` from a worktree on your own** - not `safe-merge`, not
+  `git merge` into main, not `git push origin main`. Several worktrees are usually active at once,
+  and auto-landing each one races the others. Commit verified work to the FEATURE BRANCH and STOP;
+  only merge/push to `main` when the user explicitly gives the safe-merge command in that message.
+  (This supersedes the older "push to main without asking" note - that was about not re-asking
+  before a push, not license to initiate a landing from a worktree.)
 - **Commit messages:** write clear, human-readable messages that explain the actual change - they
   must be understandable to any outside developer reading the history cold. No chat/session
   language, internal planning names, or AI-sounding phrases ("as requested", "starting era 5",

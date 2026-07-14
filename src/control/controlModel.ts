@@ -4,10 +4,12 @@
 // drive both the in-app Control tab (React) and the standalone controlpanel.html export.
 
 import type { SpxField } from '../model/types';
+import type { FieldKind } from '../model/fieldModel';
 import { slug } from '../export/slug';
 
-/** The kind of control a field gets, decided purely from its ftype. */
-export type ControlKind = 'text' | 'lines' | 'number' | 'image' | 'select' | 'toggle' | 'color';
+/** The kind of control a field gets, decided purely from its ftype. One vocabulary shared
+ *  with the video Template Definition (model/fieldModel.ts) so the two never drift. */
+export type ControlKind = FieldKind;
 
 export interface ControlDescriptor {
   field: string; // f0, f1, …

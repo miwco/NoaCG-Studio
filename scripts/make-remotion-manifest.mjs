@@ -7,8 +7,10 @@
 //
 // The fixture animates a bar + counter from useCurrentFrame (deterministic), reads editable
 // content from the `fields` prop (the video Template Definition) plus a title from
-// inputProps, and shows one tiny data-URL image asset - covering the module-eval, props,
-// fields, and asset paths of the worker's UserComposition.
+// inputProps, and shows a data-URL image asset chosen by an IMAGE INPUT - a `fields` value
+// that is an asset's logical name, resolved against the assets prop exactly as an SPX
+// filelist resolves a filename. Covers the module-eval, props, fields, image-input, and
+// asset paths of the worker's UserComposition.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -42,6 +44,8 @@ exports.default = function Fixture(props) {
   const assets = props.assets || {};
   const fields = props.fields || {};
   const accent = fields.accent || '#f6a623';
+  // Image input: the field carries an asset's logical NAME; the URL comes from assets.
+  const logo = assets[String(fields.logo || '')];
   return React.createElement(R.AbsoluteFill, {
     style: { background: '#101318', alignItems: 'center', justifyContent: 'center', fontFamily: 'Arial, sans-serif' },
   },
@@ -50,8 +54,8 @@ exports.default = function Fixture(props) {
     React.createElement('div', {
       style: { width: barW, height: 12, background: accent, marginTop: 24, borderRadius: 6 },
     }),
-    assets.dot ? React.createElement(R.Img, {
-      src: assets.dot,
+    logo ? React.createElement(R.Img, {
+      src: logo,
       style: { width: 48, height: 48, marginTop: 24, imageRendering: 'pixelated', opacity: 0.5 + t * 0.5 },
     }) : null
   );
@@ -63,7 +67,7 @@ const manifest = {
   kind: 'remotion',
   projectName: 'remotion-fixture',
   compiledJs: COMPILED_JS,
-  inputProps: { title: 'FIXTURE', fields: { headline: 'FIELDS OK', accent: '#f6a623' }, assets: { dot: DOT_PNG } },
+  inputProps: { title: 'FIXTURE', fields: { headline: 'FIELDS OK', accent: '#f6a623', logo: 'dot' }, assets: { dot: DOT_PNG } },
   durationInFrames,
   transparent: format !== 'mp4',
   width: 1280,

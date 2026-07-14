@@ -150,9 +150,11 @@ ${[BASE_SKILL, ...skills].map((s) => s.prompt).join('\n\n')}
 ${EXAMPLE_COMPOSITION}
 === end example ===
 
-The example above is emitted with these inputs (note how each read has a matching fallback):
+The example above is emitted with these inputs (note how each read has a matching fallback,
+and how the image input's value is an asset name resolved against the assets prop):
 inputs: [
   { "key": "title", "type": "text", "label": "Title", "default": "Prime Time" },
+  { "key": "logo", "type": "image", "label": "Logo", "default": "" },
   { "key": "accent", "type": "color", "label": "Accent colour", "default": "#f6a623" }
 ]
 

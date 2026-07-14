@@ -70,6 +70,24 @@ test('the logo-reveal example renders a designed wordmark, not a placeholder', a
   await expect(player(page).getByText('LOGO', { exact: true })).toHaveCount(0);
 });
 
+test('a generic prompt renders the default title sample without errors', async ({ page }) => {
+  // Regression guard: a brief matching none of the sample keywords (countdown/stinger/
+  // news/logo) falls through to the default title composition. The example chips never
+  // exercise that path, and a duplicate `const title` once made it crash at load with
+  // "Identifier 'title' has already been declared". It must compile and render.
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
+  await page.getByTestId('video-prompt').fill('a nice clean opener for my channel');
+  await page.getByTestId('video-create').click();
+  await expect(page.getByTestId('video-shell')).toBeVisible();
+  await waitForGeneration(page);
+
+  // The default sample renders its title, with no compile or runtime error banner.
+  await expect(page.getByTestId('video-code-error')).toHaveCount(0);
+  await expect(page.getByTestId('video-preview-error')).toHaveCount(0);
+  await expect(player(page).getByText('Main Title')).toBeVisible({ timeout: 10_000 });
+});
+
 test('scrubbing seeks the composition deterministically', async ({ page }) => {
   await createCountdownProject(page);
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
@@ -135,6 +153,55 @@ test('editable inputs: the Content panel edits the composition live', async ({ p
   await page.getByTestId('video-input-reset-title').click();
   await expect(titleField).toHaveValue('Game On');
   await expect(player(page).getByText('OVERTIME')).toHaveCount(0);
+});
+
+test('image inputs: the Content panel picks an uploaded asset that renders in the preview', async ({ page }) => {
+  // An image input is the video counterpart of an SPX filelist: it lets the operator choose
+  // WHICH uploaded asset fills a slot (the logo) without touching code. Its value is the
+  // asset's LOGICAL NAME, resolved against the assets prop the composition already receives -
+  // so it adds no bytes to the render manifest. The reveal shows the wordmark until one is
+  // picked, then swaps to the image LIVE (through set-props, no recompile).
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
+  await page.getByRole('button', { name: 'Logo reveal', exact: true }).click();
+  await page.getByTestId('video-create').click();
+  await expect(page.getByTestId('video-shell')).toBeVisible();
+  await waitForGeneration(page);
+  await expect(player(page).getByText('Studio')).toBeVisible({ timeout: 10_000 });
+
+  // Upload an image the way the Assets panel does (a data-URL AssetFile on the project). Its
+  // logical name comes from the file stem: images/brandlogo.png -> "brandlogo".
+  await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    useVideoProjectStore.getState().addAsset({
+      path: 'images/brandlogo.png',
+      data:
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    });
+  });
+
+  // The Content tab's image control lists the uploaded asset by its logical name.
+  await page.getByTestId('video-tab-content').click();
+  const logoPicker = page.getByTestId('video-input-logo');
+  await expect(logoPicker).toBeVisible();
+  await expect(logoPicker.locator('option[value="brandlogo"]')).toHaveCount(1);
+  // Nothing picked yet -> still the wordmark, not an image.
+  await expect(player(page).getByText('Studio')).toBeVisible();
+
+  // Pick it: the composition swaps the wordmark for the uploaded image, live.
+  await logoPicker.selectOption('brandlogo');
+  await expect(player(page).locator('img')).toBeVisible({ timeout: 10_000 });
+  await expect(player(page).getByText('Studio')).toHaveCount(0);
+  await expect(page.getByTestId('video-code-error')).toHaveCount(0);
+  await expect(page.getByTestId('video-preview-error')).toHaveCount(0);
+
+  // The stored value is the LOGICAL NAME (not a URL): it rides tiny into the render manifest,
+  // resolving against inputProps.assets.
+  const stored = await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    return useVideoProjectStore.getState().project.inputs.find((i) => i.key === 'logo')?.value;
+  });
+  expect(stored).toBe('brandlogo');
 });
 
 test('manual code edits update the preview; broken code keeps the last good version', async ({ page }) => {

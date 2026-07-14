@@ -212,10 +212,12 @@ tabbed panel: **VideoAiChatPanel** (the primary authoring surface - auto-runs th
 generation when chat holds exactly one unanswered user turn, guarded PER PROJECT ID with a
 retry button on failure; every AI result applies as ONE undoable applyProject; failed
 validation keeps the previous working code and offers "Apply anyway"), **VideoContentPanel**
-(the editable inputs the AI declared - the video Template Definition; text/number/color/select
-controls that edit `project.inputs` live through store.setInputValue, so a non-technical user
-changes the headline/accent/score without touching TSX and the preview updates instantly via
-the player host's set-props channel; per-field + "Reset all" restore defaults),
+(the editable inputs the AI declared - the video Template Definition; text/number/color/select/
+image controls that edit `project.inputs` live through store.setInputValue, so a non-technical
+user changes the headline/accent/score/logo without touching TSX and the preview updates instantly
+via the player host's set-props channel; the image control is an asset PICKER over the project's
+uploaded assets by logical name - uploading itself lives in the Assets tab; per-field + "Reset
+all" restore defaults),
 **VideoSettingsPanel**
 (undoable patchSettings; duration edits in seconds, fps changes preserve seconds),
 **VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the render manifest budget),

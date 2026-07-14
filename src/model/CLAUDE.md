@@ -45,14 +45,22 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   mix; `kind: 'video'` is the serialized discriminant. Also DocKind and
   createDefaultVideoProject (starter composition).
   **VideoInput** = the video project's Template Definition, the counterpart of an SPX
-  DataField: `{ key, type: text|number|color|select, label, value, default, options?/min?/
-  max?/step? }`. The AI declares a handful (via the emit tool) so a non-technical user edits
-  the content in the Content panel WITHOUT touching TSX; the composition reads them from its
-  `fields` prop as `fields.<key> ?? default`. `videoFieldValues(inputs)` builds the `{key:
-  value}` bag passed as `fields` into BOTH the live preview (VideoPlayerFrame set-props) and
-  the render (buildVideoManifest inputProps). `mergeVideoInputs(prev, next)` adopts a
-  regenerated set while keeping values the user already edited. Shaped to mirror SPX `ftype`s
-  so a shared cross-format definition can converge later.
+  DataField: `{ key, type: text|number|color|select|image, label, value, default, options?/
+  min?/max?/step? }`. The AI declares a handful (via the emit tool) so a non-technical user
+  edits the content in the Content panel WITHOUT touching TSX; the composition reads them from
+  its `fields` prop as `fields.<key> ?? default`. An `image` input's value is the LOGICAL NAME
+  of a project asset (the counterpart of an SPX `filelist` filename): the composition resolves
+  it against the `assets` prop it already receives (`assets[String(fields.logo ?? '')]`), so an
+  image input adds NO bytes to the render manifest budget. `videoFieldValues(inputs)` builds
+  the `{key: value}` bag passed as `fields` into BOTH the live preview (VideoPlayerFrame
+  set-props) and the render (buildVideoManifest inputProps). `mergeVideoInputs(prev, next)`
+  adopts a regenerated set while keeping values the user already edited.
+- **fieldModel.ts** - the canonical editable-field vocabulary (`FieldKind`) shared across the
+  two authoring worlds: SPX operator controls (control/controlModel.ts `ControlKind = FieldKind`)
+  and the video Template Definition (`VideoInputType = VideoFieldKind`, the text/number/color/
+  select/image subset). One source of truth for "the field kinds the product supports" so the
+  two lists never drift - the groundwork for one shared Template Definition across Remotion/SPX/
+  operator controls.
 - **videoProject.ts** - video persistence mirroring project.ts/packets.ts: current slot
   'spx-gfx-video-project' (autosave; returns false on quota so the shell can WARN - video
   assets are big) + saved list 'spx-gfx-video-saved' with soft-delete tombstones.

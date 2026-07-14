@@ -25,6 +25,9 @@ const COMP_PROPS =
 /** An accent-colour input every sample exposes (the one shared editable choice). */
 const ACCENT_INPUT: VideoInput = { key: 'accent', type: 'color', label: 'Accent colour', value: '#f6a623', default: '#f6a623' };
 const textInput = (key: string, label: string, value: string): VideoInput => ({ key, type: 'text', label, value, default: value });
+// An image input starts at '' (none) - it picks among the project's uploaded assets by
+// logical name; the sample resolves it against the assets prop and falls back to a wordmark.
+const imageInput = (key: string, label: string): VideoInput => ({ key, type: 'image', label, value: '', default: '' });
 
 /** Background for the root fill - transparent projects paint nothing so the alpha survives. */
 function rootBackground(transparent: boolean, opaqueCss: string): string {
@@ -43,7 +46,8 @@ import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig
 export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
-  const logo = Object.values(assets)[0]; // optional - the layout works with or without it
+  const logoName = String(fields.logo ?? ''); // an image input: which uploaded asset is the logo
+  const logo = assets[logoName]; // optional - pick an uploaded asset in Content, else a wordmark
   const title = String(fields.title ?? 'Game On');
   const accent = String(fields.accent ?? '#f6a623');
 
@@ -225,7 +229,8 @@ import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig
 export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, height } = useVideoConfig();
-  const logo = Object.values(assets)[0];
+  const logoName = String(fields.logo ?? ''); // an image input: which uploaded asset is the logo
+  const logo = assets[logoName];
   const wordmark = String(fields.wordmark ?? 'Studio'); // shown when no logo image is uploaded
   const accent = String(fields.accent ?? '#f6a623');
 
@@ -361,14 +366,15 @@ import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig
 export default function Composition(${COMP_PROPS}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
-  const logo = Object.values(assets)[0];
+  const logoName = String(fields.logo ?? ''); // an image input: which uploaded asset is the logo
+  const logo = assets[logoName];
   const title = String(fields.title ?? 'Main Title');
   const subtitle = String(fields.subtitle ?? 'Subtitle Here');
   const accent = String(fields.accent ?? '#f6a623');
 
   const bar = spring({ frame, fps, config: { damping: 20, stiffness: 170 } });
-  const title = spring({ frame: frame - Math.round(fps * 0.22), fps, config: { damping: 16, stiffness: 140 } });
-  const kicker = spring({ frame: frame - Math.round(fps * 0.45), fps, config: { damping: 20, stiffness: 160 } });
+  const titleIn = spring({ frame: frame - Math.round(fps * 0.22), fps, config: { damping: 16, stiffness: 140 } });
+  const subtitleIn = spring({ frame: frame - Math.round(fps * 0.45), fps, config: { damping: 20, stiffness: 160 } });
 
   const exitStart = durationInFrames - Math.round(fps * 0.5);
   const exit = interpolate(frame, [exitStart, durationInFrames], [0, 1], {
@@ -391,7 +397,7 @@ export default function Composition(${COMP_PROPS}) {
         <div style={{ overflow: 'hidden', padding: '0.02em 0' }}>
           <div
             style={{
-              transform: \`translateY(\${(1 - title) * 100}%)\`,
+              transform: \`translateY(\${(1 - titleIn) * 100}%)\`,
               color: '#f4f6fa',
               fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
               fontSize: Math.round(height * 0.13),
@@ -410,7 +416,7 @@ export default function Composition(${COMP_PROPS}) {
             alignItems: 'center',
             gap: 12,
             marginTop: Math.round(height * 0.028),
-            opacity: kicker,
+            opacity: subtitleIn,
           }}
         >
           {logo && <Img src={logo} style={{ height: Math.round(height * 0.05), objectFit: 'contain' }} />}
@@ -447,7 +453,7 @@ function pickSample(prompt: string, transparent: boolean): { tsx: string; summar
     return {
       tsx: stingerTsx(transparent),
       summary: 'A sports stinger - angled slabs slash across the frame, a condensed title snaps in with a light sweep, then a fast clear-out.',
-      inputs: [textInput('title', 'Title', 'Game On'), { ...ACCENT_INPUT }],
+      inputs: [textInput('title', 'Title', 'Game On'), imageInput('logo', 'Logo image'), { ...ACCENT_INPUT }],
     };
   }
   if (/news|breaking|headline|bulletin|election|politic/.test(p)) {
@@ -461,13 +467,18 @@ function pickSample(prompt: string, transparent: boolean): { tsx: string; summar
     return {
       tsx: logoTsx(transparent),
       summary: 'A premium logo reveal - the mark (or a designed wordmark) settles in with an overshoot, a light sweep crosses it, and it breathes before a clean close.',
-      inputs: [textInput('wordmark', 'Wordmark', 'Studio'), { ...ACCENT_INPUT }],
+      inputs: [imageInput('logo', 'Logo image'), textInput('wordmark', 'Wordmark', 'Studio'), { ...ACCENT_INPUT }],
     };
   }
   return {
     tsx: titleTsx(transparent),
     summary: 'A clean title reveal - an accent bar sweeps in, the title rises behind it, a kicker fades up, and everything exits sharply.',
-    inputs: [textInput('title', 'Title', 'Main Title'), textInput('subtitle', 'Subtitle', 'Subtitle Here'), { ...ACCENT_INPUT }],
+    inputs: [
+      textInput('title', 'Title', 'Main Title'),
+      textInput('subtitle', 'Subtitle', 'Subtitle Here'),
+      imageInput('logo', 'Logo image'),
+      { ...ACCENT_INPUT },
+    ],
   };
 }
 

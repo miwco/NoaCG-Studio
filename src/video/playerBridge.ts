@@ -10,7 +10,7 @@
 
 import { uuid } from '../model/id';
 import type { AssetFile } from '../model/types';
-import { assetLogicalName, assetMime, type VideoCompSettings } from './types';
+import { assetMime, describeAssets, type VideoCompSettings } from './types';
 
 export const PLAYER_CHANNEL = 'noacg-player';
 export const PLAYER_PROTOCOL_V = 1;
@@ -122,7 +122,11 @@ export class PlayerBridge {
         return Promise.resolve({ ok: false, message: 'the player was replaced', disposed: true });
       }
       const id = ++this.loadId;
-      const payload = assets.map((a) => assetPayload(a));
+      // Name assets exactly as describeAssets does (deduped, in order) so the map the host
+      // hands the composition uses the SAME logical names the AI prompt, the render props
+      // builder, and an image input's value all speak (video/types.ts is the one source).
+      const infos = describeAssets(assets);
+      const payload = assets.map((a, i) => assetPayload(a, infos[i].name));
       return new Promise((resolve) => {
         this.pendingLoad = { id, resolve };
         this.post(
@@ -250,9 +254,9 @@ export class PlayerBridge {
   }
 }
 
-/** Convert an AssetFile (a data URL in practice) into transfer bytes for the host. */
-function assetPayload(asset: AssetFile): { name: string; mime: string; bytes: ArrayBuffer } {
-  const name = assetLogicalName(asset.path);
+/** Convert an AssetFile (a data URL in practice) into transfer bytes for the host, under the
+ *  caller-supplied logical name (from describeAssets so preview/render/AI names all agree). */
+function assetPayload(asset: AssetFile, name: string): { name: string; mime: string; bytes: ArrayBuffer } {
   const mime = assetMime(asset) || 'application/octet-stream';
   if (typeof asset.data !== 'string') {
     // Blob assets are not produced by the video panels today; guard anyway.

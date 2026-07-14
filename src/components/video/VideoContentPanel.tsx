@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import type { VideoInput } from '../../model/videoTypes';
+import { describeAssets } from '../../video/types';
 
 /** Clamp a number to an input's optional bounds. */
 function clampNumber(input: VideoInput, n: number): number {
@@ -19,7 +20,7 @@ function clampNumber(input: VideoInput, n: number): number {
   return v;
 }
 
-function InputRow({ input }: { input: VideoInput }) {
+function InputRow({ input, assetNames }: { input: VideoInput; assetNames: string[] }) {
   const setInputValue = useVideoProjectStore((s) => s.setInputValue);
   // Number fields hold a raw string while editing so the field can be temporarily empty or
   // mid-typing; the store still gets a live numeric value whenever the text parses.
@@ -57,6 +58,38 @@ function InputRow({ input }: { input: VideoInput }) {
             ))}
           </select>
         );
+      case 'image': {
+        // The value is a project asset's logical name (or '' for none); the composition
+        // resolves it against the assets it already receives. Pick among uploaded assets -
+        // uploading itself lives in the Assets tab. A value pointing at a since-removed asset
+        // stays selectable (marked) so the control never silently drops the choice.
+        const current = String(input.value);
+        const missing = current !== '' && !assetNames.includes(current);
+        return (
+          <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <select
+              value={current}
+              onChange={(e) => setInputValue(input.key, e.target.value)}
+              data-testid={`video-input-${input.key}`}
+            >
+              <option value="">None</option>
+              {assetNames.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+              {missing && (
+                <option value={current}>{current} (missing)</option>
+              )}
+            </select>
+            {assetNames.length === 0 && (
+              <span className="hint" style={{ fontSize: 11 }}>
+                Upload images in the Assets tab
+              </span>
+            )}
+          </span>
+        );
+      }
       case 'number':
         return (
           <input
@@ -116,8 +149,12 @@ function InputRow({ input }: { input: VideoInput }) {
 
 export default function VideoContentPanel() {
   const inputs = useVideoProjectStore((s) => s.project.inputs);
+  const assets = useVideoProjectStore((s) => s.project.assets);
   const resetInputs = useVideoProjectStore((s) => s.resetInputs);
   const anyChanged = inputs.some((i) => i.value !== i.default);
+  // The logical names an image input can point at - the same names the composition reads
+  // from its assets prop and the render packs into inputProps (video/types.ts describeAssets).
+  const assetNames = describeAssets(assets).map((a) => a.name);
 
   return (
     <div className="video-content" data-testid="video-content-panel">
@@ -144,7 +181,7 @@ export default function VideoContentPanel() {
               the source of truth.
             </p>
             {inputs.map((input) => (
-              <InputRow key={input.key} input={input} />
+              <InputRow key={input.key} input={input} assetNames={assetNames} />
             ))}
           </>
         )}

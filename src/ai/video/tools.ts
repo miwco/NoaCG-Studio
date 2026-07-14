@@ -58,7 +58,7 @@ export const REMOTION_MODULE_TOOL: ClaudeTool = {
         type: 'array',
         maxItems: 8,
         description:
-          "The editable inputs a non-technical user should be able to change WITHOUT touching code (the headline text, a subtitle, an accent colour, a score). Declare each value the module reads from its `fields` prop; the code must fall back to `default` (`fields.key ?? default`). Keep purely structural/timing values in code - expose only real content choices. Return [] only when the piece genuinely has no user-editable content.",
+          "The editable inputs a non-technical user should be able to change WITHOUT touching code (the headline text, a subtitle, an accent colour, a score, which uploaded image fills a logo slot). Declare each value the module reads from its `fields` prop; the code must fall back to `default` (`fields.key ?? default`). Keep purely structural/timing values in code - expose only real content choices. Return [] only when the piece genuinely has no user-editable content.",
         items: {
           type: 'object',
           required: ['key', 'type', 'label', 'default'],
@@ -69,10 +69,11 @@ export const REMOTION_MODULE_TOOL: ClaudeTool = {
               pattern: '^[a-z][a-zA-Z0-9]*$',
               description: "The `fields.<key>` prop the module reads (a camelCase identifier, e.g. 'headline').",
             },
-            type: { type: 'string', enum: ['text', 'number', 'color', 'select'] },
-            label: { type: 'string', description: 'Short human label for the Content panel (e.g. "Headline").' },
+            type: { type: 'string', enum: ['text', 'number', 'color', 'select', 'image'] },
+            label: { type: 'string', description: 'Short human label for the Content panel (e.g. "Headline", "Logo").' },
             default: {
-              description: 'The default value - MUST equal the fallback in code. String for text/color/select; number for number.',
+              description:
+                "The default value - MUST equal the fallback in code. String for text/color/select; number for number. For 'image' it is a project asset's LOGICAL NAME (or '' for none), which the module resolves against the assets prop: `assets[String(fields.key ?? '')]`.",
               type: ['string', 'number'],
             },
             options: {
