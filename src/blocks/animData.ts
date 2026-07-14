@@ -30,6 +30,21 @@ export interface AnimCall {
  *  never becomes an expression evaluator (the no-eval posture is absolute). */
 export const ANIM_CALL_NAME_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
+/** How one track repeats within its step — the loop/yoyo/repeat primitive
+ *  (docs/PRESET_MODEL_REVIEW.md gap 6). Values mirror GSAP: `repeat` -1 loops forever,
+ *  N adds N extra passes; `yoyo` reverses alternate passes (a breath up then down);
+ *  `repeatDelay` pauses (speed-relative seconds) between passes. A looping track's
+ *  keyframes play in their own repeating sub-timeline, so an infinite ambient loop (a
+ *  breathing pulse, a shimmering accent) lives in the same data every other track does. */
+export interface AnimLoop {
+  /** GSAP repeat count: -1 = forever, N ≥ 0 = N extra passes after the first. */
+  repeat: number;
+  /** Reverse every other pass (1→1.04→1→1.04…) instead of restarting. */
+  yoyo?: boolean;
+  /** Speed-relative pause between passes (seconds; playback divides by `speed`). */
+  repeatDelay?: number;
+}
+
 /** One step — the timeline's "clip". steps[0] plays on ▶ Play, the middle steps each on
  *  one » Next press, the last on ■ Stop (the Out step). */
 export interface AnimStep {
@@ -49,6 +64,10 @@ export interface AnimStep {
    *  functions (a clock engine's `startClock`/`stopClock`), not layer motion. Written by
    *  the importer and whole-graphic preset applies; pros edit the JSON line. */
   calls?: AnimCall[];
+  /** Looping tracks: `loops[selector][prop]` makes that layer's track repeat (an ambient
+   *  breath, a marquee-style cycle). Per-track so an element can hold a one-shot entrance on
+   *  one property and loop on another; a track with no entry plays once, exactly as before. */
+  loops?: Record<string, Record<string, AnimLoop>>;
   layers: Record<string, AnimLayerTracks>;
 }
 
@@ -129,6 +148,19 @@ export function isAnimData(raw: unknown): raw is AnimData {
         if (typeof c.call !== 'string' || !ANIM_CALL_NAME_RE.test(c.call)) return false;
       }
     }
+    if (step.loops !== undefined) {
+      if (typeof step.loops !== 'object' || step.loops === null || Array.isArray(step.loops)) return false;
+      for (const perProp of Object.values(step.loops)) {
+        if (!perProp || typeof perProp !== 'object' || Array.isArray(perProp)) return false;
+        for (const loop of Object.values(perProp) as AnimLoop[]) {
+          if (!loop || typeof loop !== 'object') return false;
+          // repeat is an integer ≥ -1 (GSAP: -1 = forever, N = N extra passes).
+          if (typeof loop.repeat !== 'number' || !Number.isInteger(loop.repeat) || loop.repeat < -1) return false;
+          if (loop.yoyo !== undefined && typeof loop.yoyo !== 'boolean') return false;
+          if (loop.repeatDelay !== undefined && (typeof loop.repeatDelay !== 'number' || loop.repeatDelay < 0)) return false;
+        }
+      }
+    }
     if (!step.layers || typeof step.layers !== 'object') return false;
     for (const tracks of Object.values(step.layers)) {
       if (!tracks || typeof tracks !== 'object') return false;
@@ -188,6 +220,26 @@ export function serializeAnimData(data: AnimData): string {
         lines.push(`        { "time": ${round(c.time)}, "call": ${JSON.stringify(c.call)} }${ci < calls.length - 1 ? ',' : ''}`);
       });
       lines.push('      ],');
+    }
+    // Loops: selector → prop → { repeat, yoyo?, repeatDelay? }, one loop per line. Sorted
+    // (selectors then props) so the diff is stable regardless of insertion order.
+    if (step.loops && Object.keys(step.loops).length > 0) {
+      lines.push('      "loops": {');
+      const sels = Object.keys(step.loops).sort();
+      sels.forEach((sel, si) => {
+        const perProp = step.loops![sel];
+        const props = Object.keys(perProp).sort();
+        lines.push(`        ${JSON.stringify(sel)}: {`);
+        props.forEach((prop, pi) => {
+          const l = perProp[prop];
+          const parts = [`"repeat": ${round(l.repeat)}`];
+          if (l.yoyo) parts.push(`"yoyo": true`);
+          if (l.repeatDelay) parts.push(`"repeatDelay": ${round(l.repeatDelay)}`);
+          lines.push(`          ${JSON.stringify(prop)}: { ${parts.join(', ')} }${pi < props.length - 1 ? ',' : ''}`);
+        });
+        lines.push(`        }${si < sels.length - 1 ? ',' : ''}`);
+      });
+      lines.push('      },');
     }
     // "layers" is always present (possibly empty) — one canonical shape, no comma games.
     const selectors = Object.keys(step.layers);

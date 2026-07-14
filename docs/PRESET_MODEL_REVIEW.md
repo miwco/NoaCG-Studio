@@ -32,8 +32,8 @@ interpolate at runtime. The editable vocabulary (Inspector `PROP_ROWS`) is
 | 3 | **Motion paths / curved position** | `x` and `y` are independent scalar tracks interpolated linearly. No bezier/path property. (Deliberately excluded in the interaction model — "no motion paths".) |
 | 4 | **Stagger as an authored control** | The legacy importer bakes `stagger` into per-keyframe time offsets; the schema has **no stagger field**, so once imported it is frozen as individual times. A preset cannot re-express it and the user cannot adjust it as one knob. |
 | 5 | **Physics / spring parameters** | Springiness exists only as a GSAP ease string (`elastic.out`, `back.out`) on a keyframe; there are no mass/tension/velocity params (the resolver interpolates linearly and defers the curve to the runtime). |
-| 6 | **Loop / yoyo / repeat** | No `repeat`/`yoyo`/`repeatDelay`. Infinite/looping motion (ticker marquees, credit rolls) is outside the model — `importAnimData` returns `null` for infinite phases, so those categories stay hand-written. |
-| 7 | **3D transforms** | `DESIGN_STATE` knows `rotationX/Y`, `skewX/Y` for import fidelity, but the editable vocabulary exposes none of them (no `z`, `rotationX/Y`, `perspective`). |
+| 6 | ~~**Loop / yoyo / repeat**~~ **(DONE — see Tier 3)** | A step gains `loops[selector][prop] = { repeat, yoyo?, repeatDelay? }`: a track plays in a repeating sub-timeline. The importer converts a *static* loop (a breathing pulse) and still refuses a DOM-measured one (a marquee's `x:-scrollWidth`) or a nested-timeline loop (ticker's item flip). Starting-soon migrated on it. |
+| 7 | ~~**3D transforms**~~ **(DONE — see Tier 2)** | `DESIGN_STATE` knew `rotationX/Y`, `skewX/Y` for import fidelity but the vocabulary exposed none. Now `rotationX/Y`, `z`, and `perspective` are editable numeric tracks (`skewX/Y` remain import-only). |
 | 8 | **Composed / multiple filters** | `blur` is special-cased as `filter: 'blur(Npx)'`, a single string track. You cannot animate two independent filters (blur + brightness), and strings are stepped editor-side (only the runtime interpolates them). |
 | 9 | **Early exit (a layer leaving before the final Out)** | A layer's lifecycle is hidden → entering → visible → exiting-with-the-root. `reveals` is the only lifecycle data; there is no `hides`. |
 | 10 | **Lifecycle calls (start/stop a clock, side effects)** | A step has no `calls` field; `importAnimData` drops `tl.call` lines. This is why starting-soon and game-timers can't migrate to the data model. |
@@ -68,18 +68,35 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
 
 - **More filter rows + a composed filter track** (gap 8): drop-shadow/brightness/hue as their own
   editable rows, serialized into one `filter` string the runtime interpolates.
-- **3D transform rows** (gap 7): expose `rotationX/Y`, `z`, `perspective` as ordinary numeric
-  tracks — the runtime already understands them; only the vocabulary and Inspector rows are
-  missing.
+- **3D transform rows** (gap 7) — **DONE**. `rotationX`, `rotationY`, `z`, and `perspective`
+  (`transformPerspective`) are ordinary numeric tracks in the editable vocabulary, grouped under a
+  "3D transform" divider in the Inspector's Properties tab (perspective first, with a hint that the
+  rotations need it to read as 3D). No interpreter, resolver, validation, or preset change was
+  needed — the runtime already tweens any GSAP property via `vars[prop]`, numbers interpolate in
+  the resolver, and a preset clean-swap clears every track in its target step regardless of name.
+  They pivot around the layer's transform-origin (the existing Pivot control). Parity + a UI arm/key
+  path are pinned by `e2e/anim-engine.spec.ts` and `e2e/inspector.spec.ts`.
 - **Per-property duration** (gap 1): keep step duration as the frame, but let a track carry a
   local time-scale, or simply lean on keyframe placement (the current, workable answer).
 
 ### Tier 3 — new motion primitives (larger, do only if demand is real)
 
-- **Stagger as a step/tween field** (gap 4), **loop/yoyo** (gap 6), **motion paths** (gap 3),
-  **spring params** (gap 5). Each is a genuinely new primitive with its own UI; the interaction
-  model currently, and deliberately, excludes motion paths and a graph editor. Loop/yoyo is the
-  prerequisite for migrating tickers/credits off the legacy patchers.
+- **Loop / yoyo / repeat** (gap 6) — **DONE**. A step carries `loops[selector][prop] =
+  { repeat, yoyo?, repeatDelay? }` (additive; the `layers` arrays are untouched). The interpreter
+  runs a looping track in its own repeating GSAP sub-timeline, the resolver folds the playhead time
+  back into one pass (so the Inspector matches the looping preview), and the importer converts a
+  loop whose values are finite literals — a breathing pulse — while still refusing one that is
+  DOM-measured or lives on a nested timeline. **Starting-soon flipped to a data block on this**
+  (its ambient breath is a looping `scale` track; the countdown rides the §3b step calls). A
+  correction to the original framing: **tickers and credit rolls are NOT unblocked by loop/yoyo** —
+  their travel is computed from live DOM measurement (`scrollWidth`, `clientHeight`), which the
+  static keyframe model deliberately cannot express. Retiring their patchers needs a separate
+  dynamic-value primitive — scoped in `docs/DYNAMIC_MOTION_SCOPE.md` (named dynamic motion
+  segments, the §3b twin for motion). Loops (like §3b calls) are data-visible and code-editable
+  but have no dedicated timeline glyph yet — a future polish.
+- **Stagger as a step/tween field** (gap 4), **motion paths** (gap 3), **spring params** (gap 5).
+  Each is a genuinely new primitive with its own UI; the interaction model currently, and
+  deliberately, excludes motion paths and a graph editor.
 
 ## Recommendation
 

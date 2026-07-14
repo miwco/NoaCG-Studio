@@ -5,7 +5,31 @@
 // Inspector and the timeline's static rendering. Parity with the interpreter is pinned
 // by e2e/anim-engine.spec.ts.
 
-import type { AnimData, AnimKeyframe } from './animData';
+import type { AnimData, AnimKeyframe, AnimLoop } from './animData';
+
+/** Fold a query time into one pass of a looping track, mirroring GSAP's repeat/yoyo/
+ *  repeatDelay math, so the resolver reports exactly what the repeating sub-timeline shows.
+ *  Returns a time within the track's span; before the first keyframe it returns localT
+ *  unchanged (the loop has not started yet). */
+function loopedTime(kfs: AnimKeyframe[], loop: AnimLoop, localT: number): number {
+  const first = kfs[0].time;
+  const last = kfs[kfs.length - 1].time;
+  const period = last - first;
+  if (period <= 0 || localT <= first) return localT;
+  const rd = loop.repeatDelay && loop.repeatDelay > 0 ? loop.repeatDelay : 0;
+  const cycle = period + rd;
+  const elapsed = localT - first;
+  const pass = Math.floor(elapsed / cycle);
+  const totalPasses = loop.repeat < 0 ? Infinity : loop.repeat + 1;
+  // Past the final pass: rest where the loop stopped (a yoyo that ran an even number of
+  // passes lands back at the start).
+  if (pass >= totalPasses) return loop.yoyo && totalPasses % 2 === 0 ? first : last;
+  const within = elapsed - pass * cycle;
+  // In the pause between passes: hold at the pass's end (yoyo flips odd passes' end).
+  if (within >= period) return loop.yoyo && pass % 2 === 1 ? first : last;
+  // A yoyo runs odd passes backward.
+  return first + (loop.yoyo && pass % 2 === 1 ? period - within : within);
+}
 
 /** Effective (real-second) duration of one step — stored values are speed-relative. */
 export function stepSeconds(data: AnimData, index: number): number {
@@ -48,13 +72,19 @@ export function resolveValue(
 ): number | string | null {
   const kfs = trackAt(data, stepIndex, selector, prop);
   if (kfs.length > 0) {
-    if (localT <= kfs[0].time) return kfs[0].value;
+    // A looping track folds the query time back into one pass (the interpreter runs a
+    // repeating sub-timeline; this keeps the Inspector's number in step with it). A loop
+    // should start at the step's beginning, so before its first keyframe the plain
+    // hold-backward default below still applies.
+    const loop = data.steps[stepIndex]?.loops?.[selector]?.[prop];
+    const t = loop && kfs.length > 1 ? loopedTime(kfs, loop, localT) : localT;
+    if (t <= kfs[0].time) return kfs[0].value;
     for (let i = 1; i < kfs.length; i++) {
-      if (localT < kfs[i].time) {
+      if (t < kfs[i].time) {
         const a = kfs[i - 1];
         const b = kfs[i];
         if (typeof a.value !== 'number' || typeof b.value !== 'number') return a.value;
-        const f = (localT - a.time) / (b.time - a.time);
+        const f = (t - a.time) / (b.time - a.time);
         return a.value + (b.value - a.value) * f;
       }
     }

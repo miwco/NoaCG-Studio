@@ -29,6 +29,29 @@ function buildStepTimeline(index) {
     Object.keys(tracks).forEach(function (prop) {
       var kfs = tracks[prop];
       if (!kfs.length) return;
+      var loop = step.loops && step.loops[selector] && step.loops[selector][prop];
+      if (loop) {
+        // A looping track plays in its own repeating sub-timeline (a breathing pulse, a
+        // marquee-style cycle): the sub-timeline's length is the loop period, and it is
+        // added to the step at the track's first keyframe time. repeat -1 = forever.
+        var sub = gsap.timeline({
+          repeat: loop.repeat,
+          yoyo: !!loop.yoyo,
+          repeatDelay: (loop.repeatDelay || 0) / speed
+        });
+        var s0 = {};
+        s0[prop] = kfs[0].value;
+        sub.set(selector, s0, 0);
+        for (var j = 1; j < kfs.length; j++) {
+          var lv = {};
+          lv[prop] = kfs[j].value;
+          lv.duration = (kfs[j].time - kfs[j - 1].time) / speed;
+          lv.ease = kfs[j].ease || step.ease;
+          sub.to(selector, lv, (kfs[j - 1].time - kfs[0].time) / speed);
+        }
+        tl.add(sub, kfs[0].time / speed);
+        return;
+      }
       var start = {};
       start[prop] = kfs[0].value;
       tl.set(selector, start, 0);
@@ -129,7 +152,8 @@ const DATA_HEADER = `// The graphic's animation as DATA. Steps play in order —
 // properties are keyframe lists on the step's local clock: { "time", "value", "ease" }.
 // "reveals" names the layers that first become visible in that step; "hides" names the
 // layers that leave in it; "calls" fires named template functions (a clock engine's
-// startClock/stopClock) at their moment on the step's clock. The timeline UI reads and
+// startClock/stopClock) at their moment on the step's clock; "loops" makes a layer's track
+// repeat (repeat -1 = forever, yoyo = breathe back and forth). The timeline UI reads and
 // writes this block — and so can you: edit a number and press play.`;
 
 /** Emit the full marked ANIMATION region for a data-driven template. */

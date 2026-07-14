@@ -16,15 +16,18 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   marked region converts (category-owned runtime around it - score pops, clock painters -
   stays); a conversion failure keeps the legacy emit, never a broken template.
   `CategorySpec.dataRegion` triggers it inside assembleStandard; self-assembled categories
-  (scoreboards, game timers) call it directly. FLIPPED: lower thirds, corner bug,
-  scoreboards, game timers. The step-calls model (docs/TIMELINE_V2_PLAN.md §3b) carries
-  `tl.call(startClock/stopClock)` through the conversion as step `calls`, so a countdown
-  survives the flip (the clock runtime itself lives OUTSIDE the region and is untouched).
-  STILL BLOCKED (do NOT flip by flag alone): starting soon - its ambient hold is an infinite
-  loop the importer refuses (`inPhase.infinite`), so conversion no-ops regardless of the
-  calls; quiz's Continue is wrapper-driven (`next()` -> revealAnswer with settings.steps='2'
-  but NO data step - the timeline's steps derivation would rewrite steps to '1' on the first
-  edit and break the reveal). Info cards flip LAST: they host the classic strip's spec suite
+  (scoreboards, game timers, starting soon) call it directly. FLIPPED: lower thirds, corner bug,
+  scoreboards, game timers, starting soon. The step-calls model (docs/TIMELINE_V2_PLAN.md §3b)
+  carries `tl.call(startClock/stopClock)` through the conversion as step `calls`, so a countdown
+  survives the flip (the clock runtime itself lives OUTSIDE the region and is untouched), and the
+  loop model (gap 6) carries the ambient breath as a step `loop` (a repeating scale track) - this
+  is what let STARTING SOON flip.
+  STILL BLOCKED (do NOT flip by flag alone): quiz's Continue is wrapper-driven (`next()` ->
+  revealAnswer with settings.steps='2' but NO data step - the timeline's steps derivation would
+  rewrite steps to '1' on the first edit and break the reveal); TICKERS and CREDITS are
+  DOM-measured (a marquee's `x:-scrollWidth`, a roll's `clientHeight`), which the static keyframe
+  model cannot express - loop/yoyo does NOT unblock them (they need a separate dynamic-value
+  primitive). Info cards flip LAST: they host the classic strip's spec suite
   until Phase 8 (docs/TIMELINE_V2_PLAN.md).
   A wrapper that needs the motion speed must read it via a `motionSpeed()` helper (NOACG_ANIM
   .speed, else legacy animSpeed, else 1) - never the bare animSpeed global (scoreboards/quiz
@@ -35,8 +38,9 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   simulator, wizard thumbnails, control engine, and every export work unchanged. It pre-hides
   press-revealed layers (their reveal step's first keyframe values; plain opacity 0 fallback),
   shows/hides the CSS-hidden root, fades press-revealed layers OUTSIDE the root with the exit
-  (unless the Out step animates them itself), and divides every duration and keyframe time by
-  `speed`. `emitAnimRegion` emits the full marked region (data header + literal +
+  (unless the Out step animates them itself), runs a `loops` track in its own repeating
+  sub-timeline (repeat/yoyo/repeatDelay - the ambient breath), and divides every duration and
+  keyframe time by `speed`. `emitAnimRegion` emits the full marked region (data header + literal +
   interpreter); `replaceRegionWithAnimData` swaps a template's region for the data-driven
   emit (the converter's writer).
 - **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS + `{prefix}-done` at zero;
@@ -57,7 +61,10 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   data-driven: #f0 lines -> #ticker-track items; marquee = items rendered twice, slide one set
   width, linear repeat:-1 (seamless loop).
 - **startingSoon/** - ss01…ss03 (prefix 'starting-soon', hold-loop preset: entrance + calm
-  .starting-soon-pulse breathing + clock via shared/clock.ts, minutes in f2).
+  .starting-soon-pulse breathing + clock via shared/clock.ts, minutes in f2). DATA BLOCKS via
+  convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
+  track (gap 6) and startClock/stopClock ride the step calls (§3b); the clock runtime stays
+  outside the region.
 - **gameTimers/** - gt01…gt02 (prefix 'game-timer', type 'countdown'; data blocks via
   convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
   styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`

@@ -34,6 +34,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { clockRuntimeJs } from '../shared/clock';
+import { convertToDataRegion } from '../shared/standard';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { ssPresetById } from './ssPresets';
 
@@ -175,7 +176,7 @@ ${design.css}
 
   const js = ssRuntimeJs(meta.name, preset.emit(cfg));
 
-  return {
+  const template: SpxTemplate = {
     name: meta.name,
     type: 'starting-soon',
     resolution: o.resolution,
@@ -188,6 +189,13 @@ ${design.css}
     assets: [...o.importedImages, ...(o.customFont ? [o.customFont.asset] : [])],
     layers: [],
   };
+
+  // Timeline v2: convert the marked region into the NOACG_ANIM data block + interpreter.
+  // The ambient breath is now describable as data (a looping scale track — gap 6), and the
+  // step-calls model (§3b) carries startClock()/stopClock(), so the hold loop and countdown
+  // both survive the flip; the clock runtime lives OUTSIDE the region and is untouched. A
+  // conversion failure keeps the legacy emit — never a broken template.
+  return convertToDataRegion(template);
 }
 
 /** The authoring API for starting-soon variant modules. */
