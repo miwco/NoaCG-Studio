@@ -14,7 +14,9 @@ the live preview's player host, so preview and render run the same code).
 `buildVideoManifest.ts` (PURE) builds the remotion kind; the UI is
 components/video/VideoRenderPanel (shares RenderFormatPicker + RenderJobSection with the
 SPX RenderPanel). Assets ride as data URLs inside inputProps against the 4 MB manifest
-cap - the panel shows a budget meter. `durationInFrames()` and `ManifestSummary` take
+cap - the panel shows a budget meter; the composition's editable inputs ride alongside them
+as `inputProps.fields` (the same `{key: value}` bag the live preview passes), so a render
+reproduces exactly what previews. `durationInFrames()` and `ManifestSummary` take
 either kind.
 
 ## Purity rule (load-bearing)

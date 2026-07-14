@@ -46,16 +46,27 @@ export const REMOTION_CONTRACT = `## The composition contract (hard requirements
 - Randomness ONLY via remotion's random(seed) with a stable string seed - NEVER
   Math.random. No Date.now, no timers (setTimeout/setInterval/requestAnimationFrame), no
   fetch/network, no window/document/globalThis access, no useState for animation.
-- The component receives assets as a prop: \`{ assets = {} }: { assets?: Record<string,
-  string> }\` mapping logical asset names to URLs. Use <Img src={assets['name']}/> from
-  remotion for images and <Video src={assets['name']}/> for video assets - NEVER
-  OffthreadVideo (asset URLs are data/blob URLs, which its frame extractor cannot read).
-  NEVER invent URLs or file paths; only use the asset names you were given.
+- The component receives TWO props: \`{ assets = {}, fields = {} }: { assets?:
+  Record<string, string>; fields?: Record<string, string | number> }\`. \`assets\` maps
+  logical asset names to URLs; use <Img src={assets['name']}/> from remotion for images and
+  <Video src={assets['name']}/> for video assets - NEVER OffthreadVideo (asset URLs are
+  data/blob URLs, which its frame extractor cannot read). NEVER invent URLs or file paths;
+  only use the asset names you were given. \`fields\` carries the editable inputs (below).
 - Missing assets are the common case (the brief may name a "logo" with none uploaded). When
   an expected image is absent, design a REAL substitute, never a placeholder: for a logo or
   brand reveal, set a typographic WORDMARK (bold, tight-tracked, uppercase - a designed
   logotype), the same hero the image would have been. Under NO circumstances render a grey
   box or the literal text "LOGO". Only branch to <Img> when the named asset actually exists.
+- EDITABLE INPUTS (the video Template Definition): expose the content a non-technical user
+  would want to change - the headline/title text, a subtitle or kicker, an accent colour, a
+  score or a count - as \`fields\` the module reads, and DECLARE each in the emit tool's
+  \`inputs\` array. Read every one with a fallback that equals its declared default:
+  \`const headline = fields.headline ?? 'PRIME TIME';\` and
+  \`const accent = String(fields.accent ?? '#f6a623');\`. The module MUST still render with
+  no fields (the fallbacks). Expose only REAL content choices (typically 2-5); keep timing,
+  layout, and animation constants in code - not every value becomes an input. Use types:
+  text (copy), number (a score/count, with min/max), color (a hex accent), select (a small
+  set of choices). Declare [] only when the piece truly has no editable content.
 - Transparent projects: the root <AbsoluteFill> paints NO background. Opaque projects:
   paint a deliberate background (a designed dark gradient beats flat black).
 - Write clean, readable code a motion designer can edit: descriptive names, short comments
@@ -70,9 +81,19 @@ export const EXAMPLE_COMPOSITION = `// "Prime Sting" - a 3s broadcast stinger: a
 
 import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
-export default function Composition({ assets = {} }: { assets?: Record<string, string> }) {
+export default function Composition({
+  assets = {},
+  fields = {},
+}: {
+  assets?: Record<string, string>;
+  fields?: Record<string, string | number>;
+}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();
+
+  // Editable content (declared as inputs; every read falls back to the default) ─
+  const title = String(fields.title ?? 'Prime Time');
+  const accent = String(fields.accent ?? '#f6a623');
 
   // ── Timing (in frames, derived from fps so any frame rate works) ───────────
   const sweepStart = 0;                                  // panels enter immediately
@@ -123,7 +144,7 @@ export default function Composition({ assets = {} }: { assets?: Record<string, s
             left: '50%',
             width: width * 0.9,
             height: height * (0.16 - i * 0.03),
-            background: i === 1 ? '#f6a623' : i === 0 ? '#1d2634' : '#2c3a52',
+            background: i === 1 ? accent : i === 0 ? '#1d2634' : '#2c3a52',
             transform: \`translate(-50%, -50%) translate(\${x}px, \${(i - 1) * height * 0.17}px) rotate(-8deg)\`,
             boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
           }}
@@ -156,7 +177,7 @@ export default function Composition({ assets = {} }: { assets?: Record<string, s
             }}
           >
             {logo && <Img src={logo} style={{ height: '1.1em', objectFit: 'contain' }} />}
-            Prime Time
+            {title}
             {/* The light sweep: a moving specular band clipped to the title box */}
             <div
               style={{

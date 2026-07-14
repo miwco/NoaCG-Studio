@@ -17,6 +17,7 @@ import { compileTsx, staticValidate, WARNING_RULES } from '../../video/compile';
 import { PlayerBridge } from '../../video/playerBridge';
 import { setActiveBridge } from '../../video/bridgeRegistry';
 import { describeAssets } from '../../video/types';
+import { videoFieldValues } from '../../model/videoTypes';
 import CanvasGuides from '../CanvasGuides';
 
 const RELOAD_DEBOUNCE_MS = 350;
@@ -89,10 +90,13 @@ export default function VideoPlayerFrame() {
       }
       setCodeError(null);
       setPreviewError(null);
+      // Read the latest field values at load time (not a hook dep - live field edits go
+      // through the instant set-props effect below, never a recompile).
+      const fields = videoFieldValues(useVideoProjectStore.getState().project.inputs);
       const res = await bridge.load(
         compiled.js,
         { width, height, fps, durationInFrames, transparent },
-        {},
+        { fields },
         assets,
         { autoplay: true },
       );
@@ -102,6 +106,15 @@ export default function VideoPlayerFrame() {
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [tsx, assets, width, height, fps, durationInFrames, transparent, replayNonce, bridge, setPreviewError]);
+
+  // Live field edits (Content panel): push the new `fields` to the mounted module instantly
+  // - no recompile, no remount - so a headline/colour change shows immediately. The host
+  // merges these over the current props and keeps the assets. Serialized so the dep is a
+  // stable primitive (and to skip no-op re-pushes). A no-op before the first load lands.
+  const fieldsJson = JSON.stringify(videoFieldValues(project.inputs));
+  useEffect(() => {
+    bridge?.setProps({ fields: JSON.parse(fieldsJson) as Record<string, string | number> });
+  }, [bridge, fieldsJson]);
 
   // Scale the native-resolution frame (width × height) to fit the stage, leaving a margin so
   // the frame floats with its shadow. Re-runs on stage resize and on resolution change.

@@ -14,6 +14,12 @@ Holds ONE VideoProject + the video editor's UI state, mirroring templateStore's 
 - **applyProject(next)** - the undoable choke point (30-cap history). AI results bundle
   tsx + motionPlan + chat turns into ONE snapshot so undo reverts them together.
 - **patchSettings / addAsset / removeAsset** - undoable single applies.
+- **setInputValue(key, value) / resetInputs** - edit the editable inputs (the video Template
+  Definition). Consecutive edits to the SAME key COALESCE into one undo checkpoint (a colour
+  drag, a headline typed char by char) via a module-level `inputEditKey`; every other mutator
+  calls `resetCoalesce()` so the next field edit starts fresh. resetInputs restores every
+  value to its default in one checkpoint. The Content panel edits live (VideoContentPanel);
+  the preview updates instantly through the player host's set-props channel (no recompile).
 - **setTsx** - manual typing: NO history snapshot (Monaco native undo while focused),
   clears `future`.
 - **appendChat / dropLastChat** - optimistic chat turns without history spam; dropLastChat

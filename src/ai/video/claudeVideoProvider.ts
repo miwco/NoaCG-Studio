@@ -7,7 +7,7 @@
 
 import { callClaude, type ContentBlock } from '../anthropic';
 import { parseDataUrl } from '../../assets/assetUtils';
-import type { MotionPlan, VideoChatMessage } from '../../model/videoTypes';
+import type { MotionPlan, VideoChatMessage, VideoInput } from '../../model/videoTypes';
 import type {
   VideoAIProvider,
   VideoGenerateContext,
@@ -20,6 +20,7 @@ import {
   DETECT_SKILLS_TOOL,
   MOTION_PLAN_TOOL,
   REMOTION_MODULE_TOOL,
+  type EmittedInput,
   type EmittedModule,
   type EmittedMotionPlan,
 } from './tools';
@@ -149,6 +150,12 @@ ${[BASE_SKILL, ...skills].map((s) => s.prompt).join('\n\n')}
 ${EXAMPLE_COMPOSITION}
 === end example ===
 
+The example above is emitted with these inputs (note how each read has a matching fallback):
+inputs: [
+  { "key": "title", "type": "text", "label": "Title", "default": "Prime Time" },
+  { "key": "accent", "type": "color", "label": "Accent colour", "default": "#f6a623" }
+]
+
 Return the module ONLY via the emit_remotion_module tool.`;
 }
 
@@ -199,6 +206,25 @@ function toMotionPlan(p: EmittedMotionPlan): MotionPlan {
   return { ...p, phases: p.phases.map((ph) => ({ ...ph })) };
 }
 
+/** Map the tool's declared inputs to project VideoInputs (value starts at the default). A
+ *  missing/malformed inputs array yields [] - inputs are optional, never a pipeline failure. */
+function toInputs(emitted: EmittedInput[] | undefined): VideoInput[] {
+  if (!Array.isArray(emitted)) return [];
+  return emitted
+    .filter((i) => i && typeof i.key === 'string' && i.key.length > 0)
+    .map((i) => ({
+      key: i.key,
+      type: i.type,
+      label: i.label || i.key,
+      value: i.default,
+      default: i.default,
+      ...(i.options ? { options: i.options } : {}),
+      ...(i.min != null ? { min: i.min } : {}),
+      ...(i.max != null ? { max: i.max } : {}),
+      ...(i.step != null ? { step: i.step } : {}),
+    }));
+}
+
 function planText(plan: EmittedMotionPlan): string {
   const phases = plan.phases
     .map((p) => `  ${p.startSec.toFixed(2)}-${p.endSec.toFixed(2)}s ${p.name}: ${p.description}`)
@@ -236,6 +262,7 @@ class ClaudeVideoProvider implements VideoAIProvider {
       summary: emitted.summary,
       tsx: emitted.tsx,
       motionPlan: toMotionPlan(plan),
+      inputs: toInputs(emitted.inputs),
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],
       validation,
     };
@@ -271,6 +298,9 @@ class ClaudeVideoProvider implements VideoAIProvider {
       summary: emitted.summary,
       tsx: emitted.tsx,
       motionPlan: null, // refinements keep the existing plan
+      // A refinement re-emits the complete module, so it re-declares its inputs; merging
+      // against the current set (in applyResult) preserves values the user already edited.
+      inputs: toInputs(emitted.inputs),
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],
       validation,
     };

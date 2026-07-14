@@ -10,7 +10,15 @@ import type { VideoChatMessage, VideoProject } from '../model/videoTypes';
 import { createDefaultVideoProject } from '../model/videoTypes';
 import { loadCurrentVideoProject, saveCurrentVideoProject } from '../model/videoProject';
 
-export type VideoPanelTab = 'chat' | 'settings' | 'assets' | 'export';
+export type VideoPanelTab = 'chat' | 'content' | 'settings' | 'assets' | 'export';
+
+// Coalesces a run of edits to the SAME input into ONE undo checkpoint (a colour drag, a
+// headline typed character by character). Any other mutation clears it (via resetCoalesce)
+// so the next field edit starts a fresh checkpoint - see setInputValue.
+let inputEditKey: string | null = null;
+function resetCoalesce(): void {
+  inputEditKey = null;
+}
 
 interface VideoProjectState {
   project: VideoProject;
@@ -35,6 +43,11 @@ interface VideoProjectState {
   applyProject: (next: VideoProject) => void;
   /** Undoable settings change (duration/fps/size/name/transparent/model/exportPrefs). */
   patchSettings: (patch: Partial<VideoProject>) => void;
+  /** Edit one editable input's value. Consecutive edits to the SAME key coalesce into one
+   *  undo checkpoint (so a colour drag or typed headline is a single undo). */
+  setInputValue: (key: string, value: string | number) => void;
+  /** Reset every editable input to its declared default - ONE undoable checkpoint. */
+  resetInputs: () => void;
   /** Manual code typing: no history snapshot (Monaco native undo), clears redo. */
   setTsx: (tsx: string) => void;
   /** Append a chat message without a snapshot (optimistic user turns, error notes). */
@@ -68,26 +81,56 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
     // Creation/reopen persists IMMEDIATELY (not on the typing debounce): a reload right
     // after creating must restore the new project, and docKind's boot guard checks the
     // slot synchronously.
+    resetCoalesce();
     saveCurrentVideoProject(project);
     set({ project, history: [], future: [], previewError: null, busy: null, activePanel: 'chat' });
   },
 
-  applyProject: (next) =>
+  applyProject: (next) => {
+    resetCoalesce();
     set((s) => ({
       project: next,
       history: [...s.history, s.project].slice(-30),
       future: [],
-    })),
+    }));
+  },
 
-  patchSettings: (patch) =>
+  patchSettings: (patch) => {
+    resetCoalesce();
     set((s) => ({
       project: { ...s.project, ...patch },
       history: [...s.history, s.project].slice(-30),
       future: [],
-    })),
+    }));
+  },
 
-  setTsx: (tsx) =>
-    set((s) => ({ project: { ...s.project, tsx }, future: [] })),
+  setInputValue: (key, value) =>
+    set((s) => {
+      const inputs = s.project.inputs.map((i) => (i.key === key ? { ...i, value } : i));
+      // Coalesce a run of edits to the same key: reuse the checkpoint made on the first edit
+      // of the run (don't push another). Any other mutation cleared inputEditKey first.
+      const coalesce = inputEditKey === key;
+      inputEditKey = key;
+      return {
+        project: { ...s.project, inputs },
+        history: coalesce ? s.history : [...s.history, s.project].slice(-30),
+        future: [],
+      };
+    }),
+
+  resetInputs: () => {
+    resetCoalesce();
+    set((s) => ({
+      project: { ...s.project, inputs: s.project.inputs.map((i) => ({ ...i, value: i.default })) },
+      history: [...s.history, s.project].slice(-30),
+      future: [],
+    }));
+  },
+
+  setTsx: (tsx) => {
+    resetCoalesce();
+    set((s) => ({ project: { ...s.project, tsx }, future: [] }));
+  },
 
   appendChat: (msg) =>
     set((s) => ({ project: { ...s.project, chat: [...s.project.chat, msg] } })),
@@ -95,7 +138,8 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
   dropLastChat: () =>
     set((s) => ({ project: { ...s.project, chat: s.project.chat.slice(0, -1) } })),
 
-  addAsset: (asset) =>
+  addAsset: (asset) => {
+    resetCoalesce();
     set((s) => ({
       project: {
         ...s.project,
@@ -103,16 +147,20 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
       },
       history: [...s.history, s.project].slice(-30),
       future: [],
-    })),
+    }));
+  },
 
-  removeAsset: (path) =>
+  removeAsset: (path) => {
+    resetCoalesce();
     set((s) => ({
       project: { ...s.project, assets: s.project.assets.filter((a) => a.path !== path) },
       history: [...s.history, s.project].slice(-30),
       future: [],
-    })),
+    }));
+  },
 
-  undo: () =>
+  undo: () => {
+    resetCoalesce();
     set((s) => {
       if (s.history.length === 0) return {};
       const prev = s.history[s.history.length - 1];
@@ -121,9 +169,11 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
         history: s.history.slice(0, -1),
         future: [...s.future, s.project].slice(-30),
       };
-    }),
+    });
+  },
 
-  redo: () =>
+  redo: () => {
+    resetCoalesce();
     set((s) => {
       if (s.future.length === 0) return {};
       const next = s.future[s.future.length - 1];
@@ -132,7 +182,8 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
         history: [...s.history, s.project].slice(-30),
         future: s.future.slice(0, -1),
       };
-    }),
+    });
+  },
 
   setActivePanel: (activePanel) => set({ activePanel }),
   setPreviewError: (previewError) => set({ previewError }),

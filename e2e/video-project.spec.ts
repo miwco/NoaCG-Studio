@@ -30,6 +30,14 @@ async function createCountdownProject(page: Page): Promise<void> {
   await expect(page.getByTestId('video-shell')).toBeVisible();
 }
 
+async function createStingerProject(page: Page): Promise<void> {
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
+  await page.getByRole('button', { name: 'Sports stinger', exact: true }).click();
+  await page.getByTestId('video-create').click();
+  await expect(page.getByTestId('video-shell')).toBeVisible();
+}
+
 test('create -> stub generation -> live preview renders the composition', async ({ page }) => {
   await createCountdownProject(page);
 
@@ -82,6 +90,51 @@ test('scrubbing seeks the composition deterministically', async ({ page }) => {
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 5_000 });
+});
+
+test('editable inputs: the Content panel edits the composition live', async ({ page }) => {
+  // The AI (here the offline stub) declares editable inputs alongside the module; a
+  // non-technical user changes the content in the Content panel without touching code, and
+  // the preview updates LIVE through the player host's set-props channel (no recompile).
+  await createStingerProject(page);
+  await waitForGeneration(page);
+  await expect(player(page).getByText('Game On')).toBeVisible({ timeout: 10_000 });
+
+  // The Content tab exposes the declared inputs: a Title text field + an accent colour.
+  await page.getByTestId('video-tab-content').click();
+  await expect(page.getByTestId('video-content-panel')).toBeVisible();
+  const titleField = page.getByTestId('video-input-title');
+  await expect(titleField).toHaveValue('Game On');
+  await expect(page.getByTestId('video-input-accent')).toBeVisible();
+
+  // Editing the field flows into the mounted composition immediately.
+  await titleField.fill('PLAYOFFS');
+  await expect(player(page).getByText('PLAYOFFS')).toBeVisible({ timeout: 10_000 });
+  await expect(player(page).getByText('Game On')).toHaveCount(0);
+  await expect(page.getByTestId('video-code-error')).toHaveCount(0);
+  await expect(page.getByTestId('video-preview-error')).toHaveCount(0);
+
+  // The value lives on the project (so it rides into the render manifest too).
+  const stored = await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    return useVideoProjectStore.getState().project.inputs.find((i) => i.key === 'title')?.value;
+  });
+  expect(stored).toBe('PLAYOFFS');
+
+  // The edit is one undoable checkpoint: undo restores the previous value + preview. Blur
+  // the field first - the shell's global undo intentionally defers to native undo while a
+  // text field is focused.
+  await page.getByRole('heading', { name: 'Content' }).click();
+  await page.keyboard.press('Control+z');
+  await expect(titleField).toHaveValue('Game On');
+  await expect(player(page).getByText('Game On')).toBeVisible({ timeout: 10_000 });
+
+  // Per-field reset restores the default after another edit.
+  await titleField.fill('OVERTIME');
+  await expect(player(page).getByText('OVERTIME')).toBeVisible({ timeout: 10_000 });
+  await page.getByTestId('video-input-reset-title').click();
+  await expect(titleField).toHaveValue('Game On');
+  await expect(player(page).getByText('OVERTIME')).toHaveCount(0);
 });
 
 test('manual code edits update the preview; broken code keeps the last good version', async ({ page }) => {

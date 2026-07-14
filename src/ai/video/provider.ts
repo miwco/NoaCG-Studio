@@ -3,7 +3,7 @@
 // validator (compile -> static checks -> player probe) so the provider stays UI-free and
 // can feed exact validation errors back to the model in its repair rounds.
 
-import type { MotionPlan, VideoChatMessage } from '../../model/videoTypes';
+import type { MotionPlan, VideoChatMessage, VideoInput } from '../../model/videoTypes';
 import type { VideoAssetInfo, VideoCompSettings, VideoValidationResult } from '../../video/types';
 
 export interface VideoGenerateContext {
@@ -25,6 +25,9 @@ export interface VideoGenerateResult {
   tsx: string;
   /** The Motion Director's structured plan (null for refinements and the stub). */
   motionPlan: MotionPlan | null;
+  /** The editable inputs the composition declares (its Template Definition). `null` means
+   *  "leave the current inputs unchanged" (e.g. a refinement that didn't re-declare them). */
+  inputs: VideoInput[] | null;
   /** The motion/design skills the harness loaded (informational). */
   skills: string[];
   /** The final validation outcome; null when no validator was injected. */
