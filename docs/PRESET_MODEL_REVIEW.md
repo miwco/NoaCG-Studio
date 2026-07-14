@@ -91,8 +91,9 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   correction to the original framing: **tickers and credit rolls are NOT unblocked by loop/yoyo** —
   their travel is computed from live DOM measurement (`scrollWidth`, `clientHeight`), which the
   static keyframe model deliberately cannot express. Retiring their patchers needs a separate
-  dynamic-value primitive, tracked as its own gap. Loops (like §3b calls) are data-visible and
-  code-editable but have no dedicated timeline glyph yet — a future polish.
+  dynamic-value primitive — scoped in `docs/DYNAMIC_MOTION_SCOPE.md` (named dynamic motion
+  segments, the §3b twin for motion). Loops (like §3b calls) are data-visible and code-editable
+  but have no dedicated timeline glyph yet — a future polish.
 - **Stagger as a step/tween field** (gap 4), **motion paths** (gap 3), **spring params** (gap 5).
   Each is a genuinely new primitive with its own UI; the interaction model currently, and
   deliberately, excludes motion paths and a graph editor.
