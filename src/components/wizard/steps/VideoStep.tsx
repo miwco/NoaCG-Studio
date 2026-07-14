@@ -7,7 +7,8 @@ import { useRef, useState } from 'react';
 import { AI_MODELS, aiConfigured, loadAiSettings, saveAiSettings } from '../../../ai/settings';
 import { useAuthState } from '../../auth/useAuthState';
 import SignInPrompt from '../../auth/SignInPrompt';
-import { fileToDataUrl, uniqueAssetPath } from '../../../assets/assetUtils';
+import { fileToDataUrl } from '../../../assets/assetUtils';
+import { uniqueVideoAssetPath } from '../../../video/types';
 import { ASPECTS, FPS_OPTIONS, type AssetFile } from '../../../model/types';
 import { createDefaultVideoProject, type VideoProject } from '../../../model/videoTypes';
 import { listSavedVideoProjects, loadCurrentVideoProject } from '../../../model/videoProject';
@@ -111,7 +112,7 @@ export default function VideoStep({ onCreate, onOpen }: Props) {
         setAssetError(`"${file.name}" is too large (3 MB per asset) - compress or trim it.`);
         continue;
       }
-      next.push({ path: uniqueAssetPath(file.name, next), data });
+      next.push({ path: uniqueVideoAssetPath(file.name, next), data });
     }
     setAssets(next);
   };

@@ -15,7 +15,7 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { describeAssets } from '../../video/types';
 import { validateVideoModule } from '../../video/validate';
 import { getActiveBridge } from '../../video/bridgeRegistry';
-import { mergeVideoInputs, type VideoProject } from '../../model/videoTypes';
+import { mergeVideoInputs, type AuthoredSettings, type VideoProject } from '../../model/videoTypes';
 
 function settingsOf(project: VideoProject) {
   return {
@@ -72,7 +72,7 @@ export default function VideoAiChatPanel() {
   };
 
   /** Apply a provider result: ONE undoable snapshot bundling code + plan + assistant turn. */
-  const applyResult = (result: VideoGenerateResult) => {
+  const applyResult = (result: VideoGenerateResult, authoredFor: AuthoredSettings) => {
     const p = useVideoProjectStore.getState().project;
     applyProject({
       ...p,
@@ -81,12 +81,16 @@ export default function VideoAiChatPanel() {
       // Adopt the newly declared inputs, keeping any values the user already edited (a
       // refinement re-declares them; null means the provider left them unchanged).
       inputs: result.inputs ? mergeVideoInputs(p.inputs, result.inputs) : p.inputs,
+      // The settings this code was WRITTEN against - the ones the model was told about when
+      // the request went out, not whatever they are once it comes back. Changing them later
+      // is what settingsDrift reports on.
+      authoredFor,
       chat: [...p.chat, { role: 'assistant', text: result.summary, at: new Date().toISOString() }],
     });
     requestReplay();
   };
 
-  const handleResult = (result: VideoGenerateResult) => {
+  const handleResult = (result: VideoGenerateResult, authoredFor: AuthoredSettings) => {
     if (result.validation && !result.validation.ok) {
       // Keep the previous working composition; surface the broken module + errors. The
       // replay bump makes the player reload the CURRENT project code - validation left
@@ -100,22 +104,42 @@ export default function VideoAiChatPanel() {
       requestReplay();
     } else {
       setFailed(null);
-      applyResult(result);
+      applyResult(result, authoredFor);
     }
   };
 
   const runGenerate = async (prompt: string) => {
     setBusy('Designing your animation… (this can take a minute)');
     setError(null);
+    const p = useVideoProjectStore.getState().project;
     try {
-      const result = await getVideoAiProvider().generateVideo(
-        prompt,
-        contextFor(useVideoProjectStore.getState().project),
-        validate,
-      );
-      handleResult(result);
+      const result = await getVideoAiProvider().generateVideo(prompt, contextFor(p), validate);
+      handleResult(result, settingsOf(p));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** One refinement, whoever asked for it: the chat box, or another panel via requestAi. */
+  const runRefine = async (text: string) => {
+    setError(null);
+    appendChat({ role: 'user', text, at: new Date().toISOString() });
+    setBusy('Refining…');
+    const p = useVideoProjectStore.getState().project;
+    try {
+      const result = await getVideoAiProvider().refineVideo(
+        text,
+        { tsx: p.tsx, chat: p.chat, inputs: p.inputs },
+        contextFor(p),
+        validate,
+      );
+      handleResult(result, settingsOf(p));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      dropLastChat(); // the failed turn goes back into the input
+      setInput(text);
     } finally {
       setBusy(null);
     }
@@ -125,26 +149,31 @@ export default function VideoAiChatPanel() {
     const text = input.trim();
     if (!text || busy) return;
     setInput('');
-    setError(null);
-    appendChat({ role: 'user', text, at: new Date().toISOString() });
-    setBusy('Refining…');
-    try {
-      const p = useVideoProjectStore.getState().project;
-      const result = await getVideoAiProvider().refineVideo(
-        text,
-        { tsx: p.tsx, chat: p.chat, inputs: p.inputs },
-        contextFor(p),
-        validate,
-      );
-      handleResult(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      dropLastChat(); // the failed turn goes back into the input
-      setInput(text);
-    } finally {
-      setBusy(null);
-    }
+    await runRefine(text);
   };
+
+  // A refinement asked for from another panel (Settings' "update the code" offer). It runs
+  // down this same path, so it shows up as a normal turn in the conversation and its failures,
+  // undo, and "apply anyway" behave exactly like a typed one.
+  //
+  // Guarded by the REQUEST ITSELF, not just by clearing it: under StrictMode the effect is
+  // invoked twice from the same commit, both times seeing the request still set (the clear
+  // hasn't committed yet) - which would send it to the model twice. Reset once it's gone, so
+  // asking for the very same change again still works.
+  const pendingRequest = useVideoProjectStore((s) => s.pendingRequest);
+  const clearPendingRequest = useVideoProjectStore((s) => s.clearPendingRequest);
+  const sentRequest = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pendingRequest) {
+      sentRequest.current = null;
+      return;
+    }
+    if (busy || needsSignIn || sentRequest.current === pendingRequest) return;
+    sentRequest.current = pendingRequest;
+    clearPendingRequest();
+    void runRefine(pendingRequest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run each request exactly once
+  }, [pendingRequest, busy, needsSignIn]);
 
   // Auto-run the FIRST generation: the wizard seeds chat with one user turn and no reply.
   // Guarded PER PROJECT ID - creating or opening another project in the same session must
@@ -219,7 +248,7 @@ export default function VideoAiChatPanel() {
             <div className="row" style={{ marginTop: 8 }}>
               <button
                 onClick={() => {
-                  applyResult(failed);
+                  applyResult(failed, settingsOf(useVideoProjectStore.getState().project));
                   setFailed(null);
                 }}
                 title="Apply the broken module anyway to inspect and fix it in the code editor"

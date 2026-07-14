@@ -1,15 +1,25 @@
 // Video project settings: name, duration, fps, aspect/resolution, transparency, AI model.
 // Every commit is ONE undoable patchSettings. Duration is edited in seconds (the natural
 // unit) and stored in frames; changing fps keeps the duration in seconds constant.
+//
+// These settings drive the player and the renderer immediately - but NOT the composition's
+// code, which the AI wrote against whatever they were at the time (frame numbers, type sized
+// to the frame, a background painted or deliberately not). So when they drift apart the panel
+// says so plainly and offers to have the AI update the code, rather than letting a shortened
+// project quietly render with its exit cut off. See videoTypes.ts settingsDrift.
 
 import { useState } from 'react';
 import { ASPECTS, FPS_OPTIONS } from '../../model/types';
 import { AI_MODELS } from '../../ai/settings';
+import { driftRequest, settingsDrift } from '../../model/videoTypes';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 
 export default function VideoSettingsPanel() {
   const project = useVideoProjectStore((s) => s.project);
   const patchSettings = useVideoProjectStore((s) => s.patchSettings);
+  const requestAi = useVideoProjectStore((s) => s.requestAi);
+  const busy = useVideoProjectStore((s) => s.busy);
+  const drift = settingsDrift(project);
 
   const durationSec = project.durationInFrames / project.fps;
   // While the field is being edited it holds a raw string (which may be temporarily empty);
@@ -121,6 +131,32 @@ export default function VideoSettingsPanel() {
           Transparent background (for overlays - WebM/ProRes/PNG keep the alpha)
         </label>
       </div>
+
+      {drift.length > 0 && (
+        <div className="panel-section" data-testid="video-settings-drift">
+          <p className="status-bad" style={{ margin: '0 0 6px' }}>
+            ⚠ These settings no longer match the code
+          </p>
+          <ul className="hint" style={{ margin: '0 0 8px 16px' }}>
+            {drift.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </ul>
+          <p className="hint" style={{ marginTop: 0 }}>
+            The player and the render always follow the settings above - but the composition's own
+            code was written for the old ones, so the motion and the layout still fit those. The
+            AI can bring the code up to date; you can also just say so in the chat.
+          </p>
+          <button
+            className="primary"
+            disabled={!!busy}
+            data-testid="video-drift-fix"
+            onClick={() => requestAi(driftRequest(project))}
+          >
+            ✦ Update the code to these settings
+          </button>
+        </div>
+      )}
 
       <div className="panel-section">
         <h3>AI model</h3>

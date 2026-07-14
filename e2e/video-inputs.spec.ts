@@ -7,7 +7,8 @@
 // NOT empty the user's Content panel and revert their text to the code default. Values the
 // user typed are theirs; only an explicit content change may take them away.
 
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { createVideoProject, mockClaude, player, useFakeAiKey } from './_video';
 
 const HEADLINE_DEFAULT = 'Prime Time';
 
@@ -47,65 +48,15 @@ const MODULE_NO_INPUTS = {
   inputs: [],
 };
 
-const MOTION_PLAN = {
-  concept: 'A headline fades up.',
-  visualDirection: 'Dark stage, centred type.',
-  typography: 'One bold sans headline.',
-  background: 'Near-black.',
-  easingApproach: 'Clamped interpolate.',
-  assetUsage: 'none',
-  phases: [{ name: 'Enter', startSec: 0, endSec: 0.5, description: 'The headline fades up.' }],
-};
-
-function toolResponse(name: string, input: unknown) {
-  return {
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      content: [{ type: 'tool_use', id: 'tu_1', name, input }],
-      stop_reason: 'tool_use',
-    }),
-  };
-}
-
-/** Answer every Claude call by the forced tool; the 2nd module emit is the refinement. */
-async function mockClaude(page: Page): Promise<{ moduleEmits: () => number }> {
-  let moduleEmits = 0;
-  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
-    const body = route.request().postDataJSON() as { tools?: { name: string }[] };
-    const tool = body.tools?.[0]?.name;
-    if (tool === 'emit_motion_plan') return route.fulfill(toolResponse(tool, MOTION_PLAN));
-    if (tool === 'detect_skills') return route.fulfill(toolResponse(tool, { skills: [] }));
-    moduleEmits += 1;
-    return route.fulfill(
-      toolResponse('emit_remotion_module', moduleEmits === 1 ? MODULE_WITH_INPUTS : MODULE_NO_INPUTS),
-    );
-  });
-  return { moduleEmits: () => moduleEmits };
-}
-
-function player(page: Page) {
-  return page.frameLocator('.video-player-frame');
-}
-
 test.beforeEach(async ({ page }) => {
-  // A fake key so the REAL Claude provider runs (the route below answers every request).
-  await page.addInitScript(() =>
-    localStorage.setItem('spx-gfx-ai', JSON.stringify({ apiKey: 'sk-ant-test', model: 'claude-sonnet-5' })),
-  );
+  await useFakeAiKey(page);
 });
 
 test('a refinement that re-emits no inputs keeps the ones the user is editing', async ({ page }) => {
-  const { moduleEmits } = await mockClaude(page);
-
-  await page.goto('/app');
-  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
-  await page.getByRole('button', { name: 'Countdown', exact: true }).click();
-  await page.getByTestId('video-create').click();
-  await expect(page.getByTestId('video-shell')).toBeVisible();
+  const { emits } = await mockClaude(page, [MODULE_WITH_INPUTS, MODULE_NO_INPUTS]);
+  await createVideoProject(page);
 
   // The generation lands: its declared input shows up in the Content panel at its default.
-  await expect(page.locator('.ai-msg.assistant').first()).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('video-tab-content').click();
   const headline = page.getByTestId('video-input-headline');
   await expect(headline).toHaveValue(HEADLINE_DEFAULT);
@@ -119,7 +70,7 @@ test('a refinement that re-emits no inputs keeps the ones the user is editing', 
   await page.getByTestId('video-chat-field').fill('make the entrance snappier');
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page.locator('.ai-msg.assistant').nth(1)).toBeVisible({ timeout: 15_000 });
-  expect(moduleEmits()).toBe(2); // the refinement really did re-emit the module
+  expect(emits()).toBe(2); // the refinement really did re-emit the module
 
   // The input survives, still carrying the user's value - not wiped, not reverted to the
   // code default. (Before the fix: the Content panel emptied and the preview said "Prime Time".)
@@ -127,4 +78,78 @@ test('a refinement that re-emits no inputs keeps the ones the user is editing', 
   await expect(page.getByTestId('video-content-empty')).toHaveCount(0);
   await expect(page.getByTestId('video-input-headline')).toHaveValue('Cup Final Tonight');
   await expect(player(page).getByText('Cup Final Tonight')).toBeVisible({ timeout: 10_000 });
+});
+
+test('an asset keeps its logical name when another asset is deleted', async ({ page }) => {
+  // The name is what the composition's code and an image input's value point at, so it must
+  // never move under an asset the user didn't touch. Two files whose names differ only by
+  // extension used to collide on the stem and get told apart by POSITION: deleting the first
+  // renamed the second, silently breaking every reference to it.
+  await mockClaude(page, [MODULE_WITH_INPUTS]);
+  await createVideoProject(page);
+
+  await page.getByTestId('video-tab-assets').click();
+  const svg = (fill: string) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="${fill}"/></svg>`;
+  await page.locator('input[type=file]').setInputFiles([
+    { name: 'logo.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg('#ff0000')) },
+    { name: 'logo.png', mimeType: 'image/svg+xml', buffer: Buffer.from(svg('#00ff00')) },
+  ]);
+
+  // Distinct names, settled at upload: the stem collision is resolved in the PATH.
+  const names = page.locator('.video-asset-list code');
+  await expect(names).toHaveCount(2);
+  await expect(names.nth(0)).toHaveText('logo');
+  await expect(names.nth(1)).toHaveText('logo-2');
+
+  // Delete the FIRST. The survivor keeps the name everything already points at.
+  await page.locator('.video-asset-list li').first().getByRole('button', { name: '✕' }).click();
+  await expect(names).toHaveCount(1);
+  await expect(names.nth(0)).toHaveText('logo-2');
+});
+
+test('a field written by hand into the code becomes editable in the Content panel', async ({ page }) => {
+  // The code is the source of truth, so it decides what is editable. A pro who opens the
+  // composition and reads `fields.subtitle ?? '...'` has declared an input just as the AI
+  // would have - the panel reads it straight back out of the module.
+  await mockClaude(page, [MODULE_WITH_INPUTS]);
+  await createVideoProject(page);
+
+  // Hand-write a module that reads TWO fields the AI never declared: a subtitle and a colour.
+  // (Through the store - Monaco isn't reliably driveable headless, and the store is what it
+  // writes to.)
+  await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    useVideoProjectStore.getState().setTsx(`
+import { AbsoluteFill } from 'remotion';
+
+export default function Composition({ fields = {} }: { fields?: Record<string, string | number> }) {
+  const subtitle = fields.subtitle ?? 'Live tonight';
+  const barColor = fields.barColor ?? '#f6a623';
+  return (
+    <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', background: barColor }}>
+      <div style={{ color: '#fff', fontSize: 80 }}>{subtitle}</div>
+    </AbsoluteFill>
+  );
+}
+`);
+  });
+  await expect(player(page).getByText('Live tonight')).toBeVisible({ timeout: 10_000 });
+
+  // Both reads show up as fields, typed from the code's own fallback: text and colour.
+  await page.getByTestId('video-tab-content').click();
+  const subtitle = page.getByTestId('video-input-subtitle');
+  await expect(subtitle).toHaveValue('Live tonight');
+  await expect(page.getByTestId('video-input-barColor')).toHaveValue('#f6a623');
+  await expect(subtitle).toHaveAttribute('type', 'text');
+  await expect(page.getByTestId('video-input-barColor')).toHaveAttribute('type', 'color');
+
+  // Editing one adopts it into the project and drives the live preview, like any other field.
+  await subtitle.fill('Kickoff 20:00');
+  await expect(player(page).getByText('Kickoff 20:00')).toBeVisible({ timeout: 10_000 });
+  const adopted = await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    return useVideoProjectStore.getState().project.inputs.map((i) => `${i.key}=${i.value}`);
+  });
+  expect(adopted).toContain('subtitle=Kickoff 20:00');
 });

@@ -12,30 +12,41 @@
 // Content panel and the SPX Data/Control panels are the same component over the same
 // vocabulary - one place decides what a colour or image control is.
 
+import { useMemo } from 'react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { videoInputDescriptor, type VideoInput } from '../../model/videoTypes';
+import { contentInputs } from '../../model/videoInputInfer';
 import { FieldRow, type FieldImage } from '../fields/FieldControl';
 import { describeAssets } from '../../video/types';
 
-function InputRow({ input, images }: { input: VideoInput; images: FieldImage[] }) {
+function InputRow({ input, images, fromCode }: { input: VideoInput; images: FieldImage[]; fromCode: boolean }) {
   const setInputValue = useVideoProjectStore((s) => s.setInputValue);
   return (
     <FieldRow
       descriptor={videoInputDescriptor(input)}
       value={input.value}
-      onChange={(v) => setInputValue(input.key, v)}
+      onChange={(v) => setInputValue(input, v)}
       images={images}
       imageHint="Upload images in the Assets tab"
       testIdPrefix="video-input"
+      badge={fromCode ? 'code' : undefined}
     />
   );
 }
 
 export default function VideoContentPanel() {
-  const inputs = useVideoProjectStore((s) => s.project.inputs);
+  const declared = useVideoProjectStore((s) => s.project.inputs);
+  const tsx = useVideoProjectStore((s) => s.project.tsx);
   const assets = useVideoProjectStore((s) => s.project.assets);
   const resetInputs = useVideoProjectStore((s) => s.resetInputs);
-  const anyChanged = inputs.some((i) => i.value !== i.default);
+
+  // What the panel edits is what the CODE reads: the inputs the AI declared, plus any a human
+  // wrote into the composition by hand (`fields.subtitle ?? 'Live tonight'`). An inferred input
+  // holds no value until it's edited - the code's own fallback is the value until then - so it
+  // is never "changed" and never needs a reset.
+  const inputs = useMemo(() => contentInputs(declared, tsx), [declared, tsx]);
+  const declaredKeys = useMemo(() => new Set(declared.map((i) => i.key)), [declared]);
+  const anyChanged = declared.some((i) => i.value !== i.default);
 
   // What an image input can point at: an asset's LOGICAL NAME - the same name the composition
   // reads from its assets prop and the render packs into inputProps (video/types.ts). Uploading
@@ -61,17 +72,23 @@ export default function VideoContentPanel() {
         {inputs.length === 0 ? (
           <p className="hint" data-testid="video-content-empty" style={{ marginTop: 8 }}>
             No editable inputs yet. Generate a video and the AI exposes the text, colours, and
-            numbers you can change here - or edit the code to read values from the <code>fields</code>{' '}
-            prop.
+            numbers you can change here - or write one yourself: any{' '}
+            <code>fields.name ?? 'default'</code> the code reads shows up here as a field.
           </p>
         ) : (
           <>
             <p className="hint" style={{ marginTop: 4, marginBottom: 12 }}>
               Change the words, colours, and numbers - the preview updates live and the code stays
-              the source of truth.
+              the source of truth. Fields marked <span className="field-id">code</span> were read
+              straight out of the composition.
             </p>
             {inputs.map((input) => (
-              <InputRow key={input.key} input={input} images={images} />
+              <InputRow
+                key={input.key}
+                input={input}
+                images={images}
+                fromCode={!declaredKeys.has(input.key)}
+              />
             ))}
           </>
         )}

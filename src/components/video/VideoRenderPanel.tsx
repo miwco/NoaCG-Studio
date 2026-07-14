@@ -9,7 +9,7 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useAuthState } from '../auth/useAuthState';
 import { compileTsx } from '../../video/compile';
 import { describeAssets } from '../../video/types';
-import { videoFieldValues } from '../../model/videoTypes';
+import { settingsDrift, videoFieldValues } from '../../model/videoTypes';
 import { buildVideoManifest } from '../../render/buildVideoManifest';
 import { formatNeedsSignIn, resolveTier, validateRenderRequest, RENDER_CONFIG } from '../../render/limits';
 import { RENDER_FORMATS, type RenderFormatId } from '../../render/manifest';
@@ -75,6 +75,7 @@ export default function VideoRenderPanel() {
     return { error: null, manifest, bytes: JSON.stringify({ manifest }).length };
   }, [project, format, scale, bgColor, stillMode, stillFrame]);
 
+  const drift = settingsDrift(project);
   const tier = resolveTier(signedIn && backendConfigured);
   const limitIssues = useMemo(
     () =>
@@ -174,9 +175,18 @@ export default function VideoRenderPanel() {
         )}
       </div>
 
-      {/* Preflight: compile status, upload budget, tier limits */}
+      {/* Preflight: compile status, settings drift, upload budget, tier limits */}
       <div style={{ marginTop: 8 }} data-testid="video-render-preflight">
         {preflight.error && <p className="status-bad">{preflight.error}</p>}
+        {/* The render follows the project's settings; the CODE was written for the old ones.
+            This is the moment that costs real time, so say it before the job starts. */}
+        {drift.length > 0 && (
+          <p className="status-bad" data-testid="video-render-drift">
+            ⚠ The composition's code was written for different settings ({drift.length} mismatch
+            {drift.length > 1 ? 'es' : ''}) - it will render as written. Settings has the detail and
+            can have the AI update the code.
+          </p>
+        )}
         {!preflight.error && (
           <p className="hint" style={{ margin: 0, color: overBudget ? 'var(--warn)' : undefined }}>
             Upload size: {fmtMb(preflight.bytes)} / {fmtMb(RENDER_CONFIG.manifestMaxBytes)}

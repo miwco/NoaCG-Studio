@@ -120,6 +120,69 @@ export interface MotionPlan {
   phases: MotionPlanPhase[];
 }
 
+/**
+ * The composition settings a generation was WRITTEN AGAINST - the ones the AI was told about
+ * when it wrote the code that's in the project now.
+ *
+ * The AI plans motion to a duration and a frame, and writes the resulting numbers into the
+ * code: an exit that starts at frame 170, type sized against a 1920-wide frame, a background
+ * it paints (or deliberately doesn't, for an alpha render). Changing the project's settings
+ * afterwards changes what the player and the renderer do - it does NOT rewrite that code. So
+ * shortening a 6 s piece to 3 s cuts its exit off, and ticking "transparent" on a composition
+ * that paints its own background still renders opaque.
+ *
+ * Recording what the code was authored for is what lets the editor SAY so (settingsDrift) and
+ * offer to fix it, instead of silently rendering something the user didn't ask for. `null` on
+ * a project whose code no AI has written yet - the starter composition derives everything from
+ * useVideoConfig, so it fits any settings, and a hand-written module is its author's business.
+ */
+export type AuthoredSettings = Pick<
+  VideoProject,
+  'durationInFrames' | 'fps' | 'width' | 'height' | 'transparent'
+>;
+
+/** What no longer matches the settings the code was written for, in the user's words. */
+export function settingsDrift(project: VideoProject): string[] {
+  const a = project.authoredFor;
+  if (!a) return [];
+  const drift: string[] = [];
+  const sec = (frames: number, fps: number) => (frames / fps).toFixed(2);
+  const was = sec(a.durationInFrames, a.fps);
+  const now = sec(project.durationInFrames, project.fps);
+  if (was !== now) drift.push(`the motion was written to fill ${was} s - the project is now ${now} s`);
+  if (a.fps !== project.fps) drift.push(`it was written for ${a.fps} fps - the project is now ${project.fps} fps`);
+  if (a.width !== project.width || a.height !== project.height) {
+    drift.push(
+      `it was laid out for a ${a.width}×${a.height} frame - the project is now ${project.width}×${project.height}`,
+    );
+  }
+  if (a.transparent !== project.transparent) {
+    drift.push(
+      project.transparent
+        ? 'it was written to paint its own background - the project now renders with alpha, so that background will still be there'
+        : 'it was written for an alpha render and paints no background - the project is now opaque, so it will sit on a flat colour',
+    );
+  }
+  return drift;
+}
+
+/** The refinement to send when the user asks the AI to bring the code up to the new settings. */
+export function driftRequest(project: VideoProject): string {
+  const secs = (project.durationInFrames / project.fps).toFixed(2);
+  return (
+    `The project settings changed after you wrote this composition:\n` +
+    settingsDrift(project)
+      .map((d) => `- ${d}`)
+      .join('\n') +
+    `\n\nUpdate the code to fit the settings as they are now: retime the motion to fill EXACTLY ${secs} s ` +
+    `(${project.durationInFrames} frames at ${project.fps} fps), lay it out for a ${project.width}×${project.height} frame, and ` +
+    (project.transparent
+      ? 'paint NO background - the root must be transparent for the alpha render.'
+      : 'design a deliberate background - the render is opaque.') +
+    ` Keep the design and the editable inputs as they are; change only what the new settings require.`
+  );
+}
+
 /** Per-project export defaults (last-used render format/scale). */
 export interface VideoExportPrefs {
   format: string; // RENDER_FORMATS id ('mp4' | 'webm' | 'png-still' | 'png-sequence' | 'prores4444')
@@ -153,8 +216,14 @@ export interface VideoProject {
    *  backend's shape-agnostic asset walker externalizes them unchanged when sync lands. */
   assets: AssetFile[];
   /** Editable composition inputs (the video Template Definition) the AI declared and the
-   *  Content panel edits; their values ride into the preview and render via inputProps. */
+   *  Content panel edits; their values ride into the preview and render via inputProps.
+   *  The panel ALSO shows inputs read straight out of the code (model/videoInputInfer.ts);
+   *  one lands here as soon as it is edited. */
   inputs: VideoInput[];
+  /** The settings the current code was written against (see AuthoredSettings). Set on every
+   *  AI result; null until one lands. Drives the drift warning, never the player or render -
+   *  those always follow the project's live settings. */
+  authoredFor: AuthoredSettings | null;
   createdAt: string; // ISO
   updatedAt: string; // ISO - bumped by the autosaver
   exportPrefs: VideoExportPrefs | null;
@@ -252,6 +321,8 @@ export function createDefaultVideoProject(
     aiModel: init.aiModel ?? '',
     assets: init.assets ?? [],
     inputs: STARTER_INPUTS.map((i) => ({ ...i })),
+    // The starter derives everything from useVideoConfig, so it fits whatever the settings say.
+    authoredFor: null,
     createdAt: now,
     updatedAt: now,
     exportPrefs: null,

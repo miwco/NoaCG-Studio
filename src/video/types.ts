@@ -3,6 +3,7 @@
 
 import type { ValidationIssue } from '../validation/validateTemplate';
 import type { AssetFile } from '../model/types';
+import { uniqueAssetPath } from '../assets/assetUtils';
 
 /** The composition settings the player and renderer need (a VideoProject subset). */
 export interface VideoCompSettings {
@@ -54,7 +55,31 @@ export function assetMime(asset: AssetFile): string {
   return m ? m[1] : '';
 }
 
-/** Build the AI/player view of a project's assets (unique logical names, in order). */
+/**
+ * The path to store a newly uploaded VIDEO asset at: unique, and with a unique LOGICAL NAME.
+ *
+ * An asset's name is what the composition's code and an image input's value point at, so it
+ * must never change under an asset the user didn't touch. uniqueAssetPath only guarantees the
+ * PATH is unique - `logo.png` and `logo.jpg` both keep the stem `logo` - which used to leave
+ * describeAssets to break the tie by position, so deleting the first silently renamed the
+ * second. Uniqueness belongs at upload instead: settle the name once, into the path (which is
+ * immutable and already persisted), and no later add or delete can disturb it.
+ */
+export function uniqueVideoAssetPath(fileName: string, existing: AssetFile[]): string {
+  const taken = new Set(existing.map((a) => assetLogicalName(a.path)));
+  const dot = fileName.lastIndexOf('.');
+  const stem = dot >= 0 ? fileName.slice(0, dot) : fileName;
+  const ext = dot >= 0 ? fileName.slice(dot) : '';
+  let candidate = fileName;
+  for (let n = 2; taken.has(assetLogicalName(candidate)); n++) candidate = `${stem}-${n}${ext}`;
+  return uniqueAssetPath(candidate, existing);
+}
+
+/**
+ * Build the AI/player view of a project's assets. The name comes from the path alone, so it is
+ * stable across every add and delete (uniqueVideoAssetPath settled it at upload). The tie-break
+ * loop only ever fires for a project whose assets predate that rule - never for new uploads.
+ */
 export function describeAssets(assets: AssetFile[]): VideoAssetInfo[] {
   const seen = new Set<string>();
   return assets.map((a) => {

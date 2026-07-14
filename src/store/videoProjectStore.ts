@@ -6,7 +6,7 @@
 
 import { create } from 'zustand';
 import type { AssetFile } from '../model/types';
-import type { VideoChatMessage, VideoProject } from '../model/videoTypes';
+import type { VideoChatMessage, VideoInput, VideoProject } from '../model/videoTypes';
 import { createDefaultVideoProject } from '../model/videoTypes';
 import { loadCurrentVideoProject, saveCurrentVideoProject } from '../model/videoProject';
 
@@ -34,6 +34,10 @@ interface VideoProjectState {
   replayNonce: number;
   /** Label of the AI stage in flight ('Planning motion…'), or null. Blocks concurrent sends. */
   busy: string | null;
+  /** A refinement another panel wants run (the Settings panel's "update the code" offer).
+   *  The CHAT panel picks it up and runs it down the ONE AI path - so the turn shows up in
+   *  the conversation, and failures, undo, and "apply anyway" all behave as they always do. */
+  pendingRequest: string | null;
   /** True when the last autosave failed (storage quota) - the shell shows a warning. */
   autosaveFailed: boolean;
 
@@ -44,8 +48,11 @@ interface VideoProjectState {
   /** Undoable settings change (duration/fps/size/name/transparent/model/exportPrefs). */
   patchSettings: (patch: Partial<VideoProject>) => void;
   /** Edit one editable input's value. Consecutive edits to the SAME key coalesce into one
-   *  undo checkpoint (so a colour drag or typed headline is a single undo). */
-  setInputValue: (key: string, value: string | number) => void;
+   *  undo checkpoint (so a colour drag or typed headline is a single undo). Takes the whole
+   *  input, not just its key, because the panel also shows inputs INFERRED from the code
+   *  (model/videoInputInfer.ts) that the project has never declared - editing one adopts it
+   *  into the project there and then. */
+  setInputValue: (input: VideoInput, value: string | number) => void;
   /** Reset every editable input to its declared default - ONE undoable checkpoint. */
   resetInputs: () => void;
   /** Manual code typing: no history snapshot (Monaco native undo), clears redo. */
@@ -63,6 +70,9 @@ interface VideoProjectState {
   requestReplay: () => void;
   setBusy: (label: string | null) => void;
   setAutosaveFailed: (failed: boolean) => void;
+  /** Ask the AI for a change from outside the chat (reveals the Chat tab; the panel runs it). */
+  requestAi: (request: string) => void;
+  clearPendingRequest: () => void;
 }
 
 const initialProject = loadCurrentVideoProject() ?? createDefaultVideoProject();
@@ -76,6 +86,7 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
   replayNonce: 0,
   busy: null,
   autosaveFailed: false,
+  pendingRequest: null,
 
   loadProject: (project) => {
     // Creation/reopen persists IMMEDIATELY (not on the typing debounce): a reload right
@@ -83,7 +94,15 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
     // slot synchronously.
     resetCoalesce();
     saveCurrentVideoProject(project);
-    set({ project, history: [], future: [], previewError: null, busy: null, activePanel: 'chat' });
+    set({
+      project,
+      history: [],
+      future: [],
+      previewError: null,
+      busy: null,
+      pendingRequest: null,
+      activePanel: 'chat',
+    });
   },
 
   applyProject: (next) => {
@@ -104,13 +123,19 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
     }));
   },
 
-  setInputValue: (key, value) =>
+  setInputValue: (input, value) =>
     set((s) => {
-      const inputs = s.project.inputs.map((i) => (i.key === key ? { ...i, value } : i));
+      const declared = s.project.inputs.some((i) => i.key === input.key);
+      // An input the code declares but the project doesn't (inferred from a `fields.x ?? default`
+      // read) is adopted on its first edit: until someone changes it, the code's own fallback is
+      // the value, so there is nothing to store.
+      const inputs = declared
+        ? s.project.inputs.map((i) => (i.key === input.key ? { ...i, value } : i))
+        : [...s.project.inputs, { ...input, value }];
       // Coalesce a run of edits to the same key: reuse the checkpoint made on the first edit
       // of the run (don't push another). Any other mutation cleared inputEditKey first.
-      const coalesce = inputEditKey === key;
-      inputEditKey = key;
+      const coalesce = inputEditKey === input.key;
+      inputEditKey = input.key;
       return {
         project: { ...s.project, inputs },
         history: coalesce ? s.history : [...s.history, s.project].slice(-30),
@@ -190,6 +215,9 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
   requestReplay: () => set((s) => ({ replayNonce: s.replayNonce + 1 })),
   setBusy: (busy) => set({ busy }),
   setAutosaveFailed: (autosaveFailed) => set({ autosaveFailed }),
+
+  requestAi: (request) => set({ pendingRequest: request, activePanel: 'chat' }),
+  clearPendingRequest: () => set({ pendingRequest: null }),
 }));
 
 // Autosave the working video project (debounced) whenever the document changes, mirroring

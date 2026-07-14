@@ -5,9 +5,9 @@
 // autosave, so big files would silently break both - better an honest limit up front.
 
 import { useRef, useState } from 'react';
-import { fileToDataUrl, uniqueAssetPath } from '../../assets/assetUtils';
+import { fileToDataUrl } from '../../assets/assetUtils';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
-import { describeAssets } from '../../video/types';
+import { describeAssets, uniqueVideoAssetPath } from '../../video/types';
 
 /** Hard per-asset cap (data-URL bytes) - keeps the render manifest under its 4 MB budget. */
 const MAX_ASSET_BYTES = 3_000_000;
@@ -45,7 +45,10 @@ export default function VideoAssetsPanel() {
         );
         continue;
       }
-      addAsset({ path: uniqueAssetPath(file.name, useVideoProjectStore.getState().project.assets), data });
+      addAsset({
+        path: uniqueVideoAssetPath(file.name, useVideoProjectStore.getState().project.assets),
+        data,
+      });
     }
   };
 

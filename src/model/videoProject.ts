@@ -36,7 +36,11 @@ function isVideoProject(p: unknown): p is VideoProject {
 
 /** Fill in fields added after a record was stored (forward-compatible load). */
 function normalizeVideoProject(p: VideoProject): VideoProject {
-  return Array.isArray(p.inputs) ? p : { ...p, inputs: [] };
+  const inputs = Array.isArray(p.inputs) ? p.inputs : [];
+  // A project stored before authoredFor existed: we don't know what its code was written for,
+  // and guessing would raise a drift warning about settings nobody has touched. null = silent.
+  const authoredFor = p.authoredFor ?? null;
+  return inputs === p.inputs && authoredFor === p.authoredFor ? p : { ...p, inputs, authoredFor };
 }
 
 // ── Current slot ─────────────────────────────────────────────────────────────

@@ -1,0 +1,74 @@
+// Shared harness for the video-editor specs that need the REAL Claude provider path (the
+// offline stub can't express "the model emitted X"). The Anthropic API is mocked at the
+// network level, so everything downstream - the staged harness, the forced tools, validation,
+// the repair loop, the apply - runs exactly as in production, on emits we choose.
+
+import { expect, type Page, type Route } from '@playwright/test';
+
+/** The player host iframe's content (Playwright reaches into sandboxed frames). */
+export function player(page: Page) {
+  return page.frameLocator('.video-player-frame');
+}
+
+export interface EmittedModule {
+  summary: string;
+  tsx: string;
+  inputs: { key: string; type: string; label: string; default: string | number }[];
+}
+
+const MOTION_PLAN = {
+  concept: 'A headline holds centre.',
+  visualDirection: 'Dark stage, centred type.',
+  typography: 'One bold sans headline.',
+  background: 'Near-black.',
+  easingApproach: 'Clamped interpolate.',
+  assetUsage: 'none',
+  phases: [{ name: 'Hold', startSec: 0, endSec: 5, description: 'The headline holds centre.' }],
+};
+
+function toolResponse(name: string, input: unknown) {
+  return {
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      content: [{ type: 'tool_use', id: 'tu_1', name, input }],
+      stop_reason: 'tool_use',
+    }),
+  };
+}
+
+/**
+ * Answer every Claude call by its forced tool. `modules` are handed out in order to successive
+ * emit_remotion_module calls (the first is the generation, the next are refinements); the last
+ * one repeats once the list runs out.
+ */
+export async function mockClaude(page: Page, modules: EmittedModule[]): Promise<{ emits: () => number }> {
+  let emits = 0;
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const body = route.request().postDataJSON() as { tools?: { name: string }[] };
+    const tool = body.tools?.[0]?.name ?? '';
+    if (tool === 'emit_motion_plan') return route.fulfill(toolResponse(tool, MOTION_PLAN));
+    if (tool === 'detect_skills') return route.fulfill(toolResponse(tool, { skills: [] }));
+    const module = modules[Math.min(emits, modules.length - 1)];
+    emits += 1;
+    return route.fulfill(toolResponse('emit_remotion_module', module));
+  });
+  return { emits: () => emits };
+}
+
+/** A fake key, so the real provider runs and the route above answers it. */
+export async function useFakeAiKey(page: Page): Promise<void> {
+  await page.addInitScript(() =>
+    localStorage.setItem('spx-gfx-ai', JSON.stringify({ apiKey: 'sk-ant-test', model: 'claude-sonnet-5' })),
+  );
+}
+
+/** Create a video project through the wizard and wait for its first generation to land. */
+export async function createVideoProject(page: Page): Promise<void> {
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
+  await page.getByRole('button', { name: 'Countdown', exact: true }).click();
+  await page.getByTestId('video-create').click();
+  await expect(page.getByTestId('video-shell')).toBeVisible();
+  await expect(page.locator('.ai-msg.assistant').first()).toBeVisible({ timeout: 20_000 });
+}
