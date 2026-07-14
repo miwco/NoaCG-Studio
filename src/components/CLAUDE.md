@@ -163,9 +163,10 @@ in src/blocks/CLAUDE.md.
   the active tab of the RIGHT dock) - shown/hidden/resized/moved like any panel; any NEW
   selection reveals it (activates its tab, or re-docks it if closed - an explicit close holds
   while the selection is unchanged, see AppShell).
-- **TimelineView** - the classic collapsible strip under the preview; since Timeline v2 it
-  serves LEGACY-REGION categories only (data-block templates get StepTimeline via
-  TimelineDock, and lower thirds now create as data blocks). MOMENT CARDS
+- **TimelineView** - the classic collapsible strip under the preview. EVERY category now creates as
+  a data block, so it no longer serves any create path: it serves SAVED LEGACY TEMPLATES (a project
+  made before the migration, an import, hand-written GSAP) - TimelineDock picks the surface from the
+  CODE, never from the category. MOMENT CARDS
   `▶In · »1 · »2 · »+Step · ●On air · ■Out` (step cards numbered by PRESS; cue subtitles
   aria-hidden - getByRole('▶ Play') must stay unique in specs) over the CUE-SEGMENTED OVERVIEW
   (blocks/timelineModel.ts buildOverview): ONE strip, all sections side by side, each on its own

@@ -122,7 +122,8 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   credits and INFOGRAPHICS flipped to data blocks on this** — infographics entirely so, since every
   one of their motions is measured (a stat counts to the operator's figure, a bar grows to its own
   data-value, a ring draws to that percent, a list cascades one row per line they wrote). With the
-  quiz on §3c, only info cards are left on the legacy region.
+  quiz on §3c and info cards flipped last, EVERY category now creates as a data block — the legacy
+  region survives only in saved/imported templates.
   Design + the ratified decisions: `docs/DYNAMIC_MOTION_SCOPE.md`. The timeline renders a measured
   segment READ-ONLY (a hatched, open-ended bar naming the builder) — there is nothing to keyframe,
   and the UI says so rather than implying an affordance.
@@ -139,7 +140,14 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
 
 ## Recommendation
 
-Build Tier 1 next — it is small, additive, and directly serves the three ratified open items
-(scale/rotate handles need `transformOrigin`; the timeline's right-edge trim needs `hides`;
-starting-soon/game-timers need `calls`). Tier 2 is opportunistic polish. Tier 3 is real product
-work to schedule against demand, and is what finally retires the legacy patchers.
+*(Superseded by what shipped.)* Tiers 1 and 2 are CLOSED, and Tier 3 delivered everything the
+migration actually needed: `loops`, measured motion (`dynamics`), and the read-only glyphs that
+surface them. **Every category now creates as a data block**, so the model has been proven against
+all ten of them, and Phase 8 — retiring the legacy patchers, keeping a read-only renderer for saved
+legacy templates (§8.1 of DYNAMIC_MOTION_SCOPE) — is unblocked.
+
+What remains open, and only worth building against real demand: **stagger as a single authored knob**
+(gap 4 — the catalog bakes it into per-element keyframes, which is strictly more editable, so this
+only matters where the element count is content-driven, and that case belongs to `dynamics` anyway),
+**spring parameters** (gap 5), and **per-property duration** (gap 1). **Motion paths** (gap 3) stay
+deliberately excluded by the interaction model.

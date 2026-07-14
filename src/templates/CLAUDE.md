@@ -16,8 +16,9 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   marked region converts (category-owned runtime around it - score pops, clock painters -
   stays); a conversion failure keeps the legacy emit, never a broken template.
   `CategorySpec.dataRegion` triggers it inside assembleStandard; self-assembled categories
-  (scoreboards, game timers, starting soon, quiz, infographics) call it directly. FLIPPED: every
-  category EXCEPT info cards. The step-calls model
+  (scoreboards, game timers, starting soon, quiz, infographics) call it directly. **EVERY category
+  now creates as a data block** - the legacy region survives only in SAVED templates (see
+  src/blocks/CLAUDE.md). The step-calls model
   (docs/TIMELINE_V2_PLAN.md §3b)
   carries `tl.call(startClock/stopClock)` through the conversion as step `calls`, so a countdown
   survives the flip (the clock runtime itself lives OUTSIDE the region and is untouched), and the
@@ -32,8 +33,9 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   so it inserts a middle step `{ calls: [revealAnswer] }` before Out - which makes SPX's
   `steps: '2'` DERIVED (three steps -> one press) instead of a hard-coded value the timeline's
   steps re-sync would overwrite with '1' on the first edit, killing the reveal.
-  STILL LEGACY: **info cards, and only info cards** - they flip LAST because they host the classic
-  strip's spec suite, which retires with the strip in Phase 8 (docs/TIMELINE_V2_PLAN.md).
+  INFO CARDS flipped last (`dataRegion: true`) - they are the standard contract's other line-based
+  family, so they convert exactly like lower thirds, steps and all. Nothing blocked them but the
+  spec suite they hosted, which now runs against a SAVED legacy template instead (e2e/timeline.spec.ts).
   A wrapper that needs the motion speed must read it via the shared `motionSpeed()` helper
   (base.ts `motionSpeedJs`: NOACG_ANIM.speed, else legacy animSpeed, else 1) - never the bare
   animSpeed global, which only exists inside a legacy region.
@@ -58,7 +60,9 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   presets, prefix-parameterized - they animate any category's `.{prefix}-box` structure; on a
   data category the preset's emit is converted at create, and blocks/presetApply.ts derives
   keyframes from the same emitters after).
-- **infoCards/** - card01…card05 (prefix 'info-card').
+- **infoCards/** - card01…card05 (prefix 'info-card', `dataRegion: true`). The standard contract's
+  other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
+  them, steps and all (a » press per body line becomes a middle step with its `reveals`).
 - **endCredits/** - cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
   credits-pages / credits-crawl) + **creditsMotion.ts**; data-driven: a hidden #f0 textarea holds
   "Role | Name" lines, template JS parses and rebuilds #credits-track, ends with logo + year

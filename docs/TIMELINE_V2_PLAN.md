@@ -31,10 +31,15 @@ INFOGRAPHICS flipped last of the data-driven ones, and needed no new primitive e
 motion turned out to be measured (the stat counts to the operator's figure, each bar grows to its own
 data-value, the ring draws to that percent, the cascade runs one row per line they wrote), so the
 `dynamics` model already covered it: the region keeps the panel entrance as real keyframes and NAMES
-the rest (igMotion.ts). INFO CARDS flip LAST of all: they host the classic strip's spec suite
-(Hairline Card), and no other legacy category supports the steps toggle — the suite
-retires together with the strip in Phase 8. **INFO CARDS are now the ONLY category left on the
-legacy region.**
+the rest (igMotion.ts). INFO CARDS flipped last, and needed nothing but the flag: they are the
+standard contract's other line-based family, so they convert exactly like lower thirds, steps and
+all. The only thing that had held them back was the classic strip's spec suite, which they hosted —
+and that suite now runs against a SAVED LEGACY TEMPLATE (e2e/_legacy.ts), which is the case the
+strip actually still serves.
+
+**THE MIGRATION IS COMPLETE: every category creates as a NOACG_ANIM data block.** The legacy region
+survives only in saved/imported/hand-written templates, and the dock picks the editing surface from
+the CODE, never from the category — which is what keeps those working. **Phase 8 is unblocked.**
 
 **Phase 8 scope, RATIFIED (DYNAMIC_MOTION_SCOPE §8.1):** it removes the classic strip's EDITING
 patchers but KEEPS a minimal read-only renderer. A saved template whose measured motion is

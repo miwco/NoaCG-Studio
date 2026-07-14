@@ -216,7 +216,8 @@ lands), and a `tl.add()` needs an EXPLICIT position whenever a phase has more th
 zero-advance on the importer's clock but a real child on GSAP's, so a bare `'-=N'` after one resolves
 differently in the two.
 
-The quiz then flipped on §3b calls (`docs/TIMELINE_V2_PLAN.md` §3c), leaving INFO CARDS as the only
-category on the legacy region (they host the classic strip's spec suite). Per §8.1, Phase 8 retires
-the strip's *editing* patchers but keeps a read-only renderer for legacy templates that can never be
-auto-converted.
+The quiz then flipped on §3b calls (`docs/TIMELINE_V2_PLAN.md` §3c), and INFO CARDS last of all —
+so **every category now creates as a data block and the migration is complete**. Per §8.1, Phase 8
+retires the strip's *editing* patchers but keeps a read-only renderer for legacy templates that can
+never be auto-converted; that decision is what the classic strip's spec suite now pins, since its
+fixture became a SAVED LEGACY TEMPLATE (e2e/_legacy.ts) rather than a freshly created category.

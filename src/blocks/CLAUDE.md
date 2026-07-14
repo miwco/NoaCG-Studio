@@ -146,11 +146,15 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 
 ## The legacy patchers (animPatch / stepAssign / timelineModel)
 
-These literal patchers still serve the ONE category that has not migrated to the data region
-(INFO CARDS — every other category creates as a data block), plus every SAVED legacy template until
-its owner presses "use keyframes". Phase 8 of docs/TIMELINE_V2_PLAN.md retires them - deferred by
-design until the remaining categories migrate (the blockers per category are documented in
-src/templates/CLAUDE.md and the plan's status block).
+**EVERY category now creates as a data block** - so these patchers no longer serve any CREATE path.
+What they still serve, and why they are NOT dead code: every SAVED LEGACY TEMPLATE - a project made
+before the migration, an imported one, hand-written GSAP the importer refuses to guess at - until
+its owner presses "use keyframes". The dock picks the editing surface from the CODE, never from the
+category, which is exactly what keeps those templates working. Their coverage lives in
+e2e/timeline.spec.ts, whose fixture is now a legacy template built by e2e/_legacy.ts (it used to be
+a freshly created info card, back when info cards were still legacy).
+Phase 8 of docs/TIMELINE_V2_PLAN.md is therefore UNBLOCKED - it was waiting on the last category,
+and there isn't one.
 RATIFIED (docs/DYNAMIC_MOTION_SCOPE.md §8.1): Phase 8 removes the classic strip's EDITING patchers
 (timelineModel's splitTween/patchTweenTiming/… - the bulk of the code) but KEEPS a minimal
 read-only view. A saved template whose measured motion is hand-written inline can never be

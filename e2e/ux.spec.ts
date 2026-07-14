@@ -1,4 +1,5 @@
 import { test, expect, type Page, type FrameLocator } from '@playwright/test';
+import { applyLegacyRegion } from './_legacy';
 
 // The UX overhaul: preview-over-tabs layout, validation inside Export, motion phase
 // control + auto-replay (on the timeline strip — the Motion tab is retired), add-field
@@ -50,8 +51,8 @@ test('export: validation shows inline and gates the download on a broken templat
 });
 
 test('motion: an In-only preset swap from the ▶ In card keeps the exit and auto-replays', async ({ page }) => {
-  // The classic strip's phase controls — pinned on a not-yet-migrated category (info
-  // cards); lower thirds create as data blocks and use the step timeline instead.
+  // The classic strip's phase controls — pinned on a LEGACY TEMPLATE, which is what the strip
+  // still serves now that every category creates as a data block (see e2e/_legacy.ts).
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
@@ -60,6 +61,7 @@ test('motion: an In-only preset swap from the ▶ In card keeps the exit and aut
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await page.waitForTimeout(650);
+  await applyLegacyRegion(page, { prefix: 'info-card', presetId: 'line-reveal' });
   // The ▶ In card is the selected moment by default; its inspector row (under the tracks)
   // carries THAT phase's preset picker — the strip is the one motion surface.
   await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);

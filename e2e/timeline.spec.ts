@@ -1,14 +1,27 @@
 import { test, expect, type Page, type FrameLocator } from '@playwright/test';
+import { applyLegacyRegion } from './_legacy';
 
 // Era 6 — the timeline strip under the preview (docs/TIMELINE_PLAN.md): tracks parsed from
 // the marked ANIMATION region, a live playhead that follows ▶ Play / ■ Stop, and a scrubber
 // that pauses the preview. Also pins the "design view": after every rebuild the canvas shows
 // the graphic SETTLED (never blank), with clocks/loops idle until a real Play.
 //
-// Lower thirds moved to the data-block step timeline, so the classic strip's coverage lives
-// on a still-legacy category: info cards. "Hairline Card" (card01) is the deliberate sibling
-// of the lower-third Hairline — same default preset (line-reveal), an accent, masked lines —
-// but with THREE lines (f0 Heading, f1 Line 1, f2 Line 2), so counts and timings shift.
+// WHAT THIS SUITE IS FOR, NOW THAT EVERY CATEGORY CREATES AS A DATA BLOCK. The classic strip
+// is no longer any category's default surface — but it is not dead code, and Phase 8 keeps it
+// (docs/DYNAMIC_MOTION_SCOPE.md §8.1). It serves LEGACY TEMPLATES: a project saved before the
+// migration, an imported one, hand-written GSAP the importer refuses. Those must still render
+// truthfully and stay editable, because regenerating them would throw away their owner's
+// tuning — and "code is the single source of truth" forbids that.
+//
+// So the fixture is exactly that: a Hairline Card created as a data block, then rewritten back
+// to its preset's LEGACY emit and applied — the same template an old saved project holds.
+// card01 is the deliberate sibling of the lower-third Hairline (same default preset,
+// line-reveal, an accent, masked lines) but with THREE lines (f0 Heading, f1 Line 1, f2 Line 2),
+// so counts and timings shift.
+
+/** card01's legacy twin: its default preset (line-reveal) emitted the old way. */
+const toLegacyRegion = (page: Page, steps: boolean) =>
+  applyLegacyRegion(page, { prefix: 'info-card', presetId: 'line-reveal', steps });
 
 async function createHairlineCard(page: Page) {
   await page.goto('/app');
@@ -19,6 +32,7 @@ async function createHairlineCard(page: Page) {
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await page.waitForTimeout(650);
+  await toLegacyRegion(page, false);
 }
 
 /** Hairline Card with the wizard's step-reveal checkbox on: reveal groups start as
@@ -36,6 +50,7 @@ async function createHairlineCardWithSteps(page: Page) {
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await page.waitForTimeout(650);
+  await toLegacyRegion(page, true);
 }
 
 function frame(page: Page): FrameLocator {

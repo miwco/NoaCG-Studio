@@ -1,4 +1,5 @@
 import { test, expect, type Page, type FrameLocator } from '@playwright/test';
+import { applyLegacyRegion } from './_legacy';
 
 // Core UI flows for the choose-first creation wizard + live panels.
 
@@ -152,14 +153,15 @@ test('style panel: accent retints the live preview', async ({ page }) => {
 });
 
 test('timeline strip: preset swap jumps to the JS tab and still plays', async ({ page }) => {
-  // The classic strip still serves the not-yet-migrated categories — an info card here
-  // (lower thirds create as data blocks and use the step timeline instead).
+  // The classic strip serves LEGACY TEMPLATES — every category creates as a data block now, so
+  // its subject is a project saved before the migration (see e2e/_legacy.ts).
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
   await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
   await createFromCurrentStep(page);
+  await applyLegacyRegion(page, { prefix: 'info-card', presetId: 'line-reveal' });
 
   // The ▶ In card is selected by default — its preset picker swaps the entrance.
   await page.getByTestId('timeline-phase-preset').selectOption('mask-wipe');

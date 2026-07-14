@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { applyLegacyRegion } from './_legacy';
 
 // Timeline v2 Phase 3 — the read-first step timeline behind the dock toggle: step clips
 // with cue markers on a time ruler, a click/drag playhead that scrubs the real preview
@@ -771,8 +772,12 @@ test('v2: scoreboards create as data blocks — the score pop keeps working arou
     .toBeGreaterThan(1.05);
 });
 
-test('v2: legacy categories keep the classic strip, can peek at v2, and convert on demand', async ({ page }) => {
-  // Info cards have not migrated: classic is their default editing surface.
+test('v2: a legacy TEMPLATE keeps the classic strip, can peek at v2, and converts on demand', async ({ page }) => {
+  // Every category creates as a data block now, so the classic strip's remaining subject is a
+  // legacy TEMPLATE — a project saved before the migration, an import, hand-written GSAP. The
+  // dock picks the surface from the CODE, never from the category, which is what makes that
+  // work. Build one the way a saved project holds it: create, then write the preset's legacy
+  // emit back over the region.
   await page.goto('/app');
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="template"]').click();
@@ -781,6 +786,9 @@ test('v2: legacy categories keep the classic strip, can peek at v2, and convert 
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await page.waitForTimeout(650);
+  await expect(page.getByTestId('timeline-v2')).toBeVisible(); // it created as a data block…
+  await applyLegacyRegion(page, { prefix: 'info-card', presetId: 'line-reveal' });
+  // …and now it is legacy code, so the dock hands it to the classic strip.
   await expect(page.getByTestId('timeline')).toBeVisible();
   await expect(page.getByTestId('timeline-v2')).toHaveCount(0);
   // The chip opens the v2 read view…
