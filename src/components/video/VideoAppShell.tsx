@@ -156,7 +156,12 @@ export default function VideoAppShell() {
           {(project.durationInFrames / project.fps).toFixed(1)}&thinsp;s
         </span>
         {autosaveFailed && (
-          <span className="status-bad" style={{ fontSize: 11, marginLeft: 10 }} title="Browser storage is full - remove large assets or save space, or your latest changes won't survive a reload">
+          <span
+            className="status-bad"
+            style={{ fontSize: 11, marginLeft: 10 }}
+            data-testid="video-autosave-failed"
+            title="Browser storage is full - remove large assets or save space, or your latest changes won't survive a reload"
+          >
             ⚠ autosave failing
           </span>
         )}

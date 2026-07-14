@@ -294,3 +294,27 @@ test('reload restores the project; save/reopen and the SPX switch work', async (
   await expect(page.getByTestId('video-shell')).toBeVisible();
   await waitForGeneration(page);
 });
+
+test('an oversized project says so instead of losing the work silently', async ({ page }) => {
+  // Video assets are data URLs inside the autosaved project, so a few big ones exhaust the
+  // browser's storage. Each of these PASSES the 3 MB per-asset cap (a data URL runs about 4/3
+  // of the raw bytes) but together they blow the ~5 MB localStorage ceiling. The save must fail
+  // LOUDLY: the alternative is a project that looks saved and isn't, and a reload that quietly
+  // throws away the last edits.
+  await createCountdownProject(page);
+  await waitForGeneration(page);
+
+  await page.getByTestId('video-tab-assets').click();
+  const bulky = (bytes: number) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#111"/><!--${'x'.repeat(bytes)}--></svg>`;
+  await page.locator('input[type=file]').setInputFiles(
+    ['a', 'b', 'c'].map((n) => ({
+      name: `${n}.svg`,
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(bulky(1_500_000)),
+    })),
+  );
+  await expect(page.locator('.video-asset-list li')).toHaveCount(3); // each one was accepted
+
+  await expect(page.getByTestId('video-autosave-failed')).toBeVisible({ timeout: 10_000 });
+});

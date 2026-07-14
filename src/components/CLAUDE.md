@@ -261,10 +261,27 @@ panels use, editing `project.inputs` live through store.setInputValue - so a non
 changes the headline/accent/score/logo without touching TSX and the preview updates instantly
 via the player host's set-props channel; the image control is an asset PICKER over the project's
 uploaded assets by logical name - uploading itself lives in the Assets tab, which enforces the
-manifest budget; per-field Reset comes from the shared row, "Reset all" from the panel),
+manifest budget; per-field Reset comes from the shared row, "Reset all" from the panel. The panel
+also shows inputs INFERRED FROM THE CODE (model/videoInputInfer.ts): any `fields.<key> ?? default`
+the module reads but nobody declared, badged `code` - the code is the source of truth, so a pro
+who hand-writes a field gets the same control the AI would have declared. A declared input wins
+(it carries a label, select options, number bounds a fallback can't express); an inferred one is
+adopted into project.inputs on its first edit, which is why store.setInputValue takes the whole
+input, not just a key),
 **VideoSettingsPanel**
-(undoable patchSettings; duration edits in seconds, fps changes preserve seconds),
-**VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the render manifest budget),
+(undoable patchSettings; duration edits in seconds, fps changes preserve seconds. Settings drive
+the player and the renderer at once but NOT the composition's code, which was written against
+whatever they were at generation time - so the project records that (`authoredFor`) and the panel
+reports any DRIFT (videoTypes.ts settingsDrift: duration, fps, frame size, transparency) with a
+one-click "update the code", which goes through store.requestAi -> the CHAT panel's one AI path,
+so it lands as a normal turn and undoes like any other edit. The render preflight repeats the
+warning. `authoredFor: null` = provenance unknown (the starter, or a pre-existing saved project):
+warn about nothing),
+**VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the render manifest budget; uploads
+go through video/types.ts uniqueVideoAssetPath so an asset's LOGICAL NAME is settled once, into
+the immutable path - adding or deleting another asset must never rename one, because the code and
+image-input values point at that name. A few big assets can still exhaust localStorage: the save
+fails LOUDLY (the shell's `video-autosave-failed` flag), never silently),
 **VideoExportPanel** (mounts **VideoRenderPanel** when isRenderConfigured() - kind:'remotion'
 manifests through the shared render service, with an upload-budget meter; plus the .tsx
 source download). **SavedVideoProjects** = the 📁 My videos modal

@@ -54,9 +54,27 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   image input adds NO bytes to the render manifest budget. `videoFieldValues(inputs)` builds
   the `{key: value}` bag passed as `fields` into BOTH the live preview (VideoPlayerFrame
   set-props) and the render (buildVideoManifest inputProps). `mergeVideoInputs(prev, next)`
-  adopts a regenerated set while keeping values the user already edited.
+  adopts a regenerated set while keeping values the user already edited - and a provider that
+  simply DIDN'T re-declare its inputs must send `null`, not `[]`, or the merge empties the user's
+  Content panel and reverts their text to the code defaults (`[]` means "no editable content" and
+  is honoured as such; see ai/video/claudeVideoProvider.ts).
   `videoInputDescriptor(input)` is the adapter to the shared `FieldDescriptor` (fieldModel.ts)
   the Content panel renders - the same descriptor an SPX DataField becomes.
+  **`authoredFor`** = the settings the current code was WRITTEN against (null until a generation
+  lands). The AI plans motion to a duration and a frame and writes the resulting numbers into the
+  code; changing the settings afterwards changes the player and the renderer but NOT that code, so
+  a shortened piece loses its exit and a composition that paints its own background still renders
+  opaque under `transparent`. `settingsDrift(project)` says what no longer matches, in the user's
+  words, and `driftRequest(project)` is the refinement that brings the code up to date (the
+  Settings panel's one-click offer).
+- **videoInputInfer.ts** - reads a composition's editable inputs OUT OF ITS CODE: every
+  `fields.<key> ?? <literal>` the module reads, typed from the fallback (a hex string is a colour,
+  a number is a number, an `assets[String(fields.x ?? '')]` lookup is an image). The code is the
+  source of truth, so it decides what is editable - a hand-written field gets the same control the
+  AI would have declared. `contentInputs(declared, tsx)` is what the Content panel shows: declared
+  inputs first and unchanged (they carry labels/options/bounds a fallback can't express), then
+  whatever else the code reads. A read with NO literal fallback is ignored on purpose - without a
+  default there is nothing to show, reset to, or type the control from.
 - **fieldModel.ts** - the canonical editable-field vocabulary shared across the two authoring
   worlds. `FieldKind` = the kinds the product supports (text/lines/number/color/select/toggle/
   image); the video Template Definition uses the `VideoFieldKind` subset (`VideoInputType`,
