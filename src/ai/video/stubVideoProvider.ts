@@ -367,8 +367,8 @@ export default function Composition(${COMP_PROPS}) {
   const accent = String(fields.accent ?? '#f6a623');
 
   const bar = spring({ frame, fps, config: { damping: 20, stiffness: 170 } });
-  const title = spring({ frame: frame - Math.round(fps * 0.22), fps, config: { damping: 16, stiffness: 140 } });
-  const kicker = spring({ frame: frame - Math.round(fps * 0.45), fps, config: { damping: 20, stiffness: 160 } });
+  const titleIn = spring({ frame: frame - Math.round(fps * 0.22), fps, config: { damping: 16, stiffness: 140 } });
+  const subtitleIn = spring({ frame: frame - Math.round(fps * 0.45), fps, config: { damping: 20, stiffness: 160 } });
 
   const exitStart = durationInFrames - Math.round(fps * 0.5);
   const exit = interpolate(frame, [exitStart, durationInFrames], [0, 1], {
@@ -391,7 +391,7 @@ export default function Composition(${COMP_PROPS}) {
         <div style={{ overflow: 'hidden', padding: '0.02em 0' }}>
           <div
             style={{
-              transform: \`translateY(\${(1 - title) * 100}%)\`,
+              transform: \`translateY(\${(1 - titleIn) * 100}%)\`,
               color: '#f4f6fa',
               fontFamily: '"Arial Black", "Arial Bold", Arial, sans-serif',
               fontSize: Math.round(height * 0.13),
@@ -410,7 +410,7 @@ export default function Composition(${COMP_PROPS}) {
             alignItems: 'center',
             gap: 12,
             marginTop: Math.round(height * 0.028),
-            opacity: kicker,
+            opacity: subtitleIn,
           }}
         >
           {logo && <Img src={logo} style={{ height: Math.round(height * 0.05), objectFit: 'contain' }} />}

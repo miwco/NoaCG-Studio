@@ -45,17 +45,29 @@ const FORBIDDEN: { re: RegExp; what: string; instead: string }[] = [
 export type CompileResult = { ok: true; js: string } | { ok: false; error: string };
 
 export function compileTsx(tsx: string): CompileResult {
+  let code: string;
   try {
-    const { code } = transform(tsx, {
+    code = transform(tsx, {
       transforms: ['typescript', 'jsx', 'imports'],
       jsxRuntime: 'automatic',
       production: true,
-    });
-    return { ok: true, js: code };
+    }).code;
   } catch (e) {
     // sucrase errors carry line:col in the message.
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+  // sucrase is token-based and does NO scope analysis, so it silently accepts source a JS
+  // engine rejects at parse time (a duplicate `const`, a stray reserved word). Parse the
+  // emitted module the way the player host will - construct a Function, never execute it -
+  // so those surface here as a clean compile error instead of an opaque failure once the
+  // host tries to evaluate the module. (The app already relies on Function on the main
+  // thread; see model/spxDefinition.ts.)
+  try {
+    new Function('exports', 'require', 'module', code);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  return { ok: true, js: code };
 }
 
 /** Static contract checks on the SOURCE (before/independent of the live probe). */

@@ -70,6 +70,24 @@ test('the logo-reveal example renders a designed wordmark, not a placeholder', a
   await expect(player(page).getByText('LOGO', { exact: true })).toHaveCount(0);
 });
 
+test('a generic prompt renders the default title sample without errors', async ({ page }) => {
+  // Regression guard: a brief matching none of the sample keywords (countdown/stinger/
+  // news/logo) falls through to the default title composition. The example chips never
+  // exercise that path, and a duplicate `const title` once made it crash at load with
+  // "Identifier 'title' has already been declared". It must compile and render.
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Video or animation with AI' }).click();
+  await page.getByTestId('video-prompt').fill('a nice clean opener for my channel');
+  await page.getByTestId('video-create').click();
+  await expect(page.getByTestId('video-shell')).toBeVisible();
+  await waitForGeneration(page);
+
+  // The default sample renders its title, with no compile or runtime error banner.
+  await expect(page.getByTestId('video-code-error')).toHaveCount(0);
+  await expect(page.getByTestId('video-preview-error')).toHaveCount(0);
+  await expect(player(page).getByText('Main Title')).toBeVisible({ timeout: 10_000 });
+});
+
 test('scrubbing seeks the composition deterministically', async ({ page }) => {
   await createCountdownProject(page);
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
