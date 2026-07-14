@@ -282,16 +282,18 @@ fix findings properly rather than sprinkling eslint-disable comments.
 
 ## Git
 
-- Work happens on `main` (the old feature branches were merged and deleted). Only branch if the user
-  asks.
-- The working rhythm in this repo: **commit each completed, verified phase/step** with a descriptive
-  message. **Never add a `Co-Authored-By` trailer or any agent co-author** (the user's global rule).
-- **Never merge or push to `main` from a worktree on your own** - not `safe-merge`, not
-  `git merge` into main, not `git push origin main`. Several worktrees are usually active at once,
-  and auto-landing each one races the others. Commit verified work to the FEATURE BRANCH and STOP;
-  only merge/push to `main` when the user explicitly gives the safe-merge command in that message.
-  (This supersedes the older "push to main without asking" note - that was about not re-asking
-  before a push, not license to initiate a landing from a worktree.)
+- Most work happens in a **git worktree on a feature branch** - several are usually active at once.
+  If a session ever starts on `main` with work to do, branch first.
+- The working rhythm in this repo: **commit each completed, verified phase/step** to the FEATURE
+  BRANCH with a descriptive message. **Never add a `Co-Authored-By` trailer or any agent co-author**
+  (the user's global rule).
+- **`main` is only ever touched when the user asks for it, in that message.** Nothing lands on your
+  own initiative: no commit made while sitting on `main`, no `git merge` into main, no
+  `git push origin main`, no `safe-merge`. Several worktrees are usually active at once, and
+  auto-landing each one races the others - and the user wants to review before anything lands.
+  Commit verified work to the feature branch, report, and STOP. (This supersedes the older "push to
+  main without asking" note - that was about not re-asking before a push, not license to initiate a
+  landing.)
 - **Commit messages:** write clear, human-readable messages that explain the actual change - they
   must be understandable to any outside developer reading the history cold. No chat/session
   language, internal planning names, or AI-sounding phrases ("as requested", "starting era 5",
