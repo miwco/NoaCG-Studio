@@ -17,9 +17,13 @@ tl.call(startClock/stopClock) inside the region — the keyframe model has no ca
 representation and the importer silently drops them, so they need a lifecycle-hook design
 first; QUIZ's Continue is wrapper-driven (next() → revealAnswer, settings.steps='2' with
 no data step) — the steps derivation would rewrite steps to '1' on the first edit and
-break the reveal, so it needs a wrapper-steps representation; credits/tickers/infographics
-still need the loop representation. INFO CARDS flip LAST of all: they host the classic
-strip's spec suite (Hairline Card), and after this wave no other legacy category supports
+break the reveal, so it needs a wrapper-steps representation. GAME TIMERS flipped on the
+step-call model (§3b), and STARTING SOON flipped on the loop model (gap 6 — its ambient breath
+is a repeating scale track; the countdown rides the step calls). A correction to the original
+audit: TICKERS and CREDITS are NOT loop-blocked — their travel is DOM-measured (`scrollWidth`,
+`clientHeight`), which the static keyframe model cannot express, so loop/yoyo does not unblock
+them; they need a separate dynamic-value primitive. INFO CARDS flip LAST of all: they host the
+classic strip's spec suite (Hairline Card), and after this wave no other legacy category supports
 the steps toggle — the suite retires together with the strip in Phase 8.**
 
 **Ratified (2026-07-10) with twelve review adjustments, integrated below.**
@@ -341,10 +345,12 @@ categories: starting soon and game timers embed `tl.call(startClock)` /
 lines — converting those templates would kill the countdown. This section defines the
 representation that unblocks them; it is now implemented, and **game timers create as data
 blocks** on the back of it (the parity harness in `e2e/anim-engine.spec.ts` pins the clock
-lifecycle). **Explicitly out of scope:** quiz's wrapper-driven Continue (a
-steps-representation question, not a lifecycle one) and the loop categories' endless
-timelines — starting soon stays on the legacy emit because its ambient hold is an infinite
-loop the importer refuses (`inPhase.infinite`), not because of the calls.
+lifecycle). **Explicitly out of scope for this section:** quiz's wrapper-driven Continue (a
+steps-representation question, not a lifecycle one) and the loop categories' endless timelines.
+*(Update: the loop/yoyo primitive — PRESET_MODEL_REVIEW gap 6 — since landed, and STARTING SOON
+now flips too: its ambient breath imports as a looping scale track, and these same step calls
+carry its startClock/stopClock. Tickers/credits still don't flip — their travel is DOM-measured,
+a separate gap, not a loop one.)*
 
 **Reconciliation note:** the `hides` early-exit twin shipped after this section was drafted,
 so the step's canonical key order is `name, duration, ease, reveals, hides, calls, layers`

@@ -14,7 +14,8 @@ function clone(data: AnimData): AnimData {
   return JSON.parse(JSON.stringify(data)) as AnimData;
 }
 
-/** Drop empty tracks and layer entries so the emitted block never carries dead weight. */
+/** Drop empty tracks and layer entries so the emitted block never carries dead weight, and
+ *  any loop entry whose track no longer exists (a loop is meaningless without its keyframes). */
 function prune(data: AnimData): AnimData {
   for (const step of data.steps) {
     for (const [selector, tracks] of Object.entries(step.layers)) {
@@ -22,6 +23,15 @@ function prune(data: AnimData): AnimData {
         if (kfs.length === 0) delete tracks[prop];
       }
       if (Object.keys(tracks).length === 0) delete step.layers[selector];
+    }
+    if (step.loops) {
+      for (const [selector, perProp] of Object.entries(step.loops)) {
+        for (const prop of Object.keys(perProp)) {
+          if (!step.layers[selector]?.[prop]) delete perProp[prop];
+        }
+        if (Object.keys(perProp).length === 0) delete step.loops[selector];
+      }
+      if (Object.keys(step.loops).length === 0) delete step.loops;
     }
   }
   return data;
@@ -321,6 +331,12 @@ export function resizeStep(
       }
     }
     for (const c of step.calls ?? []) c.time = round(c.time * f);
+    // A loop's pause is a time quantity too — stretch scales it with the keyframes it gates.
+    for (const perProp of Object.values(step.loops ?? {})) {
+      for (const loop of Object.values(perProp)) {
+        if (loop.repeatDelay) loop.repeatDelay = round(loop.repeatDelay * f);
+      }
+    }
   }
   step.duration = to;
   return next;

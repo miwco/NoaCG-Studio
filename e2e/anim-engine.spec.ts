@@ -207,6 +207,71 @@ test('parity: clock templates carry startClock/stopClock through the step-call m
   expect(failures).toEqual([]);
 });
 
+test('parity: starting-soon flips to a data block and its ambient loop matches the legacy emit', async ({ page }) => {
+  test.setTimeout(60_000);
+  await toApp(page);
+  // docs/PRESET_MODEL_REVIEW.md gap 6 — the loop/yoyo primitive lets starting-soon migrate:
+  // its breathing hold (a scale track with repeat:-1, yoyo:true) is now describable as data,
+  // and the converted interpreter must breathe identically to the legacy emit (and start/stop
+  // the clock in the same places). Tickers/credits stay legacy (DOM-measured) — pinned below.
+  const failures = await page.evaluate(`(async () => {
+    ${HARNESS}
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const { resolveValue } = await import('/src/blocks/animEval.ts');
+    const failures = [];
+    const PULSE = '.starting-soon-pulse';
+
+    const tpl = variantById('ss01').create({ animation: { presetId: 'hold-loop' } });
+    if (!tpl.js.includes('var NOACG_ANIM')) return ['starting-soon did not flip to a data block'];
+    const data = parseAnimData(tpl.js);
+    if (!data) return ['the converted data block is not readable'];
+    // The ambient breath imported as a per-track loop on the pulse element.
+    const loop = data.steps[0].loops && data.steps[0].loops[PULSE] && data.steps[0].loops[PULSE].scale;
+    if (!loop) failures.push('no loop on the pulse (' + JSON.stringify(data.steps[0].loops) + ')');
+    else {
+      if (loop.repeat !== -1) failures.push('pulse loop repeat ' + loop.repeat + ' != -1');
+      if (loop.yoyo !== true) failures.push('pulse loop is not a yoyo');
+    }
+
+    const wNew = await boot(tpl);
+    const wOld = await boot(await legacyTwin(tpl, 'hold-loop', false));
+    const speed = data.speed || 1;
+
+    // The breath itself: sample the pulse scale across several periods — the converted loop
+    // must track the legacy tween (both eased sine yoyos with the same phase).
+    const inOld = wOld.buildInTimeline(); inOld.pause();
+    const inNew = wNew.buildInTimeline(); inNew.pause();
+    for (const t of [1.2, 2.0, 3.0, 4.5, 6.0, 8.0]) {
+      inOld.pause(t); inNew.pause(t);
+      const so = Number(wOld.gsap.getProperty(PULSE, 'scaleX'));
+      const sn = Number(wNew.gsap.getProperty(PULSE, 'scaleX'));
+      if (Math.abs(so - sn) > 0.01) failures.push('pulse scale @' + t + 's: legacy ' + so + ' vs data ' + sn);
+      // The loop-aware resolver folds the same time into the same value (linear vs eased
+      // differ only mid-tween by a sliver at this amplitude).
+      const resolved = Number(resolveValue(data, PULSE, 'scale', 0, t * speed));
+      if (Math.abs(resolved - sn) > 0.02) failures.push('resolver @' + t + 's: ' + resolved + ' vs interp ' + sn);
+    }
+
+    // Clock lifecycle survives the flip: startClock on the entrance, stopClock on the exit,
+    // identically in both representations (the §3b step-call contract).
+    for (const w of [wOld, wNew]) { w.__started = 0; w.__stopped = 0; w.startClock = function () { w.__started++; }; w.stopClock = function () { w.__stopped++; }; }
+    wOld.buildInTimeline().progress(1); wNew.buildInTimeline().progress(1);
+    wOld.buildOutTimeline().progress(1); wNew.buildOutTimeline().progress(1);
+    if (wOld.__started < 1) failures.push('legacy startClock never fired');
+    if (wOld.__started !== wNew.__started) failures.push('startClock count ' + wOld.__started + ' vs ' + wNew.__started);
+    if (wOld.__stopped !== wNew.__stopped) failures.push('stopClock count ' + wOld.__stopped + ' vs ' + wNew.__stopped);
+
+    // Tickers stay legacy: their motion is DOM-measured / nested, so the importer refuses.
+    for (const v of ['tk01', 'tk02']) {
+      const t = variantById(v).create({});
+      if (t.js.includes('var NOACG_ANIM')) failures.push(v + ' should NOT have flipped (DOM-measured loop)');
+    }
+    return failures;
+  })()`);
+  expect(failures).toEqual([]);
+});
+
 test('resolver: agrees with the real interpreter at keyframe times', async ({ page }) => {
   await toApp(page);
   const mismatches = await page.evaluate(`(async () => {
@@ -320,11 +385,22 @@ test('serializer: canonical fixed point, lossless splice, hand-edit round-trip',
     const values = [];
     for (const s of reparsed.steps) for (const l of Object.values(s.layers))
       for (const kfs of Object.values(l)) for (const kf of kfs) values.push(kf.value);
+    // The loops field is a new serialized shape — it must round-trip and stay a fixed point
+    // too. Starting-soon carries a real loop; serialize/parse/serialize is byte-identical and
+    // the loop survives with its repeat/yoyo intact.
+    const loopTpl = variantById('ss01').create({ animation: { presetId: 'hold-loop' } });
+    const loopData = parseAnimData(loopTpl.js);
+    const loopOnce = serializeAnimData(loopData);
+    const loopTwice = serializeAnimData(parseAnimData('var NOACG_ANIM = ' + loopOnce + ';'));
+    const roundLoop = parseAnimData('var NOACG_ANIM = ' + loopOnce + ';').steps[0].loops;
+    const roundPulse = roundLoop && roundLoop['.starting-soon-pulse'] && roundLoop['.starting-soon-pulse'].scale;
     return {
       fixedPoint: once === twice,
       spliceKeepsInterpreter: spliced.includes('function buildStepTimeline') && spliced.includes('"duration": 1.5'),
       spliceKeepsOutsideCode: spliced.split('== ANIMATION')[0] === js.split('== ANIMATION')[0],
       handEditSeen: values.includes(90) && values.includes(110),
+      loopFixedPoint: loopOnce === loopTwice,
+      loopSurvives: !!roundPulse && roundPulse.repeat === -1 && roundPulse.yoyo === true,
     };
   })()`);
   expect(result).toEqual({
@@ -332,5 +408,7 @@ test('serializer: canonical fixed point, lossless splice, hand-edit round-trip',
     spliceKeepsInterpreter: true,
     spliceKeepsOutsideCode: true,
     handEditSeen: true,
+    loopFixedPoint: true,
+    loopSurvives: true,
   });
 });

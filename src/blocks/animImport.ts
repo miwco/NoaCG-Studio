@@ -9,7 +9,7 @@ import { parseTimeline, type TimelineCall, type TimelineTween } from './timeline
 import { getTemplateParts } from '../model/structure';
 import { detectPrefix } from '../model/structure';
 import type { SpxTemplate } from '../model/types';
-import type { AnimCall, AnimData, AnimKeyframe, AnimStep } from './animData';
+import type { AnimCall, AnimData, AnimKeyframe, AnimLoop, AnimStep } from './animData';
 
 /** The settled design state per property — the FROM value for legacy `to()` tweens (a
  *  to() animates from "wherever the element rests", which for the catalog's emitted
@@ -69,6 +69,18 @@ function tweenToKeyframes(step: AnimStep, tween: TimelineTween, speed: number, r
         value: to,
         ...(tween.ease ? { ease: tween.ease } : {}),
       });
+      // A repeating tween carries a per-track loop (an ambient breath). Only reached for
+      // loops with finite literal values — the phase-level convertibility gate refuses the
+      // rest (a marquee's DOM-measured travel) before this runs. repeatDelay stores back to
+      // the speed-relative clock, like keyframe times.
+      if (tween.loop) {
+        const loops = (step.loops ??= {});
+        const perProp = (loops[selector] ??= {});
+        const spec: AnimLoop = { repeat: tween.loop.repeat };
+        if (tween.loop.yoyo) spec.yoyo = true;
+        if (tween.loop.repeatDelay) spec.repeatDelay = round(tween.loop.repeatDelay * speed);
+        perProp[prop] = spec;
+      }
     }
   });
 }
@@ -101,10 +113,11 @@ export function importAnimData(template: SpxTemplate): AnimData | null {
   const inPhase = model.phases.find((p) => p.id === 'in') ?? model.phases[0];
   const outPhase = model.phases.find((p) => p.id === 'out') ?? model.phases[model.phases.length - 1];
   if (!inPhase || !outPhase) return null;
-  // Endless loops (tickers' marquees, credit rolls) are runtime-owned motion the keyframe
-  // model deliberately does not describe — those categories keep their own emits until
-  // their Phase 5 migration decides the loop representation.
-  if (inPhase.infinite || outPhase.infinite) return null;
+  // A loop the keyframe model can describe — a `tl` tween repeating over finite literal
+  // values (a breathing pulse) — imports as step data (see loops below). A loop that is
+  // DOM-measured (a marquee's x:-scrollWidth) or lives on a nested gsap.timeline (ticker's
+  // item flip) can't be described, so those templates stay legacy (the honest refusal).
+  if (!inPhase.loopsConvertible || !outPhase.loopsConvertible) return null;
 
   const enter: AnimStep = {
     name: 'Enter',

@@ -31,11 +31,15 @@ src/templates/shared/animRuntime.ts). These modules are the editor's side of tha
 editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 
 - **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps;
-  a step = name/duration/ease/reveals?/hides?/calls?/layers (durations and keyframe times are
-  speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become
+  a step = name/duration/ease/reveals?/hides?/calls?/loops?/layers (durations and keyframe times
+  are speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become
   visible in that step, `hides` the layers that LEAVE in it - the early-exit twin, its existence
   span ends there instead of at the final Out; both are explicit data, never inferred from
-  keyframes). `calls` are lifecycle hooks - `{ time, call }` where `call` is a bare identifier
+  keyframes). `loops` is `loops[selector][prop] = { repeat, yoyo?, repeatDelay? }` - a per-track
+  loop (GSAP values: repeat -1 = forever, yoyo = breathe back and forth): the interpreter plays
+  that track in its own repeating sub-timeline, so an ambient breath lives in the same data as
+  every other track (the `layers` arrays are untouched - loops sit beside them). `calls` are
+  lifecycle hooks - `{ time, call }` where `call` is a bare identifier
   naming a global template function (a clock engine's `startClock`/`stopClock`); the interpreter
   fires them via `window[name]` at their moment on the step's clock (no eval, ever), and settle
   suppresses them like any GSAP callback (docs/TIMELINE_V2_PLAN.md §3b). A keyframe is
@@ -67,7 +71,9 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   keyframe holds backward to the step start; between keyframes numbers interpolate LINEARLY
   (the eased in-between is the preview's job - at keyframe times the two agree exactly);
   strings hold the previous keyframe; a step without the track inherits the last keyframe
-  value from an earlier step; null = the layer's design (CSS) state. Plus
+  value from an earlier step; null = the layer's design (CSS) state. A LOOPING track folds the
+  query time back into one pass (loopedTime: GSAP repeat/yoyo/repeatDelay math), so the
+  Inspector number tracks the repeating preview. Plus
   stepSeconds/stepOffsets/activationStep/hideStep helpers (hideStep = the step a layer leaves,
   its `hides` step else the final Out).
 - **animImport.ts** - the one-time legacy converter: parses a legacy marked region via
@@ -76,7 +82,12 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   hooks with their resolved positions (parsePhase walks tweens + calls in one document-ordered
   pass; a call never shifts a tween's INDEX, so the legacy patchers are untouched), and the
   importer attaches them to the enter/out step as speed-relative `calls` - this is what lets
-  game timers flip to data blocks. Used for read-only rendering of legacy templates on the new
+  game timers flip to data blocks. It also reads a repeating tween's loop (repeat/yoyo/
+  repeatDelay) and writes a step `loop` when the tween's values are finite LITERALS (a breathing
+  pulse - this is what lets STARTING SOON flip); a DOM-measured loop (a marquee's `x:-scrollWidth`)
+  or a nested-timeline loop (ticker's item flip) fails the phase's `loopsConvertible` gate and the
+  whole template stays legacy - tickers/credits are NOT unblocked by loop/yoyo (their travel is
+  DOM-measured, a separate gap). Used for read-only rendering of legacy templates on the new
   timeline AND the explicit, undoable convert-on-first-motion-edit; templates the old parser
   cannot read stay hand-crafted - the importer never guesses.
 - **presetApply.ts** - presets as keyframe generators DERIVED from their legacy emitters

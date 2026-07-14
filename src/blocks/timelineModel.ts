@@ -40,6 +40,10 @@ export interface TimelineTween {
    *  quoted strings, bookkeeping stripped) — the legacy→data converter reads these. */
   fromAll?: Record<string, number | string>;
   toAll?: Record<string, number | string>;
+  /** A repeating tween's loop spec (GSAP repeat/yoyo/repeatDelay), or null. Times are in
+   *  phase seconds (animSpeed applied, like `duration`). The converter turns a loop with
+   *  finite literal values into step data; a DOM-measured loop stays read-only. */
+  loop?: { repeat: number; yoyo: boolean; repeatDelay: number } | null;
 }
 
 /** T5 — the basic transform properties the per-layer drawer edits. Deliberately small:
@@ -77,6 +81,10 @@ export interface TimelinePhase {
   calls: TimelineCall[];
   /** True when the phase contains an endless loop (repeat: -1) — tickers, holds. */
   infinite: boolean;
+  /** True when every `repeat:` in the phase is a `tl` loop tween with finite literal values
+   *  the keyframe converter can carry (an ambient breath), false when a repeat lives on a
+   *  nested timeline or a DOM-measured tween (a marquee) the importer must refuse. */
+  loopsConvertible: boolean;
 }
 
 /** T3 — one Continue press: which line GROUP reveals, how long, with which ease. */
@@ -223,7 +231,7 @@ export function buildOverview(model: TimelineModel, partOrder: string[], alwaysR
   return { sections, rowKeys, bars: bars.filter((b) => keep.has(b.rowKey)) };
 }
 
-const BOOKKEEPING_PROPS = new Set(['duration', 'stagger', 'ease', 'transformOrigin', 'clearProps', 'repeat', 'delay', 'onComplete']);
+const BOOKKEEPING_PROPS = new Set(['duration', 'stagger', 'ease', 'transformOrigin', 'clearProps', 'repeat', 'yoyo', 'repeatDelay', 'delay', 'onComplete']);
 
 const REGION_RE = /\/\* == ANIMATION[\s\S]*?== END ANIMATION == \*\//;
 // Tween calls only — the tween-INDEX contract the patchers rely on (locateCall/splitTween
@@ -299,6 +307,18 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
   // A quoted ease is a per-tween override; `ease: easeIn/easeOut` inherits the phase knob.
   const easeMatch = vars.match(/ease:\s*'([^']+)'/);
 
+  // A repeating tween (repeat/yoyo/repeatDelay). repeatDelay is stored in phase seconds like
+  // duration (divided by animSpeed when the emit writes `/ animSpeed`).
+  const repeatMatch = vars.match(/repeat:\s*(-?\d+)/);
+  const repeatDelayMatch = vars.match(/repeatDelay:\s*([\d.]+)\s*(\/\s*animSpeed)?/);
+  const loop = repeatMatch
+    ? {
+        repeat: Number(repeatMatch[1]),
+        yoyo: /yoyo:\s*true/.test(vars),
+        repeatDelay: repeatDelayMatch ? Number(repeatDelayMatch[1]) / (repeatDelayMatch[2] ? animSpeed : 1) : 0,
+      }
+    : null;
+
   // The position argument sits after the LAST object literal: '-=N' (overlap) or an
   // absolute `N / animSpeed` / bare number (what T2 writes). Inline comments between the
   // object and the position arg are stripped first — mask-wipe's exit writes
@@ -323,6 +343,7 @@ function parseCall(kind: TimelineTween['kind'], args: string, animSpeed: number)
     toVars,
     fromAll,
     toAll,
+    loop,
   };
 }
 
@@ -394,8 +415,22 @@ function parsePhase(id: TimelinePhase['id'], body: string, animSpeed: number): T
       toVars: parsed.toVars,
       fromAll: parsed.fromAll,
       toAll: parsed.toAll,
+      loop: parsed.loop,
     });
   }
+  // Every `repeat:` in the body must be a `tl` loop tween with finite literal values for the
+  // keyframe converter to carry it. A repeat that lives on a nested gsap.timeline (ticker's
+  // item flip) or a DOM-measured tween (a marquee's x:-width) can't be described as data —
+  // the importer refuses those templates and they stay legacy (the honest fallback).
+  const rawRepeats = (body.match(/repeat:\s*-?\d+/g) ?? []).length;
+  const tlLoops = tweens.filter((t) => t.loop);
+  const loopsConvertible =
+    rawRepeats === tlLoops.length &&
+    tlLoops.every((t) => {
+      const to = t.toAll ?? {};
+      const keys = Object.keys(to);
+      return keys.length > 0 && keys.every((p) => typeof to[p] === 'number' && Number.isFinite(to[p] as number));
+    });
   return {
     id,
     label: id === 'in' ? 'In' : 'Out',
@@ -403,6 +438,7 @@ function parsePhase(id: TimelinePhase['id'], body: string, animSpeed: number): T
     tweens,
     calls,
     infinite: /repeat:\s*-1/.test(body),
+    loopsConvertible,
   };
 }
 
