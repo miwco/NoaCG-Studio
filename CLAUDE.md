@@ -189,7 +189,9 @@ public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports;
                jetbrains-mono.woff2 doubles as the app UI's mono face)
 scripts/       dev-port.mjs (per-checkout port), l3-sweep.mjs (catalog sweep - see Verifying),
                renderDevPlugin.mjs (mounts api/render on the dev server), render-smoke.mjs +
-               make-render-manifest.mjs (render verification - see docs/RENDER.md),
+               render-smoke-video.mjs (the video project's Content -> render round trip,
+               checked in pixels) + make-render-manifest.mjs (render verification - see
+               docs/RENDER.md),
                hooks/ (Claude Code guard hooks wired in .claude/settings.json: commit-message
                style, protected generated files, per-file lint on edit, dev-server policy,
                e2e port preflight, session-start worktree sanity check + port orientation)

@@ -219,6 +219,15 @@ deployed functions run as ESM (`type: module`), where Node requires them.
   MP4 sniff + token probes, then a kind:'remotion' fixture through the same service plus
   a throwing-module job that must fail with a useful message. Not in CI (renders take
   minutes and download Chrome).
+- `node scripts/render-smoke-video.mjs` — the CONTENT → RENDER round trip for a video
+  project, checked in PIXELS. A video's editable inputs reach the live preview through the
+  player host's set-props channel but the render through `inputProps` in the manifest, so a
+  working preview proves nothing about the render. This builds the manifest with the app's
+  own modules (the calls VideoRenderPanel makes) from a project whose values were edited away
+  from their code defaults, renders a png-still for real, and reads the frame back: the
+  corner pixel must be the edited accent and the centre pixel the asset an IMAGE input names.
+  A dropped field renders the code's own fallback instead — which a container sniff cannot
+  see. Not in CI (same reason as above).
 - `node scripts/make-render-manifest.mjs <out> <variantId> [sec] [format] [fps] [scale]
   [createOptionsJson]` + `node render-worker/cli.mjs <manifest> <out>` — render any
   catalog variant by hand.
