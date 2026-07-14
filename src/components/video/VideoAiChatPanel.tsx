@@ -132,7 +132,7 @@ export default function VideoAiChatPanel() {
       const p = useVideoProjectStore.getState().project;
       const result = await getVideoAiProvider().refineVideo(
         text,
-        { tsx: p.tsx, chat: p.chat },
+        { tsx: p.tsx, chat: p.chat, inputs: p.inputs },
         contextFor(p),
         validate,
       );

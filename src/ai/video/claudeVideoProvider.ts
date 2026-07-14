@@ -48,6 +48,20 @@ function assetsText(ctx: VideoGenerateContext): string {
   return `Assets available via the assets prop (use these EXACT names, nothing else):\n${lines.join('\n')}`;
 }
 
+/**
+ * The inputs the module ALREADY declares, for a refinement. Without this the model has to
+ * re-infer the input set from the `fields.x ?? default` reads in the code, and a dropped or
+ * renamed key costs the user whatever they typed into the Content panel (values survive a
+ * refinement only key-by-key - model/videoTypes.ts mergeVideoInputs).
+ */
+function currentInputsText(inputs: VideoInput[]): string {
+  if (inputs.length === 0) return 'Editable inputs: none declared yet.';
+  const lines = inputs.map(
+    (i) => `- ${i.key} (${i.type}) "${i.label}", default ${JSON.stringify(i.default)}`,
+  );
+  return `Editable inputs the composition already declares - re-declare ALL of them with the SAME keys and types, and keep the code's \`fields.<key> ?? default\` fallbacks in step. Only add, remove, or rename a key when the request actually changes what content is editable; a key that silently changes loses the value the user typed into it:\n${lines.join('\n')}`;
+}
+
 /** Uploaded raster images as vision blocks so the model designs around what it sees. */
 function imageBlocks(ctx: VideoGenerateContext, assetData: Map<string, string>): ContentBlock[] {
   const blocks: ContentBlock[] = [];
@@ -209,9 +223,10 @@ function toMotionPlan(p: EmittedMotionPlan): MotionPlan {
 }
 
 /** Map the tool's declared inputs to project VideoInputs (value starts at the default). A
- *  missing/malformed inputs array yields [] - inputs are optional, never a pipeline failure. */
-function toInputs(emitted: EmittedInput[] | undefined): VideoInput[] {
-  if (!Array.isArray(emitted)) return [];
+ *  missing/malformed array yields null - "the model said nothing about inputs", which the
+ *  caller reads as "leave them alone". Never a pipeline failure: inputs are optional. */
+function toInputs(emitted: EmittedInput[] | undefined): VideoInput[] | null {
+  if (!Array.isArray(emitted)) return null;
   return emitted
     .filter((i) => i && typeof i.key === 'string' && i.key.length > 0)
     .map((i) => ({
@@ -264,7 +279,9 @@ class ClaudeVideoProvider implements VideoAIProvider {
       summary: emitted.summary,
       tsx: emitted.tsx,
       motionPlan: toMotionPlan(plan),
-      inputs: toInputs(emitted.inputs),
+      // A fresh generation defines the input set outright - an empty emit really does mean
+      // "this piece has no editable content", and there is nothing to preserve anyway.
+      inputs: toInputs(emitted.inputs) ?? [],
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],
       validation,
     };
@@ -272,7 +289,7 @@ class ClaudeVideoProvider implements VideoAIProvider {
 
   async refineVideo(
     request: string,
-    current: { tsx: string; chat: VideoChatMessage[] },
+    current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult> {
@@ -288,7 +305,7 @@ class ClaudeVideoProvider implements VideoAIProvider {
       role: m.role,
       content: m.text,
     }));
-    const finalText = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nModify the composition below. Change ONLY what the request needs - keep everything else as close to byte-identical as possible.\n\nRequest: ${request}\n\n=== Composition.tsx ===\n${current.tsx}`;
+    const finalText = `${settingsText(ctx)}\n${assetsText(ctx)}\n${currentInputsText(current.inputs)}\n\nModify the composition below. Change ONLY what the request needs - keep everything else as close to byte-identical as possible.\n\nRequest: ${request}\n\n=== Composition.tsx ===\n${current.tsx}`;
     const { emitted, validation } = await generateValidated(
       coderSystem(skills),
       [...history, { role: 'user', content: [...vision, { type: 'text', text: finalText }] }],
@@ -296,13 +313,20 @@ class ClaudeVideoProvider implements VideoAIProvider {
       model,
     );
 
+    // A refinement re-emits the COMPLETE module, so it re-declares its inputs, and merging
+    // against the current set (in applyResult) preserves values the user already edited.
+    // But an empty emit here is far more likely a model that forgot to repeat the array than
+    // a deliberate "this piece has no editable content" - and honouring it would silently
+    // empty the user's Content panel and revert their text to the code defaults. Treat it as
+    // "unchanged"; a refinement that really should drop an input still emits the others, so
+    // the genuine removal case survives.
+    const inputs = toInputs(emitted.inputs);
+
     return {
       summary: emitted.summary,
       tsx: emitted.tsx,
       motionPlan: null, // refinements keep the existing plan
-      // A refinement re-emits the complete module, so it re-declares its inputs; merging
-      // against the current set (in applyResult) preserves values the user already edited.
-      inputs: toInputs(emitted.inputs),
+      inputs: inputs && inputs.length > 0 ? inputs : null,
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],
       validation,
     };

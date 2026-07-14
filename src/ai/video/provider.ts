@@ -26,7 +26,10 @@ export interface VideoGenerateResult {
   /** The Motion Director's structured plan (null for refinements and the stub). */
   motionPlan: MotionPlan | null;
   /** The editable inputs the composition declares (its Template Definition). `null` means
-   *  "leave the current inputs unchanged" (e.g. a refinement that didn't re-declare them). */
+   *  "leave the current inputs unchanged"; `[]` means "this piece has NO editable content"
+   *  and wipes them. A provider must only send `[]` when it really means the empty set - a
+   *  refinement that simply didn't re-declare its inputs sends `null`, or the user's Content
+   *  panel empties out behind them. */
   inputs: VideoInput[] | null;
   /** The motion/design skills the harness loaded (informational). */
   skills: string[];
@@ -41,10 +44,12 @@ export interface VideoAIProvider {
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult>;
-  /** Iterative refinement of the current module (chat-driven targeted change). */
+  /** Iterative refinement of the current module (chat-driven targeted change). `current.inputs`
+   *  is the input set the module already declares - a provider that re-emits the whole module
+   *  needs it to keep the keys stable across the edit. */
   refineVideo(
     request: string,
-    current: { tsx: string; chat: VideoChatMessage[] },
+    current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult>;
