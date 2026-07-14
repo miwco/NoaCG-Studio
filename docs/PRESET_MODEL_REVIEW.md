@@ -103,8 +103,14 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   credits flipped to data blocks on this**, leaving only quiz and info cards on the legacy region.
   Design + the ratified decisions: `docs/DYNAMIC_MOTION_SCOPE.md`. The timeline renders a measured
   segment READ-ONLY (a hatched, open-ended bar naming the builder) — there is nothing to keyframe,
-  and the UI says so rather than implying an affordance. Loops and §3b calls are still
-  data-visible and code-editable but have no dedicated timeline glyph — a remaining polish.
+  and the UI says so rather than implying an affordance.
+- **Read-only glyphs for loops and §3b calls** — **DONE**. The three code-owned things in the data
+  are now all surfaced on the timeline, and all three are read-only: measured motion (above), a
+  LOOP repeat tail on the looping track's own row (starting at its last keyframe — the keyframes
+  are the pass and stay editable; only the repeat is annotated; `↻∞` / `↻×N`, `⇄` for yoyo; a
+  finite repeat ends exactly where it really ends, an endless one runs off the end), and a
+  LIFECYCLE row of named call pins (`startClock()`). The principle: the timeline never silently
+  hides motion, and never implies an affordance it doesn't have.
 - **Stagger as a step/tween field** (gap 4), **motion paths** (gap 3), **spring params** (gap 5).
   Each is a genuinely new primitive with its own UI; the interaction model currently, and
   deliberately, excludes motion paths and a graph editor.
