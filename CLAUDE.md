@@ -104,9 +104,11 @@ Directories marked * have their own CLAUDE.md with the binding per-area contract
 src/
   model/ *     data layer: SpxTemplate types, SPX definition parse/serialize, wizard catalog
                data, fonts, brand, packets, easings, autosaved project, template import,
-               layout + prefs, and structure.ts - the TemplatePart registry, THE shared
+               layout + prefs, structure.ts - the TemplatePart registry, THE shared
                element-identity contract (timeline, canvas selection, and step assignment all
-               name elements through it)
+               name elements through it) - and fieldModel.ts, THE shared editable-field
+               contract: an SPX DataField and a video input both become one FieldDescriptor,
+               so every surface that edits a field renders the same control
   templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 10 categories
                (lower thirds, info cards, end credits, tickers, starting soon, game timers,
                scoreboards, corner bug, infographics, quiz); also the :root style contract,
@@ -143,12 +145,12 @@ src/
                bridgeRegistry.ts, types.ts (asset logical names - the `assets` prop
                contract)
   validation/  validateTemplate.ts - runs before export and on AI output
-  control/     the modular control-panel engine: controlModel.ts (fields -> operator control
-               descriptors by ftype, ONE generator, no per-template code; controlChannelName +
-               ControlMessage protocol), controlPanelHtml.ts (the standalone controlpanel.html,
-               same descriptors, inline), receiverScript.ts (BroadcastChannel listener injected
-               into exported index.html), liveData.ts (editable published-CSV -> update()
-               polling block appended to template.js)
+  control/     the modular control-panel engine: controlModel.ts (fields -> shared FieldDescriptors
+               by ftype, ONE generator, no per-template code; controlChannelName +
+               ControlMessage protocol), controlPanelHtml.ts (the standalone controlpanel.html:
+               the SAME descriptors rendered in dependency-free vanilla JS), receiverScript.ts
+               (BroadcastChannel listener injected into exported index.html), liveData.ts
+               (editable published-CSV -> update() polling block appended to template.js)
   export/ *    the export registry - 6 targets (SPX starter, HTML overlay for OBS/vMix, H2R,
                CasparCG, OGraf, LiveOS) + whole-packet export + packaging conventions
   render/ *    video/image rendering contracts: the versioned RenderManifest, the

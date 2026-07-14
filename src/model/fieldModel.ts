@@ -24,3 +24,51 @@ export type FieldKind = 'text' | 'lines' | 'number' | 'color' | 'select' | 'togg
 
 /** The subset of FieldKind the AI video Template Definition (VideoInput) exposes. */
 export type VideoFieldKind = Extract<FieldKind, 'text' | 'number' | 'color' | 'select' | 'image'>;
+
+/**
+ * A field's value. Numbers stay numbers in the world that types them (a video number input);
+ * SPX sample data is a flat string map, so the SPX surfaces stringify at the boundary. A
+ * control always emits its kind's natural type - a number for `number`, a string otherwise.
+ */
+export type FieldValue = string | number;
+
+/** One choice of a `select` field. */
+export interface FieldOption {
+  label: string;
+  value: string;
+}
+
+/**
+ * Everything a control needs to render ONE editable field - the shared shape both worlds
+ * adapt into: an SPX DataField becomes a descriptor via control/controlModel.ts
+ * `fieldDescriptors`, and a video project's VideoInput via model/videoTypes.ts
+ * `videoInputDescriptor`. Every surface that lets a human change a field renders descriptors,
+ * never raw fields, so the SPX Data panel, the SPX operator panel, and the video Content panel
+ * are literally the same component (components/fields/FieldControl.tsx) and cannot drift. The
+ * standalone controlpanel.html export renders the same descriptors in dependency-free vanilla
+ * JS (control/controlPanelHtml.ts) - keep that renderer in step with this one.
+ */
+export interface FieldDescriptor {
+  /** The field's identity in its own world: 'f0' (SPX) or the `fields.<key>` prop (video). */
+  key: string;
+  /** The human label the operator sees. */
+  label: string;
+  kind: FieldKind;
+  /** The authored default: the code fallback and the per-field Reset target. */
+  defaultValue: FieldValue;
+  /** `select` only: the allowed choices. */
+  options?: FieldOption[];
+  /** `number` only: advisory bounds. A DECLARED step also fixes the stepper's increment; a
+   *  field that declares none (every SPX number field) lets the operator pick the bump size. */
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+/** Clamp a number to a descriptor's advisory bounds. */
+export function clampToField(d: FieldDescriptor, n: number): number {
+  let v = n;
+  if (d.min != null) v = Math.max(d.min, v);
+  if (d.max != null) v = Math.min(d.max, v);
+  return v;
+}

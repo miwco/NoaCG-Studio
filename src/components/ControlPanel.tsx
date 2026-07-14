@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { saveAs } from 'file-saver';
-import { controlsForFields, type ControlDescriptor } from '../control/controlModel';
+import { fieldDescriptors } from '../control/controlModel';
+import SpxFieldRow from './fields/SpxFieldRow';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
 import { hasLiveData, liveDataBlock, stripLiveData } from '../control/liveData';
 import {
@@ -16,106 +17,14 @@ import { hasChatGraphic, chatGraphicBlock, stripChatGraphic, chatBackendRefKey, 
 import { listMyShows, type ShowRow } from '../showchat/chatData';
 import ModerationPanel from '../showchat/ModerationPanel';
 import { slug } from '../export/common';
-import { fileToDataUrl, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
 import { useTemplateStore, type PlayoutAction } from '../store/templateStore';
-
-/** One operator control, generated from the field's type. Updates live-drive the preview. */
-function Control({ c, live }: { c: ControlDescriptor; live: boolean }) {
-  const value = useTemplateStore((s) => s.sampleData[c.field] ?? '');
-  const setSampleValue = useTemplateStore((s) => s.setSampleValue);
-  const sendControl = useTemplateStore((s) => s.sendControl);
-  const assets = useTemplateStore((s) => s.template.assets);
-  const addAsset = useTemplateStore((s) => s.addAsset);
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [step, setStep] = useState('1');
-
-  const set = (v: string) => {
-    setSampleValue(c.field, v);
-    if (live) sendControl('update'); // Google-Docs feel: every edit shows on the preview
-  };
-
-  if (c.kind === 'number') {
-    const bump = (dir: number) => {
-      const s = parseFloat(step) || 1;
-      set(String((parseFloat(value) || 0) + dir * s));
-    };
-    return (
-      <div className="row">
-        <button className="ctl-step" onClick={() => bump(-1)}>−</button>
-        <input className="ctl-num" type="number" value={value} onChange={(e) => set(e.target.value)} />
-        <button className="ctl-step" onClick={() => bump(1)}>+</button>
-        <input className="ctl-num" style={{ width: 56 }} type="number" value={step} title="step" onChange={(e) => setStep(e.target.value)} />
-      </div>
-    );
-  }
-  if (c.kind === 'lines') {
-    const lines = value.length ? value.split('\n') : [''];
-    const commit = (next: string[]) => set(next.join('\n'));
-    return (
-      <div className="ctl-lines">
-        {lines.map((ln, i) => (
-          <div className="row" key={i}>
-            <input value={ln} onChange={(e) => commit(lines.map((l, k) => (k === i ? e.target.value : l)))} />
-            <button onClick={() => commit(lines.filter((_, k) => k !== i).length ? lines.filter((_, k) => k !== i) : [''])} title="Remove line">✕</button>
-          </div>
-        ))}
-        <button onClick={() => commit([...lines, ''])}>+ Add line</button>
-      </div>
-    );
-  }
-  if (c.kind === 'select') {
-    return (
-      <select value={value} onChange={(e) => set(e.target.value)}>
-        {(c.options ?? []).map((o) => (
-          <option key={o.value} value={o.value}>{o.text}</option>
-        ))}
-      </select>
-    );
-  }
-  if (c.kind === 'toggle') {
-    return (
-      <label className="row" style={{ marginTop: 4 }}>
-        <input type="checkbox" style={{ width: 'auto' }} checked={value === '1' || value === 'true'} onChange={(e) => set(e.target.checked ? '1' : '0')} />
-        <span className="muted">enabled</span>
-      </label>
-    );
-  }
-  if (c.kind === 'color') {
-    return (
-      <div className="row">
-        <input type="color" style={{ width: 44, padding: 2 }} value={/^#/.test(value) ? value : '#000000'} onChange={(e) => set(e.target.value)} />
-        <input className="grow" value={value} onChange={(e) => set(e.target.value)} />
-      </div>
-    );
-  }
-  if (c.kind === 'image') {
-    const images = assets.filter((a) => isImageAsset(a.path));
-    const upload = async (file: File) => {
-      const path = uniqueAssetPath(file.name, assets);
-      addAsset({ path, data: await fileToDataUrl(file) });
-      set(path);
-    };
-    return (
-      <div className="row">
-        <select className="grow" value={images.some((a) => a.path === value) ? value : ''} onChange={(e) => set(e.target.value)}>
-          <option value="">(no image)</option>
-          {images.map((a) => (
-            <option key={a.path} value={a.path}>{a.path}</option>
-          ))}
-        </select>
-        <input ref={fileInput} type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" style={{ display: 'none' }} onChange={(e) => { if (e.target.files?.[0]) void upload(e.target.files[0]); e.target.value = ''; }} />
-        <button onClick={() => fileInput.current?.click()}>⬆</button>
-      </div>
-    );
-  }
-  return <input value={value} onChange={(e) => set(e.target.value)} />;
-}
 
 /**
  * The Control panel — an operator view generated from the template's fields (the same
  * modular engine that produces the standalone controlpanel.html export). Every edit
  * live-drives the preview; the action buttons play/stop/update/next it. There is no
- * per-template code: number → stepper, textarea → line editor, image → picker, etc.
+ * per-template code: the fields become descriptors and each renders the shared field control
+ * — number → stepper, textarea → line list, image → picker, etc.
  */
 export default function ControlPanel() {
   const template = useTemplateStore((s) => s.template);
@@ -130,7 +39,7 @@ export default function ControlPanel() {
   const [chatShowId, setChatShowId] = useState('');
   const [chatMode, setChatMode] = useState<ChatMode>('feed');
 
-  const controls = controlsForFields(template.fields);
+  const controls = fieldDescriptors(template.fields); // operator view: hidden fields stay hidden
   const liveDataOn = hasLiveData(template.js);
   const remoteOn = hasRealtimeControl(template.js);
   const backendConfigured = isBackendConfigured();
@@ -219,14 +128,8 @@ export default function ControlPanel() {
       </label>
 
       {controls.length === 0 && <p className="muted">This template has no editable fields.</p>}
-      {controls.map((c) => (
-        <div className="field-row" key={c.field}>
-          <div className="field-meta">
-            <label style={{ margin: 0 }}>{c.title}</label>
-            <span className="field-id">{c.field}</span>
-          </div>
-          <Control c={c} live={live} />
-        </div>
+      {controls.map((d) => (
+        <SpxFieldRow key={d.key} descriptor={d} live={live} />
       ))}
 
       <div className="ctl-actions">

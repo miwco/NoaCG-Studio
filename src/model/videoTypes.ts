@@ -11,7 +11,7 @@
 // SAME compiled module drives the live preview and the final render.
 
 import type { AssetFile } from './types';
-import type { VideoFieldKind } from './fieldModel';
+import type { FieldDescriptor, VideoFieldKind } from './fieldModel';
 import { uuid } from './id';
 
 /** Which editor world the app is showing: SPX live graphics or the video editor. */
@@ -58,6 +58,25 @@ export interface VideoInput {
   min?: number;
   max?: number;
   step?: number;
+}
+
+/**
+ * A video input as a shared FIELD DESCRIPTOR - the same shape an SPX DataField becomes
+ * (control/controlModel.ts fieldDescriptors). This is the adapter that lets the Content panel
+ * render the very same control component as the SPX Data and operator panels: one vocabulary,
+ * one control, no drift.
+ */
+export function videoInputDescriptor(input: VideoInput): FieldDescriptor {
+  return {
+    key: input.key,
+    label: input.label,
+    kind: input.type,
+    defaultValue: input.default,
+    options: input.options?.map((o) => ({ label: o, value: o })),
+    min: input.min,
+    max: input.max,
+    step: input.step,
+  };
 }
 
 /** The `{ [key]: value }` bag passed to the composition as its `fields` prop (preview + render). */

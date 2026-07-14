@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 
 // Era 4: control panels. The modular engine turns a graphic's SPX fields into an operator
-// panel — text → input, number → stepper, textarea → line editor, image → picker — with no
+// panel — text → input, number → stepper, textarea → line list, image → picker — with no
 // per-template code. (Scoreboard scores are textfields by design, so operators can type
 // "0 - 0"; a genuine number field, added below, gets the stepper.)
 
@@ -67,7 +67,7 @@ test('export bundles controlpanel.html + injects the receiver into index.html', 
 
   const panel = await zip.file('match_strip/controlpanel.html')!.async('string');
   expect(panel).toContain('spx-control-match_strip'); // channel name matches the receiver's
-  expect(panel).toContain('"field":"f0"'); // controls are field-derived
+  expect(panel).toContain('"key":"f0"'); // controls are field-derived
 });
 
 async function createHairline(page: Page) {

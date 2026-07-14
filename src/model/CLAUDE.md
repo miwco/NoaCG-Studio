@@ -55,12 +55,19 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   the `{key: value}` bag passed as `fields` into BOTH the live preview (VideoPlayerFrame
   set-props) and the render (buildVideoManifest inputProps). `mergeVideoInputs(prev, next)`
   adopts a regenerated set while keeping values the user already edited.
-- **fieldModel.ts** - the canonical editable-field vocabulary (`FieldKind`) shared across the
-  two authoring worlds: SPX operator controls (control/controlModel.ts `ControlKind = FieldKind`)
-  and the video Template Definition (`VideoInputType = VideoFieldKind`, the text/number/color/
-  select/image subset). One source of truth for "the field kinds the product supports" so the
-  two lists never drift - the groundwork for one shared Template Definition across Remotion/SPX/
-  operator controls.
+  `videoInputDescriptor(input)` is the adapter to the shared `FieldDescriptor` (fieldModel.ts)
+  the Content panel renders - the same descriptor an SPX DataField becomes.
+- **fieldModel.ts** - the canonical editable-field vocabulary shared across the two authoring
+  worlds. `FieldKind` = the kinds the product supports (text/lines/number/color/select/toggle/
+  image); the video Template Definition uses the `VideoFieldKind` subset (`VideoInputType`,
+  text/number/color/select/image). **`FieldDescriptor`** is the shared SHAPE both worlds adapt
+  into - `{key, label, kind, defaultValue, options?, min?/max?/step?}` - plus `FieldValue`
+  (string | number) and `clampToField`. An SPX DataField becomes one via control/controlModel.ts
+  `fieldDescriptors`; a VideoInput via videoTypes.ts `videoInputDescriptor`. **Every surface that
+  edits a field renders descriptors, never raw fields**, so the SPX Data panel, the SPX operator
+  panel, and the video Content panel are literally the same component
+  (components/fields/FieldControl.tsx) and cannot drift. A new field kind is added HERE, mapped
+  in the two adapters, and rendered once.
 - **videoProject.ts** - video persistence mirroring project.ts/packets.ts: current slot
   'spx-gfx-video-project' (autosave; returns false on quota so the shell can WARN - video
   assets are big) + saved list 'spx-gfx-video-saved' with soft-delete tombstones.

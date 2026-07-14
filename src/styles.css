@@ -470,11 +470,15 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 }
 .simulator .bg-switch { margin-left: auto; display: flex; gap: 4px; }
 
-/* ---------- Control panel (operator view) ---------- */
+/* ---------- Field controls (the shared control: Data, Control, video Content) ---------- */
 .ctl-step { width: 40px; flex: 0 0 auto; font-weight: 700; font-size: 16px; }
 .ctl-num { text-align: center; }
-.ctl-lines { display: flex; flex-direction: column; gap: 5px; }
-.ctl-lines .row > input { flex: 1; }
+.ctl-thumb { width: 32px; height: 32px; flex: 0 0 auto; object-fit: contain;
+  background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; }
+.field-reset { font-size: 11px; padding: 2px 6px; }
+/* Add-a-field: the type select would otherwise claim the row's full width (inputs default to
+   width:100%) and crush the label box to nothing in a narrow dock. */
+.field-add-row select { flex: 0 1 auto; width: auto; }
 .ctl-actions { display: flex; gap: 6px; margin-top: 14px; }
 .ctl-actions .primary { flex: 1; }
 

@@ -1,26 +1,15 @@
 // The modular control-panel engine. ONE generator turns any template's SPX DataFields into
-// an operator panel — there is no per-template code. A number field becomes a stepper, a
-// textarea a line-list editor, an image field a picker, and so on. The same descriptors
-// drive both the in-app Control tab (React) and the standalone controlpanel.html export.
+// field descriptors (model/fieldModel.ts) — there is no per-template code. A number field
+// becomes a stepper, a textarea a line list, an image field a picker, and so on. The same
+// descriptors drive every surface that edits a field: the in-app Data and Control panels
+// (through the shared components/fields control), and the standalone controlpanel.html export.
 
 import type { SpxField } from '../model/types';
-import type { FieldKind } from '../model/fieldModel';
+import type { FieldDescriptor, FieldKind } from '../model/fieldModel';
 import { slug } from '../export/slug';
 
-/** The kind of control a field gets, decided purely from its ftype. One vocabulary shared
- *  with the video Template Definition (model/fieldModel.ts) so the two never drift. */
-export type ControlKind = FieldKind;
-
-export interface ControlDescriptor {
-  field: string; // f0, f1, …
-  title: string;
-  kind: ControlKind;
-  /** dropdown options (select kind only). */
-  options?: { text: string; value: string }[];
-}
-
-/** Map an SPX ftype to a control kind. Hidden/instruction/etc. carry no operator control. */
-function kindForField(f: SpxField): ControlKind | null {
+/** Map an SPX ftype to a control kind. The non-data ftypes carry no control at all. */
+function kindForField(f: SpxField): FieldKind | null {
   switch (f.ftype) {
     case 'textfield':
       return 'text';
@@ -36,18 +25,39 @@ function kindForField(f: SpxField): ControlKind | null {
       return 'toggle';
     case 'color':
       return 'color';
+    // An input-only value (a countdown's duration). SPX hides it from the operator, but the
+    // Data panel still edits it — see includeHidden below.
+    case 'hidden':
+      return 'text';
     default:
-      return null; // hidden, instruction, caption, button, divider, spacer
+      return null; // instruction, caption, button, divider, spacer
   }
 }
 
-/** The operator controls for a template's fields (skips non-data ftypes). */
-export function controlsForFields(fields: SpxField[]): ControlDescriptor[] {
-  const out: ControlDescriptor[] = [];
+/**
+ * The descriptors for a template's editable fields.
+ *
+ * `includeHidden` is what separates the two SPX surfaces: the operator panels (the Control tab
+ * and the exported controlpanel.html) show what SPX shows and so skip `hidden` fields, while
+ * the Data panel edits them too — a hidden field carries a real input value (a countdown's
+ * duration) that has to be testable in the editor.
+ */
+export function fieldDescriptors(
+  fields: SpxField[],
+  { includeHidden = false }: { includeHidden?: boolean } = {},
+): FieldDescriptor[] {
+  const out: FieldDescriptor[] = [];
   for (const f of fields) {
+    if (f.ftype === 'hidden' && !includeHidden) continue;
     const kind = kindForField(f);
     if (!kind) continue;
-    out.push({ field: f.field, title: f.title || f.field, kind, options: f.items });
+    out.push({
+      key: f.field,
+      label: f.title || f.field,
+      kind,
+      defaultValue: f.value, // the definition default — the per-field Reset target
+      options: f.items?.map((it) => ({ label: it.text, value: it.value })),
+    });
   }
   return out;
 }

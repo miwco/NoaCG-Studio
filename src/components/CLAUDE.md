@@ -176,16 +176,35 @@ in src/blocks/CLAUDE.md.
   without dragging) selects that element on the canvas too (store selectedPart); the selected
   row washes amber.
 
+## Field controls (fields/) - ONE control, every surface
+
+**FieldControl.tsx** is THE editable-field control. Every surface where a human changes a field's
+value renders it: the SPX Data panel, the SPX Control panel, and the video Content panel. They
+differ only in the DESCRIPTORS they pass (model/fieldModel.ts `FieldDescriptor`) and where the
+value lives - never in what a number/colour/image control looks like or how it behaves. `FieldRow`
+adds the label, the optional id badge, and the per-field **Reset** to the descriptor's
+`defaultValue` (shown only once the value differs). Controls emit their kind's natural type - a
+number for `number`, a string otherwise.
+**SpxFieldRow.tsx** is the SPX binding both SPX panels share (sampleData + asset upload; values
+stringify at that boundary because SPX sample data is a flat string map); the video panel binds
+its own store the same way.
+**Do not hand-roll a field control.** A new kind is added to `FieldKind`, mapped in the two
+adapters (control/controlModel.ts `fieldDescriptors`, model/videoTypes.ts `videoInputDescriptor`),
+and rendered once here. The exported standalone controlpanel.html (control/controlPanelHtml.ts)
+renders the SAME descriptors in dependency-free vanilla JS because it ships without React - it is
+the one deliberate second renderer; keep it in step.
+
 ## Panels (the five tool panels - Data / Control / Style / AI / Export)
 
 On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
 **SidePanel** (the five-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
 editing lives on the timeline (StepTimeline or TimelineView via TimelineDock) plus the Inspector.
 
-- **SampleDataPanel** - sample values + add-field.
-- **ControlPanel** - operator view from the control/ engine; live-drives the preview via
-  store.sendControl -> simulator; downloads controlpanel.html; adds the Google-Sheets live-data
-  block.
+- **SampleDataPanel** - sample values (shared field rows, `includeHidden`: a hidden field carries
+  a real input value like a countdown's duration, so it must be testable here) + add-field.
+- **ControlPanel** - operator view from the control/ engine (the same shared field rows, `live`
+  on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
+  simulator; downloads controlpanel.html; adds the Google-Sheets live-data block.
 - **StylePanel** - reads/writes the :root style contract (src/templates/CLAUDE.md): colors,
   font swap, zone re-anchoring, post-creation font import.
 - **AIPromptPanel**; **ExportPanel** (validation inline; remembers the last-picked target via
@@ -212,12 +231,13 @@ tabbed panel: **VideoAiChatPanel** (the primary authoring surface - auto-runs th
 generation when chat holds exactly one unanswered user turn, guarded PER PROJECT ID with a
 retry button on failure; every AI result applies as ONE undoable applyProject; failed
 validation keeps the previous working code and offers "Apply anyway"), **VideoContentPanel**
-(the editable inputs the AI declared - the video Template Definition; text/number/color/select/
-image controls that edit `project.inputs` live through store.setInputValue, so a non-technical
-user changes the headline/accent/score/logo without touching TSX and the preview updates instantly
+(the editable inputs the AI declared - the video Template Definition; each input becomes a shared
+FieldDescriptor and renders the SHARED field row (fields/), the same one the SPX Data and operator
+panels use, editing `project.inputs` live through store.setInputValue - so a non-technical user
+changes the headline/accent/score/logo without touching TSX and the preview updates instantly
 via the player host's set-props channel; the image control is an asset PICKER over the project's
-uploaded assets by logical name - uploading itself lives in the Assets tab; per-field + "Reset
-all" restore defaults),
+uploaded assets by logical name - uploading itself lives in the Assets tab, which enforces the
+manifest budget; per-field Reset comes from the shared row, "Reset all" from the panel),
 **VideoSettingsPanel**
 (undoable patchSettings; duration edits in seconds, fps changes preserve seconds),
 **VideoAssetsPanel** (data-URL assets, 3 MB/asset hard cap - the render manifest budget),

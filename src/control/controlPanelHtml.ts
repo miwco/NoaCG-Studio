@@ -1,21 +1,27 @@
 // Generate the standalone controlpanel.html bundled with an export: a self-contained
 // operator page (inline CSS + JS, no dependencies) built from the template's fields. It
 // drives the graphic over a BroadcastChannel — open the graphic (index.html) and this page
-// in the same browser and operate it live. Same modular engine as the in-app Control tab.
+// in the same browser and operate it live.
+//
+// Same engine as the in-app Control tab: the SAME field descriptors (model/fieldModel.ts),
+// the same kinds, the same semantics. It only renders them in vanilla JS instead of React,
+// because the exported page ships with no dependencies — keep this renderer in step with
+// components/fields/FieldControl.tsx.
 
 import type { SpxField } from '../model/types';
-import { controlChannelName, controlsForFields, type ControlDescriptor } from './controlModel';
+import type { FieldDescriptor } from '../model/fieldModel';
+import { controlChannelName, fieldDescriptors } from './controlModel';
 import type { RemoteControlConfig } from './realtimeControl';
 import { isImageAsset } from '../assets/assetUtils';
 
-interface EmittedControl extends ControlDescriptor {
+interface EmittedControl extends FieldDescriptor {
   value: string;
 }
 
-/** Build the descriptors + their default values for the page's generic renderer. */
+/** The descriptors + their current values, serialized into the page's generic renderer. */
 function emitControls(fields: SpxField[]): EmittedControl[] {
   const byId = new Map(fields.map((f) => [f.field, f]));
-  return controlsForFields(fields).map((c) => ({ ...c, value: byId.get(c.field)?.value ?? '' }));
+  return fieldDescriptors(fields).map((d) => ({ ...d, value: byId.get(d.key)?.value ?? '' }));
 }
 
 /** Safe to drop inside a <script> as a JS string/JSON literal (guards `</script>`). */
@@ -82,7 +88,7 @@ var REMOTE = ${jsonForScript(remote ?? null)};   // {ref,key,topic} when remote 
 
 // State: current value per field, seeded from the definition defaults.
 var state = {};
-CONTROLS.forEach(function (c) { state[c.field] = c.value; });
+CONTROLS.forEach(function (c) { state[c.key] = c.value; });
 
 // Transport 1: BroadcastChannel to a graphic on the SAME machine (Era 4).
 var ch = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel(CHANNEL) : null;
@@ -114,53 +120,67 @@ function el(tag, attrs, kids) {
   return e;
 }
 
+function clamp(c, n) {
+  if (c.min != null) n = Math.max(c.min, n);
+  if (c.max != null) n = Math.min(c.max, n);
+  return n;
+}
+
 function buildControl(c) {
-  var wrap = el('div', { class: 'field' }, [el('label', {}, [c.title])]);
-  var v = state[c.field];
+  var wrap = el('div', { class: 'field' }, [el('label', {}, [c.label])]);
+  var v = state[c.key];
   if (c.kind === 'number') {
     var input = el('input', { type: 'number', class: 'num-input' });
     input.value = v || '0';
-    input.oninput = function () { onChange(c.field, input.value); };
+    input.oninput = function () { onChange(c.key, input.value); };
     var minus = el('button', { class: 'step' }, ['−']);
     var plus = el('button', { class: 'step' }, ['+']);
-    var stepBox = el('input', { type: 'number', class: 'num-input', title: 'step', style: 'width:56px;flex:0 0 auto' });
-    stepBox.value = '1';
-    function bump(dir) { var s = parseFloat(stepBox.value) || 1; input.value = String((parseFloat(input.value) || 0) + dir * s); onChange(c.field, input.value); }
+    // A declared step fixes the increment; a field that declares none (every SPX number
+    // field) lets the operator pick the bump size — the same rule the in-app control uses.
+    var stepBox = el('input', { type: 'number', class: 'num-input', title: 'step size', style: 'width:56px;flex:0 0 auto' });
+    stepBox.value = String(c.step != null ? c.step : 1);
+    function bump(dir) {
+      var s = c.step != null ? c.step : (parseFloat(stepBox.value) || 1);
+      input.value = String(clamp(c, (parseFloat(input.value) || 0) + dir * s));
+      onChange(c.key, input.value);
+    }
     minus.onclick = function () { bump(-1); };
     plus.onclick = function () { bump(1); };
-    wrap.appendChild(el('div', { class: 'row' }, [minus, input, plus, stepBox]));
+    var kids = [minus, input, plus];
+    if (c.step == null) kids.push(stepBox);
+    wrap.appendChild(el('div', { class: 'row' }, kids));
   } else if (c.kind === 'lines') {
     var ta = el('textarea', { placeholder: 'one entry per line' });
     ta.value = v || '';
-    ta.oninput = function () { onChange(c.field, ta.value); };
+    ta.oninput = function () { onChange(c.key, ta.value); };
     wrap.appendChild(ta);
   } else if (c.kind === 'select') {
     var sel = el('select');
-    (c.options || []).forEach(function (o) { var opt = el('option', { value: o.value }, [o.text]); if (o.value === v) opt.selected = true; sel.appendChild(opt); });
-    sel.onchange = function () { onChange(c.field, sel.value); };
+    (c.options || []).forEach(function (o) { var opt = el('option', { value: o.value }, [o.label]); if (o.value === v) opt.selected = true; sel.appendChild(opt); });
+    sel.onchange = function () { onChange(c.key, sel.value); };
     wrap.appendChild(sel);
   } else if (c.kind === 'toggle') {
     var cb = el('input', { type: 'checkbox', style: 'width:auto' });
     cb.checked = (v === '1' || v === 'true');
-    cb.onchange = function () { onChange(c.field, cb.checked ? '1' : '0'); };
+    cb.onchange = function () { onChange(c.key, cb.checked ? '1' : '0'); };
     wrap.appendChild(el('label', { class: 'row' }, [cb, 'enabled']));
   } else if (c.kind === 'color') {
     var col = el('input', { type: 'color', style: 'width:44px;flex:0 0 auto' });
     col.value = /^#/.test(v) ? v : '#000000';
     var txt = el('input', { type: 'text' }); txt.value = v || '';
-    col.oninput = function () { txt.value = col.value; onChange(c.field, col.value); };
-    txt.oninput = function () { onChange(c.field, txt.value); };
+    col.oninput = function () { txt.value = col.value; onChange(c.key, col.value); };
+    txt.oninput = function () { onChange(c.key, txt.value); };
     wrap.appendChild(el('div', { class: 'row' }, [col, txt]));
   } else if (c.kind === 'image') {
     var isel = el('select', { class: 'grow' });
-    isel.appendChild(el('option', { value: '' }, ['(no image)']));
+    isel.appendChild(el('option', { value: '' }, ['None']));
     IMAGES.forEach(function (p) { var opt = el('option', { value: p }, [p]); if (p === v) opt.selected = true; isel.appendChild(opt); });
     var img = el('img', { class: 'thumb', alt: '' }); if (v) img.setAttribute('src', v);
-    isel.onchange = function () { if (isel.value) img.setAttribute('src', isel.value); else img.removeAttribute('src'); onChange(c.field, isel.value); };
+    isel.onchange = function () { if (isel.value) img.setAttribute('src', isel.value); else img.removeAttribute('src'); onChange(c.key, isel.value); };
     wrap.appendChild(el('div', { class: 'row' }, [isel, img]));
   } else {
     var t = el('input', { type: 'text' }); t.value = v || '';
-    t.oninput = function () { onChange(c.field, t.value); };
+    t.oninput = function () { onChange(c.key, t.value); };
     wrap.appendChild(t);
   }
   return wrap;
