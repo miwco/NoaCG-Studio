@@ -36,6 +36,10 @@ export interface PresetConfig {
   lineCount: number;
   /** Whether the design has a .<prefix>-accent element. */
   hasAccent: boolean;
+  /** Whether the design pairs a progress bar with its stat (a .<prefix>-bar-fill element).
+   *  Only the infographic count-up preset asks: its designs may or may not carry one, and a
+   *  preset must not write motion for an element that isn't there (a phantom timeline layer). */
+  hasBars?: boolean;
   /** Multi-step mode: in-timeline shows line 1; each next() reveals one more line. */
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */

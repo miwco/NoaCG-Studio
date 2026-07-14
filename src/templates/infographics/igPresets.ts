@@ -1,7 +1,18 @@
-// Infographic motion presets. Same marked-region + knob contract as every category.
+// Infographic motion presets. Same marked-region + knob contract as every category — this
+// emit is the SOURCE the data block is converted from at create (shared/standard.ts
+// convertToDataRegion).
+//
+// The panel's entrance is ordinary keyframable motion and stays in the region. Everything
+// AFTER it is MEASURED — the number counts to the operator's figure, a bar grows to its own
+// data-value, the ring draws to that percent, a list cascades one row per line they wrote —
+// so the region does not inline that math: it calls a named builder from igMotion.ts, which
+// lives outside the markers (docs/DYNAMIC_MOTION_SCOPE.md). That keeps the region parseable,
+// so the ordinary importer carries the choreography into the animation data, and the measured
+// logic stays readable JS you can edit.
+//
 // One preset per data shape:
-//   - 'count-up' (stat designs): the big number counts from 0 to its value; any
-//     accompanying .infographic-bar-fill progress bars grow to their data-value percent.
+//   - 'count-up' (stat designs): the big number counts from 0 to its value; a paired
+//     .infographic-bar-fill progress bar grows once the figure lands.
 //   - 'bars-grow' (bar designs): every .infographic-bar-fill grows to its data-value percent.
 //   - 'ring-fill' (ring designs): an SVG ring draws to the stat's percent while it counts.
 //   - 'rows-cascade' (list designs): the rows of #infographic-rows rise in one after another.
@@ -22,6 +33,19 @@ var easeIn = '${cfg.easeIn}';   // entrance ease — arrives fast, settles smoot
 var easeOut = '${cfg.easeOut}';   // exit ease — starts naturally, leaves quickly`;
 }
 
+/** The exit, identical across the presets: the panel fades, then the root hides. Replay resets
+ *  live at the START of each entrance (and inside the fromTo builders), so the exit doesn't
+ *  need to undo anything — it just leaves. */
+function outTimeline(): string {
+  return `// buildOutTimeline(): quick fade away — exits run faster than entrances.
+function buildOutTimeline() {
+  var tl = gsap.timeline();
+  tl.to('.infographic-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
+  tl.set('.infographic', { opacity: 0 });               // fully hidden; ready to play again
+  return tl;
+}`;
+}
+
 export const IG_PRESETS: AnimPreset[] = [
   {
     id: 'count-up' as AnimPresetId,
@@ -34,65 +58,25 @@ ${knobs(cfg)}
 
 // buildInTimeline(): panel fades and rises in, then the number counts up.
 function buildInTimeline() {
-  var el = document.getElementById('f0');
-  // Read the target from data-target (update() keeps it current) — NOT from the live
-  // textContent, which is a mid-count value like "43%" if the last play was interrupted.
-  var text = el.getAttribute('data-target');
-  if (text === null) {                         // first play before any update():
-    text = el.textContent;                     // seed it from the markup once
-    el.setAttribute('data-target', text);
-  }
-  var target = parseFloat(text.replace(/,/g, '')); // leading number: "1,234%" -> 1234
-  var suffix = text.replace(/^\\s*[-+]?[0-9.,]+/, ''); // what follows it: '%', ' pts'…
-
   var tl = gsap.timeline();
   tl.set('.infographic', { opacity: 1 });               // reveal the (CSS-hidden) graphic
-  tl.fromTo('.infographic-box',
+${
+  cfg.hasBars
+    ? `  tl.set('.infographic-bar-fill', { width: '0%' });     // the paired bar waits, empty, for its figure
+`
+    : ''
+}  tl.fromTo('.infographic-box',
     { opacity: 0, y: 24 },
     { opacity: 1, y: 0, duration: 0.6 / animSpeed, ease: easeIn }
   );
-
-  // Count only when the text actually starts with a number — otherwise leave it alone.
-  if (!isNaN(target)) {
-    var counter = { value: 0 };                // a plain object GSAP can tween
-    tl.set(el, { textContent: '0' + suffix }); // zero AFTER storing the target above
-    tl.to(counter, {
-      value: target,
-      duration: 1.6 / animSpeed,
-      ease: easeIn,
-      onUpdate: function () {
-        el.textContent = Math.round(counter.value) + suffix;  // whole numbers read best
-      },
-      onComplete: function () {
-        el.textContent = text;                 // restore the exact text (keeps decimals)
-      },
-    }, '-=0.2');                               // start while the panel is still settling
-  }
-
-  // Designs may pair progress bars with the counter — grow each one to its data-value
-  // percent after the count. Harmless when the design has none (empty selection).
-  var fills = document.querySelectorAll('.infographic-bar-fill');
-  if (fills.length > 0) {
-    tl.fromTo(fills,
-      { width: '0%' },                         // fromTo = replay-safe (always starts empty)
-      {
-        width: function (i, bar) { return bar.getAttribute('data-value') + '%'; },
-        duration: 0.9 / animSpeed,
-        ease: easeIn,
-        stagger: 0.1 / animSpeed,              // bars arrive one after another
-      }
-    );
-  }
+  // MEASURED: the number counts to whatever the operator typed — a value no keyframe can hold,
+  // because it changes with the data. infographicCountUp() (below this block) reads it at play
+  // time and returns the tween; a paired progress bar grows once the figure lands.
+  tl.add(infographicCountUp('#f0'), 0.4 / animSpeed);   // starts while the panel is still settling
   return tl;
 }
 
-// buildOutTimeline(): quick fade away — exits run faster than entrances.
-function buildOutTimeline() {
-  var tl = gsap.timeline();
-  tl.to('.infographic-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
-  tl.set('.infographic', { opacity: 0 });               // fully hidden; ready to play again
-  return tl;
-}
+${outTimeline()}
 ${MARK_CLOSE}`,
   },
 
@@ -111,35 +95,19 @@ ${knobs(cfg)}
 function buildInTimeline() {
   var tl = gsap.timeline();
   tl.set('.infographic', { opacity: 1 });               // reveal the (CSS-hidden) graphic
-  tl.set('#infographic-bars .infographic-bar-fill', { width: '0%' });  // rebuilds render fills at value — empty them so they grow
+  tl.set('.infographic-bar-fill', { width: '0%' });     // a rebuild renders the fills AT value — empty them, so they grow
   tl.fromTo('.infographic-box',
     { opacity: 0, y: 20, scale: 0.95 },
     { opacity: 1, y: 0, scale: 1, duration: 0.6 / animSpeed, ease: easeIn }
   );
-  // Each fill grows from empty to its own data-value (0–100, written by the rebuild).
-  // Deliberate width tween (not scaleX): scaling would squash the fill's rounded cap.
-  // Fills keep power3.out whatever the entrance ease — a data bar must land exactly
-  // on its value, so the panel's back.out overshoot never applies to the bars.
-  tl.fromTo('#infographic-bars .infographic-bar-fill',
-    { width: '0%' },
-    {
-      width: function (i, el) { return el.getAttribute('data-value') + '%'; },
-      duration: 0.9 / animSpeed,
-      ease: 'power3.out',
-      stagger: 0.12 / animSpeed,               // bars arrive one after another
-    }
-  );
+  // MEASURED: each fill grows to its OWN data-value, and there are as many bars as the
+  // operator wrote lines — neither is a number a keyframe can hold. infographicBarsGrow()
+  // (below this block) reads them at play time and returns the tween.
+  tl.add(infographicBarsGrow('.infographic-bar-fill'), 0.6 / animSpeed);
   return tl;
 }
 
-// buildOutTimeline(): quick fade away, then reset the bars for the next play().
-function buildOutTimeline() {
-  var tl = gsap.timeline();
-  tl.to('.infographic-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
-  tl.set('.infographic', { opacity: 0 });               // fully hidden; ready to play again
-  tl.set('#infographic-bars .infographic-bar-fill', { width: '0%' });  // bars grow again on replay
-  return tl;
-}
+${outTimeline()}
 ${MARK_CLOSE}`,
   },
 
@@ -150,64 +118,26 @@ ${MARK_CLOSE}`,
     autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
     emit: (cfg) => `${MARK_OPEN}
 // Preset: Ring fill — reveal the panel, then draw the ring to the stat's percent while
-// the number (#f0) counts up in sync. The ring is an SVG circle with pathLength="100",
-// so dashoffset 100 = empty and dashoffset (100 - percent) = filled to that percent.
+// the number (#f0) counts up in sync.
 ${knobs(cfg)}
 
 // buildInTimeline(): panel fades and rises in, then ring + counter run together.
 function buildInTimeline() {
-  var el = document.getElementById('f0');
-  // Read the target from data-target (update() keeps it current) — NOT from the live
-  // textContent, which is a mid-count value if the last play was interrupted.
-  var text = el.getAttribute('data-target');
-  if (text === null) {                         // first play before any update():
-    text = el.textContent;                     // seed it from the markup once
-    el.setAttribute('data-target', text);
-  }
-  var target = parseFloat(text);               // leading number: "87%" -> 87
-  if (isNaN(target)) target = 0;               // non-numeric text: ring stays empty
-  target = Math.max(0, Math.min(100, target)); // a ring can only show 0–100
-  var suffix = text.replace(/^\\s*[-+]?[0-9.,]+/, ''); // what follows it: '%', ' pts'…
-
   var tl = gsap.timeline();
   tl.set('.infographic', { opacity: 1 });               // reveal the (CSS-hidden) graphic
-  tl.set('.infographic-ring-fill', { strokeDashoffset: 100 });  // replay-safe: always start empty
+  tl.set('.infographic-ring-fill', { strokeDashoffset: 100 });  // the ring waits, empty, for its percent
   tl.fromTo('.infographic-box',
     { opacity: 0, y: 24 },
     { opacity: 1, y: 0, duration: 0.6 / animSpeed, ease: easeIn }
   );
-
-  // Draw the ring and count the number in ONE tween block so they finish together.
-  var counter = { value: 0 };                  // a plain object GSAP can tween
-  tl.set(el, { textContent: '0' + suffix });   // zero AFTER storing the target above
-  tl.to('.infographic-ring-fill', {
-    strokeDashoffset: 100 - target,            // dash offset shrinks as the ring fills
-    duration: 1.4 / animSpeed,
-    ease: easeIn,
-  }, '-=0.2');                                 // start while the panel is still settling
-  tl.to(counter, {
-    value: target,
-    duration: 1.4 / animSpeed,
-    ease: easeIn,
-    onUpdate: function () {
-      el.textContent = Math.round(counter.value) + suffix;  // whole numbers read best
-    },
-    onComplete: function () {
-      el.textContent = text;                   // restore the exact text (keeps decimals)
-    },
-  }, '<');                                     // '<' = in sync with the ring draw
-
+  // MEASURED: the ring draws to the operator's percent while the number counts to the same
+  // figure — one motion, because it is one value, and the value is theirs. infographicRingFill()
+  // (below this block) reads it at play time and returns both tweens, in sync.
+  tl.add(infographicRingFill('.infographic-ring-fill'), 0.4 / animSpeed);
   return tl;
 }
 
-// buildOutTimeline(): quick fade away, then reset the ring for the next play().
-function buildOutTimeline() {
-  var tl = gsap.timeline();
-  tl.to('.infographic-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
-  tl.set('.infographic', { opacity: 0 });               // fully hidden; ready to play again
-  tl.set('.infographic-ring-fill', { strokeDashoffset: 100 });  // ring draws again on replay
-  return tl;
-}
+${outTimeline()}
 ${MARK_CLOSE}`,
   },
 
@@ -218,7 +148,7 @@ ${MARK_CLOSE}`,
     autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
     emit: (cfg) => `${MARK_OPEN}
 // Preset: Rows cascade — reveal the panel, then each row of #infographic-rows rises in with a
-// short stagger. fromTo tweens make the cascade replay-safe (rows always start hidden).
+// short stagger.
 ${knobs(cfg)}
 
 // buildInTimeline(): panel fades and rises in, then the rows cascade up one by one.
@@ -229,28 +159,14 @@ function buildInTimeline() {
     { opacity: 0, y: 24 },
     { opacity: 1, y: 0, duration: 0.6 / animSpeed, ease: easeIn }
   );
-  // Every direct child of #infographic-rows is one row — rise + fade, staggered down the list.
-  tl.fromTo('#infographic-rows > *',
-    { y: 16, opacity: 0 },
-    {
-      y: 0,
-      opacity: 1,
-      duration: 0.4 / animSpeed,
-      stagger: 0.08 / animSpeed,               // rows arrive one after another
-      ease: easeIn,
-    },
-    '-=0.2'                                    // start while the panel is still settling
-  );
+  // MEASURED: the rebuild makes one row per line the operator wrote, so the cascade's length
+  // is their content — there is no fixed number of rows to keyframe. infographicRowsCascade()
+  // (below this block) reads them at play time and returns the staggered tween.
+  tl.add(infographicRowsCascade('#infographic-rows'), 0.4 / animSpeed);
   return tl;
 }
 
-// buildOutTimeline(): quick fade away — fromTo entrances make replays reset themselves.
-function buildOutTimeline() {
-  var tl = gsap.timeline();
-  tl.to('.infographic-box', { opacity: 0, duration: 0.35 / animSpeed, ease: easeOut });
-  tl.set('.infographic', { opacity: 0 });               // fully hidden; ready to play again
-  return tl;
-}
+${outTimeline()}
 ${MARK_CLOSE}`,
   },
 ];

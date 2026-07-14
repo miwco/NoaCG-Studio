@@ -52,6 +52,7 @@ const HARNESS = `
       prefix,
       lineCount: Math.max(1, countLines(tpl.html)),
       hasAccent: tpl.html.includes(prefix + '-accent'),
+      hasBars: tpl.html.includes(prefix + '-bar-fill'),
       steps: !!steps,
       stepOutsideParts: [],
       speed: data ? data.speed : 1,
@@ -600,4 +601,97 @@ test('a hand-written DOM-measured region is refused, not guessed at', async ({ p
     };
   }, HAND_WRITTEN_MEASURED_REGION);
   expect(result).toEqual({ handWrittenRefused: true, catalogIsDataBlock: true });
+});
+
+// ── Infographics: parity on the MEASURED VALUES ──────────────────────────────────────────
+//
+// Every infographic moves by a number that only exists once the operator's data is in the DOM:
+// the stat counts to the figure they typed, each bar grows to its own data-value, the ring draws
+// to that percent, the list cascades one row per line they wrote. So the parity bar here is not
+// opacity and transform (the generic harness's vocabulary — it would pass vacuously) but the
+// measured outputs themselves. Both twins are seeked WITH events, because the count's motion IS
+// a callback: it writes textContent on every update, and a suppressed seek would show nothing
+// moving in either twin and prove nothing.
+
+const IG_CASES = [
+  { variant: 'ig01', presetId: 'count-up', build: 'infographicCountUp', times: [0, 1.2, 2.0, 3.0] },
+  { variant: 'ig05', presetId: 'count-up', build: 'infographicCountUp', times: [0, 1.2, 2.0, 3.0] },
+  { variant: 'ig02', presetId: 'bars-grow', build: 'infographicBarsGrow', times: [0, 0.6, 1.0, 2.2] },
+  { variant: 'ig04', presetId: 'ring-fill', build: 'infographicRingFill', times: [0, 0.4, 1.1, 1.8] },
+  { variant: 'ig03', presetId: 'rows-cascade', build: 'infographicRowsCascade', times: [0, 0.5, 0.7, 1.5] },
+  { variant: 'ig06', presetId: 'rows-cascade', build: 'infographicRowsCascade', times: [0, 0.5, 0.7, 1.5] },
+];
+
+test('parity: infographic measured motion matches the legacy emit, and lands on the data', async ({ page }) => {
+  test.setTimeout(180_000);
+  await toApp(page);
+  const result = await page.evaluate(
+    `(async (cases) => {
+      ${HARNESS}
+      const { variantById } = await import('/src/templates/catalog.ts');
+      const { parseAnimData } = await import('/src/blocks/animData.ts');
+      const failures = [];
+      const landed = {};
+
+      // The measured state of an infographic: what the data made of it.
+      function shot(w) {
+        const d = w.document;
+        const stat = d.getElementById('f0');
+        const ring = d.querySelector('.infographic-ring-fill');
+        const rows = d.getElementById('infographic-rows');
+        return {
+          stat: stat ? stat.textContent : null,
+          bars: [...d.querySelectorAll('.infographic-bar-fill')].map((b) => b.style.width).join(' '),
+          ring: ring ? String(ring.style.strokeDashoffset || '') : '',
+          rows: rows ? [...rows.children].map((r) => Number(w.getComputedStyle(r).opacity).toFixed(1)).join(' ') : '',
+        };
+      }
+
+      for (const c of cases) {
+        const tpl = variantById(c.variant).create({ animation: { presetId: c.presetId } });
+        const data = parseAnimData(tpl.js);
+        if (!data) { failures.push(c.variant + ': creation did not emit the data block'); continue; }
+
+        // The measured motion must ride across as a dynamics segment naming its builder...
+        const dyn = (data.steps[0].dynamics || [])[0];
+        if (!dyn || dyn.build !== c.build) {
+          failures.push(c.variant + ': expected a dynamics segment building ' + c.build + ', got ' + JSON.stringify(dyn));
+          continue;
+        }
+        // ...and the builder must ship OUTSIDE the marked region, or the export would carry a
+        // data block naming a function that isn't there.
+        if (!tpl.js.split('/* == ANIMATION')[0].includes('function ' + c.build + '(')) {
+          failures.push(c.variant + ': ' + c.build + '() is not defined outside the marked region');
+        }
+
+        const wNew = await boot(tpl);
+        const wOld = await boot(await legacyTwin(tpl, c.presetId, false));
+        const tlOld = wOld.buildInTimeline(); tlOld.pause();
+        const tlNew = wNew.buildInTimeline(); tlNew.pause();
+        tlOld.seek(0.001, false); tlNew.seek(0.001, false);
+
+        for (const t of c.times) {
+          tlOld.seek(t, false); tlNew.seek(t, false);   // false = let the callbacks fire
+          const a = JSON.stringify(shot(wOld));
+          const b = JSON.stringify(shot(wNew));
+          if (a !== b) failures.push(c.variant + ' @' + t + 's: ' + a + ' vs ' + b);
+        }
+        landed[c.variant] = shot(wNew);   // the settled state: it must be the operator's data
+        tlOld.kill(); tlNew.kill();
+      }
+      return { failures, landed };
+    })(${JSON.stringify(IG_CASES)})`,
+  );
+  expect(result.failures).toEqual([]);
+
+  // And the measured values are the DATA's, not a hard-coded number: the stat lands on exactly
+  // the text the field holds (commas and suffix intact), each bar on its own data-value.
+  const landed = result.landed as Record<string, { stat: string; bars: string; ring: string; rows: string }>;
+  expect(landed.ig01.stat).toBe('87%');
+  expect(landed.ig05.stat).toBe('124,213');
+  expect(landed.ig05.bars).toBe('49.6852%'); // total / goal
+  expect(landed.ig02.bars).toBe('78% 54% 36%'); // one bar per line, each on its own value
+  expect(landed.ig04.ring).toBe('32px'); // 100 - 68: the ring drew to the stat's percent
+  expect(landed.ig03.rows).toBe('1.0 1.0 1.0 1.0 1.0');
+  expect(landed.ig06.rows).toBe('1.0 1.0 1.0');
 });

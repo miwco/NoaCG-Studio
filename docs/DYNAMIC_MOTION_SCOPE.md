@@ -206,7 +206,17 @@ Where it landed differently from the sketch: the region references its builder w
 source (the preset emitter) and the measured motion rides the existing importer the same way `tl.call`
 hooks do. That also made the preset swap fall out for free as a pure data edit (§8.2).
 
-**What it unblocks:** tickers and credits are off the legacy patchers. The remaining blockers for
-Phase 8 are the quiz's wrapper-driven Continue and info cards (which host the classic strip's spec
-suite) — see `docs/TIMELINE_V2_PLAN.md`. Per §8.1, Phase 8 retires the strip's *editing* patchers but
-keeps a read-only renderer for legacy templates that can never be auto-converted.
+**What it unblocks:** tickers and credits are off the legacy patchers — and then INFOGRAPHICS, which
+turned out to be the purest case of all: every one of their motions is measured (the stat counts to
+the operator's figure, each bar grows to its own `data-value`, the ring draws to that percent, the
+cascade runs one row per line they wrote), so all four presets became a keyframed panel entrance plus
+one named builder (`igMotion.ts`). Two things the infographic pass taught, both now in
+src/templates/CLAUDE.md: a builder may COMPOSE another (count-up adds the bar growth once the figure
+lands), and a `tl.add()` needs an EXPLICIT position whenever a phase has more than one — a segment is
+zero-advance on the importer's clock but a real child on GSAP's, so a bare `'-=N'` after one resolves
+differently in the two.
+
+The quiz then flipped on §3b calls (`docs/TIMELINE_V2_PLAN.md` §3c), leaving INFO CARDS as the only
+category on the legacy region (they host the classic strip's spec suite). Per §8.1, Phase 8 retires
+the strip's *editing* patchers but keeps a read-only renderer for legacy templates that can never be
+auto-converted.

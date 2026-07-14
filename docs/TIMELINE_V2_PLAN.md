@@ -27,9 +27,13 @@ twin of §3b's calls. QUIZ then flipped with NO new primitive (§3c): its Contin
 lifecycle CALL — which row lights up comes from the operator's f5 at play time — so the reveal
 became a real middle step whose whole content is `calls: [revealAnswer]`, and `settings.steps`
 went from a hard-coded '2' fighting the derivation to a value the derivation produces.
-INFO CARDS flip LAST of all: they host the classic strip's spec suite
-(Hairline Card), and after this wave no other legacy category supports the steps toggle — the suite
-retires together with the strip in Phase 8. **Only INFO CARDS and INFOGRAPHICS remain on the
+INFOGRAPHICS flipped last of the data-driven ones, and needed no new primitive either — ALL of their
+motion turned out to be measured (the stat counts to the operator's figure, each bar grows to its own
+data-value, the ring draws to that percent, the cascade runs one row per line they wrote), so the
+`dynamics` model already covered it: the region keeps the panel entrance as real keyframes and NAMES
+the rest (igMotion.ts). INFO CARDS flip LAST of all: they host the classic strip's spec suite
+(Hairline Card), and no other legacy category supports the steps toggle — the suite
+retires together with the strip in Phase 8. **INFO CARDS are now the ONLY category left on the
 legacy region.**
 
 **Phase 8 scope, RATIFIED (DYNAMIC_MOTION_SCOPE §8.1):** it removes the classic strip's EDITING

@@ -44,6 +44,7 @@ export function presetDonor(
     prefix,
     lineCount: Math.max(1, countLines(template.html)),
     hasAccent: template.html.includes(`${prefix}-accent`),
+    hasBars: template.html.includes(`${prefix}-bar-fill`),
     steps: false,
     stepOutsideParts: [],
     speed: data.speed,

@@ -36,7 +36,9 @@ import {
   zoneCssText,
 } from '../shared/base';
 import type { PresetConfig } from '../lowerThirds/animPresets';
+import { convertToDataRegion } from '../shared/standard';
 import { igPresetById } from './igPresets';
+import { IG_MOTION_JS } from './igMotion';
 
 export interface IgDesign {
   /** Inner HTML of .infographic — must contain .infographic-box (stat markup or #infographic-bars rows). */
@@ -166,20 +168,27 @@ ${design.css}
     prefix: 'infographic',
     lineCount: design.fields.length,
     hasAccent: false,
+    // A stat design may pair a progress bar with its figure (ig05) or not (ig01) — the
+    // count-up preset only animates the bar when one actually exists.
+    hasBars: design.html.includes('infographic-bar-fill'),
     steps: false, // infographics never step — the whole callout enters at once
     speed: o.animation.speed,
     easeIn: ease.easeIn,
     easeOut: ease.easeOut,
   };
 
-  // The design's extra runtime (e.g. rebuildInfographic()) lives OUTSIDE the marked
-  // ANIMATION region — before it — so the Animation panel can never rewrite it.
+  // The design's extra runtime (e.g. rebuildInfographic()) and the category's MEASURED-MOTION
+  // builders (igMotion.ts — the count, the bars, the ring, the cascade) live OUTSIDE the marked
+  // ANIMATION region — before it — so the timeline can never rewrite them. The region references
+  // the builders by name; every infographic ships all of them, so swapping the motion preset is
+  // a pure data edit (docs/DYNAMIC_MOTION_SCOPE.md).
   const extra = design.runtimeExtraJs.trim();
-  const js = igRuntimeJs(meta.name, extra === '' ? preset.emit(cfg) : `${extra}
+  const js = igRuntimeJs(
+    meta.name,
+    [extra, IG_MOTION_JS, preset.emit(cfg)].filter((part) => part !== '').join('\n\n'),
+  );
 
-${preset.emit(cfg)}`);
-
-  return {
+  const template: SpxTemplate = {
     name: meta.name,
     type: 'infographic',
     resolution: o.resolution,
@@ -199,6 +208,11 @@ ${preset.emit(cfg)}`);
       styles: {},
     })),
   };
+
+  // Timeline v2: the preset's region becomes the NOACG_ANIM data block. The panel entrance
+  // rides across as ordinary keyframes; the measured motion rides across as a `dynamics`
+  // segment naming its builder — the builders themselves are untouched, outside the markers.
+  return convertToDataRegion(template);
 }
 
 /** The authoring API for infographic variant modules. */

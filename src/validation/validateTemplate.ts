@@ -220,11 +220,18 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
         // a dangling one silently produces no motion, so it earns the same guard.
         (step.dynamics ?? []).forEach((d) => d.target && selectors.add(d.target));
       }
+      // Data-driven categories BUILD their elements at play time — a bar chart's fills, a
+      // ticker's items, a credits roll's lines all come from a rebuild, so their markup lives
+      // in the template's JS and never in the static HTML. Look there too, but only OUTSIDE the
+      // marked region: inside it sits the animation data itself, which names every selector it
+      // targets and would happily vouch for one whose element was deleted.
+      const runtime = template.js.replace(/\/\* == ANIMATION[\s\S]*?== END ANIMATION == \*\//, '');
+      const declares = (re: RegExp) => re.test(template.html) || re.test(runtime);
       for (const sel of selectors) {
         const exists = sel.startsWith('#')
-          ? new RegExp(`id="${sel.slice(1)}"`).test(template.html)
+          ? declares(new RegExp(`id="${sel.slice(1)}"`))
           : sel.startsWith('.')
-            ? new RegExp(`class="[^"]*\\b${sel.slice(1)}\\b[^"]*"`).test(template.html)
+            ? declares(new RegExp(`class="[^"]*\\b${sel.slice(1)}\\b[^"]*"`))
             : true; // an exotic selector — leave it to the author
         if (!exists) {
           warnings.push({
