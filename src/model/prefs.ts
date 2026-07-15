@@ -9,8 +9,6 @@ export interface UserPrefs {
   defaultExportTarget: string;
   /** The preview timeline strip's collapsed state. null = auto (expanded desktop, collapsed mobile). */
   timelineCollapsed: boolean | null;
-  /** Timeline v2 (the step timeline) — opt-in while it grows phase by phase. */
-  timelineV2: boolean;
   /** Last-used video/image render settings (Export tab). null = the panel's defaults. */
   renderSettings: { format: string; scale: number; fps: number | null; durationSec: number } | null;
 }
@@ -18,7 +16,6 @@ export interface UserPrefs {
 const DEFAULTS: UserPrefs = {
   defaultExportTarget: '', // empty = the registry's first target
   timelineCollapsed: null,
-  timelineV2: false,
   renderSettings: null,
 };
 

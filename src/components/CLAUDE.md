@@ -87,10 +87,13 @@ in src/blocks/CLAUDE.md.
   `out` = N ms setting by scheduling the exit after the entrance settles + the hold - cancelled
   by any manual play/stop/next/scrub.
 - **TimelineDock / StepTimeline** (Timeline v2, both in StepTimeline.tsx) - the dock picks the
-  timeline surface per template: a NOACG_ANIM data region gets the clip-style STEP TIMELINE
-  outright (the classic strip's literal patchers cannot read it); a legacy region keeps
-  TimelineView, with a '⧉ new timeline' peek chip and an undoable '◆ use keyframes' conversion
-  (blocks/animImport.ts + the animRuntime writer).
+  timeline surface from the CODE, never from the category (which is what lets a template saved
+  years ago still open correctly): a NOACG_ANIM data region gets the clip-style STEP TIMELINE,
+  editable - every category creates this way, so it is the normal case; a LEGACY region the
+  importer can read gets the SAME step timeline, READ-ONLY, with an undoable '◆ use keyframes'
+  conversion one click away (blocks/animImport.ts + the animRuntime writer) - it shows the real
+  choreography, converted, rather than a lesser second editor; a legacy region it CANNOT read gets
+  **LegacyTimeline** (below).
   The step timeline's vocabulary: a time ruler with the operator's cue markers (▶ » ● ■) at
   every boundary; step CLIPS - right-edge resize (default PRESERVES keyframe timing: extending
   leaves settled air, shrinking clamps at the last keyframe; Alt-drag STRETCHES times
@@ -163,42 +166,22 @@ in src/blocks/CLAUDE.md.
   the active tab of the RIGHT dock) - shown/hidden/resized/moved like any panel; any NEW
   selection reveals it (activates its tab, or re-docks it if closed - an explicit close holds
   while the selection is unchanged, see AppShell).
-- **TimelineView** - the classic collapsible strip under the preview; since Timeline v2 it
-  serves LEGACY-REGION categories only (data-block templates get StepTimeline via
-  TimelineDock, and lower thirds now create as data blocks). MOMENT CARDS
-  `▶In · »1 · »2 · »+Step · ●On air · ■Out` (step cards numbered by PRESS; cue subtitles
-  aria-hidden - getByRole('▶ Play') must stay unique in specs) over the CUE-SEGMENTED OVERVIEW
-  (blocks/timelineModel.ts buildOverview): ONE strip, all sections side by side, each on its own
-  real local clock (widths = duration × zoom; zoom +/- buttons; fit once per template.name), the
-  hold a fixed hatched break, registry-part rows spanning every section (multi-target tweens
-  expand onto member rows at their stagger offsets; set()-only rows drop).
-  Every bar edits in place AND independently: dragging a member of a joint multi-target tween
-  SPLITS it per target first (splitTween) so only that layer retimes; bars resize from BOTH
-  edges (left = start with the end pinned); dragging any eligible bar across sections moves WHEN
-  the part appears (entrance bar -> » press = assign, reveal bar -> entrance = unassign - all
-  through stepAssign.changePartPress; section bodies + cards are drop zones; dragged bars get
-  pointer-events:none so hit-testing sees through).
-  The gutter has each part's "appears on press" menu + the selected moment's ease chips
-  (patchTweenEase/patchStepEase). Each part row's ▸ arrow opens the PHASE-AWARE transform
-  drawer (X/Y/scale/opacity/rotation + blur): on ▶In it edits ENTERS-FROM (in tween
-  from-values settling to identity - patchTweenVars, insertPartTween for partless layers); on
-  ■Out it edits LEAVES-TO (out tween to-values - patchTweenToVars, insertPartOutTween;
-  opacity never auto-stripped so the exit still fades). Blur is the one non-transform
-  (serializes to filter:'blur(Npx)' via setObjBlur). The root never gets a drawer;
-  press-assigned parts have none on In but do on Out (leaving is independent of entering).
-  THE STRIP IS THE ONE MOTION SURFACE for legacy templates (the Motion side-tab is retired):
-  the selected ▶In/■Out card's inspector row holds that phase's preset picker + easing choice
-  (swapAnimationPhase / setAnimKnob - phase-correct halves per the easing doctrine; the Out
-  card names presets in their exit direction, Blur in -> Blur out), the header holds the
-  animSpeed knob, and the selected ●On air card's note edits the SPX `out` setting
-  (until-Stop / auto-out N ms / stays - synced into the definition like withStepsSetting).
-  ●On air = a pseudo-card (phaseId 'hold'); clicking it parks on the settled look. »+Step
-  disables with a tooltip reason. An unparsable marked region gets an honest one-liner PLUS a
-  start-over preset select (blank/imported templates get no strip); a 'both' swap re-emits the
-  whole region and brings the timeline back. One undoable apply + auto-replay per edit - the
-  code always the truth. Row LABELS are the shared-selection handles: clicking one (or a bar,
-  without dragging) selects that element on the canvas too (store selectedPart); the selected
-  row washes amber.
+- **LegacyTimeline** (Phase 8) - the READ-ONLY chart of a legacy region the importer REFUSES:
+  measured motion written inline (`x: -track.scrollWidth`), or a loop it would have to guess at.
+  Such a template can never be auto-converted, and regenerating it would discard its owner's
+  tuning - so it must still RENDER truthfully (DYNAMIC_MOTION_SCOPE §8.1). It draws the
+  CUE-SEGMENTED OVERVIEW (blocks/timelineModel.ts buildOverview): ONE strip, all sections side by
+  side (▶ In · » presses · ● hold · ■ Out), each on its own real local clock, the hold a hatched
+  break, registry-part rows spanning every section. A live playhead follows the simulator; clicking
+  a section or dragging the scrub parks the preview there - reading the code, never writing it. Row
+  LABELS are shared-selection handles, as everywhere.
+  It offers NO editing affordance, because Phase 8 deleted the patchers that backed them: no bar
+  drags, no resize grips, no enters-from drawer, no preset picker, no ease chips, no steps toggle.
+  The note says why, and the JS tab is where you edit it. Its ONE write is **"start over with a
+  preset"**, which emits that preset as DATA (presetRegistry.emitPresetRegion -> importer ->
+  data block): the way out of unconvertible code leads FORWARD, never to another legacy region, and
+  undo restores the hand-written version. An unparsable region gets an honest one-liner plus that
+  same select; blank/imported templates get no strip at all.
 
 ## Field controls (fields/) - ONE control, every surface
 
@@ -222,7 +205,7 @@ the one deliberate second renderer; keep it in step.
 
 On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
 **SidePanel** (the five-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
-editing lives on the timeline (StepTimeline or TimelineView via TimelineDock) plus the Inspector.
+editing lives on the timeline (StepTimeline via TimelineDock) plus the Inspector.
 
 - **SampleDataPanel** - sample values (shared field rows, `includeHidden`: a hidden field carries
   a real input value like a countdown's duration, so it must be testable here) + add-field.

@@ -16,18 +16,26 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   marked region converts (category-owned runtime around it - score pops, clock painters -
   stays); a conversion failure keeps the legacy emit, never a broken template.
   `CategorySpec.dataRegion` triggers it inside assembleStandard; self-assembled categories
-  (scoreboards, game timers, starting soon) call it directly. FLIPPED: lower thirds, corner bug,
-  scoreboards, game timers, starting soon. The step-calls model (docs/TIMELINE_V2_PLAN.md §3b)
+  (scoreboards, game timers, starting soon, quiz, infographics) call it directly. **EVERY category
+  now creates as a data block** - the legacy region survives only in SAVED templates (see
+  src/blocks/CLAUDE.md). The step-calls model
+  (docs/TIMELINE_V2_PLAN.md §3b)
   carries `tl.call(startClock/stopClock)` through the conversion as step `calls`, so a countdown
   survives the flip (the clock runtime itself lives OUTSIDE the region and is untouched), and the
   loop model (gap 6) carries the ambient breath as a step `loop` (a repeating scale track) - this
   is what let STARTING SOON flip. The MEASURED-MOTION model (docs/DYNAMIC_MOTION_SCOPE.md) carries a
   `tl.add(builderName(target))` across as a step `dynamic` - this is what let TICKERS and END
   CREDITS flip (see their motion runtimes below).
-  STILL BLOCKED (do NOT flip by flag alone): quiz's Continue is wrapper-driven (`next()` ->
-  revealAnswer with settings.steps='2' but NO data step - the timeline's steps derivation would
-  rewrite steps to '1' on the first edit and break the reveal). Info cards flip LAST: they host the
-  classic strip's spec suite until Phase 8 (docs/TIMELINE_V2_PLAN.md).
+  `convertToDataRegion(template, refine?)` takes an optional refinement of the imported data -
+  the seam for a step the LEGACY region has no shape for, so a category can author it directly
+  instead of growing a legacy step kind Phase 8 will delete. QUIZ is the one user
+  (docs/TIMELINE_V2_PLAN.md §3c): its Continue reveal is a lifecycle CALL, not a reveal group,
+  so it inserts a middle step `{ calls: [revealAnswer] }` before Out - which makes SPX's
+  `steps: '2'` DERIVED (three steps -> one press) instead of a hard-coded value the timeline's
+  steps re-sync would overwrite with '1' on the first edit, killing the reveal.
+  INFO CARDS flipped last (`dataRegion: true`) - they are the standard contract's other line-based
+  family, so they convert exactly like lower thirds, steps and all. Nothing blocked them but the
+  spec suite they hosted, which now runs against a SAVED legacy template instead (e2e/timeline.spec.ts).
   A wrapper that needs the motion speed must read it via the shared `motionSpeed()` helper
   (base.ts `motionSpeedJs`: NOACG_ANIM.speed, else legacy animSpeed, else 1) - never the bare
   animSpeed global, which only exists inside a legacy region.
@@ -52,7 +60,9 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   presets, prefix-parameterized - they animate any category's `.{prefix}-box` structure; on a
   data category the preset's emit is converted at create, and blocks/presetApply.ts derives
   keyframes from the same emitters after).
-- **infoCards/** - card01…card05 (prefix 'info-card').
+- **infoCards/** - card01…card05 (prefix 'info-card', `dataRegion: true`). The standard contract's
+  other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
+  them, steps and all (a » press per body line becomes a middle step with its `reveals`).
 - **endCredits/** - cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
   credits-pages / credits-crawl) + **creditsMotion.ts**; data-driven: a hidden #f0 textarea holds
   "Role | Name" lines, template JS parses and rebuilds #credits-track, ends with logo + year
@@ -61,12 +71,13 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee = items rendered
   twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via convertToDataRegion.
 
-### The category MOTION RUNTIMES (tickerMotion.ts / creditsMotion.ts)
+### The category MOTION RUNTIMES (tickerMotion.ts / creditsMotion.ts / igMotion.ts)
 
-These two categories move by magnitudes that only exist once the operator's text is RENDERED: a
+These categories move by magnitudes that only exist once the operator's DATA is in the DOM: a
 marquee slides exactly one track-width, a roll covers its own content height, a flip runs one
-segment per item. No static keyframe can hold a number that changes the moment the text does - which
-is why these were the last categories on the legacy patchers.
+segment per item, a stat counts to the figure they typed, a bar grows to its own `data-value`, a
+list cascades one row per line they wrote. No static keyframe can hold a number that changes the
+moment the data does - which is why these were the last categories on the legacy patchers.
 
 The fix (docs/DYNAMIC_MOTION_SCOPE.md): each measured motion is a named BUILDER - a plain function
 that measures the DOM and RETURNS a GSAP object - emitted OUTSIDE the marked ANIMATION region, in
@@ -78,7 +89,12 @@ math; it just calls it: `tl.add(tickerMarquee('#ticker-track'))`. Consequences, 
 - the builders survive the conversion and the export untouched (they're outside the markers);
 - **every builder of a category ships in every template of it**, so swapping the motion preset is a
   pure data edit (one `build` name) with nothing outside the markers rewritten;
-- the speed knob is read through `motionSpeed()`, never the region's `animSpeed`.
+- the speed knob is read through `motionSpeed()`, never the region's `animSpeed`;
+- a builder takes `(target, opts)` - `opts` is `{speed, ease}` from the interpreter (absent when the
+  LEGACY emit calls it, so always default), and it may compose other builders (igMotion's count-up
+  adds the bar growth once the figure lands). Give a `tl.add()` an EXPLICIT position when the phase
+  has more than one: a segment is zero-advance in the importer's clock but a real child in GSAP's,
+  so a bare `'-=N'` after one would resolve differently in the two.
 
 Adding a measured motion to another category = add a builder to its runtime + have the preset
 `tl.add()` it. Do NOT inline measured math in a region: it makes the template unconvertible.
@@ -98,11 +114,22 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   logo slot + placeholder mark; bug02 = house live clock via StandardDesign.runtimeExtraJs -
   design-owned JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the
   data conversion untouched).
-- **infographics/** - ig01…ig06 (prefix 'infographic'; design owns fields + runtimeExtraJs;
-  igPresets: count-up - a suffix-preserving number tween - and bars-grow over #infographic-bars
-  `.infographic-bar-fill[data-value]`).
-- **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown;
-  next() -> revealAnswer() adds .quiz-correct/.quiz-dim, update() clears the reveal).
+- **infographics/** - ig01…ig06 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+  igPresets (count-up / bars-grow / ring-fill / rows-cascade) + **igMotion.ts**. DATA BLOCKS via
+  convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
+  operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the
+  cascade runs one row per line they wrote - so none of it is a number a keyframe can hold, and it
+  all lives in the category motion runtime (see below). The region keeps only the panel entrance
+  (real, editable keyframes) and NAMES the measured part. A count-up design may or may not pair a
+  progress bar with its figure, so `PresetConfig.hasBars` tells the preset - without it a bar-less
+  design (ig01) would carry a phantom timeline layer for an element it doesn't have.
+- **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown).
+  DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
+  middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;
+  update() clears the reveal). Each answer ROW carries `quiz-option` (the shared look) AND
+  `quiz-option-N` (its own animation identity) - the entrance staggers the four, and a stagger
+  lives in the keyframe model as per-row start times, which one class matching four elements
+  cannot carry. The numbered rows are registry parts, labelled by their field ("Answer B").
 
 ## The :root style contract
 

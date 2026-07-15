@@ -119,8 +119,9 @@ src/
   blocks/ *    deterministic template transforms: the block registry (the offline AI stub's
                vocabulary), field editing, the Timeline v2 animation-data engine (animData
                schema/serializer, animEdit mutators, animEval resolver, animImport legacy
-               converter, presetApply generators), and the LEGACY-region patchers (animPatch,
-               stepAssign, timelineModel) still serving not-yet-migrated categories
+               converter, presetApply generators, presetRegistry = the preset library),
+               stepAssign (appears-on-press), and timelineModel - the READER for legacy regions
+               (Phase 8 deleted the patchers; nothing writes a legacy region any more)
   ai/          provider.ts (AIProvider + GenerateContext), claudeProvider.ts (the real provider:
                system prompt = SPX + house contracts + lt01's generated code as the canonical
                example; forced emit_template tool; validate + one repair round), anthropic.ts
@@ -179,8 +180,9 @@ src/
   components/ * the React app: AppShell (code | preview+Inspector row over full-width
                panels; a new selection auto-opens the Inspector), CodeEditor (Monaco),
                canvas direct manipulation + selection + position keyframing, PlayoutSimulator, the timeline dock
-               (StepTimeline for data-block templates, the classic TimelineView for legacy
-               ones), Inspector (properties + keyframes + Animations), the five-tab SidePanel
+               (StepTimeline for data-block templates - i.e. everything the wizard makes;
+               LegacyTimeline, read-only, for a saved region the importer refuses),
+               Inspector (properties + keyframes + Animations), the five-tab SidePanel
                (Data / Control / Style / AI / Export - Motion lives on the timeline), wizard/,
                auth/, and video/ - the PARALLEL editor shell for the AI video project
                kind (VideoAppShell: TSX Monaco + the sandboxed Remotion Player preview +
@@ -232,9 +234,10 @@ VIDEO project kind instead (React/Remotion, fixed duration - see src/ai/video, s
 components/video in the map above); creating/opening a video flips the persisted doc-kind
 switch and every SPX create path flips it back. After creation, code is the source of truth and two **live panels** keep
 working via deterministic patches: the **Style panel** writes the `:root` style contract
-(src/templates/CLAUDE.md) and **the timeline under the preview** — the step timeline for
-data-block templates, the classic strip for legacy ones — touches ONLY the marked ANIMATION region
-(src/blocks/CLAUDE.md) - user code outside the markers is never modified. The wizard applies
+(src/templates/CLAUDE.md) and **the step timeline under the preview** touches ONLY the marked
+ANIMATION region (src/blocks/CLAUDE.md) - user code outside the markers is never modified. The
+timeline dock picks its surface from the CODE, never from the category, which is what keeps a
+template saved before the migration working. The wizard applies
 with `resetSampleData: true` so a new project starts from its own field defaults
 (src/store/CLAUDE.md).
 

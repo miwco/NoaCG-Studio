@@ -30,10 +30,10 @@ interpolate at runtime. The editable vocabulary (Inspector `PROP_ROWS`) is
 | 1 | **Per-property In/Out duration** (opacity fades in 0.2 s while x slides in 0.6 s _as first-class control_) | `duration` is a **step-level** scalar. All tracks in a step share it; different rates only exist by placing keyframes at different times inside the one duration. The Inspector now sets per-direction step durations, but not per-property. |
 | 2 | **Transform-origin for scale/rotate** | There is no `transformOrigin` track and no per-layer static prop. Scale/rotate always pivot around GSAP's default (element centre). This blocks corner-anchored scale and pivoted rotation — and the deferred canvas scale/rotate handles need it. |
 | 3 | **Motion paths / curved position** | `x` and `y` are independent scalar tracks interpolated linearly. No bezier/path property. (Deliberately excluded in the interaction model — "no motion paths".) |
-| 4 | **Stagger as an authored control** | The legacy importer bakes `stagger` into per-keyframe time offsets; the schema has **no stagger field**, so once imported it is frozen as individual times. A preset cannot re-express it and the user cannot adjust it as one knob. |
+| 4 | **Stagger as an authored control** | The legacy importer bakes `stagger` into per-keyframe time offsets; the schema has **no stagger field**, so once imported it is frozen as individual times. A preset cannot re-express it and the user cannot adjust it as one knob. **Sharpened by the quiz migration:** baking only works for a target LIST (`['#f0','#f1']`) — a bare class matching N elements has nowhere to put N start times, and the stagger silently VANISHES on import. The catalog's answer is per-element identity (quiz's `quiz-option-1..4`), which is also strictly more editable (N rows, N tracks). So the knob is only genuinely needed where N is CONTENT-driven — and that case already belongs to `dynamics` (a measured builder), not to keyframes. |
 | 5 | **Physics / spring parameters** | Springiness exists only as a GSAP ease string (`elastic.out`, `back.out`) on a keyframe; there are no mass/tension/velocity params (the resolver interpolates linearly and defers the curve to the runtime). |
 | 6 | ~~**Loop / yoyo / repeat**~~ **(DONE — see Tier 3)** | A step gains `loops[selector][prop] = { repeat, yoyo?, repeatDelay? }`: a track plays in a repeating sub-timeline. The importer converts a *static* loop (a breathing pulse) and still refuses an inline DOM-measured one. Starting-soon migrated on it. |
-| 6b | ~~**Measured motion**~~ **(DONE — see Tier 3)** | A step gains `dynamics: [{ time, build, target? }]`: a named builder measures the DOM and returns the tween (a marquee's track-width travel, a credits roll, one flip per item). The motion twin of the §3b calls. Tickers and end credits migrated on it. |
+| 6b | ~~**Measured motion**~~ **(DONE — see Tier 3)** | A step gains `dynamics: [{ time, build, target? }]`: a named builder measures the DOM and returns the tween (a marquee's track-width travel, a credits roll, one flip per item, a stat counting to the operator's figure, a bar growing to its own data-value). The motion twin of the §3b calls. Tickers, end credits and infographics migrated on it. |
 | 7 | ~~**3D transforms**~~ **(DONE — see Tier 2)** | `DESIGN_STATE` knew `rotationX/Y`, `skewX/Y` for import fidelity but the vocabulary exposed none. Now `rotationX/Y`, `z`, and `perspective` are editable numeric tracks (`skewX/Y` remain import-only). |
 | 8 | ~~**Composed / multiple filters**~~ **(DONE — see Tier 2)** | The `filter` track now holds a COMPOSED string (`blur(8px) brightness(1.6) drop-shadow(0px 0px 10px)`), with one Inspector row per function; and strings interpolate editor-side when both keyframes have the same shape. |
 | 9 | **Early exit (a layer leaving before the final Out)** | A layer's lifecycle is hidden → entering → visible → exiting-with-the-root. `reveals` is the only lifecycle data; there is no `hides`. |
@@ -59,11 +59,13 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   existence span ends where it is hidden; the timeline layer-block's right edge drags to set it,
   and the runtime hides the layer at the step boundary (setLayerHide + the block right edge +
   hideStep; a template with a pre-hides interpreter is re-emitted on first use).
-- **`calls?: { time, call }[]` on a step** (gap 10). The drafted step-calls design
-  (`docs/TIMELINE_V2_PLAN.md` §3b): the interpreter `tl.call`s `window[name]` at the local time,
-  name-resolved (no eval). `resizeStep`/`duplicateStep`/`deleteStep` carry them; `parseTimeline`
-  learns `tl.call` as a zero-duration entry; `presetApply` carries calls through `'all'` scope
-  only. Unblocks starting-soon + game-timers. **Awaiting explicit ratification before build.**
+- **`calls?: { time, call }[]` on a step** (gap 10) — **DONE** (`docs/TIMELINE_V2_PLAN.md` §3b).
+  The interpreter `tl.call`s `window[name]` at the local time, name-resolved (no eval).
+  `resizeStep`/`duplicateStep`/`deleteStep` carry them; `parseTimeline` learns `tl.call` as a
+  zero-duration entry; `presetApply` carries calls through `'all'` scope only. This unblocked
+  game timers and starting soon — and then QUIZ (§3c), whose Continue reveal turned out to be
+  a call too: which answer row lights up comes from the operator's f5 at play time, so it can
+  never be a keyframe. Its reveal is now a real middle step whose content is that one call.
 
 ### Tier 2 — richer per-property control
 
@@ -113,10 +115,15 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
   measures the DOM and returns a GSAP tween/timeline the interpreter adds to the step — the motion
   twin of the §3b step calls, with the same no-eval `window[name]` lookup and the same posture (the
   data holds a name and a target; the logic stays readable JS outside the marked region). The
-  builders ship in the category motion runtimes (`tickerMotion.ts`, `creditsMotion.ts`), the preset
+  builders ship in the category motion runtimes (`tickerMotion.ts`, `creditsMotion.ts`,
+  `igMotion.ts`), the preset
   region references one with an ordinary `tl.add(builderName(target))`, and the legacy reader parses
-  that — so there is ONE choreography source and the existing importer carries it. **Tickers and end
-  credits flipped to data blocks on this**, leaving only quiz and info cards on the legacy region.
+  that — so there is ONE choreography source and the existing importer carries it. **Tickers, end
+  credits and INFOGRAPHICS flipped to data blocks on this** — infographics entirely so, since every
+  one of their motions is measured (a stat counts to the operator's figure, a bar grows to its own
+  data-value, a ring draws to that percent, a list cascades one row per line they wrote). With the
+  quiz on §3c and info cards flipped last, EVERY category now creates as a data block — the legacy
+  region survives only in saved/imported templates.
   Design + the ratified decisions: `docs/DYNAMIC_MOTION_SCOPE.md`. The timeline renders a measured
   segment READ-ONLY (a hatched, open-ended bar naming the builder) — there is nothing to keyframe,
   and the UI says so rather than implying an affordance.
@@ -133,7 +140,14 @@ parse-degrades-gracefully contract. None require a graph editor or expressions.
 
 ## Recommendation
 
-Build Tier 1 next — it is small, additive, and directly serves the three ratified open items
-(scale/rotate handles need `transformOrigin`; the timeline's right-edge trim needs `hides`;
-starting-soon/game-timers need `calls`). Tier 2 is opportunistic polish. Tier 3 is real product
-work to schedule against demand, and is what finally retires the legacy patchers.
+*(Superseded by what shipped.)* Tiers 1 and 2 are CLOSED, and Tier 3 delivered everything the
+migration actually needed: `loops`, measured motion (`dynamics`), and the read-only glyphs that
+surface them. **Every category now creates as a data block**, so the model has been proven against
+all ten of them, and Phase 8 — retiring the legacy patchers, keeping a read-only renderer for saved
+legacy templates (§8.1 of DYNAMIC_MOTION_SCOPE) — is unblocked.
+
+What remains open, and only worth building against real demand: **stagger as a single authored knob**
+(gap 4 — the catalog bakes it into per-element keyframes, which is strictly more editable, so this
+only matters where the element count is content-driven, and that case belongs to `dynamics` anyway),
+**spring parameters** (gap 5), and **per-property duration** (gap 1). **Motion paths** (gap 3) stay
+deliberately excluded by the interaction model.

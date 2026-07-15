@@ -144,55 +144,51 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   measured category is a PURE DATA EDIT - one `build` name - and nothing outside the marked region
   is rewritten, which is what the marker contract requires (docs/DYNAMIC_MOTION_SCOPE.md §8.2).
 
-## The legacy patchers (animPatch / stepAssign / timelineModel)
+## The legacy layer, after PHASE 8 (SHIPPED)
 
-These literal patchers still serve the categories that have NOT migrated to the data region
-(info cards, quiz, infographics — lower thirds, corner bug, scoreboards, game timers, starting
-soon, TICKERS and END CREDITS create as data blocks), plus every SAVED legacy template until
-its owner presses "use keyframes". Phase 8 of docs/TIMELINE_V2_PLAN.md retires them - deferred by
-design until the remaining categories migrate (the blockers per category are documented in
-src/templates/CLAUDE.md and the plan's status block).
-RATIFIED (docs/DYNAMIC_MOTION_SCOPE.md §8.1): Phase 8 removes the classic strip's EDITING patchers
-(timelineModel's splitTween/patchTweenTiming/… - the bulk of the code) but KEEPS a minimal
-read-only view. A saved template whose measured motion is hand-written inline can never be
-auto-converted (the importer refuses it rather than guessing), and silently regenerating it would
-discard the owner's tuning - which "code is the single source of truth" forbids. So it must still
-render truthfully somewhere; converting stays an explicit, undoable user action.
+**Phase 8 is DONE.** Every category creates as a data block, so nothing writes a legacy region any
+more, and the ~2,000-line literal-patch layer that used to rewrite one in place is DELETED:
+`animPatch.ts` (the phase splicers, knob setters, step-chain re-emits) and timelineModel's patchers
+(`splitTween`, `patchTweenTiming/Ease/Vars`, `patchStep*`, `insertPart*`, `setObj*`), along with
+`TimelineView.tsx`, the classic strip that drove them.
 
-## animPatch.ts - the marked ANIMATION region
+What survives, and why it is NOT dead code: a legacy region still exists in SAVED templates - a
+project made before the migration, an import, hand-written GSAP. **The dock picks the editing
+surface from the CODE, never from the category** (components/StepTimeline.tsx `TimelineDock`),
+which is exactly what keeps those working:
 
-The classic timeline strip only ever touches the marked region
-(`/* == ANIMATION … == */ … /* == END ANIMATION == */`) and its three knob variables
-(`animSpeed`, `easeIn`, `easeOut`); user code outside the markers is never modified. The
-splicers REFUSE a NOACG_ANIM data region (they return the JS unchanged - data templates go
-through the engine above).
+- a region the importer CAN read -> the step timeline, READ-ONLY, with "◆ use keyframes" one click
+  away (one undoable apply). It shows the real choreography, converted - not a lesser second editor.
+- a region it CANNOT read (measured motion written inline) -> `components/LegacyTimeline.tsx`:
+  charted read-only, honest about why, offering no affordance it lacks. RATIFIED
+  (docs/DYNAMIC_MOTION_SCOPE.md §8.1): such a template can never be auto-converted (the importer
+  refuses rather than guessing) and silently regenerating it would discard the owner's tuning -
+  which "code is the single source of truth" forbids. So it must still render truthfully.
 
-- `readAnimationInfo` reads per-phase "// In preset:" / "// Out preset:" comments, falling back
-  to "// Preset:".
-- `swapAnimationPhase(js, id, cfg, 'in'|'out'|'both')` splices two emitted regions at the
-  buildOutTimeline boundary - steps code travels with the IN phase.
-- Presets are per-category (`presetsForType`); the root prefix is detected via
-  model/structure.ts (hyphen-safe). Preset/steps swaps re-emit the region (undoable).
-- The steps toggle only shows for line-based categories (lower thirds, info cards, scoreboards,
-  corner bug) - continuous, clock, and data-driven formats hide it.
+Its coverage is e2e/legacy-timeline.spec.ts (fixtures in e2e/_legacy.ts). The 33-test classic-strip
+suite it replaced drove the patchers; every capability it covered has an equivalent on the step
+timeline, pinned by e2e/timeline-v2.spec.ts.
+
+## presetRegistry.ts - the preset library (what is left of animPatch)
+
+`presetsForType` / `anyPresetById` - every category's presets in one lookup - plus
+`emitPresetRegion(template, presetId, opts?)`, the ONE way to emit a preset's region for a
+template (structure facts read off its HTML). Two callers, one shape: **presetApply** derives a
+preset's keyframes by emitting a region and converting it through the importer (emit here, convert
+there - no preset's taste is written down twice), and **LegacyTimeline's "start over"** writes it,
+converted, over an unconvertible region - so the way OUT of legacy code leads to data, never to
+another legacy region.
 
 ## stepAssign.ts - "appears on press"
 
-`changePartPress` is the ONE appears-on-press transition, shared by the timeline gutter's menu
-and the canvas chip. On a data-block template it routes through animEdit's
-`setLayerActivation` (plus the SPX steps re-sync), same PressChange shape out. On a legacy
-region: entrance->press and press->entrance re-emit the IN phase via `applyStepChain`;
-press->press stays the tuning-preserving `patchStepRegroup` literal patch.
-Blocks (`data-gfx` + id, OUTSIDE the root) are assignable too - the emitted outside gate hides
-them from first paint (steps block, DOM-ready guarded) and `patchOutsideExit` keeps ONE surgical
-buildOutTimeline fade line in sync at the animPatch swap choke points, so they leave with the
-exit without resetting out-phase tuning.
+`changePartPress` is the ONE appears-on-press transition, shared by the timeline's layer-block drag,
+its gutter menu, and the canvas chip. It used to carry three code paths (two legacy re-emits and a
+literal array patch); a press is now just data - a step's `reveals` - so there is ONE path, routed
+through animEdit's `setLayerActivation` plus the SPX steps re-sync. A legacy region has no editable
+press chain at all (it is read-only), and the function says so by returning null.
 
-## timelineModel.ts - the classic timeline's model + patchers
+## timelineModel.ts - the legacy-region READER
 
-`buildOverview` builds the cue-segmented overview that TimelineView renders (see
-src/components/CLAUDE.md), plus the surgical patchers the classic strip edits with:
-`splitTween`, `patchTweenTiming`, `patchTweenEase`, `patchStepEase`, `patchTweenVars` /
-`insertPartTween` (enters-from), `patchTweenToVars` / `insertPartOutTween` (leaves-to), and
-`setObjBlur` (blur's filter-string read/write). Its `parseTimeline` is also the reader
-animImport.ts converts legacy regions through.
+`parseTimeline` (the reader) + `buildOverview` (the cue-segmented overview). Two callers only:
+animImport.ts converts legacy regions through the reader, and LegacyTimeline.tsx charts the
+overview for a region the importer refuses. The patchers that used to live here went with Phase 8.

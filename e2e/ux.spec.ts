@@ -49,37 +49,6 @@ test('export: validation shows inline and gates the download on a broken templat
   await expect(page.getByRole('button', { name: /Validate & download/ })).toBeDisabled();
 });
 
-test('motion: an In-only preset swap from the ▶ In card keeps the exit and auto-replays', async ({ page }) => {
-  // The classic strip's phase controls — pinned on a not-yet-migrated category (info
-  // cards); lower thirds create as data blocks and use the step timeline instead.
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650);
-  // The ▶ In card is the selected moment by default; its inspector row (under the tracks)
-  // carries THAT phase's preset picker — the strip is the one motion surface.
-  await expect(page.getByTestId('timeline-seg-in')).toHaveClass(/active/);
-  await expect(page.getByTestId('timeline-phase-preset')).toHaveValue('line-reveal'); // the card's default
-  await page.getByTestId('timeline-phase-preset').selectOption('pop-spring');
-  // The phase mix is recorded in the marker comments…
-  const js = await page.evaluate(async () => {
-    const { useTemplateStore } = await import('/src/store/templateStore.ts');
-    return useTemplateStore.getState().template.js;
-  });
-  expect(js).toContain('// In preset: Pop spring');
-  expect(js).toContain('// Out preset: Line reveal'); // the default preset, untouched
-  expect(js).toContain('function buildOutTimeline');
-  // …the editor jumps to the JS tab (the swap is real, readable code)…
-  await expect(page.locator('.tabs .tab.active')).toHaveText('JS');
-  // …and the auto-replay makes the graphic visible without pressing Play.
-  await expect
-    .poll(async () => frame(page).locator('.info-card').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })
-    .toBe('1');
-});
 
 test('data: add-field appends to the SPX definition and highlights the HTML', async ({ page }) => {
   await createHairline(page);

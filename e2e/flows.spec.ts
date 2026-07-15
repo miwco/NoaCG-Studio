@@ -151,27 +151,6 @@ test('style panel: accent retints the live preview', async ({ page }) => {
     .toBe('rgb(255, 45, 120)');
 });
 
-test('timeline strip: preset swap jumps to the JS tab and still plays', async ({ page }) => {
-  // The classic strip still serves the not-yet-migrated categories — an info card here
-  // (lower thirds create as data blocks and use the step timeline instead).
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Info cards' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline Card' }).click();
-  await createFromCurrentStep(page);
-
-  // The ▶ In card is selected by default — its preset picker swaps the entrance.
-  await page.getByTestId('timeline-phase-preset').selectOption('mask-wipe');
-  await expect(page.locator('.tabs .tab.active')).toHaveText('JS');
-
-  const frame = previewFrame(page);
-  await expect(frame.locator('#f0')).toBeAttached();
-  await page.getByRole('button', { name: '▶ Play' }).click();
-  await expect
-    .poll(async () => frame.locator('.info-card').evaluate((el) => getComputedStyle(el).opacity))
-    .toBe('1');
-});
 
 test('export: downloads a plug-and-play SPX zip', async ({ page }) => {
   await toVariantStep(page, 'Hairline');

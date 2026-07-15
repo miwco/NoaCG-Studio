@@ -6,7 +6,7 @@ import { importAnimData } from '../blocks/animImport';
 import { deleteKeyframe, setFilterComponent, setKeyframe } from '../blocks/animEdit';
 import { filterComponent } from '../blocks/filterTrack';
 import { applyPresetData, presetDonor } from '../blocks/presetApply';
-import { presetsForType, anyPresetById } from '../blocks/animPatch';
+import { presetsForType, anyPresetById } from '../blocks/presetRegistry';
 import { activationStep, animatedProps, resolveValue, stepSeconds } from '../blocks/animEval';
 import type { AnimPresetId } from '../model/wizard';
 import { EASINGS, resolveEasing, type EasingId } from '../model/easings';

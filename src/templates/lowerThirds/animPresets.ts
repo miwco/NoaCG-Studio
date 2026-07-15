@@ -36,14 +36,18 @@ export interface PresetConfig {
   lineCount: number;
   /** Whether the design has a .<prefix>-accent element. */
   hasAccent: boolean;
+  /** Whether the design pairs a progress bar with its stat (a .<prefix>-bar-fill element).
+   *  Only the infographic count-up preset asks: its designs may or may not carry one, and a
+   *  preset must not write motion for an element that isn't there (a phantom timeline layer). */
+  hasBars?: boolean;
   /** Multi-step mode: in-timeline shows line 1; each next() reveals one more line. */
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */
   stepChain?: StepChain;
   /** Assigned chain selectors whose element lives OUTSIDE the .<prefix> root (building-block
-   *  elements sit next to the root, not inside it) — they miss the root's opacity gate, so
-   *  the steps block hides them from first paint and the exit fades them out
-   *  (blocks/animPatch.ts patchOutsideExit keeps the out-phase line in sync). */
+   *  elements sit next to the root, not inside it) — they miss the root's opacity gate, so the
+   *  steps block hides them from first paint. On a data template the exit side is the
+   *  interpreter's job (it fades press-revealed layers outside the root with the Out step). */
   stepOutsideParts?: string[];
   /** Initial animSpeed value (0.75 slower · 1 normal · 1.5 faster). */
   speed: number;
@@ -158,8 +162,8 @@ function revealNextStep() {
 
 /** The load-side of the outside gate: press-assigned parts that live OUTSIDE the root are
  *  not covered by its rest-hide (the root is CSS-hidden until play; its children with it),
- *  so they must hide themselves from the first paint. The exit side is the patched
- *  buildOutTimeline line (blocks/animPatch.ts patchOutsideExit). */
+ *  so they must hide themselves from the first paint. The exit side belongs to the data
+ *  interpreter, which fades press-revealed layers outside the root with the Out step. */
 function outsideGate(cfg: PresetConfig): string {
   const outside = cfg.stepOutsideParts ?? [];
   if (!cfg.steps || outside.length === 0) return '';

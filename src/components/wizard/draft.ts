@@ -3,12 +3,7 @@
 // WizardOptions, and resolveOptions() (model/wizard.ts) fills the rest.
 
 import { ASPECTS, type AssetFile, type Resolution, type SpxTemplate } from '../../model/types';
-import {
-  anyPresetById,
-  presetConfigFromTemplate,
-  swapAnimationPhase,
-  type AnimPhase,
-} from '../../blocks/animPatch';
+import { anyPresetById, type AnimPhase } from '../../blocks/presetRegistry';
 import { parseAnimData, spliceAnimData } from '../../blocks/animData';
 import { applyPresetData, presetDonor } from '../../blocks/presetApply';
 import { resolveEasing } from '../../model/easings';
@@ -146,10 +141,10 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
 }
 
 /**
- * Build the draft's real template. `variant.create` emits the animation region with the
- * entrance preset driving both phases; when the draft mixes a different exit in, the
- * out phase is spliced with the same deterministic patcher the Motion panel uses —
- * so the wizard preview and the created project are always the exact same code.
+ * Build the draft's real template. `variant.create` emits the animation data with the entrance
+ * preset driving both phases; when the draft mixes a different exit in, that exit is applied
+ * onto the Out step with the same generator the Inspector's Animations tab uses — so the wizard
+ * preview and the created project are always the exact same code.
  */
 export function buildDraftTemplate(variant: TemplateVariant, draft: WizardDraft): SpxTemplate {
   const template = variant.create(draftToOptions(variant, draft));
@@ -159,20 +154,10 @@ export function buildDraftTemplate(variant: TemplateVariant, draft: WizardDraft)
   const outPreset = anyPresetById(outId);
   const easeOut = resolveEasing(draft.animation.easing, outPreset.autoEase).easeOut;
 
-  // Timeline v2 categories create as data blocks — the exit mix is a preset application
-  // onto the Out step (the same generator the Inspector's Animations tab uses).
   const data = parseAnimData(template.js);
-  if (data) {
-    const donor = presetDonor(template, data, outId, { easeOut });
-    const mixed = donor && applyPresetData(data, donor, 'out', 'all');
-    const js = mixed && spliceAnimData(template.js, mixed);
-    return js ? { ...template, js } : template;
-  }
-
-  const cfg = {
-    // Keeps the emitted speed and entrance ease; only the exit ease follows the new preset.
-    ...presetConfigFromTemplate(template, draft.animation.steps),
-    easeOut,
-  };
-  return { ...template, js: swapAnimationPhase(template.js, outId, cfg, 'out') };
+  if (!data) return template; // no data block (a hand-written variant) — nothing to mix onto
+  const donor = presetDonor(template, data, outId, { easeOut });
+  const mixed = donor && applyPresetData(data, donor, 'out', 'all');
+  const js = mixed && spliceAnimData(template.js, mixed);
+  return js ? { ...template, js } : template;
 }
