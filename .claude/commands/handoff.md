@@ -58,7 +58,13 @@ The user has explicitly asked that this command not read housekeeping back to th
 - an "anything left behind" / loose-ends checklist;
 - a section reciting repo hygiene - uncommitted files, unpushed commits, stashes, untracked
   scratch files, whether the branch landed on `main`;
-- a standalone "validation status" section rehearsing what you did and didn't rerun.
+- a standalone "validation status" section rehearsing what you did and didn't rerun;
+- **anything about OTHER branches or worktrees** - that another branch is unmerged, how many
+  commits it is behind `main`, or that a worktree/branch could be removed. The user merges each
+  branch and prunes worktrees in their OWN dedicated sessions, deliberately. A handoff never routes
+  the next session to that work, recommends cleanup, or reports how far another branch has drifted -
+  and the pasteable prompt never hands off "go merge branch X." The handoff is about the work THIS
+  session did.
 
 You still READ all of that (Phase 1) - it grounds the summary and it is how you catch a genuine
 problem. But it only reaches the response when it is **actually actionable**, and then it appears
@@ -142,8 +148,12 @@ reasoning is worth more than the file list.
 
 ### 2. What's next
 
-The best next step, plus anything else worth doing. This is where every real loose end lands -
-including the ones a checklist would have caught:
+Scope this to THIS session's line of work: what wasn't finished, and what should or could be done
+next on the thing you just built. It is NOT a place to route the user to other branches or
+repo-wide cleanup - merging an unrelated worktree, removing branches, "N commits behind main" -
+which they handle in their own dedicated sessions. The best next step on this work, plus anything
+else worth doing on it - this is where every real loose end lands, including the ones a checklist
+would have caught:
 
 - **Unfinished work known only from this chat** - a half-done feature, a bug found but not fixed, a
   design agreed but not built, a decision deferred. THIS IS THE MOST VALUABLE OUTPUT of the command:
