@@ -10,8 +10,9 @@ import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
 import { insertImageElement } from '../blocks/assetOps';
+import { insertLottieElement } from '../blocks/lottieInsert';
 import { probeAsset } from '../assets/assetInfo';
-import { fileToDataUrl, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
+import { fileToDataUrl, isImageAsset, isLottieAsset, uniqueAssetPath } from '../assets/assetUtils';
 import { ASSET_DRAG_TYPE } from './AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { phaseIdOf } from './StepTimeline';
@@ -917,9 +918,11 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     const place = async () => {
       if (assetPath) {
         const asset = template.assets.find((a) => a.path === assetPath);
-        if (!asset || !isImageAsset(assetPath)) return; // Lottie/fonts: no canvas placement yet
+        if (!asset) return;
+        const insert = isImageAsset(assetPath) ? insertImageElement : isLottieAsset(assetPath) ? insertLottieElement : null;
+        if (!insert) return; // fonts/other: no canvas placement
         const info = await probeAsset(asset);
-        const { template: next, selector } = insertImageElement(template, {
+        const { template: next, selector } = insert(template, {
           assetPath,
           x: point.x,
           y: point.y,

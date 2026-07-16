@@ -27,6 +27,16 @@ plus `insertImageElement` - the drag-to-canvas drop: a commented, absolutely pos
 `<img id="img-*" data-gfx>` + CSS rule at the drop point. Callers apply through ONE
 applyTemplate so a move (or a drop) is one undo step.
 
+## lottieInsert.ts - Lottie placement
+
+`insertLottieElement` - the drag-to-canvas drop for a `lottie/<file>.json` asset: a
+positioned `<div id="lottie-*" data-gfx data-lottie="<path>">` container, a commented CSS
+rule, ONE shared idempotent bootstrap in the JS (decodes an inlined data: URL with atob -
+no fetch, so file:// playout works - or hands a real path to the player), and the bundled
+player's `<head>` script tag (mirrors the GSAP tag; preview/exports strip-inline-or-keep it
+identically, and only when used - see assets/lottieSupport.ts). Autoplay + loop in v1; the
+timeline animates the container like any block part.
+
 ## cssVars.ts
 
 :root variable read/write helpers (the Style panel's patch layer).

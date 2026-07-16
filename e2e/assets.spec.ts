@@ -9,9 +9,19 @@ const TINY_PNG = Buffer.from(
   'base64',
 );
 
-/** A minimal file that passes the Lottie signature gate (v + layers + numeric w/h). */
+/** A minimal REAL animation (one red solid layer) — passes the signature gate AND renders. */
 const TINY_LOTTIE = Buffer.from(
-  JSON.stringify({ v: '5.7.0', fr: 30, ip: 0, op: 60, w: 512, h: 512, layers: [] }),
+  JSON.stringify({
+    v: '5.7.0', fr: 30, ip: 0, op: 60, w: 512, h: 512, nm: 'burst', ddd: 0, assets: [],
+    layers: [{
+      ddd: 0, ind: 1, ty: 1, nm: 'solid', sr: 1,
+      ks: {
+        o: { a: 0, k: 100 }, r: { a: 0, k: 0 },
+        p: { a: 0, k: [256, 256, 0] }, a: { a: 0, k: [256, 256, 0] }, s: { a: 0, k: [100, 100, 100] },
+      },
+      sw: 512, sh: 512, sc: '#ff0000', ip: 0, op: 60, st: 0,
+    }],
+  }),
 );
 
 async function createHairline(page: Page) {
@@ -145,13 +155,16 @@ test('dragging an asset onto the canvas inserts a positioned <img> as one undo s
   expect(st.css).toContain('position: absolute');
   // The new element became the shared selection (selectable, animatable part).
   expect(st.selected).toBe('#img-team-logo');
-  // The Assets panel now counts the reference.
-  await expect(page.getByTestId('asset-info')).toContainText('1× in the template');
-
   // The preview renders it after the debounced rebuild, with the data-URL inlined.
   const img = page.frameLocator('iframe.preview-frame').locator('#img-team-logo');
   await expect(img).toBeVisible({ timeout: 3000 });
   expect(await img.getAttribute('src')).toContain('data:image/png');
+
+  // The new selection auto-reveals the Inspector tab (by design), so return to the
+  // Assets tab and re-select the row before reading its info.
+  await page.getByTestId('dock-tab-assets').click();
+  await row.click();
+  await expect(page.getByTestId('asset-info')).toContainText('1× in the template');
 
   // Moving the asset into a folder rewrites the reference in the code.
   page.once('dialog', (d) => void d.accept('logos'));
@@ -163,6 +176,47 @@ test('dragging an asset onto the canvas inserts a positioned <img> as one undo s
   await expect.poll(async () => (await state()).html).toContain('src="images/team-logo.png"');
   await page.keyboard.press('Control+z');
   await expect.poll(async () => (await state()).html).not.toContain('img-team-logo');
+});
+
+test('dropping a Lottie asset on the canvas inserts a playing animation element', async ({ page }) => {
+  await createHairline(page);
+  await openAssetsTab(page);
+  await page.getByTestId('assets-import-input').setInputFiles({
+    name: 'burst.json', mimeType: 'application/json', buffer: TINY_LOTTIE,
+  });
+  const row = page.locator('[data-path="lottie/burst.json"]');
+  await expect(row).toBeVisible();
+
+  const dt = await page.evaluateHandle(() => new DataTransfer());
+  await row.dispatchEvent('dragstart', { dataTransfer: dt });
+  const canvas = (await page.getByTestId('canvas-layer').boundingBox())!;
+  await page.getByTestId('canvas-layer').dispatchEvent('drop', {
+    dataTransfer: dt, clientX: canvas.x + canvas.width / 2, clientY: canvas.y + canvas.height / 2,
+  });
+
+  // The insert wrote the container, the player's script tag, and ONE shared bootstrap.
+  const code = () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const t = useTemplateStore.getState().template;
+      return { html: t.html, js: t.js };
+    });
+  await expect.poll(async () => (await code()).html).toContain('data-lottie="lottie/burst.json"');
+  const c = await code();
+  expect(c.html).toContain('id="lottie-burst"');
+  expect(c.html).toContain('js/lottie.min.js');
+  expect(c.js).toContain('function initLottieBoxes()');
+
+  // The preview plays it: the bundled player builds an <svg> inside the container.
+  const box = page.frameLocator('iframe.preview-frame').locator('#lottie-burst');
+  await expect(box).toBeVisible({ timeout: 3000 });
+  await expect(box.locator('svg')).toBeVisible({ timeout: 3000 });
+  // The attribute was inlined to a data: URL for the srcdoc preview (no network).
+  expect(await box.getAttribute('data-lottie')).toContain('data:application/json');
+
+  // One undo removes the whole insert.
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await code()).html).not.toContain('lottie-burst');
 });
 
 test('a saved v2 layout gains the Assets tab once (v2 -> v3 migration)', async ({ page }) => {
