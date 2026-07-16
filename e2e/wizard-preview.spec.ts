@@ -101,6 +101,35 @@ test('fields step: quick typing settles into the preview text', async ({ page })
   await expect.poll(() => rootOpacity(page)).toBe('1');
 });
 
+test('zoom to graphic: the preview reframes onto a small graphic and back', async ({ page }) => {
+  // A corner bug is ~150px of a 1920px canvas — the case the zoom exists for.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Corner bug' }).click();
+  await page.locator('.wz-variant', { hasText: 'Glass Mark' }).click();
+
+  const iframe = page.locator('.wz-side iframe');
+  const scaleOf = async () =>
+    Number(((await iframe.getAttribute('style'))!.match(/scale\(([\d.]+)\)/) ?? [])[1]);
+
+  // Wait for the debounced srcdoc + the stage fit, then record the full-canvas scale.
+  await expect.poll(scaleOf).toBeGreaterThan(0.2);
+  const fullCanvas = await scaleOf();
+
+  const zoomBtn = page.getByRole('button', { name: 'Zoom to graphic' });
+  await expect(zoomBtn).toBeEnabled();
+  await zoomBtn.click();
+  // The reframed view is dramatically closer than the full canvas, and off-centered
+  // toward the graphic (the content translate appears in the transform).
+  await expect.poll(scaleOf).toBeGreaterThan(fullCanvas * 2);
+  expect(await iframe.getAttribute('style')).toMatch(/scale\([\d.]+\) translate\(-?\d/);
+
+  // Toggling back restores the whole-canvas fit.
+  await page.getByRole('button', { name: 'Whole canvas' }).click();
+  await expect.poll(scaleOf).toBeCloseTo(fullCanvas, 2);
+});
+
 test('animation step: a mid-demo preset change never leaves the preview hidden', async ({ page }) => {
   await openWizardTo(page, 'animation');
   // The lifecycle demo is running (in → out at 1.7s → in again at 2.8s). Change the

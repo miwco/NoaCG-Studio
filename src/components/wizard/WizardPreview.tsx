@@ -20,8 +20,14 @@ type SpxWindow = Window & { play?: () => void; stop?: () => void; next?: () => v
 export default function WizardPreview({ template, replayKey = 0, demoOut = false }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.2);
+  const [stage, setStage] = useState({ w: 0, h: 0 });
   const [srcdoc, setSrcdoc] = useState('');
+  // Zoom-to-graphic: default shows the whole canvas; the toggle reframes the view onto
+  // just the graphic so small formats (corner bugs, tickers) are actually inspectable.
+  const [zoomed, setZoomed] = useState(false);
+  // The graphic's layout box in canvas px, measured transform-free (offset* ignores the
+  // entrance's GSAP transforms, so mid-animation measurements still give the settled box).
+  const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   // Pending lifecycle-demo timers (out + back in) — cleared on any new play/stop.
   const demoTimers = useRef<number[]>([]);
   const clearDemo = useCallback(() => {
@@ -36,19 +42,19 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
 
   const { width, height } = template.resolution;
 
-  // Fit the canvas inside the stage.
+  // Track the stage size (the fit scale and the zoom framing both derive from it).
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
+    const el = stageRef.current;
+    if (!el) return;
     const fit = () => {
-      const r = stage.getBoundingClientRect();
-      setScale(Math.min(r.width / width, r.height / height));
+      const r = el.getBoundingClientRect();
+      setStage({ w: r.width, h: r.height });
     };
     fit();
     const ro = new ResizeObserver(fit);
-    ro.observe(stage);
+    ro.observe(el);
     return () => ro.disconnect();
-  }, [width, height]);
+  }, []);
 
   // Rebuild (debounced) when the template changes; auto-play the entrance on load.
   // Committing a new srcdoc also cancels any pending demo timers — a stop()/play()
@@ -65,6 +71,20 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
 
   const win = (): SpxWindow | null => (frameRef.current?.contentWindow as SpxWindow) ?? null;
 
+  /** Measure the graphic's box in canvas px. The root is the body's first <div> (the
+   *  `.{prefix}` wrapper every generated template has). getBoundingClientRect is right
+   *  here: it includes the zone anchoring's STATIC transform (centered zones position
+   *  via translate(-50%)), while the entrance's GSAP motion never transforms the root
+   *  itself (presets move the box and lines inside it), so a mid-flight measurement
+   *  still equals the settled box. The iframe's own scale doesn't reach in — inside
+   *  the document, coordinates are plain canvas pixels. */
+  const measureBox = () => {
+    const root = frameRef.current?.contentDocument?.body?.querySelector('div');
+    if (!root) return setBox(null);
+    const r = root.getBoundingClientRect();
+    setBox(r.width > 0 ? { x: r.left, y: r.top, w: r.width, h: r.height } : null);
+  };
+
   const playIn = () => {
     const w = win();
     if (!w || typeof w.play !== 'function') return;
@@ -72,6 +92,7 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
     const tpl = templateRef.current;
     w.update?.(JSON.stringify(Object.fromEntries(tpl.fields.map((f) => [f.field, f.value]))));
     w.play();
+    measureBox(); // every (re)play follows a load or a data push — refresh the zoom framing
     if (demoOut) {
       // Show the exit too, then come back on air so the preview isn't left empty.
       demoTimers.current.push(
@@ -102,6 +123,22 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [replayKey]);
 
+  // The view: whole canvas by default; zoomed reframes onto the graphic's box.
+  const fitScale = Math.min(stage.w / width, stage.h / height) || 0.2;
+  let z = fitScale;
+  let tx = 0;
+  let ty = 0;
+  if (zoomed && box) {
+    const M = 48; // canvas-px breathing room around the framed graphic
+    const contain = Math.min(stage.w / (box.w + M), stage.h / (box.h + M));
+    // A near-canvas-wide (ticker) or -tall (credits) graphic barely gains from a
+    // contain fit — fill the other axis instead and crop: that IS the detail view.
+    z = contain >= fitScale * 1.3 ? contain : Math.max(stage.w / (box.w + M), stage.h / (box.h + M));
+    z = Math.min(Math.max(z, fitScale), 3);
+    tx = width / 2 - (box.x + box.w / 2);
+    ty = height / 2 - (box.y + box.h / 2);
+  }
+
   return (
     <div className="wz-preview">
       <div className="wz-stage" ref={stageRef}>
@@ -111,7 +148,7 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
           sandbox="allow-scripts allow-same-origin"
           srcDoc={srcdoc}
           onLoad={() => setTimeout(playWhenReady, 60)}
-          style={{ width, height, transform: `translate(-50%, -50%) scale(${scale})` }}
+          style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
         />
       </div>
       <div className="wz-preview-bar">
@@ -119,6 +156,14 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
           {width}×{height} · {template.fps} fps
         </span>
         <div className="row" style={{ gap: 6 }}>
+          <button
+            className={zoomed ? 'active' : ''}
+            disabled={!box}
+            onClick={() => { if (!zoomed) measureBox(); setZoomed(!zoomed); }}
+            title={zoomed ? 'Show the whole canvas again' : 'Zoom the preview to just the graphic'}
+          >
+            {zoomed ? '▭ Whole canvas' : '⌖ Zoom to graphic'}
+          </button>
           <button onClick={playIn} title={demoOut ? 'Replay the animation (in, then out)' : 'Replay the entrance animation'}>▶ Replay</button>
           <button onClick={() => { clearDemo(); win()?.stop?.(); }} title="Play the exit animation">■ Out</button>
         </div>

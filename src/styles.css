@@ -677,8 +677,8 @@ kbd {
 
 /* ---------- Creation wizard ---------- */
 .wz-modal {
-  width: min(1240px, 94vw);
-  height: min(820px, 92vh);
+  width: min(1520px, 96vw);
+  height: min(960px, 94vh);
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -711,7 +711,7 @@ kbd {
 .wz-body { flex: 1; display: flex; min-height: 0; }
 .wz-step { flex: 1; overflow: auto; padding: 20px; min-width: 0; }
 .wz-side {
-  flex: 0 0 44%;
+  flex: 0 0 50%;                    /* the preview deserves half the modal */
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -739,7 +739,11 @@ kbd {
   background-size: 24px 24px;
   background-position: 0 0, 0 12px, 12px -12px, -12px 0;
 }
-.wz-stage iframe { position: absolute; top: 50%; left: 50%; border: 0; background: transparent; box-shadow: 0 10px 50px rgba(0,0,0,0.55); }
+.wz-stage iframe {
+  position: absolute; top: 50%; left: 50%; border: 0; background: transparent;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.55);
+  transition: transform 0.25s ease;  /* the zoom toggle glides instead of jumping */
+}
 .wz-preview-bar {
   display: flex;
   align-items: center;
