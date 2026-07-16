@@ -111,6 +111,60 @@ test('moving an asset into a new folder nests its path; undo restores it', async
   await expect(page.locator('[data-path="images/team-logo.png"]')).toBeVisible();
 });
 
+test('dragging an asset onto the canvas inserts a positioned <img> as one undo step', async ({ page }) => {
+  await createHairline(page);
+  await openAssetsTab(page);
+  await page.getByTestId('assets-import-input').setInputFiles({
+    name: 'team-logo.png', mimeType: 'image/png', buffer: TINY_PNG,
+  });
+  const row = page.locator('[data-path="images/team-logo.png"]');
+  await expect(row).toBeVisible();
+
+  // HTML5 drag via dispatched events (Playwright can't native-drag): dragstart on the row
+  // fills the DataTransfer, drop on the canvas overlay places the image at that point.
+  const dt = await page.evaluateHandle(() => new DataTransfer());
+  await row.dispatchEvent('dragstart', { dataTransfer: dt });
+  const canvas = (await page.getByTestId('canvas-layer').boundingBox())!;
+  const dropX = canvas.x + canvas.width * 0.6;
+  const dropY = canvas.y + canvas.height * 0.4;
+  await page.getByTestId('canvas-layer').dispatchEvent('drop', {
+    dataTransfer: dt, clientX: dropX, clientY: dropY,
+  });
+
+  // The insert is real, commented code: an <img> with a positioned CSS rule.
+  const state = () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const s = useTemplateStore.getState();
+      return { html: s.template.html, css: s.template.css, selected: s.selectedPart };
+    });
+  await expect.poll(async () => (await state()).html).toContain('id="img-team-logo"');
+  const st = await state();
+  expect(st.html).toContain('src="images/team-logo.png"');
+  expect(st.css).toContain('#img-team-logo');
+  expect(st.css).toContain('position: absolute');
+  // The new element became the shared selection (selectable, animatable part).
+  expect(st.selected).toBe('#img-team-logo');
+  // The Assets panel now counts the reference.
+  await expect(page.getByTestId('asset-info')).toContainText('1× in the template');
+
+  // The preview renders it after the debounced rebuild, with the data-URL inlined.
+  const img = page.frameLocator('iframe.preview-frame').locator('#img-team-logo');
+  await expect(img).toBeVisible({ timeout: 3000 });
+  expect(await img.getAttribute('src')).toContain('data:image/png');
+
+  // Moving the asset into a folder rewrites the reference in the code.
+  page.once('dialog', (d) => void d.accept('logos'));
+  await page.getByTestId('asset-info').locator('select').selectOption('__new__');
+  await expect.poll(async () => (await state()).html).toContain('src="images/logos/team-logo.png"');
+
+  // Undo the move, then undo the insert — each was exactly one step.
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await state()).html).toContain('src="images/team-logo.png"');
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await state()).html).not.toContain('img-team-logo');
+});
+
 test('a saved v2 layout gains the Assets tab once (v2 -> v3 migration)', async ({ page }) => {
   await createHairline(page);
   // Seed a hand-written v2 layout (no assets panel anywhere). NEVER via addInitScript —
