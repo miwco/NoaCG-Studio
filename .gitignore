@@ -21,6 +21,7 @@ example_projects/
 
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand)
 bench-out/
+video-bench-out*/
 compare-out/
 
 # Local render outputs + manifest fixtures (multi-MB, regenerated on demand by
