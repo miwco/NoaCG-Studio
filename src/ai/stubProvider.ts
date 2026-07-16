@@ -179,6 +179,18 @@ export class StubAIProvider implements AIProvider {
 
     return { summary: 'Made the template more SPX-ready: ' + notes.join('; ') + '.', template: next };
   }
+
+  async convertImport(prompt: string, imported: SpxTemplate): Promise<TemplateChange> {
+    // Offline conversion = the deterministic SPX-readiness fixes; free-form restyling per
+    // the prompt needs the real provider.
+    const ready = await this.makeSpxReady(imported);
+    return {
+      summary:
+        ready.summary +
+        (prompt.trim() ? ' (Free-form conversion requests need an AI key — the offline stub applies the deterministic fixes only.)' : ''),
+      template: ready.template,
+    };
+  }
 }
 
 export const aiProvider: AIProvider = new StubAIProvider();

@@ -303,4 +303,17 @@ ${template.js}`,
       template,
     );
   },
+
+  async convertImport(prompt, imported, _context, options) {
+    const request = prompt.trim() || 'Bring it fully up to the house standards.';
+    return this.modify(
+      `This template was IMPORTED from the user's existing file — keep what it gets right ` +
+        `(its content, its design intent, its working markup), and convert the rest to this ` +
+        `tool's contracts: SPXGCTemplateDefinition + fN field mapping, the :root style vars, ` +
+        `the marked ANIMATION region as the NOACG_ANIM data block with the standard ` +
+        `interpreter, and relative asset paths only.\n\nRequest: ${request}`,
+      imported,
+      options,
+    );
+  },
 };
