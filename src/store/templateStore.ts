@@ -11,7 +11,7 @@ import { loadProject, saveProject } from '../model/project';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'control' | 'style' | 'ai' | 'export';
+export type SidePanel = 'data' | 'control' | 'style' | 'assets' | 'ai' | 'export';
 
 /** A live playout action the Control panel asks the simulator to run on the preview. */
 export type PlayoutAction = 'update' | 'play' | 'stop' | 'next';
