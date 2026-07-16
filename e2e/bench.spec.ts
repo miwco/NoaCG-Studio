@@ -143,6 +143,33 @@ test.describe('runtime bench detection fixtures', () => {
   });
 });
 
+test.describe('design adjustments', () => {
+  test('an aggressively adjusted grounded assembly still passes the bench', async ({ page }) => {
+    test.setTimeout(60_000);
+    await toApp(page);
+    const res = await page.evaluate(`(async () => { ${HELPERS}
+      const { specToTemplate } = await import('/src/ai/designSpec.ts');
+      const { applyDesignAdjustments } = await import('/src/ai/designAdjust.ts');
+      const spec = {
+        fit: 'catalog', reason: 'test', name: 'Adjusted Strap',
+        summary: 'test', category: 'lower-third', variantId: 'lt01',
+        lines: [{ title: 'Name', sample: 'Ada Lovelace' }, { title: 'Title', sample: 'Chief Analyst' }],
+        typography: { scaleRatio: 2.4, headingWeight: 'black', tracking: 'wide', kickerCase: 'caps' },
+        density: 'airy', alignment: 'center',
+        shape: { corner: 'round', accentForm: 'none', panel: 'none' },
+      };
+      const assembled = specToTemplate(spec);
+      const adjusted = applyDesignAdjustments(assembled.template, spec);
+      const res = await bench(adjusted);
+      return { ok: res.ok, errors: res.errors, changed: adjusted.css !== assembled.template.css };
+    })()`);
+    const { ok, errors, changed } = res as { ok: boolean; errors: { rule: string; message: string }[]; changed: boolean };
+    expect(changed).toBe(true); // the parameters genuinely reshaped the CSS
+    expect(errors, JSON.stringify(errors, null, 2)).toEqual([]);
+    expect(ok).toBe(true);
+  });
+});
+
 // ── The calibration tripwire: the catalog must pass its own bench, always ─────────────
 const CATEGORIES = [
   'lower-third',

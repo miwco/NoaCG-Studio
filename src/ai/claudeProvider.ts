@@ -16,6 +16,7 @@ import { parseDataUrl } from '../assets/assetUtils';
 import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
 import { lt01 } from '../templates/lowerThirds/lt01';
 import { catalogDigest, DESIGN_SPEC_TOOL, specToTemplate, type DesignSpec } from './designSpec';
+import { applyDesignAdjustments } from './designAdjust';
 import { variantsFor } from '../templates/catalog';
 import type { TemplateVariant } from '../model/wizard';
 
@@ -434,9 +435,13 @@ export const claudeProvider: AIProvider = {
         // by construction, panel- and timeline-editable like any wizard output.
         options?.onProgress?.('Assembling…');
         const t0 = Date.now();
-        const { template, diversity } = specToTemplate(spec, context);
+        const assembled = specToTemplate(spec, context);
+        // The spec's compositional parameters (typography scale, density, shape, panel)
+        // apply as deterministic overrides — the brief shapes the composition, not just
+        // the colours.
+        const template = applyDesignAdjustments(assembled.template, spec);
         run.stage('assemble', t0);
-        run.diversity(diversity);
+        run.diversity(assembled.diversity);
         options?.onProgress?.('Testing it…');
         const validation = await validateWith(template, options, run);
         // No repair loop here: a grounded assembly failing its own bench is a platform
