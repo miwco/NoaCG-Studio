@@ -654,3 +654,25 @@ export const claudeProvider: AIProvider = {
     );
   },
 };
+
+/**
+ * The PRE-HARNESS generation path, exported for scripts/ai-compare.mjs only: the house
+ * system prompt + the lt01 example + the validated repair loop, with NO design-spec stage.
+ * The app never calls this — it is the benchmark's stage-ablation arm, kept so the
+ * harness's added value stays measurable against the previous product.
+ */
+export async function plainGenerate(
+  prompt: string,
+  context?: GenerateContext,
+  options?: GenerateOptions,
+): Promise<AiTemplateChange> {
+  return recorded('generate', (run) =>
+    generateValidated(
+      [...imageBlocks(context), { type: 'text', text: contextText(prompt, context) }],
+      context,
+      undefined,
+      options,
+      run,
+    ),
+  );
+}

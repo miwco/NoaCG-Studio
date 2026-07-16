@@ -1,10 +1,9 @@
-// C-vs-B comparison rig — the decisive test behind the moat memo.
+// The harness value proof — same brief, same model, four arms side by side.
 //
 //   node scripts/ai-compare.mjs [out-dir] [count | id,id,…]
 //
-// The memo's central claim is that this service beats "just asking Claude/Codex to make
-// the same graphic". This bench runs the SAME brief through three arms on the SAME model
-// (claude-sonnet-5) and lays the results side by side so a human can judge:
+// The product's central claim is that the NoaCG harness beats "just asking Claude/Codex to
+// make the same graphic" — and each harness stage must EARN its cost. Arms:
 //
 //   A  RAW          one shot, a generic "make a broadcast graphic" system prompt. No taste
 //                   teaching, no example, no layout-safety rules, no validation repair. This
@@ -12,24 +11,30 @@
 //   B  RAW+ITERATE  arm A, then N generic self-critique rounds ("review your own work as a
 //                   broadcast designer, fix overlaps/contrast/hierarchy, re-emit"). This is a
 //                   competent person iterating with vanilla Claude — THE REAL BAR.
-//   C  PIPELINE     our claudeProvider.generate: full house-contract system prompt + lt01 as a
-//                   worked example + the automatic validation repair round. The product.
+//   D  PRE-HARNESS  the previous product: the full house-contract system prompt + worked
+//                   example + the validated repair loop, but NO design-spec stage — every
+//                   brief goes to the free-form coder. The stage-ablation arm.
+//   C  HARNESS      claudeProvider.generate as shipped: design-spec router → grounded catalog
+//                   assembly (+ deterministic design adjustments, optional bounded polish) or
+//                   the validated custom path — with the runtime bench injected, exactly as
+//                   the app runs it.
 //
-// The only variables between arms are the system prompt and the iteration/verification loop —
-// the moat levers. Rendering, model, and scoring are identical.
+// Per arm the scorecard tracks: static validity, the NEUTRAL runtime bench (lifecycle,
+// binding, overlap/overflow, doubled-text stress — house-editability checks OFF so the bar
+// is arm-agnostic), the motion-sampled overlap count, EDITABILITY (house-shaped: prefix +
+// readable NOACG_ANIM + :root vars — a product criterion, clearly biased toward D/C),
+// model calls, repair rounds, tokens, and wall time. C additionally reports its ROUTE
+// (grounded / grounded+polish / custom) and variant diversity.
 //
 // HONEST HANDICAP: arms A and B are TOLD the SPX format basics (definition, fN↔id, runtime
 // functions, relative refs, gsap global) so their output renders and can pass the validator on
-// format grounds. We deliberately give the baseline the format knowledge for free — so any C
-// win is a TASTE / LAYOUT / RELIABILITY win, not "we happen to know our own file format". The
-// validator's hard errors are all format-level; field-mapping is only a warning. So `valid` is
-// mildly house-biased toward C; the neutral, cross-arm score is the text-OVERLAP count and the
-// screenshots. Read those first.
+// format grounds — any C/D win is a TASTE / LAYOUT / RELIABILITY win, not format knowledge.
+// The neutral cross-arm scores are the runtime bench, the overlap count, and the screenshots.
 //
-// Requirements: the dev server (this checkout's port — scripts/dev-port.mjs) and VITE_ANTHROPIC_API_KEY in .env (or
-// the environment). ⚠ SPENDS REAL TOKENS — arm B multiplies calls by the round count, so a full
-// run is roughly count × (1 + ROUNDS_B + up-to-2) generations. Third arg limits to the first N
-// briefs or a comma-separated id list.
+// Requirements: the dev server (this checkout's port — scripts/dev-port.mjs) and
+// VITE_ANTHROPIC_API_KEY in .env (or the environment). ⚠ SPENDS REAL TOKENS — roughly
+// count × (1 raw + ROUNDS_B + pre-harness 1-3 + harness 1-4) calls. Third arg limits to the
+// first N briefs or a comma-separated id list.
 
 import { chromium } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -41,9 +46,20 @@ const FILTER = process.argv[3] ?? '';
 const ROUNDS_B = 2; // arm B: 1 generation + this many self-critique improvement rounds
 mkdirSync(OUT, { recursive: true });
 
-// A representative spread: growing bars + count-up, calm panel, dense cascading data rows,
-// a timed colour wipe, and a fullscreen dual-slide. Layout AND motion challenges.
+// Two groups. CATALOG-SHAPED briefs with a deliberate genre spread (the harness should
+// route these grounded, and their density/weight/motion answers should DIFFER — repeated
+// variants/compositions across them is the named "sameness" failure). STRUCTURE briefs are
+// off-catalog (growing bars, dense data rows, timed wipes, dual-slides): the harness should
+// route these custom, so they measure the validated free-form path against the baselines.
 const BRIEFS = [
+  // Catalog-shaped, genre spread:
+  ['news-lt', 'A serious evening-news lower third for a national broadcaster: presenter name and role. Restrained, credible, quick unobtrusive entrance.'],
+  ['esports-rank', 'An energetic esports ranking strap for a tournament: player nickname and team. Aggressive, fast, high contrast, sharp angles.'],
+  ['kids-timer', "A countdown timer for a children's game show: playful, big, friendly, bouncy motion."],
+  ['finance-ticker', 'A financial index ticker for a business channel: continuously scrolling index names with values from one textarea. Quiet, precise, endless linear travel.'],
+  ['glam-card', 'An entertainment show info card announcing a special guest: name and one teaser line. Glamorous but tasteful, airy spacing, elegant thin typography.'],
+  ['brutal-lt', 'A brutalist lower third: massive black heading, tight tracking, sharp corners, no panel decoration at all. Name and title.'],
+  // Structure briefs (off-catalog):
   ['election-bars', 'Election results panel: three candidates as horizontal bars that grow to their percentage on play. Fields: three candidate names, three party names, three percentages. Counted-up numbers at the bar ends. Serious, newsroom-clean, bottom-center.'],
   ['weather-now', 'A "weather now" side panel: big temperature, a condition line, wind and humidity as small rows, city name as a caps kicker. Fields for all values. Calm and airy, mid-right, gentle slide-in.'],
   ['timing-tower', 'A motorsport timing tower, top-left: positions 1-5 as compact rows (position number on an accent chip, driver three-letter code, gap time). One textarea field, one line per driver "VER +0.000". Rows cascade in fast. Condensed, high-contrast.'],
@@ -79,18 +95,26 @@ const selected = /^[a-z-]+(,[a-z-]+)*$/.test(FILTER)
   ? BRIEFS.filter(([id]) => FILTER.split(',').includes(id))
   : BRIEFS.slice(0, Number(FILTER) || Infinity);
 
-// ── Generate all three arms for one brief (browser context) ──────────────────
-// Returns { A, B, C } each { name, type, summary, html, css, js, ok, errors }.
+// ── Generate all four arms for one brief (browser context) ───────────────────
+// Returns { A, B, D, C } each { name, summary, html/css/js, ok, benchOk, editable,
+// errors, benchErrors, ms, calls, repairs, tokensIn, tokensOut, route?, variantId? }.
 async function generateArms(brief, roundsB) {
   return page.evaluate(
     async ({ brief: b, roundsB: rounds }) => {
-      const { callClaude } = await import('/src/ai/anthropic.ts');
-      const { claudeProvider } = await import('/src/ai/claudeProvider.ts');
+      const { callClaudeDetailed } = await import('/src/ai/anthropic.ts');
+      const { claudeProvider, plainGenerate } = await import('/src/ai/claudeProvider.ts');
       const { validateTemplate } = await import('/src/validation/validateTemplate.ts');
+      const { benchTemplateRuntime, mergeResults } = await import('/src/validation/runtimeBench.ts');
+      const { clearAiRuns, aiRunRecords } = await import('/src/ai/telemetry.ts');
+      const { detectPrefix } = await import('/src/model/structure.ts');
+      const { parseAnimData } = await import('/src/blocks/animData.ts');
       const { parseDefinition } = await import('/src/model/spxDefinition.ts');
       const { RESOLUTIONS, DEFAULT_SETTINGS } = await import('/src/model/types.ts');
 
       const RES = RESOLUTIONS[0];
+      const CTX = { images: [], palette: null, resolution: RES, fps: 25 };
+      // The app's injected validation pipeline — arms D and C run exactly as shipped.
+      const validate = async (t) => mergeResults(validateTemplate(t), await benchTemplateRuntime(t));
 
       // The emit tool — same three-file structured output the pipeline uses, so rendering is
       // identical across arms. Defined here (not imported) to keep the arms self-contained.
@@ -151,27 +175,69 @@ async function generateArms(brief, roundsB) {
         };
       }
 
-      function scored(emitted) {
-        const t = toTemplate(emitted);
+      // Shared deterministic scoring — the SAME bar for every arm. The runtime bench runs
+      // NEUTRAL (houseContract off): lifecycle/binding/overlap/stress are arm-agnostic.
+      // Editability (house-shaped output every panel can edit) is reported separately —
+      // a product criterion, openly biased toward the arms that know the house contracts.
+      async function scored(t, summary, metrics, extra) {
         const v = validateTemplate(t);
-        t._ok = v.ok;
-        t._errors = v.errors.map((e) => `${e.rule}: ${e.message}`);
-        t._summary = emitted.summary;
-        return t;
+        const bench = await benchTemplateRuntime(t, { houseContract: false });
+        const editable = Boolean(
+          detectPrefix(t.html) && parseAnimData(t.js) && t.css.includes('--accent:') && t.css.includes('--scale:'),
+        );
+        return {
+          name: t.name,
+          summary,
+          html: t.html,
+          css: t.css,
+          js: t.js,
+          ok: v.ok,
+          errors: v.errors.map((e) => `${e.rule}: ${e.message}`),
+          benchOk: bench.ok,
+          benchErrors: bench.errors.map((e) => `${e.rule}: ${e.message}`).slice(0, 4),
+          editable,
+          ...metrics,
+          ...(extra ?? {}),
+        };
+      }
+
+      // Telemetry → per-run metrics (arms D and C record their runs).
+      function metricsFrom(rec, ms) {
+        const stages = rec?.stages ?? [];
+        return {
+          ms,
+          calls: stages.filter((s) => s.model).length,
+          repairs: rec?.repairRounds ?? 0,
+          tokensIn: stages.reduce((a, s) => a + (s.usage?.inputTokens ?? 0), 0),
+          tokensOut: stages.reduce((a, s) => a + (s.usage?.outputTokens ?? 0), 0),
+        };
       }
 
       // Arm A — one raw shot, no repair.
-      const emitA = await callClaude({
+      let t0 = Date.now();
+      const rawA = await callClaudeDetailed({
         system: BASE_SYSTEM,
         messages: [{ role: 'user', content: [{ type: 'text', text: briefText }] }],
         tool: EMIT,
       });
-      const A = scored(emitA);
+      const emitA = rawA.output;
+      const aMs = Date.now() - t0;
+      const A = await scored(toTemplate(emitA), emitA.summary, {
+        ms: aMs,
+        calls: 1,
+        repairs: 0,
+        tokensIn: rawA.usage.inputTokens,
+        tokensOut: rawA.usage.outputTokens,
+      });
 
       // Arm B — start from A's generation, then N generic self-critique rounds.
+      // Its metrics include A's call: that's the true cost of "iterate from a raw shot".
+      t0 = Date.now();
       let curB = emitA;
+      let bIn = rawA.usage.inputTokens;
+      let bOut = rawA.usage.outputTokens;
       for (let i = 0; i < rounds; i++) {
-        curB = await callClaude({
+        const raw = await callClaudeDetailed({
           system: BASE_SYSTEM,
           messages: [
             { role: 'user', content: [{ type: 'text', text: briefText }] },
@@ -195,36 +261,37 @@ async function generateArms(brief, roundsB) {
           ],
           tool: EMIT,
         });
+        curB = raw.output;
+        bIn += raw.usage.inputTokens;
+        bOut += raw.usage.outputTokens;
       }
-      const B = scored(curB);
-
-      // Arm C — the real pipeline (full system prompt + example + validation repair).
-      const changeC = await claudeProvider.generate(b, {
-        images: [],
-        palette: null,
-        resolution: RES,
-        fps: 25,
+      const B = await scored(toTemplate(curB), curB.summary, {
+        ms: aMs + (Date.now() - t0),
+        calls: 1 + rounds,
+        repairs: 0,
+        tokensIn: bIn,
+        tokensOut: bOut,
       });
-      const cTpl = changeC.template;
-      const vC = validateTemplate(cTpl);
-      const C = {
-        ...cTpl,
-        _ok: vC.ok,
-        _errors: vC.errors.map((e) => `${e.rule}: ${e.message}`),
-        _summary: changeC.summary,
-      };
 
-      const pack = (t) => ({
-        name: t.name,
-        type: t.type,
-        summary: t._summary,
-        html: t.html,
-        css: t.css,
-        js: t.js,
-        ok: t._ok,
-        errors: t._errors,
+      // Arm D — the pre-harness product: house prompt + example + the validated repair
+      // loop, but NO design-spec stage (every brief goes to the free-form coder).
+      clearAiRuns();
+      t0 = Date.now();
+      const changeD = await plainGenerate(b, CTX, { validate });
+      const D = await scored(changeD.template, changeD.summary, metricsFrom(aiRunRecords().at(-1), Date.now() - t0));
+
+      // Arm C — the harness as shipped (design-spec router, grounded assembly or validated
+      // custom, bench-injected), exactly the app's configuration.
+      clearAiRuns();
+      t0 = Date.now();
+      const changeC = await claudeProvider.generate(b, CTX, { validate });
+      const recC = aiRunRecords().at(-1);
+      const C = await scored(changeC.template, changeC.summary, metricsFrom(recC, Date.now() - t0), {
+        route: changeC.path ?? null,
+        variantId: recC?.diversity?.variantId ?? null,
       });
-      return { A: pack(A), B: pack(B), C: pack(C) };
+
+      return { A, B, D, C };
     },
     { brief, roundsB },
   );
@@ -310,7 +377,8 @@ async function shoot(arm, id, tpl) {
 const ARMS = [
   ['A', 'Raw (one shot)'],
   ['B', `Raw + iterate (${ROUNDS_B} rounds)`],
-  ['C', 'Our pipeline'],
+  ['D', 'Pre-harness (house prompt + checks)'],
+  ['C', 'The harness'],
 ];
 const results = [];
 for (const [id, brief] of selected) {
@@ -340,8 +408,24 @@ for (const [id, brief] of selected) {
     } catch (e) {
       overlaps = [`render error: ${e.message || e}`];
     }
-    row.arms[key] = { name: tpl.name, summary: tpl.summary, ok: tpl.ok, errors: tpl.errors, overlaps };
-    process.stdout.write(`${key}${tpl.ok ? '✓' : '✗'}${overlaps.length ? '⚠' + overlaps.length : ''} `);
+    row.arms[key] = {
+      name: tpl.name,
+      summary: tpl.summary,
+      ok: tpl.ok,
+      errors: tpl.errors,
+      benchOk: tpl.benchOk,
+      benchErrors: tpl.benchErrors,
+      editable: tpl.editable,
+      ms: tpl.ms,
+      calls: tpl.calls,
+      repairs: tpl.repairs,
+      tokensIn: tpl.tokensIn,
+      tokensOut: tpl.tokensOut,
+      route: tpl.route ?? null,
+      variantId: tpl.variantId ?? null,
+      overlaps,
+    };
+    process.stdout.write(`${key}${tpl.ok && tpl.benchOk ? '✓' : '✗'}${overlaps.length ? '⚠' + overlaps.length : ''} `);
   }
   results.push(row);
   console.log('');
@@ -355,32 +439,54 @@ writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
 // ── Scoreboard ──
 const done = results.filter((r) => r.arms);
 const tally = (key) => {
-  let valid = 0, clean = 0, overlaps = 0;
+  let valid = 0, benchOk = 0, clean = 0, editable = 0, overlaps = 0, ms = 0, calls = 0, repairs = 0, tokIn = 0, tokOut = 0;
+  const variants = {};
   for (const r of done) {
     const a = r.arms[key];
     if (a.ok) valid++;
-    if (a.ok && !a.overlaps.length) clean++;
+    if (a.benchOk) benchOk++;
+    if (a.ok && a.benchOk && !a.overlaps.length) clean++;
+    if (a.editable) editable++;
     overlaps += a.overlaps.length;
+    ms += a.ms ?? 0;
+    calls += a.calls ?? 0;
+    repairs += a.repairs ?? 0;
+    tokIn += a.tokensIn ?? 0;
+    tokOut += a.tokensOut ?? 0;
+    if (a.variantId) variants[a.variantId] = (variants[a.variantId] ?? 0) + 1;
   }
-  return { valid, clean, overlaps, total: done.length };
+  const n = done.length || 1;
+  return {
+    valid, benchOk, clean, editable, overlaps, total: done.length,
+    avgSec: ms / n / 1000, avgCalls: calls / n, avgRepairs: repairs / n,
+    avgTokIn: Math.round(tokIn / n), avgTokOut: Math.round(tokOut / n),
+    // Diversity tripwire: the most-repeated chassis across the suite (sameness watch).
+    topVariant: Object.entries(variants).sort((x, y) => y[1] - x[1])[0] ?? null,
+  };
 };
 const board = Object.fromEntries(ARMS.map(([k]) => [k, tally(k)]));
 
-// ── Gallery: three columns per brief, scoreboard on top ──
+// ── Gallery: four columns per brief, scoreboard on top ──
 const armHead = ARMS.map(
   ([k, label]) =>
-    `<th>${label}<br><span class="sb">${board[k].clean}/${board[k].total} clean · ${board[k].valid} valid · ${board[k].overlaps} overlaps</span></th>`,
+    `<th>${label}<br><span class="sb">${board[k].clean}/${board[k].total} clean · ${board[k].valid} valid · ${board[k].benchOk} bench · ${board[k].editable} editable · ${board[k].overlaps} overlaps<br>` +
+    `avg ${board[k].avgCalls.toFixed(1)} calls · ${board[k].avgRepairs.toFixed(1)} repairs · ${board[k].avgTokIn}/${board[k].avgTokOut} tok · ${board[k].avgSec.toFixed(1)}s` +
+    `${board[k].topVariant ? ` · top chassis ${board[k].topVariant[0]}×${board[k].topVariant[1]}` : ''}</span></th>`,
 ).join('');
 
 const rows = done
   .map((r) => {
     const cells = ARMS.map(([k]) => {
       const a = r.arms[k];
-      const cls = a.ok && !a.overlaps.length ? 'ok' : 'bad';
+      const cls = a.ok && a.benchOk && !a.overlaps.length ? 'ok' : 'bad';
       return `<td class="${cls}">
         <img src="${r.id}-${k}.png" alt="${r.id} ${k}" loading="lazy">
         <div class="meta"><strong>${a.name ?? ''}</strong>
           <em>${a.ok ? '✓ valid' : '✗ ' + (a.errors[0] ?? 'invalid')}</em>
+          <em>${a.benchOk ? '✓ bench' : '✗ ' + (a.benchErrors?.[0] ?? 'bench failed')}</em>
+          ${a.editable ? '<em>⧉ editable</em>' : ''}
+          ${a.route ? `<em>route ${a.route}${a.variantId ? ' · ' + a.variantId : ''}</em>` : ''}
+          <p class="mono">${a.calls} call${a.calls === 1 ? '' : 's'} · ${a.repairs} repair${a.repairs === 1 ? '' : 's'} · ${a.tokensIn}/${a.tokensOut} tok · ${((a.ms ?? 0) / 1000).toFixed(1)}s</p>
           ${a.overlaps.length ? `<p class="warn">⚠ ${a.overlaps.length} overlap: ${a.overlaps.join(' · ')}</p>` : ''}
           <p>${a.summary ?? ''}</p>
           <p><a href="${r.id}-${k}.code.txt">view code</a></p>
@@ -392,31 +498,38 @@ const rows = done
 
 writeFileSync(
   `${OUT}/review.html`,
-  `<!doctype html><meta charset="utf-8"><title>C-vs-B comparison</title>
+  `<!doctype html><meta charset="utf-8"><title>Harness comparison</title>
 <style>
   body{background:#0b0f17;color:#e8ecf2;font:14px/1.5 system-ui;margin:0;padding:28px}
-  h1{font-size:20px;margin:0 0 4px} .lead{color:#8b95a5;max-width:900px;margin:0 0 20px}
+  h1{font-size:20px;margin:0 0 4px} .lead{color:#8b95a5;max-width:980px;margin:0 0 20px}
   .lead b{color:#f0b429}
   table{border-collapse:collapse;width:100%} th,td{vertical-align:top;padding:8px;border:1px solid #1c2532}
   thead th{background:#141b26;position:sticky;top:0} .sb{font-weight:400;color:#8b95a5;font-size:11px}
-  th.brief{width:200px;text-align:left;font-weight:600} th.brief p{font-weight:400;color:#8b95a5;font-size:12px;margin:6px 0 0}
-  td{width:26%} td.bad{background:#1a1113} td img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#000}
+  th.brief{width:170px;text-align:left;font-weight:600} th.brief p{font-weight:400;color:#8b95a5;font-size:12px;margin:6px 0 0}
+  td{width:21%} td.bad{background:#1a1113} td img{width:100%;display:block;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#000}
   .meta{padding:8px 2px 0} em{color:#7fd18a;font-style:normal;font-size:12px;margin-left:6px} td.bad em{color:#ff8484}
-  .meta p{margin:5px 0 0;color:#8b95a5;font-size:12px} p.warn{color:#ffb35c} a{color:#5aa9e6}
+  .meta p{margin:5px 0 0;color:#8b95a5;font-size:12px} p.warn{color:#ffb35c} p.mono{font-family:ui-monospace,monospace;font-size:11px} a{color:#5aa9e6}
 </style>
-<h1>C-vs-B comparison — is the pipeline better than iterating with a bare prompt?</h1>
-<p class="lead">Same brief, same model (claude-sonnet-5), three arms. <b>A</b> is one raw shot;
-<b>B</b> is a competent iterator (${ROUNDS_B} generic self-critique rounds) — the real bar;
-<b>C</b> is our pipeline. The neutral cross-arm score is the <b>text-overlap count</b> and the
-screenshots — <b>valid</b> is mildly biased toward C because A/B were only handed the file format,
-not our taste rules. If C doesn't clearly out-clean B here, the moat is not in generation.</p>
+<h1>Harness comparison — does the NoaCG harness beat asking the model directly?</h1>
+<p class="lead">Same brief, same model, four arms. <b>A</b> is one raw shot; <b>B</b> is a
+competent iterator (${ROUNDS_B} generic self-critique rounds) — the real bar; <b>D</b> is the
+pre-harness product (house prompt + validated repair, no design-spec stage) — the stage
+ablation; <b>C</b> is the harness as shipped (design-spec router → grounded assembly or
+validated custom, runtime bench injected). The neutral cross-arm scores are the <b>runtime
+bench</b>, the <b>text-overlap count</b>, and the screenshots — <b>valid</b> and
+<b>editable</b> are openly biased toward D/C, which know the house contracts. Judge
+quality-per-token, diversity (watch the top-chassis counter), and brief adherence together.
+If C doesn't clearly beat B here, the harness has not earned its place.</p>
 <table><thead><tr><th>brief</th>${armHead}</tr></thead><tbody>${rows}</tbody></table>`,
 );
 
 await browser.close();
-console.log('\nScoreboard (clean / valid / overlaps out of ' + done.length + '):');
+console.log('\nScoreboard (out of ' + done.length + '):');
 for (const [k, label] of ARMS) {
   const b = board[k];
-  console.log(`  ${k} ${label.padEnd(24)}  clean ${b.clean}/${b.total} · valid ${b.valid} · overlaps ${b.overlaps}`);
+  console.log(
+    `  ${k} ${label.padEnd(36)} clean ${b.clean}/${b.total} · valid ${b.valid} · bench ${b.benchOk} · editable ${b.editable} · overlaps ${b.overlaps} · ` +
+      `avg ${b.avgCalls.toFixed(1)} calls / ${b.avgRepairs.toFixed(1)} repairs / ${b.avgTokIn}+${b.avgTokOut} tok / ${b.avgSec.toFixed(1)}s`,
+  );
 }
 console.log(`\nDone → ${OUT}/review.html`);

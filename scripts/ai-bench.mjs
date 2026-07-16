@@ -74,16 +74,24 @@ for (const [id, brief] of selected) {
       async ({ brief: b }) => {
         const { claudeProvider } = await import('/src/ai/claudeProvider.ts');
         const { validateTemplate } = await import('/src/validation/validateTemplate.ts');
-        const change = await claudeProvider.generate(b, {
-          images: [],
-          palette: null,
-          resolution: { width: 1920, height: 1080, label: '1080p' },
-          fps: 25,
-        });
-        const v = validateTemplate(change.template);
+        const { benchTemplateRuntime, mergeResults } = await import('/src/validation/runtimeBench.ts');
+        // The app's exact configuration: the runtime bench injected, findings drive repairs.
+        const validate = async (t) => mergeResults(validateTemplate(t), await benchTemplateRuntime(t));
+        const change = await claudeProvider.generate(
+          b,
+          {
+            images: [],
+            palette: null,
+            resolution: { width: 1920, height: 1080, label: '1080p' },
+            fps: 25,
+          },
+          { validate },
+        );
+        const v = change.validation ?? validateTemplate(change.template);
         return {
           name: change.template.name,
           summary: change.summary,
+          route: change.path ?? null,
           ok: v.ok,
           errors: v.errors.map((e) => `${e.rule}: ${e.message}`),
           template: change.template,
@@ -139,9 +147,10 @@ for (const [id, brief] of selected) {
       return found.slice(0, 5);
     });
 
-    results.push({ id, brief, name: r.name, summary: r.summary, ok: r.ok, errors: r.errors, overlaps });
+    results.push({ id, brief, name: r.name, summary: r.summary, route: r.route, ok: r.ok, errors: r.errors, overlaps });
     console.log(
       (r.ok ? `OK  (${r.name})` : `INVALID (${r.errors.length} errors)`) +
+        (r.route ? `  [${r.route}]` : '') +
         (overlaps.length ? `  ⚠ ${overlaps.length} text overlap(s)` : ''),
     );
 

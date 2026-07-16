@@ -276,7 +276,23 @@ undo/redo keys as AppShell with the same Monaco/form-field guard. AI chat gates 
 
 CreationWizard (Entry -> Category -> Template -> Fields -> Style -> Animation, persistent live
 preview), draft.ts, WizardPreview, MiniPreview, steps/. Creating calls `variant.create(options)`
-which generates the complete, commented template.
+which generates the complete, commented template. FOUR entry cards: template, Create with AI,
+video, blank.
+
+**Create with AI** (Entry card -> steps/AiStep, mode 'ai') is the MERGED describe/import step.
+One drop zone accepts images AND an existing .html/.zip template. A dropped template parses
+deterministically (model/importTemplate.ts) into a card with two actions: **"Open as code (no
+AI)"** — the byte-faithful import (applyTemplate + Export panel, exactly the old Import entry;
+it renders OUTSIDE the `needsSignIn` gate and must stay there — only the AI actions are an
+account feature) — or **Convert** (provider.convertImport, guided by the prompt). Dropped
+images become `GenerateContext.images` chips with a "Design around these with a catalog
+template" escape that patches the draft and continues into the mode-'import' images ->
+category -> TemplateStep flow (ImportStep is now that slim continuation only). The step
+injects the harness's validator (`validateTemplate` + `benchTemplateRuntime` merged) into
+every provider call, streams `onProgress` stages into the busy line, shows the route badge
+(catalog design system / +flourish / custom) on the result card, and passes a grounded
+result's `spec` back on refine so spec-level refinement re-assembles deterministically
+(src/ai/CLAUDE.md).
 
 **Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + duration/
 aspect/fps/transparency + asset upload -> an INSTANT create (`createDefaultVideoProject`, the

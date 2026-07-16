@@ -714,6 +714,34 @@ read-only scheduled cloud agent. Not yet built — see the plan doc for the veri
       mapped to the Template Definition system, and the visual Motion Critic pass.
 - [ ] Data-driven/live content architecture (ticker/scoreboard controlled from a backend) — later
 
+### The SPX generation harness (2026-07-17 — AI that beats a bare prompt, provably)
+- [x] **One "Create with AI" entry** — the wizard's Describe-it and Import cards merged: a
+      brief plus optional images and/or an existing .html/.zip in one drop zone; the
+      byte-faithful no-AI "Open as code" import stays one click away (never sign-in-gated),
+      the images → catalog continuation survives, and Convert brings a foreign template to
+      the house contracts guided by the prompt.
+- [x] **Grounded-first generation** — one small design-spec call routes each brief; catalog-fit
+      specs assemble DETERMINISTICALLY through the real wizard assemblers (correct by
+      construction, panel/timeline-editable), with compositional design adjustments
+      (typography scale/weight/tracking, density, alignment, shape, panel treatment) so
+      different briefs produce different designs — not one layout in new colours — plus an
+      optional bounded polish patch that can only improve (revert on any gate/bench failure).
+      Off-catalog briefs go to the free-form coder (nearest catalog design as the canonical
+      example) with a validated 2-round repair loop; taste guidance is genre-reasoning, not a
+      fixed look, and uploaded references are read as a design system that outweighs it.
+- [x] **The runtime bench in the loop** — every AI result is exercised in a live iframe
+      (lifecycle, field binding, overlap/overflow, doubled-text stress, house editability);
+      findings feed repair rounds verbatim; the whole catalog must pass its own bench
+      (e2e/bench.spec.ts calibration tripwire). The offline stub assembles catalog-grade
+      results through the same pipeline.
+- [x] **Value proven, not assumed** — per-run telemetry (tokens, latency, calls, repairs,
+      route, variant diversity) + scripts/ai-compare.mjs rebuilt as the standing proof: same
+      brief, same model, four arms (raw / raw+self-critique / pre-harness / the harness),
+      neutral scoring. The decision rule: a harness stage keeps its place only if it shows a
+      clear improvement for its cost.
+- Deferred until the benchmark earns them: a selective vision taste critic, a curated taste
+  library with per-brief retrieval, and a nightly taste-analysis task (reviewable proposals).
+
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate
 - [x] Playwright E2E for core UI flows
