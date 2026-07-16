@@ -58,6 +58,7 @@ export default function StylePanel() {
   const vars = listCssVariables(template.css);
   const colorVars = vars.filter((v) => looksLikeColor(v.value) || toHex(v.value) !== null);
   const scaleVar = vars.find((v) => v.name === 'scale');
+  const typeScaleVar = vars.find((v) => v.name === 'type-scale');
 
   // The generated @font-face block is swappable while its marker comment survives
   // (bundled or imported — both carry a recognizable marker).
@@ -179,6 +180,26 @@ export default function StylePanel() {
               value={scaleVar.value}
               onChange={(e) => setVar('scale', e.target.value)}
               title="--scale multiplies every size in the design"
+            />
+          </div>
+        </div>
+      )}
+
+      {typeScaleVar && (
+        <div className="panel-section">
+          <h3>Text size</h3>
+          <div className="row" style={{ gap: 6 }}>
+            {/* A raw multiplier on top of --scale — resolution is already folded into --scale. */}
+            {[{ l: 'S', s: 0.9 }, { l: 'M', s: 1 }, { l: 'L', s: 1.15 }].map(({ l, s }) => (
+              <button key={l} onClick={() => setVar('type-scale', String(s))}>
+                {l}
+              </button>
+            ))}
+            <input
+              className="grow"
+              value={typeScaleVar.value}
+              onChange={(e) => setVar('type-scale', e.target.value)}
+              title="--type-scale multiplies only the text sizes (the graphic keeps its size)"
             />
           </div>
         </div>

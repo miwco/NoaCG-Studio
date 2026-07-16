@@ -77,7 +77,7 @@ ${cardLineMasks(o)}
 
 /* Line 1 - the card heading. Big, heavy, all caps. */
 .info-card-name {
-  font-size: calc(48px * var(--scale));  /* headline scale for a card */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* headline scale for a card */
   font-weight: 700;                /* maximum punch */
   line-height: 1.1;                /* tight - big text needs little leading */
   letter-spacing: 0.02em;          /* a touch of air between the caps */
@@ -88,7 +88,7 @@ ${cardLineMasks(o)}
 /* Lines 2 and 3 - the stat readouts, set in the accent color like a scoreboard. */
 .info-card-title,
 .info-card-extra {
-  font-size: calc(26px * var(--scale));  /* clearly secondary to the heading */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly secondary to the heading */
   font-weight: 500;                /* medium - legible without competing */
   line-height: 1.25;               /* normal leading for the small lines */
   text-transform: uppercase;       /* stats match the heading's caps voice */

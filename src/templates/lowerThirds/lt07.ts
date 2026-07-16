@@ -82,7 +82,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 1 — the name / headline. Bebas is single-weight, so size does the shouting. */
 .lower-third-name {
-  font-size: calc(60px * var(--scale));  /* headline size */
+  font-size: calc(60px * var(--scale) * var(--type-scale));  /* headline size */
   line-height: 1.05;               /* big display text sits tight */
   color: var(--text-color);        /* primary text */
   text-transform: uppercase;       /* all-caps matchday voice */
@@ -90,7 +90,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 2 — the subtitle (fixture, score line, role). */
 .lower-third-title {
-  font-size: calc(27px * var(--scale));  /* clearly subordinate to the name (≈2.2:1 vs the headline) */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name (≈2.2:1 vs the headline) */
   line-height: 1.2;                /* a touch more air than the headline */
   color: var(--text-dim);          /* secondary text steps back */
   letter-spacing: 0.14em;          /* tracked-out small caps breathe */
@@ -99,7 +99,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 3 — an optional kicker (venue, sponsor). Only present with three lines. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale));  /* the smallest voice in the stack */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   line-height: 1.2;                /* same rhythm as the subtitle */
   color: var(--text-dim);          /* stays quiet next to the name */
   letter-spacing: 0.14em;          /* same tracking as the subtitle */

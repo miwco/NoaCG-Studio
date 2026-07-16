@@ -81,7 +81,7 @@ ${logo}${lineMasks(o)}
 
 /* Line 1 — the name leads. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale));  /* headline size */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size */
   font-weight: 700;                /* bold enough to carry the card */
   line-height: 1.1;                /* tight leading — big text needs less */
   letter-spacing: -0.01em;         /* large text tightens slightly */
@@ -91,7 +91,7 @@ ${logo}${lineMasks(o)}
 /* Line 2 — the title/role sits quietly under the name. */
 .lower-third-title {
   margin-top: calc(6px * var(--scale));  /* small gap: name + title read as one unit */
-  font-size: calc(23px * var(--scale));  /* half the name — clear hierarchy */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* half the name — clear hierarchy */
   font-weight: 500;                /* medium — present but not competing */
   line-height: 1.3;                /* roomier leading at reading size */
   color: var(--text-dim);          /* dimmed secondary text */
@@ -100,7 +100,7 @@ ${logo}${lineMasks(o)}
 /* Line 3 (optional) — a small-caps kicker, e.g. a handle or a location. */
 .lower-third-extra {
   margin-top: calc(10px * var(--scale));  /* a touch more air before the kicker */
-  font-size: calc(17px * var(--scale));   /* small label size */
+  font-size: calc(17px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact single-line label */
   letter-spacing: 0.14em;          /* small caps need room to breathe */

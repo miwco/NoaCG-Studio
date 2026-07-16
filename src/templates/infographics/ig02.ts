@@ -69,7 +69,7 @@ export const ig02: TemplateVariant = defineInfographicVariant(
 /* Heading — a small-caps kicker in the accent color, like the Frosted Card's third line. */
 .infographic-heading {
   margin-bottom: calc(20px * var(--scale));  /* air before the first bar row */
-  font-size: calc(17px * var(--scale));  /* small label size */
+  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: 0.14em;          /* small caps need room to breathe */
@@ -98,7 +98,7 @@ export const ig02: TemplateVariant = defineInfographicVariant(
 /* The bar's label — the primary reading line of each row. */
 .infographic-bar-label {
   min-width: 0;                    /* allow the label to shrink and wrap inside flex */
-  font-size: calc(21px * var(--scale));  /* clearly bigger than the heading kicker */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* clearly bigger than the heading kicker */
   font-weight: 600;                /* semibold carries the row */
   line-height: 1.25;               /* a touch of leading in case a long label wraps */
   color: var(--text-color);        /* primary text color */
@@ -108,7 +108,7 @@ export const ig02: TemplateVariant = defineInfographicVariant(
 /* The value figure — the number the bar visualizes. */
 .infographic-bar-value {
   flex-shrink: 0;                  /* long labels never squeeze the figure */
-  font-size: calc(21px * var(--scale));  /* same size as the label… */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* same size as the label… */
   font-weight: 700;                /* …contrast through weight, not more fonts */
   font-variant-numeric: tabular-nums;  /* equal-width digits — figures align across rows */
   color: var(--text-color);        /* primary text color */

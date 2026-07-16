@@ -75,7 +75,7 @@ ${lineMasks(o)}
 
 /* Name — the big line. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale));  /* headline size (2:1 against the handle) */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (2:1 against the handle) */
   font-weight: 800;                /* heaviest weight — contrast through weight, not more fonts */
   line-height: 1.15;               /* tight leading: big text needs less air between rows */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -84,7 +84,7 @@ ${lineMasks(o)}
 
 /* Handle — the small accent-colored line beside the name. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale));  /* clearly smaller than the name */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly smaller than the name */
   font-weight: 500;                /* medium weight — quiet next to the 800 name */
   line-height: 1.2;                /* a touch more leading at small sizes */
   color: var(--accent);            /* the handle wears the one accent color */

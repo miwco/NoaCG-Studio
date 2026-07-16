@@ -66,7 +66,7 @@ ${lineMasks(o)}
 
 /* Name line — the confident display moment. */
 .lower-third-name {
-  font-size: calc(54px * var(--scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 700;                 /* full display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: -0.01em;          /* large sizes tighten slightly */
@@ -77,7 +77,7 @@ ${lineMasks(o)}
 .lower-third-title,
 .lower-third-extra {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(22px * var(--scale));  /* label scale — clearly subordinate */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* label scale — clearly subordinate */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* a touch of air if the title wraps */
   letter-spacing: 0.22em;           /* wide tracking — the label breathes */

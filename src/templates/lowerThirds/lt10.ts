@@ -92,7 +92,7 @@ ${lineMasks(o)}
 
 /* The name — the biggest, boldest line; everything else defers to it. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale));    /* headline size */
+  font-size: calc(44px * var(--scale) * var(--type-scale));    /* headline size */
   font-weight: 600;                /* strong but not shouty */
   line-height: 1.1;                /* big text sits tight */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -101,7 +101,7 @@ ${lineMasks(o)}
 
 /* The title line — quieter through lighter weight and a dimmed color. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale));    /* half the name: clear hierarchy */
+  font-size: calc(22px * var(--scale) * var(--type-scale));    /* half the name: clear hierarchy */
   font-weight: 400;                /* regular weight steps back */
   line-height: 1.3;                /* smaller text gets more air */
   color: var(--text-dim);          /* dimmed so the name leads */
@@ -109,7 +109,7 @@ ${lineMasks(o)}
 
 /* The third line — a small spaced-out uppercase label, dimmed like the title. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale));    /* the smallest line */
+  font-size: calc(18px * var(--scale) * var(--type-scale));    /* the smallest line */
   font-weight: 600;                /* semibold keeps small uppercase type crisp */
   line-height: 1.3;                /* matches the title's rhythm */
   letter-spacing: 0.1em;           /* small caps breathe */

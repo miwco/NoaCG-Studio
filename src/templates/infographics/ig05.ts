@@ -75,7 +75,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The kicker — quiet tracking-wide caps, the accent's second, tiny appearance. */
 .infographic-kicker {
-  font-size: calc(19px * var(--scale));  /* label scale — a caption, not a headline */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: 0.18em;          /* wide tracking — small caps breathe */
@@ -97,7 +97,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The currency mark — static and dimmed: a unit, not part of the counting number. */
 .infographic-currency {
-  font-size: calc(44px * var(--scale));  /* clearly subordinate to the figure */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
   font-weight: 600;                /* semibold so the thin glyph stays visible */
   color: var(--text-dim);          /* dimmed — the total carries the weight */
 }
@@ -105,7 +105,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 /* The total — enormous tabular digits; the count-up preset tweens this text from 0. */
 .infographic-value {
   min-width: 0;                    /* allow the figure to shrink and wrap inside flex */
-  font-size: calc(110px * var(--scale));  /* the whole design IS this number (1080p reference) */
+  font-size: calc(110px * var(--scale) * var(--type-scale));  /* the whole design IS this number (1080p reference) */
   font-weight: 700;                /* bold — the panel's single heavy element */
   line-height: 1;                  /* no dead leading — the track sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -146,7 +146,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The raised figure — a small bold echo of the total at the bar's start. */
 .infographic-sub {
-  font-size: calc(19px * var(--scale));  /* footer scale — clearly under the big figure */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* footer scale — clearly under the big figure */
   font-weight: 700;                /* bold — it restates the headline number */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* a currency figure never wraps mid-number */
@@ -155,7 +155,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The goal line — dimmed and right-aligned: the target, not the news. */
 .infographic-goal {
-  font-size: calc(19px * var(--scale));  /* same size as the raised figure… */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* same size as the raised figure… */
   font-weight: 400;                /* …contrast through weight, not more fonts */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* "Goal: €250,000" never wraps mid-number */

@@ -44,7 +44,8 @@ const results = await page.evaluate(async (CATEGORY) => {
     const val = validateTemplate(tpl);
     row.checks.valid = val.ok;
     if (!val.ok) row.issues.push(...val.errors.map((e) => e.rule + ': ' + e.message));
-    row.checks.rootVars = tpl.css.includes('--accent:') && tpl.css.includes('--scale:');
+    row.checks.rootVars =
+      tpl.css.includes('--accent:') && tpl.css.includes('--scale:') && tpl.css.includes('--type-scale:');
     row.checks.markers = tpl.js.includes('== ANIMATION') && tpl.js.includes('== END ANIMATION ==');
     row.checks.fontFace = tpl.css.includes('@font-face');
     const isCredits = CATEGORY === 'end-credits';

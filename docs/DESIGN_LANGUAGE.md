@@ -126,7 +126,11 @@ use the tighter classic 120 px left inset for lower-left thirds). Zone sets the 
 - **Comment every CSS property** (short, right-aligned style as in existing templates) and every
   JS section. Comments explain *what it does*, not *that it changed*.
 - **`:root` style contract** at the top of the CSS: `--accent`, `--text-color`, `--text-dim`,
-  `--panel-bg`, `--font-heading`, `--scale` — each commented.
+  `--panel-bg`, `--font-heading`, `--scale`, `--type-scale` — each commented.
+- **Two size knobs.** Every dimension scales via `calc(Npx * var(--scale))` (the whole-graphic
+  knob, which also folds in resolution); font sizes additionally multiply by the text-only knob:
+  `font-size: calc(Npx * var(--scale) * var(--type-scale))`. Nothing else consumes
+  `--type-scale` — it changes the type, never the panel around it.
 - **Marked animation region** in template.js:
   ```js
   /* == ANIMATION (generated — the Animation panel rewrites this block) == */

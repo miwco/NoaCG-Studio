@@ -60,8 +60,29 @@ test('style step: font and size choices land in the rebuilt preview', async ({ p
         .evaluate((el) => getComputedStyle(el).getPropertyValue('--font-heading')),
     )
     .toContain('Space Grotesk');
-  // Size L scales the WHOLE graphic (the --scale contract), not just the text.
-  await page.locator('.panel-section', { hasText: 'Size' }).getByRole('button', { name: 'L', exact: true }).click();
+  // Graphic size L scales the WHOLE graphic (the --scale contract), not just the text.
+  await page.locator('.panel-section', { hasText: 'Graphic size' }).getByRole('button', { name: 'L', exact: true }).click();
+  await expect
+    .poll(async () =>
+      preview(page)
+        .locator(':root')
+        .evaluate((el) => getComputedStyle(el).getPropertyValue('--scale').trim()),
+    )
+    .toBe('1.2');
+  // Text size L scales ONLY the type (the --type-scale contract): the name line's
+  // font grows while the graphic's --scale stays where the size knob put it.
+  const fontPx = () =>
+    preview(page).locator('#f0').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const before = await fontPx();
+  await page.locator('.panel-section', { hasText: 'Text size' }).getByRole('button', { name: 'L', exact: true }).click();
+  await expect
+    .poll(async () =>
+      preview(page)
+        .locator(':root')
+        .evaluate((el) => getComputedStyle(el).getPropertyValue('--type-scale').trim()),
+    )
+    .toBe('1.15');
+  expect(await fontPx()).toBeCloseTo(before * 1.15, 0);
   await expect
     .poll(async () =>
       preview(page)

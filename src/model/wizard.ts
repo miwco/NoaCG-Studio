@@ -142,8 +142,10 @@ export interface WizardOptions {
   fontId?: string;
   /** A user-imported font (embedded as an asset) — takes precedence over fontId. */
   customFont?: CustomFont;
-  /** Size multiplier written as --scale (S 0.85 · M 1 · L 1.2). */
+  /** Whole-graphic size multiplier written as --scale (S 0.85 · M 1 · L 1.2). */
   sizeScale?: number;
+  /** Text-only size multiplier written as --type-scale (S 0.9 · M 1 · L 1.15). */
+  typeScale?: number;
   zone?: Zone9;
   /** Pixel offsets added after zone anchoring. */
   nudge?: { x: number; y: number };
@@ -164,6 +166,7 @@ export interface ResolvedOptions {
   fontId: string;
   customFont: CustomFont | null;
   sizeScale: number;
+  typeScale: number;
   zone: Zone9;
   nudge: { x: number; y: number };
   animation: AnimationChoice;
@@ -233,6 +236,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     fontId: options.fontId ?? variant.defaultFontId,
     customFont: options.customFont ?? null,
     sizeScale: options.sizeScale ?? 1,
+    typeScale: options.typeScale ?? 1,
     zone: options.zone ?? variant.defaultZone,
     nudge: options.nudge ?? { x: 0, y: 0 },
     animation: {

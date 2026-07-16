@@ -134,9 +134,12 @@ Adding a measured motion to another category = add a builder to its runtime + ha
 ## The :root style contract
 
 Every template exposes `--accent`, `--text-color`, `--text-dim`, `--panel-bg`, `--font-heading`,
-`--scale`. The Style panel reads/writes exactly these, swaps the marked `@font-face` block
-(bundled or imported), re-anchors the root element via `zoneDecls`, and can import a font
-post-creation.
+`--scale`, `--type-scale`. The Style panel reads/writes exactly these, swaps the marked
+`@font-face` block (bundled or imported), re-anchors the root element via `zoneDecls`, and can
+import a font post-creation. **Two size knobs:** every dimension is authored as
+`calc(Npx * var(--scale))` (whole-graphic size; resolution is folded into `--scale` by
+`computeScale`), and font sizes additionally multiply by `var(--type-scale)` (text-only size,
+a raw multiplier — S 0.9 · M 1 · L 1.15). Nothing but `font-size` consumes `--type-scale`.
 
 ## Template runtime rule
 

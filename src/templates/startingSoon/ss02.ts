@@ -72,7 +72,7 @@ export const ss02: TemplateVariant = defineStartingSoonVariant(
 .starting-soon-chip {
   position: relative;              /* anchors the painted slab (::before) */
   padding: calc(10px * var(--scale)) calc(30px * var(--scale));  /* tight chip padding */
-  font-size: calc(24px * var(--scale));  /* label scale — a kicker, not a headline */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — a kicker, not a headline */
   font-weight: 700;                /* bold so the spaced caps carry */
   line-height: 1.2;                /* a single tight label row */
   letter-spacing: 0.16em;          /* spaced-out caps read as a tag */
@@ -96,7 +96,7 @@ export const ss02: TemplateVariant = defineStartingSoonVariant(
 .starting-soon-show {
   position: relative;              /* anchors its painted slab (::before) */
   padding: calc(14px * var(--scale)) calc(44px * var(--scale));  /* generous slab padding */
-  font-size: calc(92px * var(--scale));  /* headline scale for a full-screen hold */
+  font-size: calc(92px * var(--scale) * var(--type-scale));  /* headline scale for a full-screen hold */
   font-weight: 900;                /* maximum impact weight */
   line-height: 1.05;               /* tight — big text needs little leading */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -156,7 +156,7 @@ export const ss02: TemplateVariant = defineStartingSoonVariant(
 
 /* The digits — big, heavy, and steady (tabular digits never wobble as they tick). */
 .starting-soon-clock {
-  font-size: calc(56px * var(--scale));  /* clearly subordinate to the name (~1.6:1) */
+  font-size: calc(56px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name (~1.6:1) */
   font-weight: 800;                /* heavy — the clock is a headline of its own */
   line-height: 1.1;                /* tight digit row */
   letter-spacing: 0.04em;          /* a touch of air between the digits */

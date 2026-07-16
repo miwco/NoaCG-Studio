@@ -78,7 +78,7 @@ export const tk05: TemplateVariant = defineTickerVariant(
   background: var(--accent);       /* the one solid accent surface */
   box-shadow: 0 0 calc(26px * var(--scale)) color-mix(in srgb, var(--accent) 40%, transparent);
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(22px * var(--scale)); /* label scale */
+  font-size: calc(22px * var(--scale) * var(--type-scale)); /* label scale */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: 0.18em;          /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -104,7 +104,7 @@ export const tk05: TemplateVariant = defineTickerVariant(
 
 /* One story — comfortable reading size at travel speed. */
 .ticker-item {
-  font-size: calc(28px * var(--scale)); /* the strip's main voice */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* the strip's main voice */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color */
 }
@@ -112,7 +112,7 @@ export const tk05: TemplateVariant = defineTickerVariant(
 /* The dot between stories — the accent as punctuation, like the brand overlay. */
 .ticker-sep {
   margin: 0 calc(36px * var(--scale)); /* even air on both sides of the dot */
-  font-size: calc(16px * var(--scale)); /* small — a pause, not a bullet point */
+  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--accent);            /* accent dots chain the stories together */
 }
 
@@ -123,7 +123,7 @@ export const tk05: TemplateVariant = defineTickerVariant(
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
   padding: 0 calc(36px * var(--scale));  /* mirrors the label block's breathing room */
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(26px * var(--scale)); /* quiet — present, not competing with stories */
+  font-size: calc(26px * var(--scale) * var(--type-scale)); /* quiet — present, not competing with stories */
   font-variant-numeric: tabular-nums;   /* every digit same width — no tick wobble */
   color: var(--text-color);        /* primary text color */
 }`,

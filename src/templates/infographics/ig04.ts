@@ -90,7 +90,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 .infographic-question {
   max-width: calc(480px * var(--scale));  /* wraps at a readable measure, like the bench look */
   margin-bottom: calc(30px * var(--scale));  /* clear air between question and ring — never touching */
-  font-size: calc(30px * var(--scale));  /* headline size — the ring's figure still leads */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* headline size — the ring's figure still leads */
   font-weight: 700;                /* bold enough to carry the panel */
   line-height: 1.25;               /* a touch of leading for wrapped rows */
   letter-spacing: -0.01em;         /* large text tightens slightly */
@@ -149,7 +149,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The number — huge, heavy, the single loudest thing on the panel. */
 .infographic-value {
-  font-size: calc(76px * var(--scale));  /* hero size, sized to sit inside the ring's hole */
+  font-size: calc(76px * var(--scale) * var(--type-scale));  /* hero size, sized to sit inside the ring's hole */
   font-weight: 800;                /* heaviest weight — contrast through weight, not more fonts */
   line-height: 1;                  /* no dead leading — the answer sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -159,7 +159,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The % sign — small and accent-colored, clearly subordinate to the number. */
 .infographic-pct {
-  font-size: calc(34px * var(--scale));  /* under half the number — clear hierarchy */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* under half the number — clear hierarchy */
   font-weight: 800;                /* matches the number's weight at its smaller size */
   line-height: 1;                  /* hugs its baseline */
   color: var(--accent);            /* echoes the ring — the same single accent */
@@ -168,7 +168,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 /* The answer — quiet tracking-wide caps under the figure. */
 .infographic-answer {
   margin-top: calc(8px * var(--scale));  /* small gap: figure + answer read as one unit */
-  font-size: calc(18px * var(--scale));  /* small label size */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact single-line label */
   letter-spacing: 0.18em;          /* small caps need room to breathe */

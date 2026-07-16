@@ -90,7 +90,7 @@ export const qz01: TemplateVariant = defineQuizVariant(
 
 /* The question: condensed heavy caps - the loudest thing on the card. */
 .quiz-mask > span {
-  font-size: calc(40px * var(--scale));  /* headline scale for a multi-row card */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline scale for a multi-row card */
   font-weight: 800;                /* maximum punch */
   line-height: 1.15;               /* tight - big text needs little leading */
   letter-spacing: 0.01em;          /* a touch of air between the caps */
@@ -138,7 +138,7 @@ export const qz01: TemplateVariant = defineQuizVariant(
   align-items: center;             /* ... vertically */
   justify-content: center;         /* ... and horizontally */
   margin-right: calc(18px * var(--scale));  /* air between the block and the answer text */
-  font-size: calc(22px * var(--scale));  /* the letter - loud but under the answers */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* the letter - loud but under the answers */
   font-weight: 800;                /* block letters hit hard */
   color: var(--panel-bg);          /* dark ink on the bright accent block */
 }
@@ -155,7 +155,7 @@ export const qz01: TemplateVariant = defineQuizVariant(
 
 /* The answer text: condensed caps, clearly under the question. */
 .quiz-text {
-  font-size: calc(24px * var(--scale));  /* list scale - subordinate to the 40px question */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* list scale - subordinate to the 40px question */
   font-weight: 700;                /* heavy enough to read at a glance */
   letter-spacing: 0.04em;          /* slight air between the caps */
   text-transform: uppercase;       /* the whole card shouts */

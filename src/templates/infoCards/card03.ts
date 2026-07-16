@@ -84,7 +84,7 @@ ${logo}${cardLineMasks(o)}
 
 /* Line 1 — the heading leads the card. */
 .info-card-name {
-  font-size: calc(42px * var(--scale));  /* headline size */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size */
   font-weight: 700;                /* bold enough to carry the card */
   line-height: 1.1;                /* tight leading — big text needs less */
   letter-spacing: -0.01em;         /* large text tightens slightly */
@@ -94,7 +94,7 @@ ${logo}${cardLineMasks(o)}
 /* Line 2 — the first body line sits quietly under the heading. */
 .info-card-title {
   margin-top: calc(12px * var(--scale));  /* even gap — body lines read as a list */
-  font-size: calc(23px * var(--scale));   /* half the heading — clear hierarchy */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* half the heading — clear hierarchy */
   font-weight: 500;                /* medium — present but not competing */
   line-height: 1.3;                /* roomier leading at reading size */
   color: var(--text-dim);          /* dimmed secondary text */
@@ -103,7 +103,7 @@ ${logo}${cardLineMasks(o)}
 /* Line 3 (optional) — a further body line in the same quiet voice. */
 .info-card-extra {
   margin-top: calc(12px * var(--scale));  /* same gap keeps the list rhythm */
-  font-size: calc(23px * var(--scale));   /* matches the line above — one list, one size */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* matches the line above — one list, one size */
   font-weight: 500;                /* medium — same voice as the line above */
   line-height: 1.3;                /* roomier leading at reading size */
   color: var(--text-dim);          /* dimmed secondary text */

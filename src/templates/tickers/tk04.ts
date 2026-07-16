@@ -79,7 +79,7 @@ export const tk04: TemplateVariant = defineTickerVariant(
   padding-left: calc(30px * var(--scale));   /* generous left end-cap */
   padding-right: calc(26px * var(--scale));  /* air between the divider and the quotes —
                                                 travelling text never touches the hairline */
-  font-size: calc(15px * var(--scale));  /* kicker scale — clearly a tag, not a quote */
+  font-size: calc(15px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a tag, not a quote */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: 0.18em;          /* small caps breathe — minimal family tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -150,7 +150,7 @@ ${flip
 
 /* The index name — dim tracking caps, subordinate to its number. */
 .tk-name {
-  font-size: calc(15px * var(--scale));  /* small caps scale, matches the label */
+  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small caps scale, matches the label */
   font-weight: 600;                /* semibold so the dim ink stays crisp */
   letter-spacing: 0.14em;          /* tracking-wide caps — the family voice */
   text-transform: uppercase;       /* index names are always set in caps */
@@ -160,7 +160,7 @@ ${flip
 
 /* The value — the loudest element of a quote: bold, tabular, primary ink. */
 .tk-value {
-  font-size: calc(22px * var(--scale));  /* clearly above the name — instant hierarchy */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly above the name — instant hierarchy */
   font-weight: 700;                /* bold — the number is what viewers scan for */
   font-variant-numeric: tabular-nums;  /* equal-width digits — columns never wobble */
   color: var(--text-color);        /* primary ink */
@@ -171,14 +171,14 @@ ${flip
   display: inline-flex;            /* arrow and number as one unit */
   align-items: baseline;           /* the small arrow sits on the number's baseline */
   gap: calc(5px * var(--scale));   /* a sliver of air between arrow and number */
-  font-size: calc(16px * var(--scale));  /* between name and value — clearly secondary */
+  font-size: calc(16px * var(--scale) * var(--type-scale));  /* between name and value — clearly secondary */
   font-weight: 600;                /* firm enough to read at travel speed */
   font-variant-numeric: tabular-nums;  /* equal-width digits here too */
 }
 
 /* The direction arrow — smaller than its number, purely a glyph. */
 .tk-arrow {
-  font-size: calc(10px * var(--scale));  /* small triangle — a marker, not a headline */
+  font-size: calc(10px * var(--scale) * var(--type-scale));  /* small triangle — a marker, not a headline */
 }
 
 /* SEMANTIC STATE COLORS — the one sanctioned bypass of the accent system: market

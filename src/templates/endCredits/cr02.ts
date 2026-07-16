@@ -84,7 +84,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 /* A section heading — spans the full width, centered, led by the accent dot. */
 .credits-heading {
   text-align: center;              /* headings sit on the panel's center axis */
-  font-size: calc(20px * var(--scale));    /* a label, not a headline — the names lead */
+  font-size: calc(20px * var(--scale) * var(--type-scale));    /* a label, not a headline — the names lead */
   font-weight: 600;                /* semibold keeps small uppercase type crisp (lt10's label) */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* label styling, whatever case the operator types */
@@ -118,7 +118,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 /* The role — quieter through lighter weight and a dimmed color, pushed to the gutter. */
 .credits-role {
   text-align: right;               /* right-aligned: every role ends at the central axis */
-  font-size: calc(22px * var(--scale));    /* clearly smaller than the name: hierarchy */
+  font-size: calc(22px * var(--scale) * var(--type-scale));    /* clearly smaller than the name: hierarchy */
   font-weight: 400;                /* regular weight steps back */
   line-height: 1.3;                /* smaller text gets more air */
   color: var(--text-dim);          /* dimmed so the name leads (lt10's title treatment) */
@@ -128,7 +128,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 /* The name — the strongest voice in the roll; everything else defers to it. */
 .credits-name {
   text-align: left;                /* left-aligned: every name starts at the central axis */
-  font-size: calc(26px * var(--scale));    /* the biggest running text in the roll */
+  font-size: calc(26px * var(--scale) * var(--type-scale));    /* the biggest running text in the roll */
   font-weight: 600;                /* strong but not shouty — lt10's name weight */
   line-height: 1.3;                /* matches the role so both columns share a baseline */
   color: var(--text-color);        /* primary text color */
@@ -159,7 +159,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
   justify-content: center;         /* label centered horizontally */
   border: calc(1px * var(--scale)) solid rgba(255, 255, 255, 0.18);  /* the glass-family keyline */
   border-radius: calc(14px * var(--scale));        /* rounded like everything in this family */
-  font-size: calc(16px * var(--scale));    /* a quiet label, not content */
+  font-size: calc(16px * var(--scale) * var(--type-scale));    /* a quiet label, not content */
   font-weight: 600;                /* semibold keeps the small uppercase label crisp */
   letter-spacing: 0.1em;           /* matches the heading label's tracking */
   text-transform: uppercase;       /* label styling */
@@ -168,7 +168,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 
 /* The year / copyright line — the roll's last, quietest word. */
 .credits-year {
-  font-size: calc(20px * var(--scale));    /* small and dignified */
+  font-size: calc(20px * var(--scale) * var(--type-scale));    /* small and dignified */
   font-weight: 400;                /* regular weight — nothing left to compete with */
   color: var(--text-dim);          /* dimmed, like the roles above it */
 }`,

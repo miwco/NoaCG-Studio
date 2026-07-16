@@ -44,6 +44,8 @@ export interface WizardDraft {
   /** The user's imported font, kept even while a bundled font is selected. */
   customFont: CustomFont | null;
   sizeScale: number;
+  /** Text-only size multiplier (--type-scale) on top of the whole-graphic sizeScale. */
+  typeScale: number;
   zone: Zone9 | null;
   nudge: { x: number; y: number };
   animation: {
@@ -93,6 +95,7 @@ export function initialDraft(): WizardDraft {
     fontId: null,
     customFont: null,
     sizeScale: 1,
+    typeScale: 1,
     zone: null,
     nudge: { x: 0, y: 0 },
     animation: { presetId: null, outPresetId: null, direction: 'both', speed: 1, easing: 'auto', steps: false },
@@ -127,6 +130,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
     fontId: draft.fontId && draft.fontId !== 'custom' ? draft.fontId : undefined,
     customFont: draft.fontId === 'custom' && draft.customFont ? draft.customFont : undefined,
     sizeScale: draft.sizeScale,
+    typeScale: draft.typeScale,
     zone: draft.zone ?? undefined,
     nudge: draft.nudge,
     animation: {

@@ -71,8 +71,9 @@ marketplace-quality templates. The user is learning to code from what you write.
 
 ## The house style contracts (keep AI output editable by the app's panels)
 - ALL colors flow through :root vars: --accent, --text-color, --text-dim, --panel-bg,
-  --font-heading, --scale. Zero hardcoded colors anywhere else in the CSS.
-- ALL pixel sizes via calc(N * var(--scale)).
+  --font-heading, --scale, --type-scale. Zero hardcoded colors anywhere else in the CSS.
+- ALL pixel sizes via calc(N * var(--scale)); font sizes additionally multiply by the
+  text-only knob: font-size: calc(N * var(--scale) * var(--type-scale)).
 - The root element (one wrapper div) is absolutely positioned in a safe-area zone and starts
   at opacity: 0 — play() reveals it.
 - Text boxes hug their content (width: fit-content) with a max-width cap so long text wraps

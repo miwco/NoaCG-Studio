@@ -46,6 +46,14 @@ const SIZES: { label: string; scale: number }[] = [
   { label: 'L', scale: 1.2 },
 ];
 
+// Text sizes ride ON TOP of the graphic size (--type-scale × --scale), so the range is
+// tighter — L text on an L graphic must still sit comfortably inside its panel.
+const TYPE_SIZES: { label: string; scale: number }[] = [
+  { label: 'S', scale: 0.9 },
+  { label: 'M', scale: 1 },
+  { label: 'L', scale: 1.15 },
+];
+
 /** Step 4 — colors, font, size, and position. */
 export default function StyleStep({ variant, draft, onDraft }: Props) {
   // The variant's own style family first, then the rest.
@@ -203,13 +211,28 @@ export default function StyleStep({ variant, draft, onDraft }: Props) {
 
       <div className="row" style={{ alignItems: 'flex-start', gap: 24 }}>
         <div className="panel-section">
-          <h3>Size</h3>
+          <h3>Graphic size <span className="muted">(the whole graphic)</span></h3>
           <div className="row" style={{ gap: 6 }}>
             {SIZES.map((s) => (
               <button
                 key={s.label}
                 className={draft.sizeScale === s.scale ? 'active' : ''}
                 onClick={() => onDraft({ sizeScale: s.scale })}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel-section">
+          <h3>Text size <span className="muted">(type only)</span></h3>
+          <div className="row" style={{ gap: 6 }}>
+            {TYPE_SIZES.map((s) => (
+              <button
+                key={s.label}
+                className={draft.typeScale === s.scale ? 'active' : ''}
+                onClick={() => onDraft({ typeScale: s.scale })}
               >
                 {s.label}
               </button>

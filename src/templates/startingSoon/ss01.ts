@@ -58,7 +58,7 @@ export const ss01: TemplateVariant = defineStartingSoonVariant(
 
 /* The caps title — a quiet tracking-wide label above the show name. */
 .starting-soon-kicker {
-  font-size: calc(24px * var(--scale)); /* label scale — clearly subordinate */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* label scale — clearly subordinate */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: 0.24em;          /* wide tracking — the label breathes */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -67,7 +67,7 @@ export const ss01: TemplateVariant = defineStartingSoonVariant(
 
 /* The show name — large and elegant; the only heavy element on the card. */
 .starting-soon-show {
-  font-size: calc(92px * var(--scale)); /* full-frame headline scale */
+  font-size: calc(92px * var(--scale) * var(--type-scale)); /* full-frame headline scale */
   font-weight: 600;                /* confident without shouting */
   line-height: 1.08;               /* big text sits tight */
   letter-spacing: -0.01em;         /* large sizes tighten slightly */
@@ -85,7 +85,7 @@ export const ss01: TemplateVariant = defineStartingSoonVariant(
 
 /* The countdown — large, light figures; tabular digits so the colon never jitters. */
 .starting-soon-clock {
-  font-size: calc(112px * var(--scale)); /* the clock is the card's focal point on hold */
+  font-size: calc(112px * var(--scale) * var(--type-scale)); /* the clock is the card's focal point on hold */
   font-weight: 400;                /* regular figures — the size carries the moment, not weight */
   line-height: 1;                  /* a single tight row of digits */
   letter-spacing: 0.02em;          /* a touch of air between the light figures */

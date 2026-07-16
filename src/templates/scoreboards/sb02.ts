@@ -95,7 +95,7 @@ export const sb02: TemplateVariant = defineScoreboardVariant(
 
 /* Team name — quiet tracking-wide caps, subordinate to the score. */
 .scoreboard-team {
-  font-size: calc(24px * var(--scale));  /* label scale (values are 1080p reference) */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale (values are 1080p reference) */
   font-weight: 600;                /* firm without shouting */
   line-height: 1.15;               /* tight, but safe if a long name wraps */
   letter-spacing: 0.1em;           /* small caps breathe */
@@ -105,7 +105,7 @@ export const sb02: TemplateVariant = defineScoreboardVariant(
 
 /* Score — the row's anchor: bigger, heavier, and in tabular figures. */
 .scoreboard-score {
-  font-size: calc(32px * var(--scale));  /* clearly senior to the team name */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* clearly senior to the team name */
   font-weight: 700;                /* the heaviest element in the design */
   line-height: 1.1;                /* a touch of headroom for the on-air score pop */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter on updates */

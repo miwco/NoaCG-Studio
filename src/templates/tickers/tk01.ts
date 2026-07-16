@@ -70,7 +70,7 @@ export const tk01: TemplateVariant = defineTickerVariant(
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
   padding: 0 calc(28px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(18px * var(--scale)); /* kicker scale — clearly a label, not a headline */
+  font-size: calc(18px * var(--scale) * var(--type-scale)); /* kicker scale — clearly a label, not a headline */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: 0.12em;          /* small caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -95,7 +95,7 @@ export const tk01: TemplateVariant = defineTickerVariant(
 
 /* One news item — quiet, readable, subordinate to nothing. */
 .ticker-item {
-  font-size: calc(22px * var(--scale)); /* comfortable reading size at travel speed */
+  font-size: calc(22px * var(--scale) * var(--type-scale)); /* comfortable reading size at travel speed */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color */
 }
@@ -103,7 +103,7 @@ export const tk01: TemplateVariant = defineTickerVariant(
 /* The dot between items — dimmed punctuation, never a second accent. */
 .ticker-sep {
   margin: 0 calc(28px * var(--scale)); /* even air on both sides of the dot */
-  font-size: calc(14px * var(--scale)); /* small — a pause, not a bullet point */
+  font-size: calc(14px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--text-dim);          /* dimmed so the items stay the focus */
 }`,
     // renderTickerItem(text): the markup for ONE item — text plus its trailing dot,

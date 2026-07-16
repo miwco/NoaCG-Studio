@@ -64,7 +64,7 @@ ${lineMasks(o)}
 
 /* Name line — the big moment. */
 .lower-third-name {
-  font-size: calc(56px * var(--scale));  /* headline size */
+  font-size: calc(56px * var(--scale) * var(--type-scale));  /* headline size */
   font-weight: 600;                /* strong without shouting */
   line-height: 1.08;               /* tight leading for big text */
   letter-spacing: -0.01em;         /* big text tightens */
@@ -73,7 +73,7 @@ ${lineMasks(o)}
 
 /* Title line — small caps, dimmed, quiet. */
 .lower-third-title {
-  font-size: calc(23px * var(--scale));  /* clearly subordinate to the name */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name */
   font-weight: 400;                /* light against the semibold name */
   line-height: 1.3;                /* relaxed leading at small sizes */
   letter-spacing: 0.04em;          /* uppercase letters need room to breathe */

@@ -79,7 +79,7 @@ export const tk06: TemplateVariant = defineTickerVariant(
   background: var(--accent);       /* the one solid accent surface */
   box-shadow: 0 0 calc(24px * var(--scale)) color-mix(in srgb, var(--accent) 40%, transparent);
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(20px * var(--scale)); /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* label scale */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: 0.16em;          /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -106,7 +106,7 @@ export const tk06: TemplateVariant = defineTickerVariant(
 /* One market item — mono, tabular: numbers deserve even digits. */
 .ticker-item {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(26px * var(--scale)); /* the strip's main voice */
+  font-size: calc(26px * var(--scale) * var(--type-scale)); /* the strip's main voice */
   font-weight: 400;                /* regular mono — the deltas carry the color */
   font-variant-numeric: tabular-nums;   /* even digits across every item */
   color: var(--text-color);        /* the symbol in primary text color */
@@ -125,7 +125,7 @@ export const tk06: TemplateVariant = defineTickerVariant(
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
   padding: 0 calc(32px * var(--scale));  /* mirrors the label block's breathing room */
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(24px * var(--scale)); /* the quietest voice on the strip */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
   font-variant-numeric: tabular-nums;   /* every digit same width — no tick wobble */
   color: var(--text-dim);          /* dimmed — the markets are the point, not the time */
 }`,

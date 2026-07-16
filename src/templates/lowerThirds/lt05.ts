@@ -77,7 +77,7 @@ ${lineMasks(o)}
 
 /* Line 1 - the player name. Big, heavy, all caps. */
 .lower-third-name {
-  font-size: calc(58px * var(--scale));  /* headline scale */
+  font-size: calc(58px * var(--scale) * var(--type-scale));  /* headline scale */
   font-weight: 700;                /* maximum punch */
   line-height: 1.1;                /* tight - big text needs little leading */
   letter-spacing: 0.02em;          /* a touch of air between the caps */
@@ -87,7 +87,7 @@ ${lineMasks(o)}
 
 /* Line 2 - the stat line, dimmed so the accent slab stays the single color moment. */
 .lower-third-title {
-  font-size: calc(27px * var(--scale));  /* clearly secondary to the name (58/27 within 1.8-2.2) */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly secondary to the name (58/27 within 1.8-2.2) */
   font-weight: 500;                /* medium - legible without competing */
   line-height: 1.25;               /* normal leading for the small line */
   color: var(--text-dim);          /* secondary line dims - one accent dose per graphic */
