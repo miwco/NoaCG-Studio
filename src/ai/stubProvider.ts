@@ -4,11 +4,14 @@
 
 import { BUILDING_BLOCKS } from '../blocks/registry';
 import { addFieldToDefinition, insertGraphicHtml, nextFieldId } from '../blocks/edit';
-import { createDefaultTemplate } from '../model/defaultTemplate';
 import { parseDefinition, replaceDefinitionInHtml } from '../model/spxDefinition';
 import type { SpxTemplate, TemplateChange } from '../model/types';
-import type { AIProvider } from './provider';
+import type { AIProvider, AiTemplateChange, GenerateContext } from './provider';
 import { blankTemplate } from './presets';
+import { specToTemplate, type DesignSpec } from './designSpec';
+import type { TemplateCategory } from '../model/wizard';
+import type { StyleTag } from '../model/fonts';
+import { variantsFor } from '../templates/catalog';
 
 const block = (id: string) => BUILDING_BLOCKS.find((b) => b.id === id)!;
 
@@ -53,27 +56,100 @@ function relativizePaths(html: string): { html: string; changed: boolean } {
 
 const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 
+// Offline "grounded" generation: keyword → category → a real catalog assembly through the
+// same specToTemplate the AI harness uses, so the stub returns catalog-grade, panel- and
+// timeline-editable templates instead of bare building blocks.
+const CATEGORY_KEYWORDS: { test: RegExp; category: TemplateCategory; label: string }[] = [
+  { test: /lower ?third|name ?strap|\bstrap\b|presenter|speaker|guest/, category: 'lower-third', label: 'lower third' },
+  { test: /ticker|crawl|scroll|news ?bar/, category: 'ticker', label: 'ticker' },
+  { test: /score|\bvs\b|versus|match ?up/, category: 'scoreboard', label: 'scoreboard' },
+  { test: /starting ?soon|be right back|pre-?show|stream starts/, category: 'starting-soon', label: 'starting-soon loop' },
+  { test: /game ?timer|count ?down|shot ?clock/, category: 'game-timer', label: 'game timer' },
+  { test: /credits/, category: 'end-credits', label: 'end credits' },
+  { test: /info ?card|quote|statement|announcement card/, category: 'info-card', label: 'info card' },
+  { test: /\bbug\b|corner|watermark|\blogo\b/, category: 'corner-bug', label: 'corner bug' },
+  { test: /stat|poll|chart|graph|leaderboard|infographic|percent|results?\b/, category: 'infographic', label: 'infographic' },
+  { test: /quiz|question|trivia/, category: 'quiz', label: 'quiz graphic' },
+];
+
+const STYLE_KEYWORDS: { test: RegExp; tag: StyleTag }[] = [
+  { test: /glass|translucent|frosted|blur/, tag: 'glass' },
+  { test: /sport|esport|athletic|dynamic|energetic/, tag: 'sport' },
+  { test: /minimal|clean|quiet|restrained|elegant/, tag: 'minimal' },
+];
+
+/** Keyword-match a grounded design spec, or null when nothing fits. */
+function keywordSpec(prompt: string, ctx?: GenerateContext): { spec: DesignSpec; label: string } | null {
+  const p = prompt.toLowerCase();
+  const hit = CATEGORY_KEYWORDS.find((k) => k.test.test(p));
+  if (!hit) return null;
+  const pool = variantsFor(hit.category);
+  if (!pool.length) return null;
+  const style = STYLE_KEYWORDS.find((s) => s.test.test(p))?.tag;
+  const variant = (style && pool.find((v) => v.styleTag === style)) ?? pool[0];
+  return {
+    label: hit.label,
+    spec: {
+      fit: 'catalog',
+      reason: `Keyword match: ${hit.label}.`,
+      name: variant.name,
+      summary: `A ${hit.label} assembled from the catalog design system (offline mode).`,
+      category: hit.category,
+      variantId: variant.id,
+      lines: [],
+      useLogoSlot: Boolean(ctx?.images?.length),
+    },
+  };
+}
+
 export class StubAIProvider implements AIProvider {
-  async generate(prompt: string): Promise<TemplateChange> {
+  async generate(prompt: string, context?: GenerateContext): Promise<AiTemplateChange> {
     await wait();
     const p = prompt.toLowerCase();
+
+    const grounded = keywordSpec(prompt, context);
+    if (grounded) {
+      const { template } = specToTemplate(grounded.spec, context);
+      return {
+        summary:
+          `Assembled a ${grounded.label} from the catalog design system. ` +
+          '(Offline mode matches keywords — connect an AI key for free-form briefs.)',
+        template,
+        path: 'stub',
+        spec: grounded.spec,
+      };
+    }
     if (/full ?screen|title card|headline/.test(p)) {
       const t = block('fullscreen').apply(blankTemplate('Fullscreen title', 'Fullscreen title'));
-      return { summary: 'Generated a fullscreen title template.', template: t };
+      return { summary: 'Generated a fullscreen title template.', template: t, path: 'stub' };
     }
     if (/coming ?up|line ?up|next up|schedule/.test(p)) {
-      return { summary: 'Generated a "coming up" template with a heading and two items.', template: comingUpTemplate() };
+      return {
+        summary: 'Generated a "coming up" template with a heading and two items.',
+        template: comingUpTemplate(),
+        path: 'stub',
+      };
     }
-    if (/\bbug\b|corner|watermark/.test(p)) {
-      const t = block('bug').apply(blankTemplate('Corner bug', 'Corner bug'));
-      return { summary: 'Generated a corner-bug template.', template: t };
-    }
-    if (/\blogo\b/.test(p)) {
-      const t = block('logo').apply(blankTemplate('Logo', 'Logo'));
-      return { summary: 'Generated a logo template.', template: t };
-    }
-    // Default: a lower third.
-    return { summary: 'Generated a lower-third template.', template: createDefaultTemplate() };
+    // Default: a lower third from the catalog (the most-wanted graphic).
+    const fallback = variantsFor('lower-third')[0];
+    return {
+      summary:
+        'No keyword matched, so here is a catalog lower third. Try words like "ticker", "scoreboard", ' +
+        '"countdown", "credits", or "infographic" — or connect an AI key for free-form briefs.',
+      template: specToTemplate(
+        {
+          fit: 'catalog',
+          reason: 'Offline fallback.',
+          name: fallback.name,
+          summary: 'A catalog lower third.',
+          category: 'lower-third',
+          variantId: fallback.id,
+          lines: [],
+        },
+        context,
+      ).template,
+      path: 'stub',
+    };
   }
 
   async modify(prompt: string, template: SpxTemplate): Promise<TemplateChange> {
