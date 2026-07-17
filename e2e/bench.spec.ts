@@ -62,6 +62,29 @@ test.describe('runtime bench detection fixtures', () => {
     expect(rules((res as { errors: { rule: string }[] }).errors)).toContain('bench-overlap');
   });
 
+  test('a coincident same-text layer (karaoke wipe) is allowed; a misaligned one is not', async ({ page }) => {
+    await toApp(page);
+    const res = await page.evaluate(`(async () => { ${HELPERS}
+      const layered = (offset) => fixture({
+        html: doc('<div class="fx">' +
+          '<div style="position:absolute;left:400px;top:800px;font-size:44px;color:#555;">Sing the same line here</div>' +
+          '<div style="position:absolute;left:' + (400 + offset) + 'px;top:800px;font-size:44px;color:#fc3;">Sing the same line here</div>' +
+          '</div>'),
+        js: FIXTURE_JS,
+      });
+      const coincident = await bench(layered(0), { houseContract: false });
+      const misaligned = await bench(layered(30), { houseContract: false });
+      return { coincident, misaligned };
+    })()`);
+    const { coincident, misaligned } = res as {
+      coincident: { ok: boolean; errors: { rule: string }[] };
+      misaligned: { errors: { rule: string }[] };
+    };
+    expect(rules(coincident.errors)).not.toContain('bench-overlap');
+    expect(coincident.ok).toBe(true);
+    expect(rules(misaligned.errors)).toContain('bench-overlap');
+  });
+
   test('text escaping the canvas trips bench-overflow', async ({ page }) => {
     await toApp(page);
     const res = await page.evaluate(`(async () => { ${HELPERS}

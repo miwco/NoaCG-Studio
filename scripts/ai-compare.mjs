@@ -382,7 +382,7 @@ const ARMS = [
 ];
 const results = [];
 for (const [id, brief] of selected) {
-  process.stdout.write(`▸ ${id} … generating A/B/C `);
+  process.stdout.write(`▸ ${id} … generating A/B/D/C `);
   let arms;
   try {
     arms = await generateArms(brief, ROUNDS_B);
@@ -429,6 +429,8 @@ for (const [id, brief] of selected) {
   }
   results.push(row);
   console.log('');
+  // Persist incrementally — a long run that dies mid-way keeps every finished brief.
+  writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
 
   await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(500);

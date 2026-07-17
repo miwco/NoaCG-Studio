@@ -138,6 +138,18 @@ function intersection(a: DOMRect, b: DOMRect): number {
   return w > 0 && h > 0 ? w * h : 0;
 }
 
+/** Two copies of the SAME text stacked near-coincidentally are deliberate layering — a
+ *  karaoke wipe's accent fill over its base line, a glow copy. An OFFSET duplicate is a
+ *  misaligned wipe, which is a real bug (the same rule the compare rig's sampler uses). */
+function isDeliberateLayer(a: Element, b: Element, ra: DOMRect, rb: DOMRect, inter: number): boolean {
+  if ((a.textContent ?? '').trim() !== (b.textContent ?? '').trim()) return false;
+  const union = ra.width * ra.height + rb.width * rb.height - inter;
+  const iou = union > 0 ? inter / union : 0;
+  const dx = Math.abs((ra.left + ra.right) / 2 - (rb.left + rb.right) / 2);
+  const dy = Math.abs((ra.top + ra.bottom) / 2 - (rb.top + rb.bottom) / 2);
+  return iou > 0.8 && dx < 6 && dy < 6;
+}
+
 /** Pairwise overlap among leaves (ancestor/descendant pairs excluded - text on its own
  *  panel is design, two unrelated texts on top of each other is the #1 broadcast defect). */
 function overlapIssues(
@@ -157,6 +169,7 @@ function overlapIssues(
       const rb = b.getBoundingClientRect();
       const inter = intersection(ra, rb);
       if (inter < 4) continue;
+      if (isDeliberateLayer(a, b, ra, rb, inter)) continue;
       const smaller = Math.min(ra.width * ra.height, rb.width * rb.height);
       const ratio = smaller > 0 ? inter / smaller : 0;
       if (ratio >= OVERLAP_ERROR) {
