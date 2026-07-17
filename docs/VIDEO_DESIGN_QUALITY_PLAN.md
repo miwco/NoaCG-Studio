@@ -199,7 +199,41 @@ Two arms, same model (Sonnet 5), same briefs, same runs, judged on real rendered
   shows a clear improvement for its cost. If B wins, land it and re-point the chips; if
   B only ties, escalate to §3.5.
 
-## 6. Follow-up hardening surfaced by the baseline (independent of the A/B)
+## 5b. A/B result (this branch - arm B landed)
+
+Arm B = §3.1 (technique-menu skills) + §3.2 (reference cards, new
+src/ai/video/referenceCards.ts) + §3.4 (palette-world principle) applied to
+prompts.ts/skills.ts/claudeVideoProvider.ts. Same model, same briefs, 2 runs each.
+Galleries: `bench-armB/review.html` (chips) and `bench-armB-briefs/review.html` (neutral).
+
+Verdict: **clear win, landed.** The reference cards + committed-concept instruction moved
+each brief into its own material world instead of the graphite default:
+- **Chips** (still art-directed, so palette is fixed by the brief): the sports stinger went
+  from graphite minimalism to a committed gold/navy/crimson slash architecture; the
+  countdown gained a ticking dial world instead of a bare number in a void. News/logo
+  stay dark because their chip text prescribes it (see §3.6 - re-point the chips).
+- **Neutral briefs** (the real test): cooking became a textured cream paper card with a
+  serif lockup, kicker and flourish (EDITORIAL-WARM card); awards became a gold-ribbon +
+  star + shimmer "moment" (CELEBRATION card); esports produced two DIFFERENT committed
+  concepts across runs. Diversity across briefs is high and within-brief runs differ in
+  concept - the goal (more intentional, not more uniform) held.
+- **Cost**: unchanged. Reference selection is deterministic keyword matching (no model
+  call); the injected text rides the existing Director call.
+
+Caveats the A/B surfaced (feed §6):
+- **Clipping persists**: news r1 still clipped "WORLD REPORT" -> "WORLD REP" at the hold.
+  Prompt guidance alone is unreliable here; §6's programmatic check is required.
+- **Network temptation grows**: cooking r1 was REJECTED for an http(s) URL - asking for
+  richer material (paper texture, real type) tempts the model to fetch a texture or web
+  font. This is the strongest argument for §3.3 (bundle the fonts) and for hardening the
+  "design texture in code, never fetch" contract line + quoting the offending line on
+  repair. The gate caught it (kept the prior code), so it never shipped.
+
+Not yet done (deliberately deferred): §3.3 fonts (mechanical, benefits both arms - keep it
+out of the prompt A/B), §3.5 vision critic (only if quality plateaus), §3.6 chip rewrite
+(product copy decision).
+
+## 6. Follow-up hardening surfaced by the baseline and the A/B (independent of the prompt work)
 
 - **Text-clip check**: the bench's readability pass (and ideally the injected validator's
   probe) should flag a text element whose rendered box is cut by an ancestor's overflow

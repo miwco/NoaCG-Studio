@@ -27,15 +27,17 @@ export const SKILLS: VideoSkill[] = [
     id: 'stingers',
     keywords: /sting|bumper|transition to|swish|wipe/i,
     prompt: `### Stingers
-- A stinger is 1.5-4s and must FILL the frame at its midpoint (it hides an edit underneath).
-- Build it as: fast directional sweep of large shapes -> logo/title snap at center ON TOP of
-  the settled panels -> equally fast clear-out (text leaves first, panels after). The
-  midpoint frame should be ~100% covered.
-- Use 2-4 large geometric panels sweeping with 2-4 frame stagger, slight angles (8-15deg),
-  layered z-order with all text above every panel. Keep each panel visibly distinct - vary
-  tone, angle, and offset, with an edge highlight or shadow where layers meet - so the cover
-  moment reads as layered depth, never one flat colour wall.
-- Sharp spring configs (damping 12-16, stiffness 150-220).`,
+- A stinger is 1.5-4s and must FILL the frame at its midpoint (it hides an edit underneath):
+  fast build -> covered midpoint with the title/logo ON TOP -> equally fast clear-out (text
+  leaves first, panels after).
+- Choose ONE cover architecture that fits the brief and commit - don't blend them:
+  ANGLED SLABS (2-4 large panels sweeping with a tight stagger and slight angles),
+  SPLIT-SLICE (the frame covered by strips that slide in/out in alternating directions),
+  CENTRE BLOOM (geometry irises out from the middle and swallows the frame),
+  RIBBON (one bold folded band travels through and drags the title with it).
+- Whatever covers the frame is layered depth, never one flat colour wall: vary tone, angle
+  and offset between shapes, with an edge highlight or shadow where layers meet.
+- Entrances hit hard (sharp springs, e.g. damping 12-16); the exit is even faster.`,
   },
   {
     id: 'logo-reveals',
@@ -44,23 +46,31 @@ export const SKILLS: VideoSkill[] = [
 - The logo is the hero: it gets the center, the most travel, and the longest hold. At the
   hero moment the lockup COMMANDS the frame - a wordmark spans roughly 40-60% of the frame
   width; a small word floating in darkness reads cheap, not premium.
-- Reveal patterns that read premium: scale-in with an overshooting spring; a masked wipe;
-  a light sweep (a moving specular gradient) across the settled mark; elements assembling.
+- Choose ONE reveal concept that fits the brand's energy and commit - don't blend them:
+  ASSEMBLY (the mark builds from moving parts - sliced bars, converging glyph groups, a
+  monogram snapping into a frame; engineered, modern),
+  MASK & ARCHITECTURE (panels or rules wipe away to reveal the mark behind clean edges;
+  editorial, structural),
+  LIGHT & MATERIAL (the mark emerges through lighting - a glow bloom, metallic gradients,
+  a specular pass; cinematic),
+  IMPACT (the mark lands with weight - a stamp with a shock ring or 1-2% frame shake on
+  landing; sports, energy),
+  ORBIT (supporting elements - rings, chips, particles - circulate and settle around the
+  mark; playful, techy).
 - A light sweep must live INSIDE the glyphs: stack a duplicate of the wordmark exactly on
   top of itself with WebkitBackgroundClip 'text' and animate the gradient's position
   across it. A sheen rectangle drifting over the type - even one clipped to the text box -
   shows band edges above and below the letters and reads as a box sliding past, never as
   a specular glint.
-- With no logo uploaded, design a real typographic LOCKUP, never a bare word: heavy caps,
-  tight tracking (letterSpacing about -0.02em), sized from the frame (fontSize about
-  height*0.2), a subtle vertical gradient in the fill so the type reads lit rather than
-  flat white - plus at least one supporting element (a monogram chip, a drawn rule, a
-  small kicker line) landing on its own stagger.
+- With no logo uploaded, design a real typographic LOCKUP, never a bare word: heavy caps
+  sized from the frame with deliberate tracking, a lit fill (subtle tonal gradient), plus
+  at least one supporting element (a monogram chip, a drawn rule, a small kicker line)
+  landing on its own stagger.
 - Never distort a logo's aspect ratio; never rotate it more than a few degrees.
 - Give the settled logo a subtle life: 1-2% scale breathing or a slow light pass. Ease
   breathing in from exactly 1.0 at the settle moment - a hold that starts mid-cycle pops.
-- Ground the mark in a layered background: a radial or diagonal graded field plus a corner
-  vignette, never one flat or near-flat fill.`,
+- Ground the mark in a layered background that belongs to the chosen concept, never one
+  flat or near-flat fill.`,
   },
   {
     id: 'sports-graphics',
@@ -69,9 +79,12 @@ export const SKILLS: VideoSkill[] = [
 - Energy comes from speed and angles: italic/oblique type, 8-15deg slashes, hard cuts.
 - Strong condensed uppercase typography, big weight contrast (900 vs 400); support lines
   sized from the frame (about height*0.028), high-contrast against what they sit on.
-- Team/brand colors as bold panels, not tints - but every bold panel is a LIT surface:
-  same-hue shading, an edge keyline where slabs meet, layered shadows between them.
-  Metallic/dark backgrounds read premium; one flat colour wall never does.
+- Team/brand colors as bold panels, not tints - and saturated colour worlds are welcome
+  here. Every bold panel is a LIT surface: same-hue shading, an edge keyline where slabs
+  meet, layered shadows between them. One flat colour wall never reads premium.
+- Pick ONE signature energy device per piece: slash-panels that cut the frame, a burst of
+  speed lines behind the hero, a shock ring on the title's landing, or a diagonal wipe
+  with counter-moving layers.
 - Punchy springs (stiffness 180-260) and short travels - impact over float.`,
   },
   {
@@ -79,9 +92,13 @@ export const SKILLS: VideoSkill[] = [
     keywords: /news|election|breaking|headline|bulletin|politic/i,
     prompt: `### News graphics
 - Authority through restraint: clean grotesque type, precise alignment, measured pace.
-- Blues/dark neutrals with ONE alert accent. No playful easing - power2/power3-style curves
-  (springs with damping 20+, no overshoot).
-- Straight horizontal reveals: bars extend, text slides from behind rules, thin keylines.`,
+- Dark neutrals with ONE alert accent (the palette need not be navy - deep slate, ink
+  green, or warm charcoal carry authority too). No playful easing - power2/power3-style
+  curves (springs with damping 20+, no overshoot).
+- Pick ONE structural device and let it organise the piece: a grid of rules that builds
+  and carries the type, a banner cascade (stacked bars landing in sequence), a single
+  bold underline that draws and anchors the headline, or a split-screen wipe.
+- Straight reveals: bars extend, text slides from behind rules, thin keylines.`,
   },
   {
     id: 'kinetic-typography',
@@ -117,7 +134,10 @@ export const SKILLS: VideoSkill[] = [
     prompt: `### Countdowns
 - Each number owns exactly one second: enters with impact (spring scale/weight), holds,
   yields cleanly. Compute the number from Math.floor(frame / fps) - never state.
-- Add a per-second pulse (a ring expanding, a tick, a flash) synchronized to the beat.
+- Choose ONE beat device and commit: an expanding ring pulse, a card flip, a segment arc
+  that sweeps one revolution per second, or a hard scale-slam with a flash.
+- The environment is part of the design - give the numbers a world (a lit stage, a
+  ticking dial, converging guides), not just a void.
 - Tabular numerals (fontVariantNumeric: 'tabular-nums') so digits don't jitter.
 - The final number ("1" or "0") gets an amplified landing - bigger scale, stronger pulse.`,
   },

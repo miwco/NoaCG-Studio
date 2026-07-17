@@ -4,6 +4,11 @@
 // anchor, like lt01 is for SPX templates).
 
 export const MOTION_PRINCIPLES = `## NoaCG motion-design principles (the permanent quality bar)
+- A COMMITTED CONCEPT: every piece is built around ONE memorable device you could name in
+  a sentence ("the title assembles from sliced slabs", "a gold ribbon carries the
+  reveal", "steam curls rise into the wordmark"). Choose it deliberately and let every
+  element serve it. A technically clean result that reads as a neutral default template
+  is a FAILURE of this bar - design something this brief, and only this brief, deserves.
 - Clear visual hierarchy: one hero element; everything else supports it. If everything is
   big, nothing is.
 - Purposeful movement: every animation exists to direct attention or express energy - no
@@ -14,6 +19,11 @@ export const MOTION_PRINCIPLES = `## NoaCG motion-design principles (the permane
   Size EVERY piece of type from the frame (fractions of height/width), never a fixed px
   value - a support/kicker line is around height*0.025-0.035; a hardcoded 22px kicker on a
   1080p canvas is unreadably small.
+- THE TEXT FITS: the hero line must sit INSIDE the safe margins at its largest settled
+  moment. Derive hero type size from the frame width AND the actual string length -
+  roughly fontSize ≤ (width * 0.85) / (0.6 * characters) for heavy caps; a 12-character
+  title cannot use the same height fraction a 4-character one can. Once a reveal has
+  finished, no readable text may clip against an overflow mask or the frame edge.
 - Readability first: text holds still long enough to read (≥ 18 frames for a short line),
   strong contrast against what it actually sits on.
 - Professional easing: springs and clamped interpolate curves with intent - decisive
@@ -22,11 +32,15 @@ export const MOTION_PRINCIPLES = `## NoaCG motion-design principles (the permane
 - Intentional timing: choreograph on a beat grid; stagger related elements 2-5 frames.
 - Decisive entrances and exits: the piece starts with confidence and ENDS CLEANLY - by the
   last frame everything has exited or settled deliberately (no mid-motion freeze).
-- Restraint: 1-2 typefaces, one accent color doing sharp small work, black/white/greys
-  doing the heavy lifting. Fewer, better-choreographed elements over busy scenes.
-- Broadcast polish: subtle depth (soft shadows, layered darks), no default-blue, no pure
-  #FF0000. Subtle SAME-HUE gradients are the tool for depth - what is banned is the
-  rainbow/multi-hue gradient, never tonal shading.
+- THE BRIEF PICKS THE PALETTE WORLD: audience, genre, and energy decide whether the piece
+  lives in layered darks, daylight warmth, rich saturated colour, or airy light tones - a
+  warm morning look executed with depth is exactly as premium as a graphite newsroom.
+  Within the chosen world keep discipline: neutrals carry the frame, one or two accents do
+  sharp work. No rainbow/multi-hue gradients (tonal SAME-HUE shading is the depth tool),
+  no default-blue, no pure #FF0000.
+- Restraint in COUNT, not in character: 1-2 typefaces and few, well-choreographed
+  elements - but give each one material character (a lit surface, a texture, a strong
+  silhouette). Minimal is a design choice; empty is not.
 - No flat colour walls: any shape covering a large share of the frame is a LIT surface -
   give it a soft same-hue gradient, an edge highlight or hairline keyline where it meets
   another layer, and a shadow separating it from what is behind. Overlapping panels stay
@@ -43,8 +57,11 @@ export const MOTION_PRINCIPLES = `## NoaCG motion-design principles (the permane
 - No placeholder design, ever. These are the signs of an unfinished result, and none may
   ship: a flat grey/neutral rectangle standing in for real content; the literal word
   "LOGO"/"TEXT" as a stand-in; a lone element doing a weak center-screen fade with no
-  structure; arbitrary drift that isn't choreographed; a thin washed-out gradient. If an
-  intended element (a logo image) is absent, design a real substitute - see the contract.`;
+  structure; arbitrary drift that isn't choreographed; a thin washed-out gradient - and
+  the uncommitted default: a centred word on a plain dark radial gradient with a light
+  sweep and a small-caps kicker. That last one is this tool's most common failure; it
+  only passes when the brief asks for exactly that. If an intended element (a logo image)
+  is absent, design a real substitute - see the contract.`;
 
 export const REMOTION_CONTRACT = `## The composition contract (hard requirements - the validator enforces these)
 - ONE complete TSX module. Imports ONLY from 'react' and 'remotion'. Default-export the
