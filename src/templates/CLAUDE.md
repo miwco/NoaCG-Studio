@@ -123,6 +123,17 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   (real, editable keyframes) and NAMES the measured part. A count-up design may or may not pair a
   progress bar with its figure, so `PresetConfig.hasBars` tells the preset - without it a bar-less
   design (ig01) would carry a phantom timeline layer for an element it doesn't have.
+- **importedDesign/** - imp01 (prefix 'imported-design', NOT browsable - the wizard's "Import
+  graphic" entry is its only way in; CategoryInfo.group 'imported'). The user's own flat artwork
+  IS the design: `.imported-design-box` holds the `<img>` art + per-line `#fwN` mask wrappers
+  (position, in the artwork's own px) around `#fN` spans (per-line type: font/size/weight/color -
+  LineSpec.style). Self-assembled from shared/base.ts, NOT assembleStandard: the auto-fit
+  `width: fit-content` cap would shrink frame-sized artwork (the box takes the artwork's width;
+  frame-sized art anchors at 0,0, cropped art gets a zone). designPresets.ts (design-fade/
+  slide/pop/blur) animates ONLY the box - artwork and text as one unit; the line presets would
+  tear text out of artwork drawn around it. Steps forced off. The `#fwN` rules are the canvas
+  placement drag's contract (blocks/designLayout.ts). Contract + diagnosis: docs/IMPORT_MVP.md;
+  E2E: e2e/import-graphic.spec.ts.
 - **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown).
   DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
   middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;

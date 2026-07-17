@@ -47,7 +47,8 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
           <p className="hint" style={{ marginTop: -4, marginBottom: 10 }}>
             Each line becomes an editable field the operator fills in on air. Position is measured
             in your artwork's own pixels{art ? ` (${art.width} × ${art.height})` : ''}, from its
-            top-left corner — the live preview shows exactly where each one lands.
+            top-left corner — and after creating, you can select a field on the canvas and drag it
+            into place.
           </p>
         )}
         {lines.map((line, i) => (

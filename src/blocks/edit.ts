@@ -178,7 +178,12 @@ function findRuleBody(css: string, selector: string): { body: string; start: num
 export function setCssDeclaration(css: string, selector: string, prop: string, value: string): string {
   const rule = findRuleBody(css, selector);
   if (rule) {
-    const re = new RegExp(`(^|;|\\{)(\\s*)${escapeRe(prop)}\\s*:[^;}]*`, 'i');
+    // A declaration may be preceded by the PREVIOUS line's trailing comment (generated rules
+    // annotate every declaration — zoneCssText, the imported-design placement rules), so a
+    // closing `*/` counts as a boundary too. Without it the replace never matched such a
+    // declaration and this fell through to append — a silent duplicate whose stale twin
+    // stayed in the rule forever.
+    const re = new RegExp(`(^|;|\\{|\\*\\/)(\\s*)${escapeRe(prop)}\\s*:[^;}]*`, 'i');
     let body = rule.body;
     if (re.test(body)) {
       body = body.replace(re, `$1$2${prop}: ${value}`);

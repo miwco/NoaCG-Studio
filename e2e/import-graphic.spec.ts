@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { lowerThirdPng } from './_png';
+import { elementPoint } from './_canvas';
 
 // The Import Graphic MVP workflow, end to end (docs/IMPORT_MVP.md): a flat PNG design becomes
 // a working SPX template with editable text fields and selectable in/out animations.
@@ -102,6 +103,89 @@ test('import graphic: a cropped design is placed as an object, not stretched', a
   await dropDesign(page, 900, 260);
   await expect(page.locator('.asset-card')).toContainText('900 × 260');
   await expect(page.locator('.wz-step')).toContainText('Smaller than');
+});
+
+/** Create the imported design and land in the editor with the preview rebuilt. */
+async function createImported(page: Page) {
+  await dropDesign(page);
+  await page.getByRole('button', { name: 'Add text fields ›' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  await page.waitForTimeout(650);
+}
+
+/** The current template's #fw0 rule position + #f0 keyframe tracks + history length. */
+async function placementState(page: Page) {
+  return page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { placedLines } = await import('/src/blocks/designLayout.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const s = useTemplateStore.getState();
+    const data = parseAnimData(s.template.js);
+    return {
+      place: placedLines(s.template.html, s.template.css)['#f0'] ?? null,
+      f0Tracks: Object.keys(data?.steps[0].layers['#f0'] ?? {}),
+      history: s.history.length,
+    };
+  });
+}
+
+test('import graphic: dragging a field places it in the CSS — never a keyframe', async ({ page }) => {
+  await createImported(page);
+
+  // Select the Name field via its timeline row (the shared selection), like any layer.
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector')).toBeVisible({ timeout: 3000 });
+  const before = await placementState(page);
+  expect(before.place).not.toBeNull();
+
+  // Drag the field 120 px right and 60 px up on screen.
+  const c = await elementPoint(page, '#f0');
+  await page.mouse.move(c.x, c.y);
+  await page.mouse.down();
+  await page.mouse.move(c.x + 120, c.y - 60, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+
+  // The wrapper's CSS rule moved by the drag (screen px → design px through the doc scale;
+  // --scale is 1 at 1080p size M, so canvas px are design px here)...
+  const after = await placementState(page);
+  expect(after.place!.x).toBeCloseTo(before.place!.x + 120 / c.scale, -1);
+  expect(after.place!.y).toBeCloseTo(before.place!.y - 60 / c.scale, -1);
+  expect(after.place!.scaled).toBe(true); // the rule keeps its calc(--scale) idiom
+
+  // ...and the drag wrote NO motion: the field's keyframe tracks are exactly what they were.
+  expect(after.f0Tracks).toEqual(before.f0Tracks);
+
+  // ONE undoable apply; undo restores the original placement.
+  expect(after.history).toBe(before.history + 1);
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await placementState(page)).place!.x).toBe(before.place!.x);
+});
+
+test('import graphic: Escape cancels a placement drag without touching the code', async ({ page }) => {
+  await createImported(page);
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector')).toBeVisible({ timeout: 3000 });
+  const before = await placementState(page);
+
+  const c = await elementPoint(page, '#f0');
+  await page.mouse.move(c.x, c.y);
+  await page.mouse.down();
+  await page.mouse.move(c.x + 100, c.y + 40, { steps: 6 });
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+
+  const after = await placementState(page);
+  expect(after.place).toEqual(before.place);
+  expect(after.history).toBe(before.history);
+  // The live preview sprang back too (the inline override was cleared).
+  const inline = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('#fw0')
+    .evaluate((el) => (el as HTMLElement).style.left);
+  expect(inline).toBe('');
 });
 
 test('import graphic: the exported SPX package validates', async ({ page }) => {

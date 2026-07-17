@@ -84,20 +84,23 @@ template like any other, so the timeline can key any layer after creation.
 The presets emit a legacy region which `convertToDataRegion` converts to `NOACG_ANIM` at
 create — the same emit→import path every category uses. No new engine code.
 
-## Positioning: where it happens, and the open follow-up
+## Positioning: the Text step and the canvas drag
 
 Text is placed in the wizard's **Text** step: X / Y in the artwork's own pixels (measured from
 its top-left) plus an anchor edge, with the live preview showing where each line lands. That is
 what writes `LineStyle.x/y` → the `#fwN` rule's `left`/`top`.
 
-**Dragging a field on the canvas after creation is NOT wired up yet**, and the reason is a real
-design tension worth stating rather than papering over: on a data-block template, dragging a
-selected non-root layer writes **x/y keyframes** at the playhead (`CanvasInteraction`, the
-position-keyframing model) — that is *motion*, not a design position. For an imported design a
-drag should mean "this is where the text sits", i.e. patch the CSS rule instead. Wiring that up
-means branching the gesture by template type, which is additive but touches a file every existing
-template depends on. Until it lands, the wizard's numeric placement is the honest mechanism and
-the UI does not claim otherwise.
+**After creation, dragging a selected field on the canvas re-places it.** The design tension
+this had to resolve: on a data-block template, dragging a selected non-root layer writes **x/y
+keyframes** at the playhead — that is *motion*, not a design position. For a placed line a drag
+means "this is where the text sits". The resolution (`blocks/designLayout.ts`) follows the house
+rule — the gate derives from the **code**, never the category: a line is *placed* when its
+parent wrapper carries an id whose CSS rule holds readable `left`/`top` px values (the shape the
+assembler emits, and a shape a pro can hand-write to opt any template's line in). A placed
+line's drag patches that rule (one undoable CSS apply, in the rule's own `calc(Npx *
+var(--scale))` or plain-px idiom) and is **excluded from the keyframe drag entirely**, so a
+multi-select drag can never write motion keyframes for it. Everything else keeps the keyframe
+drag unchanged, and catalog templates are untouched (their masks carry no wrapper ids).
 
 ## Deliberately out of scope (MVP)
 

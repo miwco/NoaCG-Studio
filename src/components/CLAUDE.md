@@ -61,6 +61,13 @@ in src/blocks/CLAUDE.md.
   Escape springs everything back. The root keeps the zone drag, unselected layers don't drag
   on their own, and legacy templates keep the classic gestures exactly. Pinned by
   e2e/canvas-keyframe.spec.ts.
+  PLACEMENT DRAG (imported designs): a selected PLACED line - one whose wrapper id has a CSS
+  rule with left/top px values (blocks/designLayout.ts placedLines; the imported-design shape,
+  code-derived, never category) - drags as PLACEMENT, not motion: live inline left/top preview
+  in the rule's own idiom, ONE undoable placeLine CSS patch on release, Escape clears the
+  previews. Placed lines are excluded from the keyframe drag entirely, so a multi-select drag
+  never keys motion for them; catalog templates (mask divs without ids) never match. Pinned by
+  e2e/import-graphic.spec.ts.
   The SELECTION model (multi, docs/TIMELINE_INTERACTION_MODEL.md): a click selects the
   innermost TemplatePart under the point (registry-driven closest-ancestor hit test,
   rect-containment fallback); clicking the sole selected part again climbs to its container;

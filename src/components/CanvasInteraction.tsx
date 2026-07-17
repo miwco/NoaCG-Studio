@@ -9,6 +9,7 @@ import { parseAnimData, spliceAnimData } from '../blocks/animData';
 import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
+import { placedLines, placeLine, placementCss, type LinePlacement } from '../blocks/designLayout';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { phaseIdOf } from './StepTimeline';
 import type { SpxWindow } from './PlayoutSimulator';
@@ -62,6 +63,24 @@ interface LayerDrag {
   dx: number;
   dy: number;
   /** Past the threshold — the layers follow live and release commits keyframes. */
+  active: boolean;
+}
+
+/** A PLACEMENT drag on selected placed text lines (an imported design's fields): the line's
+ *  position is a design decision written in its wrapper's CSS rule, so the drag re-places it
+ *  there — live inline left/top preview, ONE undoable CSS patch on release. Never keyframes:
+ *  moving a field independently of the artwork it was drawn into is exactly what whole-unit
+ *  motion exists to prevent (docs/IMPORT_MVP.md). */
+interface PlaceDrag {
+  lines: { selector: string; wrapperId: string; baseX: number; baseY: number; scaled: boolean }[];
+  /** The computed --scale at drag start (doc px per design px). */
+  scaleVar: number;
+  /** Pointer start, in screen px. */
+  startX: number;
+  startY: number;
+  /** Current pointer delta, in DESIGN px (the units the CSS rule holds). */
+  dx: number;
+  dy: number;
   active: boolean;
 }
 
@@ -135,6 +154,9 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   const [layerDrag, setLayerDrag] = useState<LayerDrag | null>(null);
   const layerDragRef = useRef<LayerDrag | null>(null);
   layerDragRef.current = layerDrag;
+  const [placeDrag, setPlaceDrag] = useState<PlaceDrag | null>(null);
+  const placeDragRef = useRef<PlaceDrag | null>(null);
+  placeDragRef.current = placeDrag;
   /** A lasso in flight: start + current corner, in doc px (matched against part rects, which
    *  are also doc px — a pure hit-test space, no logical conversion needed). */
   const [lasso, setLasso] = useState<{ x0: number; y0: number; x1: number; y1: number; active: boolean; additive: boolean } | null>(null);
@@ -163,8 +185,8 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   // must never resize the workspace while the pointer is mid-gesture or the inline editor is
   // open — the canvas (and the edit overlay anchored to it) would shift under the user.
   useEffect(() => {
-    setCanvasGestureActive(Boolean(drag || layerDrag || scaleDrag || layerTf || editing || lasso));
-  }, [drag, layerDrag, scaleDrag, layerTf, editing, lasso, setCanvasGestureActive]);
+    setCanvasGestureActive(Boolean(drag || layerDrag || placeDrag || scaleDrag || layerTf || editing || lasso));
+  }, [drag, layerDrag, placeDrag, scaleDrag, layerTf, editing, lasso, setCanvasGestureActive]);
 
   // ── Selection model (editor UI state only — never written into the template).
   // The selectors live in the STORE so the timeline highlights the same elements
@@ -233,16 +255,25 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     ? presses!.findIndex((targets) => targets.includes(selectedPart!.selector))
     : -1;
 
+  // ── Placed lines (blocks/designLayout.ts): text whose position is a DESIGN decision
+  //    written in its wrapper's CSS rule — the imported-design shape. Dragging one of these
+  //    re-places it (patches the rule) instead of keying motion; the gate is the code
+  //    carrying that rule, never the template's category. ──
+  const placed = useMemo(() => placedLines(template.html, template.css), [template.html, template.css]);
+
   // ── Canvas position keyframing (the interaction model, amendment 3): with a parked
   //    playhead, dragging any SELECTED non-root layer moves the whole selection and
   //    writes each layer's x/y keyframes at that moment — the drag itself arms, no
   //    Inspector setup needed. The root keeps the zone drag (a graphic's home position
-  //    is a design decision, not motion), unselected layers don't drag on their own,
-  //    and legacy-region templates never reach this path (no data block to key into). ──
+  //    is a design decision, not motion), a PLACED line keeps the placement drag (same
+  //    reason, per element), unselected layers don't drag on their own, and legacy-region
+  //    templates never reach this path (no data block to key into). ──
   const kfSelectors = useMemo(() => {
     if (!dataModel) return [];
-    return selectedParts.filter((sel) => parts.find((p) => p.selector === sel)?.kind !== 'root');
-  }, [dataModel, selectedParts, parts]);
+    return selectedParts.filter(
+      (sel) => !placed[sel] && parts.find((p) => p.selector === sel)?.kind !== 'root',
+    );
+  }, [dataModel, selectedParts, parts, placed]);
   const kfDraggable = kfSelectors.length > 0;
 
   /** Where the drag's keyframes land: the parked playhead, else the layer's settled
@@ -284,6 +315,31 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     applyTemplate({ ...template, js });
     const place = playhead;
     if (place) setTimeout(() => sendScrub(phaseIdOf(dataModel, place.step), place.t), 650);
+  };
+
+  /** Clear the placement drag's inline left/top previews — the stylesheet position returns. */
+  const resetPlaceDrag = (pd: PlaceDrag) => {
+    for (const line of pd.lines) {
+      const el = doc()?.getElementById(line.wrapperId);
+      if (el) {
+        el.style.left = '';
+        el.style.top = '';
+      }
+    }
+  };
+
+  /** Commit a placement drag: ONE undoable apply patching every dragged line's wrapper rule
+   *  (blocks/designLayout.ts placeLine — the same left/top the Text step wrote at create).
+   *  The inline previews stay: they already show the committed values, and the rebuild's
+   *  fresh document replaces them moments later. */
+  const commitPlaceDrag = (pd: PlaceDrag) => {
+    let next = template;
+    for (const line of pd.lines) {
+      next = placeLine(next, line.wrapperId, Math.round(line.baseX + pd.dx), Math.round(line.baseY + pd.dy), line.scaled);
+    }
+    if (next.css === template.css) return;
+    applyTemplate(next);
+    setActiveTab('css');
   };
 
   const changePress = (toPress: number) => {
@@ -394,9 +450,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   }, [editing?.field]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Escape cancels an active drag (standard direct-manipulation behavior). A layer drag
-  // also puts the layer back where the drag found it (the live GSAP preview moved it).
+  // also puts the layer back where the drag found it (the live GSAP preview moved it);
+  // a placement drag clears its inline previews so the stylesheet position returns.
   useEffect(() => {
-    if (!drag && !layerDrag && !lasso) return;
+    if (!drag && !layerDrag && !placeDrag && !lasso) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setDrag(null);
@@ -406,10 +463,15 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
         resetLayerDrag(ld);
         setLayerDrag(null);
       }
+      const pd = placeDragRef.current;
+      if (pd) {
+        resetPlaceDrag(pd);
+        setPlaceDrag(null);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [drag, layerDrag, lasso]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [drag, layerDrag, placeDrag, lasso]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A code edit can remove selected elements — the selection follows the registry.
   useEffect(() => {
@@ -466,7 +528,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
         setLayerTf(null);
         return;
       }
-      if (dragRef.current || editingRef.current || scaleDragRef.current || layerDragRef.current || lassoRef.current) return;
+      if (dragRef.current || editingRef.current || scaleDragRef.current || layerDragRef.current || placeDragRef.current || lassoRef.current) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest?.('input, textarea, select, .monaco-editor')) return;
       setSelected(null);
@@ -478,7 +540,39 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (editing) return; // the editor overlay handles its own events
     const p = clientToDoc(e);
-    // The keyframe drag has first claim: pointer down ON any selected non-root layer
+    // The placement drag claims a pointer down ON a selected PLACED line (its wrapper —
+    // the positioned element). Selected placed lines move together; the delta converts
+    // to design px through the computed --scale, since that is what the rule holds.
+    const placedSel = selectedParts
+      .map((sel) => ({ sel, place: placed[sel] as LinePlacement | undefined }))
+      .filter((x): x is { sel: string; place: LinePlacement } => !!x.place);
+    if (placedSel.length > 0) {
+      const d = doc();
+      const els = placedSel
+        .map((x) => ({ ...x, el: d?.getElementById(x.place.wrapperId) ?? null }))
+        .filter((x): x is { sel: string; place: LinePlacement; el: HTMLElement } => !!x.el && x.el.getClientRects().length > 0);
+      if (els.some((x) => inRect(p, x.el.getBoundingClientRect()))) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        const scaleVar = d ? parseFloat(getComputedStyle(d.documentElement).getPropertyValue('--scale')) || 1 : 1;
+        setPlaceDrag({
+          lines: els.map((x) => ({
+            selector: x.sel,
+            wrapperId: x.place.wrapperId,
+            baseX: x.place.x,
+            baseY: x.place.y,
+            scaled: x.place.scaled,
+          })),
+          scaleVar,
+          startX: e.clientX,
+          startY: e.clientY,
+          dx: 0,
+          dy: 0,
+          active: false,
+        });
+        return;
+      }
+    }
+    // The keyframe drag claims next: pointer down ON any selected non-root layer
     // moves the whole selection (works outside the root too — block parts live there).
     if (kfDraggable) {
       const d = doc();
@@ -559,6 +653,26 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       setLasso({ ...ls, x1: p.x, y1: p.y, active });
       return;
     }
+    const pd = placeDragRef.current;
+    if (pd) {
+      // The placed lines follow the pointer live, through the SAME CSS channel the commit
+      // writes (an inline left/top in the rule's own idiom) — never a transform, so what
+      // the drag shows is exactly what the patched stylesheet will render.
+      const dx = (e.clientX - pd.startX) / scale / pd.scaleVar;
+      const dy = (e.clientY - pd.startY) / scale / pd.scaleVar;
+      const active = pd.active || Math.hypot(e.clientX - pd.startX, e.clientY - pd.startY) > DRAG_THRESHOLD;
+      setPlaceDrag({ ...pd, dx, dy, active });
+      if (active) {
+        for (const line of pd.lines) {
+          const el = doc()?.getElementById(line.wrapperId);
+          if (el) {
+            el.style.left = placementCss(line.baseX + dx, line.scaled);
+            el.style.top = placementCss(line.baseY + dy, line.scaled);
+          }
+        }
+      }
+      return;
+    }
     const ld = layerDragRef.current;
     if (ld) {
       // The selected layers follow the pointer live (a GSAP x/y set on the preview —
@@ -589,9 +703,15 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     // position-armed layer reads as grabbable everywhere (its drag keys x/y).
     const p = clientToDoc(e);
     const overKfLayer =
-      kfDraggable &&
-      kfSelectors.some((sel) => {
-        const el = doc()?.querySelector<HTMLElement>(sel);
+      (kfDraggable &&
+        kfSelectors.some((sel) => {
+          const el = doc()?.querySelector<HTMLElement>(sel);
+          return !!el && el.getClientRects().length > 0 && inRect(p, el.getBoundingClientRect());
+        })) ||
+      // A selected PLACED line is grabbable the same way — its drag re-places it.
+      selectedParts.some((sel) => {
+        const pl = placed[sel];
+        const el = pl ? doc()?.getElementById(pl.wrapperId) : null;
         return !!el && el.getClientRects().length > 0 && inRect(p, el.getBoundingClientRect());
       });
     const r = rootEl()?.getBoundingClientRect();
@@ -777,6 +897,17 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       commitLasso(ls);
       return;
     }
+    const pd = placeDragRef.current;
+    if (pd) {
+      setPlaceDrag(null);
+      if (!pd.active) {
+        // A click stays a click — the selection still climbs through containers.
+        if (!editingRef.current) selectAt(clientToDoc(e), e.shiftKey);
+        return;
+      }
+      commitPlaceDrag(pd);
+      return;
+    }
     const ld = layerDragRef.current;
     if (ld) {
       setLayerDrag(null);
@@ -907,6 +1038,11 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
           resetLayerDrag(ld);
           setLayerDrag(null);
         }
+        const pd = placeDragRef.current;
+        if (pd) {
+          resetPlaceDrag(pd);
+          setPlaceDrag(null);
+        }
       }}
       onPointerLeave={() => setHoverPart(null)}
       onDoubleClick={onDoubleClick}
@@ -927,15 +1063,17 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
                   // (the press control replaces the passive hint when both would show).
                   hint: pressEligible
                     ? undefined
-                    : kfDraggable && selectedPart.kind === 'line'
-                      ? 'Double-click edits · drag moves'
-                      : kfDraggable && selectedPart.kind !== 'root'
-                        ? 'Drag to key its position'
-                        : selectedPart.kind === 'line'
-                          ? 'Double-click to edit'
-                          : selectedPart.kind === 'root'
-                            ? 'Corner handle resizes'
-                            : undefined,
+                    : placed[selectedPart.selector]
+                      ? 'Double-click edits · drag places it'
+                      : kfDraggable && selectedPart.kind === 'line'
+                        ? 'Double-click edits · drag moves'
+                        : kfDraggable && selectedPart.kind !== 'root'
+                          ? 'Drag to key its position'
+                          : selectedPart.kind === 'line'
+                            ? 'Double-click to edit'
+                            : selectedPart.kind === 'root'
+                              ? 'Corner handle resizes'
+                              : undefined,
                   action: pressEligible ? (
                     <select
                       className="canvas-appears"
@@ -961,7 +1099,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
               : null
           }
           hover={
-            !scaleDrag && !layerDrag?.active && !lasso?.active && hoverPart && hoverPart.selector !== selected
+            !scaleDrag && !layerDrag?.active && !placeDrag?.active && !lasso?.active && hoverPart && hoverPart.selector !== selected
               ? { rect: hoverPart.rect, label: hoverPart.label }
               : null
           }
@@ -1018,7 +1156,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
 
       {/* The selected layer's scale (corner) + rotate (top) handles — key scale/rotation at
           the playhead, pivoting around the Inspector pivot. Data-block, single-layer only. */}
-      {layerTfSel && selRect && !ghost && !editing && !layerDrag?.active && (
+      {layerTfSel && selRect && !ghost && !editing && !layerDrag?.active && !placeDrag?.active && (
         <>
           <div
             className={`layer-scale-handle${layerTf?.kind === 'scale' ? ' dragging' : ''}`}
@@ -1046,6 +1184,15 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
         <div className="move-hint">
           {layerTf.kind === 'scale' ? `×${layerTf.value.toFixed(2)}` : `${Math.round(layerTf.value)}°`}
           {' '}— release to key at the playhead · Esc cancels
+        </div>
+      )}
+
+      {/* The placement drag's hint: live design-px position, committed into the CSS rule. */}
+      {placeDrag?.active && placeDrag.lines.length > 0 && (
+        <div className="move-hint">
+          {placeDrag.lines.length > 1 ? `${placeDrag.lines.length} fields · ` : ''}
+          x {Math.round(placeDrag.lines[0].baseX + placeDrag.dx)} · y{' '}
+          {Math.round(placeDrag.lines[0].baseY + placeDrag.dy)} — release to place · Esc cancels
         </div>
       )}
 

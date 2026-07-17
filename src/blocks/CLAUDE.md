@@ -23,6 +23,19 @@ Field/definition editing helpers: nextFieldId, addFieldToDefinition, setFieldDef
 
 :root variable read/write helpers (the Style panel's patch layer).
 
+## designLayout.ts - placed-line positions (the imported-design drag)
+
+The read/write pair for text lines whose position is a DESIGN decision written in the CSS: the
+imported-design assembler puts each line's `left`/`top` on its wrapper's rule
+(`#fwN { left: calc(Npx * var(--scale)) }`). `placedLines(html, css)` derives the map on every
+call (never stored, like getTemplateParts); `placeLine` patches one wrapper's rule via
+setCssDeclaration. The gate is code-derived, never category-derived: a line is "placed" when its
+parent carries an id whose rule holds readable left+top px values - so a hand-written template
+with that shape opts in, and catalog templates (mask divs without ids) never match. The canvas
+drag for a placed line goes through THIS (placement), and the line is excluded from the
+position-KEYFRAME drag - moving a field independently of artwork drawn around it is what
+whole-unit motion exists to prevent (docs/IMPORT_MVP.md).
+
 ## The Timeline v2 animation-data engine
 
 Data-block templates carry `var NOACG_ANIM = { ... };` (strict JSON inside the braces) plus a
