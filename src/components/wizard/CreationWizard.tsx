@@ -4,6 +4,7 @@ import { variantById, variantsFor } from '../../templates/catalog';
 import { createBlankTemplate } from '../../templates/blank';
 import { brandPatch, buildDraftTemplate, draftResolution, initialDraft, mergeDraft, type DraftPatch, type WizardDraft } from './draft';
 import { loadBrand, saveBrand, type ProjectBrand } from '../../model/brand';
+import { commitStagedSelection } from '../../ai/preferences';
 import { formatTemplate } from '../../format/formatCode';
 import { paletteById } from '../../model/wizard';
 import WizardPreview from './WizardPreview';
@@ -129,6 +130,9 @@ export default function CreationWizard() {
 
   const createFromAi = () => {
     if (!aiResult?.valid) return;
+    // The picked harness alternative becomes the project — commit the staged preference
+    // (aggregated, subtle; see src/ai/preferences.ts). A no-alternatives run staged nothing.
+    commitStagedSelection();
     void applyGenerated(aiResult.template);
   };
 

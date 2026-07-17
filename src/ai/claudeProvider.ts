@@ -15,7 +15,8 @@ import { RESOLUTIONS, type SpxTemplate, type TemplateType, DEFAULT_SETTINGS } fr
 import { parseDataUrl } from '../assets/assetUtils';
 import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
 import { lt01 } from '../templates/lowerThirds/lt01';
-import { catalogDigest, DESIGN_SPEC_TOOL, specToTemplate, type DesignSpec } from './designSpec';
+import { catalogDigest, DESIGN_ALTERNATIVES_TOOL, DESIGN_SPEC_TOOL, specToTemplate, type DesignSpec } from './designSpec';
+import { preferenceHint } from './preferences';
 import { applyDesignAdjustments } from './designAdjust';
 import { applyPolish, POLISH_TOOL, type PolishPatch } from './polish';
 import { variantsFor } from '../templates/catalog';
@@ -191,9 +192,33 @@ above.
 
 ## What the platform can assemble
 ${catalogDigest()}
-
-Return the design ONLY via the emit_design_spec tool.`;
+${(() => {
+    const hint = preferenceHint();
+    return hint ? `\n## Aggregated user preferences\n${hint}\n` : '';
+  })()}
+Return the design ONLY via the requested tool.`;
 }
+
+// The default one-shot generation (harness OFF): the model's own take, told only the SPX
+// format basics so the result runs in playout — no taste teaching, no worked example, no
+// repair loop. The benchmark's raw arm showed these look strong; keeping this path pure is
+// what makes the harness's value measurable (and its checkbox honest).
+const RAW_SYSTEM = `You make broadcast graphics as SPX / CasparCG HTML templates. Return the complete
+template as three files via the emit_template tool.
+
+Format basics (so it runs in playout):
+- index.html defines window.SPXGCTemplateDefinition with DataFields named f0, f1, …; each field
+  maps to one element with the same id. Field types: textfield, textarea, number, filelist (for
+  images).
+- template.js (loaded in <head>) defines global update(data /* a JSON string */), play(), stop(),
+  next().
+- External references are relative: css/template.css, js/template.js, js/gsap.min.js. GSAP is
+  available as the global "gsap" (the only library). No CDN or absolute paths.
+- Each tool field is the PURE contents of that one file: "html" is the full document
+  (doctype…</html>, and the SPXGCTemplateDefinition <script> lives here); "css" is CSS only;
+  "js" is JavaScript only — no <script> tags, no HTML.
+
+Return ONLY via the emit_template tool.`;
 
 // ── Building an SpxTemplate from the model's output ──────────────────────────
 
@@ -598,6 +623,86 @@ export const claudeProvider: AIProvider = {
         : userContent;
       return generateValidated(content, context, undefined, options, run, exampleVariant);
     });
+  },
+
+  async generateRaw(prompt, context, options) {
+    return recorded('generate', async (run) => {
+      options?.onProgress?.('Generating…');
+      const t0 = Date.now();
+      const result = await callClaudeDetailed({
+        system: RAW_SYSTEM,
+        messages: [
+          { role: 'user', content: [...imageBlocks(context), { type: 'text', text: contextText(prompt, context) }] },
+        ],
+        tool: TEMPLATE_TOOL,
+      });
+      run.stage('raw', t0, result.model, result.usage);
+      const emitted = result.output as EmittedTemplate;
+      const template = toTemplate(emitted, context);
+      // Static validation only, for honest display — no bench, no repair: this path IS the
+      // baseline the harness gets measured against.
+      return { summary: emitted.summary, template, path: 'raw', validation: validateTemplate(template) };
+    });
+  },
+
+  async generateAlternatives(prompt, context, options) {
+    const run = startAiRun('generate');
+    try {
+      const userContent: ContentBlock[] = [
+        ...imageBlocks(context),
+        { type: 'text', text: contextText(prompt, context) },
+      ];
+
+      // ONE design-stage call returns three distinct directions; each assembles like a
+      // single harness generation (grounded deterministically, or the validated custom path).
+      options?.onProgress?.('Designing three directions…');
+      let specs: DesignSpec[] = [];
+      try {
+        const t0 = Date.now();
+        const result = await callClaudeDetailed({
+          system: specSystemPrompt(),
+          messages: [{ role: 'user', content: userContent }],
+          tool: DESIGN_ALTERNATIVES_TOOL,
+          maxTokens: 8000,
+        });
+        run.stage('design-alternatives', t0, result.model, result.usage);
+        const output = result.output as { alternatives?: DesignSpec[] };
+        specs = (Array.isArray(output.alternatives) ? output.alternatives : []).slice(0, 3);
+        for (const spec of specs) if (!Array.isArray(spec.lines)) spec.lines = [];
+      } catch {
+        specs = [];
+      }
+
+      const results: AiTemplateChange[] = [];
+      for (const [i, spec] of specs.entries()) {
+        options?.onProgress?.(`Building option ${i + 1} of ${specs.length}…`);
+        if (spec.fit === 'catalog') {
+          results.push(await groundedResult(spec, context, options, run));
+        } else {
+          const change = await generateValidated(
+            [...userContent, { type: 'text', text: designNotes(spec) }],
+            context,
+            undefined,
+            options,
+            run,
+            variantsFor(spec.category)[0],
+          );
+          results.push({ ...change, spec });
+        }
+      }
+      // The design stage failing (or returning nothing) must not kill the generation:
+      // fall back to one full harness run so the user still gets a result.
+      if (!results.length) results.push(await this.generate(prompt, context, options));
+
+      run.finish(
+        results.every((r) => r.validation?.ok ?? true),
+        results.flatMap((r) => r.validation?.errors.map((e) => e.rule) ?? []),
+      );
+      return results;
+    } catch (e) {
+      run.finish(false, ['exception']);
+      throw e;
+    }
   },
 
   async modify(prompt, template, options) {

@@ -39,8 +39,9 @@ export interface GenerateOptions {
   spec?: DesignSpec;
 }
 
-/** Which pipeline produced a result — surfaced honestly in the UI and in telemetry. */
-export type AiPath = 'grounded' | 'grounded+polish' | 'custom' | 'stub';
+/** Which pipeline produced a result — surfaced honestly in the UI and in telemetry.
+ *  'raw' = the default one-shot generation (harness off). */
+export type AiPath = 'grounded' | 'grounded+polish' | 'custom' | 'raw' | 'stub';
 
 /** A template change with the harness's provenance attached. */
 export interface AiTemplateChange extends TemplateChange {
@@ -55,6 +56,18 @@ export interface AiTemplateChange extends TemplateChange {
 export interface AIProvider {
   /** Create a new template from a natural-language prompt (+ optional images/brand). */
   generate(prompt: string, context?: GenerateContext, options?: GenerateOptions): Promise<AiTemplateChange>;
+  /**
+   * The DEFAULT generation (harness off): one model call, no design-spec stage, no bench
+   * repair loop — the model's own take, statically validated for honest display. The
+   * benchmark showed these look strong; the harness must EARN being switched on.
+   */
+  generateRaw(prompt: string, context?: GenerateContext, options?: GenerateOptions): Promise<AiTemplateChange>;
+  /**
+   * The harness path (harness on): THREE genuinely different design directions from one
+   * design-stage call, each assembled/validated like generate(). The UI offers the pick;
+   * the choice feeds aggregated preference data (src/ai/preferences.ts).
+   */
+  generateAlternatives(prompt: string, context?: GenerateContext, options?: GenerateOptions): Promise<AiTemplateChange[]>;
   /** Modify the current template per a prompt. */
   modify(prompt: string, template: SpxTemplate, options?: GenerateOptions): Promise<AiTemplateChange>;
   /** Explain a piece of code (returns prose, no template change). */

@@ -5,6 +5,7 @@ import { EXAMPLE_PROMPTS } from '../../../ai/examplePrompts';
 import { AI_MODELS, aiConfigured, loadAiSettings, saveAiSettings } from '../../../ai/settings';
 import type { AiPath, AiTemplateChange, GenerateOptions, SpxValidator } from '../../../ai/provider';
 import type { DesignSpec } from '../../../ai/designSpec';
+import { clearStagedSelection, facetsOf, stageSelection } from '../../../ai/preferences';
 import { useAuthState } from '../../auth/useAuthState';
 import SignInPrompt from '../../auth/SignInPrompt';
 import { fileToDataUrl, uniqueAssetPath } from '../../../assets/assetUtils';
@@ -73,6 +74,10 @@ export default function AiStep({
   // (passed back on refine so "warmer colours" re-assembles instead of editing code).
   const [lastPath, setLastPath] = useState<AiPath | null>(null);
   const [lastSpec, setLastSpec] = useState<DesignSpec | null>(null);
+  // Harness mode: the three alternatives + which one is picked (the pick is staged as
+  // preference data and committed when the project is actually created).
+  const [alternatives, setAlternatives] = useState<AiTemplateChange[] | null>(null);
+  const [selected, setSelected] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   // The brainstorm chat (optional): sharpen the idea, then use its BRIEF as the prompt.
   const [chatOpen, setChatOpen] = useState(false);
@@ -134,17 +139,24 @@ export default function AiStep({
   // drive the provider's repair rounds.
   const validate: SpxValidator = async (t) => mergeResults(validateTemplate(t), await benchTemplateRuntime(t));
 
+  const showChange = (change: AiTemplateChange) => {
+    const v = change.validation ?? validateTemplate(change.template);
+    setSummary(change.summary);
+    setValidation(v);
+    setLastPath(change.path ?? null);
+    setLastSpec(change.spec ?? null);
+    onResult(change.template, v.ok);
+    return v;
+  };
+
   const run = async (fn: (options: GenerateOptions) => Promise<AiTemplateChange>, label: string) => {
     setBusy(label);
     setError(null);
     try {
       const change = await fn({ validate, onProgress: (stage) => setBusy(stage) });
-      const v = change.validation ?? validateTemplate(change.template);
-      setSummary(change.summary);
-      setValidation(v);
-      setLastPath(change.path ?? null);
-      setLastSpec(change.spec ?? null);
-      onResult(change.template, v.ok);
+      setAlternatives(null);
+      clearStagedSelection();
+      showChange(change);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -152,16 +164,59 @@ export default function AiStep({
     }
   };
 
+  /** Show alternative `i` in the preview + stage the pick as preference data. */
+  const selectAlternative = (list: AiTemplateChange[], i: number) => {
+    setSelected(i);
+    showChange(list[i]);
+    stageSelection(
+      facetsOf(list[i].spec, list[i].path),
+      list.map((alt) => facetsOf(alt.spec, alt.path)),
+    );
+  };
+
   const context = { images, palette: brandPalette, resolution, fps };
 
-  const generate = () =>
-    run(
-      (options) =>
-        imported
-          ? getAiProvider().convertImport(prompt, imported.template, context, options)
-          : getAiProvider().generate(prompt, context, options),
-      imported ? 'Converting your template…' : 'Designing your graphic… (this can take a minute)',
-    );
+  const generate = () => {
+    // Conversion always runs the validated conversion flow; plain generation branches on
+    // the harness switch: OFF = the default one-shot (statically validated, no repair
+    // loop), ON = three harness alternatives with the live bench injected.
+    if (imported) {
+      void run(
+        (options) => getAiProvider().convertImport(prompt, imported.template, context, options),
+        'Converting your template…',
+      );
+      return;
+    }
+    if (!settings.useHarness) {
+      void run(
+        (options) => getAiProvider().generateRaw(prompt, context, { onProgress: options.onProgress }),
+        'Generating…',
+      );
+      return;
+    }
+    void (async () => {
+      setBusy('Designing three directions…');
+      setError(null);
+      try {
+        const list = await getAiProvider().generateAlternatives(prompt, context, {
+          validate,
+          onProgress: (stage) => setBusy(stage),
+        });
+        setAlternatives(list.length > 1 ? list : null);
+        // Start on the first option that passes; the pick is the user's to change.
+        const first = Math.max(0, list.findIndex((alt) => alt.validation?.ok ?? false));
+        if (list.length > 1) selectAlternative(list, first);
+        else if (list.length === 1) {
+          clearStagedSelection();
+          showChange(list[0]);
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(null);
+      }
+    })();
+  };
 
   const refineNow = () => {
     if (!result) return;
@@ -336,14 +391,29 @@ export default function AiStep({
             </p>
           )}
 
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row wrap" style={{ marginTop: 10, alignItems: 'center' }}>
             <button
               className="primary"
               disabled={!!busy || !aiConfigured(settings) || (!prompt.trim() && !imported)}
-              onClick={() => void generate()}
+              onClick={() => generate()}
             >
               {imported ? '⚡ Convert with AI' : result ? '↻ Generate again' : '✦ Generate'}
             </button>
+            {!imported && (
+              <label
+                className="wz-match"
+                title="On: the NoaCG harness designs three alternatives on the catalog design system, live-tests each, and learns from your picks. Off: the model's own one-shot take."
+              >
+                <input
+                  type="checkbox"
+                  style={{ width: 'auto' }}
+                  checked={settings.useHarness}
+                  onChange={(e) => saveSetting({ useHarness: e.target.checked })}
+                  disabled={!!busy}
+                />
+                Use NoaCG harness (3 options)
+              </label>
+            )}
             <button onClick={() => setShowSettings((s) => !s)}>⚙ AI settings</button>
           </div>
 
@@ -381,6 +451,22 @@ export default function AiStep({
           {busy && <p className="hint" style={{ marginTop: 10 }}>⏳ {busy}</p>}
           {error && <p className="status-bad" style={{ marginTop: 10 }}>✗ {error}</p>}
 
+          {alternatives && !busy && (
+            <div className="row wrap" style={{ marginTop: 10, gap: 6 }}>
+              {alternatives.map((alt, i) => (
+                <button
+                  key={i}
+                  className={i === selected ? 'primary' : undefined}
+                  data-alt={i + 1}
+                  title={alt.template.name}
+                  onClick={() => selectAlternative(alternatives, i)}
+                >
+                  {alt.validation?.ok ? '✓' : '✗'} Option {i + 1} — {alt.template.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {result && !busy && (
             <div className="change-preview" style={{ marginTop: 10 }}>
               <strong>{result.name}</strong>
@@ -388,7 +474,9 @@ export default function AiStep({
               {routeLabel(lastPath) && <p className="hint" style={{ marginTop: 4 }}>{routeLabel(lastPath)}</p>}
               <p className={validation?.ok ? 'status-ok' : 'status-bad'} style={{ marginTop: 6 }}>
                 {validation?.ok
-                  ? '✓ Passes SPX validation and the live playout test — press Play in the preview, then Create project.'
+                  ? lastPath === 'raw'
+                    ? '✓ Passes SPX validation — press Play in the preview, then Create project.'
+                    : '✓ Passes SPX validation and the live playout test — press Play in the preview, then Create project.'
                   : `✗ ${validation?.errors.length} check(s) failing — refine or regenerate.`}
               </p>
               {validation && !validation.ok && (

@@ -99,13 +99,9 @@ const ZONES: Zone9[] = [
 
 const allVariantIds = (): string[] => Object.values(CATALOG).flatMap((list) => (list ?? []).map((v) => v.id));
 
-export const DESIGN_SPEC_TOOL: ClaudeTool = {
-  name: 'emit_design_spec',
-  description:
-    'Return the design decision for the brief: the route (catalog chassis vs custom build) plus ' +
-    'every design parameter. The platform assembles catalog specs deterministically.',
-  input_schema: {
-    type: 'object',
+/** The one spec schema, shared by the single-spec and three-alternatives tools. */
+const SPEC_INPUT_SCHEMA: Record<string, unknown> = {
+  type: 'object',
     required: ['fit', 'reason', 'name', 'summary', 'category', 'lines'],
     additionalProperties: false,
     properties: {
@@ -215,6 +211,35 @@ export const DESIGN_SPEC_TOOL: ClaudeTool = {
         description:
           'ONE visual signature for the polish pass, only when the parameters above cannot express ' +
           'the intent (a gradient edge, a slanted accent). null when they can.',
+      },
+    },
+};
+
+export const DESIGN_SPEC_TOOL: ClaudeTool = {
+  name: 'emit_design_spec',
+  description:
+    'Return the design decision for the brief: the route (catalog chassis vs custom build) plus ' +
+    'every design parameter. The platform assembles catalog specs deterministically.',
+  input_schema: SPEC_INPUT_SCHEMA,
+};
+
+/** The harness generates THREE alternatives per brief — one call, three distinct directions. */
+export const DESIGN_ALTERNATIVES_TOOL: ClaudeTool = {
+  name: 'emit_design_alternatives',
+  description:
+    'Return THREE genuinely different design directions for the brief. Each is a complete design ' +
+    'spec; they must differ in real decisions (chassis family, composition, typography, density, ' +
+    'motion character, palette) — never one design with three tints. The platform assembles each.',
+  input_schema: {
+    type: 'object',
+    required: ['alternatives'],
+    additionalProperties: false,
+    properties: {
+      alternatives: {
+        type: 'array',
+        minItems: 3,
+        maxItems: 3,
+        items: SPEC_INPUT_SCHEMA,
       },
     },
   },

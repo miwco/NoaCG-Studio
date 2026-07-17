@@ -104,7 +104,9 @@ function requestedTool(route: Route): string {
 
 function toolResponse(route: Route, template: unknown) {
   const tool = requestedTool(route);
-  return tool === 'emit_design_spec' ? toolUse(tool, CUSTOM_SPEC) : toolUse('emit_template', template);
+  if (tool === 'emit_design_alternatives') return toolUse(tool, { alternatives: [CUSTOM_SPEC] });
+  if (tool === 'emit_design_spec') return toolUse(tool, CUSTOM_SPEC);
+  return toolUse('emit_template', template);
 }
 
 async function openAiStep(page: Page) {
@@ -115,9 +117,29 @@ async function openAiStep(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   // A fake key so aiConfigured() is true (requests never leave: the route below answers).
+  // The harness is opt-in; these specs turn it ON — the default-raw spec seeds its own.
+  await page.addInitScript(() =>
+    localStorage.setItem('spx-gfx-ai', JSON.stringify({ apiKey: 'sk-ant-test', model: 'claude-sonnet-5', useHarness: true })),
+  );
+});
+
+test('harness off (the default): one raw model call, no design stage', async ({ page }) => {
   await page.addInitScript(() =>
     localStorage.setItem('spx-gfx-ai', JSON.stringify({ apiKey: 'sk-ant-test', model: 'claude-sonnet-5' })),
   );
+  const tools: string[] = [];
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    tools.push(requestedTool(route));
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await expect(page.getByLabel(/Use NoaCG harness/)).not.toBeChecked();
+  await page.locator('.wz-step textarea').fill('A simple test slate');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation');
+  expect(tools).toEqual(['emit_template']); // one call, straight to the coder tool
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('Test Slate');
 });
 
 test('describe-it: prompt → validated template → create project', async ({ page }) => {
@@ -135,27 +157,45 @@ test('describe-it: prompt → validated template → create project', async ({ p
   await expect(page.frameLocator('iframe.preview-frame').locator('#f0')).toHaveText('Hello AI');
 });
 
-test('describe-it: a catalog spec is assembled by the platform with no coder call', async ({ page }) => {
+test('harness on: three grounded alternatives, zero coder calls, the pick is remembered', async ({ page }) => {
   let templateCalls = 0;
+  const alts = [
+    { ...GROUNDED_SPEC, variantId: 'lt01', name: 'Grounded One' },
+    { ...GROUNDED_SPEC, variantId: 'lt02', name: 'Grounded Two' },
+    { ...GROUNDED_SPEC, variantId: 'lt03', name: 'Grounded Three' },
+  ];
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
-    if (requestedTool(route) === 'emit_template') templateCalls += 1;
-    return route.fulfill(requestedTool(route) === 'emit_design_spec' ? toolUse('emit_design_spec', GROUNDED_SPEC) : toolUse('emit_template', VALID_TEMPLATE));
+    const tool = requestedTool(route);
+    if (tool === 'emit_template') templateCalls += 1;
+    if (tool === 'emit_design_alternatives') return route.fulfill(toolUse(tool, { alternatives: alts }));
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
   });
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A clean news lower third');
   await page.getByRole('button', { name: '✦ Generate' }).click();
   await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation');
-  expect(templateCalls).toBe(0); // grounded: the platform assembled it, the model wrote no code
+  expect(templateCalls).toBe(0); // grounded: the platform assembled all three, the model wrote no code
+  await expect(page.locator('[data-alt]')).toHaveCount(3);
+
+  // Pick option 2 — the preview and result card follow.
+  await page.locator('[data-alt="2"]').click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Grounded Two');
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden();
-  await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded Strap');
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded Two');
+
+  // The committed pick landed in the aggregated preference data (chosen 1 of 3 shown).
+  const prefs = await page.evaluate(() => JSON.parse(localStorage.getItem('spx-gfx-ai-preferences') ?? '{}'));
+  expect((prefs as { selections: number }).selections).toBe(1);
+  expect((prefs as { chosen: Record<string, number> }).chosen['variantId:lt02']).toBe(1);
+  expect((prefs as { shown: Record<string, number> }).shown['variantId:lt03']).toBe(1);
 });
 
 test('describe-it: a flourish runs the polish pass and lands as a marked override block', async ({ page }) => {
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
     const tool = requestedTool(route);
-    if (tool === 'emit_design_spec')
-      return route.fulfill(toolUse('emit_design_spec', { ...GROUNDED_SPEC, flourish: 'a hairline accent edge on the panel' }));
+    if (tool === 'emit_design_alternatives')
+      return route.fulfill(toolUse(tool, { alternatives: [{ ...GROUNDED_SPEC, flourish: 'a hairline accent edge on the panel' }] }));
     if (tool === 'emit_polish')
       return route.fulfill(
         toolUse('emit_polish', {
@@ -182,8 +222,8 @@ test('describe-it: a flourish runs the polish pass and lands as a marked overrid
 test('describe-it: a contract-breaking polish patch reverts to the assembled template', async ({ page }) => {
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
     const tool = requestedTool(route);
-    if (tool === 'emit_design_spec')
-      return route.fulfill(toolUse('emit_design_spec', { ...GROUNDED_SPEC, flourish: 'repaint everything purple' }));
+    if (tool === 'emit_design_alternatives')
+      return route.fulfill(toolUse(tool, { alternatives: [{ ...GROUNDED_SPEC, flourish: 'repaint everything purple' }] }));
     if (tool === 'emit_polish')
       return route.fulfill(
         toolUse('emit_polish', {
@@ -211,7 +251,7 @@ test('describe-it: a contract-breaking polish patch reverts to the assembled tem
 test('describe-it: an invalid first answer triggers the automatic repair round', async ({ page }) => {
   let templateCalls = 0;
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
-    if (requestedTool(route) !== 'emit_template') return route.fulfill(toolUse('emit_design_spec', CUSTOM_SPEC));
+    if (requestedTool(route) !== 'emit_template') return route.fulfill(toolResponse(route, VALID_TEMPLATE));
     templateCalls += 1;
     return route.fulfill(toolUse('emit_template', templateCalls === 1 ? INVALID_TEMPLATE : VALID_TEMPLATE));
   });
@@ -225,7 +265,7 @@ test('describe-it: an invalid first answer triggers the automatic repair round',
 test('describe-it: refine sends the current code back through modify', async ({ page }) => {
   const prompts: string[] = [];
   await page.route('https://api.anthropic.com/v1/messages', async (route: Route) => {
-    if (requestedTool(route) !== 'emit_template') return route.fulfill(toolUse('emit_design_spec', CUSTOM_SPEC));
+    if (requestedTool(route) !== 'emit_template') return route.fulfill(toolResponse(route, VALID_TEMPLATE));
     const body = route.request().postDataJSON() as { messages: { content: { type: string; text?: string }[] }[] };
     const text = body.messages.map((m) => (Array.isArray(m.content) ? m.content.map((c) => c.text ?? '').join(' ') : '')).join(' ');
     prompts.push(text);

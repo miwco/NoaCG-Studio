@@ -152,6 +152,31 @@ export class StubAIProvider implements AIProvider {
     };
   }
 
+  async generateRaw(prompt: string, context?: GenerateContext): Promise<AiTemplateChange> {
+    // Offline has no "raw model" — the deterministic path IS the default.
+    return this.generate(prompt, context);
+  }
+
+  async generateAlternatives(prompt: string, context?: GenerateContext): Promise<AiTemplateChange[]> {
+    await wait();
+    const grounded = keywordSpec(prompt, context);
+    if (grounded) {
+      // Up to three DIFFERENT chassis from the matched category — real alternatives.
+      const pool = variantsFor(grounded.spec.category).slice(0, 3);
+      return pool.map((variant) => {
+        const spec: DesignSpec = { ...grounded.spec, variantId: variant.id, name: variant.name };
+        const { template } = specToTemplate(spec, context);
+        return {
+          summary: `Option: ${variant.name} — a ${grounded.label} from the catalog design system (offline mode).`,
+          template,
+          path: 'stub' as const,
+          spec,
+        };
+      });
+    }
+    return [await this.generate(prompt, context)];
+  }
+
   async modify(prompt: string, template: SpxTemplate): Promise<TemplateChange> {
     await wait();
     const p = prompt.toLowerCase();

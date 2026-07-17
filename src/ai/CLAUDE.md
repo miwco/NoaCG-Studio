@@ -22,7 +22,26 @@ EARN that claim in scripts/ai-compare.mjs, never assume it. Its principles, in p
 4. **The smallest harness that wins.** A catalog-fit generation costs ONE small model call
    (the design spec); everything after it is deterministic. Stages that only add cost get cut.
 
-## The pipeline (claudeProvider.generate)
+## The harness is OPT-IN (user decision after the first real benchmark)
+
+The 2026-07-17 benchmark proved the harness on reliability, cost, and editability — but not
+a consistently better VISUAL result, and raw one-shot output already looks strong. So:
+
+- **Default (checkbox off): `generateRaw`** — ONE model call with `RAW_SYSTEM` (format
+  basics only, no taste teaching, no worked example), statically validated for display,
+  NO bench and NO repair loop. Keep this path pure: it is the baseline the harness is
+  measured against, and diluting it makes the comparison dishonest.
+- **"Use NoaCG harness" (checkbox on, `AiSettings.useHarness`): `generateAlternatives`** —
+  one design-stage call (forced `emit_design_alternatives`) returns THREE genuinely
+  different directions; each assembles like a single harness generation. The AI step
+  offers the pick.
+- **Preference learning (`preferences.ts`)**: the pick is staged on selection and COMMITTED
+  when the project is created — aggregated shown/chosen facet counters (chassis, category,
+  density, palette, zone, preset, route), localStorage-only. `preferenceHint()` feeds the
+  design-stage prompt a SUBTLE tie-breaker only after ≥8 selections and ≥6 shows per facet;
+  it never overrides the brief and never reacts to a single click.
+
+## The pipeline (claudeProvider.generate — one harness run; generateAlternatives runs it ×3)
 
 1. **Design spec** (`designSpec.ts`, forced `emit_design_spec`) - the only mandatory model
    call and the ROUTER. Returns `fit: 'catalog' | 'custom'` plus every design parameter:
