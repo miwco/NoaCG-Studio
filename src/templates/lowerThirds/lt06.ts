@@ -18,8 +18,8 @@ export const lt06: TemplateVariant = defineVariant(
       { title: 'Name', sample: 'RIVERA' },
       { title: 'Team', sample: 'FC VOLTA' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['mask-wipe', 'snap-stinger', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['mask-wipe', 'snap-stinger', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('inferno'),
     defaultFontId: 'archivo',
     defaultZone: 'bottom-left',
@@ -46,7 +46,7 @@ ${lineMasks(o)}
   background: var(--panel-bg);     /* the dark slab behind the name */
   color: var(--text-color);        /* primary text color */
   padding: calc(16px * var(--scale)) calc(34px * var(--scale));  /* generous slab padding, wide sides */
-  font-size: calc(54px * var(--scale));  /* headline size — the loudest thing on screen */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size — the loudest thing on screen */
   font-weight: 900;                /* maximum impact weight (sport hits hard) */
   line-height: 1.1;                /* tight — big text needs little leading */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -58,7 +58,7 @@ ${lineMasks(o)}
   background: var(--accent);       /* the accent moment: a full accent slab */
   color: var(--panel-bg);          /* the dark slab hue doubles as ink on the bright accent bar */
   padding: calc(10px * var(--scale)) calc(34px * var(--scale));  /* slimmer bar; sides match the name slab so text edges align */
-  font-size: calc(26px * var(--scale));  /* clearly subordinate to the name (~2.1:1) */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name (~2.1:1) */
   font-weight: 700;                /* bold, but a step below the name */
   line-height: 1.3;                /* small caps get room to breathe */
   letter-spacing: 0.08em;          /* spaced-out caps read as a label */

@@ -4,7 +4,7 @@
 //
 // Sanctioned structure deviation: the shared.ts contract documents .lower-third-accent as a SIBLING of
 // .lower-third-box, but here the dot is intentionally the box's first flex child so it rides every box
-// preset for free. Box-level presets (blur-in, slide-fade, pop-spring) are unaffected; the
+// preset for free. Box-level presets (blur-in, the slide family, pop-spring) are unaffected; the
 // 'line-reveal' preset (a scaleX 0→1 draw) is deliberately left out of animationPresets below
 // because a horizontal draw reads oddly on a circular dot.
 
@@ -24,10 +24,10 @@ export const lt10: TemplateVariant = defineVariant(
       { title: 'Title', sample: 'Product Designer' },
       { title: 'Company', sample: 'Studio Nord' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     // 'line-reveal' is intentionally omitted: its scaleX 0→1 accent draw reads oddly on
     // this variant's circular dot (see the structure-deviation note in the header comment).
-    animationPresets: ['blur-in', 'slide-fade', 'pop-spring', 'fade', 'drop-in', 'flip-3d'],
+    animationPresets: ['blur-in', 'slide-up', 'pop-spring', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('mint'),
     defaultFontId: 'space-grotesk',
     defaultZone: 'bottom-left',
@@ -92,7 +92,7 @@ ${lineMasks(o)}
 
 /* The name — the biggest, boldest line; everything else defers to it. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale));    /* headline size */
+  font-size: calc(44px * var(--scale) * var(--type-scale));    /* headline size */
   font-weight: 600;                /* strong but not shouty */
   line-height: 1.1;                /* big text sits tight */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -101,7 +101,7 @@ ${lineMasks(o)}
 
 /* The title line — quieter through lighter weight and a dimmed color. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale));    /* half the name: clear hierarchy */
+  font-size: calc(22px * var(--scale) * var(--type-scale));    /* half the name: clear hierarchy */
   font-weight: 400;                /* regular weight steps back */
   line-height: 1.3;                /* smaller text gets more air */
   color: var(--text-dim);          /* dimmed so the name leads */
@@ -109,7 +109,7 @@ ${lineMasks(o)}
 
 /* The third line — a small spaced-out uppercase label, dimmed like the title. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale));    /* the smallest line */
+  font-size: calc(18px * var(--scale) * var(--type-scale));    /* the smallest line */
   font-weight: 600;                /* semibold keeps small uppercase type crisp */
   line-height: 1.3;                /* matches the title's rhythm */
   letter-spacing: 0.1em;           /* small caps breathe */

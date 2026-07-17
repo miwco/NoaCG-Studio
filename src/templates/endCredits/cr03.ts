@@ -35,7 +35,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
       },
       { title: 'Year / copyright', sample: '© 2026 Your Production' },
     ],
-    hasLogoSlot: true,
+    logo: 'built-in',
     animationPresets: ['credits-pages'],
     defaultPalette: paletteById('volt'),
     defaultFontId: 'oswald',
@@ -91,7 +91,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 .credits-heading {
   position: relative;              /* anchors the painted slab (::before) behind the text */
   padding: calc(10px * var(--scale)) calc(30px * var(--scale));  /* tight chip, wide sides */
-  font-size: calc(30px * var(--scale));  /* just under the 32px names - the slab chip, not size, marks it as a heading */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* just under the 32px names - the slab chip, not size, marks it as a heading */
   font-weight: 700;                /* headings are shouted */
   line-height: 1.1;                /* tight - chip hugs the caps */
   letter-spacing: 0.08em;          /* condensed caps breathe a little */
@@ -120,7 +120,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* The role: small dim caps - the name is the star. */
 .credits-role {
-  font-size: calc(16px * var(--scale));  /* half the 32px name - the loud/quiet pair reads decisive */
+  font-size: calc(16px * var(--scale) * var(--type-scale));  /* half the 32px name - the loud/quiet pair reads decisive */
   font-weight: 500;                /* medium - legible without competing */
   line-height: 1.3;                /* normal leading for the small line */
   letter-spacing: 0.08em;          /* top of the sport family's 0.02-0.1em label tracking */
@@ -130,7 +130,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* The name: big condensed caps, the loud line of every row. */
 .credits-name {
-  font-size: calc(32px * var(--scale));  /* headline of the row - 2:1 over the 16px role */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* headline of the row - 2:1 over the 16px role */
   font-weight: 700;                /* maximum punch */
   line-height: 1.15;               /* tight - big text needs little leading */
   letter-spacing: 0.02em;          /* a touch of air between the caps */
@@ -192,7 +192,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* The year / copyright line under the badge. */
 .credits-year {
-  font-size: calc(22px * var(--scale));  /* small closing line */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* small closing line */
   font-weight: 600;                /* solid but below the names' 700 */
   line-height: 1.3;                /* normal leading */
   letter-spacing: 0.1em;           /* small caps breathe */

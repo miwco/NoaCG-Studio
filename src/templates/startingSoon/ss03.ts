@@ -18,7 +18,7 @@ export const ss03: TemplateVariant = defineStartingSoonVariant(
       { title: 'Title', sample: 'STARTING SOON' },
       { title: 'Show name', sample: 'Midnight Sessions' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['hold-loop'],
     defaultPalette: paletteById('frost'),
     defaultFontId: 'manrope',
@@ -65,7 +65,7 @@ export const ss03: TemplateVariant = defineStartingSoonVariant(
 
 /* Title caps — the quiet accent kicker above the headline. */
 .starting-soon-title {
-  font-size: calc(24px * var(--scale));  /* label scale — announces, never competes */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — announces, never competes */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact single-line label */
   letter-spacing: 0.18em;          /* wide caps set the waiting-room mood */
@@ -75,7 +75,7 @@ export const ss03: TemplateVariant = defineStartingSoonVariant(
 
 /* Show name — the headline the audience is waiting for. */
 .starting-soon-show {
-  font-size: calc(66px * var(--scale));  /* holding screens carry lower-third headline size and more */
+  font-size: calc(66px * var(--scale) * var(--type-scale));  /* holding screens carry lower-third headline size and more */
   font-weight: 700;                /* bold enough to own the screen */
   line-height: 1.1;                /* tight leading — big text needs less */
   letter-spacing: -0.01em;         /* large text tightens slightly */
@@ -109,7 +109,7 @@ export const ss03: TemplateVariant = defineStartingSoonVariant(
 
 /* The countdown — painted by the clock runtime every second. */
 .starting-soon-clock {
-  font-size: calc(46px * var(--scale));  /* clearly the second-biggest thing on the card */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* clearly the second-biggest thing on the card */
   font-weight: 600;                /* solid digits without going heavy */
   line-height: 1;                  /* the capsule's padding sets the height */
   letter-spacing: 0.04em;          /* digits get a little air */

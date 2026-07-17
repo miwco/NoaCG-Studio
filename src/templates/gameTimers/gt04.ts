@@ -22,7 +22,7 @@ export const gt04: TemplateVariant = defineGameTimerVariant(
     description: 'A dark stage disc with a glowing accent drain ring and a pill label — controlled pop, crisp ticks, one big payoff at zero.',
     maxLines: 1,
     suggestedLines: [{ title: 'Label', sample: 'TIME LEFT' }],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['timer-run', 'timer-line-reveal'],
     defaultPalette: paletteById('royal'),
     defaultFontId: 'manrope',

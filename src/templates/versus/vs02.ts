@@ -23,7 +23,7 @@ export const vs02: TemplateVariant = defineVersusVariant(
       { title: 'Team B', sample: 'CRIMSON HAWKS' },
       { title: 'Event / date', sample: 'SEMI FINAL · SATURDAY 20:00' },
     ],
-    hasLogoSlot: true,
+    logo: 'built-in',
     animationPresets: [VS_SLAM_ID, VS_GLIDE_ID],
     defaultPalette: paletteById('signal'),
     defaultFontId: 'space-grotesk',

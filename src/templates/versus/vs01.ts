@@ -24,7 +24,7 @@ export const vs01: TemplateVariant = defineVersusVariant(
       { title: 'Team B', sample: 'TEAM BRAVO' },
       { title: 'Event / date', sample: 'CHAMPIONSHIP FINAL · SATURDAY 20:00' },
     ],
-    hasLogoSlot: true,
+    logo: 'built-in',
     animationPresets: [VS_GLIDE_ID, VS_SLAM_ID],
     defaultPalette: paletteById('royal'),
     defaultFontId: 'archivo',

@@ -35,7 +35,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
       { title: 'Credits', sample: CRAWL_SAMPLE },
       { title: 'Year / copyright', sample: '© 2026 Your Production' },
     ],
-    hasLogoSlot: true,
+    logo: 'built-in',
     animationPresets: ['credits-crawl'],
     defaultPalette: paletteById('signal'),
     defaultFontId: 'space-grotesk',
@@ -86,7 +86,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 
 /* Section heading - small caps in the accent color, the crawl's wayfinding marks. */
 .credits-heading {
-  font-size: calc(18px * var(--scale));          /* label size */
+  font-size: calc(18px * var(--scale) * var(--type-scale));          /* label size */
   font-weight: 600;                              /* firm without shouting */
   letter-spacing: 0.14em;                        /* small caps breathe */
   text-transform: uppercase;                     /* reads as a section label */
@@ -109,7 +109,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 
 /* Role - quiet uppercase label before the name. */
 .credits-role {
-  font-size: calc(16px * var(--scale));          /* clearly subordinate to the name */
+  font-size: calc(16px * var(--scale) * var(--type-scale));          /* clearly subordinate to the name */
   font-weight: 400;                              /* light against the semibold name */
   letter-spacing: 0.08em;                        /* uppercase letters need room */
   text-transform: uppercase;                     /* label voice, not a sentence */
@@ -118,14 +118,14 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 
 /* Name - the strong element of each pair. */
 .credits-name {
-  font-size: calc(22px * var(--scale));          /* the crawl's headline size */
+  font-size: calc(22px * var(--scale) * var(--type-scale));          /* the crawl's headline size */
   font-weight: 600;                              /* strong without shouting */
   color: var(--text-color);                      /* primary text color */
 }
 
 /* Middle-dot divider emitted after each credit - punctuation between crawl items. */
 .credits-sep {
-  font-size: calc(22px * var(--scale));          /* sized with the names it separates */
+  font-size: calc(22px * var(--scale) * var(--type-scale));          /* sized with the names it separates */
   color: var(--text-dim);                        /* quiet - a beat, not a feature */
 }
 
@@ -155,7 +155,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 
 /* Year / copyright - the quiet sign-off. */
 .credits-year {
-  font-size: calc(18px * var(--scale));          /* small closing line */
+  font-size: calc(18px * var(--scale) * var(--type-scale));          /* small closing line */
   font-weight: 400;                              /* no emphasis needed */
   color: var(--text-dim);                        /* dimmed - the show is over */
 }`,

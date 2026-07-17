@@ -18,7 +18,7 @@ export const ig01: TemplateVariant = defineInfographicVariant(
       { title: 'Value', sample: '87%' },
       { title: 'Label', sample: 'Audience share' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['count-up'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
@@ -56,7 +56,7 @@ export const ig01: TemplateVariant = defineInfographicVariant(
 
 /* The figure — enormous and light: at this size regular weight already reads airy. */
 .infographic-value {
-  font-size: calc(150px * var(--scale)); /* the whole design IS this number (1080p reference) */
+  font-size: calc(150px * var(--scale) * var(--type-scale)); /* the whole design IS this number (1080p reference) */
   font-weight: 400;                /* regular — at 150px it already reads light and airy */
   line-height: 1;                  /* no dead leading — the rule sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -76,7 +76,7 @@ export const ig01: TemplateVariant = defineInfographicVariant(
 
 /* The label — quiet tracking-wide caps, clearly subordinate to the figure. */
 .infographic-label {
-  font-size: calc(21px * var(--scale)); /* kicker scale — a caption, not a headline */
+  font-size: calc(21px * var(--scale) * var(--type-scale)); /* kicker scale — a caption, not a headline */
   font-weight: 400;                /* light; the figure carries all the weight */
   line-height: 1.35;               /* relaxed leading in case it wraps */
   letter-spacing: 0.16em;          /* wide tracking — small caps breathe */

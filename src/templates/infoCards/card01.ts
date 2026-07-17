@@ -11,14 +11,14 @@ export const card01: TemplateVariant = defineCardVariant(
     name: 'Hairline Card',
     styleTag: 'minimal',
     description: 'A taller Hairline: heading and quiet body lines beside one thin vertical line - no panel.',
-    maxLines: 3,
+    maxLines: 5,
     suggestedLines: [
       { title: 'Heading', sample: 'The Story in Numbers' },
       { title: 'Line 1', sample: 'Renewables grew 28% this year' },
       { title: 'Line 2', sample: 'Coal at its lowest share since 1965' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['line-reveal', 'slide-fade', 'mask-wipe', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'optional',
+    animationPresets: ['line-reveal', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
     defaultZone: 'mid-right',
@@ -56,7 +56,7 @@ ${cardLineMasks(o)}
 
 /* Heading — big and confident; the only heavy element in the design. */
 .info-card-name {
-  font-size: calc(44px * var(--scale));  /* card heading size (values are 1080p reference) */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* card heading size (values are 1080p reference) */
   font-weight: 700;                 /* bold enough to carry the design on its own */
   line-height: 1.1;                 /* big text sits tight */
   letter-spacing: -0.01em;          /* large sizes tighten slightly */
@@ -66,7 +66,7 @@ ${cardLineMasks(o)}
 /* Body lines — quiet on purpose: smaller, lighter, dimmed. */
 .info-card-title,
 .info-card-extra {
-  font-size: calc(24px * var(--scale));  /* ≈1.8:1 below the heading — clear hierarchy */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈1.8:1 below the heading — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the heading */
   line-height: 1.35;                /* body text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */

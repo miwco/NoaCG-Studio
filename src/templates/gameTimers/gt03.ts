@@ -23,7 +23,7 @@ export const gt03: TemplateVariant = defineGameTimerVariant(
     description: 'A big sunny badge clock ringed by dancing dots — elastic pop-in, a bouncing tick, and a burst at zero.',
     maxLines: 1,
     suggestedLines: [{ title: 'Heading', sample: 'GET READY!' }],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['timer-run'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'manrope',

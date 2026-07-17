@@ -17,8 +17,8 @@ export const lt03: TemplateVariant = defineVariant(
       { title: 'Name', sample: 'Dr. Amara Okafor' },
       { title: 'Title', sample: 'Climate Researcher' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['slide-fade', 'line-reveal', 'mask-wipe', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['slide-up', 'line-reveal', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('mint'),
     defaultFontId: 'inter',
     defaultZone: 'bottom-left',
@@ -59,7 +59,7 @@ ${lineMasks(o)}
 
 /* Line 1 — the name: big and confident, pure white. */
 .lower-third-name {
-  font-size: calc(48px * var(--scale));            /* headline scale */
+  font-size: calc(48px * var(--scale) * var(--type-scale));            /* headline scale */
   font-weight: 700;                                /* bold carries the hierarchy */
   line-height: 1.1;                                /* tight — big text needs less leading */
   letter-spacing: -0.01em;                         /* big text tightens slightly */
@@ -68,7 +68,7 @@ ${lineMasks(o)}
 
 /* Line 2 — the title: half the size, dimmed, clearly secondary. */
 .lower-third-title {
-  font-size: calc(24px * var(--scale));            /* ~2:1 ratio under the name */
+  font-size: calc(24px * var(--scale) * var(--type-scale));            /* ~2:1 ratio under the name */
   font-weight: 400;                                /* regular weight keeps it quiet */
   line-height: 1.3;                                /* comfortable for a smaller line */
   color: var(--text-dim);                          /* dimmed — never pure white twice */
@@ -76,7 +76,7 @@ ${lineMasks(o)}
 
 /* Line 3 (optional) — a small-caps kicker in the accent color. */
 .lower-third-extra {
-  font-size: calc(19px * var(--scale));            /* smallest line in the stack */
+  font-size: calc(19px * var(--scale) * var(--type-scale));            /* smallest line in the stack */
   font-weight: 600;                                /* semibold keeps small caps legible */
   line-height: 1.3;                                /* matches the title's rhythm */
   text-transform: uppercase;                       /* small-caps label treatment */

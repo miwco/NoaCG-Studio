@@ -118,7 +118,8 @@ export function rootVarsCss(o: ResolvedOptions, headingStack: string, scale: num
   --text-dim: ${o.palette.textDim};  /* secondary text (title line) */
   --panel-bg: ${o.palette.panel};  /* the panel behind the text */
   --font-heading: ${headingStack};  /* the graphic's typeface */
-  --scale: ${scale};                  /* size multiplier (also handles resolution) */
+  --scale: ${scale};                  /* whole-graphic size multiplier (also handles resolution) */
+  --type-scale: ${o.typeScale};                  /* text-only size multiplier (on top of --scale) */
 }`;
 }
 

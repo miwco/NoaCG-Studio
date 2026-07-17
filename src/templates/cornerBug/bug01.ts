@@ -16,8 +16,8 @@ export const bug01: TemplateVariant = defineBugVariant(
     description: 'A small frosted tile with a logo slot and a tiny caption — the persistent on-air mark.',
     maxLines: 1,
     suggestedLines: [{ title: 'Caption', sample: 'LIVE' }],
-    hasLogoSlot: true,
-    animationPresets: ['blur-in', 'pop-spring', 'slide-fade', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'built-in',
+    animationPresets: ['blur-in', 'pop-spring', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('frost'),
     defaultFontId: 'manrope',
     defaultZone: 'top-right',
@@ -122,7 +122,7 @@ ${markCss}
 /* The caption — a tiny caps label under the mark (e.g. LIVE, or a channel name). */
 .corner-bug-name {
   margin-top: calc(10px * var(--scale));  /* air between the mark and the caption */
-  font-size: calc(16px * var(--scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 700;                /* bold keeps small caps legible at bug scale */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: 0.18em;          /* small caps need room to breathe */

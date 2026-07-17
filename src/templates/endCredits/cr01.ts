@@ -32,7 +32,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
       { title: 'Credits', sample: SAMPLE },
       { title: 'Year / copyright', sample: '© 2026 Your Production' },
     ],
-    hasLogoSlot: true,
+    logo: 'built-in',
     animationPresets: ['credits-roll'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
@@ -70,7 +70,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* Section heading — a quiet accent label, never louder than the names it introduces. */
 .credits-heading {
-  font-size: calc(18px * var(--scale));  /* kicker-sized (values are 1080p reference) */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* kicker-sized (values are 1080p reference) */
   font-weight: 600;                    /* semibold — presence without weight */
   text-transform: uppercase;           /* small caps read as structure, not content */
   letter-spacing: 0.2em;               /* wide tracking — small caps breathe */
@@ -86,7 +86,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* Role line — small, spaced caps, dimmed: the label, never the star. */
 .credits-role {
-  font-size: calc(20px * var(--scale));  /* clearly subordinate to the name below */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name below */
   font-weight: 400;                    /* regular weight — contrast comes from the name */
   text-transform: uppercase;           /* caps mark it as a label */
   letter-spacing: 0.14em;              /* open tracking for small uppercase text */
@@ -96,7 +96,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* Name line — the star of each stack; the only weighty element in the design. */
 .credits-name {
-  font-size: calc(34px * var(--scale));  /* ~1.7:1 over the role — clear hierarchy */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* ~1.7:1 over the role — clear hierarchy */
   font-weight: 600;                    /* semibold carries the design without a panel */
   line-height: 1.15;                   /* big text sits tight */
   letter-spacing: -0.01em;             /* large sizes tighten slightly */
@@ -133,7 +133,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   height: calc(96px * var(--scale));   /* roughly 2.3:1 — generic mark proportions */
   border: 1px dashed var(--text-dim);  /* dashed keyline says "drop your logo here" */
   border-radius: calc(2px * var(--scale)); /* minimal family: 0-2px radius, nothing rounder */
-  font-size: calc(14px * var(--scale)); /* small caps label inside the frame */
+  font-size: calc(14px * var(--scale) * var(--type-scale)); /* small caps label inside the frame */
   letter-spacing: 0.18em;              /* the same airy tracking as the headings */
   text-transform: uppercase;           /* label, not content */
   color: var(--text-dim);              /* dimmed — the placeholder never competes */
@@ -142,7 +142,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* Year / copyright — the very last line; quiet and dimmed. */
 .credits-year {
-  font-size: calc(20px * var(--scale));  /* matches the role lines — closes the loop */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* matches the role lines — closes the loop */
   font-weight: 400;                    /* regular — nothing shouts on the way out */
   letter-spacing: 0.04em;              /* a touch of air for the short closing line */
   color: var(--text-dim);              /* dimmed sign-off */

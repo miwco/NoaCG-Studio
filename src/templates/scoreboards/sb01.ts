@@ -19,8 +19,8 @@ export const sb01: TemplateVariant = defineScoreboardVariant(
     description: 'A leaning dark strip - team names flank two accent score chips. Match-night fast.',
     maxLines: 1,
     suggestedLines: [{ title: 'Team A', sample: 'HOME' }],
-    hasLogoSlot: false,
-    animationPresets: ['snap-stinger', 'slide-fade', 'mask-wipe', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['snap-stinger', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('volt'),
     defaultFontId: 'oswald',
     defaultZone: 'top-center',
@@ -124,7 +124,7 @@ export const sb01: TemplateVariant = defineScoreboardVariant(
 
 /* The team name: condensed heavy caps - the family voice. */
 .scoreboard-team {
-  font-size: calc(40px * var(--scale));  /* headline scale, a step under the scores */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline scale, a step under the scores */
   font-weight: 700;                /* maximum punch */
   line-height: 1.1;                /* tight - big caps need little leading */
   letter-spacing: 0.02em;          /* a touch of air between the caps */
@@ -156,7 +156,7 @@ export const sb01: TemplateVariant = defineScoreboardVariant(
 
 /* The score figure: the heaviest thing on the strip, in dark ink on the bright chip. */
 .scoreboard-score {
-  font-size: calc(50px * var(--scale));  /* the loudest scale - scores lead a scoreboard */
+  font-size: calc(50px * var(--scale) * var(--type-scale));  /* the loudest scale - scores lead a scoreboard */
   font-weight: 700;                /* heavy condensed figures */
   line-height: 1;                  /* the figure fills its chip, no dead leading */
   color: var(--panel-bg);          /* the slab hue doubles as ink - highest contrast on accent */
@@ -165,7 +165,7 @@ export const sb01: TemplateVariant = defineScoreboardVariant(
 
 /* The divider: a heavy accent colon - the accent's only echo on the dark slab itself. */
 .scoreboard-colon {
-  font-size: calc(40px * var(--scale));  /* matches the team names */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* matches the team names */
   font-weight: 700;                /* solid, not a hairline */
   line-height: 1;                  /* sits tight on the center line */
   color: var(--accent);            /* ties the slab to the chips */

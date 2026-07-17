@@ -16,8 +16,8 @@ export const lt07: TemplateVariant = defineVariant(
       { title: 'Name', sample: 'THE TITANS' },
       { title: 'Subtitle', sample: 'HOME · GAME 4' },
     ],
-    hasLogoSlot: true,
-    animationPresets: ['snap-stinger', 'pop-spring', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'optional',
+    animationPresets: ['snap-stinger', 'pop-spring', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('royal'),
     defaultFontId: 'bebas-neue',
     defaultZone: 'bottom-left',
@@ -30,11 +30,14 @@ export const lt07: TemplateVariant = defineVariant(
     uicolor: '7',
   },
   (o) => {
-    // The badge shows the imported logo when one exists; otherwise it stays a clean
-    // accent square (drop a logo here via the import flow).
-    const badge = o.logoAssetPath
-      ? `\n        <img class="lower-third-logo" src="${o.logoAssetPath}" alt="" />\n      `
-      : '<!-- Empty accent square — drop a logo here via the import flow. -->';
+    // The badge holds a real SPX image field ("filelist") when the logo slot is on: SPX
+    // writes the file path straight into the <img>, and an empty value keeps the badge a
+    // clean accent square (setFieldValue hides an <img> without a value).
+    const logoField = `f${o.lines.length + o.extraFields.length}`;
+    const logoPath = o.logoAssetPath ?? '';
+    const badge = o.logoEnabled
+      ? `\n        <!-- Logo (image field ${logoField}) — empty keeps the badge a clean accent square. -->\n        <img id="${logoField}" class="lower-third-logo"${logoPath ? ` src="${logoPath}"` : ' style="display: none"'} alt="" />\n      `
+      : '<!-- Empty accent square — turn on the logo slot in the wizard to fill it. -->';
 
     return {
       html: `    <!-- One flex slab: the accent badge (logo slot) on the left, the text stack on the right. -->
@@ -44,6 +47,19 @@ export const lt07: TemplateVariant = defineVariant(
 ${lineMasks(o, '        ')}
       </div>
     </div>`,
+
+      extraFields: o.logoEnabled
+        ? [
+            {
+              field: logoField,
+              ftype: 'filelist',
+              title: 'Logo',
+              value: logoPath,
+              assetfolder: './images/',
+              extension: 'png',
+            },
+          ]
+        : [],
       css: `/* The slab: badge and text panel fused into one hard-edged unit (zero radius on purpose). */
 .lower-third-box {
   display: flex;                   /* badge and text sit side by side */
@@ -62,7 +78,7 @@ ${lineMasks(o, '        ')}
   background: var(--accent);       /* the accent used boldly, sport-style */
 }
 
-/* The imported logo (rendered only when a graphic was imported). */
+/* The logo inside the badge (the ${logoField} image field — hidden while empty). */
 .lower-third-logo {
   width: 100%;                     /* fill the badge width… */
   height: 100%;                    /* …and its height… */
@@ -82,7 +98,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 1 — the name / headline. Bebas is single-weight, so size does the shouting. */
 .lower-third-name {
-  font-size: calc(60px * var(--scale));  /* headline size */
+  font-size: calc(60px * var(--scale) * var(--type-scale));  /* headline size */
   line-height: 1.05;               /* big display text sits tight */
   color: var(--text-color);        /* primary text */
   text-transform: uppercase;       /* all-caps matchday voice */
@@ -90,7 +106,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 2 — the subtitle (fixture, score line, role). */
 .lower-third-title {
-  font-size: calc(27px * var(--scale));  /* clearly subordinate to the name (≈2.2:1 vs the headline) */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name (≈2.2:1 vs the headline) */
   line-height: 1.2;                /* a touch more air than the headline */
   color: var(--text-dim);          /* secondary text steps back */
   letter-spacing: 0.14em;          /* tracked-out small caps breathe */
@@ -99,7 +115,7 @@ ${lineMasks(o, '        ')}
 
 /* Line 3 — an optional kicker (venue, sponsor). Only present with three lines. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale));  /* the smallest voice in the stack */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   line-height: 1.2;                /* same rhythm as the subtitle */
   color: var(--text-dim);          /* stays quiet next to the name */
   letter-spacing: 0.14em;          /* same tracking as the subtitle */

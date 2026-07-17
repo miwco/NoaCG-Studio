@@ -16,14 +16,14 @@ export const card05: TemplateVariant = defineCardVariant(
     name: 'House Title',
     styleTag: 'noacg',
     description: 'The house title card: mono kicker, huge display title, quiet subtitle, soft accent glow.',
-    maxLines: 3,
+    maxLines: 5,
     suggestedLines: [
       { title: 'Title', sample: 'The Results Show' },
       { title: 'Kicker', sample: 'Elections 2026' },
       { title: 'Subtitle', sample: 'Live from the studio · 20:00' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['line-reveal', 'mask-wipe', 'blur-in', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'optional',
+    animationPresets: ['line-reveal', 'mask-wipe', 'blur-in', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('noacg'),
     defaultFontId: 'space-grotesk',
     defaultZone: 'bottom-left',
@@ -76,7 +76,7 @@ ${kicker}${mask(0)}${subtitle}
 .info-card-title {
   display: block;                  /* its own row above the title */
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(24px * var(--scale));  /* label scale — clearly subordinate */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — clearly subordinate */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* single tight label line */
   letter-spacing: 0.28em;          /* the widest tracking in the family — a marquee label */
@@ -87,7 +87,7 @@ ${kicker}${mask(0)}${subtitle}
 
 /* The title (f0) — the biggest type in the house family: one huge display statement. */
 .info-card-name {
-  font-size: calc(96px * var(--scale));  /* full-frame headline scale */
+  font-size: calc(96px * var(--scale) * var(--type-scale));  /* full-frame headline scale */
   font-weight: 700;                /* full display weight */
   line-height: 1.02;               /* huge text sits tight */
   letter-spacing: -0.02em;         /* display sizes tighten hardest */
@@ -97,7 +97,7 @@ ${kicker}${mask(0)}${subtitle}
 
 /* The subtitle (f2) — the quiet closing voice. */
 .info-card-extra {
-  font-size: calc(32px * var(--scale));  /* well below the title — clear hierarchy */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* well below the title — clear hierarchy */
   font-weight: 400;                /* regular — the title did the shouting */
   line-height: 1.3;                /* room if the subtitle wraps */
   color: var(--text-dim);          /* dimmed — never pure white twice */

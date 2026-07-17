@@ -19,8 +19,8 @@ export const lt12: TemplateVariant = defineVariant(
       { title: 'Headline', sample: 'Coalition talks reach midnight deadline' },
       { title: 'Label', sample: 'Breaking' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['line-reveal', 'slide-fade', 'mask-wipe', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['line-reveal', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('noacg'),
     defaultFontId: 'space-grotesk',
     defaultZone: 'bottom-left',
@@ -62,7 +62,7 @@ ${chip}${mask(0)}
   padding: calc(9px * var(--scale)) calc(26px * var(--scale));  /* compact plate around the label */
   background: var(--accent);       /* the one solid accent surface */
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(18px * var(--scale));  /* small — urgency comes from contrast, not size */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small — urgency comes from contrast, not size */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: 0.24em;          /* wide tracking — the label breathes */
   text-transform: uppercase;       /* BREAKING, whatever the operator types */
@@ -78,7 +78,7 @@ ${chip}${mask(0)}
   backdrop-filter: blur(8px);      /* the house blur */
   -webkit-backdrop-filter: blur(8px);  /* Safari spelling of the same effect */
   border-left: calc(8px * var(--scale)) solid var(--accent);  /* the house bar, fused to the panel */
-  font-size: calc(46px * var(--scale));  /* headline size — one strong statement */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size — one strong statement */
   font-weight: 700;                /* full display weight */
   line-height: 1.12;               /* wrapped headlines stay compact */
   color: var(--text-color);        /* primary text color */

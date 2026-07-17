@@ -199,8 +199,8 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 .dock-tabs {
   display: flex;
   align-items: stretch;
-  gap: 2px;
-  padding: 4px 6px 0;
+  gap: 3px;
+  padding: 5px 8px 0;
   flex-wrap: wrap;
   background: var(--bg-2);
   border-bottom: 1px solid var(--border);
@@ -208,17 +208,17 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .dock-tab { display: inline-flex; align-items: center; position: relative; border-radius: 5px 5px 0 0; }
 .dock-tab .dock-tab-label {
-  font-size: 11.5px;
-  padding: 5px 7px;
+  font-size: 13px;
+  padding: 7px 11px;
   color: var(--text-dim);
   background: transparent;
   border: 0;
 }
-.dock-tab.active { background: var(--bg); }
+.dock-tab.active { background: var(--bg); box-shadow: inset 0 2px 0 var(--amber); }
 .dock-tab.active .dock-tab-label { color: var(--text); }
 .dock-tab .dock-tab-caret {
-  font-size: 9px;
-  padding: 4px 5px 4px 0;
+  font-size: 10px;
+  padding: 5px 6px 5px 0;
   color: var(--text-dim);
   background: transparent;
   border: 0;
@@ -564,6 +564,9 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 
 /* ---------- Panels ---------- */
 .panel-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Scoped to the side-panel strip only — the bare .tab class is shared with the
+   code editor's HTML/CSS/JS tabs, which stay compact. */
+.panel-tabs .tab { padding: 8px 14px; font-size: 14px; }
 .panel-body { flex: 1; overflow: auto; padding: 12px; }
 .panel-section { margin-bottom: 18px; }
 .panel-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin: 0 0 8px; }
@@ -677,8 +680,8 @@ kbd {
 
 /* ---------- Creation wizard ---------- */
 .wz-modal {
-  width: min(1240px, 94vw);
-  height: min(820px, 92vh);
+  width: min(1520px, 96vw);
+  height: min(960px, 94vh);
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -711,7 +714,7 @@ kbd {
 .wz-body { flex: 1; display: flex; min-height: 0; }
 .wz-step { flex: 1; overflow: auto; padding: 20px; min-width: 0; }
 .wz-side {
-  flex: 0 0 44%;
+  flex: 0 0 50%;                    /* the preview deserves half the modal */
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -739,7 +742,11 @@ kbd {
   background-size: 24px 24px;
   background-position: 0 0, 0 12px, 12px -12px, -12px 0;
 }
-.wz-stage iframe { position: absolute; top: 50%; left: 50%; border: 0; background: transparent; box-shadow: 0 10px 50px rgba(0,0,0,0.55); }
+.wz-stage iframe {
+  position: absolute; top: 50%; left: 50%; border: 0; background: transparent;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.55);
+  transition: transform 0.25s ease;  /* the zoom toggle glides instead of jumping */
+}
 .wz-preview-bar {
   display: flex;
   align-items: center;
@@ -867,9 +874,22 @@ kbd {
 .wz-nudge input { width: 80px; }
 
 /* Step 5: animation */
+/* The Template step's discovery filters: small chips above the variant grid. */
+.wz-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.wz-filter { padding: 4px 12px; border-radius: 999px; font-size: 12px; }
+.wz-filter.active { border-color: var(--accent); color: var(--accent); }
+.wz-filter-clear { opacity: 0.8; }
+.wz-filter-empty { margin-top: 8px; }
+
 .wz-anim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .wz-anim { text-align: left; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
 .wz-anim.selected { border-color: var(--accent); }
+/* The Slide family's cell: the preset card plus its direction-of-travel picker. */
+.wz-anim-cell { display: flex; flex-direction: column; gap: 6px; }
+.wz-anim-cell .wz-anim { flex: 1; width: 100%; }
+.wz-anim-dirs { display: flex; gap: 4px; }
+.wz-anim-dirs button { flex: 1; padding: 4px 0; font-size: 14px; line-height: 1; }
+.wz-anim-dirs button.active { border-color: var(--accent); color: var(--accent); }
 
 .issue { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; line-height: 1.35; border: 1px solid var(--border); }
 .issue.error { background: rgba(255, 107, 107, 0.08); border-color: rgba(255, 107, 107, 0.4); }
@@ -1050,6 +1070,84 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   text-overflow: ellipsis;
   margin-bottom: 6px;
 }
+
+/* ---------- Assets panel ---------- */
+.assets-panel { min-height: 100%; border: 1px dashed transparent; border-radius: 6px; }
+.assets-panel.dragging { border-color: var(--amber); background: rgba(246, 166, 35, 0.05); }
+.asset-folder { margin-bottom: 10px; border-radius: 6px; }
+.asset-folder.drop-target { outline: 1px dashed var(--amber); outline-offset: 2px; }
+.asset-folder-head {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0.3px;
+  padding: 2px 0 4px;
+}
+.asset-folder-empty { margin: 2px 0 4px 8px; font-style: italic; }
+.asset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+}
+.asset-row:hover { background: var(--bg-3); }
+.asset-row.selected { border-color: var(--amber); background: var(--bg-3); }
+.asset-row-thumb {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(45deg, #2c333d 25%, transparent 25%),
+    linear-gradient(-45deg, #2c333d 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2c333d 75%),
+    linear-gradient(-45deg, transparent 75%, #2c333d 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-color: #20262e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.asset-row-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.asset-row-icon { font-size: 13px; color: var(--text-dim); }
+.asset-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.asset-badge {
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.asset-badge-lottie { color: var(--amber); border-color: var(--amber); }
+.asset-row-size { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); }
+.asset-totals { margin-top: 6px; }
+.asset-info { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
+.asset-info h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin: 0 0 8px; }
+.asset-info-body { display: flex; gap: 10px; align-items: flex-start; }
+.asset-info-preview { width: 120px; height: 90px; flex: 0 0 auto; margin-bottom: 0; }
+.asset-info-facts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.asset-fact { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.asset-fact-key { flex: 0 0 84px; color: var(--text-dim); }
+.asset-fact-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.asset-name-btn { background: transparent; border: 0; padding: 0; font-size: 12px; color: var(--text); cursor: text; text-align: left; }
+.asset-name-btn:hover { color: var(--amber); }
+.asset-rename { font-size: 12px; padding: 1px 4px; }
 
 .link-btn {
   display: inline;

@@ -42,7 +42,7 @@ export const ig07: TemplateVariant = defineInfographicVariant(
       { title: 'Candidate 2', sample: CAND_SAMPLES[1] },
       { title: 'Candidate 3', sample: CAND_SAMPLES[2] },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['bars-grow'],
     defaultPalette: paletteById('signal'),
     defaultFontId: 'archivo',

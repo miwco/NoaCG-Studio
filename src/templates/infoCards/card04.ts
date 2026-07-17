@@ -19,8 +19,8 @@ export const card04: TemplateVariant = defineCardVariant(
       { title: 'Name', sample: 'Albert Einstein' },
       { title: 'Role', sample: 'Theoretical physicist' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['blur-in', 'slide-fade', 'line-reveal', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'optional',
+    animationPresets: ['blur-in', 'slide-up', 'line-reveal', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'manrope',
     defaultZone: 'mid-center',
@@ -70,14 +70,14 @@ ${mask(0)}
   left: 0;                         /* stretched across the box… */
   right: 0;                        /* …so text-align can center the glyph */
   font-family: Georgia, 'Times New Roman', serif;  /* a serif mark reads as literary decoration */
-  font-size: calc(150px * var(--scale));  /* oversized — the glyph is the design's hero */
+  font-size: calc(150px * var(--scale) * var(--type-scale));  /* oversized — the glyph is the design's hero */
   line-height: 1;                  /* one clean em box; the ink sits in its upper half */
   color: var(--accent);            /* the one loud dose of accent color */
 }
 
 /* The quote (f0) — large, light and slanted: the voice of the card. */
 .info-card-name {
-  font-size: calc(48px * var(--scale));  /* large — the quote carries the composition */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* large — the quote carries the composition */
   font-weight: 300;                /* light weight keeps the size elegant, not loud */
   font-style: italic;              /* slanted — spoken words, not a headline */
   line-height: 1.3;                /* wrapped quote rows get generous leading */
@@ -97,7 +97,7 @@ ${mask(0)}
 
 /* The name (f1) — small and firm: the quote's anchor. */
 .info-card-title {
-  font-size: calc(26px * var(--scale));  /* well below the quote — clear hierarchy */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* well below the quote — clear hierarchy */
   font-weight: 700;                /* bold at small size reads confident, not heavy */
   line-height: 1.2;                /* a single tight line */
   letter-spacing: 0.01em;          /* a touch of air at bold small sizes */
@@ -107,7 +107,7 @@ ${mask(0)}
 
 /* The role (f2) — quiet tracked caps, dimmed: the softest voice on the card. */
 .info-card-extra {
-  font-size: calc(17px * var(--scale));  /* small caps line under the name */
+  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small caps line under the name */
   font-weight: 600;                /* semibold keeps tiny caps legible */
   line-height: 1.2;                /* a single tight line */
   text-transform: uppercase;       /* caps — a label, not a sentence */

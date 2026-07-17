@@ -257,7 +257,7 @@ export function catalogDigest(): string {
     for (const v of variants) {
       const bits = [
         `${v.maxLines} line${v.maxLines > 1 ? 's' : ''}`,
-        v.hasLogoSlot ? 'logo slot' : null,
+        v.logo === 'built-in' ? 'logo slot (always)' : v.logo === 'optional' ? 'logo slot (optional)' : null,
         `motion: ${v.animationPresets.join(' | ')}`,
       ].filter(Boolean);
       lines.push(`- ${v.id} "${v.name}" [${v.styleTag}] — ${v.description} (${bits.join('; ')})`);
@@ -278,6 +278,9 @@ export function catalogDigest(): string {
 const clampNumber = (v: number | undefined, min: number, max: number): number | undefined =>
   typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : undefined;
 
+/** A design can carry the user's logo when it has a slot built in, or offers one. */
+const canTakeLogo = (v: TemplateVariant): boolean => v.logo !== 'none';
+
 /** Pick the best chassis when the spec's variantId is missing or wrong (never fail). */
 function resolveVariant(spec: DesignSpec, wantsLogo: boolean): TemplateVariant {
   const direct = spec.variantId ? variantById(spec.variantId) : undefined;
@@ -285,7 +288,7 @@ function resolveVariant(spec: DesignSpec, wantsLogo: boolean): TemplateVariant {
   const pool = variantsFor(spec.category);
   const fallback = pool.length ? pool : variantsFor('lower-third');
   if (wantsLogo) {
-    const withLogo = fallback.find((v) => v.hasLogoSlot);
+    const withLogo = fallback.find(canTakeLogo);
     if (withLogo) return withLogo;
   }
   return direct ?? fallback[0];
@@ -350,7 +353,14 @@ export function specToTemplate(spec: DesignSpec, ctx?: GenerateContext): Assembl
       ...(typeof spec.animation?.steps === 'boolean' ? { steps: spec.animation.steps } : {}),
     },
     importedImages: ctx?.images ?? [],
-    logoAssetPath: wantsLogo && variant.hasLogoSlot ? ctx?.images[0]?.path : undefined,
+    // The logo capability decides what a spec's useLogoSlot can actually do: a 'built-in'
+    // design always has its slot, an 'optional' one only emits it when enabled, and a
+    // 'none' design gets neither (the image still rides along as a project asset).
+    ...(wantsLogo && canTakeLogo(variant)
+      ? { logoEnabled: true, logoAssetPath: ctx?.images[0]?.path }
+      : variant.logo === 'optional'
+        ? { logoEnabled: false }
+        : {}),
   };
 
   const template = variant.create(options);
