@@ -109,6 +109,23 @@ var(--scale))` or plain-px idiom) and is **excluded from the keyframe drag entir
 multi-select drag can never write motion keyframes for it. Everything else keeps the keyframe
 drag unchanged, and catalog templates are untouched (their masks carry no wrapper ids).
 
+## Wizard taste decisions (post-MVP pass)
+
+Three calls made after the visual taste pass, all founder-ratified:
+
+- **One CTA on the Design step.** The step body has no button of its own; the wizard footer's
+  Next is the step's single forward action and reads **"Add text fields ›"** there — descriptive,
+  in the wizard's standard place.
+- **The Style step slims to what still applies.** Palette and Font always show (they style the
+  text lines). The global **Text size** knob never shows for an imported design — the assembler
+  sizes each line from its own `LineStyle.fontSize` (set on the Text step) and reads no
+  `--type-scale`. **Graphic size** and **Position** show only for a smaller-than-frame design;
+  a frame-sized design covers the canvas as drawn, and scaling or re-anchoring it could only
+  push it off its own frame.
+- **The box is labelled "Design", not "Panel".** `model/structure.ts` special-cases the
+  `imported-design` prefix, so the timeline row, canvas chip, and Inspector all say "Design" —
+  the box is the user's artwork, not a generated background panel.
+
 ## Deliberately out of scope (MVP)
 
 Per-element animation, layered imports, multi-step logic, image fields, Google Sheets,

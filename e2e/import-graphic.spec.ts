@@ -61,6 +61,11 @@ test('import graphic: the imported design animates — the gap this feature clos
   // imported design carries a NOACG_ANIM data block (an import used to get no strip at all).
   await expect(page.locator('.tlv2-ruler')).toBeVisible();
 
+  // The design unit's row speaks the user's word: this box is their artwork, not a "Panel".
+  await expect(
+    page.locator('.tlv2-labels .timeline-label[data-part=".imported-design-box"]'),
+  ).toContainText('Design');
+
   const frame = page.frameLocator('iframe.preview-frame');
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
@@ -78,6 +83,16 @@ test('import graphic: in and out animations are chosen separately', async ({ pag
   await dropDesign(page);
   await page.getByRole('button', { name: 'Add text fields ›' }).click();
   await page.getByRole('button', { name: 'Next ›' }).click(); // Style
+
+  // The Style step slims to what still applies: a frame-sized design covers the canvas as
+  // drawn, so sizing and re-anchoring it are off the table, and text size is per-line on the
+  // Text step. Palette and font still style the lines.
+  await expect(page.locator('.wz-step')).toContainText('Palette');
+  await expect(page.locator('.wz-step')).toContainText('Font');
+  await expect(page.locator('.wz-step')).not.toContainText('Graphic size');
+  await expect(page.locator('.wz-step')).not.toContainText('Text size');
+  await expect(page.locator('.wz-step')).not.toContainText('Position');
+
   await page.getByRole('button', { name: 'Next ›' }).click(); // Animation
   await expect(page.locator('.wz-dot.active')).toContainText('Animation');
 
@@ -103,6 +118,14 @@ test('import graphic: a cropped design is placed as an object, not stretched', a
   await dropDesign(page, 900, 260);
   await expect(page.locator('.asset-card')).toContainText('900 × 260');
   await expect(page.locator('.wz-step')).toContainText('Smaller than');
+
+  // A floating design CAN be sized and anchored, so those knobs stay; the global text-size
+  // knob never applies to an imported design (each line is sized on the Text step).
+  await page.getByRole('button', { name: 'Add text fields ›' }).click();
+  await page.getByRole('button', { name: 'Next ›' }).click(); // Style
+  await expect(page.locator('.wz-step')).toContainText('Graphic size');
+  await expect(page.locator('.wz-step')).toContainText('Position');
+  await expect(page.locator('.wz-step')).not.toContainText('Text size');
 });
 
 test('import graphic: a 2× export is shown frame-sized, not pushed off the frame', async ({ page }) => {

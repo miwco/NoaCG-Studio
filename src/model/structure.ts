@@ -67,7 +67,10 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
       parts.push({ selector: `.${prefix}`, kind: 'root', label: 'Whole graphic', channel: 'rise' });
     }
     if (unique(`.${prefix}-box`)) {
-      parts.push({ selector: `.${prefix}-box`, kind: 'panel', label: 'Panel', channel: 'rise' });
+      // An imported design's box is the user's own artwork with its text — "Panel" (the house
+      // word for a generated background box) would misname it on every surface that shows it.
+      const label = prefix === 'imported-design' ? 'Design' : 'Panel';
+      parts.push({ selector: `.${prefix}-box`, kind: 'panel', label, channel: 'rise' });
     }
     if (unique(`.${prefix}-accent`)) {
       parts.push({ selector: `.${prefix}-accent`, kind: 'accent', label: 'Accent line', channel: 'rise' });
