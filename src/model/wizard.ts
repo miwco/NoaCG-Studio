@@ -215,8 +215,14 @@ export interface WizardOptions {
 export interface DesignArt {
   /** Relative asset path, e.g. "images/lower-third.png". */
   path: string;
+  /** The design-space size everything positions against. For artwork larger than the frame
+   *  (a 2× / retina export is the common case) this is the size scaled down to FIT the frame -
+   *  the file keeps its full resolution; only the display size shrinks. */
   width: number;
   height: number;
+  /** The file's real pixel size, kept when it differs from the fitted width/height above. */
+  sourceWidth?: number;
+  sourceHeight?: number;
 }
 
 /** WizardOptions with every default resolved — what variant builders actually receive. */

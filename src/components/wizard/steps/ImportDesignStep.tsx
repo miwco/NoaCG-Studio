@@ -27,6 +27,7 @@ export default function ImportDesignStep({ art, images, resolution, onArt, onCle
 
   const preview = art ? images.find((a) => a.path === art.path) : null;
   const fullFrame = !!art && art.width === resolution.width && art.height === resolution.height;
+  const scaled = !!art && art.sourceWidth != null;
 
   /** The artwork's real pixel size — an <img> is the only thing that actually knows it. */
   const measure = (dataUrl: string) =>
@@ -36,6 +37,23 @@ export default function ImportDesignStep({ art, images, resolution, onArt, onCle
       img.onerror = () => reject(new Error('That file could not be read as an image.'));
       img.src = dataUrl;
     });
+
+  /**
+   * The design-space size: artwork larger than the frame is scaled down to FIT it, because a
+   * larger file is almost always the same design exported at higher resolution (a 2× / retina
+   * export), and placing it at natural size would push most of it off the frame. The file keeps
+   * every pixel — only the display size shrinks — and the real size is kept for the summary.
+   */
+  const fitToFrame = (size: { width: number; height: number }): Omit<DesignArt, 'path'> => {
+    if (size.width <= resolution.width && size.height <= resolution.height) return size;
+    const fit = Math.min(resolution.width / size.width, resolution.height / size.height);
+    return {
+      width: Math.round(size.width * fit),
+      height: Math.round(size.height * fit),
+      sourceWidth: size.width,
+      sourceHeight: size.height,
+    };
+  };
 
   const take = async (files: FileList | File[]) => {
     setError(null);
@@ -49,7 +67,7 @@ export default function ImportDesignStep({ art, images, resolution, onArt, onCle
       const size = await measure(dataUrl);
       // One design per graphic: a second drop REPLACES the artwork rather than piling up.
       const asset: AssetFile = { path: uniqueAssetPath(file.name, []), data: dataUrl };
-      onArt({ path: asset.path, ...size }, [asset]);
+      onArt({ path: asset.path, ...fitToFrame(size) }, [asset]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -90,13 +108,19 @@ export default function ImportDesignStep({ art, images, resolution, onArt, onCle
               <img src={typeof preview.data === 'string' ? preview.data : ''} alt={art.path} />
             </div>
             <div className="asset-path" title={art.path}>{art.path.replace('images/', '')}</div>
-            <div className="hint mono" style={{ marginBottom: 6 }}>{art.width} × {art.height}</div>
+            <div className="hint mono" style={{ marginBottom: 6 }}>
+              {art.sourceWidth ?? art.width} × {art.sourceHeight ?? art.height}
+            </div>
             <button onClick={onClear}>✕ Use a different design</button>
           </div>
           <p className="hint" style={{ marginTop: 10 }}>
-            {fullFrame
-              ? `Frame-sized (${resolution.width} × ${resolution.height}) — it will sit exactly where you drew it, edge to edge.`
-              : `Smaller than the ${resolution.width} × ${resolution.height} frame, so it is placed as an object you can position and resize.`}
+            {fullFrame && scaled
+              ? `A ${Math.round((art.sourceWidth! / art.width) * 10) / 10}× export of the ${resolution.width} × ${resolution.height} frame — shown frame-sized, edge to edge, exactly as you drew it (the extra resolution keeps it sharp).`
+              : fullFrame
+                ? `Frame-sized (${resolution.width} × ${resolution.height}) — it will sit exactly where you drew it, edge to edge.`
+                : scaled
+                  ? `Larger than the ${resolution.width} × ${resolution.height} frame, so it is scaled down to fit it (the extra resolution keeps it sharp) and placed as an object you can position.`
+                  : `Smaller than the ${resolution.width} × ${resolution.height} frame, so it is placed as an object you can position and resize.`}
           </p>
         </div>
       )}

@@ -852,7 +852,7 @@ kbd {
 .wz-place-grid input[type="number"] { width: 76px; flex: none; }
 .wz-place-grid select { width: 104px; }
 .wz-place-grid input[type="color"] { width: 32px; padding: 2px; flex: none; }
-.wz-place-color input:not([type="color"]) { width: 96px; flex: none; }
+.wz-place-color input:not([type="color"]) { width: 172px; flex: none; } /* fits an rgba(...) value */
 
 /* Step 4: style pickers */
 .wz-palettes { display: flex; flex-wrap: wrap; gap: 8px; }
