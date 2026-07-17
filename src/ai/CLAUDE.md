@@ -69,7 +69,19 @@ a consistently better VISUAL result, and raw one-shot output already looks stron
    strict-JSON data block it reliably got wrong. Every emit (first and repairs) runs
    `convertEmittedRegion`: canonicalize a drifted open marker, then `convertToDataRegion` -
    the SAME parity-proven importer every wizard category uses at create - so a convertible
-   emit ships as a timeline-editable data block. An unconvertible region keeps the model's
+   emit ships as a timeline-editable data block.
+   **The STRUCTURE SPINE is the conversion's precondition, so the prompt states it as a hard
+   requirement** (root `<div class="PREFIX">` holding `<div class="PREFIX-box">`, that -box
+   class ALONE on the element; `PREFIX-mask` around each `#fN`; `PREFIX-accent`). Learned the
+   expensive way (ai-compare, 2026-07-17): the coder followed the authoring grammar perfectly
+   and `parseTimeline` read every region, but `importAnimData` bails on `detectPrefix` FIRST,
+   and detectPrefix keys entirely off `class="{prefix}-box"` - which the old prompt never named
+   (the example merely showed it, and models generalize the idea, not the literal class). Every
+   free-form result converted the moment a `-box` was injected. Worse, the bench's own repair
+   message told the model to "give the root a single class and prefix every child class",
+   which does NOT satisfy the check - so the custom route's repair rounds were UNWINNABLE by
+   construction. That message now names the real contract. If a future editability finding
+   looks model-shaped, suspect the teaching message before the model. An unconvertible region keeps the model's
    own code (honest hand-crafted output, read-only timeline) and its `bench-editability`
    findings DEMOTE TO WARNINGS at the end - they never burn a repair round alone, though
    they ride along in any round a functional error triggers. Exception: when the template

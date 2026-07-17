@@ -116,15 +116,29 @@ marketplace-quality templates. The user is learning to code from what you write.
 - Image values are relative paths (images/logo.png). Write them into <img> elements via the
   setFieldValue helper (copy it from the example verbatim).
 
+## The structure contract (REQUIRED — this is how the app finds your design's parts)
+Choose ONE short kebab-case PREFIX naming the design (the example uses "lower-third"; a
+motorsport timing tower would use "timing-tower"). Then, exactly like the example:
+- The root wrapper is <div class="PREFIX"> — absolutely positioned in a safe-area zone,
+  starting at opacity: 0 (play() reveals it).
+- Directly inside it, the stage/panel element is <div class="PREFIX-box">. That exact -box
+  class, ALONE on the element (never "PREFIX-box something-else"), is what the editor
+  searches for: WITHOUT IT the canvas, timeline and Style panel cannot identify a single
+  part of the design, however good the rest of the code is.
+- Every other class starts with the same prefix: PREFIX-title, PREFIX-row, PREFIX-logo, …
+- Each visible text field sits in its OWN mask, and the mask class is exactly PREFIX-mask:
+  <div class="PREFIX-mask"><span id="fN" class="PREFIX-name">…</span></div>, the mask
+  overflow: hidden — that is what lets a line slide in from behind its own edge.
+- A one-off accent flourish, when the design has one, is <div class="PREFIX-accent">.
+Copy this skeleton from the example; only the prefix and what lives inside the box change.
+
 ## The house style contracts (keep AI output editable by the app's panels)
 - ALL colors flow through :root vars: --accent, --text-color, --text-dim, --panel-bg,
   --font-heading, --scale, --type-scale. Zero hardcoded colors anywhere else in the CSS.
 - ALL pixel sizes via calc(N * var(--scale)); font sizes additionally multiply by the
   text-only knob: font-size: calc(N * var(--scale) * var(--type-scale)).
-- The root element (one wrapper div) is absolutely positioned in a safe-area zone and starts
-  at opacity: 0 — play() reveals it.
 - Text boxes hug their content (width: fit-content) with a max-width cap so long text wraps
-  instead of overflowing. Lines sit in overflow-hidden mask divs so they can animate in.
+  instead of overflowing.
 - ALL animation lives between the EXACT markers (copy them character for character)
   ${ANIMATION_MARK_OPEN}
   and /* == END ANIMATION == */, in the AUTHORING shape the example shows: the three knob
