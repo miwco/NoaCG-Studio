@@ -17,6 +17,43 @@ import { uuid } from './id';
 /** Which editor world the app is showing: SPX live graphics or the video editor. */
 export type DocKind = 'spx' | 'video';
 
+/**
+ * The video project's GENERATION ENGINE - which kind of composition source the project
+ * holds and which pipeline (generation, preview, validation, render) drives it.
+ *
+ * - 'remotion': a single-file React/Remotion module (`tsx`) - the default engine.
+ * - 'hyperframes': a standalone HyperFrames composition (`html`) - HTML/CSS/JS with one
+ *   paused GSAP timeline registered at `window.__timelines[<id>]` and `data-*` clip
+ *   timing, per the HyperFrames composition contract (https://hyperframes.heygen.com).
+ *   NoaCG previews and renders it with its own deterministic seek driver
+ *   (src/video/hyperframes/), so the file stays a genuinely portable HyperFrames project.
+ *
+ * The engine is chosen at creation and never changes for the life of the project - the
+ * two source formats are not convertible into each other.
+ */
+export type VideoEngine = 'remotion' | 'hyperframes';
+
+/** Engine metadata for every surface that names them (wizard cards, shell labels). */
+export const VIDEO_ENGINES: {
+  id: VideoEngine;
+  label: string;
+  description: string;
+  experimental: boolean;
+}[] = [
+  {
+    id: 'remotion',
+    label: 'Remotion',
+    description: 'Structured React-based video code - good for reusable, parameterized videos.',
+    experimental: false,
+  },
+  {
+    id: 'hyperframes',
+    label: 'HyperFrames',
+    description: 'HTML/CSS/JavaScript motion design with GSAP - free-form web-style animation.',
+    experimental: true,
+  },
+];
+
 /** One turn of the AI iteration chat. Part of the document so context survives reload. */
 export interface VideoChatMessage {
   role: 'user' | 'assistant';
@@ -200,12 +237,20 @@ export interface VideoProject {
   name: string;
   /** The original brief from the wizard (also duplicated as chat[0]). */
   prompt: string;
+  /** The generation engine this project was created with (see VideoEngine). Records
+   *  stored before the field existed load as 'remotion' (videoProject.ts normalize). */
+  engine: VideoEngine;
   /** The AI iteration chat, in order. */
   chat: VideoChatMessage[];
   /** The latest structured motion plan, regenerated on each full generation. */
   motionPlan: MotionPlan | null;
-  /** The single-file Remotion composition source (default-exported React component). */
+  /** The single-file Remotion composition source (default-exported React component).
+   *  The live source for engine 'remotion'; '' on a hyperframes project. */
   tsx: string;
+  /** The standalone HyperFrames composition source (a complete HTML document). The live
+   *  source for engine 'hyperframes'; '' on a remotion project. Read/write the active
+   *  source through videoSource/withVideoSource so the engine picks the right field. */
+  html: string;
   durationInFrames: number;
   fps: number; // FPS_OPTIONS member (25/30/50/60)
   width: number;
@@ -287,6 +332,90 @@ const STARTER_INPUTS: VideoInput[] = [
   { key: 'headline', type: 'text', label: 'Headline', value: STARTER_HEADLINE, default: STARTER_HEADLINE },
 ];
 
+/**
+ * The HyperFrames starter composition: a real, valid standalone composition that follows
+ * the same contract the AI is held to (root data-* attributes, `class="clip"` timing, ONE
+ * paused GSAP timeline registered synchronously at window.__timelines['main'], the
+ * headline declared as a native composition variable). GSAP is provided as a global by
+ * NoaCG's driver - the source carries no script tags of its own. Sized/timed from the
+ * project settings so the starter always fits them exactly.
+ */
+function starterHyperframesHtml(init: {
+  width: number;
+  height: number;
+  durationSec: number;
+  transparent: boolean;
+}): string {
+  const { width, height, transparent } = init;
+  // Two decimals, trailing zeros trimmed - keeps 2.5 as "2.5" and 6 as "6".
+  const dur = String(Math.round(init.durationSec * 100) / 100);
+  const exitStart = String(Math.round(Math.max(0, init.durationSec - 0.6) * 100) / 100);
+  return `<!doctype html>
+<!-- Starter composition - replaced by your first AI generation, or edit it directly.
+     A HyperFrames composition: the root and each clip declare their timing as data-*
+     attributes, and ALL motion lives on one paused GSAP timeline registered at
+     window.__timelines['main'] (gsap is provided as a global - add no script tags).
+     The headline is an editable input: it is declared as a composition variable below
+     and bound with data-var-text, so the Content panel can change it without code. -->
+<html lang="en" data-composition-variables='[
+  {"id":"headline","type":"string","label":"Headline","default":"${STARTER_HEADLINE}"}
+]'>
+<head>
+<meta charset="UTF-8" />
+<title>Starter composition</title>
+<style>
+  body { margin: 0;${transparent ? '' : ' background: #101319;'} }
+  #root {
+    position: relative;
+    width: ${width}px;
+    height: ${height}px;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .clip { position: absolute; inset: 0; display: grid; place-items: center; }
+  #headline {
+    margin: 0;
+    color: #f4f4f5;
+    font-size: ${Math.round(height * 0.067)}px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0"
+     data-width="${width}" data-height="${height}" data-duration="${dur}">
+  <section id="title-card" class="clip" data-start="0" data-duration="${dur}" data-track-index="1">
+    <h1 id="headline" data-var-text="headline">${STARTER_HEADLINE}</h1>
+  </section>
+</div>
+<script>
+  // One paused timeline, built synchronously - the renderer seeks it frame by frame.
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  // Rise and fade in over the first 0.6 s; fade out over the last 0.6 s.
+  tl.from('#headline', { y: 48, autoAlpha: 0, duration: 0.6, ease: 'power3.out' }, 0.1);
+  tl.to('#headline', { autoAlpha: 0, duration: 0.5, ease: 'power2.in' }, ${exitStart});
+  window.__timelines['main'] = tl;
+</script>
+</body>
+</html>
+`;
+}
+
+/** The project's live composition source, whichever field the engine reads. */
+export function videoSource(project: Pick<VideoProject, 'engine' | 'tsx' | 'html'>): string {
+  return project.engine === 'hyperframes' ? project.html : project.tsx;
+}
+
+/** A copy of the project with the live source replaced (the engine picks the field). */
+export function withVideoSource<T extends Pick<VideoProject, 'engine' | 'tsx' | 'html'>>(
+  project: T,
+  source: string,
+): T {
+  return project.engine === 'hyperframes' ? { ...project, html: source } : { ...project, tsx: source };
+}
+
 /** Build a fresh project; every field can be seeded (the wizard passes its form values). */
 export function createDefaultVideoProject(
   init: Partial<
@@ -294,6 +423,7 @@ export function createDefaultVideoProject(
       VideoProject,
       | 'name'
       | 'prompt'
+      | 'engine'
       | 'chat'
       | 'fps'
       | 'width'
@@ -307,23 +437,34 @@ export function createDefaultVideoProject(
 ): VideoProject {
   const now = new Date().toISOString();
   const fps = init.fps ?? DEFAULT_VIDEO_FPS;
+  const engine = init.engine ?? 'remotion';
+  const durationInFrames = init.durationInFrames ?? DEFAULT_VIDEO_DURATION_SEC * fps;
+  const width = init.width ?? 1920;
+  const height = init.height ?? 1080;
+  const transparent = init.transparent ?? false;
   return {
     id: uuid(),
     kind: 'video',
     name: init.name ?? 'New video',
     prompt: init.prompt ?? '',
+    engine,
     chat: init.chat ?? [],
     motionPlan: null,
-    tsx: STARTER_TSX,
-    durationInFrames: init.durationInFrames ?? DEFAULT_VIDEO_DURATION_SEC * fps,
+    tsx: engine === 'remotion' ? STARTER_TSX : '',
+    html:
+      engine === 'hyperframes'
+        ? starterHyperframesHtml({ width, height, durationSec: durationInFrames / fps, transparent })
+        : '',
+    durationInFrames,
     fps,
-    width: init.width ?? 1920,
-    height: init.height ?? 1080,
-    transparent: init.transparent ?? false,
+    width,
+    height,
+    transparent,
     aiModel: init.aiModel ?? '',
     assets: init.assets ?? [],
     inputs: STARTER_INPUTS.map((i) => ({ ...i })),
-    // The starter derives everything from useVideoConfig, so it fits whatever the settings say.
+    // The starter derives everything from the settings it was built with (Remotion via
+    // useVideoConfig, HyperFrames baked in at creation), so it fits them by construction.
     authoredFor: null,
     createdAt: now,
     updatedAt: now,

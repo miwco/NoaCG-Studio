@@ -10,7 +10,12 @@ import SignInPrompt from '../../auth/SignInPrompt';
 import { fileToDataUrl } from '../../../assets/assetUtils';
 import { uniqueVideoAssetPath } from '../../../video/types';
 import { ASPECTS, FPS_OPTIONS, type AssetFile } from '../../../model/types';
-import { createDefaultVideoProject, type VideoProject } from '../../../model/videoTypes';
+import {
+  createDefaultVideoProject,
+  VIDEO_ENGINES,
+  type VideoEngine,
+  type VideoProject,
+} from '../../../model/videoTypes';
 import { listSavedVideoProjects, loadCurrentVideoProject } from '../../../model/videoProject';
 import { useDocKindStore } from '../../../store/docKindStore';
 
@@ -78,6 +83,7 @@ export default function VideoStep({ onCreate, onOpen }: Props) {
   const [settings, setSettings] = useState(loadAiSettings);
   const [showSettings, setShowSettings] = useState(!aiConfigured());
   const [prompt, setPrompt] = useState('');
+  const [engine, setEngine] = useState<VideoEngine>('remotion');
   const [aspectId, setAspectId] = useState(ASPECTS[0].id);
   const [resIndex, setResIndex] = useState(0);
   const [fps, setFps] = useState(30);
@@ -131,6 +137,7 @@ export default function VideoStep({ onCreate, onOpen }: Props) {
       createDefaultVideoProject({
         name: brief.length > 42 ? `${brief.slice(0, 42)}…` : brief,
         prompt: brief,
+        engine,
         chat: [{ role: 'user', text: brief, at: new Date().toISOString() }],
         fps,
         width: resolution.width,
@@ -171,16 +178,34 @@ export default function VideoStep({ onCreate, onOpen }: Props) {
       {needsSignIn ? (
         <SignInPrompt
           feature="Video or animation with AI"
-          reason="Sign in to use AI - describe any animation and get a real, editable Remotion video."
+          reason="Sign in to use AI - describe any animation and get a real, editable video composition."
         />
       ) : (
         <>
           <div className="panel-section">
             <h3>Describe your video</h3>
             <p className="hint">
-              What is it, how should it move, what should it feel like? You get real
-              React/Remotion code - previewed live, refined by chat, rendered to video.
+              What is it, how should it move, what should it feel like? You get real,
+              editable code - previewed live, refined by chat, rendered to video.
             </p>
+            <div className="wz-engine-row" role="radiogroup" aria-label="Generation engine">
+              {VIDEO_ENGINES.map((e) => (
+                <button
+                  key={e.id}
+                  role="radio"
+                  aria-checked={engine === e.id}
+                  className={`wz-engine ${engine === e.id ? 'active' : ''}`}
+                  onClick={() => setEngine(e.id)}
+                  data-testid={`video-engine-${e.id}`}
+                >
+                  <span className="wz-engine-name">
+                    {e.label}
+                    {e.experimental && <span className="wz-engine-badge">Experimental</span>}
+                  </span>
+                  <span className="wz-engine-desc">{e.description}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <p className="hint" style={{ margin: '0 0 6px' }}>

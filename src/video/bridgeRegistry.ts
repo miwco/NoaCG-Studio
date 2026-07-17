@@ -1,15 +1,30 @@
-// The mounted player bridge, registered by VideoPlayerFrame so sibling surfaces (the AI
+// The mounted preview bridge, registered by VideoPlayerFrame so sibling surfaces (the AI
 // chat's live validator) can reach it at call time. One video shell = at most one bridge;
-// no reactivity needed - consumers look it up when they run.
+// no reactivity needed - consumers look it up when they run. Which class is mounted
+// follows the project's engine: PlayerBridge (Remotion player host) or HyperframesBridge
+// (the composed srcdoc driver) - each validator narrows to its own kind.
 
-import type { PlayerBridge } from './playerBridge';
+import { PlayerBridge } from './playerBridge';
+import { HyperframesBridge } from './hyperframes/bridge';
 
-let active: PlayerBridge | null = null;
+export type VideoBridge = PlayerBridge | HyperframesBridge;
 
-export function setActiveBridge(bridge: PlayerBridge | null): void {
+let active: VideoBridge | null = null;
+
+export function setActiveBridge(bridge: VideoBridge | null): void {
   active = bridge;
 }
 
-export function getActiveBridge(): PlayerBridge | null {
+export function getActiveBridge(): VideoBridge | null {
   return active;
+}
+
+/** The mounted bridge when it is the Remotion player host (else null). */
+export function getActivePlayerBridge(): PlayerBridge | null {
+  return active instanceof PlayerBridge ? active : null;
+}
+
+/** The mounted bridge when it is the HyperFrames driver (else null). */
+export function getActiveHyperframesBridge(): HyperframesBridge | null {
+  return active instanceof HyperframesBridge ? active : null;
 }

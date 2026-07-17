@@ -37,6 +37,12 @@ shots-*/
 # dev-server port, so this file must never be shared through git.
 .claude/launch.json
 
+# Locally installed third-party agent skills (npx skills add ...) - vendor content,
+# reinstallable on demand, never committed.
+.claude/skills/
+.agents/
+skills-lock.json
+
 # Remotion deploy bundle (built by render-worker/bundle.mjs in the Vercel build step)
 render-worker/bundle/
 

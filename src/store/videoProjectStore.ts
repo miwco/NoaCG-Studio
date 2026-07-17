@@ -1,13 +1,14 @@
 // Central state for the video editor (zustand), mirroring templateStore's contracts:
 // applyProject is the undoable mutation choke point (AI results, settings patches, asset
-// changes all snapshot for undo), setTsx is manual typing (no history spam - Monaco's own
-// undo covers keystrokes), and an 800 ms-debounced subscription autosaves the project.
+// changes all snapshot for undo), setSource is manual typing into the engine's source
+// field (no history spam - Monaco's own undo covers keystrokes), and an 800 ms-debounced
+// subscription autosaves the project.
 // Completely parallel to templateStore: the SPX store never sees video state or vice versa.
 
 import { create } from 'zustand';
 import type { AssetFile } from '../model/types';
 import type { VideoChatMessage, VideoInput, VideoProject } from '../model/videoTypes';
-import { createDefaultVideoProject } from '../model/videoTypes';
+import { createDefaultVideoProject, withVideoSource } from '../model/videoTypes';
 import { loadCurrentVideoProject, saveCurrentVideoProject } from '../model/videoProject';
 
 export type VideoPanelTab = 'chat' | 'content' | 'settings' | 'assets' | 'export';
@@ -55,8 +56,9 @@ interface VideoProjectState {
   setInputValue: (input: VideoInput, value: string | number) => void;
   /** Reset every editable input to its declared default - ONE undoable checkpoint. */
   resetInputs: () => void;
-  /** Manual code typing: no history snapshot (Monaco native undo), clears redo. */
-  setTsx: (tsx: string) => void;
+  /** Manual code typing into the project's live source (tsx or html, whichever the
+   *  engine reads): no history snapshot (Monaco native undo), clears redo. */
+  setSource: (source: string) => void;
   /** Append a chat message without a snapshot (optimistic user turns, error notes). */
   appendChat: (msg: VideoChatMessage) => void;
   /** Drop the last chat message (roll back an optimistic user turn on failure). */
@@ -152,9 +154,9 @@ export const useVideoProjectStore = create<VideoProjectState>((set) => ({
     }));
   },
 
-  setTsx: (tsx) => {
+  setSource: (source) => {
     resetCoalesce();
-    set((s) => ({ project: { ...s.project, tsx }, future: [] }));
+    set((s) => ({ project: withVideoSource(s.project, source), future: [] }));
   },
 
   appendChat: (msg) =>

@@ -137,20 +137,32 @@ src/
   ai/video/    the VIDEO motion-design harness ("Video or animation with AI"): staged
                generation - keyword-first skill detection (skills.ts; one cheap Haiku
                call only when nothing matches) -> Motion Director (forced emit_motion_plan
-               tool, a timed plan) -> Remotion coder (forced emit_remotion_module tool
-               against prompts.ts: the composition contract + motion principles + a
-               canonical example module that itself passes the pipeline) -> bounded
-               repair (2 rounds, exact validator errors with frame numbers fed back).
-               stubVideoProvider serves offline; refinements send recent chat + the
-               current module and ask for minimal change
+               tool, a timed plan) -> the ENGINE's coder -> bounded repair (2 rounds,
+               exact validator errors with frame numbers fed back). Two engines share the
+               brief/plan/skills/assets stages: 'remotion' (default; forced
+               emit_remotion_module against prompts.ts) and 'hyperframes' (experimental;
+               forced emit_hyperframes_composition against hyperframesPrompts.ts - a
+               standalone HTML composition whose editable inputs are its own
+               data-composition-variables declarations). Each has a canonical example
+               that itself passes the pipeline. stubVideoProvider serves offline for
+               both (stubHyperframesSamples.ts); refinements send recent chat + the
+               current source and ask for minimal change
   video/       the composition pipeline for the video project kind: compile.ts (sucrase
                TSX->CJS + static contract checks: imports limited to react/remotion,
                deterministic frame-derived animation, no network/DOM), validate.ts
                (compile -> static -> live player probe of frames 0/mid/last),
                playerBridge.ts (the postMessage client for the sandboxed player host;
                SERIALIZED load/probe, disposed bridges resolve immediately),
-               bridgeRegistry.ts, types.ts (asset logical names - the `assets` prop
-               contract)
+               bridgeRegistry.ts (holds whichever engine's bridge is mounted), types.ts
+               (asset logical names - the `assets` prop contract), and hyperframes/ -
+               the 'hyperframes' engine runtime: parse.ts (composition + variables ->
+               VideoInputs; the code declares what is editable), driver.ts (the injected
+               in-page seek driver: clip windows + the ONE paused GSAP timeline at
+               window.__timelines[id]; preview postMessage protocol + the render face
+               __noacgHfRender), compose.ts (source -> self-contained document: bundled
+               GSAP inlined, asset:<name> -> data URLs, mode preview|render), bridge.ts
+               (the srcdoc preview client), validate.ts (static contract checks with
+               teaching messages + live probe)
   validation/  validateTemplate.ts - runs before export and on AI output - and
                runtimeBench.ts: the live-iframe bench (lifecycle, field binding, overlap/
                overflow, doubled-text stress, house editability) the app injects into every
@@ -245,9 +257,10 @@ commented template. Four entry cards: templates, **"Create with AI"** (the merge
 describe/import step - a brief plus optional images and/or an existing .html/.zip; every AI
 result runs the harness with the runtime bench injected, and the byte-faithful no-AI "Open as
 code" import stays one click away, never gated on sign-in), **"Video or animation with AI"**
-(creates the parallel VIDEO project kind - React/Remotion, fixed duration - see src/ai/video,
-src/video, and components/video in the map above; creating/opening a video flips the persisted
-doc-kind switch and every SPX create path flips it back), and blank. After creation, code is the source of truth and two **live panels** keep
+(creates the parallel VIDEO project kind, fixed duration, with a GENERATION-ENGINE choice at
+create: Remotion (React, the default) or HyperFrames (HTML/CSS/JS + GSAP, experimental) - see
+src/ai/video, src/video, and components/video in the map above; creating/opening a video flips
+the persisted doc-kind switch and every SPX create path flips it back), and blank. After creation, code is the source of truth and two **live panels** keep
 working via deterministic patches: the **Style panel** writes the `:root` style contract
 (src/templates/CLAUDE.md) and **the step timeline under the preview** touches ONLY the marked
 ANIMATION region (src/blocks/CLAUDE.md) - user code outside the markers is never modified. The

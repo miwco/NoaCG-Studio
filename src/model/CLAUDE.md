@@ -45,11 +45,16 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   `documents.id` column is a uuid PK, and a non-UUID id would be rejected by Postgres and poison
   sync.
 - **videoTypes.ts** - VideoProject, the canonical unit of the AI VIDEO editor ("Video or
-  animation with AI"): a single-file React/Remotion composition (`tsx`) + duration/fps/size/
-  transparency + assets (the exact AssetFile shape, sync-ready) + `inputs` (editable inputs,
-  below) + AI chat history and motion plan. Parallel to SpxTemplate - the two worlds never
-  mix; `kind: 'video'` is the serialized discriminant. Also DocKind and
-  createDefaultVideoProject (starter composition).
+  animation with AI"): ONE composition source + duration/fps/size/transparency + assets (the
+  exact AssetFile shape, sync-ready) + `inputs` (editable inputs, below) + AI chat history and
+  motion plan. Parallel to SpxTemplate - the two worlds never mix; `kind: 'video'` is the
+  serialized discriminant. **`engine: 'remotion' | 'hyperframes'`** (VIDEO_ENGINES carries the
+  wizard-card metadata) picks which source field is live - `tsx` (a single-file React/Remotion
+  module, the default) or `html` (a standalone HyperFrames composition; runtime in
+  src/video/hyperframes/) - chosen at creation, never converted; read/write the active source
+  through `videoSource(p)`/`withVideoSource(p, code)`. Records stored before the field load as
+  'remotion' (videoProject.ts normalize). Also DocKind and createDefaultVideoProject
+  (engine-matched starter composition).
   **VideoInput** = the video project's Template Definition, the counterpart of an SPX
   DataField: `{ key, type: text|number|color|select|image, label, value, default, options?/
   min?/max?/step? }`. The AI declares a handful (via the emit tool) so a non-technical user

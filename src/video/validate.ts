@@ -7,7 +7,7 @@
 import type { ValidationIssue } from '../validation/validateTemplate';
 import { compileTsx, staticValidate, WARNING_RULES } from './compile';
 import type { PlayerBridge } from './playerBridge';
-import { getActiveBridge } from './bridgeRegistry';
+import { getActivePlayerBridge } from './bridgeRegistry';
 import type { AssetFile } from '../model/types';
 import { describeAssets, type VideoCompSettings, type VideoValidationResult } from './types';
 
@@ -40,7 +40,7 @@ export async function validateVideoModule(
   for (let attempt = 0; probeBridge && attempt < 2; attempt++) {
     const loaded = await probeBridge.load(compiled.js, settings, {}, assets, { autoplay: false });
     if (!loaded.ok && loaded.disposed) {
-      const fresh = getActiveBridge();
+      const fresh = getActivePlayerBridge();
       probeBridge = fresh && fresh !== probeBridge ? fresh : null;
       continue;
     }

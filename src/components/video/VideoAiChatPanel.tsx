@@ -14,8 +14,15 @@ import SignInPrompt from '../auth/SignInPrompt';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { describeAssets } from '../../video/types';
 import { validateVideoModule } from '../../video/validate';
-import { getActiveBridge } from '../../video/bridgeRegistry';
-import { mergeVideoInputs, type AuthoredSettings, type VideoProject } from '../../model/videoTypes';
+import { validateHyperframesComposition } from '../../video/hyperframes/validate';
+import { getActivePlayerBridge, getActiveHyperframesBridge } from '../../video/bridgeRegistry';
+import {
+  mergeVideoInputs,
+  videoSource,
+  withVideoSource,
+  type AuthoredSettings,
+  type VideoProject,
+} from '../../model/videoTypes';
 
 function settingsOf(project: VideoProject) {
   return {
@@ -35,6 +42,7 @@ function contextFor(project: VideoProject) {
     if (asset && typeof asset.data === 'string') assetData.set(info.name, asset.data);
   }
   return {
+    engine: project.engine,
     settings: settingsOf(project),
     assets: infos,
     assetData,
@@ -42,10 +50,13 @@ function contextFor(project: VideoProject) {
   };
 }
 
-/** The live validate pipeline for candidate modules, bound to the mounted player. */
-const validate: VideoValidator = (tsx) => {
+/** The live validate pipeline for candidate sources, bound to the mounted preview -
+ *  engine-matched, so each provider result runs its own engine's checks and probe. */
+const validate: VideoValidator = (source) => {
   const p = useVideoProjectStore.getState().project;
-  return validateVideoModule(tsx, settingsOf(p), p.assets, getActiveBridge());
+  return p.engine === 'hyperframes'
+    ? validateHyperframesComposition(source, settingsOf(p), p.assets, getActiveHyperframesBridge())
+    : validateVideoModule(source, settingsOf(p), p.assets, getActivePlayerBridge());
 };
 
 export default function VideoAiChatPanel() {
@@ -79,8 +90,7 @@ export default function VideoAiChatPanel() {
   const applyResult = (result: VideoGenerateResult, authoredFor: AuthoredSettings) => {
     const p = useVideoProjectStore.getState().project;
     applyProject({
-      ...p,
-      tsx: result.tsx,
+      ...withVideoSource(p, result.source),
       motionPlan: result.motionPlan ?? p.motionPlan,
       // Adopt the newly declared inputs, keeping any values the user already edited (a
       // refinement re-declares them; null means the provider left them unchanged).
@@ -141,7 +151,7 @@ export default function VideoAiChatPanel() {
     try {
       const result = await getVideoAiProvider().refineVideo(
         text,
-        { tsx: p.tsx, chat: p.chat, inputs: p.inputs },
+        { source: videoSource(p), chat: p.chat, inputs: p.inputs },
         contextFor(p),
         validate,
         onProgress,
@@ -209,7 +219,7 @@ export default function VideoAiChatPanel() {
     return (
       <SignInPrompt
         feature="AI video editing"
-        reason="Sign in to use AI - describe changes and get real, editable Remotion code."
+        reason="Sign in to use AI - describe changes and get real, editable composition code."
       />
     );
   }

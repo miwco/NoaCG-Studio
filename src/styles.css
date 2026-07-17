@@ -492,6 +492,35 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   margin: 0 0 8px;
 }
 
+/* ---------- Video engine picker (VideoStep) ---------- */
+.wz-engine-row { display: flex; gap: 8px; margin: 10px 0 2px; }
+.wz-engine {
+  flex: 1 1 0;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  cursor: pointer;
+}
+.wz-engine:hover { border-color: var(--accent); }
+.wz-engine.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.wz-engine-name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.wz-engine-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.wz-engine-desc { font-size: 12px; color: var(--text-dim); margin-top: 3px; line-height: 1.35; }
+
 /* ---------- Describe-it extras (example chips + brainstorm chat) ---------- */
 .wz-example {
   font-size: 12px;

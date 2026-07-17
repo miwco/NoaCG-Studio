@@ -2,7 +2,9 @@
 // configured (same posture as ai/stubProvider.ts). Keyword-matches the brief onto a few
 // hand-written sample compositions that follow the exact contract the real harness holds
 // the model to (imports only react/remotion, everything frame-derived, assets via props),
-// so the whole generate -> validate -> preview loop works with no key at all.
+// so the whole generate -> validate -> preview loop works with no key at all. The
+// 'hyperframes' engine gets its own samples (stubHyperframesSamples.ts) under the same
+// doctrine.
 //
 // These samples double as the OFFLINE acceptance tests for the built-in example prompts:
 // each is deliberately broadcast-grade (strong composition, real typographic hierarchy,
@@ -11,6 +13,8 @@
 // exactly as the contract requires of the real model.
 
 import type { VideoInput } from '../../model/videoTypes';
+import { hyperframesInputs } from '../../video/hyperframes/parse';
+import { pickHyperframesSample } from './stubHyperframesSamples';
 import type {
   VideoAIProvider,
   VideoGenerateContext,
@@ -483,13 +487,13 @@ function pickSample(prompt: string, transparent: boolean): { tsx: string; summar
 }
 
 async function finish(
-  tsx: string,
+  source: string,
   summary: string,
   inputs: VideoInput[] | null,
   validate?: VideoValidator,
 ): Promise<VideoGenerateResult> {
-  const validation = validate ? await validate(tsx) : null;
-  return { summary, tsx, motionPlan: null, inputs, skills: [], validation };
+  const validation = validate ? await validate(source) : null;
+  return { summary, source, motionPlan: null, inputs, skills: [], validation };
 }
 
 class StubVideoProvider implements VideoAIProvider {
@@ -498,29 +502,49 @@ class StubVideoProvider implements VideoAIProvider {
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult> {
+    if (ctx.engine === 'hyperframes') {
+      // The HyperFrames samples bake the canvas and duration in (as the real coder is
+      // instructed to); their inputs are the variables the document itself declares.
+      const { html, summary } = pickHyperframesSample(prompt, ctx.settings);
+      return finish(
+        html,
+        `${summary} (offline sample - add an AI key for real generation)`,
+        hyperframesInputs(html),
+        validate,
+      );
+    }
     const { tsx, summary, inputs } = pickSample(prompt, ctx.settings.transparent);
     return finish(tsx, `${summary} (offline sample - add an AI key for real generation)`, inputs, validate);
   }
 
   refineVideo(
     request: string,
-    current: { tsx: string },
-    _ctx: VideoGenerateContext,
+    current: { source: string },
+    ctx: VideoGenerateContext,
     validate?: VideoValidator,
   ): Promise<VideoGenerateResult> {
     // A couple of honest deterministic tweaks; anything else keeps the module unchanged.
     // inputs: null - a refinement never re-declares them, so the current set is kept as-is.
     const r = request.toLowerCase();
-    let tsx = current.tsx;
+    let source = current.source;
     let summary = 'No offline rule matches that request - add an AI key in settings for real edits.';
-    if (/faster|quicker|snappier/.test(r)) {
-      tsx = tsx.replace(/stiffness: (\d+)/g, (_, n) => `stiffness: ${Math.round(Number(n) * 1.5)}`);
+    if (ctx.engine === 'hyperframes') {
+      // The samples animate with GSAP eases; "faster/slower" scales the tween durations.
+      if (/faster|quicker|snappier/.test(r)) {
+        source = source.replace(/duration: (\d+(?:\.\d+)?)/g, (_, n) => `duration: ${Math.max(0.15, Math.round(Number(n) * 0.7 * 100) / 100)}`);
+        summary = 'Made the motion snappier (shorter tweens). Offline sample edit.';
+      } else if (/slower|calmer|gentler/.test(r)) {
+        source = source.replace(/duration: (\d+(?:\.\d+)?)/g, (_, n) => `duration: ${Math.round(Number(n) * 1.4 * 100) / 100}`);
+        summary = 'Calmed the motion down (longer tweens). Offline sample edit.';
+      }
+    } else if (/faster|quicker|snappier/.test(r)) {
+      source = source.replace(/stiffness: (\d+)/g, (_, n) => `stiffness: ${Math.round(Number(n) * 1.5)}`);
       summary = 'Made the motion snappier (stiffer springs). Offline sample edit.';
     } else if (/slower|calmer|gentler/.test(r)) {
-      tsx = tsx.replace(/stiffness: (\d+)/g, (_, n) => `stiffness: ${Math.max(40, Math.round(Number(n) * 0.6))}`);
+      source = source.replace(/stiffness: (\d+)/g, (_, n) => `stiffness: ${Math.max(40, Math.round(Number(n) * 0.6))}`);
       summary = 'Calmed the motion down (softer springs). Offline sample edit.';
     }
-    return finish(tsx, summary, null, validate);
+    return finish(source, summary, null, validate);
   }
 }
 

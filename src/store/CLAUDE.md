@@ -20,8 +20,9 @@ Holds ONE VideoProject + the video editor's UI state, mirroring templateStore's 
   calls `resetCoalesce()` so the next field edit starts fresh. resetInputs restores every
   value to its default in one checkpoint. The Content panel edits live (VideoContentPanel);
   the preview updates instantly through the player host's set-props channel (no recompile).
-- **setTsx** - manual typing: NO history snapshot (Monaco native undo while focused),
-  clears `future`.
+- **setSource** - manual typing into the project's live source field (`tsx` or `html`,
+  whichever the engine reads - model/videoTypes.ts withVideoSource): NO history snapshot
+  (Monaco native undo while focused), clears `future`.
 - **appendChat / dropLastChat** - optimistic chat turns without history spam; dropLastChat
   rolls back a failed send.
 - **loadProject** - whole-document replace (wizard create / reopen): clears history.

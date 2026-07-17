@@ -33,9 +33,15 @@ export async function renderManifest(manifest, outputPath, { onProgress = () => 
   onProgress({ stage: 'bundling', progress: 0 });
   const serveUrl = await bundleProject();
 
-  // kind:'remotion' = an authored composition module (video editor); everything else is
+  // kind:'remotion' = an authored composition module and kind:'hyperframes' = a
+  // HyperFrames composition document (both from the video editor); everything else is
   // the classic html render document. Same engine, same formats - just the composition.
-  const compositionId = manifest.kind === 'remotion' ? 'noacg-user' : 'noacg';
+  const compositionId =
+    manifest.kind === 'remotion'
+      ? 'noacg-user'
+      : manifest.kind === 'hyperframes'
+        ? 'noacg-hyperframes'
+        : 'noacg';
   const composition = await selectComposition({ serveUrl, id: compositionId, inputProps: manifest });
   const totalFrames = composition.durationInFrames;
   mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
@@ -90,9 +96,9 @@ export async function renderManifest(manifest, outputPath, { onProgress = () => 
     });
   } else if (format === 'png-still') {
     const defaultStillMs =
-      manifest.kind === 'remotion'
-        ? (totalFrames / 2 / manifest.fps) * 1000 // the middle frame
-        : manifest.timing.totalDurationMs / 2;
+      manifest.kind === 'html'
+        ? manifest.timing.totalDurationMs / 2
+        : (totalFrames / 2 / manifest.fps) * 1000; // the middle frame
     const stillMs = manifest.output.stillTimeMs ?? defaultStillMs;
     const frame = Math.min(totalFrames - 1, Math.max(0, Math.round((stillMs / 1000) * manifest.fps)));
     onProgress({ stage: 'rendering', progress: 0.2, renderedFrames: 0, totalFrames: 1 });

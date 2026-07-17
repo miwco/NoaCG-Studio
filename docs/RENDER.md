@@ -4,7 +4,7 @@ How NoaCG Studio turns a graphic into finished media (MP4 / WebM / PNG still /
 PNG sequence ZIP / ProRes 4444 MOV). The user flow: open a graphic → Export tab →
 **Video & image** → pick format + total duration → Render → real progress → Download.
 
-## Two document kinds, one service
+## Three document kinds, one service
 
 The manifest (version 2) is a discriminated union on `kind`:
 
@@ -12,15 +12,23 @@ The manifest (version 2) is a discriminated union on `kind`:
   document driven by the virtual clock (everything below).
 - **`kind: 'remotion'`** — an authored composition from the AI video editor: ONE module
   compiled in-browser (sucrase → CJS, imports limited to react/remotion), its input props
-  (assets as data URLs), and a fixed `durationInFrames`. The worker's second composition
+  (assets as data URLs), and a fixed `durationInFrames`. The worker's composition
   `noacg-user` evaluates it under a require shim that supplies the worker's own React and
   Remotion — the exact same shim contract as the live preview's player host, so the
   preview and the render run identical code. No timing model, no schedule, no
   measurement. Composition errors fail the job with the real message (cancelRender). The
   UI side is `src/render/buildVideoManifest.ts` + `VideoRenderPanel`.
+- **`kind: 'hyperframes'`** — the video editor's HyperFrames engine: the COMPOSED
+  self-contained composition document (`src/video/hyperframes/compose.ts` in 'render'
+  mode: assets and GSAP inlined, the NoaCG driver injected) and a fixed
+  `durationInFrames`. The worker's composition `noacg-hyperframes` hosts it in a srcdoc
+  iframe and drives the driver's `__noacgHfRender` one seek per output frame — the
+  NoaCGGraphic pattern minus the schedule/measurement machinery, since a HyperFrames
+  composition renders any time t deterministically (clip windows + one paused GSAP
+  timeline). Handshakes on `HYPERFRAMES_RUNTIME_VERSION`. Same UI side as 'remotion'.
 
 Tiers, quotas, format rules, executors, and the job store are kind-agnostic and identical
-for both.
+for all three.
 
 ## Architecture (NoaCG stays the source of truth)
 
@@ -228,6 +236,11 @@ deployed functions run as ESM (`type: module`), where Node requires them.
   corner pixel must be the edited accent and the centre pixel the asset an IMAGE input names.
   A dropped field renders the code's own fallback instead — which a container sniff cannot
   see. Not in CI (same reason as above).
+- `node scripts/render-smoke-hyperframes.mjs` — the same pixel-checked round trip for the
+  'hyperframes' kind: static checks → compose ('render' mode) → api → worker → png-still,
+  then reads back a variable value (`var(--accent)`), proof the timeline was actually
+  SEEKED (a slab parked over the checked corner is tweened away by mid-frame), and an
+  `asset:` reference resolved to the uploaded asset. Not in CI.
 - `node scripts/make-render-manifest.mjs <out> <variantId> [sec] [format] [fps] [scale]
   [createOptionsJson]` + `node render-worker/cli.mjs <manifest> <out>` — render any
   catalog variant by hand.

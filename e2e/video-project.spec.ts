@@ -219,7 +219,7 @@ test('manual code edits update the preview; broken code keeps the last good vers
   // driveable headless - the store IS what the editor writes to).
   await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
-    useVideoProjectStore.getState().setTsx(`
+    useVideoProjectStore.getState().setSource(`
 import { AbsoluteFill } from 'remotion';
 export default function Composition() {
   return (
@@ -235,7 +235,7 @@ export default function Composition() {
   // Break it: the error banner appears, the last good module keeps rendering.
   await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
-    useVideoProjectStore.getState().setTsx('import { AbsoluteFill } from "remotion";\nexport default function C() { return <AbsoluteFill><');
+    useVideoProjectStore.getState().setSource('import { AbsoluteFill } from "remotion";\nexport default function C() { return <AbsoluteFill><');
   });
   await expect(page.getByTestId('video-code-error')).toBeVisible({ timeout: 5_000 });
   await expect(player(page).getByText('MANUAL EDIT OK')).toBeVisible();

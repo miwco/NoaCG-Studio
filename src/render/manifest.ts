@@ -10,12 +10,17 @@
 // and the virtual-clock epoch (so even wall-clock graphics render reproducibly).
 
 /** Bump when the manifest shape changes incompatibly. The worker rejects unknown versions.
- *  v2: a `kind` discriminator - 'html' (the SPX document path, unchanged behavior) or
- *  'remotion' (an authored composition module from the video editor). */
+ *  v2: a `kind` discriminator - 'html' (the SPX document path, unchanged behavior),
+ *  'remotion' (an authored composition module from the video editor), or 'hyperframes'
+ *  (a HyperFrames composition document from the video editor - additive, so v2 stands). */
 export const RENDER_MANIFEST_VERSION = 2;
 
 /** Bump when the in-document __noacgRender API changes. The host handshakes on it. */
 export const RENDER_RUNTIME_VERSION = 1;
+
+/** Bump when the in-document __noacgHfRender API (the HyperFrames driver's render face,
+ *  src/video/hyperframes/driver.ts) changes. The worker's host handshakes on it. */
+export const HYPERFRAMES_RUNTIME_VERSION = 1;
 
 export type RenderFormatId = 'mp4' | 'webm' | 'png-still' | 'png-sequence' | 'prores4444';
 
@@ -176,17 +181,30 @@ export interface RemotionRenderManifest extends RenderManifestBase {
   transparent?: boolean;
 }
 
-export type RenderManifest = HtmlRenderManifest | RemotionRenderManifest;
+/** A HyperFrames composition from the video editor: the fully self-contained composed
+ *  document (assets and GSAP inlined, the NoaCG driver injected in 'render' mode - see
+ *  src/video/hyperframes/compose.ts). Like 'remotion', no timing model, no schedule, no
+ *  measurement - the duration is fixed by the project; the worker drives one
+ *  __noacgHfRender.seek per output frame. */
+export interface HyperframesRenderManifest extends RenderManifestBase {
+  kind: 'hyperframes';
+  documentHtml: string;
+  durationInFrames: number;
+  /** Advisory: the composition paints no own background (UI hints only). */
+  transparent?: boolean;
+}
 
-/** The subset either kind needs for duration math (limits, timeouts, calculateMetadata). */
+export type RenderManifest = HtmlRenderManifest | RemotionRenderManifest | HyperframesRenderManifest;
+
+/** The subset any kind needs for duration math (limits, timeouts, calculateMetadata). */
 export type ManifestTimingSummary =
   | { kind: 'html'; fps: number; timing: RenderTiming }
-  | { kind: 'remotion'; fps: number; durationInFrames: number };
+  | { kind: 'remotion' | 'hyperframes'; fps: number; durationInFrames: number };
 
 /** Frames in the finished output — fixed by the manifest alone, so Remotion's
  *  calculateMetadata never waits on measurement. */
 export function durationInFrames(manifest: ManifestTimingSummary): number {
-  if (manifest.kind === 'remotion') return Math.max(1, Math.round(manifest.durationInFrames));
+  if (manifest.kind !== 'html') return Math.max(1, Math.round(manifest.durationInFrames));
   return Math.max(1, Math.round((manifest.timing.totalDurationMs / 1000) * manifest.fps));
 }
 

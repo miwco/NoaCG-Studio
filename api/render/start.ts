@@ -50,6 +50,17 @@ export default {
       ) {
         return apiError('invalid', 'inputProps must be a JSON object', 400);
       }
+    } else if (manifest.kind === 'hyperframes') {
+      if (typeof manifest.documentHtml !== 'string' || manifest.documentHtml.length === 0) {
+        return apiError('invalid', 'manifest has no document', 400);
+      }
+      if (
+        !Number.isFinite(manifest.durationInFrames) ||
+        manifest.durationInFrames < 1 ||
+        manifest.durationInFrames > 3600 * manifest.fps
+      ) {
+        return apiError('invalid', 'bad durationInFrames', 400);
+      }
     } else if (manifest.kind === 'html') {
       if (typeof manifest.documentHtml !== 'string' || manifest.documentHtml.length === 0) {
         return apiError('invalid', 'manifest has no document', 400);

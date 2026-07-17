@@ -9,7 +9,13 @@
 // in v1 — introducing billing later means changing resolveTier() to read an entitlements
 // table, nothing else moves.
 
-import { RENDER_FORMATS, type HtmlRenderManifest, type RemotionRenderManifest, type RenderFormatId } from './manifest.js';
+import {
+  RENDER_FORMATS,
+  type HtmlRenderManifest,
+  type HyperframesRenderManifest,
+  type RemotionRenderManifest,
+  type RenderFormatId,
+} from './manifest.js';
 import { durationInFrames } from './manifest.js';
 
 export type RenderTier = 'anonymous' | 'free' | 'paid';
@@ -122,11 +128,12 @@ export interface LimitIssue {
  *  the multi-MB document). Both manifest kinds satisfy their branch structurally. */
 export type ManifestSummary =
   | Pick<HtmlRenderManifest, 'kind' | 'width' | 'height' | 'fps' | 'scale' | 'timing' | 'output'>
-  | Pick<RemotionRenderManifest, 'kind' | 'width' | 'height' | 'fps' | 'scale' | 'durationInFrames' | 'output'>;
+  | Pick<RemotionRenderManifest, 'kind' | 'width' | 'height' | 'fps' | 'scale' | 'durationInFrames' | 'output'>
+  | Pick<HyperframesRenderManifest, 'kind' | 'width' | 'height' | 'fps' | 'scale' | 'durationInFrames' | 'output'>;
 
 /** A summary's duration in seconds, whichever way the kind expresses it. */
 function summaryDurationSec(m: ManifestSummary): number {
-  return m.kind === 'remotion' ? m.durationInFrames / m.fps : m.timing.totalDurationMs / 1000;
+  return m.kind === 'html' ? m.timing.totalDurationMs / 1000 : m.durationInFrames / m.fps;
 }
 
 /** Validate a render request against a tier. Empty result = allowed. */

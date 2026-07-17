@@ -1,31 +1,35 @@
-// The video shell's Monaco editor: one TSX file (the Remotion composition module).
+// The video shell's Monaco editor: the project's ONE composition source file - the
+// Remotion TSX module, or the HyperFrames composition HTML, whichever the engine reads.
 // Lazy-loaded like the SPX CodeEditor - Monaco is the heaviest chunk and the code view
-// is optional. Typing goes through setTsx (no store history - Monaco's own undo covers
-// keystrokes); syntax-only diagnostics (see monacoSetup.ts).
+// is optional. Typing goes through setSource (no store history - Monaco's own undo
+// covers keystrokes); TSX gets syntax-only diagnostics (see monacoSetup.ts).
 
 import '../../monacoSetup'; // bundled Monaco + workers - no CDN, fully offline
 import Editor from '@monaco-editor/react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
+import { videoSource } from '../../model/videoTypes';
 
 export default function VideoCodeEditor() {
-  const tsx = useVideoProjectStore((s) => s.project.tsx);
-  const setTsx = useVideoProjectStore((s) => s.setTsx);
+  const engine = useVideoProjectStore((s) => s.project.engine);
+  const source = useVideoProjectStore((s) => videoSource(s.project));
+  const setSource = useVideoProjectStore((s) => s.setSource);
+  const hyperframes = engine === 'hyperframes';
 
   return (
     <>
       <div className="pane-header">
         <div className="tabs">
-          <button className="tab active">Composition.tsx</button>
+          <button className="tab active">{hyperframes ? 'composition.html' : 'Composition.tsx'}</button>
         </div>
       </div>
       <div className="editor-host">
         <Editor
           height="100%"
           theme="vs-dark"
-          language="typescript"
-          path="file:///video/Composition.tsx"
-          value={tsx}
-          onChange={(next) => setTsx(next ?? '')}
+          language={hyperframes ? 'html' : 'typescript'}
+          path={hyperframes ? 'file:///video/composition.html' : 'file:///video/Composition.tsx'}
+          value={source}
+          onChange={(next) => setSource(next ?? '')}
           options={{
             fontSize: 13,
             minimap: { enabled: false },

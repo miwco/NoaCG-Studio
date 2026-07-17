@@ -16,6 +16,7 @@ import { useMemo } from 'react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { videoInputDescriptor, type VideoInput } from '../../model/videoTypes';
 import { contentInputs } from '../../model/videoInputInfer';
+import { hyperframesContentInputs } from '../../video/hyperframes/parse';
 import { FieldRow, type FieldImage } from '../fields/FieldControl';
 import { describeAssets } from '../../video/types';
 
@@ -36,15 +37,24 @@ function InputRow({ input, images, fromCode }: { input: VideoInput; images: Fiel
 
 export default function VideoContentPanel() {
   const declared = useVideoProjectStore((s) => s.project.inputs);
+  const engine = useVideoProjectStore((s) => s.project.engine);
   const tsx = useVideoProjectStore((s) => s.project.tsx);
+  const html = useVideoProjectStore((s) => s.project.html);
   const assets = useVideoProjectStore((s) => s.project.assets);
   const resetInputs = useVideoProjectStore((s) => s.resetInputs);
 
   // What the panel edits is what the CODE reads: the inputs the AI declared, plus any a human
-  // wrote into the composition by hand (`fields.subtitle ?? 'Live tonight'`). An inferred input
-  // holds no value until it's edited - the code's own fallback is the value until then - so it
-  // is never "changed" and never needs a reset.
-  const inputs = useMemo(() => contentInputs(declared, tsx), [declared, tsx]);
+  // wrote into the composition by hand - `fields.subtitle ?? 'Live tonight'` in a Remotion
+  // module, or a data-composition-variables declaration in a HyperFrames document. An inferred
+  // input holds no value until it's edited - the code's own fallback is the value until then -
+  // so it is never "changed" and never needs a reset.
+  const inputs = useMemo(
+    () =>
+      engine === 'hyperframes'
+        ? hyperframesContentInputs(declared, html)
+        : contentInputs(declared, tsx),
+    [engine, declared, tsx, html],
+  );
   const declaredKeys = useMemo(() => new Set(declared.map((i) => i.key)), [declared]);
   const anyChanged = declared.some((i) => i.value !== i.default);
 
@@ -72,8 +82,17 @@ export default function VideoContentPanel() {
         {inputs.length === 0 ? (
           <p className="hint" data-testid="video-content-empty" style={{ marginTop: 8 }}>
             No editable inputs yet. Generate a video and the AI exposes the text, colours, and
-            numbers you can change here - or write one yourself: any{' '}
-            <code>fields.name ?? 'default'</code> the code reads shows up here as a field.
+            numbers you can change here - or write one yourself:{' '}
+            {engine === 'hyperframes' ? (
+              <>
+                declare it in <code>data-composition-variables</code> and it shows up here as a
+                field.
+              </>
+            ) : (
+              <>
+                any <code>fields.name ?? 'default'</code> the code reads shows up here as a field.
+              </>
+            )}
           </p>
         ) : (
           <>

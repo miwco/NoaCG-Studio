@@ -7,11 +7,17 @@ service). The core promise: **manifest + frame number = exact pixels** - a frame
 depends on rAF timing, CPU speed, or the wall clock.
 
 **Manifest v2 is a discriminated union on `kind`:** 'html' (the SPX document path - the
-timing/schedule/measurement machinery below applies to it ONLY) and 'remotion' (the AI
+timing/schedule/measurement machinery below applies to it ONLY), 'remotion' (the AI
 video editor's authored composition: compiledJs + inputProps + fixed durationInFrames;
-rendered by the worker's second composition `noacg-user` via a require shim identical to
-the live preview's player host, so preview and render run the same code).
-`buildVideoManifest.ts` (PURE) builds the remotion kind; the UI is
+rendered by the worker's composition `noacg-user` via a require shim identical to
+the live preview's player host, so preview and render run the same code), and
+'hyperframes' (the video editor's HyperFrames engine: a COMPOSED self-contained document
+- src/video/hyperframes/compose.ts in 'render' mode - + fixed durationInFrames; rendered
+by the worker's `noacg-hyperframes` host, which drives the injected driver's
+__noacgHfRender one seek per frame - the NoaCGGraphic pattern minus schedule/measurement;
+HYPERFRAMES_RUNTIME_VERSION is its handshake).
+`buildVideoManifest.ts` (PURE) builds the remotion and hyperframes kinds (the caller
+composes the document - composition is browser-only); the UI is
 components/video/VideoRenderPanel (shares RenderFormatPicker + RenderJobSection with the
 SPX RenderPanel). Assets ride as data URLs inside inputProps against the 4 MB manifest
 cap - the panel shows a budget meter; the composition's editable inputs ride alongside them
@@ -75,4 +81,6 @@ by scripts/renderDevPlugin.mjs) with seams in `api/_lib` (JobStore: memory | Sup
 render_jobs; RenderExecutor: local child process | Vercel Sandbox via @remotion/vercel).
 The renderer is `render-worker/` (own pinned package - the Remotion dependency never
 enters the app bundle). Full architecture + ops: docs/RENDER.md. Verify render changes
-with `node scripts/render-smoke.mjs` (dev server running) - the real local full loop.
+with `node scripts/render-smoke.mjs` (dev server running) - the real local full loop -
+plus `render-smoke-video.mjs` (remotion kind) and `render-smoke-hyperframes.mjs`
+(hyperframes kind), both pixel-checked.

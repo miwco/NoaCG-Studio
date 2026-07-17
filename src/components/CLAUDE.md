@@ -248,10 +248,17 @@ editing lives on the timeline (StepTimeline via TimelineDock) plus the Inspector
 
 The PARALLEL editor world for the AI video project kind (VideoProject, src/model/videoTypes.ts).
 App.tsx renders **VideoAppShell** instead of AppShell when docKindStore says 'video'; only the
-wizard flips that switch. Layout: TSX code pane (lazy Monaco, **VideoCodeEditor**, syntax-only
-TSX diagnostics from monacoSetup.ts) | splitter (model/videoLayout.ts `codeRatio` pref,
-independent of the SPX dockable workspace) | right column =
-**VideoPlayerFrame** (the player stage; the sandboxed Remotion Player iframe host) over a
+wizard flips that switch. Every panel follows the project's ENGINE ('remotion' | 'hyperframes',
+picked at creation): the code pane, the preview bridge, the validator, the render manifest, and
+the source download all branch on it, while chat/Content/Settings/Assets stay one surface.
+Layout: code pane (lazy Monaco, **VideoCodeEditor** - Composition.tsx with syntax-only TSX
+diagnostics from monacoSetup.ts, or composition.html for a HyperFrames project; typing goes
+through store.setSource) | splitter (model/videoLayout.ts `codeRatio` pref, independent of the
+SPX dockable workspace) | right column =
+**VideoPlayerFrame** (the player stage; sandbox="allow-scripts" iframe either way - the
+prebuilt Remotion Player host driven by PlayerBridge, or the HyperFrames composed-srcdoc
+driver driven by HyperframesBridge (src/video/hyperframes/); bridgeRegistry holds whichever
+is mounted and the chat's validator narrows to its engine's kind) over a
 tabbed panel: **VideoAiChatPanel** (the primary authoring surface - auto-runs the FIRST
 generation when chat holds exactly one unanswered user turn, guarded PER PROJECT ID with a
 retry button on failure; every AI result applies as ONE undoable applyProject; failed
@@ -283,9 +290,11 @@ go through video/types.ts uniqueVideoAssetPath so an asset's LOGICAL NAME is set
 the immutable path - adding or deleting another asset must never rename one, because the code and
 image-input values point at that name. A few big assets can still exhaust localStorage: the save
 fails LOUDLY (the shell's `video-autosave-failed` flag), never silently),
-**VideoExportPanel** (mounts **VideoRenderPanel** when isRenderConfigured() - kind:'remotion'
-manifests through the shared render service, with an upload-budget meter; plus the .tsx
-source download). **SavedVideoProjects** = the 📁 My videos modal
+**VideoExportPanel** (mounts **VideoRenderPanel** when isRenderConfigured() - the engine's
+manifest kind ('remotion' compiledJs+inputProps, or 'hyperframes' composed documentHtml)
+through the shared render service, with an upload-budget meter; plus the engine's source
+download - the .tsx module, or a standalone composition.html with the bundled GSAP inlined
+so it stays plug-and-play). **SavedVideoProjects** = the 📁 My videos modal
 (explicit saves; the current slot autosaves separately). The shell binds the same global
 undo/redo keys as AppShell with the same Monaco/form-field guard. AI chat gates on
 `needsSignIn` (hosted mode) exactly like AIPromptPanel; everything else stays open.
@@ -331,9 +340,11 @@ option buttons; selecting one swaps the preview and STAGES the pick
 counters become the design stage's subtle preference hint. Conversion of an imported
 template always runs the validated conversion flow regardless of the checkbox.
 
-**Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + duration/
-aspect/fps/transparency + asset upload -> an INSTANT create (`createDefaultVideoProject`, the
-brief seeded as chat[0]); generation runs in the video shell's chat, not the wizard. The step's
+**Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + a
+GENERATION-ENGINE picker (the VIDEO_ENGINES cards: Remotion preselected, HyperFrames tagged
+Experimental) + duration/aspect/fps/transparency + asset upload -> an INSTANT create
+(`createDefaultVideoProject`, the brief seeded as chat[0], the engine recorded on the
+project); generation runs in the video shell's chat, not the wizard. The step's
 reopen strip lists saved videos plus a "Continue" chip for the autosaved current video project
 (shown from the SPX shell). Creating/opening a video flips docKind to 'video'; every SPX create
 path (template/AI/blank/import) flips it back to 'spx'.

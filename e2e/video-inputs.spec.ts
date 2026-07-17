@@ -120,7 +120,7 @@ test('a field written by hand into the code becomes editable in the Content pane
   // writes to.)
   await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
-    useVideoProjectStore.getState().setTsx(`
+    useVideoProjectStore.getState().setSource(`
 import { AbsoluteFill } from 'remotion';
 
 export default function Composition({ fields = {} }: { fields?: Record<string, string | number> }) {

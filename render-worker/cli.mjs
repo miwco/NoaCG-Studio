@@ -15,7 +15,7 @@ if (!manifestPath || !outputPath) {
 
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const durSec =
-  manifest.kind === 'remotion'
+  manifest.kind === 'remotion' || manifest.kind === 'hyperframes'
     ? manifest.durationInFrames / manifest.fps
     : manifest.timing.totalDurationMs / 1000;
 console.log(

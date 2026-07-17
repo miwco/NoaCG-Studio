@@ -40,7 +40,18 @@ function normalizeVideoProject(p: VideoProject): VideoProject {
   // A project stored before authoredFor existed: we don't know what its code was written for,
   // and guessing would raise a drift warning about settings nobody has touched. null = silent.
   const authoredFor = p.authoredFor ?? null;
-  return inputs === p.inputs && authoredFor === p.authoredFor ? p : { ...p, inputs, authoredFor };
+  // Records stored before the engine existed are Remotion projects by definition.
+  const engine = p.engine === 'hyperframes' ? 'hyperframes' : 'remotion';
+  const html = typeof p.html === 'string' ? p.html : '';
+  if (
+    inputs === p.inputs &&
+    authoredFor === p.authoredFor &&
+    engine === p.engine &&
+    html === p.html
+  ) {
+    return p;
+  }
+  return { ...p, inputs, authoredFor, engine, html };
 }
 
 // ── Current slot ─────────────────────────────────────────────────────────────

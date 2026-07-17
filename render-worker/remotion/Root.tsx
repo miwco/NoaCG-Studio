@@ -1,15 +1,20 @@
-// The composition registry: TWO generic compositions whose metadata comes entirely from
+// The composition registry: THREE generic compositions whose metadata comes entirely from
 // the manifest passed as input props — no per-graphic compositions, ever.
-//   'noacg'      — kind:'html': the SPX render document driven by the virtual clock.
-//   'noacg-user' — kind:'remotion': an authored composition module from the video editor.
+//   'noacg'             — kind:'html': the SPX render document driven by the virtual clock.
+//   'noacg-user'        — kind:'remotion': an authored composition module from the video editor.
+//   'noacg-hyperframes' — kind:'hyperframes': a HyperFrames composition document from the
+//                         video editor, driven one seek per frame.
 
 import { Composition } from 'remotion';
 import { NoaCGGraphic } from './NoaCGGraphic';
 import { UserComposition } from './UserComposition';
+import { HyperframesGraphic } from './HyperframesGraphic';
 import {
   durationInFrames,
+  HYPERFRAMES_RUNTIME_VERSION,
   RENDER_MANIFEST_VERSION,
   type HtmlRenderManifest,
+  type HyperframesRenderManifest,
   type RemotionRenderManifest,
   type RenderManifest,
 } from '../../src/render/manifest';
@@ -30,6 +35,24 @@ const PLACEHOLDER: HtmlRenderManifest = {
   scale: 1,
   timing: { totalDurationMs: 2000, outMode: 'none', minHoldMs: 500, epochMs: 0 },
   data: {},
+  output: { format: 'mp4' },
+};
+
+/** A tiny always-valid HyperFrames document so `remotion studio` opens this one too. */
+const HYPERFRAMES_PLACEHOLDER: HyperframesRenderManifest = {
+  version: RENDER_MANIFEST_VERSION,
+  kind: 'hyperframes',
+  projectName: 'placeholder',
+  documentHtml:
+    '<!doctype html><html><head><meta name="color-scheme" content="light"><script>window.__noacgHfRender={version:' +
+    HYPERFRAMES_RUNTIME_VERSION +
+    ',prepare:function(){return Promise.resolve({durationMs:2000})},seek:function(){},getErrors:function(){return []}};</script></head>' +
+    '<body style="margin:0;display:grid;place-items:center;font:700 48px sans-serif;color:#f5a623">NoaCG HyperFrames host — pass a manifest as input props</body></html>',
+  durationInFrames: 100,
+  width: 1920,
+  height: 1080,
+  fps: 50,
+  scale: 1,
   output: { format: 'mp4' },
 };
 
@@ -75,6 +98,25 @@ export const Root: React.FC = () => (
       fps={50}
       calculateMetadata={({ props }) => {
         const manifest = guardManifest(props, 'html');
+        return {
+          durationInFrames: durationInFrames(manifest),
+          fps: manifest.fps,
+          width: manifest.width,
+          height: manifest.height,
+          props,
+        };
+      }}
+    />
+    <Composition
+      id="noacg-hyperframes"
+      component={HyperframesGraphic as unknown as React.FC<Record<string, unknown>>}
+      defaultProps={HYPERFRAMES_PLACEHOLDER as unknown as Record<string, unknown>}
+      durationInFrames={100}
+      width={1920}
+      height={1080}
+      fps={50}
+      calculateMetadata={({ props }) => {
+        const manifest = guardManifest(props, 'hyperframes');
         return {
           durationInFrames: durationInFrames(manifest),
           fps: manifest.fps,

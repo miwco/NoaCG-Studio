@@ -96,6 +96,24 @@ export const REMOTION_MODULE_TOOL: ClaudeTool = {
   },
 };
 
+export const HYPERFRAMES_MODULE_TOOL: ClaudeTool = {
+  name: 'emit_hyperframes_composition',
+  description: 'Return the complete standalone HyperFrames composition document.',
+  input_schema: {
+    type: 'object',
+    required: ['summary', 'html'],
+    additionalProperties: false,
+    properties: {
+      summary: { type: 'string', description: 'One sentence describing the composition for the user.' },
+      html: {
+        type: 'string',
+        description:
+          'The COMPLETE standalone HTML document: composition root with data-* timing, one paused GSAP timeline registered at window.__timelines[<id>], editable inputs declared as data-composition-variables on <html> (they become the Content panel), no external scripts or URLs.',
+      },
+    },
+  },
+};
+
 export const DETECT_SKILLS_TOOL: ClaudeTool = {
   name: 'detect_skills',
   description: 'Pick the motion-design skills most relevant to the request.',
@@ -139,4 +157,11 @@ export interface EmittedModule {
   summary: string;
   tsx: string;
   inputs?: EmittedInput[];
+}
+
+/** emit_hyperframes_composition result - inputs live IN the document (its declared
+ *  composition variables), so the tool carries only the source. */
+export interface EmittedHyperframesModule {
+  summary: string;
+  html: string;
 }

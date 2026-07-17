@@ -1,13 +1,16 @@
 // The Claude-backed video provider - the NoaCG motion-design harness. Not one raw
 // prompt-to-code call but staged: (a) skill detection loads only relevant craft guidance,
-// (b) the Motion Director produces a structured timed plan, (c) the Remotion coder writes
-// the module against the contract + plan + one canonical example, (d) a bounded
-// compile/probe/repair loop feeds exact validator errors back. Mirrors claudeProvider's
-// doctrine (forced tools, real example, errors-back repair) for the video world.
+// (b) the Motion Director produces a structured timed plan, (c) the coder writes the
+// composition against the ENGINE's contract + the plan + one canonical example (Remotion
+// TSX or a HyperFrames document, per ctx.engine), (d) a bounded validate/repair loop
+// feeds exact validator errors back. Mirrors claudeProvider's doctrine (forced tools,
+// real example, errors-back repair) for the video world. Stages a and b are engine-
+// independent - the same brief, plan, skills, assets, and settings feed both coders.
 
 import { callClaude, type ContentBlock } from '../anthropic';
 import { parseDataUrl } from '../../assets/assetUtils';
-import type { MotionPlan, VideoChatMessage, VideoInput } from '../../model/videoTypes';
+import type { MotionPlan, VideoChatMessage, VideoEngine, VideoInput } from '../../model/videoTypes';
+import { hyperframesInputs } from '../../video/hyperframes/parse';
 import type {
   VideoAIProvider,
   VideoGenerateContext,
@@ -17,10 +20,13 @@ import type {
 } from './provider';
 import { BASE_SKILL, detectSkillsByKeyword, skillById, type VideoSkill } from './skills';
 import { EXAMPLE_COMPOSITION, MOTION_PRINCIPLES, REMOTION_CONTRACT } from './prompts';
+import { EXAMPLE_HYPERFRAMES_COMPOSITION, HYPERFRAMES_CONTRACT } from './hyperframesPrompts';
 import {
   DETECT_SKILLS_TOOL,
+  HYPERFRAMES_MODULE_TOOL,
   MOTION_PLAN_TOOL,
   REMOTION_MODULE_TOOL,
+  type EmittedHyperframesModule,
   type EmittedInput,
   type EmittedModule,
   type EmittedMotionPlan,
@@ -42,11 +48,14 @@ function settingsText(ctx: VideoGenerateContext): string {
 
 function assetsText(ctx: VideoGenerateContext): string {
   if (ctx.assets.length === 0) return 'Assets: none uploaded.';
+  const hf = ctx.engine === 'hyperframes';
   const lines = ctx.assets.map((a) => {
     const dims = a.width && a.height ? `, ${a.width}x${a.height}` : '';
-    return `- assets['${a.name}'] (${a.mime}${dims})`;
+    return `- ${hf ? `asset:${a.name}` : `assets['${a.name}']`} (${a.mime}${dims})`;
   });
-  return `Assets available via the assets prop (use these EXACT names, nothing else):\n${lines.join('\n')}`;
+  return hf
+    ? `Assets available as asset: URLs (use these EXACT names, nothing else):\n${lines.join('\n')}`
+    : `Assets available via the assets prop (use these EXACT names, nothing else):\n${lines.join('\n')}`;
 }
 
 /**
@@ -55,12 +64,16 @@ function assetsText(ctx: VideoGenerateContext): string {
  * renamed key costs the user whatever they typed into the Content panel (values survive a
  * refinement only key-by-key - model/videoTypes.ts mergeVideoInputs).
  */
-function currentInputsText(inputs: VideoInput[]): string {
+function currentInputsText(inputs: VideoInput[], engine: VideoEngine): string {
   if (inputs.length === 0) return 'Editable inputs: none declared yet.';
   const lines = inputs.map(
     (i) => `- ${i.key} (${i.type}) "${i.label}", default ${JSON.stringify(i.default)}`,
   );
-  return `Editable inputs the composition already declares - re-declare ALL of them with the SAME keys and types, and keep the code's \`fields.<key> ?? default\` fallbacks in step. Only add, remove, or rename a key when the request actually changes what content is editable; a key that silently changes loses the value the user typed into it:\n${lines.join('\n')}`;
+  const keep =
+    engine === 'hyperframes'
+      ? 'keep every data-composition-variables declaration and its data-var-text/data-var-src/var(--id) bindings in step'
+      : "keep the code's `fields.<key> ?? default` fallbacks in step";
+  return `Editable inputs the composition already declares - re-declare ALL of them with the SAME keys and types, and ${keep}. Only add, remove, or rename a key when the request actually changes what content is editable; a key that silently changes loses the value the user typed into it:\n${lines.join('\n')}`;
 }
 
 /** Uploaded raster images as vision blocks so the model designs around what it sees. */
@@ -101,10 +114,12 @@ async function detectSkills(prompt: string, model?: string): Promise<VideoSkill[
 
 // ── Stage b: the Motion Director ─────────────────────────────────────────────
 
-function directorSystem(skills: VideoSkill[]): string {
+function directorSystem(skills: VideoSkill[], engine: VideoEngine): string {
+  const medium =
+    engine === 'hyperframes' ? 'HTML/CSS with a GSAP timeline (HyperFrames)' : 'React/Remotion';
   return `You are the Motion Director inside NoaCG Studio - a senior broadcast motion
 designer planning a fixed-duration video composition. You produce a concise, structured,
-TIMED plan another expert will implement in React/Remotion. Plan phases that cover the
+TIMED plan another expert will implement in ${medium}. Plan phases that cover the
 full duration exactly - from 0 to the total - with a clear entrance, a hero moment/hold,
 and a decisive exit (unless the brief explicitly wants motion running through the cut).
 
@@ -138,7 +153,7 @@ async function directMotion(
 ): Promise<EmittedMotionPlan> {
   const text = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nThe brief:\n${prompt}`;
   const plan = (await callClaude({
-    system: directorSystem(skills),
+    system: directorSystem(skills, ctx.engine),
     messages: [{ role: 'user', content: [...vision, { type: 'text', text }] }],
     tool: MOTION_PLAN_TOOL,
     maxTokens: 4000,
@@ -149,9 +164,35 @@ async function directMotion(
   return plan;
 }
 
-// ── Stage c: the Remotion coder ──────────────────────────────────────────────
+// ── Stage c: the coder (engine-specific contract + example, shared taste) ────
 
-function coderSystem(skills: VideoSkill[]): string {
+function coderSystem(skills: VideoSkill[], engine: VideoEngine): string {
+  const skillsBlock = [BASE_SKILL, ...skills].map((s) => s.prompt).join('\n\n');
+  if (engine === 'hyperframes') {
+    return `You are the motion designer-engineer inside NoaCG Studio, writing a standalone
+HyperFrames composition (one HTML document, all motion on one paused GSAP timeline) for a
+fixed-duration video. You write COMPLETE, working, broadcast-quality code that a
+professional can read and extend.
+
+${HYPERFRAMES_CONTRACT}
+
+${MOTION_PRINCIPLES}
+
+${skillsBlock}
+
+Skill notes may use React/Remotion idioms (springs, interpolate, random(seed), fontSize
+from useVideoConfig) - translate them to this medium: GSAP eases (back.out, expo.out,
+power3.out; spring-like feels come from back/elastic with restraint), timeline positions
+in seconds, precomputed value arrays instead of per-frame functions, and px sizes computed
+from the given canvas.
+
+## The canonical example (a REAL composition from this tool - match its structure and quality)
+=== composition.html ===
+${EXAMPLE_HYPERFRAMES_COMPOSITION}
+=== end example ===
+
+Return the document ONLY via the emit_hyperframes_composition tool.`;
+  }
   return `You are the motion designer-engineer inside NoaCG Studio, writing the single
 React/Remotion composition module for a fixed-duration video. You write COMPLETE, working,
 broadcast-quality code that a professional can read and extend.
@@ -160,7 +201,7 @@ ${REMOTION_CONTRACT}
 
 ${MOTION_PRINCIPLES}
 
-${[BASE_SKILL, ...skills].map((s) => s.prompt).join('\n\n')}
+${skillsBlock}
 
 ## The canonical example (a REAL module from this tool - match its structure and quality)
 === Composition.tsx ===
@@ -181,44 +222,77 @@ Return the module ONLY via the emit_remotion_module tool.`;
 
 // ── Stage d: emit + validate + bounded repair ────────────────────────────────
 
+/** The engine-neutral emit: whichever tool ran, the caller sees {summary, source, inputs?}. */
+interface EmittedSource {
+  summary: string;
+  source: string;
+  /** remotion only: the tool-declared inputs (hyperframes declares them IN the document). */
+  inputs?: EmittedInput[];
+}
+
+function emitConfig(engine: VideoEngine) {
+  if (engine === 'hyperframes') {
+    return {
+      tool: HYPERFRAMES_MODULE_TOOL,
+      fileLabel: 'composition.html',
+      repairNote:
+        'check the composition root attributes, the timeline registration, and the determinism rules',
+      toEmitted: (raw: unknown): EmittedSource => {
+        const m = raw as EmittedHyperframesModule;
+        return { summary: m.summary, source: m.html };
+      },
+    };
+  }
+  return {
+    tool: REMOTION_MODULE_TOOL,
+    fileLabel: 'Composition.tsx',
+    repairNote:
+      'note: TypeScript type errors surface as runtime errors - check prop shapes and undefined values at the reported frames',
+    toEmitted: (raw: unknown): EmittedSource => {
+      const m = raw as EmittedModule;
+      return { summary: m.summary, source: m.tsx, inputs: m.inputs };
+    },
+  };
+}
+
 async function generateValidated(
+  engine: VideoEngine,
   system: string,
   baseMessages: { role: 'user' | 'assistant'; content: ContentBlock[] | string }[],
   validate: VideoValidator | undefined,
   model: string | undefined,
   onProgress?: VideoProgress,
-): Promise<{ emitted: EmittedModule; validation: Awaited<ReturnType<VideoValidator>> | null }> {
-  let emitted = (await callClaude({
-    system,
-    messages: baseMessages,
-    tool: REMOTION_MODULE_TOOL,
-    model,
-  })) as EmittedModule;
+): Promise<{ emitted: EmittedSource; validation: Awaited<ReturnType<VideoValidator>> | null }> {
+  const cfg = emitConfig(engine);
+  let emitted = cfg.toEmitted(
+    await callClaude({ system, messages: baseMessages, tool: cfg.tool, model }),
+  );
 
   if (!validate) return { emitted, validation: null };
 
   onProgress?.('Checking the result in the player…');
-  let validation = await validate(emitted.tsx);
+  let validation = await validate(emitted.source);
   for (let round = 0; round < MAX_REPAIR_ROUNDS && !validation.ok; round++) {
     onProgress?.(`Fixing issues the checks found (round ${round + 1} of ${MAX_REPAIR_ROUNDS})…`);
-    // Hand the EXACT validator findings back with the full module - same doctrine as the
-    // SPX repair round. Runtime findings carry frame numbers; remind the model that type
-    // errors surface as runtime errors (sucrase does not typecheck).
+    // Hand the EXACT validator findings back with the full source - same doctrine as the
+    // SPX repair round. Runtime findings carry frame numbers.
     const errorList = validation.errors.map((e) => `- ${e.rule}: ${e.message}`).join('\n');
-    emitted = (await callClaude({
-      system,
-      messages: [
-        ...baseMessages,
-        { role: 'assistant', content: 'I generated a module but validation rejected it.' },
-        {
-          role: 'user',
-          content: `Your module failed validation. Fix ALL of these and re-emit the COMPLETE module (note: TypeScript type errors surface as runtime errors - check prop shapes and undefined values at the reported frames):\n${errorList}\n\n=== Composition.tsx ===\n${emitted.tsx}`,
-        },
-      ],
-      tool: REMOTION_MODULE_TOOL,
-      model,
-    })) as EmittedModule;
-    validation = await validate(emitted.tsx);
+    emitted = cfg.toEmitted(
+      await callClaude({
+        system,
+        messages: [
+          ...baseMessages,
+          { role: 'assistant', content: 'I generated a composition but validation rejected it.' },
+          {
+            role: 'user',
+            content: `Your composition failed validation. Fix ALL of these and re-emit the COMPLETE source (${cfg.repairNote}):\n${errorList}\n\n=== ${cfg.fileLabel} ===\n${emitted.source}`,
+          },
+        ],
+        tool: cfg.tool,
+        model,
+      }),
+    );
+    validation = await validate(emitted.source);
   }
   return { emitted, validation };
 }
@@ -278,10 +352,11 @@ class ClaudeVideoProvider implements VideoAIProvider {
     onProgress?.('Designing the motion plan…');
     const plan = await directMotion(prompt, ctx, skills, vision, model);
 
-    onProgress?.('Writing the Remotion code…');
+    onProgress?.(ctx.engine === 'hyperframes' ? 'Writing the HyperFrames composition…' : 'Writing the Remotion code…');
     const coderText = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nThe motion plan to implement:\n${planText(plan)}\n\nThe original brief:\n${prompt}`;
     const { emitted, validation } = await generateValidated(
-      coderSystem(skills),
+      ctx.engine,
+      coderSystem(skills, ctx.engine),
       [{ role: 'user', content: [...vision, { type: 'text', text: coderText }] }],
       validate,
       model,
@@ -290,11 +365,16 @@ class ClaudeVideoProvider implements VideoAIProvider {
 
     return {
       summary: emitted.summary,
-      tsx: emitted.tsx,
+      source: emitted.source,
       motionPlan: toMotionPlan(plan),
-      // A fresh generation defines the input set outright - an empty emit really does mean
+      // A fresh generation defines the input set outright - an empty set really does mean
       // "this piece has no editable content", and there is nothing to preserve anyway.
-      inputs: toInputs(emitted.inputs) ?? [],
+      // HyperFrames declares inputs IN the document (composition variables) - parse them;
+      // Remotion declares them in the emit tool.
+      inputs:
+        ctx.engine === 'hyperframes'
+          ? hyperframesInputs(emitted.source)
+          : toInputs(emitted.inputs) ?? [],
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],
       validation,
     };
@@ -302,7 +382,7 @@ class ClaudeVideoProvider implements VideoAIProvider {
 
   async refineVideo(
     request: string,
-    current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
+    current: { source: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
     onProgress?: VideoProgress,
@@ -315,32 +395,36 @@ class ClaudeVideoProvider implements VideoAIProvider {
     const skills = detectSkillsByKeyword(`${request}\n${recentText}`);
     const vision = imageBlocks(ctx, ctx.assetData ?? new Map());
 
-    // Recent conversation as real turns (compressed), then the edit request + module.
+    // Recent conversation as real turns (compressed), then the edit request + source.
     const history = current.chat.slice(-6).map((m) => ({
       role: m.role,
       content: m.text,
     }));
-    const finalText = `${settingsText(ctx)}\n${assetsText(ctx)}\n${currentInputsText(current.inputs)}\n\nModify the composition below. Change ONLY what the request needs - keep everything else as close to byte-identical as possible.\n\nRequest: ${request}\n\n=== Composition.tsx ===\n${current.tsx}`;
+    const fileLabel = ctx.engine === 'hyperframes' ? 'composition.html' : 'Composition.tsx';
+    const finalText = `${settingsText(ctx)}\n${assetsText(ctx)}\n${currentInputsText(current.inputs, ctx.engine)}\n\nModify the composition below. Change ONLY what the request needs - keep everything else as close to byte-identical as possible.\n\nRequest: ${request}\n\n=== ${fileLabel} ===\n${current.source}`;
     const { emitted, validation } = await generateValidated(
-      coderSystem(skills),
+      ctx.engine,
+      coderSystem(skills, ctx.engine),
       [...history, { role: 'user', content: [...vision, { type: 'text', text: finalText }] }],
       validate,
       model,
       onProgress,
     );
 
-    // A refinement re-emits the COMPLETE module, so it re-declares its inputs, and merging
+    // A refinement re-emits the COMPLETE source, so it re-declares its inputs, and merging
     // against the current set (in applyResult) preserves values the user already edited.
-    // But an empty emit here is far more likely a model that forgot to repeat the array than
-    // a deliberate "this piece has no editable content" - and honouring it would silently
-    // empty the user's Content panel and revert their text to the code defaults. Treat it as
-    // "unchanged"; a refinement that really should drop an input still emits the others, so
-    // the genuine removal case survives.
-    const inputs = toInputs(emitted.inputs);
+    // But an empty set here is far more likely a model that forgot to repeat the
+    // declarations than a deliberate "this piece has no editable content" - and honouring
+    // it would silently empty the user's Content panel and revert their text to the code
+    // defaults. Treat it as "unchanged"; a refinement that really should drop an input
+    // still emits the others, so the genuine removal case survives. (Applies to both
+    // engines: HyperFrames inputs parse out of the document's variable declarations.)
+    const inputs =
+      ctx.engine === 'hyperframes' ? hyperframesInputs(emitted.source) : toInputs(emitted.inputs);
 
     return {
       summary: emitted.summary,
-      tsx: emitted.tsx,
+      source: emitted.source,
       motionPlan: null, // refinements keep the existing plan
       inputs: inputs && inputs.length > 0 ? inputs : null,
       skills: [BASE_SKILL.id, ...skills.map((s) => s.id)],

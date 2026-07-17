@@ -1,12 +1,16 @@
 // The video AI provider seam, parallel to ai/provider.ts. Both providers (Claude harness,
-// offline stub) emit a complete single-file Remotion module; the caller injects the live
-// validator (compile -> static checks -> player probe) so the provider stays UI-free and
-// can feed exact validation errors back to the model in its repair rounds.
+// offline stub) emit ONE complete composition source - a single-file Remotion module or a
+// standalone HyperFrames document, whichever ENGINE the context names; the caller injects
+// the live validator (static checks -> preview probe, engine-matched) so the provider
+// stays UI-free and can feed exact validation errors back to the model in its repair
+// rounds.
 
-import type { MotionPlan, VideoChatMessage, VideoInput } from '../../model/videoTypes';
+import type { MotionPlan, VideoChatMessage, VideoEngine, VideoInput } from '../../model/videoTypes';
 import type { VideoAssetInfo, VideoCompSettings, VideoValidationResult } from '../../video/types';
 
 export interface VideoGenerateContext {
+  /** Which composition format to emit (the project's generation engine). */
+  engine: VideoEngine;
   settings: VideoCompSettings;
   assets: VideoAssetInfo[];
   /** Raw asset data URLs by logical name - image assets become vision blocks. */
@@ -15,8 +19,9 @@ export interface VideoGenerateContext {
   model?: string;
 }
 
-/** The injected validate pipeline (bound to the live player bridge by the chat panel). */
-export type VideoValidator = (tsx: string) => Promise<VideoValidationResult>;
+/** The injected validate pipeline (bound to the live preview bridge by the chat panel;
+ *  the caller matches it to the engine the context names). */
+export type VideoValidator = (source: string) => Promise<VideoValidationResult>;
 
 /** Stage reporting for the UI busy line ("Designing the motion plan…"). Generation is a
  *  staged pipeline that can take a minute - the caller shows each stage as it starts so
@@ -26,8 +31,9 @@ export type VideoProgress = (stage: string) => void;
 export interface VideoGenerateResult {
   /** One sentence describing the composition, shown as the assistant chat turn. */
   summary: string;
-  /** The complete tsx module (best-so-far even when validation failed). */
-  tsx: string;
+  /** The complete composition source in the context's engine format - a tsx module or a
+   *  HyperFrames HTML document (best-so-far even when validation failed). */
+  source: string;
   /** The Motion Director's structured plan (null for refinements and the stub). */
   motionPlan: MotionPlan | null;
   /** The editable inputs the composition declares (its Template Definition). `null` means
@@ -55,7 +61,7 @@ export interface VideoAIProvider {
    *  needs it to keep the keys stable across the edit. */
   refineVideo(
     request: string,
-    current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
+    current: { source: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
     onProgress?: VideoProgress,

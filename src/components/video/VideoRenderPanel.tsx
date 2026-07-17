@@ -9,8 +9,10 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useAuthState } from '../auth/useAuthState';
 import { compileTsx } from '../../video/compile';
 import { describeAssets } from '../../video/types';
+import { composeHyperframesDocument } from '../../video/hyperframes/compose';
+import { HF_WARNING_RULES, staticValidateHyperframes } from '../../video/hyperframes/validate';
 import { settingsDrift, videoFieldValues } from '../../model/videoTypes';
-import { buildVideoManifest } from '../../render/buildVideoManifest';
+import { buildHyperframesManifest, buildVideoManifest } from '../../render/buildVideoManifest';
 import { formatNeedsSignIn, resolveTier, validateRenderRequest, RENDER_CONFIG } from '../../render/limits';
 import { RENDER_FORMATS, type RenderFormatId } from '../../render/manifest';
 import { useRenderJob } from '../../render/renderJobStore';
@@ -45,6 +47,53 @@ export default function VideoRenderPanel() {
   // The manifest is cheap to build - do it for preflight so the size meter and the limit
   // checks run on the REAL payload.
   const preflight = useMemo(() => {
+    const options = {
+      format,
+      scale,
+      backgroundColor: format === 'mp4' ? bgColor : undefined,
+      stillFrame: format === 'png-still' && stillMode === 'custom' ? stillFrame : undefined,
+    };
+    if (project.engine === 'hyperframes') {
+      // Same pipeline as the live preview: static contract checks, then the composed
+      // self-contained document (assets + GSAP + the driver inlined, 'render' mode).
+      const settings = {
+        width: project.width,
+        height: project.height,
+        fps: project.fps,
+        durationInFrames: project.durationInFrames,
+        transparent: project.transparent,
+      };
+      const blocking = staticValidateHyperframes(project.html, project.assets, settings).filter(
+        (i) => !HF_WARNING_RULES.has(i.rule),
+      );
+      if (blocking.length > 0) {
+        return { error: `The composition fails validation: ${blocking[0].message}`, manifest: null, bytes: 0 };
+      }
+      let documentHtml: string;
+      try {
+        documentHtml = composeHyperframesDocument(project.html, {
+          settings,
+          assets: project.assets,
+          values: videoFieldValues(project.inputs),
+          mode: 'render',
+        });
+      } catch (e) {
+        return { error: `Could not compose the render document: ${e instanceof Error ? e.message : String(e)}`, manifest: null, bytes: 0 };
+      }
+      const manifest = buildHyperframesManifest(
+        {
+          name: project.name,
+          width: project.width,
+          height: project.height,
+          fps: project.fps,
+          durationInFrames: project.durationInFrames,
+          documentHtml,
+          transparent: project.transparent,
+        },
+        options,
+      );
+      return { error: null, manifest, bytes: JSON.stringify({ manifest }).length };
+    }
     const compiled = compileTsx(project.tsx);
     if (!compiled.ok) return { error: `The composition does not compile: ${compiled.error}`, manifest: null, bytes: 0 };
     const assetProps: Record<string, string> = {};
@@ -65,12 +114,7 @@ export default function VideoRenderPanel() {
         inputProps: { assets: assetProps, fields: videoFieldValues(project.inputs) },
         transparent: project.transparent,
       },
-      {
-        format,
-        scale,
-        backgroundColor: format === 'mp4' ? bgColor : undefined,
-        stillFrame: format === 'png-still' && stillMode === 'custom' ? stillFrame : undefined,
-      },
+      options,
     );
     return { error: null, manifest, bytes: JSON.stringify({ manifest }).length };
   }, [project, format, scale, bgColor, stillMode, stillFrame]);
@@ -81,7 +125,7 @@ export default function VideoRenderPanel() {
     () =>
       validateRenderRequest(
         {
-          kind: 'remotion',
+          kind: project.engine === 'hyperframes' ? 'hyperframes' : 'remotion',
           width: project.width,
           height: project.height,
           fps: project.fps,
@@ -91,7 +135,7 @@ export default function VideoRenderPanel() {
         },
         tier,
       ),
-    [project.width, project.height, project.fps, project.durationInFrames, scale, format, tier],
+    [project.engine, project.width, project.height, project.fps, project.durationInFrames, scale, format, tier],
   );
 
   const overBudget = preflight.bytes > RENDER_CONFIG.manifestMaxBytes;

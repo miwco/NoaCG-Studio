@@ -14,8 +14,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { compileTsx, staticValidate, WARNING_RULES } from '../../video/compile';
-import { PlayerBridge } from '../../video/playerBridge';
-import { setActiveBridge } from '../../video/bridgeRegistry';
+import { PlayerBridge, type LoadResult } from '../../video/playerBridge';
+import { HyperframesBridge } from '../../video/hyperframes/bridge';
+import { staticValidateHyperframes, HF_WARNING_RULES } from '../../video/hyperframes/validate';
+import { setActiveBridge, type VideoBridge } from '../../video/bridgeRegistry';
 import { describeAssets } from '../../video/types';
 import { videoFieldValues } from '../../model/videoTypes';
 import CanvasGuides from '../CanvasGuides';
@@ -49,19 +51,24 @@ export default function VideoPlayerFrame() {
   const [bg, setBg] = useState<'checkerboard' | 'black'>(project.transparent ? 'checkerboard' : 'black');
   const [safeAreas, setSafeAreas] = useState(false);
   const [grid, setGrid] = useState(false);
-  // The bridge is created in an effect (remount-safe under StrictMode); the iframe gets
-  // its nonce-carrying src on the re-render after creation.
-  const [bridge, setBridge] = useState<PlayerBridge | null>(null);
+  // The bridge is created in an effect (remount-safe under StrictMode); the class follows
+  // the project's ENGINE - the Remotion player host, or the HyperFrames srcdoc driver.
+  // The Remotion iframe gets its nonce-carrying src on the re-render after creation; the
+  // HyperFrames bridge writes srcdoc through the attached iframe instead.
+  const engine = project.engine;
+  const [bridge, setBridge] = useState<VideoBridge | null>(null);
 
   useEffect(() => {
-    const b = new PlayerBridge({
+    const callbacks = {
       onFrame: setFrame,
       onState: setPlaying,
-      onRuntimeError: (message, f) =>
+      onRuntimeError: (message: string, f: number | null) =>
         useVideoProjectStore
           .getState()
           .setPreviewError(f != null ? `frame ${f}: ${message}` : message),
-    });
+    };
+    const b: VideoBridge =
+      engine === 'hyperframes' ? new HyperframesBridge(callbacks) : new PlayerBridge(callbacks);
     if (iframeRef.current) b.attach(iframeRef.current);
     setActiveBridge(b);
     setBridge(b);
@@ -69,52 +76,80 @@ export default function VideoPlayerFrame() {
       setActiveBridge(null);
       b.dispose();
     };
-  }, []);
+  }, [engine]);
 
   // (Re)load the composition: debounced on code/settings/asset changes, and on
   // replayNonce (AI applies + post-failed-validation restores bump it).
-  const { tsx, assets, width, height, fps, durationInFrames, transparent } = project;
+  //
+  // HyperFrames: image-variable values substitute a src URL at compose time, so they are
+  // a reload dependency (imageValuesJson); scalar values stay live via set-vars below.
+  const { tsx, html, assets, width, height, fps, durationInFrames, transparent } = project;
+  const source = engine === 'hyperframes' ? html : tsx;
+  const imageValuesJson = JSON.stringify(
+    engine === 'hyperframes'
+      ? project.inputs.filter((i) => i.type === 'image').map((i) => [i.key, i.value])
+      : [],
+  );
   useEffect(() => {
     if (!bridge) return;
     const handle = setTimeout(async () => {
-      const compiled = compileTsx(tsx);
-      if (!compiled.ok) {
-        setCodeError(compiled.error);
-        return; // the host keeps the last good module playing
+      const settings = { width, height, fps, durationInFrames, transparent };
+      const values = videoFieldValues(useVideoProjectStore.getState().project.inputs);
+      let res: LoadResult;
+      if (bridge instanceof HyperframesBridge) {
+        const blocking = staticValidateHyperframes(source, assets, settings).filter(
+          (i) => !HF_WARNING_RULES.has(i.rule),
+        );
+        if (blocking.length > 0) {
+          setCodeError(blocking.map((i) => i.message).join(' '));
+          return; // keep the last good document
+        }
+        setCodeError(null);
+        setPreviewError(null);
+        res = await bridge.load(source, settings, values, assets, { autoplay: true });
+      } else {
+        const compiled = compileTsx(source);
+        if (!compiled.ok) {
+          setCodeError(compiled.error);
+          return; // the host keeps the last good module playing
+        }
+        const blocking = staticValidate(source, describeAssets(assets)).filter(
+          (i) => !WARNING_RULES.has(i.rule),
+        );
+        if (blocking.length > 0) {
+          setCodeError(blocking.map((i) => i.message).join(' '));
+          return;
+        }
+        setCodeError(null);
+        setPreviewError(null);
+        // Read the latest field values at load time (not a hook dep - live field edits go
+        // through the instant set-props effect below, never a recompile).
+        res = await bridge.load(
+          compiled.js,
+          settings,
+          { fields: values },
+          assets,
+          { autoplay: true },
+        );
       }
-      const blocking = staticValidate(tsx, describeAssets(assets)).filter(
-        (i) => !WARNING_RULES.has(i.rule),
-      );
-      if (blocking.length > 0) {
-        setCodeError(blocking.map((i) => i.message).join(' '));
-        return;
-      }
-      setCodeError(null);
-      setPreviewError(null);
-      // Read the latest field values at load time (not a hook dep - live field edits go
-      // through the instant set-props effect below, never a recompile).
-      const fields = videoFieldValues(useVideoProjectStore.getState().project.inputs);
-      const res = await bridge.load(
-        compiled.js,
-        { width, height, fps, durationInFrames, transparent },
-        { fields },
-        assets,
-        { autoplay: true },
-      );
       // A disposed result means this bridge was replaced mid-flight - never overwrite
       // the successor's state.
       if (!res.ok && !res.disposed) setPreviewError(res.message);
     }, RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [tsx, assets, width, height, fps, durationInFrames, transparent, replayNonce, bridge, setPreviewError]);
+  }, [source, assets, width, height, fps, durationInFrames, transparent, replayNonce, bridge, imageValuesJson, setPreviewError]);
 
-  // Live field edits (Content panel): push the new `fields` to the mounted module instantly
-  // - no recompile, no remount - so a headline/colour change shows immediately. The host
-  // merges these over the current props and keeps the assets. Serialized so the dep is a
-  // stable primitive (and to skip no-op re-pushes). A no-op before the first load lands.
+  // Live field edits (Content panel): push the new values to the mounted composition
+  // instantly - no recompile, no remount - so a headline/colour change shows immediately.
+  // Remotion: the host merges `fields` over the current props. HyperFrames: the driver
+  // re-applies variable values and re-renders the current moment. Serialized so the dep
+  // is a stable primitive (and to skip no-op re-pushes). A no-op before the first load.
   const fieldsJson = JSON.stringify(videoFieldValues(project.inputs));
   useEffect(() => {
-    bridge?.setProps({ fields: JSON.parse(fieldsJson) as Record<string, string | number> });
+    if (!bridge) return;
+    const values = JSON.parse(fieldsJson) as Record<string, string | number>;
+    if (bridge instanceof HyperframesBridge) bridge.setVars(values);
+    else bridge.setProps({ fields: values });
   }, [bridge, fieldsJson]);
 
   // Scale the native-resolution frame (width × height) to fit the stage, leaving a margin so
@@ -154,6 +189,7 @@ export default function VideoPlayerFrame() {
         <div className="canvas-world">
           {bridge && (
           <iframe
+            key={engine}
             ref={(el) => {
               iframeRef.current = el;
               if (el) bridge.attach(el);
@@ -164,7 +200,9 @@ export default function VideoPlayerFrame() {
             // keeps AI/user composition code away from the app's localStorage (the
             // Anthropic API key) and session. Never add allow-same-origin here.
             sandbox="allow-scripts"
-            src={bridge.src}
+            // Remotion loads the prebuilt player host by URL; the HyperFrames bridge
+            // writes composed srcdoc into the attached iframe instead.
+            src={bridge instanceof PlayerBridge ? bridge.src : undefined}
             style={{ width, height, transform: `translate(-50%, -50%) scale(${fit})` }}
           />
           )}
