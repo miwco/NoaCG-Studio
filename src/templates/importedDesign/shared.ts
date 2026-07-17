@@ -268,7 +268,8 @@ export const IMPORTED_DESIGN: TemplateVariant = {
     { title: 'Name', sample: 'Alexandra Riva' },
     { title: 'Title', sample: 'Chief Correspondent' },
   ],
-  hasLogoSlot: false,
+  // The artwork IS the design — a logo drawn into it needs no slot from us.
+  logo: 'none',
   animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur'],
   defaultPalette: paletteById('ivory'),
   defaultFontId: 'inter',

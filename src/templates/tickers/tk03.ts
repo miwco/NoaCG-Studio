@@ -26,7 +26,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
       },
       { title: 'Label', sample: 'NOW' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['ticker-flip'],
     defaultPalette: paletteById('orchid'),
     defaultFontId: 'manrope',
@@ -87,7 +87,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
   align-items: center;             /* dot and text share the capsule's center line */
   gap: calc(9px * var(--scale));   /* small gap between the dot and the label */
   flex-shrink: 0;                  /* long items never squeeze the label */
-  font-size: calc(15px * var(--scale));  /* small-caps kicker size */
+  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
   font-weight: 700;                /* bold - the label reads as a badge */
   letter-spacing: 0.12em;          /* small caps breathe */
   text-transform: uppercase;       /* label is always set in caps */
@@ -123,7 +123,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
   inset: 0;                        /* fill the viewport window */
   display: flex;                   /* flex layout for clean vertical centering */
   align-items: center;             /* text sits on the capsule's center line */
-  font-size: calc(21px * var(--scale));  /* single-line item size - clearly bigger than the label */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* single-line item size - clearly bigger than the label */
   font-weight: 600;                /* semibold - present without shouting */
   line-height: 1.2;                /* a touch of leading for the single line */
   color: var(--text-color);        /* primary text color */

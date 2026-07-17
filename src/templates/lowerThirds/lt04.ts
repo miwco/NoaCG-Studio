@@ -18,8 +18,8 @@ export const lt04: TemplateVariant = defineVariant(
       { title: 'Name', sample: 'Isabella Fontaine' },
       { title: 'Kicker', sample: 'EXCLUSIVE' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['mask-wipe', 'slide-fade', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['mask-wipe', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('porcelain'),
     defaultFontId: 'archivo',
     defaultZone: 'bottom-left',
@@ -62,7 +62,7 @@ ${lineMasks(o)}
 
 /* The name (f0): the big line the graphic exists for. */
 .lower-third-name {
-  font-size: calc(52px * var(--scale));  /* headline scale */
+  font-size: calc(52px * var(--scale) * var(--type-scale));  /* headline scale */
   font-weight: 800;                /* maximum contrast against the small kicker */
   line-height: 1.1;                /* tight leading — big text needs less air */
   letter-spacing: -0.01em;         /* big text tightens slightly */
@@ -71,7 +71,7 @@ ${lineMasks(o)}
 
 /* The kicker (f1): a small, loud label chip in the accent color. */
 .lower-third-title {
-  font-size: calc(17px * var(--scale));  /* small on purpose — a label, not a headline */
+  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small on purpose — a label, not a headline */
   font-weight: 700;                /* bold enough to read at this size */
   line-height: 1.2;                /* a touch of air inside its reveal mask */
   text-transform: uppercase;       /* all caps read as a category tag */

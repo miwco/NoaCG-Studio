@@ -4,7 +4,7 @@ import { variantById, variantsFor } from '../../templates/catalog';
 import { createBlankTemplate } from '../../templates/blank';
 import { brandPatch, buildDraftTemplate, draftResolution, initialDraft, mergeDraft, type DraftPatch, type WizardDraft } from './draft';
 import { loadBrand, saveBrand, type ProjectBrand } from '../../model/brand';
-import { importTemplateFile } from '../../model/importTemplate';
+import { commitStagedSelection } from '../../ai/preferences';
 import { formatTemplate } from '../../format/formatCode';
 import { paletteById } from '../../model/wizard';
 import WizardPreview from './WizardPreview';
@@ -25,8 +25,8 @@ import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useDocKindStore } from '../../store/docKindStore';
 
 const STEP_TITLES = ['Start', 'Category', 'Template', 'Fields', 'Style', 'Animation'];
-const STEP_TITLES_IMPORT = ['Start', 'Import', 'Template', 'Fields', 'Style', 'Animation'];
-const STEP_TITLES_AI = ['Start', 'Describe'];
+const STEP_TITLES_IMPORT = ['Start', 'Images', 'Template', 'Fields', 'Style', 'Animation'];
+const STEP_TITLES_AI = ['Start', 'Create'];
 const STEP_TITLES_VIDEO = ['Start', 'Video'];
 const STEP_TITLES_DESIGN = ['Start', 'Design', 'Text', 'Style', 'Animation'];
 
@@ -140,6 +140,9 @@ export default function CreationWizard() {
 
   const createFromAi = () => {
     if (!aiResult?.valid) return;
+    // The picked harness alternative becomes the project — commit the staged preference
+    // (aggregated, subtle; see src/ai/preferences.ts). A no-alternatives run staged nothing.
+    commitStagedSelection();
     void applyGenerated(aiResult.template);
   };
 
@@ -185,7 +188,7 @@ export default function CreationWizard() {
   // style family first (so the package's siblings lead).
   const orderedVariants = [...variantsFor(draft.category)].sort((a, b) => {
     if (draft.importedImages.length > 0) {
-      const logo = Number(b.hasLogoSlot) - Number(a.hasLogoSlot);
+      const logo = Number(b.logo !== 'none') - Number(a.logo !== 'none');
       if (logo !== 0) return logo;
     }
     if (matchBrand && brand) {
@@ -210,10 +213,9 @@ export default function CreationWizard() {
             <BrandLogo size={20} />
             <span className="wz-title-sep">·</span>
             <span className="wz-title-step">
-              {mode === 'ai' ? 'Describe it'
+              {mode === 'ai' ? 'Create with AI'
                 : mode === 'video' ? 'Video with AI'
                 : mode === 'design' ? 'Import graphic'
-                : mode === 'import' ? 'Import'
                 : 'New project'}
             </span>
           </div>
@@ -243,7 +245,6 @@ export default function CreationWizard() {
               <EntryStep
                 onTemplates={() => { setMode('template'); setStep(1); }}
                 onImportGraphic={() => { setMode('design'); setStep(1); }}
-                onImport={() => { setMode('import'); setStep(1); }}
                 onAi={() => { setMode('ai'); setStep(1); }}
                 onVideo={() => { setMode('video'); setStep(1); }}
                 onBlank={startBlank}
@@ -259,6 +260,22 @@ export default function CreationWizard() {
                 brandPalette={matchBrand && brand ? brand.palette : null}
                 result={aiResult?.template ?? null}
                 onResult={(template, valid) => setAiResult(template ? { template, valid } : null)}
+                onOpenImported={(imported) => {
+                  // The byte-faithful path (deliberately NOT applyGenerated/Prettier): the
+                  // user's file opens exactly as written, and the Export panel's inline
+                  // validation shows what (if anything) needs fixing before it is
+                  // SPX/CasparCG/OGraf-ready. applyTemplate closes the wizard.
+                  applyTemplate(imported, { resetSampleData: true });
+                  setActiveTab('html');
+                  useTemplateStore.getState().setActivePanel('export');
+                  toSpxShell();
+                }}
+                onUseTemplates={(images) => {
+                  // Skip the AI: design AROUND the images with the catalog — the existing
+                  // images -> category -> template-picker continuation (logo-slot first).
+                  patch({ importedImages: images, logoAssetPath: images[0]?.path ?? null });
+                  setMode('import');
+                }}
               />
             )}
             {step === 1 && mode === 'design' && (
@@ -297,19 +314,6 @@ export default function CreationWizard() {
                   patch({ category });
                   setStep(2);
                 }}
-                onTemplateFile={async (file) => {
-                  try {
-                    const imported = await importTemplateFile(file);
-                    applyTemplate(imported, { resetSampleData: true });
-                    setActiveTab('html');
-                    // Land on Export: its inline validation shows what (if anything) needs
-                    // fixing before the template is SPX/CasparCG/OGraf-ready.
-                    useTemplateStore.getState().setActivePanel('export');
-                    return null;
-                  } catch (e) {
-                    return e instanceof Error ? e.message : String(e);
-                  }
-                }}
               />
             )}
             {step === 1 && mode === 'template' && (
@@ -331,6 +335,7 @@ export default function CreationWizard() {
                     variantId: v.id,
                     lines: v.suggestedLines.map((l) => ({ ...l })),
                     zone: null,
+                    logoEnabled: null, // the logo decision belongs to the picked design
                     animation: { presetId: null, outPresetId: null },
                     // Matched brand carries the package look into every new graphic.
                     ...(matchBrand && brand

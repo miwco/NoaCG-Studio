@@ -16,8 +16,8 @@ export const lt01: TemplateVariant = defineVariant(
       { title: 'Name', sample: 'Alexandra Riva' },
       { title: 'Title', sample: 'Chief Correspondent' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['line-reveal', 'slide-fade', 'mask-wipe', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['line-reveal', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
     defaultZone: 'bottom-left',
@@ -54,7 +54,7 @@ ${lineMasks(o)}
 
 /* Name line — big and confident; the only heavy element in the design. */
 .lower-third-name {
-  font-size: calc(54px * var(--scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 700;                 /* bold enough to carry the design on its own */
   line-height: 1.08;                /* big text sits tight */
   letter-spacing: -0.01em;          /* large sizes tighten slightly */
@@ -64,7 +64,7 @@ ${lineMasks(o)}
 /* Title line (and any extra line) — quiet on purpose: smaller, lighter, dimmed. */
 .lower-third-title,
 .lower-third-extra {
-  font-size: calc(24px * var(--scale));  /* ≈2.2:1 below the name — clear hierarchy */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈2.2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */

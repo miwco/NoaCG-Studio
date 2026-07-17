@@ -208,10 +208,10 @@ and rendered once here. The exported standalone controlpanel.html (control/contr
 renders the SAME descriptors in dependency-free vanilla JS because it ships without React - it is
 the one deliberate second renderer; keep it in step.
 
-## Panels (the five tool panels - Data / Control / Style / AI / Export)
+## Panels (the six tool panels - Data / Control / Style / Assets / AI / Export)
 
 On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
-**SidePanel** (the five-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
+**SidePanel** (the six-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
 editing lives on the timeline (StepTimeline via TimelineDock) plus the Inspector.
 
 - **SampleDataPanel** - sample values (shared field rows, `includeHidden`: a hidden field carries
@@ -220,7 +220,18 @@ editing lives on the timeline (StepTimeline via TimelineDock) plus the Inspector
   on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
   simulator; downloads controlpanel.html; adds the Google-Sheets live-data block.
 - **StylePanel** - reads/writes the :root style contract (src/templates/CLAUDE.md): colors,
-  font swap, zone re-anchoring, post-creation font import.
+  font swap, zone re-anchoring, post-creation font import (an imported font still lands in
+  template.assets and shows in the Assets panel's list).
+- **AssetsPanel** - the template's bundled files as folder-grouped ROWS (images, Lottie .json
+  gated by looksLikeLottie, fonts): DnD file import (one addAssets = one undo step), rows are
+  drag SOURCES (`application/x-noacg-asset`, exported as ASSET_DRAG_TYPE) for the canvas drop
+  (CanvasInteraction) and for folder-header drops; folders are path segments (one level inside
+  the bucket) - moving/renaming goes through blocks/assetOps.ts moveAsset, which rewrites every
+  code reference in the SAME undoable apply, then patches stale sampleData values. Empty
+  user-created folders are ephemeral component state on purpose (assets sync as template JSON).
+  The Information section derives name/format/dimensions/aspect/size/alpha/Lottie timing +
+  reference count per selection via src/assets/assetInfo.ts (async probe, cached) - the model
+  stays { path, data }. Pinned by e2e/assets.spec.ts.
 - **AIPromptPanel**; **ExportPanel** (validation inline; remembers the last-picked target via
   model/prefs.ts). Below the zip targets it mounts **render/RenderPanel** — the Video & image
   section (MP4/WebM/PNG/sequence/ProRes via the render API) — ONLY when `isRenderConfigured()`
@@ -283,7 +294,42 @@ undo/redo keys as AppShell with the same Monaco/form-field guard. AI chat gates 
 
 CreationWizard (Entry -> Category -> Template -> Fields -> Style -> Animation, persistent live
 preview), draft.ts, WizardPreview, MiniPreview, steps/. Creating calls `variant.create(options)`
-which generates the complete, commented template.
+which generates the complete, commented template. FOUR entry cards: template, Create with AI,
+video, blank.
+
+The steps are driven by each variant's declared CAPABILITIES (model/wizard.ts): the Template
+step filters the card grid with style/logo/line-capacity chips; the Fields step offers up to
+`maxLines` text lines plus the logo toggle + custom upload on a `logo: 'optional'` design
+(built-in slots show it checked and locked); the Style step has TWO size knobs (Graphic size ->
+--scale, Text size -> --type-scale); the Animation step renders the slide family as ONE card
+with a direction-of-travel picker. WizardPreview cancels pending lifecycle-demo timers when a
+debounced srcdoc commits (a stale stop() must never blank the fresh document), pushes field
+values from a latest-template ref, and gates the auto-entrance on `document.fonts.ready`
+(capped) so a font choice shows on the entrance itself. Pinned by e2e/wizard-preview.spec.ts,
+wizard-logo.spec.ts, and wizard-filters.spec.ts.
+
+**Create with AI** (Entry card -> steps/AiStep, mode 'ai') is the MERGED describe/import step.
+One drop zone accepts images AND an existing .html/.zip template. A dropped template parses
+deterministically (model/importTemplate.ts) into a card with two actions: **"Open as code (no
+AI)"** — the byte-faithful import (applyTemplate + Export panel, exactly the old Import entry;
+it renders OUTSIDE the `needsSignIn` gate and must stay there — only the AI actions are an
+account feature) — or **Convert** (provider.convertImport, guided by the prompt). Dropped
+images become `GenerateContext.images` chips with a "Design around these with a catalog
+template" escape that patches the draft and continues into the mode-'import' images ->
+category -> TemplateStep flow (ImportStep is now that slim continuation only). The step
+injects the harness's validator (`validateTemplate` + `benchTemplateRuntime` merged) into
+every provider call, streams `onProgress` stages into the busy line, shows the route badge
+(catalog design system / +flourish / custom) on the result card, and passes a grounded
+result's `spec` back on refine so spec-level refinement re-assembles deterministically
+(src/ai/CLAUDE.md).
+
+The harness is OPT-IN: the **"Use NoaCG harness (3 options)"** checkbox
+(`AiSettings.useHarness`, default off). Off → `generateRaw` (one-shot, static validation
+only, no bench). On → `generateAlternatives`: three directions, rendered as `[data-alt]`
+option buttons; selecting one swaps the preview and STAGES the pick
+(src/ai/preferences.ts); CreationWizard's `createFromAi` COMMITS it — the aggregated
+counters become the design stage's subtle preference hint. Conversion of an imported
+template always runs the validated conversion flow regardless of the checkbox.
 
 **Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + duration/
 aspect/fps/transparency + asset upload -> an INSTANT create (`createDefaultVideoProject`, the

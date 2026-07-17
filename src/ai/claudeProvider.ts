@@ -2,16 +2,27 @@
 // apply. The system prompt teaches the model this project's contracts (SPX runtime, :root
 // style vars, marked ANIMATION region, auto-fit, teachable ES5) and shows lt01's real
 // generated code as the canonical example — so AI output stays editable by the Style and
-// Motion panels exactly like wizard output. One automatic repair round runs when the
-// validator finds errors; anything still broken is surfaced to the user, never auto-applied.
+// Motion panels exactly like wizard output. Results run through the injected validation
+// pipeline (static validateTemplate + the runtime bench when the caller provides one) with
+// a bounded errors-back repair loop, RE-VALIDATED every round; anything still broken is
+// surfaced to the user with its findings attached, never auto-applied.
 
-import { callClaude, type ClaudeTool, type ContentBlock } from './anthropic';
-import type { AIProvider, GenerateContext } from './provider';
+import { callClaude, callClaudeDetailed, type ClaudeTool, type ContentBlock } from './anthropic';
+import type { AiPath, AIProvider, AiTemplateChange, GenerateContext, GenerateOptions } from './provider';
+import { startAiRun, type AiRunKind, type AiRunRecorder } from './telemetry';
 import { parseDefinition } from '../model/spxDefinition';
-import { RESOLUTIONS, type SpxTemplate, type TemplateChange, type TemplateType, DEFAULT_SETTINGS } from '../model/types';
+import { RESOLUTIONS, type SpxTemplate, type TemplateType, DEFAULT_SETTINGS } from '../model/types';
 import { parseDataUrl } from '../assets/assetUtils';
-import { validateTemplate } from '../validation/validateTemplate';
+import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
 import { lt01 } from '../templates/lowerThirds/lt01';
+import { catalogDigest, DESIGN_ALTERNATIVES_TOOL, DESIGN_SPEC_TOOL, specToTemplate, type DesignSpec } from './designSpec';
+import { preferenceHint } from './preferences';
+import { applyDesignAdjustments } from './designAdjust';
+import { applyPolish, POLISH_TOOL, type PolishPatch } from './polish';
+import { variantsFor } from '../templates/catalog';
+import type { TemplateVariant } from '../model/wizard';
+import { detectPrefix } from '../model/structure';
+import { parseAnimData } from '../blocks/animData';
 
 // ── Structured output: the model must return the template via this tool ─────
 
@@ -46,11 +57,26 @@ interface EmittedTemplate {
   js: string;
 }
 
-// ── The system prompt: contracts + taste + one real example ─────────────────
+// ── The system prompts: contracts + taste-as-reasoning + one real example ────
 
-function systemPrompt(): string {
+// Taste is derived from the brief, never from a fixed aesthetic — shared by the design
+// stage and the coder so both reason the same way.
+const TASTE_REASONING = `## How to judge design (reason from the context, never from a house look)
+Taste is not a fixed aesthetic. Derive it from the brief, the programme's genre, the
+audience, and any references: clear hierarchy (what is read first, second, last),
+intentional contrast, information density suited to the audience and reading distance,
+strong typography, balanced spacing, coherent visual logic, motion that supports the
+reading order, restraint where the content is serious, distinctiveness without
+unnecessary decoration. A news lower third, an esports ranking, an election result, a
+financial ticker, an entertainment graphic, and a children's programme each earn
+DIFFERENT answers — density, weight, colour energy, motion speed. Never default to one
+look; make every choice follow the programme.`;
+
+function systemPrompt(exampleVariant: TemplateVariant = lt01): string {
   // The canonical example is REAL generated code — the same contracts the wizard writes.
-  const example = lt01.create();
+  // The caller picks the nearest catalog design so a scoreboard brief studies a real
+  // scoreboard's contracts, not always a lower third.
+  const example = exampleVariant.create();
   return `You are the template generator inside NoaCG Studio — a tool that creates
 broadcast graphics templates for SPX Graphics / CasparCG playout. You write COMPLETE, working,
 marketplace-quality templates. The user is learning to code from what you write.
@@ -71,8 +97,9 @@ marketplace-quality templates. The user is learning to code from what you write.
 
 ## The house style contracts (keep AI output editable by the app's panels)
 - ALL colors flow through :root vars: --accent, --text-color, --text-dim, --panel-bg,
-  --font-heading, --scale. Zero hardcoded colors anywhere else in the CSS.
-- ALL pixel sizes via calc(N * var(--scale)).
+  --font-heading, --scale, --type-scale. Zero hardcoded colors anywhere else in the CSS.
+- ALL pixel sizes via calc(N * var(--scale)); font sizes additionally multiply by the
+  text-only knob: font-size: calc(N * var(--scale) * var(--type-scale)).
 - The root element (one wrapper div) is absolutely positioned in a safe-area zone and starts
   at opacity: 0 — play() reveals it.
 - Text boxes hug their content (width: fit-content) with a max-width cap so long text wraps
@@ -119,8 +146,8 @@ marketplace-quality templates. The user is learning to code from what you write.
   clever one-liners unless they clearly make the code simpler to read — usually they do not here.
 - Teachable ES5 in template.js (var, function declarations), short useful comments that explain
   WHY (not that something changed). Rich but commented CSS. No frameworks, no build steps.
-- Broadcast taste: one accent color doing sharp small work, generous whitespace, real
-  typographic hierarchy, marketplace-grade composition — never a tutorial demo.
+
+${TASTE_REASONING}
 
 ## The canonical example (REAL output of this tool — match its structure exactly)
 === index.html ===
@@ -133,6 +160,66 @@ ${example.js}
 
 Return the template ONLY via the emit_template tool.`;
 }
+
+/** The design-stage prompt: decide the route and every design parameter — no code. */
+function specSystemPrompt(): string {
+  return `You are the design director inside NoaCG Studio — a tool that creates broadcast
+graphics templates. You do NOT write code here. You read the brief (and any attached
+reference images) and return ONE design decision via the emit_design_spec tool.
+
+${TASTE_REASONING}
+
+## Routing (fit)
+Choose "catalog" when a design family below carries the brief's STRUCTURE — the platform
+then assembles a guaranteed-correct template from your parameters, and styling differences
+(colour, typography, density, spacing, shape, motion character) are expressed through the
+parameters and the flourish, never by rejecting the chassis. Choose "custom" when the brief
+genuinely calls for a structure or composition no family expresses — a novel layout, an
+unlisted graphic kind, a composition that would be forced into the wrong shape. Custom is a
+real creative route; never cram a brief into an ill-fitting chassis, and never route to
+custom just for a styling difference.
+
+## Variety (a hard requirement)
+Different briefs must produce visibly different designs. Choose the chassis, zone, motion,
+typography, density, and palette from THIS brief's world — not the same safe family every
+time. Fill lines[] with realistic samples from the brief's world, never lorem ipsum.
+
+## References
+When images are attached: a logo means brand colours and useLogoSlot where the design has a
+slot; screenshots or style frames mean you read the SYSTEM behind them — grid, hierarchy,
+spacing rhythm, proportions, shape language, colour balance, density, motion cues — into
+referenceSystem, and let it drive your parameters. References outweigh every generic rule
+above.
+
+## What the platform can assemble
+${catalogDigest()}
+${(() => {
+    const hint = preferenceHint();
+    return hint ? `\n## Aggregated user preferences\n${hint}\n` : '';
+  })()}
+Return the design ONLY via the requested tool.`;
+}
+
+// The default one-shot generation (harness OFF): the model's own take, told only the SPX
+// format basics so the result runs in playout — no taste teaching, no worked example, no
+// repair loop. The benchmark's raw arm showed these look strong; keeping this path pure is
+// what makes the harness's value measurable (and its checkbox honest).
+const RAW_SYSTEM = `You make broadcast graphics as SPX / CasparCG HTML templates. Return the complete
+template as three files via the emit_template tool.
+
+Format basics (so it runs in playout):
+- index.html defines window.SPXGCTemplateDefinition with DataFields named f0, f1, …; each field
+  maps to one element with the same id. Field types: textfield, textarea, number, filelist (for
+  images).
+- template.js (loaded in <head>) defines global update(data /* a JSON string */), play(), stop(),
+  next().
+- External references are relative: css/template.css, js/template.js, js/gsap.min.js. GSAP is
+  available as the global "gsap" (the only library). No CDN or absolute paths.
+- Each tool field is the PURE contents of that one file: "html" is the full document
+  (doctype…</html>, and the SPXGCTemplateDefinition <script> lives here); "css" is CSS only;
+  "js" is JavaScript only — no <script> tags, no HTML.
+
+Return ONLY via the emit_template tool.`;
 
 // ── Building an SpxTemplate from the model's output ──────────────────────────
 
@@ -155,35 +242,70 @@ function toTemplate(emitted: EmittedTemplate, ctx?: GenerateContext, base?: SpxT
   };
 }
 
-/** One call → template; if validation fails, one repair round with the errors. */
+/** How many errors-back repair rounds the free-form path gets (video-harness parity). */
+const MAX_REPAIR_ROUNDS = 2;
+
+/** Run the injected validation pipeline (static + runtime bench) or plain static validation. */
+async function validateWith(
+  template: SpxTemplate,
+  options?: GenerateOptions,
+  run?: AiRunRecorder,
+): Promise<ValidationResult> {
+  const t0 = Date.now();
+  const result = options?.validate ? await options.validate(template) : validateTemplate(template);
+  run?.stage('validate', t0);
+  return result;
+}
+
+/**
+ * Emit → validate → bounded errors-back repair. Every round is RE-VALIDATED (a repair that
+ * comes back broken never masquerades as fixed); a result that still fails after the budget
+ * is returned with its validation attached — surfaced to the user, never auto-applied.
+ */
 async function generateValidated(
   userContent: ContentBlock[],
   ctx?: GenerateContext,
   base?: SpxTemplate,
-): Promise<TemplateChange> {
-  const emitted = (await callClaude({
-    system: systemPrompt(),
+  options?: GenerateOptions,
+  run?: AiRunRecorder,
+  exampleVariant?: TemplateVariant,
+): Promise<AiTemplateChange> {
+  const system = systemPrompt(exampleVariant);
+  options?.onProgress?.('Writing the code…');
+  let t0 = Date.now();
+  // The system prompt is byte-identical across the emit and its repair rounds — one
+  // prompt-cache breakpoint absorbs most of the loop's input cost.
+  const first = await callClaudeDetailed({
+    system,
     messages: [{ role: 'user', content: userContent }],
     tool: TEMPLATE_TOOL,
-  })) as EmittedTemplate;
+    cacheSystem: true,
+  });
+  run?.stage('coder', t0, first.model, first.usage);
 
+  let emitted = first.output as EmittedTemplate;
   let template = toTemplate(emitted, ctx, base);
   let summary = emitted.summary;
+  options?.onProgress?.('Testing it…');
+  let validation = await validateWith(template, options, run);
 
-  const validation = validateTemplate(template);
-  if (!validation.ok) {
-    // One automatic repair round: hand the exact validator errors back with the code.
-    const repair = (await callClaude({
-      system: systemPrompt(),
+  for (let round = 1; round <= MAX_REPAIR_ROUNDS && !validation.ok; round++) {
+    // Errors-back repair: the exact findings (validator rules + bench measurements) with
+    // the full current code, forced back through the same tool.
+    options?.onProgress?.(`Repairing (round ${round})…`);
+    run?.repair();
+    t0 = Date.now();
+    const repair = await callClaudeDetailed({
+      system,
       messages: [
         { role: 'user', content: userContent },
-        { role: 'assistant', content: `I generated a template but the validator rejected it.` },
+        { role: 'assistant', content: `I generated a template but it failed the platform's checks.` },
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Your template failed validation. Fix ALL of these and re-emit the complete template:
+              text: `Your template failed these checks. Fix ALL of them and re-emit the complete template:
 ${validation.errors.map((e) => `- ${e.rule}: ${e.message}`).join('\n')}
 
 === index.html ===
@@ -197,12 +319,31 @@ ${template.js}`,
         },
       ],
       tool: TEMPLATE_TOOL,
-    })) as EmittedTemplate;
-    template = toTemplate(repair, ctx, base);
-    summary = repair.summary;
+      cacheSystem: true,
+    });
+    run?.stage(`repair-${round}`, t0, repair.model, repair.usage);
+    emitted = repair.output as EmittedTemplate;
+    template = toTemplate(emitted, ctx, base);
+    summary = emitted.summary;
+    options?.onProgress?.('Testing it…');
+    validation = await validateWith(template, options, run);
   }
 
-  return { summary, template };
+  return { summary, template, path: 'custom', validation };
+}
+
+/** Telemetry wrapper: record the run whether it returns or throws. */
+async function recorded(kind: AiRunKind, work: (run: AiRunRecorder) => Promise<AiTemplateChange>): Promise<AiTemplateChange> {
+  const run = startAiRun(kind);
+  try {
+    const result = await work(run);
+    if (result.path) run.route(result.path);
+    run.finish(result.validation?.ok ?? true, result.validation?.errors.map((e) => e.rule));
+    return result;
+  } catch (e) {
+    run.finish(false, ['exception']);
+    throw e;
+  }
 }
 
 // ── Prompt assembly ───────────────────────────────────────────────────────────
@@ -245,20 +386,12 @@ function imageBlocks(ctx?: GenerateContext): ContentBlock[] {
 
 // ── The provider ──────────────────────────────────────────────────────────────
 
-export const claudeProvider: AIProvider = {
-  async generate(prompt, context) {
-    return generateValidated(
-      [...imageBlocks(context), { type: 'text', text: contextText(prompt, context) }],
-      context,
-    );
-  },
-
-  async modify(prompt, template) {
-    return generateValidated(
-      [
-        {
-          type: 'text',
-          text: `Modify the template below. Change ONLY what the request needs — keep everything else
+/** The code-level modify content (shared by modifyAs and the spec-refine fallback). */
+function modifyContent(prompt: string, template: SpxTemplate): ContentBlock[] {
+  return [
+    {
+      type: 'text',
+      text: `Modify the template below. Change ONLY what the request needs — keep everything else
 (byte-identical where possible), including the user's own edits and comments.
 
 Request: ${prompt}
@@ -269,11 +402,318 @@ ${template.html}
 ${template.css}
 === template.js ===
 ${template.js}`,
+    },
+  ];
+}
+
+/** The modify flow shared by modify/fix/makeSpxReady/convertImport (each records its own kind). */
+function modifyAs(
+  kind: AiRunKind,
+  prompt: string,
+  template: SpxTemplate,
+  options?: GenerateOptions,
+): Promise<AiTemplateChange> {
+  return recorded(kind, (run) =>
+    generateValidated(modifyContent(prompt, template), undefined, template, options, run),
+  );
+}
+
+/**
+ * Spec-level refinement: when the template being modified came from a grounded spec (the
+ * caller passed it back) and is still house-shaped, the refinement re-emits the SPEC and
+ * re-assembles deterministically — "warmer colours, calmer entrance" never round-trips
+ * code. Falls back to the code-level modify when the design stage fails or routes custom.
+ */
+async function specRefine(
+  prompt: string,
+  template: SpxTemplate,
+  priorSpec: DesignSpec,
+  options: GenerateOptions | undefined,
+  run: AiRunRecorder,
+): Promise<AiTemplateChange> {
+  options?.onProgress?.('Designing…');
+  try {
+    const t0 = Date.now();
+    const result = await callClaudeDetailed({
+      system: specSystemPrompt(),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `The user is refining an existing design. Its current design spec:
+${JSON.stringify(priorSpec, null, 2)}
+
+Refinement request: ${prompt}
+
+Return the FULL updated spec — carry forward everything the request does not change
+(including the flourish). Route to custom ONLY if the request now needs a structure the
+catalog cannot express.`,
+            },
+          ],
         },
       ],
-      undefined,
-      template,
-    );
+      tool: DESIGN_SPEC_TOOL,
+      maxTokens: 4000,
+    });
+    run.stage('design-spec', t0, result.model, result.usage);
+    const spec = result.output as DesignSpec;
+    if (!Array.isArray(spec.lines)) spec.lines = [];
+    if (spec.fit === 'catalog') {
+      return groundedResult(spec, contextFrom(template), options, run);
+    }
+  } catch {
+    // The design stage failed — the code-level modify below still serves the request.
+  }
+  return generateValidated(modifyContent(prompt, template), undefined, template, options, run);
+}
+
+// ── The grounded pipeline: assemble → adjust → optional polish (revert on any failure) ──
+
+/** Try the bounded polish pass; null = reverted (the caller keeps the assembled template). */
+async function polishStage(
+  template: SpxTemplate,
+  spec: DesignSpec,
+  options: GenerateOptions | undefined,
+  run: AiRunRecorder,
+): Promise<{ template: SpxTemplate; validation: ValidationResult } | null> {
+  options?.onProgress?.('Polishing…');
+  try {
+    const t0 = Date.now();
+    const result = await callClaudeDetailed({
+      system:
+        `You add ONE bounded visual flourish to an assembled broadcast graphics template in NoaCG Studio.\n\n` +
+        `Hard rules: every colour flows through the :root vars (--accent, --text-color, --text-dim, ` +
+        `--panel-bg); every size via calc(N * var(--scale)); never redeclare :root or @font-face; ` +
+        `never touch JavaScript or the animation; keep the auto-fit behaviour (width: fit-content + ` +
+        `max-width caps) intact; keep every field id exactly once and the mask structure when you ` +
+        `return html. Touch ONLY what the flourish needs — the design is already sound.\n\n` +
+        `Return the patch ONLY via the emit_polish tool.`,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Add this flourish to the template below.
+
+Flourish: ${spec.flourish}
+${spec.referenceSystem ? `Reference system (from the user's uploads): ${spec.referenceSystem}` : ''}
+
+=== index.html ===
+${template.html}
+=== template.css ===
+${template.css}`,
+            },
+          ],
+        },
+      ],
+      tool: POLISH_TOOL,
+      maxTokens: 8000,
+    });
+    run.stage('polish', t0, result.model, result.usage);
+    const polished = applyPolish(template, result.output as PolishPatch);
+    if (!polished) return null;
+    options?.onProgress?.('Testing it…');
+    const validation = await validateWith(polished, options, run);
+    return validation.ok ? { template: polished, validation } : null;
+  } catch {
+    return null; // a polish failure never costs the user the assembled result
+  }
+}
+
+/** Spec → assembled, adjusted, validated (and polished when the spec asks) result. */
+async function groundedResult(
+  spec: DesignSpec,
+  ctx: GenerateContext | undefined,
+  options: GenerateOptions | undefined,
+  run: AiRunRecorder,
+): Promise<AiTemplateChange> {
+  options?.onProgress?.('Assembling…');
+  const t0 = Date.now();
+  const assembled = specToTemplate(spec, ctx);
+  // The spec's compositional parameters (typography scale, density, shape, panel) apply
+  // as deterministic overrides — the brief shapes the composition, not just the colours.
+  let template = applyDesignAdjustments(assembled.template, spec);
+  run.stage('assemble', t0);
+  run.diversity(assembled.diversity);
+  options?.onProgress?.('Testing it…');
+  // No repair loop here: a grounded assembly failing its own bench is a platform bug
+  // worth surfacing, not something a model round-trip should paper over.
+  let validation = await validateWith(template, options, run);
+  let path: AiPath = 'grounded';
+  if (spec.flourish && validation.ok) {
+    const polished = await polishStage(template, spec, options, run);
+    if (polished) {
+      template = polished.template;
+      validation = polished.validation;
+      path = 'grounded+polish';
+    }
+  }
+  return {
+    summary: spec.summary || 'Built from the catalog design system.',
+    template,
+    path,
+    validation,
+    spec,
+  };
+}
+
+/** Rebuild a GenerateContext from a template being refined (its images ride its assets). */
+function contextFrom(template: SpxTemplate): GenerateContext {
+  return {
+    images: template.assets.filter((a) => a.path.startsWith('images/')),
+    palette: null,
+    resolution: template.resolution,
+    fps: template.fps,
+  };
+}
+
+/** The design stage's decisions, carried into the free-form coder as plain direction. */
+function designNotes(spec: DesignSpec): string {
+  return [
+    'Design direction (decided in the design stage — follow it):',
+    `- ${spec.reason}`,
+    spec.motionCharacter ? `- Motion: ${spec.motionCharacter}` : null,
+    spec.referenceSystem ? `- Reference system (read from the uploads): ${spec.referenceSystem}` : null,
+    spec.flourish ? `- Signature: ${spec.flourish}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export const claudeProvider: AIProvider = {
+  async generate(prompt, context, options) {
+    return recorded('generate', async (run) => {
+      const userContent: ContentBlock[] = [
+        ...imageBlocks(context),
+        { type: 'text', text: contextText(prompt, context) },
+      ];
+
+      // Stage 1 — the design spec (also the router). A stage failure must never kill the
+      // generation: fall through to the free-form path with no spec.
+      options?.onProgress?.('Designing…');
+      let spec: DesignSpec | null = null;
+      try {
+        const t0 = Date.now();
+        const result = await callClaudeDetailed({
+          system: specSystemPrompt(),
+          messages: [{ role: 'user', content: userContent }],
+          tool: DESIGN_SPEC_TOOL,
+          maxTokens: 4000,
+        });
+        run.stage('design-spec', t0, result.model, result.usage);
+        spec = result.output as DesignSpec;
+        if (!Array.isArray(spec.lines)) spec.lines = [];
+      } catch {
+        // No spec — the free-form path below still serves the brief.
+      }
+
+      if (spec && spec.fit === 'catalog') {
+        // Stage 2 — deterministic assembly through the real catalog assemblers: correct
+        // by construction, panel- and timeline-editable like any wizard output.
+        return groundedResult(spec, context, options, run);
+      }
+
+      // Custom route — the free-form coder, studying the NEAREST catalog design as its
+      // canonical example and carrying the design stage's direction.
+      const exampleVariant = spec ? variantsFor(spec.category)[0] : undefined;
+      const content: ContentBlock[] = spec
+        ? [...userContent, { type: 'text', text: designNotes(spec) }]
+        : userContent;
+      return generateValidated(content, context, undefined, options, run, exampleVariant);
+    });
+  },
+
+  async generateRaw(prompt, context, options) {
+    return recorded('generate', async (run) => {
+      options?.onProgress?.('Generating…');
+      const t0 = Date.now();
+      const result = await callClaudeDetailed({
+        system: RAW_SYSTEM,
+        messages: [
+          { role: 'user', content: [...imageBlocks(context), { type: 'text', text: contextText(prompt, context) }] },
+        ],
+        tool: TEMPLATE_TOOL,
+      });
+      run.stage('raw', t0, result.model, result.usage);
+      const emitted = result.output as EmittedTemplate;
+      const template = toTemplate(emitted, context);
+      // Static validation only, for honest display — no bench, no repair: this path IS the
+      // baseline the harness gets measured against.
+      return { summary: emitted.summary, template, path: 'raw', validation: validateTemplate(template) };
+    });
+  },
+
+  async generateAlternatives(prompt, context, options) {
+    const run = startAiRun('generate');
+    try {
+      const userContent: ContentBlock[] = [
+        ...imageBlocks(context),
+        { type: 'text', text: contextText(prompt, context) },
+      ];
+
+      // ONE design-stage call returns three distinct directions; each assembles like a
+      // single harness generation (grounded deterministically, or the validated custom path).
+      options?.onProgress?.('Designing three directions…');
+      let specs: DesignSpec[] = [];
+      try {
+        const t0 = Date.now();
+        const result = await callClaudeDetailed({
+          system: specSystemPrompt(),
+          messages: [{ role: 'user', content: userContent }],
+          tool: DESIGN_ALTERNATIVES_TOOL,
+          maxTokens: 8000,
+        });
+        run.stage('design-alternatives', t0, result.model, result.usage);
+        const output = result.output as { alternatives?: DesignSpec[] };
+        specs = (Array.isArray(output.alternatives) ? output.alternatives : []).slice(0, 3);
+        for (const spec of specs) if (!Array.isArray(spec.lines)) spec.lines = [];
+      } catch {
+        specs = [];
+      }
+
+      const results: AiTemplateChange[] = [];
+      for (const [i, spec] of specs.entries()) {
+        options?.onProgress?.(`Building option ${i + 1} of ${specs.length}…`);
+        if (spec.fit === 'catalog') {
+          results.push(await groundedResult(spec, context, options, run));
+        } else {
+          const change = await generateValidated(
+            [...userContent, { type: 'text', text: designNotes(spec) }],
+            context,
+            undefined,
+            options,
+            run,
+            variantsFor(spec.category)[0],
+          );
+          results.push({ ...change, spec });
+        }
+      }
+      // The design stage failing (or returning nothing) must not kill the generation:
+      // fall back to one full harness run so the user still gets a result.
+      if (!results.length) results.push(await this.generate(prompt, context, options));
+
+      run.finish(
+        results.every((r) => r.validation?.ok ?? true),
+        results.flatMap((r) => r.validation?.errors.map((e) => e.rule) ?? []),
+      );
+      return results;
+    } catch (e) {
+      run.finish(false, ['exception']);
+      throw e;
+    }
+  },
+
+  async modify(prompt, template, options) {
+    // A grounded result refines at SPEC level while it is still house-shaped; anything
+    // else (foreign imports, hand-edited code, custom builds) refines at code level.
+    if (options?.spec && detectPrefix(template.html) && parseAnimData(template.js)) {
+      const spec = options.spec;
+      return recorded('modify', (run) => specRefine(prompt, template, spec, options, run));
+    }
+    return modifyAs('modify', prompt, template, options);
   },
 
   async explain(code) {
@@ -287,20 +727,58 @@ ${template.js}`,
     return text;
   },
 
-  async fix(template) {
+  async fix(template, options) {
     const validation = validateTemplate(template);
     const problems = validation.ok
       ? 'No validator errors — review the template for runtime bugs (replay-safety, missing ids) and fix what you find.'
       : validation.errors.map((e) => `- ${e.rule}: ${e.message}`).join('\n');
-    return this.modify(`Fix these validation problems:\n${problems}`, template);
+    return modifyAs('fix', `Fix these validation problems:\n${problems}`, template, options);
   },
 
-  async makeSpxReady(template) {
-    return this.modify(
+  async makeSpxReady(template, options) {
+    return modifyAs(
+      'make-ready',
       'Make this template fully SPX-ready: a complete SPXGCTemplateDefinition matching the DOM ' +
         '(every fN has exactly one element), global update/play/stop/next functions, relative asset ' +
         'paths only, and the standard external references (css/template.css, js/gsap.min.js, js/template.js).',
       template,
+      options,
+    );
+  },
+
+  async convertImport(prompt, imported, _context, options) {
+    const request = prompt.trim() || 'Bring it fully up to the house standards.';
+    return modifyAs(
+      'convert',
+      `This template was IMPORTED from the user's existing file — keep what it gets right ` +
+        `(its content, its design intent, its working markup), and convert the rest to this ` +
+        `tool's contracts: SPXGCTemplateDefinition + fN field mapping, the :root style vars, ` +
+        `the marked ANIMATION region as the NOACG_ANIM data block with the standard ` +
+        `interpreter, and relative asset paths only.\n\nRequest: ${request}`,
+      imported,
+      options,
     );
   },
 };
+
+/**
+ * The PRE-HARNESS generation path, exported for scripts/ai-compare.mjs only: the house
+ * system prompt + the lt01 example + the validated repair loop, with NO design-spec stage.
+ * The app never calls this — it is the benchmark's stage-ablation arm, kept so the
+ * harness's added value stays measurable against the previous product.
+ */
+export async function plainGenerate(
+  prompt: string,
+  context?: GenerateContext,
+  options?: GenerateOptions,
+): Promise<AiTemplateChange> {
+  return recorded('generate', (run) =>
+    generateValidated(
+      [...imageBlocks(context), { type: 'text', text: contextText(prompt, context) }],
+      context,
+      undefined,
+      options,
+      run,
+    ),
+  );
+}

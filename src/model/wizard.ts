@@ -37,6 +37,7 @@ export type TemplateCategory =
   | 'ticker'
   | 'infographic'
   | 'corner-bug'
+  | 'versus'
   | 'quiz'
   | 'imported-design';
 
@@ -50,8 +51,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 2,  available: true , description: 'A persistent corner logo (image placeholder).', group: 'essentials' },
   // Specials — for particular formats and moments.
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 6,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
-  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 2,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
+  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
+  { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
   { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
   // Not browsable — reached only by importing artwork (see CategoryInfo.group).
   { id: 'imported-design', name: 'Imported design',       plannedCount: 1,  available: true , description: 'Your own artwork with text fields on top.', group: 'imported' },
@@ -123,14 +125,18 @@ export interface Palette {
 }
 
 export type AnimPresetId =
-  | 'slide-fade'
+  // The Slide family — one choreography, four directions of travel (slide-up enters
+  // rising from below, slide-left enters travelling left from the right edge, …):
+  | 'slide-up'
+  | 'slide-down'
+  | 'slide-left'
+  | 'slide-right'
   | 'line-reveal'
   | 'mask-wipe'
   | 'pop-spring'
   | 'snap-stinger'
   | 'blur-in'
   | 'fade'
-  | 'drop-in'
   | 'flip-3d'
   // End-credits motion formats (templates/endCredits/creditsPresets.ts):
   | 'credits-roll'
@@ -143,6 +149,9 @@ export type AnimPresetId =
   | 'hold-loop'
   | 'timer-run'
   | 'timer-line-reveal'
+  // Versus-card formats (templates/versus/vsPresets.ts):
+  | 'vs-slam'
+  | 'vs-glide'
   // Infographic motion formats (templates/infographics/igPresets.ts):
   | 'count-up'
   | 'bars-grow'
@@ -173,7 +182,8 @@ export interface AnimationChoice {
 export interface WizardOptions {
   resolution?: Resolution;
   fps?: number;
-  /** 1–3 visible text lines (design adapts). Defaults to the variant's suggested lines. */
+  /** Visible text lines, up to the variant's maxLines (the design adapts). Defaults to
+   *  the variant's suggested lines. */
   lines?: LineSpec[];
   /** Extra non-visual fields appended to the SPX definition. */
   extraFields?: ExtraFieldSpec[];
@@ -181,8 +191,10 @@ export interface WizardOptions {
   fontId?: string;
   /** A user-imported font (embedded as an asset) — takes precedence over fontId. */
   customFont?: CustomFont;
-  /** Size multiplier written as --scale (S 0.85 · M 1 · L 1.2). */
+  /** Whole-graphic size multiplier written as --scale (S 0.85 · M 1 · L 1.2). */
   sizeScale?: number;
+  /** Text-only size multiplier written as --type-scale (S 0.9 · M 1 · L 1.15). */
+  typeScale?: number;
   zone?: Zone9;
   /** Pixel offsets added after zone anchoring. */
   nudge?: { x: number; y: number };
@@ -191,6 +203,9 @@ export interface WizardOptions {
   importedImages?: AssetFile[];
   /** Relative path of the imported image to place in the variant's logo slot. */
   logoAssetPath?: string;
+  /** Whether an 'optional'-logo design should include its logo slot (field + <img>).
+   *  Unset falls back to "an image was provided"; 'built-in' designs always have one. */
+  logoEnabled?: boolean;
   /** The artwork that IS the graphic (the Import Graphic flow's imported-design category).
    *  Its natural size decides the design's size, so it is measured at import, not guessed. */
   designArt?: DesignArt;
@@ -214,15 +229,22 @@ export interface ResolvedOptions {
   fontId: string;
   customFont: CustomFont | null;
   sizeScale: number;
+  typeScale: number;
   zone: Zone9;
   nudge: { x: number; y: number };
   animation: AnimationChoice;
   importedImages: AssetFile[];
   logoAssetPath: string | null;
+  logoEnabled: boolean;
   designArt: DesignArt | null;
 }
 
 // ── Template variants ────────────────────────────────────────────────────────
+
+/** A variant's logo capability: 'built-in' = the design always carries a logo slot
+ *  (corner bugs, credits), 'optional' = the wizard offers a logo toggle (+ upload),
+ *  'none' = the design has no sensible place for one. */
+export type LogoSupport = 'none' | 'optional' | 'built-in';
 
 export interface TemplateVariant {
   /** e.g. "lt01". */
@@ -231,12 +253,12 @@ export interface TemplateVariant {
   name: string;
   styleTag: StyleTag;
   description: string;
-  /** How many visible text lines the design supports. */
-  maxLines: 1 | 2 | 3;
+  /** How many visible text lines the design supports (1–5). */
+  maxLines: number;
   /** Suggested lines used as the wizard's starting point (and preview defaults). */
   suggestedLines: LineSpec[];
-  /** Whether the design has an image/logo slot (used by the import-graphics flow). */
-  hasLogoSlot: boolean;
+  /** Logo capability — drives the wizard's logo toggle, the import flow, and filtering. */
+  logo: LogoSupport;
   /** Animation presets that suit this design (first = default). */
   animationPresets: AnimPresetId[];
   defaultPalette: Palette;
@@ -284,6 +306,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     fontId: options.fontId ?? variant.defaultFontId,
     customFont: options.customFont ?? null,
     sizeScale: options.sizeScale ?? 1,
+    typeScale: options.typeScale ?? 1,
     zone: options.zone ?? variant.defaultZone,
     nudge: options.nudge ?? { x: 0, y: 0 },
     animation: {
@@ -294,6 +317,9 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     },
     importedImages: options.importedImages ?? [],
     logoAssetPath: options.logoAssetPath ?? null,
+    logoEnabled:
+      variant.logo === 'built-in' ||
+      (variant.logo === 'optional' && (options.logoEnabled ?? !!options.logoAssetPath)),
     designArt: options.designArt ?? null,
   };
 }

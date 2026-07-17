@@ -21,7 +21,13 @@ example_projects/
 
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand)
 bench-out/
+video-bench-out*/
 compare-out/
+
+# Catalog sweep taste screenshots (scripts/l3-sweep.mjs <shots-dir> <category>; multi-MB
+# PNGs, regenerated on demand - review them on disk, never commit them)
+l3-shots/
+shots-*/
 
 # Local render outputs + manifest fixtures (multi-MB, regenerated on demand by
 # scripts/make-render-manifest.mjs and the render dev loop)

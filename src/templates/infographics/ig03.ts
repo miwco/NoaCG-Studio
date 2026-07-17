@@ -25,7 +25,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
       { title: 'Standings', sample: TOWER_SAMPLE },
       { title: 'Title', sample: 'LIVE TIMING' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['rows-cascade'],
     defaultPalette: paletteById('signal'),
     defaultFontId: 'oswald',
@@ -63,7 +63,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   align-items: center;             /* the dash sits on the caps' optical middle */
   gap: calc(12px * var(--scale));  /* air between the dash and the text */
   margin-bottom: calc(14px * var(--scale));  /* air before the first row */
-  font-size: calc(19px * var(--scale));  /* small label size */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: 0.14em;          /* small caps need room to breathe */
@@ -121,7 +121,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   align-items: center;             /* ... vertically ... */
   justify-content: center;         /* ... and horizontally on the chip */
   width: calc(40px * var(--scale));  /* a chip, wide enough for two digits */
-  font-size: calc(19px * var(--scale));  /* small and heavy — a rank, not a headline */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small and heavy — a rank, not a headline */
   font-weight: 800;                /* maximum punch at chip size */
   font-variant-numeric: tabular-nums;  /* ranks share one width down the tower */
   color: var(--panel-bg);          /* the slab hue doubles as ink on the bright chip (lt06's move) */
@@ -145,7 +145,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   margin-right: auto;              /* push the gap figure to the right edge */
   padding: calc(7px * var(--scale)) calc(28px * var(--scale)) calc(7px * var(--scale)) 0;
                                    /* vertical = row height; right = code and gap NEVER touch */
-  font-size: calc(27px * var(--scale));  /* clearly the loudest text in the row */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly the loudest text in the row */
   font-weight: 700;                /* heavy caps carry the code */
   line-height: 1.15;               /* tight — condensed caps need little leading */
   letter-spacing: 0.04em;          /* a touch of air between the caps */
@@ -157,7 +157,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
 /* The gap figure — right-aligned and dimmed, so the chips stay the color moment. */
 .infographic-gap {
   align-self: center;              /* sit on the row's center line, not stretched */
-  font-size: calc(20px * var(--scale));  /* clearly subordinate to the code */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate to the code */
   font-weight: 600;                /* semibold — legible without competing */
   font-variant-numeric: tabular-nums;  /* digits share one width — gaps align as they tick */
   color: var(--text-dim);          /* secondary figures dim - one accent dose per row */

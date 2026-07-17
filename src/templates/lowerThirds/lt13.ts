@@ -20,8 +20,8 @@ export const lt13: TemplateVariant = defineVariant(
       { title: 'Organisation', sample: 'Climate Policy Institute' },
       { title: 'Location', sample: 'Live · Helsinki' },
     ],
-    hasLogoSlot: false,
-    animationPresets: ['line-reveal', 'mask-wipe', 'slide-fade', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'none',
+    animationPresets: ['line-reveal', 'mask-wipe', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('noacg'),
     defaultFontId: 'space-grotesk',
     defaultZone: 'bottom-left',
@@ -66,7 +66,7 @@ ${lineMasks(o)}
 
 /* Name (f0) — the strap's one heavy element. */
 .lower-third-name {
-  font-size: calc(50px * var(--scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(50px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 700;                 /* full display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: -0.01em;          /* large sizes tighten slightly */
@@ -75,7 +75,7 @@ ${lineMasks(o)}
 
 /* Organisation (f1) — the quiet middle voice. */
 .lower-third-title {
-  font-size: calc(28px * var(--scale));  /* clearly below the name */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.25;                /* room if the organisation wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
@@ -85,7 +85,7 @@ ${lineMasks(o)}
 /* Location (f2) — the house label voice: mono caps, tracked, in the accent color. */
 .lower-third-extra {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(20px * var(--scale));  /* the smallest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the strap */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* single tight label line */
   letter-spacing: 0.2em;            /* wide tracking — the label breathes */

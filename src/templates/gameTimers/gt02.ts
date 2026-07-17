@@ -20,7 +20,7 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
     description: 'A corner slab clock with a leaning accent edge — flips to the accent and flashes at zero.',
     maxLines: 1,
     suggestedLines: [{ title: 'Label', sample: 'SHOT CLOCK' }],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['timer-run'],
     defaultPalette: paletteById('inferno'),
     defaultFontId: 'archivo',
@@ -80,7 +80,7 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
    stays the single accent dose while the clock runs. */
 .game-timer-label {
   color: var(--text-dim);          /* secondary line dims — one accent dose per graphic */
-  font-size: calc(19px * var(--scale));  /* kicker scale — clearly a label, not a headline */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a label, not a headline */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: 0.1em;           /* spaced-out caps read as a tag */
   text-transform: uppercase;       /* sport graphics shout, whatever the operator types */
@@ -89,7 +89,7 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
 /* The clock: the loudest thing on screen — big, heavy, dead straight. */
 .game-timer-clock {
   margin-top: calc(10px * var(--scale));  /* small gap: chip + clock read as one unit */
-  font-size: calc(76px * var(--scale));  /* headline scale — readable from the back row */
+  font-size: calc(76px * var(--scale) * var(--type-scale));  /* headline scale — readable from the back row */
   font-weight: 900;                /* maximum impact weight (sport hits hard) */
   line-height: 1.05;               /* tight — big digits need little leading */
   letter-spacing: 0.02em;          /* a touch of air between the heavy digits */

@@ -3,7 +3,6 @@ import BrandLogo from '../../BrandLogo';
 interface Props {
   onTemplates: () => void;
   onImportGraphic: () => void;
-  onImport: () => void;
   onAi: () => void;
   onVideo: () => void;
   onBlank: () => void;
@@ -11,14 +10,16 @@ interface Props {
 
 /**
  * Step 0 — the app's home moment. A branded hero states what NoaCG Studio is and who it's
- * for, then the ways to start. Template-first (the north star: create, no code required),
- * with the AI, video, and import paths beside it and a pure code-first blank for pros.
+ * for, then five ways to start. Template-first (the north star: create, no code required),
+ * with the AI path (which also imports/converts existing templates), the video path, the
+ * manual Import graphic path, and a pure code-first blank for pros.
  *
  * "Import graphic" is deliberately its own card and a MANUAL path — no AI anywhere in it.
  * A user who designed their graphic in Photoshop wants NoaCG to make it broadcast-ready
- * (fields, animation, export), not to regenerate it.
+ * (fields, animation, export), not to regenerate it. Existing .html / SPX templates (and
+ * logos to design around) go through Create with AI instead.
  */
-export default function EntryStep({ onTemplates, onImportGraphic, onImport, onAi, onVideo, onBlank }: Props) {
+export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo, onBlank }: Props) {
   return (
     <div className="wz-entry-wrap">
       <div className="wz-hero">
@@ -45,8 +46,8 @@ export default function EntryStep({ onTemplates, onImportGraphic, onImport, onAi
         </button>
         <button className="wz-entry-card" onClick={onAi} data-entry="ai">
           <span className="wz-entry-icon">✦</span>
-          <strong>Describe it</strong>
-          <span className="hint">Tell the AI what you need — add a logo, brand colors, or a still. Every result is validated and lands as clean, editable code.</span>
+          <strong>Create with AI</strong>
+          <span className="hint">Describe what you need — drop in a logo, brand stills, or an existing .html / SPX template to convert. Every result is live-tested and lands as clean, editable code.</span>
         </button>
         <button className="wz-entry-card" onClick={onVideo} data-entry="video">
           <span className="wz-entry-icon">▶</span>
@@ -57,11 +58,6 @@ export default function EntryStep({ onTemplates, onImportGraphic, onImport, onAi
           <span className="wz-entry-icon">▦</span>
           <strong>Import graphic</strong>
           <span className="hint">Already designed it? Bring the finished image in, place your editable text on it, and pick how it animates. No AI — you place every piece.</span>
-        </button>
-        <button className="wz-entry-card" onClick={onImport} data-entry="import">
-          <span className="wz-entry-icon">⬇</span>
-          <strong>Import</strong>
-          <span className="hint">Logos and images to design around — or an existing .html / SPX template to edit and convert (SPX · CasparCG · OGraf).</span>
         </button>
         <button className="wz-entry-card" onClick={onBlank} data-entry="blank">
           <span className="wz-entry-icon">‹›</span>

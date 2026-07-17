@@ -47,6 +47,19 @@ export interface GameTimerDesign {
   css: string;
   /** Whether the design has a .game-timer-accent element (line-reveal presets draw it first). */
   hasAccent?: boolean;
+  /**
+   * The design's hand-tuned default ease pair, used when the wizard easing is 'auto'
+   * (it replaces the preset's autoEase; an explicit easing pick still wins). This is how
+   * a deliberately playful design gets its elastic entrance without a whole new preset.
+   */
+  autoEase?: { easeIn: string; easeOut: string };
+  /**
+   * Design-owned runtime JS emitted after the clock runtime and BEFORE the marked
+   * ANIMATION region (the corner bug's runtimeExtraJs pattern): playout logic like a
+   * drain-ring painter lives here, survives the data conversion untouched, and must
+   * never reach into the region's variables (read speed via motionSpeed() if needed).
+   */
+  runtimeExtraJs?: string;
 }
 
 export interface GameTimerMeta {
@@ -158,7 +171,9 @@ ${design.css}
 `;
 
   const preset = gameTimerPresetById(o.animation.presetId);
-  const ease = resolveEasing(o.animation.easing, preset.autoEase);
+  // 'auto' easing resolves to the design's hand-tuned pair when it declares one (a
+  // playful badge wants its elastic pop by default); the preset's pair otherwise.
+  const ease = resolveEasing(o.animation.easing, design.autoEase ?? preset.autoEase);
   const cfg: PresetConfig = {
     prefix: 'game-timer',
     lineCount: 1,
@@ -169,12 +184,12 @@ ${design.css}
     easeOut: ease.easeOut,
   };
 
-  const js = gameTimerRuntimeJs(
-    meta.name,
-    `${clockRuntimeJs('game-timer', 'f1')}
-
-${preset.emit(cfg)}`,
-  );
+  // Clock runtime, then any design-owned runtime, then the marked ANIMATION region —
+  // everything before the region is playout logic the Animation panel never touches.
+  const runtimeBlocks = [clockRuntimeJs('game-timer', 'f1')];
+  if (design.runtimeExtraJs) runtimeBlocks.push(design.runtimeExtraJs);
+  runtimeBlocks.push(preset.emit(cfg));
+  const js = gameTimerRuntimeJs(meta.name, runtimeBlocks.join('\n\n'));
 
   const template: SpxTemplate = {
     name: meta.name,
@@ -196,6 +211,63 @@ ${preset.emit(cfg)}`,
   // itself lives OUTSIDE the region and is untouched. A conversion failure keeps the legacy
   // emit — never a broken template.
   return convertToDataRegion(template);
+}
+
+/**
+ * Design-owned runtime for the badge-style timers (gt03/gt04): a drain ring that follows
+ * the shared countdown, a "last three seconds" urgency state, and a small accent on the
+ * clock each tick. This is playout logic like the clock engine itself, so it is emitted
+ * OUTSIDE the marked ANIMATION region (via GameTimerDesign.runtimeExtraJs) and survives
+ * the data conversion and every preset swap untouched.
+ *
+ * Contract with the design:
+ *   - an SVG circle with class "game-timer-ring-fill", r = 180 in its viewBox (that is the
+ *     1131 circumference below), with a CSS transition on stroke-dashoffset so each
+ *     one-second step glides instead of jumping
+ *   - the root gets .game-timer-ending while three or fewer seconds tick — the design's
+ *     CSS decides what urgency looks like (a pulse, a glow)
+ *
+ * `tick` picks the clock's per-second accent: 'bounce' is the exuberant elastic pop,
+ * 'snap' the crisp controlled one. Both settle at scale 1, so a replay starts clean.
+ */
+export function badgeRingRuntimeJs(tick: 'bounce' | 'snap'): string {
+  const pop =
+    tick === 'bounce'
+      ? `    // The playful beat: the clock bounces on every tick, elastic like a toy.
+    gsap.fromTo('.game-timer-clock',
+      { scale: 1.22, transformOrigin: '50% 50%' },
+      { scale: 1, duration: 0.55, ease: 'elastic.out(1, 0.4)' });`
+      : `    // The crisp beat: a small controlled snap on every tick — lively, never wobbly.
+    gsap.fromTo('.game-timer-clock',
+      { scale: 0.94, transformOrigin: '50% 50%' },
+      { scale: 1, duration: 0.18, ease: 'power2.out' });`;
+  return `// ── Badge drain ring ────────────────────────────────────────────────────
+// The ring around the badge empties as the countdown runs. The clock runtime above owns
+// the time (clockTimer / clockSecondsLeft / clockDurationSeconds); this painter just looks
+// a few times a second, and the ring's CSS transition glides each one-second step.
+var RING_CIRCUMFERENCE = 1131;  // 2 × π × r for the ring circle (r = 180 in its viewBox)
+var ringPaintedSecond = null;   // the remaining-seconds value we last painted
+
+function paintRing() {
+  var ring = document.querySelector('.game-timer-ring-fill');
+  var root = document.querySelector('.game-timer');
+  if (!ring || !root) return;   // template.js loads in <head> — wait until the DOM exists
+  var total = clockDurationSeconds();
+  // Off air the ring previews full; at zero it stays empty until the next play().
+  var left = clockTimer ? clockSecondsLeft
+    : (root.classList.contains('game-timer-done') ? 0 : total);
+  if (left === ringPaintedSecond) return;   // nothing changed since the last look
+  var ticked = !!clockTimer && ringPaintedSecond !== null && left < ringPaintedSecond;
+  ringPaintedSecond = left;
+  // Hide exactly the elapsed fraction of the ring (the dashoffset covers the rest).
+  ring.style.strokeDashoffset = (RING_CIRCUMFERENCE * (1 - left / total)) + 'px';
+  // The last three ticking seconds get an urgency class the design's CSS can pulse.
+  root.classList.toggle('game-timer-ending', !!clockTimer && left > 0 && left <= 3);
+  if (ticked) {
+${pop}
+  }
+}
+setInterval(paintRing, 150);    // a few cheap looks a second — never more than one repaint`;
 }
 
 /** The authoring API for game-timer variant modules. */

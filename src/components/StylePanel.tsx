@@ -15,7 +15,7 @@ import {
 import type { Zone9 } from '../model/wizard';
 import { detectPrefix } from '../model/structure';
 import { zoneDecls } from '../templates/lowerThirds/shared';
-import { fileToDataUrl, isFontAsset, isImageAsset, uniqueAssetPath } from '../assets/assetUtils';
+import { fileToDataUrl } from '../assets/assetUtils';
 
 /** rgb()/rgba()/#hex → #rrggbb for the color input swatch; non-colors return null. */
 function toHex(value: string): string | null {
@@ -50,14 +50,13 @@ export default function StylePanel() {
   const setCss = useTemplateStore((s) => s.patchCss);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const addAsset = useTemplateStore((s) => s.addAsset);
-  const removeAsset = useTemplateStore((s) => s.removeAsset);
-  const fileInput = useRef<HTMLInputElement>(null);
   const fontInput = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const vars = listCssVariables(template.css);
   const colorVars = vars.filter((v) => looksLikeColor(v.value) || toHex(v.value) !== null);
   const scaleVar = vars.find((v) => v.name === 'scale');
+  const typeScaleVar = vars.find((v) => v.name === 'type-scale');
 
   // The generated @font-face block is swappable while its marker comment survives
   // (bundled or imported — both carry a recognizable marker).
@@ -113,19 +112,6 @@ export default function StylePanel() {
     setCss(css);
     setNote(`Moved to ${zone} (see the ${rootSelector} rule in the CSS).`);
   };
-
-  const onFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    for (const file of Array.from(files)) {
-      const dataUrl = await fileToDataUrl(file);
-      addAsset({ path: uniqueAssetPath(file.name, template.assets), data: dataUrl });
-    }
-    setNote(`Added ${files.length} asset${files.length > 1 ? 's' : ''} — reference them as assets/<name> in the HTML.`);
-    if (fileInput.current) fileInput.current.value = '';
-  };
-
-  const images = template.assets.filter((a) => isImageAsset(a.path));
-  const others = template.assets.filter((a) => !isImageAsset(a.path) && !isFontAsset(a.path));
 
   return (
     <div>
@@ -184,6 +170,26 @@ export default function StylePanel() {
         </div>
       )}
 
+      {typeScaleVar && (
+        <div className="panel-section">
+          <h3>Text size</h3>
+          <div className="row" style={{ gap: 6 }}>
+            {/* A raw multiplier on top of --scale — resolution is already folded into --scale. */}
+            {[{ l: 'S', s: 0.9 }, { l: 'M', s: 1 }, { l: 'L', s: 1.15 }].map(({ l, s }) => (
+              <button key={l} onClick={() => setVar('type-scale', String(s))}>
+                {l}
+              </button>
+            ))}
+            <input
+              className="grow"
+              value={typeScaleVar.value}
+              onChange={(e) => setVar('type-scale', e.target.value)}
+              title="--type-scale multiplies only the text sizes (the graphic keeps its size)"
+            />
+          </div>
+        </div>
+      )}
+
       {canSwapFont && (
         <div className="panel-section">
           <h3>Font</h3>
@@ -227,40 +233,6 @@ export default function StylePanel() {
           </p>
         </div>
       )}
-
-      <div className="divider" />
-
-      <div className="panel-section">
-        <h3>Assets</h3>
-        <input
-          ref={fileInput}
-          type="file"
-          accept="image/*,.woff,.woff2,.ttf,.otf"
-          multiple
-          onChange={(e) => onFiles(e.target.files)}
-          style={{ display: 'none' }}
-        />
-        <button className="primary" onClick={() => fileInput.current?.click()}>+ Upload asset</button>
-        {images.length > 0 && (
-          <div className="asset-grid" style={{ marginTop: 10 }}>
-            {images.map((a) => (
-              <div className="asset-card" key={a.path}>
-                <div className="asset-thumb">
-                  <img src={typeof a.data === 'string' ? a.data : ''} alt={a.path} />
-                </div>
-                <div className="asset-path" title={a.path}>{a.path.replace('assets/', '')}</div>
-                <button onClick={() => removeAsset(a.path)} title="Remove asset">✕ Remove</button>
-              </div>
-            ))}
-          </div>
-        )}
-        {others.map((a) => (
-          <div className="row" key={a.path} style={{ justifyContent: 'space-between', marginTop: 6 }}>
-            <span className="muted">{a.path}</span>
-            <button onClick={() => removeAsset(a.path)}>✕</button>
-          </div>
-        ))}
-      </div>
 
       {note && <p className="hint">{note}</p>}
     </div>

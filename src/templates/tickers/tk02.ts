@@ -28,7 +28,7 @@ export const tk02: TemplateVariant = defineTickerVariant(
       { title: 'Ticker items', sample: ITEMS_SAMPLE },
       { title: 'Label', sample: 'LIVE' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['ticker-marquee'],
     defaultPalette: paletteById('volt'),
     defaultFontId: 'oswald',
@@ -80,7 +80,7 @@ export const tk02: TemplateVariant = defineTickerVariant(
 /* The label text: counter-skewed so the word reads dead straight inside the leaning chip. */
 .ticker-label span {
   transform: skewX(8deg);          /* cancels the chip's -8deg - text stays upright */
-  font-size: calc(26px * var(--scale));  /* chip scale - louder than the items */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* chip scale - louder than the items */
   font-weight: 700;                /* maximum punch */
   text-transform: uppercase;       /* labels are shouted, not spoken */
   letter-spacing: 0.08em;          /* wide tracking - sport label convention */
@@ -105,7 +105,7 @@ export const tk02: TemplateVariant = defineTickerVariant(
 
 /* One item: condensed uppercase, primary text color. */
 .ticker-item {
-  font-size: calc(24px * var(--scale));  /* readable at speed, clearly under the chip */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* readable at speed, clearly under the chip */
   font-weight: 600;                /* heavy enough to survive motion blur */
   text-transform: uppercase;       /* the whole rail shouts */
   letter-spacing: 0.04em;          /* slight air between the caps */
@@ -115,7 +115,7 @@ export const tk02: TemplateVariant = defineTickerVariant(
 /* The separator: the volt '///' between items - the accent's only echo on the rail. */
 .ticker-sep {
   margin: 0 calc(26px * var(--scale));   /* even air on both sides of every item */
-  font-size: calc(24px * var(--scale));  /* matches the items */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* matches the items */
   font-weight: 700;                /* solid slashes, not hairlines */
   color: var(--accent);            /* volt - ties the rail to the chip */
 }`,

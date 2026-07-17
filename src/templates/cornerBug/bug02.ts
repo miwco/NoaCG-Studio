@@ -41,8 +41,8 @@ export const bug02: TemplateVariant = defineBugVariant(
     description: 'The house bug: logo (or the three-bar mark), a tiny caption, and a live ticking clock.',
     maxLines: 1,
     suggestedLines: [{ title: 'Caption', sample: 'On Air' }],
-    hasLogoSlot: true,
-    animationPresets: ['slide-fade', 'blur-in', 'pop-spring', 'fade', 'drop-in', 'flip-3d'],
+    logo: 'built-in',
+    animationPresets: ['slide-up', 'blur-in', 'pop-spring', 'fade', 'slide-down', 'flip-3d'],
     defaultPalette: paletteById('noacg'),
     defaultFontId: 'space-grotesk',
     defaultZone: 'top-left',
@@ -152,7 +152,7 @@ ${bugLineMasks(o)}
 /* The caption (f0) — the house label voice at bug scale. */
 .corner-bug-name {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(15px * var(--scale));   /* tiny label size */
+  font-size: calc(15px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: 0.2em;           /* small caps need room to breathe */
@@ -164,7 +164,7 @@ ${bugLineMasks(o)}
 /* The clock — mono figures with tabular digits so nothing jitters on the tick. */
 .corner-bug-clock {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(34px * var(--scale));  /* the mark's focal point */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* the mark's focal point */
   font-weight: 400;                /* regular figures — size carries the moment */
   line-height: 1;                  /* one tight row of digits */
   letter-spacing: 0.06em;          /* a touch of air between figures */

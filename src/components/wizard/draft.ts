@@ -45,6 +45,8 @@ export interface WizardDraft {
   /** The user's imported font, kept even while a bundled font is selected. */
   customFont: CustomFont | null;
   sizeScale: number;
+  /** Text-only size multiplier (--type-scale) on top of the whole-graphic sizeScale. */
+  typeScale: number;
   zone: Zone9 | null;
   nudge: { x: number; y: number };
   animation: {
@@ -62,6 +64,9 @@ export interface WizardDraft {
   importedImages: AssetFile[];
   /** Which imported image goes into the variant's logo slot (relative assets/ path). */
   logoAssetPath: string | null;
+  /** The Fields step's logo toggle on an 'optional'-logo variant; null = undecided
+   *  (falls back to "a logo image was provided"). */
+  logoEnabled: boolean | null;
   /** The artwork the graphic IS, in the Import Graphic flow (measured at import). */
   designArt: DesignArt | null;
 }
@@ -96,11 +101,13 @@ export function initialDraft(): WizardDraft {
     fontId: null,
     customFont: null,
     sizeScale: 1,
+    typeScale: 1,
     zone: null,
     nudge: { x: 0, y: 0 },
     animation: { presetId: null, outPresetId: null, direction: 'both', speed: 1, easing: 'auto', steps: false },
     importedImages: [],
     logoAssetPath: null,
+    logoEnabled: null,
     designArt: null,
   };
 }
@@ -131,6 +138,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
     fontId: draft.fontId && draft.fontId !== 'custom' ? draft.fontId : undefined,
     customFont: draft.fontId === 'custom' && draft.customFont ? draft.customFont : undefined,
     sizeScale: draft.sizeScale,
+    typeScale: draft.typeScale,
     zone: draft.zone ?? undefined,
     nudge: draft.nudge,
     animation: {
@@ -140,7 +148,9 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
       steps: draft.animation.steps,
     },
     importedImages: draft.importedImages.length > 0 ? draft.importedImages : undefined,
-    logoAssetPath: variant.hasLogoSlot ? draft.logoAssetPath ?? undefined : undefined,
+    logoAssetPath: variant.logo !== 'none' ? draft.logoAssetPath ?? undefined : undefined,
+    // null = the user hasn't decided; resolveOptions then falls back to "an image exists".
+    logoEnabled: draft.logoEnabled ?? undefined,
     designArt: draft.designArt ?? undefined,
   };
 }

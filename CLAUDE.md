@@ -3,9 +3,9 @@
 Guidance for AI agents working in this repo. Keep it accurate - update it when architecture or
 conventions change. This root file holds the product identity, the non-negotiables, and the
 working practices; **deep per-area contracts live in nested CLAUDE.md files** in `src/model`,
-`src/templates`, `src/store`, `src/blocks`, `src/export`, `src/render`, `src/landing`, and
-`src/components` - they load automatically when you work on files there, and you should read
-the relevant one before editing that area from outside it.
+`src/templates`, `src/store`, `src/blocks`, `src/ai`, `src/export`, `src/render`,
+`src/landing`, and `src/components` - they load automatically when you work on files there,
+and you should read the relevant one before editing that area from outside it.
 
 ## What this is
 
@@ -75,8 +75,11 @@ Verifying, below). Never mark work done on a green build alone if behaviour is o
    clever code - a professional should be able to read and extend it. Rich-but-commented CSS is the
    house style.
 3. **Offline-first, no unnecessary dependencies.** GSAP is bundled locally
-   (`src/assets/gsap.min.js`). Don't add runtime deps or external/CDN references in generated
-   templates. The exported package must be plug-and-play (relative paths, bundled GSAP).
+   (`src/assets/gsap.min.js`); so is the Lottie player (`src/assets/lottie.min.js`,
+   lottie_light/MIT — injected into previews and exports ONLY when the template uses a
+   Lottie asset; detector in `src/assets/lottieSupport.ts`). Don't add runtime deps or
+   external/CDN references in generated templates. The exported package must be
+   plug-and-play (relative paths, bundled libraries).
 4. **Validate before export.** `validation/validateTemplate.ts` is the gate; export is blocked on
    errors. Keep it authoritative - the platform owns SPX compatibility, not the AI.
 5. **Building blocks and AI are deterministic transforms** `(template) => template` that insert
@@ -109,9 +112,9 @@ src/
                name elements through it) - and fieldModel.ts, THE shared editable-field
                contract: an SPX DataField and a video input both become one FieldDescriptor,
                so every surface that edits a field renders the same control
-  templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 10 categories
+  templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 11 categories
                (lower thirds, info cards, end credits, tickers, starting soon, game timers,
-               scoreboards, corner bug, infographics, quiz); also the :root style contract,
+               scoreboards, corner bug, infographics, versus cards, quiz); also the :root style contract,
                the DOM-ready runtime rule, the field/image policy, and the easing doctrine
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
@@ -122,12 +125,15 @@ src/
                converter, presetApply generators, presetRegistry = the preset library),
                stepAssign (appears-on-press), and timelineModel - the READER for legacy regions
                (Phase 8 deleted the patchers; nothing writes a legacy region any more)
-  ai/          provider.ts (AIProvider + GenerateContext), claudeProvider.ts (the real provider:
-               system prompt = SPX + house contracts + lt01's generated code as the canonical
-               example; forced emit_template tool; validate + one repair round), anthropic.ts
-               (direct browser call with the user's key OR the VITE_AI_PROXY_URL gateway),
-               settings.ts (localStorage + .env: key, model), index.ts (getAiProvider - Claude
-               when configured, stub otherwise), stubProvider.ts, presets.ts
+  ai/ *        the SPX GENERATION HARNESS: one small design-spec call routes each brief -
+               catalog-fit specs assemble DETERMINISTICALLY through the real wizard
+               assemblers (+ compositional design adjustments, + an optional bounded polish
+               patch with revert semantics); off-catalog briefs go to the free-form coder
+               (nearest catalog design as the canonical example) with a validated 2-round
+               repair loop. Callers inject the quality gate (validateTemplate + the runtime
+               bench); telemetry records cost/route/diversity per run; the stub serves
+               catalog-grade results offline. Value is PROVEN, not assumed - see
+               scripts/ai-compare.mjs and src/ai/CLAUDE.md
   ai/video/    the VIDEO motion-design harness ("Video or animation with AI"): staged
                generation - keyword-first skill detection (skills.ts; one cheap Haiku
                call only when nothing matches) -> Motion Director (forced emit_motion_plan
@@ -145,7 +151,10 @@ src/
                SERIALIZED load/probe, disposed bridges resolve immediately),
                bridgeRegistry.ts, types.ts (asset logical names - the `assets` prop
                contract)
-  validation/  validateTemplate.ts - runs before export and on AI output
+  validation/  validateTemplate.ts - runs before export and on AI output - and
+               runtimeBench.ts: the live-iframe bench (lifecycle, field binding, overlap/
+               overflow, doubled-text stress, house editability) the app injects into every
+               AI generation; e2e/bench.spec.ts keeps the whole catalog passing its own bench
   control/     the modular control-panel engine: controlModel.ts (fields -> shared FieldDescriptors
                by ftype, ONE generator, no per-template code; controlChannelName +
                ControlMessage protocol), controlPanelHtml.ts (the standalone controlpanel.html:
@@ -190,6 +199,9 @@ src/
 public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports;
                jetbrains-mono.woff2 doubles as the app UI's mono face)
 scripts/       dev-port.mjs (per-checkout port), l3-sweep.mjs (catalog sweep - see Verifying),
+               ai-compare.mjs (the harness value proof: same brief, four arms, neutral
+               scoring + cost/diversity - the standing decision rule for harness stages) and
+               ai-bench.mjs (single-arm brief bank + review gallery; both SPEND TOKENS),
                renderDevPlugin.mjs (mounts api/render on the dev server), render-smoke.mjs +
                render-smoke-video.mjs (the video project's Content -> render round trip,
                checked in pixels) + make-render-manifest.mjs (render verification - see
@@ -229,10 +241,13 @@ src/components/CLAUDE.md.
 
 New projects go through the **CreationWizard** (Entry -> Category -> Template -> Fields -> Style
 -> Animation, persistent live preview); `variant.create(options)` generates the complete,
-commented template. A fifth entry card, **"Video or animation with AI"**, creates the parallel
-VIDEO project kind instead (React/Remotion, fixed duration - see src/ai/video, src/video, and
-components/video in the map above); creating/opening a video flips the persisted doc-kind
-switch and every SPX create path flips it back. After creation, code is the source of truth and two **live panels** keep
+commented template. Four entry cards: templates, **"Create with AI"** (the merged
+describe/import step - a brief plus optional images and/or an existing .html/.zip; every AI
+result runs the harness with the runtime bench injected, and the byte-faithful no-AI "Open as
+code" import stays one click away, never gated on sign-in), **"Video or animation with AI"**
+(creates the parallel VIDEO project kind - React/Remotion, fixed duration - see src/ai/video,
+src/video, and components/video in the map above; creating/opening a video flips the persisted
+doc-kind switch and every SPX create path flips it back), and blank. After creation, code is the source of truth and two **live panels** keep
 working via deterministic patches: the **Style panel** writes the `:root` style contract
 (src/templates/CLAUDE.md) and **the step timeline under the preview** touches ONLY the marked
 ANIMATION region (src/blocks/CLAUDE.md) - user code outside the markers is never modified. The

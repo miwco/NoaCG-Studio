@@ -17,7 +17,7 @@ export const gt01: TemplateVariant = defineGameTimerVariant(
     description: 'Small-caps label over a large clock, split by a 2px accent hairline that draws in first.',
     maxLines: 1,
     suggestedLines: [{ title: 'Label', sample: 'ROUND 1' }],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['timer-line-reveal', 'timer-run'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
@@ -55,7 +55,7 @@ export const gt01: TemplateVariant = defineGameTimerVariant(
 
 /* Label line — a quiet small-caps kicker; the clock is the loud element here. */
 .game-timer-mask > span {
-  font-size: calc(18px * var(--scale));  /* kicker scale — clearly a label, not a headline */
+  font-size: calc(18px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a label, not a headline */
   font-weight: 600;                /* enough weight for small caps to carry */
   line-height: 1.3;                /* relaxed leading at small sizes */
   letter-spacing: 0.06em;          /* quiet tracked caps — the lt02 family voice */
@@ -73,7 +73,7 @@ export const gt01: TemplateVariant = defineGameTimerVariant(
 
 /* The clock — large and calm; tabular figures so digits never jiggle as they tick. */
 .game-timer-clock {
-  font-size: calc(88px * var(--scale));  /* the headline element of the design */
+  font-size: calc(88px * var(--scale) * var(--type-scale));  /* the headline element of the design */
   font-weight: 400;                /* regular — confident, never shimmer-thin over video */
   line-height: 1;                  /* the numerals sit tight under the hairline */
   letter-spacing: 0.02em;          /* big numerals get a touch of air */

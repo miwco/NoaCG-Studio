@@ -14,6 +14,12 @@ export interface AiSettings {
   model: string;
   /** Gateway base URL (hosted mode). Empty = direct mode. */
   proxyUrl: string;
+  /**
+   * Generate through the NoaCG harness (design-spec routing, grounded assembly, the live
+   * bench, three alternatives) instead of the default one-shot generation. Off by default:
+   * the harness is opt-in until the benchmark shows it consistently better.
+   */
+  useHarness: boolean;
 }
 
 export const DEFAULT_MODEL = 'claude-sonnet-5';
@@ -41,6 +47,7 @@ export function loadAiSettings(): AiSettings {
     apiKey: saved.apiKey ?? env('VITE_ANTHROPIC_API_KEY'),
     model: saved.model || env('VITE_AI_MODEL') || DEFAULT_MODEL,
     proxyUrl: saved.proxyUrl ?? env('VITE_AI_PROXY_URL'),
+    useHarness: saved.useHarness ?? false,
   };
 }
 

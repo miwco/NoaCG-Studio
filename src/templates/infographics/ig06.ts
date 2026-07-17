@@ -22,7 +22,7 @@ export const ig06: TemplateVariant = defineInfographicVariant(
       { title: 'Schedule', sample: ROWS_SAMPLE },
       { title: 'Heading', sample: 'COMING UP TONIGHT' },
     ],
-    hasLogoSlot: false,
+    logo: 'none',
     animationPresets: ['rows-cascade'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
@@ -69,7 +69,7 @@ export const ig06: TemplateVariant = defineInfographicVariant(
 
 /* Heading — the accent tracking-wide caps kicker, the panel's loudest color moment. */
 .infographic-heading {
-  font-size: calc(20px * var(--scale));  /* kicker scale — a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: 0.16em;          /* wide tracking — small caps breathe (minimal voice) */
@@ -108,7 +108,7 @@ export const ig06: TemplateVariant = defineInfographicVariant(
 .infographic-time {
   flex-shrink: 0;                  /* a long show name never squeezes the time */
   min-width: calc(96px * var(--scale));  /* one shared column width — the dots align vertically */
-  font-size: calc(30px * var(--scale));  /* the anchor of each row */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* the anchor of each row */
   font-weight: 700;                /* bold — the time carries the row's weight */
   line-height: 1.15;               /* tight leading for the biggest text on the board */
   letter-spacing: -0.01em;         /* large digits tighten slightly */
@@ -131,7 +131,7 @@ export const ig06: TemplateVariant = defineInfographicVariant(
 /* The show name — quiet against the bold time: smaller, lighter, dimmed. */
 .infographic-show {
   min-width: 0;                    /* allow the name to shrink and wrap inside flex */
-  font-size: calc(23px * var(--scale));  /* clearly subordinate to the time */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* clearly subordinate to the time */
   font-weight: 400;                /* regular; contrast comes from the bold time */
   line-height: 1.35;               /* relaxed leading in case a long title wraps */
   color: var(--text-dim);          /* dimmed — never full white twice in one row */

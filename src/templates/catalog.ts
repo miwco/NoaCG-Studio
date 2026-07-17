@@ -11,6 +11,7 @@ import { GAME_TIMERS } from './gameTimers';
 import { SCOREBOARDS } from './scoreboards';
 import { CORNER_BUGS } from './cornerBug';
 import { INFOGRAPHICS } from './infographics';
+import { VERSUS } from './versus';
 import { QUIZ } from './quiz';
 import { IMPORTED_DESIGNS } from './importedDesign/shared';
 
@@ -24,6 +25,7 @@ export const CATALOG: Partial<Record<TemplateCategory, TemplateVariant[]>> = {
   'scoreboard': SCOREBOARDS,
   'corner-bug': CORNER_BUGS,
   'infographic': INFOGRAPHICS,
+  'versus': VERSUS,
   'quiz': QUIZ,
   // Not browsable in the category grid — the Import Graphic entry is its only way in.
   'imported-design': IMPORTED_DESIGNS,

@@ -8,6 +8,7 @@
 
 import { loadAiSettings } from './settings';
 import { getAccessToken } from '../backend/auth';
+import type { AiUsage } from './telemetry';
 
 /** One content block in a user message (text or a base64 image for vision). */
 export type ContentBlock =
@@ -29,21 +30,36 @@ export interface ClaudeRequest {
   /** Override the settings model for this call (cheap classification stages pin Haiku;
    *  a video project can pin its own model). */
   model?: string;
+  /** Mark the system prompt as a prompt-cache breakpoint. Set it when the same large
+   *  system prompt repeats across calls (the coder + its repair rounds share one) — the
+   *  cache read absorbs most of the repair loop's input cost. */
+  cacheSystem?: boolean;
 }
 
 interface ClaudeResponse {
   content: ({ type: 'text'; text: string } | { type: 'tool_use'; name: string; input: unknown })[];
   stop_reason: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
 }
 
-/** Call Claude. Returns the forced tool's input (when a tool is given) or the text. */
-export async function callClaude(req: ClaudeRequest): Promise<unknown> {
+/** A call's structured output (or text) plus its token usage and model, for telemetry. */
+export interface ClaudeResult {
+  output: unknown;
+  usage: AiUsage;
+  /** The model the call actually used (per-call override or the settings model). */
+  model: string;
+}
+
+/** Call Claude and also return token usage. Same contract as callClaude otherwise. */
+export async function callClaudeDetailed(req: ClaudeRequest): Promise<ClaudeResult> {
   const s = loadAiSettings();
 
   const body = {
     model: req.model ?? s.model,
     max_tokens: req.maxTokens ?? 16000,
-    system: req.system,
+    system: req.cacheSystem
+      ? [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }]
+      : req.system,
     messages: req.messages,
     ...(req.tool
       ? { tools: [req.tool], tool_choice: { type: 'tool', name: req.tool.name } }
@@ -77,6 +93,10 @@ export async function callClaude(req: ClaudeRequest): Promise<unknown> {
   }
 
   const data = (await res.json()) as ClaudeResponse;
+  const usage: AiUsage = {
+    inputTokens: data.usage?.input_tokens ?? 0,
+    outputTokens: data.usage?.output_tokens ?? 0,
+  };
   if (req.tool) {
     // A response cut off at max_tokens leaves the tool input incomplete — partial JSON
     // parses into an object with missing keys and causes confusing downstream crashes.
@@ -86,10 +106,16 @@ export async function callClaude(req: ClaudeRequest): Promise<unknown> {
     }
     const call = data.content.find((c) => c.type === 'tool_use');
     if (!call || call.type !== 'tool_use') throw new Error('The model did not return the expected structured result.');
-    return call.input;
+    return { output: call.input, usage, model: body.model };
   }
-  return data.content
+  const text = data.content
     .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
     .map((c) => c.text)
     .join('\n');
+  return { output: text, usage, model: body.model };
+}
+
+/** Call Claude. Returns the forced tool's input (when a tool is given) or the text. */
+export async function callClaude(req: ClaudeRequest): Promise<unknown> {
+  return (await callClaudeDetailed(req)).output;
 }
