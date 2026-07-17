@@ -105,6 +105,27 @@ test('import graphic: a cropped design is placed as an object, not stretched', a
   await expect(page.locator('.wz-step')).toContainText('Smaller than');
 });
 
+test('import graphic: a 2× export is shown frame-sized, not pushed off the frame', async ({ page }) => {
+  // A retina/2x export of a 1080p design is one of the likeliest files to be dropped here.
+  // At natural size only its top-left quadrant would fit the frame — a lower third drawn in
+  // its bottom half would be entirely off-screen, an invisible graphic.
+  await dropDesign(page, 3840, 2160);
+  await expect(page.locator('.asset-card')).toContainText('3840 × 2160');
+  await expect(page.locator('.wz-step')).toContainText('2× export');
+
+  await page.getByRole('button', { name: 'Add text fields ›' }).click();
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+
+  // The design unit is exactly the frame's width: edge to edge, as drawn (--scale is 1 here).
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('.imported-design-art')).toBeVisible();
+  const width = await frame
+    .locator('.imported-design-box')
+    .evaluate((el) => el.getBoundingClientRect().width);
+  expect(Math.round(width)).toBe(1920);
+});
+
 /** Create the imported design and land in the editor with the preview rebuilt. */
 async function createImported(page: Page) {
   await dropDesign(page);

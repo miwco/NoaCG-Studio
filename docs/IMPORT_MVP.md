@@ -68,6 +68,13 @@ keyframes, validation, and all six export targets.
   a free-floating object and gets the ordinary 9-zone anchor.
 - The artwork's natural size is **measured at import**, never assumed: it decides the graphic's
   size, the full-frame question, and where text defaults land.
+- **Artwork larger than the frame is scaled down to fit it at import** (`DesignArt.width/height`
+  become the fitted design-space size; the file's real pixels are kept as `sourceWidth/Height`
+  for the summary). A larger file is almost always the same design exported at higher resolution
+  (a 2×/retina export) - at natural size only its top-left quadrant would fit the frame, leaving
+  a lower third drawn in its bottom half entirely off-screen. A 2× export of the frame therefore
+  lands exactly frame-sized (anchored at 0,0), keeps its full resolution for sharpness, and text
+  positions are measured in the fitted space the user actually sees.
 
 ## Whole-unit motion
 
