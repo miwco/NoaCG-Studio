@@ -70,23 +70,54 @@ function infographicCountUp(target, opts) {
 
 // infographicBarsGrow(): every bar grows to its OWN data-value percent, one after another.
 // The rebuild writes that attribute from the operator's lines, so both the widths and the
-// number of bars are theirs — a keyframe track could hold neither.
+// number of bars are theirs — a keyframe track could hold neither. A design may anchor a
+// readout cap to a fill's end (ig07's election figures): the cap is positioned at the
+// fill's tip in CSS, so it rides the width tween for free, and its .infographic-bar-num
+// counts from 0 to its own figure in step with the growth.
 function infographicBarsGrow(target, opts) {
   var fills = document.querySelectorAll(target);
   if (!fills.length) return null;
   var speed = motionSpeed();
+  var grow = 0.9 / speed;                        // one bar's growth time
+  var stagger = 0.12 / speed;                    // bars arrive one after another
+  var tl = gsap.timeline();
   // Deliberate width tween (not scaleX): scaling would squash the fill's rounded cap. And the
   // fills keep power3.out whatever the entrance ease — a data bar must land exactly on its
   // value, so a back.out overshoot never applies to it (it would read as the wrong figure).
-  return gsap.fromTo(fills,
+  tl.fromTo(fills,
     { width: '0%' },                             // fromTo = replay-safe (always starts empty)
     {
       width: function (i, bar) { return bar.getAttribute('data-value') + '%'; },
-      duration: 0.9 / speed,
+      duration: grow,
       ease: 'power3.out',
-      stagger: 0.12 / speed                      // bars arrive one after another
-    }
+      stagger: stagger
+    },
+    0                                            // explicit position — the counts below share the clock
   );
+  // The readout numbers: a bar's cap counts to its own figure over the same curve and length
+  // as the growth, so number and bar land together. infographicStat() reads the real target
+  // from data-target (the rebuild keeps it current), never the mid-count text.
+  for (var i = 0; i < fills.length; i++) {
+    var num = fills[i].querySelector('.infographic-bar-num');
+    var stat = infographicStat(num);             // null when the design has no readout caps
+    if (!stat) continue;
+    (function (el, figure, at) {
+      var counter = { value: 0 };                // a plain object GSAP can tween
+      tl.set(el, { textContent: '0' + figure.suffix }, at);
+      tl.to(counter, {
+        value: figure.value,
+        duration: grow,                          // the bar's exact length — they land together
+        ease: 'power3.out',
+        onUpdate: function () {
+          el.textContent = Math.round(counter.value) + figure.suffix;  // whole numbers read best
+        },
+        onComplete: function () {
+          el.textContent = figure.text;          // restore the exact figure (keeps decimals)
+        }
+      }, at);
+    })(num, stat, i * stagger);                  // aligned with this bar's stagger slot
+  }
+  return tl;
 }
 
 // infographicRingFill(): the ring draws around the stat while the number counts up with it —

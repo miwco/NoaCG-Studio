@@ -204,6 +204,7 @@ const CATEGORIES = [
   'scoreboard',
   'corner-bug',
   'infographic',
+  'versus',
   'quiz',
 ] as const;
 

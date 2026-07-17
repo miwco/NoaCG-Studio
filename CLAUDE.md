@@ -109,9 +109,9 @@ src/
                name elements through it) - and fieldModel.ts, THE shared editable-field
                contract: an SPX DataField and a video input both become one FieldDescriptor,
                so every surface that edits a field renders the same control
-  templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 10 categories
+  templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 11 categories
                (lower thirds, info cards, end credits, tickers, starting soon, game timers,
-               scoreboards, corner bug, infographics, quiz); also the :root style contract,
+               scoreboards, corner bug, infographics, versus cards, quiz); also the :root style contract,
                the DOM-ready runtime rule, the field/image policy, and the easing doctrine
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc

@@ -11,6 +11,7 @@ import { GAME_TIMERS } from './gameTimers';
 import { SCOREBOARDS } from './scoreboards';
 import { CORNER_BUGS } from './cornerBug';
 import { INFOGRAPHICS } from './infographics';
+import { VERSUS } from './versus';
 import { QUIZ } from './quiz';
 
 export const CATALOG: Partial<Record<TemplateCategory, TemplateVariant[]>> = {
@@ -23,6 +24,7 @@ export const CATALOG: Partial<Record<TemplateCategory, TemplateVariant[]>> = {
   'scoreboard': SCOREBOARDS,
   'corner-bug': CORNER_BUGS,
   'infographic': INFOGRAPHICS,
+  'versus': VERSUS,
   'quiz': QUIZ,
 };
 

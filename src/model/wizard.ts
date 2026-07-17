@@ -32,6 +32,7 @@ export type TemplateCategory =
   | 'ticker'
   | 'infographic'
   | 'corner-bug'
+  | 'versus'
   | 'quiz';
 
 export const CATEGORIES: CategoryInfo[] = [
@@ -44,8 +45,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 2,  available: true , description: 'A persistent corner logo (image placeholder).', group: 'essentials' },
   // Specials — for particular formats and moments.
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 6,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
-  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 2,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
+  { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
+  { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
   { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
 ];
 
@@ -110,6 +112,9 @@ export type AnimPresetId =
   | 'hold-loop'
   | 'timer-run'
   | 'timer-line-reveal'
+  // Versus-card formats (templates/versus/vsPresets.ts):
+  | 'vs-slam'
+  | 'vs-glide'
   // Infographic motion formats (templates/infographics/igPresets.ts):
   | 'count-up'
   | 'bars-grow'

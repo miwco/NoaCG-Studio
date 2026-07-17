@@ -741,6 +741,19 @@ read-only scheduled cloud agent. Not yet built — see the plan doc for the veri
       clear improvement for its cost.
 - Deferred until the benchmark earns them: a selective vision taste critic, a curated taste
   library with per-brief retrieval, and a nightly taste-analysis task (reviewable proposals).
+- [x] **The harness made optional, comparative, and learning** (user verdict on run #1: not
+      yet consistently better visually — raw already looks strong): a "Use NoaCG harness
+      (3 options)" checkbox (default OFF = the pure one-shot baseline, statically validated,
+      no repair); harness ON generates THREE distinct directions from one design-stage call
+      with an option picker; the committed pick feeds aggregated preference counters that
+      surface into the design prompt as a subtle tie-breaker (≥8 selections, ratios only).
+- [x] **Benchmark winners promoted into the catalog** (the Era-3.5 move, repeated): both
+      kids' timers → gt03 "Sunny Pop" + gt04 "Stage Ring" (design-owned ring/tick runtimes
+      + autoEase on the gt contract), raw election bars → ig07 "Election Bars" (count-up
+      readouts riding the bars-grow measured-motion builder), and both versus cards → a NEW
+      **versus** category (vs01 "Arena Duel" + vs02 "Collision Card", vs-slam/vs-glide
+      presets) — the full-frame match-up that misfitted info-cards (dropped card05) now owns
+      its contract. Catalog: **11 categories, 49 designs**.
 
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate

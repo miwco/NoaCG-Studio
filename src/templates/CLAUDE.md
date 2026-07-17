@@ -103,10 +103,14 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
   track (gap 6) and startClock/stopClock ride the step calls (§3b); the clock runtime stays
   outside the region.
-- **gameTimers/** - gt01…gt02 (prefix 'game-timer', type 'countdown'; data blocks via
+- **gameTimers/** - gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
   convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
   styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`
-  (§3b); the clock runtime (shared/clock.ts) stays outside the region.
+  (§3b); the clock runtime (shared/clock.ts) stays outside the region. gt03/gt04 are the AI
+  benchmark's kids-timer winners ported onto the contract: design-owned ring/tick runtimes
+  via `GameTimerDesign.runtimeExtraJs` (outside the region, following the clock's globals)
+  and `GameTimerDesign.autoEase` (a design's hand-tuned default ease pair, used only when
+  the wizard easing is 'auto' - an explicit pick still wins).
 - **scoreboards/** - sb01…sb02 (prefix 'scoreboard', data blocks via convertToDataRegion;
   fixed 4-field contract f0-f3 as scoreboard-masks so the standard presets drive them;
   update() pops a score's mask when it changes on air - speed via motionSpeed()).
@@ -123,6 +127,12 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   (real, editable keyframes) and NAMES the measured part. A count-up design may or may not pair a
   progress bar with its figure, so `PresetConfig.hasBars` tells the preset - without it a bar-less
   design (ig01) would carry a phantom timeline layer for an element it doesn't have.
+- **versus/** - vs01…vs02 (prefix 'versus', type 'fullscreen', SELF-ASSEMBLED like scoreboards;
+  fixed field contract f0/f1 team names, f2 event line, f3/f4 logo filelists with visible
+  placeholder marks; steps '1' - the sides are simultaneous) + vsPresets.ts (vs-slam /
+  vs-glide: edges-meet slides + a VS pop, real keyframes only, DATA BLOCKS via
+  convertToDataRegion). Born from the AI benchmark's versus-card winners - the full-frame
+  match-up that once misfitted the info-card contract (dropped card05) now owns its contract.
 - **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown).
   DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
   middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;

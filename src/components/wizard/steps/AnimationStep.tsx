@@ -4,6 +4,7 @@ import { TICKER_PRESETS } from '../../../templates/tickers/tickerPresets';
 import { SS_PRESETS } from '../../../templates/startingSoon/ssPresets';
 import { GT_PRESETS } from '../../../templates/gameTimers/gtPresets';
 import { IG_PRESETS } from '../../../templates/infographics/igPresets';
+import { VS_PRESETS } from '../../../templates/versus/vsPresets';
 import { QUIZ_PRESETS } from '../../../templates/quiz/quizPresets';
 import { EASINGS, type EasingId } from '../../../model/easings';
 import type { AnimPhase } from '../../../blocks/presetRegistry';
@@ -13,7 +14,7 @@ import type { DraftPatch, WizardDraft } from '../draft';
 /** Every preset across categories (a variant lists which ones suit it). */
 const ALL_PRESETS = [
   ...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS,
-  ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...QUIZ_PRESETS,
+  ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...VS_PRESETS, ...QUIZ_PRESETS,
 ];
 
 interface Props {

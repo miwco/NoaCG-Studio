@@ -8,6 +8,7 @@ import { ig03 } from './ig03';
 import { ig04 } from './ig04';
 import { ig05 } from './ig05';
 import { ig06 } from './ig06';
+import { ig07 } from './ig07';
 
 export const INFOGRAPHICS: TemplateVariant[] = [
   ig01, // Big stat count-up
@@ -16,6 +17,7 @@ export const INFOGRAPHICS: TemplateVariant[] = [
   ig04, // bench-winner infographic variant
   ig05, // bench-winner infographic variant
   ig06, // bench-winner infographic variant
+  ig07, // bench-winner election results bars
 ];
 
 export function infographicById(id: string): TemplateVariant | undefined {
