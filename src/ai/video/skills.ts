@@ -41,11 +41,26 @@ export const SKILLS: VideoSkill[] = [
     id: 'logo-reveals',
     keywords: /logo|ident|mark\b|brand reveal/i,
     prompt: `### Logo reveals
-- The logo is the hero: it gets the center, the most travel, and the longest hold.
+- The logo is the hero: it gets the center, the most travel, and the longest hold. At the
+  hero moment the lockup COMMANDS the frame - a wordmark spans roughly 40-60% of the frame
+  width; a small word floating in darkness reads cheap, not premium.
 - Reveal patterns that read premium: scale-in with an overshooting spring; a masked wipe;
   a light sweep (a moving specular gradient) across the settled mark; elements assembling.
+- A light sweep must live INSIDE the glyphs: stack a duplicate of the wordmark exactly on
+  top of itself with WebkitBackgroundClip 'text' and animate the gradient's position
+  across it. A sheen rectangle drifting over the type - even one clipped to the text box -
+  shows band edges above and below the letters and reads as a box sliding past, never as
+  a specular glint.
+- With no logo uploaded, design a real typographic LOCKUP, never a bare word: heavy caps,
+  tight tracking (letterSpacing about -0.02em), sized from the frame (fontSize about
+  height*0.2), a subtle vertical gradient in the fill so the type reads lit rather than
+  flat white - plus at least one supporting element (a monogram chip, a drawn rule, a
+  small kicker line) landing on its own stagger.
 - Never distort a logo's aspect ratio; never rotate it more than a few degrees.
-- Give the settled logo a subtle life: 1-2% scale breathing or a slow light pass.`,
+- Give the settled logo a subtle life: 1-2% scale breathing or a slow light pass. Ease
+  breathing in from exactly 1.0 at the settle moment - a hold that starts mid-cycle pops.
+- Ground the mark in a layered background: a radial or diagonal graded field plus a corner
+  vignette, never one flat or near-flat fill.`,
   },
   {
     id: 'sports-graphics',

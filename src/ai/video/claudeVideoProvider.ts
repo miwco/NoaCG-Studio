@@ -12,6 +12,7 @@ import type {
   VideoAIProvider,
   VideoGenerateContext,
   VideoGenerateResult,
+  VideoProgress,
   VideoValidator,
 } from './provider';
 import { BASE_SKILL, detectSkillsByKeyword, skillById, type VideoSkill } from './skills';
@@ -185,6 +186,7 @@ async function generateValidated(
   baseMessages: { role: 'user' | 'assistant'; content: ContentBlock[] | string }[],
   validate: VideoValidator | undefined,
   model: string | undefined,
+  onProgress?: VideoProgress,
 ): Promise<{ emitted: EmittedModule; validation: Awaited<ReturnType<VideoValidator>> | null }> {
   let emitted = (await callClaude({
     system,
@@ -195,8 +197,10 @@ async function generateValidated(
 
   if (!validate) return { emitted, validation: null };
 
+  onProgress?.('Checking the result in the player…');
   let validation = await validate(emitted.tsx);
   for (let round = 0; round < MAX_REPAIR_ROUNDS && !validation.ok; round++) {
+    onProgress?.(`Fixing issues the checks found (round ${round + 1} of ${MAX_REPAIR_ROUNDS})…`);
     // Hand the EXACT validator findings back with the full module - same doctrine as the
     // SPX repair round. Runtime findings carry frame numbers; remind the model that type
     // errors surface as runtime errors (sucrase does not typecheck).
@@ -264,19 +268,24 @@ class ClaudeVideoProvider implements VideoAIProvider {
     prompt: string,
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
+    onProgress?: VideoProgress,
   ): Promise<VideoGenerateResult> {
     const model = ctx.model;
+    onProgress?.('Reading the brief…');
     const skills = await detectSkills(prompt, undefined);
     const vision = imageBlocks(ctx, ctx.assetData ?? new Map());
 
+    onProgress?.('Designing the motion plan…');
     const plan = await directMotion(prompt, ctx, skills, vision, model);
 
+    onProgress?.('Writing the Remotion code…');
     const coderText = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nThe motion plan to implement:\n${planText(plan)}\n\nThe original brief:\n${prompt}`;
     const { emitted, validation } = await generateValidated(
       coderSystem(skills),
       [{ role: 'user', content: [...vision, { type: 'text', text: coderText }] }],
       validate,
       model,
+      onProgress,
     );
 
     return {
@@ -296,8 +305,10 @@ class ClaudeVideoProvider implements VideoAIProvider {
     current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
+    onProgress?: VideoProgress,
   ): Promise<VideoGenerateResult> {
     const model = ctx.model;
+    onProgress?.('Writing the change…');
     // Skills: the refinement request plus recent context (a "make the countdown pulse"
     // follow-up should load the countdown craft even if the request alone wouldn't).
     const recentText = current.chat.slice(-6).map((m) => m.text).join('\n');
@@ -315,6 +326,7 @@ class ClaudeVideoProvider implements VideoAIProvider {
       [...history, { role: 'user', content: [...vision, { type: 'text', text: finalText }] }],
       validate,
       model,
+      onProgress,
     );
 
     // A refinement re-emits the COMPLETE module, so it re-declares its inputs, and merging

@@ -2350,6 +2350,28 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   display: grid;
   place-items: center;
 }
+
+/* While an AI request runs, a scrim owns the stage: the player underneath is loading and
+   probing CANDIDATE modules during validation, and those flashes must never be mistaken
+   for the finished result. Shows the same stage text as the chat's busy line. */
+.video-stage-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 15, 22, 0.72);
+  backdrop-filter: blur(2px);
+}
+.video-stage-busy span {
+  color: var(--text);
+  font-size: 13px;
+  animation: video-busy-pulse 1.6s ease-in-out infinite;
+}
+@keyframes video-busy-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
 .video-preview-error { padding: 6px 12px; font-size: 12px; border-top: 1px solid var(--border); }
 
 /* The AI chat: history scrolls, the input row stays pinned below it. */

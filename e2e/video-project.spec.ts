@@ -48,6 +48,10 @@ test('create -> stub generation -> live preview renders the composition', async 
   // first number (the Countdown example is 5s at 30fps -> starts at 5).
   await expect(player(page).getByText('5', { exact: true })).toBeVisible({ timeout: 10_000 });
 
+  // The user gets an unambiguous completion signal (and the busy scrim has left the stage).
+  await expect(page.getByTestId('video-ai-done')).toBeVisible();
+  await expect(page.getByTestId('video-stage-busy')).toHaveCount(0);
+
   // No error banners.
   await expect(page.getByTestId('video-code-error')).toHaveCount(0);
   await expect(page.getByTestId('video-preview-error')).toHaveCount(0);
