@@ -166,6 +166,36 @@ const results = await page.evaluate(async (CATEGORY) => {
           await new Promise((r) => setTimeout(r, 1400));
           return { ringMoved: getComputedStyle(ring).strokeDashoffset !== before };
         }
+        // Bars authored per row (no rebuild container), each carrying its own counted
+        // readout at the cap — ig07's shape. Prove the measured motion for real: the fills
+        // must grow to their data-value and the readouts must count to their figures.
+        if (d.querySelector('.infographic-bar-num')) {
+          const fills = [...d.querySelectorAll('.infographic-bar-fill')];
+          const nums = () => [...d.querySelectorAll('.infographic-bar-num')].map((e) => e.textContent);
+          const widths = () => fills.map((e) => getComputedStyle(e).width);
+          w.play();
+          await new Promise((r) => setTimeout(r, 250));
+          const midNums = nums();
+          const midWidths = widths();
+          await new Promise((r) => setTimeout(r, 1600));
+          const endNums = nums();
+          const endWidths = widths();
+          // Mid-flight must differ from the settled state (it grew/counted), and each bar
+          // must land on its own data-value.
+          const landed = fills.every((el, i) => {
+            const track = el.parentElement.getBoundingClientRect().width;
+            const want = (Number(el.getAttribute('data-value')) / 100) * track;
+            return Math.abs(parseFloat(endWidths[i]) - want) < track * 0.04;
+          });
+          return {
+            counting:
+              fills.length > 0 &&
+              landed &&
+              (String(midWidths) !== String(endWidths) || String(midNums) !== String(endNums)),
+            bars: 0, // proven by `counting` here — don't let the bar count pass it trivially
+            detail: { midNums, endNums, midWidths, endWidths, landed },
+          };
+        }
         w.play();
         const el = d.getElementById('f0');
         const first = el.textContent;
@@ -269,7 +299,11 @@ for (const id of ids) {
     // (scoreboards, quiz…) must not have them blanked in the taste shot.
     const data = {};
     tpl.fields.forEach((fld) => { data[fld.field] = fld.value; });
-    if (v.suggestedLines[0]) data.f0 = v.suggestedLines[0].sample;
+    // Fall back to the suggested line ONLY when f0 has no default of its own. A field's own
+    // default is the design's truth; a design whose wizard lines are composite parse-inputs
+    // (ig07's "Name | Party | Percent", split into 9 fields at create) would otherwise get
+    // the raw pipe-joined line stuffed into its name element.
+    if (v.suggestedLines[0] && !data.f0) data.f0 = v.suggestedLines[0].sample;
     w.update(JSON.stringify(data));
     w.play();
   }, [id, CATEGORY]);
