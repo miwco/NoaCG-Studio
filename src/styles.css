@@ -442,12 +442,27 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   display: flex;
   gap: 8px;
   z-index: 6;
+  /* A phone-width stage can't fit every group on one row (the tool switch joined the
+     guides/zoom/background groups) — wrap toward the right edge instead of clipping. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: calc(100% - 16px);
 }
+.preview-toolbar .tool-switch,
 .preview-toolbar .guide-switch,
 .preview-toolbar .zoom-switch,
 .preview-toolbar .bg-switch {
   display: flex;
   gap: 4px;
+}
+/* The area-type button's glyph: a T in a dashed box — the tool draws a bounded text area. */
+.tool-area-glyph {
+  display: inline-block;
+  border: 1px dashed currentColor;
+  border-radius: 2px;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 1.3;
 }
 .preview-toolbar button {
   font-size: 11px;
@@ -1372,6 +1387,10 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .canvas-layer.cursor-grab { cursor: grab; }
 .canvas-layer.cursor-text { cursor: text; }
 .canvas-layer.dragging { cursor: grabbing; }
+/* An armed text tool: the cursor says what a press will do (these win over the hover
+   cursor classes above — the tool owns the canvas until it disarms). */
+.canvas-layer.tool-text { cursor: text; }
+.canvas-layer.tool-area-text { cursor: crosshair; }
 
 /* W2 — the corner scale handle (bottom-right of the hovered graphic). */
 .scale-handle {
@@ -2307,6 +2326,16 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   position: absolute;
   border: 1px solid rgba(246, 166, 35, 0.7);
   background: rgba(246, 166, 35, 0.07);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 6;
+}
+/* The area-text tool's rectangle in flight — dashed, unlike the selection lasso, because it
+   draws a BOX that will exist (the wrapping text area), not a marquee over what does. */
+.canvas-area-draft {
+  position: absolute;
+  border: 1px dashed rgba(246, 166, 35, 0.85);
+  background: rgba(246, 166, 35, 0.05);
   border-radius: 2px;
   pointer-events: none;
   z-index: 6;
