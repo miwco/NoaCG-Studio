@@ -18,6 +18,7 @@ import { ASSET_DRAG_TYPE } from './AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { phaseIdOf } from './StepTimeline';
 import type { SpxWindow } from './PlayoutSimulator';
+import { useIsMobile } from './useIsMobile';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -203,6 +204,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   const canvasTool = useTemplateStore((s) => s.canvasTool);
   const setCanvasTool = useTemplateStore((s) => s.setCanvasTool);
   const undo = useTemplateStore((s) => s.undo);
+
+  // Phones and narrow windows: the chip drops its affordance hints there (they describe
+  // pointer/keyboard gestures a touch screen doesn't have) — same breakpoint as the layout.
+  const isMobile = useIsMobile();
 
   const [drag, setDrag] = useState<DragState | null>(null);
   const [layerDrag, setLayerDrag] = useState<LayerDrag | null>(null);
@@ -1659,7 +1664,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
                   label: selectedPart.label,
                   // The chip surfaces only actions that ALREADY exist where they apply
                   // (the press control replaces the passive hint when both would show).
-                  hint: pressEligible
+                  // On a phone every one of these lines would advertise a desktop gesture —
+                  // double-click, arrow keys, the corner handle — so the chip shows just the
+                  // name there: less guidance beats an instruction the device can't follow.
+                  hint: pressEligible || isMobile
                     ? undefined
                     : placed[selectedPart.selector]
                       ? 'Double-click edits · drag places · arrows nudge'

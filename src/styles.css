@@ -2385,11 +2385,22 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--amber);
+  /* The label wins the room: it never shrinks below its text (a long field title still
+     ellipsizes against the chip's own cap), the hint gives way first. */
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .canvas-chip-hint {
   font-size: 9px;
   letter-spacing: 0.06em;
   color: var(--text-dim);
+  /* On a narrow stage the hint ellipsizes inside the chip's width cap instead of pushing
+     the chip past the canvas edge. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------- Shared selection (Era 6 — canvas ↔ timeline highlight the same element) ---------- */
