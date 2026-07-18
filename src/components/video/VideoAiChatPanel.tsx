@@ -64,6 +64,10 @@ export default function VideoAiChatPanel() {
   const [showSettings, setShowSettings] = useState(false);
   // A result whose validation failed: not applied, offered for manual inspection.
   const [failed, setFailed] = useState<VideoGenerateResult | null>(null);
+  // A transient "it worked" confirmation under the newest turn - the generation pipeline
+  // is long enough that "did anything happen?" needs an explicit answer. Cleared by the
+  // next request (and by failures, which show their own state).
+  const [done, setDone] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const saveSetting = (patch: Parameters<typeof saveAiSettings>[0]) => {
@@ -105,15 +109,20 @@ export default function VideoAiChatPanel() {
     } else {
       setFailed(null);
       applyResult(result, authoredFor);
+      setDone(true);
     }
   };
+
+  /** Each provider stage lands in the busy line so a long generation is never silent. */
+  const onProgress = (stage: string) => setBusy(stage);
 
   const runGenerate = async (prompt: string) => {
     setBusy('Designing your animation… (this can take a minute)');
     setError(null);
+    setDone(false);
     const p = useVideoProjectStore.getState().project;
     try {
-      const result = await getVideoAiProvider().generateVideo(prompt, contextFor(p), validate);
+      const result = await getVideoAiProvider().generateVideo(prompt, contextFor(p), validate, onProgress);
       handleResult(result, settingsOf(p));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -125,6 +134,7 @@ export default function VideoAiChatPanel() {
   /** One refinement, whoever asked for it: the chat box, or another panel via requestAi. */
   const runRefine = async (text: string) => {
     setError(null);
+    setDone(false);
     appendChat({ role: 'user', text, at: new Date().toISOString() });
     setBusy('Refining…');
     const p = useVideoProjectStore.getState().project;
@@ -134,6 +144,7 @@ export default function VideoAiChatPanel() {
         { tsx: p.tsx, chat: p.chat, inputs: p.inputs },
         contextFor(p),
         validate,
+        onProgress,
       );
       handleResult(result, settingsOf(p));
     } catch (e) {
@@ -218,6 +229,11 @@ export default function VideoAiChatPanel() {
           </div>
         ))}
         {busy && <p className="hint">⏳ {busy}</p>}
+        {done && !busy && (
+          <p className="status-ok" data-testid="video-ai-done">
+            ✔ Done - the new version is playing in the preview. Ask below for any change.
+          </p>
+        )}
         {error && (
           <p className="status-bad">
             ✗ {error}

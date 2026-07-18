@@ -12,6 +12,7 @@
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "test:e2e:affected": "node scripts/e2e-affected.mjs",
     "test:e2e:live": "playwright test --config=playwright.live.config.ts",
     "postinstall": "node scripts/dev-port.mjs && node scripts/build-player-host.mjs"
   },

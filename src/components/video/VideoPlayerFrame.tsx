@@ -35,6 +35,7 @@ export default function VideoPlayerFrame() {
   const replayNonce = useVideoProjectStore((s) => s.replayNonce);
   const previewError = useVideoProjectStore((s) => s.previewError);
   const setPreviewError = useVideoProjectStore((s) => s.setPreviewError);
+  const busy = useVideoProjectStore((s) => s.busy);
 
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -169,6 +170,14 @@ export default function VideoPlayerFrame() {
           )}
           <CanvasGuides width={frameW} height={frameH} safeAreas={safeAreas} grid={grid} />
         </div>
+
+        {/* An AI request in flight owns the stage: validation loads and probes candidate
+            modules in the live player, and those flashes must never read as the result. */}
+        {busy && (
+          <div className="video-stage-busy" data-testid="video-stage-busy">
+            <span>✦ {busy}</span>
+          </div>
+        )}
 
         <div className="preview-toolbar">
           <div className="guide-switch">

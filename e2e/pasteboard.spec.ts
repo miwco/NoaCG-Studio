@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
+import { awaitPreviewRebuild } from './_preview';
+import { createProject } from './_create';
 import { canvasBox, elementPoint } from './_canvas';
 
 // The off-canvas pasteboard (plans/happy-marinating-pebble.md): the editor shows a working
@@ -8,14 +10,7 @@ import { canvasBox, elementPoint } from './_canvas';
 // editor-view concept and never enters persisted, canvas-local coordinates.
 
 async function createHairline(page: Page) {
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650);
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
 }
 
@@ -56,7 +51,8 @@ test('drag an element fully into the pasteboard: negative keyframe, still visibl
   await page.mouse.down();
   await page.mouse.move(start.x - dxCanvas * start.scale, start.y, { steps: 10 });
   await page.mouse.up();
-  await page.waitForTimeout(400);
+  // The release keys x and rebuilds the preview — measure only against the new document.
+  await awaitPreviewRebuild(page);
 
   // The keyframe written is CANVAS-LOCAL and negative — the pad never leaks in.
   const data = await animData(page);
@@ -84,7 +80,7 @@ test('the pasteboard pad never enters persisted state; export stays clipped to t
   await page.mouse.down();
   await page.mouse.move(start.x - 300 * start.scale, start.y, { steps: 8 });
   await page.mouse.up();
-  await page.waitForTimeout(400);
+  await awaitPreviewRebuild(page);
 
   const probe = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');

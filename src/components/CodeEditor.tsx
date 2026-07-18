@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../monacoSetup'; // bundled Monaco + workers — no CDN, fully offline
 import Editor, { type OnMount } from '@monaco-editor/react';
 import { useTemplateStore, type EditorTab } from '../store/templateStore';
@@ -97,6 +97,9 @@ export default function CodeEditor() {
 
   const editorRef = useRef<MonacoEditor | null>(null);
   const decorationsRef = useRef<ReturnType<MonacoEditor['createDecorationsCollection']> | null>(null);
+  // Flips once Monaco has mounted, so effects that need the editor re-run when it arrives —
+  // the editor loads lazily, and an apply can land before the chunk has finished loading.
+  const [editorReady, setEditorReady] = useState(false);
 
   const current = TABS.find((t) => t.id === activeTab)!;
   const value = activeTab === 'html' ? template.html : activeTab === 'css' ? template.css : template.js;
@@ -126,8 +129,7 @@ export default function CodeEditor() {
     const editor = editorRef.current;
     const range = lastChange?.ranges[activeTab];
     if (!editor || !range) return;
-    // Small delay: the new value reaches Monaco right after this render commit.
-    const handle = setTimeout(() => {
+    const apply = (reveal: boolean) => {
       decorationsRef.current?.clear();
       decorationsRef.current = editor.createDecorationsCollection([
         {
@@ -139,15 +141,33 @@ export default function CodeEditor() {
           },
         },
       ]);
-      editor.revealLineInCenter(range.start);
-    }, 80);
-    return () => clearTimeout(handle);
-  }, [lastChange, activeTab]);
+      if (reveal) editor.revealLineInCenter(range.start);
+    };
+    // Small delay: the new value reaches Monaco right after this render commit. On a loaded
+    // machine, though, two async steps can land AFTER the delay and silently wipe the fresh
+    // decorations: the per-tab MODEL swap (decoration collections die with the model) and the
+    // controlled value commit (setValue drops them too). Cover both: re-apply on model change,
+    // and once on the first content change (no reveal — a user's own keystroke must not
+    // recenter the viewport).
+    const handle = setTimeout(() => apply(true), 80);
+    const subModel = editor.onDidChangeModel(() => apply(true));
+    const subContent = editor.onDidChangeModelContent(() => {
+      apply(false);
+      subContent.dispose();
+    });
+    return () => {
+      clearTimeout(handle);
+      subModel.dispose();
+      subContent.dispose();
+    };
+    // editorReady: a change applied while Monaco was still loading gets its highlight on mount.
+  }, [lastChange, activeTab, editorReady]);
 
   // Report the token under the cursor (kept for future context-aware tools) and register the
   // hover explanations + the Prettier formatters.
   const onMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
+    setEditorReady(true);
     registerHoverExplanations(monaco);
     registerFormatters(monaco);
     // When the editor mounts into a just-shown box (e.g. the mobile "Show code" panel), Monaco can

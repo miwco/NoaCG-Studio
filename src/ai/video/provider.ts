@@ -18,6 +18,11 @@ export interface VideoGenerateContext {
 /** The injected validate pipeline (bound to the live player bridge by the chat panel). */
 export type VideoValidator = (tsx: string) => Promise<VideoValidationResult>;
 
+/** Stage reporting for the UI busy line ("Designing the motion plan…"). Generation is a
+ *  staged pipeline that can take a minute - the caller shows each stage as it starts so
+ *  the user always knows the request is alive and what it is doing. */
+export type VideoProgress = (stage: string) => void;
+
 export interface VideoGenerateResult {
   /** One sentence describing the composition, shown as the assistant chat turn. */
   summary: string;
@@ -43,6 +48,7 @@ export interface VideoAIProvider {
     prompt: string,
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
+    onProgress?: VideoProgress,
   ): Promise<VideoGenerateResult>;
   /** Iterative refinement of the current module (chat-driven targeted change). `current.inputs`
    *  is the input set the module already declares - a provider that re-emits the whole module
@@ -52,5 +58,6 @@ export interface VideoAIProvider {
     current: { tsx: string; chat: VideoChatMessage[]; inputs: VideoInput[] },
     ctx: VideoGenerateContext,
     validate?: VideoValidator,
+    onProgress?: VideoProgress,
   ): Promise<VideoGenerateResult>;
 }

@@ -852,7 +852,7 @@ kbd {
 .wz-place-grid input[type="number"] { width: 76px; flex: none; }
 .wz-place-grid select { width: 104px; }
 .wz-place-grid input[type="color"] { width: 32px; padding: 2px; flex: none; }
-.wz-place-color input:not([type="color"]) { width: 96px; flex: none; }
+.wz-place-color input:not([type="color"]) { width: 172px; flex: none; } /* fits an rgba(...) value */
 
 /* Step 4: style pickers */
 .wz-palettes { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -2349,6 +2349,28 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   inset: 0;
   display: grid;
   place-items: center;
+}
+
+/* While an AI request runs, a scrim owns the stage: the player underneath is loading and
+   probing CANDIDATE modules during validation, and those flashes must never be mistaken
+   for the finished result. Shows the same stage text as the chat's busy line. */
+.video-stage-busy {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 15, 22, 0.72);
+  backdrop-filter: blur(2px);
+}
+.video-stage-busy span {
+  color: var(--text);
+  font-size: 13px;
+  animation: video-busy-pulse 1.6s ease-in-out infinite;
+}
+@keyframes video-busy-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 .video-preview-error { padding: 6px 12px; font-size: 12px; border-top: 1px solid var(--border); }
 
