@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
+import { awaitPreviewRebuild } from './_preview';
+import { createProject } from './_create';
 import { elementPoint } from './_canvas';
 
 // Era 6 — inline text editing (docs/WYSIWYG_PLAN.md W3): double-click a text line in the
@@ -7,14 +9,7 @@ import { elementPoint } from './_canvas';
 // CODE (definition + static text); the live sample value is operator state and stays.
 
 async function createHairline(page: Page) {
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650);
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
 }
 
 /** Screen position of the center of a preview element (pad-agnostic — see e2e/_canvas.ts). */
@@ -49,7 +44,7 @@ test('double-click edits text in place: live value + definition default, undoabl
   await editor.press('Enter');
 
   // Live everywhere: the preview text, the Data panel value, and the definition default.
-  await page.waitForTimeout(650); // the template patch rebuilds the preview
+  await awaitPreviewRebuild(page);
   await expect(page.frameLocator('iframe.preview-frame').locator('#f0')).toHaveText('Inline Name');
   await page.getByTestId('dock-tab-data').click();
   await expect(page.locator('.panel-body input').first()).toHaveValue('Inline Name');
@@ -57,7 +52,7 @@ test('double-click edits text in place: live value + definition default, undoabl
 
   // Undo reverts the template patch (the definition default returns to the wizard text).
   await page.keyboard.press('Control+z');
-  await page.waitForTimeout(650);
+  await awaitPreviewRebuild(page);
   expect(await definitionDefault(page, 'f0')).toBe('Alexandra Riva');
 });
 
@@ -75,7 +70,7 @@ test('Escape cancels an inline edit without changes', async ({ page }) => {
   await editor.press('Escape');
   await expect(editor).toHaveCount(0);
 
-  await page.waitForTimeout(650);
+  await page.waitForTimeout(650); // KEEP as a sleep: this asserts nothing changes, so no rebuild ever comes
   expect(await definitionDefault(page, 'f0')).toBe('Alexandra Riva');
   await expect(page.frameLocator('iframe.preview-frame').locator('#f0')).toHaveText('Alexandra Riva');
 });

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { createProject } from './_create';
 
 // The Assets panel: its own dock tab (desktop + mobile), row-based file list with folders,
 // undoable imports, the derived info section, reference-safe moves, and the v2 -> v3
@@ -25,14 +26,7 @@ const TINY_LOTTIE = Buffer.from(
 );
 
 async function createHairline(page: Page) {
-  await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="template"]').click();
-  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).click();
-  await page.locator('.wz-variant', { hasText: 'Hairline' }).click();
-  await page.getByRole('button', { name: 'Create project' }).click();
-  await expect(page.locator('.wz-modal')).toBeHidden();
-  await page.waitForTimeout(650); // debounced preview rebuild
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
 }
 
 async function openAssetsTab(page: Page) {

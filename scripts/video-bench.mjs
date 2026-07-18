@@ -71,12 +71,11 @@ if (FILTER.endsWith('.json') && existsSync(FILTER)) {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1720, height: 980 } });
 await page.addInitScript((key) => {
-  // proxyUrl:'' pins DIRECT mode (an empty string beats the ?? fallback to the dev
-  // server's VITE_AI_PROXY_URL); useHarness:false keeps the run on the measured path.
-  localStorage.setItem(
-    'spx-gfx-ai',
-    JSON.stringify({ apiKey: key, model: 'claude-sonnet-5', proxyUrl: '', useHarness: false }),
-  );
+  // proxyUrl:'' pins DIRECT mode - an empty string beats loadAiSettings' ?? fallback to the
+  // dev server's VITE_AI_PROXY_URL, so a full .env no longer reroutes bench calls. NOTE:
+  // `useHarness` is deliberately NOT seeded - it gates the SPX wizard only (AiStep), never
+  // the video path, so pinning it here would just be a stale mirror of an unrelated default.
+  localStorage.setItem('spx-gfx-ai', JSON.stringify({ apiKey: key, model: 'claude-sonnet-5', proxyUrl: '' }));
 }, KEY);
 
 // Preflight: confirm the app actually resolves to direct mode with the seeded key before
@@ -87,10 +86,10 @@ await page.addInitScript((key) => {
   const resolved = await page.evaluate(async () => {
     const { loadAiSettings } = await import('/src/ai/settings.ts');
     const s = loadAiSettings();
-    return { direct: !s.proxyUrl && Boolean(s.apiKey), model: s.model, harness: s.useHarness };
+    return { direct: !s.proxyUrl && Boolean(s.apiKey), model: s.model };
   });
-  if (!resolved.direct || resolved.harness) {
-    console.error(`Preflight failed: expected direct BYO-key mode with the harness off, got ${JSON.stringify(resolved)}.`);
+  if (!resolved.direct) {
+    console.error(`Preflight failed: expected direct BYO-key mode, got ${JSON.stringify(resolved)}.`);
     await browser.close();
     process.exit(1);
   }

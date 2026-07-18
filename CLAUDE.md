@@ -271,7 +271,13 @@ fix findings properly rather than sprinkling eslint-disable comments.
 
 - **UI flows -> use Playwright.** Verify user-facing flows with the E2E suite in `e2e/` (specs
   drive the real dev server). Run `npm run test:e2e`. Add a spec for any new user-facing flow
-  (gallery, blocks, undo, guides, branding, export, …).
+  (gallery, blocks, undo, guides, branding, export, …). For the inner loop,
+  `npm run test:e2e:affected` maps your changed files to the specs that cover them
+  (curated map in `scripts/e2e-affected.mjs`; core changes fall back to the full suite) -
+  the FULL suite remains the merge gate. In specs, never sleep out the preview debounce:
+  use `awaitPreviewRebuild` from `e2e/_preview.ts` (it watches the iframe's `data-doc-rev`
+  stamp), and bootstrap non-wizard specs with `createProject` from `e2e/_create.ts` instead
+  of walking the wizard UI.
 - **Logic checks without UI (fast path):** Vite serves source modules, so in a browser context you
   can `await import('/src/blocks/registry.ts?t=' + Date.now())`, apply blocks to
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
@@ -304,9 +310,12 @@ fix findings properly rather than sprinkling eslint-disable comments.
 - In Playwright specs, **never clear localStorage via `addInitScript`** - the script also runs in
   the same-origin srcdoc preview iframe, so every preview rebuild wipes the key (this silently
   deleted the project brand). Fresh browser contexts already isolate storage per test.
-- The preview rebuilds on a ~350 ms debounce after `applyTemplate` - Playwright specs must wait for
-  it (or for an element unique to the new document) before clicking Play or asserting inside the
-  iframe, or they hit the previous document.
+- The preview rebuilds on a ~350 ms debounce after `applyTemplate` - Playwright specs must wait
+  for it before clicking Play or asserting inside the iframe, or they hit the previous document.
+  Use `awaitPreviewRebuild` (e2e/_preview.ts) - it waits for PreviewFrame's `data-doc-rev` stamp
+  to advance. Call it AROUND the action (`awaitPreviewRebuild(page, () => …)`) when anything slow
+  sits between the action and the wait; the bare post-action form is only safe immediately after
+  the mutating action (within the debounce window).
 
 ## Git
 

@@ -19,12 +19,11 @@ example_projects/
 # don't ship it in the open/self-hostable repo. Auth is handled separately via OAuth.
 .mcp.json
 
-# AI bench / comparison outputs (screenshots + generated code, regenerated on demand)
-bench-out/
+# AI bench / comparison outputs (screenshots + generated code, regenerated on demand).
+# The out-dir is the operator's choice, so the bench patterns are deliberately broad.
+bench-*/
 video-bench-out*/
-compare-out/
-bench-baseline*/
-bench-armB*/
+compare-out*/
 
 # Catalog sweep taste screenshots (scripts/l3-sweep.mjs <shots-dir> <category>; multi-MB
 # PNGs, regenerated on demand - review them on disk, never commit them)
