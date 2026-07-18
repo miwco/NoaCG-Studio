@@ -294,7 +294,9 @@ test('reload restores the project; save/reopen and the SPX switch work', async (
   await page.getByRole('button', { name: '+ New project' }).click();
   await page.getByRole('button', { name: 'Video or animation with AI' }).click();
   await expect(page.getByTestId('video-step')).toBeVisible();
-  await page.getByRole('button', { name: /^▶ A 5-second broadcast countdown/ }).click();
+  // The chip is labelled with the project's own brief, so match the countdown example's
+  // opening words rather than the whole sentence (the example copy is product prose).
+  await page.getByRole('button', { name: /^▶ A 5-second countdown/ }).click();
   await expect(page.getByTestId('video-shell')).toBeVisible();
   await waitForGeneration(page);
 });

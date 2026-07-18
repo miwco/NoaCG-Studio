@@ -7,11 +7,6 @@ import { createRoot } from 'react-dom/client';
 import { Player } from '@remotion/player';
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import HostApp from './HostApp';
-import { installTextChecks } from './textChecks';
-
-// The readability checks are also driven from OUTSIDE the protocol: scripts/video-bench.mjs
-// reaches into this frame over CDP and calls window.__noacgTextChecks at its own hold frames.
-installTextChecks();
 
 function DemoComp() {
   const frame = useCurrentFrame();

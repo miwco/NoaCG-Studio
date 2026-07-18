@@ -12,7 +12,7 @@
 import { uuid } from '../../model/id';
 import type { AssetFile } from '../../model/types';
 import type { VideoCompSettings } from '../types';
-import type { LoadResult, PlayerBridgeCallbacks, ProbeResult } from '../playerBridge';
+import type { LoadResult, PlayerBridgeCallbacks, ProbeResult, ProbeTextIssue } from '../playerBridge';
 import { composeHyperframesDocument } from './compose';
 import { loadHyperframesFontCss } from './fontCss';
 import { HF_CHANNEL, HF_PROTOCOL_V } from './driver';
@@ -31,6 +31,7 @@ interface DriverEvent {
   frame?: number;
   ok?: boolean;
   errors?: { frame: number; message: string }[];
+  textIssues?: ProbeTextIssue[];
   playing?: boolean;
 }
 
@@ -125,16 +126,21 @@ export class HyperframesBridge {
     return op;
   }
 
-  /** Probe frames on the currently loaded composition (validation). */
-  probe(frames: number[]): Promise<ProbeResult> {
+  /** Probe frames on the currently loaded composition (validation). `checkFrames`
+   *  additionally get the driver's readability checks - pass HOLD frames only. */
+  probe(frames: number[], checkFrames: number[] = []): Promise<ProbeResult> {
     const run = (): Promise<ProbeResult> => {
       if (this.disposedFlag || !this.booted) {
-        return Promise.resolve({ ok: false, errors: [{ frame: 0, message: 'no composition is loaded' }] });
+        return Promise.resolve({
+          ok: false,
+          errors: [{ frame: 0, message: 'no composition is loaded' }],
+          textIssues: [],
+        });
       }
       const id = this.loadId;
       return new Promise((resolve) => {
         this.pendingProbe = { id, resolve };
-        this.post({ type: 'probe', id, frames });
+        this.post({ type: 'probe', id, frames, checkFrames });
       });
     };
     const op = this.chain.then(run, run);
@@ -198,7 +204,7 @@ export class HyperframesBridge {
       case 'probe-result': {
         const pending = this.pendingProbe;
         if (pending && pending.id === msg.id) {
-          pending.resolve({ ok: !!msg.ok, errors: msg.errors ?? [] });
+          pending.resolve({ ok: !!msg.ok, errors: msg.errors ?? [], textIssues: msg.textIssues ?? [] });
           this.pendingProbe = null;
         }
         break;

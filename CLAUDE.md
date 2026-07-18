@@ -157,6 +157,13 @@ src/
                (compile -> static -> live player probe of frames 0/mid/last, plus the
                readability pass at two HOLD frames: a crop reported at both becomes a
                'text-clip' error the repair loop fights, then a warning if it survives),
+               textChecks.js - the RUNTIME READABILITY checks (text clipped by the frame or
+               an overflow-hidden ancestor; text painted behind the graphics), authored as
+               plain JS because it must be INLINED into two opaque-origin runtimes that
+               cannot import from the app (the player host at build time, the HyperFrames
+               document at compose time) and is also called by scripts/video-bench.mjs -
+               one implementation, every surface; readability.ts (which frames to check and
+               the persist-across-frames rule, shared by both engines' validators),
                playerBridge.ts (the postMessage client for the sandboxed player host;
                SERIALIZED load/probe, disposed bridges resolve immediately),
                bridgeRegistry.ts (holds whichever engine's bridge is mounted), types.ts
@@ -250,11 +257,9 @@ player-host/   the Remotion Player host for the video editor's live preview - it
                origin keeps AI/user composition code away from localStorage and the
                session); the app talks to it purely via postMessage with a per-session
                nonce (protocol spec: player-host/src/protocol.ts, mirrored by
-               src/video/playerBridge.ts); textChecks.ts lives here too - the RUNTIME
-               READABILITY checks (text clipped by the frame or an overflow-hidden
-               ancestor, text painted behind the graphics) run against the mounted DOM,
-               so the injected validator's probe and scripts/video-bench.mjs judge a
-               composition by ONE implementation
+               src/video/playerBridge.ts); the build also INLINES src/video/textChecks.js
+               (the runtime readability checks) into the page, the same way it inlines the
+               fonts - the iframe has no origin to fetch either from
 ```
 
 ### Auth posture (the open editor)

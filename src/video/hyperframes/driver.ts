@@ -31,7 +31,7 @@
 import { HYPERFRAMES_RUNTIME_VERSION } from '../../render/manifest';
 
 export const HF_CHANNEL = 'noacg-hf';
-export const HF_PROTOCOL_V = 1;
+export const HF_PROTOCOL_V = 2;
 export const HF_RENDER_RUNTIME_VERSION = HYPERFRAMES_RUNTIME_VERSION;
 
 export const HF_DRIVER_JS = `(function () {
@@ -226,20 +226,50 @@ export const HF_DRIVER_JS = `(function () {
         break;
       case 'probe': {
         var probeErrors = [];
+        var textIssues = [];
         var frames = msg.frames || [];
-        for (var i = 0; i < frames.length; i++) {
+        var checkFrames = msg.checkFrames || [];
+        // One seek per distinct frame: error probing and the readability checks share it.
+        var seekFrames = frames.slice();
+        for (var c = 0; c < checkFrames.length; c++) {
+          if (seekFrames.indexOf(checkFrames[c]) < 0) seekFrames.push(checkFrames[c]);
+        }
+        seekFrames.sort(function (a, b) { return a - b; });
+        for (var i = 0; i < seekFrames.length; i++) {
+          var f = seekFrames[i];
           var before = errors.length;
           try {
-            seek(frames[i] / fps);
+            seek(f / fps);
           } catch (e) {
             recordError((e && e.message) || 'seek failed');
           }
-          for (var k = before; k < errors.length; k++) {
-            probeErrors.push({ frame: frames[i], message: errors[k] });
+          var threw = errors.length > before;
+          if (frames.indexOf(f) >= 0) {
+            for (var k = before; k < errors.length; k++) {
+              probeErrors.push({ frame: f, message: errors[k] });
+            }
+          }
+          // Skip the checks on a frame that just threw - the DOM is whatever survived.
+          if (checkFrames.indexOf(f) >= 0 && !threw && window.__noacgTextChecks) {
+            var found = window.__noacgTextChecks.clip();
+            for (var q = 0; q < found.length; q++) {
+              textIssues.push({
+                frame: f,
+                kind: found[q].kind,
+                key: found[q].key,
+                message: found[q].message,
+              });
+            }
           }
         }
         seek(t); // leave the visible state where it was
-        post({ type: 'probe-result', id: msg.id, ok: probeErrors.length === 0, errors: probeErrors });
+        post({
+          type: 'probe-result',
+          id: msg.id,
+          ok: probeErrors.length === 0,
+          errors: probeErrors,
+          textIssues: textIssues,
+        });
         break;
       }
     }

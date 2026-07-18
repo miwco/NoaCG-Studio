@@ -1,0 +1,272 @@
+// Runtime READABILITY checks, run against a mounted composition's own DOM at a settled
+// frame. Two failure classes, one implementation, FOUR consumers - which is why this file
+// is plain JS installing a global rather than a typed module:
+//
+//   - the Remotion player host (player-host/, its own package, opaque origin): inlined into
+//     the host page by scripts/build-player-host.mjs, exactly like the bundled font CSS;
+//   - the HyperFrames driver (opaque-origin srcdoc): inlined by hyperframes/compose.ts via
+//     a ?raw import, ahead of the driver that calls it;
+//   - both engines' validators, through their probe protocols, where a persistent crop
+//     becomes a repair round before the composition is ever applied;
+//   - scripts/video-bench.mjs, which reaches into the preview frame over CDP.
+//
+// Neither runtime can be reached from the app (sandbox="allow-scripts", no
+// allow-same-origin, so no contentDocument), and the HyperFrames driver is injected as a
+// STRING - so a shared TypeScript module cannot serve both. A shared source file inlined
+// into each world can, and keeps one algorithm instead of three drifting copies.
+//
+// CLIPPING: "KITCHEN" rendering as "KITCH", "WORLD REPORT" as "WORLD REP". Measured from
+// the glyphs themselves - a Range over the element's own text nodes - against the frame and
+// every overflow-clipping ancestor. Measuring the RANGE, not the element box, is what makes
+// this work: nowrap text inside a fixed-width clipped card overflows silently, and the
+// element's own rect reports the (uncut) box width, not the painted glyph extent.
+//
+// OCCLUSION: "the title is painted behind the shape panels" - hit-testing sample points
+// against the real paint order, the video counterpart of the SPX bench's overlap check.
+//
+// False positives are the expensive failure here (a flagged run costs the user repair
+// rounds), so the checks are deliberately conservative: clip-path/mask-image ancestors are
+// invisible to a rect test and stay unflagged (an intentional mask reads as clean), the
+// thresholds below ignore sub-glyph bleeds, and callers only trust a finding that PERSISTS
+// across several hold frames - which is what excludes an entrance still in flight.
+//
+// Issue shape: { kind: 'clip' | 'occlusion', key, message }. `key` is stable across frames
+// (the percentages in `message` are not) - callers dedupe and intersect on it.
+
+(function () {
+  'use strict';
+
+  /** Fraction of the text's own width/height that must be lost before it counts as clipped.
+   *  0.12 is comfortably below one short word ("WORLD REPORT" -> "WORLD REP" loses ~17%,
+   *  "KITCHEN" -> "KITCH" ~28%) and comfortably above a trailing-space or antialiasing bleed. */
+  var CLIP_LOSS = 0.12;
+  /** …and an absolute floor, so a big headline losing a hairline never fires. */
+  var CLIP_MIN_PX = 8;
+
+  var CLIPS = /^(hidden|clip|scroll|auto)$/;
+
+  function width(b) {
+    return Math.max(0, b.right - b.left);
+  }
+  function height(b) {
+    return Math.max(0, b.bottom - b.top);
+  }
+
+  function describe(el) {
+    var cls = typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : '';
+    return '<' + el.tagName.toLowerCase() + cls + '>';
+  }
+
+  function label(el) {
+    return (el.textContent || '').trim().slice(0, 28);
+  }
+
+  /**
+   * Every element that renders its OWN readable text: visible, not tiny, carrying a direct
+   * non-empty text node, and big enough on screen to matter. Both checks start here.
+   */
+  function readableTextElements(doc, win) {
+    var out = [];
+    var all = doc.querySelectorAll('body *');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var cs = win.getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.3) continue;
+      if (parseFloat(cs.fontSize) < 12) continue;
+      var ownText = false;
+      for (var n = 0; n < el.childNodes.length; n++) {
+        var node = el.childNodes[n];
+        if (node.nodeType === 3 && (node.textContent || '').trim()) ownText = true;
+      }
+      if (!ownText) continue;
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && r.width * r.height > 500) out.push(el);
+    }
+    return out;
+  }
+
+  /** The painted extent of an element's OWN glyphs (its direct text nodes), ignoring
+   *  descendants - a Range measures what is actually drawn, box overflow included. */
+  function textExtent(el, doc) {
+    var box = null;
+    for (var i = 0; i < el.childNodes.length; i++) {
+      var node = el.childNodes[i];
+      if (node.nodeType !== 3 || !(node.textContent || '').trim()) continue;
+      var range = doc.createRange();
+      range.selectNodeContents(node);
+      var r = range.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) continue;
+      box = box
+        ? {
+            left: Math.min(box.left, r.left),
+            top: Math.min(box.top, r.top),
+            right: Math.max(box.right, r.right),
+            bottom: Math.max(box.bottom, r.bottom),
+          }
+        : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    }
+    return box;
+  }
+
+  /** Clip a region down through the ancestor chain, per axis, remembering the clippers.
+   *  The frame itself (the viewport) is the outermost one. */
+  function clipRegion(el, win) {
+    var region = { left: 0, top: 0, right: win.innerWidth, bottom: win.innerHeight };
+    var clippers = [];
+    for (var a = el.parentElement; a && a !== el.ownerDocument.documentElement; a = a.parentElement) {
+      var cs = win.getComputedStyle(a);
+      var clipsX = CLIPS.test(cs.overflowX);
+      var clipsY = CLIPS.test(cs.overflowY);
+      if (!clipsX && !clipsY) continue;
+      // The BORDER box, not the padding box: the larger region, so padding never
+      // manufactures a finding. getBoundingClientRect is already in the same
+      // (post-transform) space as the text Range, so scaled previews compare correctly.
+      var r = a.getBoundingClientRect();
+      if (clipsX) {
+        region.left = Math.max(region.left, r.left);
+        region.right = Math.min(region.right, r.right);
+      }
+      if (clipsY) {
+        region.top = Math.max(region.top, r.top);
+        region.bottom = Math.min(region.bottom, r.bottom);
+      }
+      clippers.push(a);
+    }
+    return { region: region, clippers: clippers };
+  }
+
+  /** An element that clips its own overflow cuts its own text too (the fixed-width card). */
+  function selfClip(el, win, region) {
+    var cs = win.getComputedStyle(el);
+    var r = el.getBoundingClientRect();
+    var out = { left: region.left, top: region.top, right: region.right, bottom: region.bottom };
+    if (CLIPS.test(cs.overflowX)) {
+      out.left = Math.max(out.left, r.left);
+      out.right = Math.min(out.right, r.right);
+    }
+    if (CLIPS.test(cs.overflowY)) {
+      out.top = Math.max(out.top, r.top);
+      out.bottom = Math.min(out.bottom, r.bottom);
+    }
+    return out;
+  }
+
+  /** Text whose glyphs are cut by the frame edge or by an overflow-clipping ancestor. */
+  function clipIssues(doc, win) {
+    var issues = [];
+    var texts = readableTextElements(doc, win);
+    for (var i = 0; i < texts.length; i++) {
+      var el = texts[i];
+      var text = textExtent(el, doc);
+      if (!text || width(text) <= 0 || height(text) <= 0) continue;
+
+      var found = clipRegion(el, win);
+      var region = selfClip(el, win, found.region);
+      var visible = {
+        left: Math.max(text.left, region.left),
+        top: Math.max(text.top, region.top),
+        right: Math.min(text.right, region.right),
+        bottom: Math.min(text.bottom, region.bottom),
+      };
+
+      var lostW = width(text) - width(visible);
+      var lostH = height(text) - height(visible);
+      var axis = null;
+      var pct = 0;
+      if (lostW > Math.max(CLIP_MIN_PX, CLIP_LOSS * width(text))) {
+        axis = 'width';
+        pct = Math.round((lostW / width(text)) * 100);
+      } else if (lostH > Math.max(CLIP_MIN_PX, CLIP_LOSS * height(text))) {
+        axis = 'height';
+        pct = Math.round((lostH / height(text)) * 100);
+      }
+      if (!axis) continue;
+
+      // Name the culprit so the repair round has somewhere to go: the innermost clipper, or
+      // the frame when nothing else took the bite.
+      var cutter = found.clippers.length ? describe(found.clippers[0]) : 'the frame edge';
+      issues.push({
+        kind: 'clip',
+        key: 'clip:' + label(el) + ':' + axis,
+        message:
+          '"' + label(el) + '" is CUT OFF - ' + pct + '% of its ' + axis + ' is clipped by ' + cutter +
+          '. Give the text room (or fit the type to the box); readable text must never be cropped at the hold.',
+      });
+    }
+    return issues.slice(0, 5);
+  }
+
+  /** Is this element something that PAINTS over what is behind it? */
+  function painted(el, win) {
+    if (['IMG', 'VIDEO', 'CANVAS', 'SVG', 'svg'].indexOf(el.tagName) >= 0) return true;
+    var cs = win.getComputedStyle(el);
+    if (Number(cs.opacity) < 0.05) return false;
+    // background-clip: text paints only inside its own glyphs - the standard technique for a
+    // specular sweep over a wordmark (a duplicate glyph layer), not an occluder.
+    var clip = cs.webkitBackgroundClip || cs.backgroundClip;
+    if (clip === 'text') return false;
+    if (cs.backgroundImage !== 'none') return true;
+    var m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/);
+    if (!m) return false;
+    var parts = m[1].split(',').map(Number);
+    return (parts[3] === undefined ? 1 : parts[3]) > 0.05;
+  }
+
+  /**
+   * Text painted BEHIND the graphics: hit-test each text element against the real paint
+   * order. Occluded = most sample points are covered by a painted element that is neither
+   * ancestor nor descendant and does not carry the same text (duplicate glyph layers -
+   * sweeps, glows - are deliberate).
+   */
+  function occlusionIssues(doc, win) {
+    var issues = [];
+    var texts = readableTextElements(doc, win);
+    for (var i = 0; i < texts.length; i++) {
+      var el = texts[i];
+      var r = el.getBoundingClientRect();
+      var points = [
+        [r.left + r.width / 2, r.top + r.height / 2],
+        [r.left + r.width * 0.25, r.top + r.height / 2],
+        [r.left + r.width * 0.75, r.top + r.height / 2],
+        [r.left + r.width / 2, r.top + r.height * 0.25],
+        [r.left + r.width / 2, r.top + r.height * 0.75],
+      ];
+      var blocked = 0;
+      var blocker = null;
+      for (var p = 0; p < points.length; p++) {
+        var x = points[p][0];
+        var y = points[p][1];
+        if (x < 0 || y < 0 || x >= win.innerWidth || y >= win.innerHeight) continue;
+        var stack = doc.elementsFromPoint(x, y);
+        for (var s = 0; s < stack.length; s++) {
+          var hit = stack[s];
+          if (hit === el || el.contains(hit) || hit.contains(el)) break; // reached our text
+          var hitText = (hit.textContent || '').trim();
+          if (hitText && hitText === (el.textContent || '').trim()) break;
+          if (painted(hit, win)) {
+            blocked++;
+            if (!blocker) blocker = describe(hit);
+            break;
+          }
+        }
+      }
+      if (blocked >= 3) {
+        issues.push({
+          kind: 'occlusion',
+          key: 'occlusion:' + label(el),
+          message: '"' + label(el) + '" is painted BEHIND ' + blocker + ' (' + blocked + '/5 sample points covered)',
+        });
+      }
+    }
+    return issues.slice(0, 5);
+  }
+
+  window.__noacgTextChecks = {
+    clip: function () {
+      return clipIssues(document, window);
+    },
+    occlusion: function () {
+      return occlusionIssues(document, window);
+    },
+  };
+})();

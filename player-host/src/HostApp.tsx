@@ -6,7 +6,6 @@
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import { evalModule, type UserComponent } from './moduleEval';
-import { clipIssues } from './textChecks';
 import {
   PLAYER_CHANNEL,
   PLAYER_PROTOCOL_V,
@@ -15,6 +14,22 @@ import {
   type LoadMessage,
   type PlayerCompSettings,
 } from './protocol';
+
+/** The readability checks (src/video/textChecks.js) are INLINED into this page's head by
+ *  scripts/build-player-host.mjs - one shared implementation across the two isolated video
+ *  runtimes and the bench, none of which can import a module from the app. Absent only if
+ *  the page was built without it, in which case the probe simply reports nothing. */
+declare global {
+  interface Window {
+    __noacgTextChecks?: { clip: () => TextIssue[]; occlusion: () => TextIssue[] };
+  }
+}
+
+interface TextIssue {
+  kind: string;
+  key: string;
+  message: string;
+}
 
 /** Omit that distributes over a union (plain Omit collapses HostToApp to common keys). */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -190,7 +205,9 @@ export default function HostApp({ nonce }: Props) {
           }
           // Skip the checks on a frame that just threw - the DOM is whatever survived.
           if (readabilityFrames.has(frame) && errorLogRef.current.length === 0) {
-            for (const issue of clipIssues()) textIssues.push({ frame, ...issue });
+            for (const issue of window.__noacgTextChecks?.clip() ?? []) {
+              textIssues.push({ frame, ...issue });
+            }
           }
         }
         post({ type: 'probe-result', id, ok: errors.length === 0, errors, textIssues });

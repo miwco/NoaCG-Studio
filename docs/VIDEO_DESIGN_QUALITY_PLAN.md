@@ -161,12 +161,21 @@ deliberately deferred its critic until the compare rig proves it pays - hold vid
 same standard: build it only if §5's experiment shows the prompt+reference changes alone
 plateau below the bar.
 
-### 3.6 De-art-direct the wizard chips
+### 3.6 De-art-direct the wizard chips (DONE)
 
-Rewrite the four example prompts to state intent, audience, and energy - not the finished
-design. The chips are the bench's briefs; as long as they prescribe graphite + light
-sweep, the bench measures obedience and the first thing every new user sees is the same
-five motifs.
+The four example prompts now state intent, audience, and energy - not the finished design.
+No chip names a palette any more ("deep graphite gradient", "deep navy backdrop", "amber
+keyline" are gone); the logo chip's never-a-placeholder line stays, because that is a
+functional requirement rather than art direction. What each chip keeps is the keyword its
+offline sample routes on (stubVideoProvider.pickSample), so an offline user still gets the
+matching starter.
+
+DEFERRED, and worth a decision: the SET is still four dark broadcast genres, which teaches
+the graphite default by composition even with neutral prose. Swapping one (the countdown was
+the candidate - a warm daytime cooking title would cover a palette world nothing else does)
+is NOT a pure copy edit: the countdown chip is the canonical e2e fixture (video-project.spec
+asserts its first number renders) and the bench's default label list names it. The reopen-strip
+spec also matches on the chip's opening words - the one place chip prose is load-bearing.
 
 ## 4. The bench .env - explained and automated
 
@@ -286,6 +295,13 @@ All three landed; §6.1 records the decisions worth knowing.
   instantly-answered mock beats the player to the screen and validation quietly falls back
   to the static checks - `mockClaude(..., { delayMs })` (e2e/_video.ts) is what keeps the
   probe-dependent specs honest.
-- **HyperFrames has no clip check yet**: its driver would need the same pass. The Remotion
-  path (the default engine) is covered; the shared ProbeResult carries `textIssues` as
-  optional for exactly this reason.
+- **Both engines run the SAME checks**: neither runtime can import a module from the app
+  (each is an opaque-origin sandbox, and the HyperFrames driver is injected as a string), so
+  the one implementation travels as SOURCE - `src/video/textChecks.js`, inlined into the
+  player host by scripts/build-player-host.mjs and into the composed document by
+  hyperframes/compose.ts, exactly as the bundled fonts already do. The frame choice and the
+  persistence rule are shared as a normal module (src/video/readability.ts).
+- **Not yet measured on real output**: the thresholds are calibrated against two hand-written
+  reproductions of the known failures, not a bench corpus. A bench run (§5's arms, or just the
+  neutral briefs) is what would confirm the false-positive rate; until then the demotion above
+  is what bounds the cost of being wrong.

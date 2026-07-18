@@ -8,6 +8,7 @@ import type { ValidationIssue } from '../../validation/validateTemplate';
 import type { AssetFile } from '../../model/types';
 import { describeAssets, type VideoCompSettings, type VideoValidationResult } from '../types';
 import { quoteMatch } from '../compile';
+import { holdFrames, persistentTextIssues } from '../readability';
 import type { HyperframesBridge } from './bridge';
 import { HF_VARIABLE_TYPES, parseHyperframesComposition } from './parse';
 
@@ -170,9 +171,12 @@ export async function validateHyperframesComposition(
     }
     if (loaded.ok) {
       const d = settings.durationInFrames;
-      const probe = await bridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)]);
+      const probe = await bridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)], holdFrames(d));
       for (const e of probe.errors) {
         errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
+      }
+      for (const issue of persistentTextIssues(probe.textIssues ?? [], holdFrames(d))) {
+        errors.push({ rule: 'text-clip', message: issue });
       }
     }
   }

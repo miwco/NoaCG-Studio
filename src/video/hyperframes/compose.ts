@@ -24,6 +24,10 @@
 //      Chromium paint the iframe opaque and silently kills alpha (see src/render/CLAUDE.md).
 
 import gsapSource from '../../assets/gsap.min.js?raw';
+// The runtime readability checks, shared verbatim with the Remotion player host (which
+// inlines the same file at build time) - neither runtime can import a module from the app,
+// so the one implementation travels as source into both.
+import textChecksSource from '../textChecks.js?raw';
 import type { AssetFile } from '../../model/types';
 import { describeAssets, type VideoCompSettings } from '../types';
 import { parseHyperframesComposition } from './parse';
@@ -105,6 +109,7 @@ export function composeHyperframesDocument(source: string, opts: HfComposeOption
     `<script>/* GSAP (bundled - offline) */\n${gsapSource}\n</script>`;
   const bodyInject =
     `<script>window.__NOACG_HF_CONFIG = ${inlineJson(config)};</script>` +
+    `<script>/* NoaCG readability checks (src/video/textChecks.js) */\n${textChecksSource}\n</script>` +
     `<script>/* NoaCG HyperFrames driver */\n${HF_DRIVER_JS}\n</script>`;
 
   // Inject without re-serializing the whole document (keeps the author's HTML verbatim).

@@ -39,28 +39,28 @@ const EXAMPLES: Example[] = [
   {
     label: 'Sports stinger',
     prompt:
-      'A high-energy 3-second sports stinger: bold angled panels in deep team colours slash across the frame, a heavy condensed uppercase title snaps in at centre, then everything clears out fast.',
+      'A 3-second stinger to cut between plays in a live match broadcast. Fast, physical and unmistakably sport - the team name has to land hard and clear out fast.',
     durationSec: 3,
     transparent: false,
   },
   {
     label: 'News intro',
     prompt:
-      'A modern 5-second news intro: precise horizontal rules extend across a deep navy backdrop, a confident grotesque headline slides in from behind a mask, one amber accent keyline lands last.',
+      'A 5-second opener for a serious daily news bulletin. Authoritative and precise; the programme name is the hero, and it should look like it belongs to a channel with a house style.',
     durationSec: 5,
     transparent: false,
   },
   {
     label: 'Logo reveal',
     prompt:
-      'A premium 2.5-second logo reveal on a deep graphite gradient: a bold wordmark settles in at centre with an overshoot, a specular light sweep passes across it, and it breathes gently before a clean close. If no logo image is provided, set the wordmark in confident type - never a placeholder box.',
+      "A premium 2.5-second logo reveal for a brand's title card. Confident and memorable - commit to one device the piece is remembered by. If no logo image is provided, set the brand name in confident type - never a placeholder box.",
     durationSec: 2.5,
     transparent: false,
   },
   {
     label: 'Countdown',
     prompt:
-      'A 5-second broadcast countdown: each number lands at centre with a decisive spring and a ring pulse on the beat, big tabular numerals with strong contrast, the final number amplified.',
+      'A 5-second countdown into the start of a live show. Each number lands with intent and the anticipation builds to the final beat.',
     durationSec: 5,
     transparent: false,
   },

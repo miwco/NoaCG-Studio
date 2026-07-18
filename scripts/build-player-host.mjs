@@ -31,6 +31,11 @@ const videoFontCss = videoFontFaceCss(fontDataUrl);
 // (@font-face is otherwise lazy - registered only on first use).
 const fontWarmScript = `[${VIDEO_FONTS.map((f) => JSON.stringify(f.family)).join(',')}].forEach(function(f){try{document.fonts.load('700 1em "'+f+'"');}catch(e){}});`;
 
+// The runtime readability checks, shared verbatim with the HyperFrames driver (which
+// inlines the same file via a ?raw import) and called by scripts/video-bench.mjs over CDP.
+// Inlined for the same reason as the fonts: this page has no origin a fetch could use.
+const textChecksJs = readFileSync(join(root, 'src', 'video', 'textChecks.js'), 'utf8');
+
 function* walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, entry.name);
@@ -52,9 +57,10 @@ function sourceHash() {
     h.update(f.slice(hostDir.length));
     h.update(readFileSync(f));
   }
-  // The inlined font CSS is part of the output, so a font (or list) change must invalidate
-  // the cached build even though no host source changed.
+  // The inlined font CSS and readability checks are part of the output, so a change to
+  // either must invalidate the cached build even though no host source changed.
   h.update(videoFontCss);
+  h.update(textChecksJs);
   return h.digest('hex');
 }
 
@@ -104,7 +110,9 @@ if (/src="\.\/assets\//.test(html)) {
 
 // Inline the bundled video fonts (@font-face data URLs) + a boot-time warm script into the
 // head, so compositions render real broadcast type and the very first mount isn't fallback.
-const fontBlock = `<style id="noacg-video-fonts">\n${videoFontCss}\n</style>\n<script>${fontWarmScript}</script>\n`;
+const fontBlock =
+  `<style id="noacg-video-fonts">\n${videoFontCss}\n</style>\n<script>${fontWarmScript}</script>\n` +
+  `<script>/* NoaCG readability checks (src/video/textChecks.js) */\n${textChecksJs}\n</script>\n`;
 if (html.includes('</head>')) {
   html = html.replace('</head>', `${fontBlock}</head>`);
 } else {
