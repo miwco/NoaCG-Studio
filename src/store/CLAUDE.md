@@ -77,8 +77,10 @@ templateStore.ts (zustand) holds the template plus editor UI state.
   (inline edit, root/layer/scale drag; published by CanvasInteraction). AppShell's deferred
   Inspector auto-open checks it at fire time so the workspace never resizes under a gesture.
   UI state only - no history.
-- **activePanel** (`SidePanel` type) - the side panel's tab: FIVE ids
-  (data/control/style/ai/export). Motion is not a tab - it lives on the timeline.
+- **activePanel** (`SidePanel` type) - the mobile strip's tab AND the desktop docks' "reveal
+  this panel" signal: SEVEN ids (inspector/data/control/style/assets/ai/export - a subset of
+  model/layout.ts's PanelId; `code` is not a tab). Motion is not a tab - it lives on the
+  timeline.
   **panelRevealNonce** bumps on EVERY setActivePanel call - the docks key their reveal effect
   on the nonce, not on the id changing, so re-requesting the stored panel still reveals it
   (the Import Graphic wizard revealing the default 'data' tab is the case that needs this).

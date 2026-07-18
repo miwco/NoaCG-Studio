@@ -240,8 +240,16 @@ the one deliberate second renderer; keep it in step.
 ## Panels (the six tool panels - Data / Control / Style / Assets / AI / Export)
 
 On DESKTOP each is a dockable panel (AppShell renders them into the docks; see WorkspaceDock).
-**SidePanel** (the six-tab strip) is now the MOBILE surface only. There is no Motion tab: motion
-editing lives on the timeline (StepTimeline via TimelineDock) plus the Inspector.
+**SidePanel** is now the MOBILE surface only: a SEVEN-tab strip - **Inspector** leads, then the
+six tool panels. The Inspector belongs there because the mobile stack has no docks, so the strip
+is the only route to a panel, and the Inspector is where a SELECTED layer is edited (properties,
+the placed-field Style tab, motion) - without it a phone can add fields but never style or
+animate them. It renders RAW (it brings its own padding + scrolling, like the desktop dock's
+renderPanel); the tool panels keep the shared `.panel-body`. A new selection does NOT auto-switch
+the mobile tab (AppShell's reveal effect is desktop-only: on a phone a tab swap under the fold
+would be a surprise, not a reveal). There is no Motion tab: motion editing lives on the timeline
+(StepTimeline via TimelineDock) plus the Inspector. Pinned by the mobile cases in
+e2e/layout.spec.ts.
 
 - **SampleDataPanel** - sample values (shared field rows, `includeHidden`: a hidden field carries
   a real input value like a countdown's duration, so it must be testable here) + add-field. On a

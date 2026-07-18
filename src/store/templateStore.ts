@@ -11,7 +11,10 @@ import { loadProject, saveProject } from '../model/project';
 
 export type EditorTab = 'html' | 'css' | 'js';
 export type PreviewBg = 'checkerboard' | 'black' | 'video';
-export type SidePanel = 'data' | 'control' | 'style' | 'assets' | 'ai' | 'export';
+/** The panels the MOBILE tab strip switches between (SidePanel.tsx), and the ids the
+ *  desktop docks accept as a "reveal this panel" signal. A subset of model/layout.ts's
+ *  PanelId — `code` is not a tab (mobile mounts it on demand under the panels). */
+export type SidePanel = 'inspector' | 'data' | 'control' | 'style' | 'assets' | 'ai' | 'export';
 
 /** A live playout action the Control panel asks the simulator to run on the preview. */
 export type PlayoutAction = 'update' | 'play' | 'stop' | 'next';

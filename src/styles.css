@@ -2271,7 +2271,12 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   /* Modals fill the small screen and stack their inner columns. */
   .wz-modal { width: 100vw; height: 100dvh; max-width: none; border-radius: 0; border: none; }
   .wz-body { flex-direction: column; }
-  .wz-side { flex-basis: auto; border-left: none; border-top: 1px solid var(--border); }
+  /* Stacked, the aside must be given a REAL height. Overriding flex-basis alone left
+     `flex: 0 0 50%`'s flex-grow at 0, so the aside sized to its content — and since
+     .wz-preview is `height: 100%` against an auto-height parent, the stage collapsed to
+     nothing and the preview iframe rendered outside its own box. A fixed share of the
+     viewport keeps the preview real; the step scrolls in what is left. */
+  .wz-side { flex: 0 0 38vh; border-left: none; border-top: 1px solid var(--border); }
   .wz-header { padding: 12px 14px; gap: 10px; }
   .wz-entry { padding: 16px 4px; }
   .wz-entry-card { width: 100%; }

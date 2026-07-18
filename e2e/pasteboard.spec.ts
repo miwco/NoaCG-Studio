@@ -50,9 +50,10 @@ test('drag an element fully into the pasteboard: negative keyframe, still visibl
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await page.mouse.move(start.x - dxCanvas * start.scale, start.y, { steps: 10 });
-  await page.mouse.up();
   // The release keys x and rebuilds the preview — measure only against the new document.
-  await awaitPreviewRebuild(page);
+  // WRAPPER form: the bare form snapshots the revision AFTER the release, so a rebuild that
+  // already landed leaves it waiting for a second one that never comes.
+  await awaitPreviewRebuild(page, () => page.mouse.up());
 
   // The keyframe written is CANVAS-LOCAL and negative — the pad never leaks in.
   const data = await animData(page);
@@ -115,18 +116,25 @@ test('code ↔ canvas: a negative x written in code renders on the pasteboard an
 
   // Author an off-canvas entrance x = -400 for #f0 directly in the template code — the same
   // canvas-local coordinate a preset generator or a hand edit would write.
+  // The write rebuilds the preview; the scrub has to reach the NEW document, so it is issued
+  // after the rebuild rather than raced against it behind a fixed sleep.
+  await awaitPreviewRebuild(page, () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const { parseAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
+      const { setKeyframe } = await import('/src/blocks/animEdit.ts');
+      const s = useTemplateStore.getState();
+      const data = parseAnimData(s.template.js)!;
+      const next = setKeyframe(data, 0, '#f0', 'x', 0, -400);
+      s.applyTemplate({ ...s.template, js: spliceAnimData(s.template.js, next)! });
+    }),
+  );
   await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
-    const { parseAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
-    const { setKeyframe } = await import('/src/blocks/animEdit.ts');
     const s = useTemplateStore.getState();
-    const data = parseAnimData(s.template.js)!;
-    const next = setKeyframe(data, 0, '#f0', 'x', 0, -400);
-    s.applyTemplate({ ...s.template, js: spliceAnimData(s.template.js, next)! });
     s.setPlayhead({ step: 0, t: 0 });
     s.sendScrub('in', 0);
   });
-  await page.waitForTimeout(500);
 
   // The value round-trips as the canvas-local -400 (not pad-shifted).
   const data = await animData(page);
@@ -134,9 +142,12 @@ test('code ↔ canvas: a negative x written in code renders on the pasteboard an
   expect(kf, 'the x = -400 keyframe is in the code').toBeTruthy();
 
   // At t = 0 the element renders in the pasteboard (left of the canvas) and is selectable.
+  // Polled, not slept: the scrub reaches the preview over postMessage.
   const canvas = await canvasBox(page);
+  await expect
+    .poll(async () => (await elementPoint(page, '#f0')).x, { timeout: 5000 })
+    .toBeLessThan(canvas.x);
   const p = await elementPoint(page, '#f0');
-  expect(p.x).toBeLessThan(canvas.x);
   await page.mouse.click(p.x, p.y);
   const sel = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
@@ -153,7 +164,9 @@ test('preset-authored off-canvas: a slide preset entrance renders + selects on t
   // deepen its start so the preset-authored entrance clears the canvas edge — a preset
   // producing a big travel is the same code path, larger value. This proves preset positions
   // outside the canvas render and hit-test, not just manual drags.
-  const authored = await page.evaluate(async () => {
+  let authored: { ok: boolean; entryY?: number } = { ok: false };
+  await awaitPreviewRebuild(page, async () => {
+    authored = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
     const { parseAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
     const { presetDonor, applyPresetData } = await import('/src/blocks/presetApply.ts');
@@ -174,12 +187,12 @@ test('preset-authored off-canvas: a slide preset entrance renders + selects on t
     const box = iframe.contentDocument!.querySelector('.lower-third-box')!.getBoundingClientRect();
     const settledCanvasCenterY = box.top + box.height / 2 - padY; // doc px → canvas px
     ys[0].value = Math.round(s.template.resolution.height + 120 - settledCanvasCenterY);
-    s.applyTemplate({ ...s.template, js: spliceAnimData(s.template.js, next)! });
-    return { ok: true, entryY: ys[0].value };
+      s.applyTemplate({ ...s.template, js: spliceAnimData(s.template.js, next)! });
+      return { ok: true, entryY: ys[0].value };
+    });
   });
   expect(authored.ok).toBeTruthy();
   expect(authored.entryY as number).toBeGreaterThan(0);
-  await page.waitForTimeout(500); // let the debounced rebuild settle first
 
   // Scrub to the entrance start AFTER the rebuild, so the preview seeks to the off-canvas
   // frame (issuing it before the rebuild would be overridden by the settle). A hair past zero:
@@ -191,12 +204,14 @@ test('preset-authored off-canvas: a slide preset entrance renders + selects on t
     s.setPlayhead({ step: 0, t: 0.01 });
     s.sendScrub('in', 0.01);
   });
-  await page.waitForTimeout(300);
 
+  // Rendered below the canvas, in the bottom pasteboard, at the preset entrance. Polled
+  // rather than slept: the scrub reaches the preview over postMessage.
   const canvas = await canvasBox(page);
+  await expect
+    .poll(async () => (await elementPoint(page, '.lower-third-box')).y, { timeout: 5000 })
+    .toBeGreaterThan(canvas.y + canvas.height);
   const p = await elementPoint(page, '.lower-third-box');
-  // Rendered below the canvas, in the bottom pasteboard, at the preset entrance.
-  expect(p.y).toBeGreaterThan(canvas.y + canvas.height);
   await page.mouse.click(p.x, p.y);
   const sel = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');

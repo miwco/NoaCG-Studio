@@ -116,3 +116,45 @@ test('the timeline height is resizable via the centre divider, and persists', as
   const tlReload = (await page.getByTestId('center-timeline').boundingBox())!.height;
   expect(Math.abs(tlReload - tlAfter)).toBeLessThan(30);
 });
+
+// ── Mobile (≤768px): the single-column stack. The desktop dock model does not apply, so the
+//    SidePanel strip is the ONLY way to reach a panel — which is why the Inspector is in it. ──
+
+test('mobile: the Inspector is a panel tab, so a selected layer can still be edited', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await createHairline(page);
+
+  // Without this tab a phone could add fields but never edit the layer they create: the
+  // Inspector is where a selection's properties, design, and motion all live.
+  await page.getByTestId('panel-tab-inspector').click();
+  await expect(page.getByTestId('inspector')).toBeVisible();
+  await expect(page.getByTestId('inspector-empty')).toBeVisible();
+
+  // Selecting a layer fills it in, on the phone layout too.
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector-part-label')).toBeVisible();
+
+  // The tool panels still render in the shared padded body beside it.
+  await page.getByTestId('panel-tab-data').click();
+  await expect(page.locator('.panel-body')).toContainText('Sample data');
+});
+
+test('mobile: the wizard preview keeps a real stage instead of collapsing', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app');
+  await page.locator('[data-entry="template"]').click();
+  await page.locator('.wz-cat', { hasText: 'Lower thirds' }).first().click();
+  await page.locator('.wz-variant').first().click();
+
+  // Stacked, the aside must still be given a height: `flex: 0 0 50%`'s flex-grow of 0 once
+  // left it sized to its content, collapsing the stage to nothing and pushing the preview
+  // iframe outside its own box.
+  const side = (await page.locator('.wz-side').boundingBox())!;
+  const stage = (await page.locator('.wz-stage').boundingBox())!;
+  const frame = (await page.locator('.wz-side iframe').boundingBox())!;
+  expect(side.height).toBeGreaterThan(200);
+  expect(stage.height).toBeGreaterThan(140);
+  // The iframe sits INSIDE the stage, not spilling out above it.
+  expect(frame.y).toBeGreaterThanOrEqual(stage.y - 1);
+  expect(frame.y + frame.height).toBeLessThanOrEqual(stage.y + stage.height + 1);
+});
