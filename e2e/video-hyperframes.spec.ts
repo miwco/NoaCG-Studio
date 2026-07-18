@@ -48,6 +48,18 @@ test('create with the HyperFrames engine -> stub generation -> live preview rend
   // The code pane shows the HTML source under its engine-appropriate tab name.
   await expect(page.getByRole('button', { name: 'composition.html' })).toBeVisible();
 
+  // The bundled broadcast faces are embedded in the composed document (the sandboxed
+  // iframe's opaque origin cannot fetch /fonts, so they must ride as data URLs) - the
+  // same faces the Remotion side injects, so both engines honour one typography contract.
+  const fonts = await page
+    .locator('.video-player-frame')
+    .evaluate((el: HTMLIFrameElement) => {
+      const doc = el.getAttribute('srcdoc') ?? '';
+      return { faces: (doc.match(/@font-face/g) ?? []).length, embedded: doc.includes('data:font') || doc.includes('data:application/font') };
+    });
+  expect(fonts.faces).toBeGreaterThan(0);
+  expect(fonts.embedded).toBe(true);
+
   // The project records the engine and holds the composition in `html`.
   const stored = await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');

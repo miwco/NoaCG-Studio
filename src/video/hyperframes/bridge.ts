@@ -14,6 +14,7 @@ import type { AssetFile } from '../../model/types';
 import type { VideoCompSettings } from '../types';
 import type { LoadResult, PlayerBridgeCallbacks, ProbeResult } from '../playerBridge';
 import { composeHyperframesDocument } from './compose';
+import { loadHyperframesFontCss } from './fontCss';
 import { HF_CHANNEL, HF_PROTOCOL_V } from './driver';
 
 /** A srcdoc that never finishes booting still resolves (a broken document must fail
@@ -83,9 +84,14 @@ export class HyperframesBridge {
     assets: AssetFile[],
     opts: { autoplay?: boolean } = {},
   ): Promise<LoadResult> {
-    const run = (): Promise<LoadResult> => {
+    const run = async (): Promise<LoadResult> => {
       if (this.disposedFlag || !this.iframe) {
-        return Promise.resolve({ ok: false, message: 'the player was replaced', disposed: true });
+        return { ok: false, message: 'the player was replaced', disposed: true };
+      }
+      // The bundled fonts resolve once per session; every later load reuses the cache.
+      const fontCss = await loadHyperframesFontCss();
+      if (this.disposedFlag || !this.iframe) {
+        return { ok: false, message: 'the player was replaced', disposed: true };
       }
       const id = ++this.loadId;
       this.booted = false;
@@ -96,11 +102,12 @@ export class HyperframesBridge {
           assets,
           values,
           mode: 'preview',
+          fontCss,
           nonce: this.nonce,
           autoplay: opts.autoplay ?? true,
         });
       } catch (e) {
-        return Promise.resolve({ ok: false, message: e instanceof Error ? e.message : String(e) });
+        return { ok: false, message: e instanceof Error ? e.message : String(e) };
       }
       return new Promise((resolve) => {
         const timer = window.setTimeout(() => {

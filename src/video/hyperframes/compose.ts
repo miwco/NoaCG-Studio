@@ -4,8 +4,12 @@
 // see is exactly what renders.
 //
 // What composition does (browser-only module - uses ?raw and DOMParser):
-//   1. Inline the BUNDLED GSAP at the start of <head> (offline rule: generated documents
-//      never reference a CDN; the composition source itself carries no script tags).
+//   1. Inline the BUNDLED GSAP and the bundled broadcast @font-face CSS at the start of
+//      <head> (offline rule: generated documents never reference a CDN; the composition
+//      source itself carries no script or font tags). The fonts are the SAME faces the
+//      Remotion side injects (video/videoFonts.ts), so both engines honour the same
+//      typography contract and preview matches render; the caller passes the resolved CSS
+//      (hyperframes/fontCss.ts loads it once) because composition itself stays sync.
 //   2. Substitute `asset:<logicalName>` references (src attributes, CSS url()) with the
 //      project asset's data URL - the HyperFrames counterpart of the Remotion `assets`
 //      prop; the names come from describeAssets, the one logical-name source.
@@ -31,6 +35,10 @@ export interface HfComposeOptions {
   /** Variable values by id (the Content panel's edits; defaults fill the gaps in-page). */
   values: Record<string, string | number>;
   mode: 'preview' | 'render';
+  /** The bundled-font @font-face CSS (data URLs) - see hyperframes/fontCss.ts. Omitted
+   *  only where fonts genuinely don't matter (a unit-style call); '' degrades to the
+   *  composition's own fallback stacks. */
+  fontCss?: string;
   /** preview only: the bridge's session nonce (authenticates the postMessage channel). */
   nonce?: string;
   /** preview only: start playing once booted. */
@@ -93,6 +101,7 @@ export function composeHyperframesDocument(source: string, opts: HfComposeOption
   const scheme = opts.mode === 'preview' ? 'dark' : 'light';
   const headInject =
     `<meta name="color-scheme" content="${scheme}">` +
+    (opts.fontCss ? `<style>/* Bundled broadcast fonts */\n${opts.fontCss}\n</style>` : '') +
     `<script>/* GSAP (bundled - offline) */\n${gsapSource}\n</script>`;
   const bodyInject =
     `<script>window.__NOACG_HF_CONFIG = ${inlineJson(config)};</script>` +

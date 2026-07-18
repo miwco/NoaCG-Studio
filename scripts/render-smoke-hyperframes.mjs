@@ -79,6 +79,7 @@ await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
 const manifest = await page.evaluate(async ({ html, logoSvg, editedAccent }) => {
   const { staticValidateHyperframes, HF_WARNING_RULES } = await import('/src/video/hyperframes/validate.ts');
   const { composeHyperframesDocument } = await import('/src/video/hyperframes/compose.ts');
+  const { loadHyperframesFontCss } = await import('/src/video/hyperframes/fontCss.ts');
   const { buildHyperframesManifest } = await import('/src/render/buildVideoManifest.ts');
 
   const settings = { width: 1920, height: 1080, fps: 30, durationInFrames: 30, transparent: false };
@@ -86,11 +87,14 @@ const manifest = await page.evaluate(async ({ html, logoSvg, editedAccent }) => 
   const blocking = staticValidateHyperframes(html, assets, settings).filter((i) => !HF_WARNING_RULES.has(i.rule));
   if (blocking.length > 0) throw new Error(`the smoke composition fails validation: ${blocking[0].message}`);
 
+  const fontCss = await loadHyperframesFontCss();
+  if (!fontCss.includes('@font-face')) throw new Error('the bundled fonts did not resolve');
   const documentHtml = composeHyperframesDocument(html, {
     settings,
     assets,
     values: { accent: editedAccent },
     mode: 'render',
+    fontCss,
   });
   return buildHyperframesManifest(
     {

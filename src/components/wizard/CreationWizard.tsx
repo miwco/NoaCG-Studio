@@ -301,7 +301,6 @@ export default function CreationWizard() {
                   });
                 }}
                 onClear={() => patch({ designArt: null, importedImages: [], variantId: null })}
-                onContinue={() => setStep(3)}
               />
             )}
             {step === 1 && mode === 'import' && (
@@ -416,7 +415,9 @@ export default function CreationWizard() {
             )}
             {mode !== 'ai' && mode !== 'video' && step > 0 && step < 5 && (
               <button className="primary wz-next" disabled={nextDisabled} onClick={() => goToStep(1)}>
-                Next ›
+                {/* The Design step's forward action says what it does — it is the step's ONE
+                    CTA (the step body deliberately has no button of its own). */}
+                {mode === 'design' && step === 1 ? 'Add text fields ›' : 'Next ›'}
               </button>
             )}
           </div>

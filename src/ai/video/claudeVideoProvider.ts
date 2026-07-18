@@ -19,6 +19,7 @@ import type {
   VideoValidator,
 } from './provider';
 import { BASE_SKILL, detectSkillsByKeyword, skillById, type VideoSkill } from './skills';
+import { detectReferenceCards, referenceSection } from './referenceCards';
 import { EXAMPLE_COMPOSITION, MOTION_PRINCIPLES, REMOTION_CONTRACT } from './prompts';
 import { EXAMPLE_HYPERFRAMES_COMPOSITION, HYPERFRAMES_CONTRACT } from './hyperframesPrompts';
 import {
@@ -114,9 +115,10 @@ async function detectSkills(prompt: string, model?: string): Promise<VideoSkill[
 
 // ── Stage b: the Motion Director ─────────────────────────────────────────────
 
-function directorSystem(skills: VideoSkill[], engine: VideoEngine): string {
+function directorSystem(skills: VideoSkill[], engine: VideoEngine, brief: string): string {
   const medium =
     engine === 'hyperframes' ? 'HTML/CSS with a GSAP timeline (HyperFrames)' : 'React/Remotion';
+  const references = referenceSection(detectReferenceCards(brief));
   return `You are the Motion Director inside NoaCG Studio - a senior broadcast motion
 designer planning a fixed-duration video composition. You produce a concise, structured,
 TIMED plan another expert will implement in ${medium}. Plan phases that cover the
@@ -127,7 +129,9 @@ ${MOTION_PRINCIPLES}
 
 ${[BASE_SKILL, ...skills].map((s) => s.prompt).join('\n\n')}
 
-Make the plan CONCRETE and BUILDABLE, not generic:
+${references ? `${references}\n\n` : ''}Make the plan CONCRETE and BUILDABLE, not generic:
+- \`concept\` names the ONE memorable device this piece is built around and what makes it
+  distinct from a default result. Commit to it; do not hedge across several ideas.
 - Name the actual on-screen elements (the exact title/word, the shapes, the accent), where
   each sits, and how big it is relative to the frame. Every phase says what enters, moves,
   or exits and when - no vague "elements animate in".
@@ -153,7 +157,7 @@ async function directMotion(
 ): Promise<EmittedMotionPlan> {
   const text = `${settingsText(ctx)}\n${assetsText(ctx)}\n\nThe brief:\n${prompt}`;
   const plan = (await callClaude({
-    system: directorSystem(skills, ctx.engine),
+    system: directorSystem(skills, ctx.engine, prompt),
     messages: [{ role: 'user', content: [...vision, { type: 'text', text }] }],
     tool: MOTION_PLAN_TOOL,
     maxTokens: 4000,
@@ -191,6 +195,12 @@ from the given canvas.
 ${EXAMPLE_HYPERFRAMES_COMPOSITION}
 === end example ===
 
+The example shows the SHAPE of a good composition - variables declared on <html>, clips
+with data-* timing, one paused timeline with every tween positioned in seconds, clean
+comments - not a style to reproduce. Its visual motifs (angled slabs, the snapping title,
+the breathing hold) belong to ITS brief; your document implements the PLAN's concept with
+its own vocabulary.
+
 Return the document ONLY via the emit_hyperframes_composition tool.`;
   }
   return `You are the motion designer-engineer inside NoaCG Studio, writing the single
@@ -207,6 +217,11 @@ ${skillsBlock}
 === Composition.tsx ===
 ${EXAMPLE_COMPOSITION}
 === end example ===
+
+The example shows the SHAPE of a good module - timing constants up top, named phases,
+everything frame-derived, clean comments - not a style to reproduce. Its visual motifs
+(angled panels, light sweep, breathing hold, small-caps kicker) belong to ITS brief;
+your module implements the PLAN's concept with its own vocabulary.
 
 The example above is emitted with these inputs (note how each read has a matching fallback,
 and how the image input's value is an asset name resolved against the assets prop):

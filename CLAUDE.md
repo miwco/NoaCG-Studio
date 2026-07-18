@@ -136,10 +136,14 @@ src/
                scripts/ai-compare.mjs and src/ai/CLAUDE.md
   ai/video/    the VIDEO motion-design harness ("Video or animation with AI"): staged
                generation - keyword-first skill detection (skills.ts; one cheap Haiku
-               call only when nothing matches) -> Motion Director (forced emit_motion_plan
-               tool, a timed plan) -> the ENGINE's coder -> bounded repair (2 rounds,
-               exact validator errors with frame numbers fed back). Two engines share the
-               brief/plan/skills/assets stages: 'remotion' (default; forced
+               call only when nothing matches) + design-DNA reference cards
+               (referenceCards.ts, keyword-picked, injected as inspiration not a template)
+               -> Motion Director (forced emit_motion_plan tool, a timed plan) -> the
+               ENGINE's coder -> bounded repair (2 rounds, exact validator errors with
+               frame numbers fed back). The skills are technique MENUS (commit to one
+               device), not recipes; each engine's contract lists the BUNDLED FONTS
+               (src/video/videoFonts.ts) the composition may use. Two engines share the
+               brief/plan/skills/assets/fonts stages: 'remotion' (default; forced
                emit_remotion_module against prompts.ts) and 'hyperframes' (experimental;
                forced emit_hyperframes_composition against hyperframesPrompts.ts - a
                standalone HTML composition whose editable inputs are its own
@@ -154,15 +158,22 @@ src/
                playerBridge.ts (the postMessage client for the sandboxed player host;
                SERIALIZED load/probe, disposed bridges resolve immediately),
                bridgeRegistry.ts (holds whichever engine's bridge is mounted), types.ts
-               (asset logical names - the `assets` prop contract), and hyperframes/ -
-               the 'hyperframes' engine runtime: parse.ts (composition + variables ->
-               VideoInputs; the code declares what is editable), driver.ts (the injected
-               in-page seek driver: clip windows + the ONE paused GSAP timeline at
-               window.__timelines[id]; preview postMessage protocol + the render face
-               __noacgHfRender), compose.ts (source -> self-contained document: bundled
-               GSAP inlined, asset:<name> -> data URLs, mode preview|render), bridge.ts
-               (the srcdoc preview client), validate.ts (static contract checks with
-               teaching messages + live probe)
+               (asset logical names - the `assets` prop contract), videoFonts.ts - the
+               SINGLE SOURCE of the bundled broadcast fonts (the same OFL faces
+               model/fonts.ts ships), built into DATA-URL @font-face and injected
+               identically into every surface so preview == render: the Remotion preview
+               (build-player-host.mjs inlines it - the opaque-origin iframe can't fetch
+               fonts), the Remotion render (scripts/gen-video-font-css.mjs ->
+               render-worker, behind a delayRender gate), and both HyperFrames modes
+               (hyperframes/fontCss.ts fetches them once and compose.ts inlines them) -
+               and hyperframes/ - the 'hyperframes' engine runtime: parse.ts (composition
+               + variables -> VideoInputs; the code declares what is editable), driver.ts
+               (the injected in-page seek driver: clip windows + the ONE paused GSAP
+               timeline at window.__timelines[id]; preview postMessage protocol + the
+               render face __noacgHfRender), compose.ts (source -> self-contained
+               document: bundled GSAP + fonts inlined, asset:<name> -> data URLs, mode
+               preview|render), bridge.ts (the srcdoc preview client), validate.ts
+               (static contract checks with teaching messages + live probe)
   validation/  validateTemplate.ts - runs before export and on AI output - and
                runtimeBench.ts: the live-iframe bench (lifecycle, field binding, overlap/
                overflow, doubled-text stress, house editability) the app injects into every

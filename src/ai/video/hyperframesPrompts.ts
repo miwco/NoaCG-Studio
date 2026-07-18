@@ -3,7 +3,12 @@
 // src/video/hyperframes/validate.ts, whose messages these rules mirror) and one canonical
 // example composition (a REAL document that passes the full pipeline - the taste anchor,
 // exactly like EXAMPLE_COMPOSITION is for the Remotion coder). The shared
-// MOTION_PRINCIPLES (prompts.ts) apply unchanged - taste is engine-independent.
+// MOTION_PRINCIPLES (prompts.ts) apply unchanged - taste is engine-independent - including
+// its instruction to prefer the BUNDLED broadcast faces, which the contract below lists
+// from the same single source (video/videoFonts.ts) the Remotion contract reads; the
+// composed document embeds exactly those faces (video/hyperframes/fontCss.ts).
+
+import { videoFontFamiliesDoc } from '../../video/videoFonts';
 
 export const HYPERFRAMES_CONTRACT = `## The composition contract (hard requirements - the validator enforces these)
 - ONE complete standalone HTML document (doctype, <html>, <head> with a <style> block,
@@ -59,6 +64,13 @@ export const HYPERFRAMES_CONTRACT = `## The composition contract (hard requireme
 - Transparent projects: paint NO background anywhere (body and root stay transparent).
   Opaque projects: paint a deliberate designed background (a dark layered gradient beats
   flat black).
+- BUNDLED FONTS - these broadcast faces are already loaded in BOTH the preview and the
+  final render; use one by naming its family in CSS (with a fallback), e.g.
+  \`font-family: "Bebas Neue", "Arial Narrow", Arial, sans-serif;\`. Available:
+${videoFontFamiliesDoc()}
+  Do NOT write an @font-face rule, <link>, @import, or any font URL - they are pre-injected,
+  and a network/URL font load is rejected by the validator. A system stack (Arial, Georgia,
+  …) is allowed where none of the above fits (there is no bundled serif).
 - Write clean, readable code a motion designer can edit: a commented <style> block,
   descriptive ids/classes, timing gathered as consts at the top of the script, short
   comments explaining the WHY of each phase. Keep the document under ~90 kB.`;

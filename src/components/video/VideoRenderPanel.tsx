@@ -4,12 +4,13 @@
 // preview runs plus assets as data URLs. Shares the format cards and the job lifecycle
 // with the SPX panel; only mounted when isRenderConfigured().
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useAuthState } from '../auth/useAuthState';
 import { compileTsx } from '../../video/compile';
 import { describeAssets } from '../../video/types';
 import { composeHyperframesDocument } from '../../video/hyperframes/compose';
+import { loadHyperframesFontCss } from '../../video/hyperframes/fontCss';
 import { HF_WARNING_RULES, staticValidateHyperframes } from '../../video/hyperframes/validate';
 import { settingsDrift, videoFieldValues } from '../../model/videoTypes';
 import { buildHyperframesManifest, buildVideoManifest } from '../../render/buildVideoManifest';
@@ -38,6 +39,22 @@ export default function VideoRenderPanel() {
   const [stillMode, setStillMode] = useState<'middle' | 'custom'>('middle');
   const [stillFrame, setStillFrame] = useState(0);
   const [startFailure, setStartFailure] = useState<string | null>(null);
+  // The bundled-font CSS a HyperFrames document embeds. It is part of the payload, so the
+  // manifest (and the upload meter) can only be built once it has resolved - a few ms,
+  // already warm whenever the preview has loaded. Remotion projects never need it: their
+  // fonts live in the player host and the render worker.
+  const needsFontCss = project.engine === 'hyperframes';
+  const [fontCss, setFontCss] = useState<string | null>(null);
+  useEffect(() => {
+    if (!needsFontCss) return;
+    let live = true;
+    void loadHyperframesFontCss().then((css) => {
+      if (live) setFontCss(css);
+    });
+    return () => {
+      live = false;
+    };
+  }, [needsFontCss]);
 
   const pickFormat = (f: RenderFormatId) => {
     setFormat(f);
@@ -69,6 +86,9 @@ export default function VideoRenderPanel() {
       if (blocking.length > 0) {
         return { error: `The composition fails validation: ${blocking[0].message}`, manifest: null, bytes: 0 };
       }
+      if (fontCss === null) {
+        return { error: 'Preparing the bundled fonts…', manifest: null, bytes: 0 };
+      }
       let documentHtml: string;
       try {
         documentHtml = composeHyperframesDocument(project.html, {
@@ -76,6 +96,7 @@ export default function VideoRenderPanel() {
           assets: project.assets,
           values: videoFieldValues(project.inputs),
           mode: 'render',
+          fontCss,
         });
       } catch (e) {
         return { error: `Could not compose the render document: ${e instanceof Error ? e.message : String(e)}`, manifest: null, bytes: 0 };
@@ -117,7 +138,7 @@ export default function VideoRenderPanel() {
       options,
     );
     return { error: null, manifest, bytes: JSON.stringify({ manifest }).length };
-  }, [project, format, scale, bgColor, stillMode, stillFrame]);
+  }, [project, format, scale, bgColor, stillMode, stillFrame, fontCss]);
 
   const drift = settingsDrift(project);
   const tier = resolveTier(signedIn && backendConfigured);
