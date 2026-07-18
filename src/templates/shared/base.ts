@@ -233,6 +233,8 @@ function update(data) {
     var el = document.getElementById(key);
     if (el) setFieldValue(el, fields[key]);
   }
+  // Designs that fit text to a fixed slot re-measure here (no-op otherwise).
+  if (typeof fitPlacedText === 'function') fitPlacedText();
 }
 
 // play(): take the graphic on air — run the entrance timeline.

@@ -52,6 +52,13 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   emit (the converter's writer).
 - **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS + `{prefix}-done` at zero;
   DOM-ready-safe.
+- **shared/textFit.ts** - the FIT-TO-SLOT runtime for placed text lines (the imported-design
+  contract): `fitPlacedText()` condenses a `data-fit="shrink"` line to its wrapper's max-width
+  by reducing font-size (never by distorting the chosen typeface), floored at 55%. Design-owned
+  JS emitted OUTSIDE the marked region, injected idempotently by blocks/designLayout.ts
+  `ensureTextFitRuntime`; the shared `update()` calls it via an optional hook (the
+  `revealNextStep` idiom). It re-fits on `document.fonts.ready` as well as DOM-ready - a
+  DOM-ready-only pass measures the FALLBACK face and overflows once the real one swaps in.
 
 ## Categories
 

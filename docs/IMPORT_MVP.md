@@ -136,6 +136,42 @@ honours an explicitly empty `lines` array for this (absent still falls back to s
 `imported-design` prefix, so the timeline row, canvas chip, and Inspector all say "Design" —
 the box is the user's artwork, not a generated background panel.
 
+## Fit: what a long value does to a placed line (2026-07-18)
+
+A placed line was `white-space: nowrap` with no width cap, so a long operator value ran clean
+off the artwork and off the frame. The line's **slot** is its wrapper's `max-width`; the
+**fit mode** is how the text answers when the value outgrows it (`blocks/designLayout.ts`
+`lineFit`/`setLineFit`, read from the code like every other reader here):
+
+| Mode | Code shape | For |
+|---|---|---|
+| `overflow` | no cap (or `max-width: none`) | a line whose length the designer controls — the pre-fit behaviour, so **saved templates read as this and nothing changes under them** |
+| `wrap` | cap + `white-space: normal` + `overflow-wrap: break-word` | descriptions, synopses — text that may take more rows |
+| `shrink` | cap + `white-space: nowrap` + `data-fit="shrink"` | **the default for a new field**: names in a drawn slot |
+
+`shrink` is the only one needing code, because CSS cannot size text to its container.
+`templates/shared/textFit.ts` emits `fitPlacedText()` as **design-owned JS outside the marked
+ANIMATION region** (like `shared/clock.ts` and the category motion runtimes), so the timeline
+never rewrites it and it survives export untouched. The shared `update()` calls it when it
+exists — the same optional-hook idiom `next()` uses for `revealNextStep` — and
+`ensureTextFitRuntime` injects the block (and, for a template created before the hook, the
+hook line) exactly once, the idempotent-bootstrap pattern `blocks/lottieInsert.ts` uses.
+
+Two decisions worth keeping:
+
+- **It shrinks by reducing font-size, not by condensing glyphs horizontally.** The horizontal
+  squeeze is the older hardware-CG trick, but it distorts the typeface the user chose — and
+  that typeface is part of the design they imported. A `FIT_MIN_RATIO` floor (0.55) stops it
+  before illegibility; past the floor the slot's `overflow: hidden` clips, which is the honest
+  outcome of a value that genuinely does not fit.
+- **It re-fits on `document.fonts.ready`, not just DOM-ready.** The design's face loads with
+  `font-display: swap`, so a DOM-ready-only pass measures the *fallback* font and leaves the
+  fitted line overflowing the moment the real face swaps in. (Found by measuring the composed
+  export document, not by reading the code — the same hazard `WizardPreview` already gates on.)
+
+A new field is born with a slot equal to the room between it and the artwork's right edge, so
+a long value can never leave the design without the user configuring anything.
+
 ## The canvas + data-field phase (post-MVP, 2026-07-18)
 
 The wizard hands off to the REAL canvas (it always did — the output is a contract-shaped

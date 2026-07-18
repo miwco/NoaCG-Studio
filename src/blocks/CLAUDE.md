@@ -63,6 +63,14 @@ font-size, weight, color, line-height, letter-spacing on the span's `#fN` rule, 
 (the wrapper's translateX shift) on `#fwN`. Every write is a setCssDeclaration patch in the
 rule's own idiom, so the canvas gestures and these controls stay one language.
 
+`lineFit`/`setLineFit` are the FIT pair: the wrapper's `max-width` is the line's slot, and the
+mode is how a too-long operator value answers it - `overflow` (no cap; what a pre-fit saved
+template reads as, so nothing changes under it), `wrap` (CSS), or `shrink` (one row, condensed
+by templates/shared/textFit.ts's `fitPlacedText()`, marked `data-fit="shrink"` on the element).
+`ensureTextFitRuntime` injects that design-owned runtime - and the shared update()'s optional
+hook when the template predates it - ONCE, idempotently (the lottieInsert bootstrap pattern).
+New lines from `addPlacedLine` default to `shrink` with the room to the artwork's right edge.
+
 `addPlacedLine(template, {title, ftype})` is the Data panel's add-field on an imported design:
 ONE pure transform emitting the mask wrapper + span (a registry `line` part), the placement +
 type rules in the assembler's exact idiom, and the SPX DataField (update() binds by id - no JS

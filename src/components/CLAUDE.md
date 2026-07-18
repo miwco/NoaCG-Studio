@@ -183,8 +183,10 @@ in src/blocks/CLAUDE.md.
   registry renames the row/chip from it - and for text lines the shown text, the canvas
   inline editor's pattern: setFieldDefault + the live sample value), numeric X/Y placement, and
   for a text line the full typography set (font incl. bundled-face shipping, size, weight,
-  color, anchor, line-height, tracking), for an image slot its box - every control a
-  deterministic patch of the field's OWN rules via designLayout (setLineTextStyle, placeLine,
+  color, anchor, line-height, tracking) plus a FIT group (Shrink / Wrap / Free + the slot
+  width - what a long operator value does to the line), for an image slot its box - every
+  control a deterministic patch of the field's OWN rules via designLayout (setLineFit,
+  setLineTextStyle, placeLine,
   setSlotSize), one undoable apply per edit, colors patching live like the Style panel. The
   tab exists only while a placed field is selected (a non-placed selection falls back to
   Properties without clobbering the stored choice). A placed field's look is DESIGN, never

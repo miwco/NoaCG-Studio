@@ -3,12 +3,16 @@ import { useTemplateStore } from '../store/templateStore';
 import { getTemplateParts } from '../model/structure';
 import {
   designBoxInfo,
+  lineFit,
   lineTextStyle,
   placeLine,
   placedLines,
+  setLineFit,
   setLineTextStyle,
   setSlotSize,
   slotSize,
+  type LineFit,
+  type LineFitMode,
   type LinePlacement,
   type LineTextPatch,
   type LineTextStyle,
@@ -194,6 +198,7 @@ export default function Inspector() {
   const place = placed[part.selector] ?? null;
   const fieldId = place ? part.selector.slice(1) : null;
   const textStyle = fieldId ? lineTextStyle(template.html, template.css, fieldId) : null;
+  const fit = fieldId && textStyle ? lineFit(template.html, template.css, fieldId) : null;
   const slot = place && !textStyle ? slotSize(template.css, place.wrapperId) : null;
   const activeInspectorTab = tab === 'style' && !place ? 'properties' : tab;
 
@@ -514,6 +519,7 @@ export default function Inspector() {
           fieldId={fieldId!}
           place={place}
           textStyle={textStyle}
+          fit={fit}
           slot={slot}
           fieldTitle={placedField?.title ?? ''}
           fieldText={textStyle ? sampleData[fieldId!] ?? placedField?.value ?? '' : null}
@@ -850,6 +856,7 @@ function PlacedFieldStyle({
   fieldId,
   place,
   textStyle,
+  fit,
   slot,
   fieldTitle,
   fieldText,
@@ -862,6 +869,8 @@ function PlacedFieldStyle({
   fieldId: string;
   place: LinePlacement;
   textStyle: LineTextStyle | null;
+  /** How the line answers a value too long for its slot; null for an image slot. */
+  fit: LineFit | null;
   slot: { width: number; height: number; scaled: boolean } | null;
   /** The DataField's operator-facing label. */
   fieldTitle: string;
@@ -1025,6 +1034,50 @@ function PlacedFieldStyle({
             hint="Letter-spacing in design px"
             onCommit={(v) => patchText({ letterSpacing: v })}
           />
+        </>
+      )}
+
+      {fit && (
+        <>
+          <div className="inspector-group-label">Fit</div>
+          <div className="inspector-row">
+            <span
+              className="inspector-row-label"
+              title="What a value too long for its slot does: run past it, flow onto more rows, or condense to stay on one"
+            >
+              Long text
+            </span>
+            <span className="inspector-preset-phase" role="group" aria-label="Fit mode">
+              {(
+                [
+                  ['shrink', 'Shrink', 'Keeps one row and condenses to fit the slot — the broadcast default for names'],
+                  ['wrap', 'Wrap', 'Flows onto more rows inside the slot width'],
+                  ['overflow', 'Free', 'No slot at all — the line runs as long as its value'],
+                ] as const
+              ).map(([m, label, hint]) => (
+                <button
+                  key={m}
+                  className={`tab ${fit.mode === m ? 'active' : ''}`}
+                  title={hint}
+                  data-testid={`inspector-style-fit-${m}`}
+                  onClick={() => onCommit(setLineFit(template, fieldId, { mode: m as LineFitMode }))}
+                >
+                  {label}
+                </button>
+              ))}
+            </span>
+          </div>
+          {fit.mode !== 'overflow' && (
+            <StyleNumRow
+              label="Slot width (px)"
+              value={fit.maxWidth}
+              step={1}
+              min={16}
+              testid="inspector-style-fit-width"
+              hint="How much room the design gives this line, in design px"
+              onCommit={(v) => onCommit(setLineFit(template, fieldId, { maxWidth: Math.max(16, v) }))}
+            />
+          )}
         </>
       )}
 

@@ -499,6 +499,134 @@ test('import graphic: the Style tab\'s Content rows rename and retext a field', 
   expect(state.sample).toBe('Alexandra Riva');
 });
 
+// ── Fit: a long operator value has to stay inside the room the design gives the line.
+//    Placed lines used to be uncapped and nowrap, so a long name ran clean off the
+//    artwork (templates/shared/textFit.ts). ──
+
+/** Select f0, open the Style tab, and set its fit through the real controls. Selecting is
+ *  conditional: clicking the row of the ALREADY-selected layer toggles it back off. */
+async function setSlot(page: Page, mode: 'shrink' | 'wrap' | 'overflow', width?: number) {
+  const selected = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().selectedPart;
+  });
+  if (selected !== '#f0') {
+    await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  }
+  // Reveal the Inspector explicitly: it shares the right dock with Data, so a previous
+  // measurement left Data active, and an unchanged selection re-reveals nothing.
+  await page.getByTestId('dock-tab-inspector').click();
+  await expect(page.getByTestId('inspector')).toBeVisible({ timeout: 3000 });
+  await page.getByTestId('inspector-tab-style').click();
+  await awaitPreviewRebuild(page, () => page.getByTestId(`inspector-style-fit-${mode}`).click());
+  if (width !== undefined) {
+    await page.getByTestId('inspector-style-fit-width').fill(String(width));
+    await awaitPreviewRebuild(page, () =>
+      page.getByTestId('inspector-style-fit-width').press('Enter'),
+    );
+  }
+}
+
+/** Push a value through update() and measure the line against its slot in the preview. */
+async function measureLine(page: Page, value: string) {
+  await page.getByTestId('dock-tab-data').click();
+  await page.locator('.panel-body .field-row').first().locator('input').fill(value);
+  await page.getByTestId('dock-body-right').getByRole('button', { name: '⟳ Update' }).click();
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('#f0')).toHaveText(value);
+  return page.evaluate(() => {
+    const doc = (document.querySelector('iframe.preview-frame') as HTMLIFrameElement).contentDocument!;
+    const line = doc.getElementById('f0')!;
+    const slot = doc.getElementById('fw0')!;
+    const fontSize = parseFloat(doc.defaultView!.getComputedStyle(line).fontSize);
+    return {
+      lineWidth: line.getBoundingClientRect().width,
+      slotWidth: slot.getBoundingClientRect().width,
+      fontSize,
+      // Rows as a RATIO of the line's own type size, not its computed line-height —
+      // `line-height: normal` computes to the string "normal", which parses to NaN. One
+      // row of text is ~1.2x its font-size; two rows are ~2.4x.
+      rowRatio: line.getBoundingClientRect().height / fontSize,
+    };
+  });
+}
+
+/** A single row of text sits well under 1.8x its own type size; more rows sit above it. */
+const ONE_ROW = 1.8;
+
+const LONG_NAME = 'Bartholomew Fitzgerald-Wellington III';
+
+test('import graphic: a new field is born with a slot, so a long value cannot run off the design', async ({ page }) => {
+  await dropDesign(page);
+  await createBare(page);
+  await addFieldViaDataTab(page, 'Name');
+
+  // The add emits the whole fit contract: the wrapper's slot, the shrink marker on the
+  // line, and the design-owned runtime (with the shared update()'s hook calling it).
+  const state = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { lineFit } = await import('/src/blocks/designLayout.ts');
+    const t = useTemplateStore.getState().template;
+    return {
+      fit: lineFit(t.html, t.css, 'f0'),
+      marked: /<span id="f0"[^>]*data-fit="shrink"/.test(t.html),
+      runtime: t.js.includes('function fitPlacedText'),
+      hook: t.js.includes('typeof fitPlacedText'),
+    };
+  });
+  expect(state.fit?.mode).toBe('shrink');
+  expect(state.fit!.maxWidth!).toBeGreaterThan(0);
+  expect(state.marked).toBe(true);
+  expect(state.runtime).toBe(true);
+  expect(state.hook).toBe(true);
+});
+
+test('import graphic: a long name shrinks to stay inside its slot, and a short one springs back', async ({ page }) => {
+  await createImported(page);
+  await setSlot(page, 'shrink', 420);
+
+  const design = await measureLine(page, 'Ada Lovelace');
+  expect(design.lineWidth).toBeLessThan(420); // comfortably inside — nothing to do
+
+  // The value that used to run off the artwork now fits the slot exactly, on ONE row:
+  // the design's own size comes down instead of the text reflowing into the artwork.
+  const long = await measureLine(page, LONG_NAME);
+  expect(long.lineWidth).toBeLessThanOrEqual(421);
+  expect(long.fontSize).toBeLessThan(design.fontSize);
+  expect(long.rowRatio).toBeLessThan(ONE_ROW);
+
+  // …and the fit never compounds: a short value returns to the design's own size.
+  const back = await measureLine(page, 'Ada Lovelace');
+  expect(back.fontSize).toBeCloseTo(design.fontSize, 1);
+});
+
+test('import graphic: wrap flows a long value onto more rows, Free lets it run', async ({ page }) => {
+  await createImported(page);
+  await setSlot(page, 'shrink', 420);
+  const shrunk = await measureLine(page, LONG_NAME);
+
+  // Wrap keeps the design's type size and uses more rows inside the same slot.
+  await setSlot(page, 'wrap');
+  const wrapped = await measureLine(page, LONG_NAME);
+  expect(wrapped.fontSize).toBeGreaterThan(shrunk.fontSize);
+  expect(wrapped.lineWidth).toBeLessThanOrEqual(421);
+  expect(wrapped.rowRatio).toBeGreaterThan(ONE_ROW);
+
+  // Free removes the slot entirely — the original, uncapped behaviour, still available
+  // for a line whose length the designer controls.
+  await setSlot(page, 'overflow');
+  const free = await measureLine(page, LONG_NAME);
+  expect(free.lineWidth).toBeGreaterThan(430);
+  expect(free.rowRatio).toBeLessThan(ONE_ROW);
+  const fit = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { lineFit } = await import('/src/blocks/designLayout.ts');
+    const t = useTemplateStore.getState().template;
+    return lineFit(t.html, t.css, 'f0');
+  });
+  expect(fit).toEqual({ mode: 'overflow', maxWidth: null, scaled: true });
+});
+
 test('import graphic: the artwork and a field animate as separate layers from the Inspector', async ({ page }) => {
   await createImported(page);
 

@@ -802,6 +802,16 @@ logo slot: here the image IS the design.
       setFieldTitle + shown text via the inline-edit pattern), and an imported design
       declares no --type-scale, so the Style panel's global Text-size knob (keyed on the
       var's presence) no longer appears as a dead control there.
+- [x] **Long values stay inside the design (fit)** - a placed line was uncapped and nowrap, so
+      a long name ran off the artwork and off the frame. A line now has a SLOT (the wrapper's
+      max-width) and a fit mode: shrink (one row, condensed to fit - the default for a new
+      field, and what broadcast CG does with a name in a drawn slot), wrap, or free (the
+      pre-fit behaviour, which is what every saved template reads as). Shrink rides a
+      design-owned runtime outside the marked region (templates/shared/textFit.ts) that the
+      shared update() calls through an optional hook, injected idempotently; it reduces
+      font-size rather than distorting the user's typeface, floors at 55%, and re-measures on
+      document.fonts.ready so it never fits against the fallback face. Inspector Style tab
+      group + E2E for all three modes.
 
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate

@@ -17,7 +17,8 @@
 
 import type { SpxTemplate } from '../model/types';
 import { FONTS, fontById, fontFaceCss, fontStack } from '../model/fonts';
-import { addFieldToDefinition, addLayer, appendCss, nextFieldId, setCssDeclaration } from './edit';
+import { TEXT_FIT_HOOK, TEXT_FIT_MARKER, TEXT_FIT_RUNTIME_JS } from '../templates/shared/textFit';
+import { addFieldToDefinition, addLayer, appendCss, appendJs, nextFieldId, setCssDeclaration } from './edit';
 
 export interface LinePlacement {
   /** The positioned wrapper's element id (e.g. "fw0"). */
@@ -252,6 +253,127 @@ export function setLineTextStyle(
   return { ...template, css };
 }
 
+// ── The line's FIT — how a long operator value answers the room the design gives it ──────
+//
+// The bug this exists for: a placed line was `white-space: nowrap` with no width cap, so a
+// long name ran clean off the artwork (and off the frame). The wrapper's `max-width` is the
+// slot; the MODE is how the text responds when the value outgrows it. See
+// templates/shared/textFit.ts for the contract and the shrink runtime.
+
+export type LineFitMode = 'overflow' | 'wrap' | 'shrink';
+
+export interface LineFit {
+  mode: LineFitMode;
+  /** The slot width in design px, or null when the line is uncapped ('overflow'). */
+  maxWidth: number | null;
+  scaled: boolean;
+}
+
+/** True when the field's element carries `data-fit="shrink"` (the runtime's marker). */
+function hasShrinkMark(html: string, fieldId: string): boolean {
+  const tag = html.match(new RegExp(`<[a-zA-Z][^>]*\\bid=["']${escapeRe(fieldId)}["'][^>]*>`));
+  return !!tag && /\bdata-fit\s*=\s*["']shrink["']/.test(tag[0]);
+}
+
+/** Add or remove `data-fit="shrink"` on the field's own tag (nothing else is touched). */
+function setShrinkMark(html: string, fieldId: string, on: boolean): string {
+  return html.replace(
+    new RegExp(`<[a-zA-Z][^>]*\\bid=["']${escapeRe(fieldId)}["'][^>]*>`),
+    (tag) => {
+      const stripped = tag.replace(/\s*\bdata-fit\s*=\s*["'][^"']*["']/, '');
+      if (!on) return stripped;
+      return stripped.replace(/\s*(\/?)>$/, ` data-fit="shrink"$1>`);
+    },
+  );
+}
+
+/**
+ * A placed line's fit, derived from the code like every other reader here: the cap comes
+ * from the wrapper's `max-width`, and the mode from the field's own markup/CSS. No cap (or
+ * an explicit `none`) means the line is uncapped, which is exactly the pre-fit behaviour —
+ * so a template saved before this contract reads as 'overflow' and nothing changes under it.
+ */
+export function lineFit(html: string, css: string, fieldId: string): LineFit | null {
+  const place = placedLines(html, css)[`#${fieldId}`];
+  if (!place) return null;
+  const cap = readPx(css, `#${place.wrapperId}`, 'max-width');
+  if (!cap) return { mode: 'overflow', maxWidth: null, scaled: place.scaled };
+  return {
+    mode: hasShrinkMark(html, fieldId) ? 'shrink' : 'wrap',
+    maxWidth: cap.value,
+    scaled: cap.scaled,
+  };
+}
+
+/**
+ * Emit the shrink runtime into a template's JS, once. Idempotent (the shared-bootstrap
+ * pattern blocks/lottieInsert.ts uses): the block is appended only when absent, and the
+ * shared update()'s optional hook is added only when the template predates it — a project
+ * created before the fit contract still gets working shrink, with no other line touched.
+ */
+export function ensureTextFitRuntime(template: SpxTemplate): SpxTemplate {
+  let js = template.js;
+  if (!js.includes(TEXT_FIT_MARKER)) {
+    js = appendJs(js, 'Fit placed text to its slot (design-owned — the timeline never touches this).', TEXT_FIT_RUNTIME_JS);
+  }
+  if (!js.includes('typeof fitPlacedText')) {
+    // The generated update()'s exact shape (templates/shared/base.ts runtimeJs). A
+    // hand-rewritten update() simply keeps its own behaviour: the DOM-ready pass still
+    // fits the design's own sample text, and the author can call fitPlacedText() himself.
+    js = js.replace(
+      /(if \(el\) setFieldValue\(el, fields\[key\]\);\n {2}\}\n)\}/,
+      `$1${TEXT_FIT_HOOK}\n}`,
+    );
+  }
+  return js === template.js ? template : { ...template, js };
+}
+
+/**
+ * Set a placed line's fit. One deterministic patch per decision: the wrapper's cap, the
+ * line's wrapping, and the shrink marker — plus the runtime when shrink first appears.
+ * Returns null when the selector is not a placed text line.
+ */
+export function setLineFit(
+  template: SpxTemplate,
+  fieldId: string,
+  patch: { mode?: LineFitMode; maxWidth?: number },
+): SpxTemplate | null {
+  const current = lineFit(template.html, template.css, fieldId);
+  const place = placedLines(template.html, template.css)[`#${fieldId}`];
+  if (!current || !place || !lineFontSize(template.css, fieldId)) return null;
+
+  const mode = patch.mode ?? current.mode;
+  const scaled = current.scaled || place.scaled;
+  // Switching away from 'overflow' needs a slot to fit into: keep the one that is there,
+  // else fall back to the room between the line and the artwork's right edge.
+  const boxWidth = designBoxInfo(template.html, template.css)?.boxWidth ?? 1920;
+  const maxWidth =
+    patch.maxWidth ?? current.maxWidth ?? Math.max(64, Math.round(boxWidth - place.x - boxWidth * 0.04));
+
+  let html = template.html;
+  let css = template.css;
+  const wrap = `#${place.wrapperId}`;
+  const sel = `#${fieldId}`;
+
+  if (mode === 'overflow') {
+    css = setCssDeclaration(css, wrap, 'max-width', 'none');
+    css = setCssDeclaration(css, sel, 'white-space', 'nowrap');
+    html = setShrinkMark(html, fieldId, false);
+  } else {
+    css = setCssDeclaration(css, wrap, 'max-width', placementCss(maxWidth, scaled));
+    if (mode === 'wrap') {
+      css = setCssDeclaration(css, sel, 'white-space', 'normal');
+      css = setCssDeclaration(css, sel, 'overflow-wrap', 'break-word');
+    } else {
+      css = setCssDeclaration(css, sel, 'white-space', 'nowrap');
+    }
+    html = setShrinkMark(html, fieldId, mode === 'shrink');
+  }
+
+  const next: SpxTemplate = { ...template, html, css };
+  return mode === 'shrink' ? ensureTextFitRuntime(next) : next;
+}
+
 // ── Adding a placed line — the Data panel's add-field on an imported design ──────────────
 
 /**
@@ -350,11 +472,16 @@ export function addPlacedLine(
     if (inBoxRe.test(l)) insertAt = i;
   });
   if (insertAt === -1) return null;
+  // The new line FITS by default: it keeps one row and condenses if the operator's value
+  // outgrows the room between it and the artwork's right edge. Without a cap a long name
+  // runs off the design (and off the frame) - the fit contract exists for exactly that.
+  const maxWidth = Math.max(64, Math.round(boxWidth - x - boxWidth * 0.04));
+
   lines.splice(
     insertAt + 1,
     0,
     `    <!-- ${spec.title} (${fieldId}) — SPX writes this field's value straight into the element. -->`,
-    `    <div class="${prefix}-mask" id="${wrapperId}"><span id="${fieldId}">${escapeHtml(sample)}</span></div>`,
+    `    <div class="${prefix}-mask" id="${wrapperId}"><span id="${fieldId}" data-fit="shrink">${escapeHtml(sample)}</span></div>`,
   );
   const html = lines.join('\n');
 
@@ -367,11 +494,12 @@ export function addPlacedLine(
   position: absolute;
   left: ${placementCss(x, scaled)};   /* measured from the artwork's left edge */
   top: ${placementCss(y, scaled)};    /* …and from its top edge */
+  max-width: ${placementCss(maxWidth, scaled)};  /* the slot: how much room the design gives this line */
   overflow: hidden;                 /* the line's mask — an entrance can slide the text within it */
 }
 #${fieldId} {
   display: inline-block;            /* so the line can move inside its mask */
-  white-space: nowrap;              /* a placed line keeps its shape — it never reflows */
+  white-space: nowrap;              /* one row — data-fit="shrink" condenses a long value instead of reflowing */
   font-family: var(--font-heading);
   font-size: ${placementCss(fontSize, scaled)};
   font-weight: ${weight};
@@ -395,6 +523,8 @@ export function addPlacedLine(
     text: sample,
     styles: {},
   });
+  // The shrink marker above needs its runtime (idempotent — later lines add nothing).
+  next = ensureTextFitRuntime(next);
   return { template: next, fieldId };
 }
 
