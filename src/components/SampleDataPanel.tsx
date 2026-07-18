@@ -3,7 +3,7 @@ import { type Ftype, type SpxField } from '../model/types';
 import { fieldDescriptors } from '../control/controlModel';
 import SpxFieldRow from './fields/SpxFieldRow';
 import { addFieldToDefinition, nextFieldId } from '../blocks/edit';
-import { addPlacedLine, designBoxInfo } from '../blocks/designLayout';
+import { addPlacedImageSlot, addPlacedLine, designBoxInfo } from '../blocks/designLayout';
 import { useTemplateStore } from '../store/templateStore';
 
 // The broadcast field set (same as the wizard's extras).
@@ -42,15 +42,19 @@ export default function SampleDataPanel() {
     [template.html, template.css],
   );
 
-  // Add a field. On a placed-design template a single-line field becomes a REAL placed line —
-  // element + placement rule + DataField in one undoable apply (blocks/designLayout.ts), then
-  // the new layer is selected so the canvas and Inspector pick it up straight away. Everything
-  // else appends to the SPX definition only (the editor highlights the new entry) — the field
-  // is definition-only until it's wired to an element; AI modify does that in one prompt.
+  // Add a field. On a placed-design template a single-line field becomes a REAL placed line
+  // and an image field a REAL placed slot — element + placement rule + DataField in one
+  // undoable apply (blocks/designLayout.ts), then the new layer is selected so the canvas and
+  // Inspector pick it up straight away. Everything else appends to the SPX definition only
+  // (the editor highlights the new entry) — the field is definition-only until it's wired to
+  // an element; AI modify does that in one prompt.
   const addField = () => {
     const title = newTitle.trim() || 'New field';
-    if (newType === 'textfield' || newType === 'number') {
-      const added = addPlacedLine(template, { title, ftype: newType });
+    if (newType === 'textfield' || newType === 'number' || newType === 'filelist') {
+      const added =
+        newType === 'filelist'
+          ? addPlacedImageSlot(template, { title })
+          : addPlacedLine(template, { title, ftype: newType });
       if (added) {
         applyTemplate(added.template);
         setSelectedPart(`#${added.fieldId}`); // the new layer — selectable, draggable, animatable
@@ -136,7 +140,7 @@ export default function SampleDataPanel() {
         </div>
         <p className="hint" style={{ marginTop: 6 }}>
           {placedDesign
-            ? 'A text or number field appears on your design, ready to drag into place on the canvas. Long text and image fields land in the SPX definition only.'
+            ? 'Text, number, and image fields appear on your design, ready to drag into place on the canvas. Long text lands in the SPX definition only.'
             : 'Lands in the SPX definition (highlighted in the HTML). To show it in the design, ask the AI — e.g. “display the new Sponsor field under the title”.'}
         </p>
       </div>

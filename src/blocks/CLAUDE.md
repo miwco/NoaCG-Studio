@@ -59,9 +59,13 @@ it is what whole-unit motion exists to prevent (docs/IMPORT_MVP.md).
 `addPlacedLine(template, {title, ftype})` is the Data panel's add-field on an imported design:
 ONE pure transform emitting the mask wrapper + span (a registry `line` part), the placement +
 type rules in the assembler's exact idiom, and the SPX DataField (update() binds by id - no JS
-change). New lines stack under the lowest existing line and inherit its look. Gated by
-`designBoxInfo` (a box whose unit carries `<prefix>-art`); returns null off-shape so the
-caller falls back to the definition-only add.
+change). New lines stack under the lowest existing line and inherit its look.
+`addPlacedImageSlot(template, {title})` is its image twin: `<img id="fN">` in the mask (a
+registry `image` part), a sized slot box with a dashed empty-slot mark (`.has-image` keyed -
+setFieldValue already toggles it), and a filelist DataField; `slotSize`/`setSlotSize` are the
+box's resize pair (the corner handle on a slot). Both gated by `designBoxInfo` (a box whose
+unit carries `<prefix>-art`); they return null off-shape so the caller falls back to the
+definition-only add.
 
 ## The Timeline v2 animation-data engine
 

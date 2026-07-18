@@ -783,6 +783,12 @@ logo slot: here the image IS the design.
       presets apply per layer; Animations is the Inspector's default view on an imported
       design); E2E covers the full import -> canvas -> field -> animate -> preview -> SPX
       export roundtrip.
+- [x] **Image slots + editor-wide nudge (follow-up)** - the Data tab's Image add creates a
+      placed image slot on the artwork (SPX filelist field, dashed empty-slot mark, corner
+      box resize; the slot stays selectable and draggable while empty), and arrow-key
+      nudging extends beyond placed fields to EVERY selected layer - placed fields move as
+      placement CSS, other layers key x/y at the playhead like the drag, one undoable apply
+      per burst either way.
 
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate

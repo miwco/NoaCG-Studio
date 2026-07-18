@@ -105,6 +105,32 @@ export function setLineFontSize(
   return { ...template, css: setCssDeclaration(template.css, `#${fieldId}`, 'font-size', placementCss(px, scaled)) };
 }
 
+// ── The slot's BOX SIZE — the resize pair for a placed IMAGE slot (no font-size rule) ────
+
+/** A placed image slot's box size in design px (from its wrapper's rule), in either idiom. */
+export function slotSize(
+  css: string,
+  wrapperId: string,
+): { width: number; height: number; scaled: boolean } | null {
+  const w = readPx(css, `#${wrapperId}`, 'width');
+  const h = readPx(css, `#${wrapperId}`, 'height');
+  return w && h ? { width: w.value, height: h.value, scaled: w.scaled && h.scaled } : null;
+}
+
+/** Resize one slot's box: its wrapper rule's width/height, as one deterministic CSS patch. */
+export function setSlotSize(
+  template: SpxTemplate,
+  wrapperId: string,
+  width: number,
+  height: number,
+  scaled: boolean,
+): SpxTemplate {
+  let css = template.css;
+  css = setCssDeclaration(css, `#${wrapperId}`, 'width', placementCss(width, scaled));
+  css = setCssDeclaration(css, `#${wrapperId}`, 'height', placementCss(height, scaled));
+  return { ...template, css };
+}
+
 // ── Adding a placed line — the Data panel's add-field on an imported design ──────────────
 
 /**
@@ -246,6 +272,96 @@ export function addPlacedLine(
     label: spec.title,
     fieldId,
     text: sample,
+    styles: {},
+  });
+  return { template: next, fieldId };
+}
+
+/**
+ * Add a placed IMAGE slot to an imported design — the Data panel's Image add made real.
+ * Same shape as addPlacedLine, with an `<img id="fN">` in the mask (a registry `image`
+ * part) and a sized slot box on the wrapper: the empty slot shows a dashed outline (the
+ * house rule — image placeholders are visible, never invisible), a chosen image fills it
+ * with object-fit: contain, and the shared runtime's setFieldValue already handles the
+ * `<img>` show/hide + `.has-image` toggle. The field is an SPX `filelist` listing the
+ * project's images/ folder, exactly like the catalog's logo slots.
+ *
+ * The slot starts on the design's right, level with the topmost line (the lower-third
+ * logo convention) — a starting point the user drags; the corner handle resizes the box
+ * (slotSize/setSlotSize). Returns null when the template is not a placed-design shape.
+ */
+export function addPlacedImageSlot(
+  template: SpxTemplate,
+  spec: { title: string },
+): { template: SpxTemplate; fieldId: string } | null {
+  const info = designBoxInfo(template.html, template.css);
+  if (!info) return null;
+  const { prefix, boxWidth } = info;
+
+  const fieldId = nextFieldId(template.fields);
+  const wrapperId = `fw${fieldId.slice(1)}`;
+  if (new RegExp(`\\bid=["']${wrapperId}["']`).test(template.html)) return null;
+
+  const placed = placedLines(template.html, template.css);
+  const entries = Object.values(placed);
+  const scaled = entries.length > 0 ? entries.every((p) => p.scaled) : true;
+  const size = Math.round(boxWidth * 0.0625); // 120 at 1920 — a lower-third logo size
+  const x = Math.round(boxWidth * 0.8);
+  const y = entries.length
+    ? Math.min(...entries.map((p) => p.y))
+    : Math.round(boxWidth * (9 / 16) * 0.72);
+
+  const lines = template.html.split('\n');
+  const inBoxRe = new RegExp(`class="${escapeRe(prefix)}-(?:mask|art)"`);
+  let insertAt = -1;
+  lines.forEach((l, i) => {
+    if (inBoxRe.test(l)) insertAt = i;
+  });
+  if (insertAt === -1) return null;
+  lines.splice(
+    insertAt + 1,
+    0,
+    `    <!-- ${spec.title} (${fieldId}) — an image slot: SPX fills it from the images/ folder. -->`,
+    `    <div class="${prefix}-mask" id="${wrapperId}"><img id="${fieldId}" alt="" /></div>`,
+  );
+  const html = lines.join('\n');
+
+  const css = appendCss(
+    template.css,
+    `${spec.title} (${fieldId}) — an image slot; drag it on the canvas to move it.`,
+    `#${wrapperId} {
+  position: absolute;
+  left: ${placementCss(x, scaled)};   /* measured from the artwork's left edge */
+  top: ${placementCss(y, scaled)};    /* …and from its top edge */
+  width: ${placementCss(size, scaled)};    /* the slot's box — the corner handle resizes it */
+  height: ${placementCss(size, scaled)};
+  overflow: hidden;                 /* the slot's mask — an entrance can slide the image within it */
+}
+#${wrapperId}:not(.has-image) {
+  outline: 2px dashed rgba(255, 255, 255, 0.35);  /* the empty slot stays visible — pick an image to fill it */
+  outline-offset: -2px;
+}
+#${fieldId} {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;              /* the image fits the slot without distortion */
+}`,
+  );
+
+  let next = addFieldToDefinition({ ...template, html, css }, {
+    field: fieldId,
+    ftype: 'filelist',
+    title: spec.title,
+    value: '',
+    assetfolder: './images/',
+    extension: 'png',
+  });
+  next = addLayer(next, {
+    id: fieldId,
+    type: 'image',
+    label: spec.title,
+    fieldId,
     styles: {},
   });
   return { template: next, fieldId };

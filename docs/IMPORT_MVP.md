@@ -141,14 +141,28 @@ template), and this phase makes the editor's data-field workflow first-class the
   size/weight/color; the first line of a bare design starts in the artwork's lower-left. The
   gate is `designBoxInfo` — code-derived (a box whose unit carries `<prefix>-art`), never the
   category. Long text and image fields keep the definition-only add.
-- **Keyboard nudging.** Arrows move every selected placed line 1 design px (Shift = 10),
-  previewed live through the same inline left/top channel the placement drag uses; the burst
-  commits as ONE undoable `placeLine` apply once the keys go quiet, so holding an arrow never
-  floods the history. Esc cancels the pending burst.
-- **The corner handle resizes the TEXT.** On a single selected placed line the corner handle
-  edits the line's `font-size` in its own `#fN` rule (`lineFontSize`/`setLineFontSize`, the
-  rule's own idiom) — the keyframe scale/rotate handles step aside for placed lines, for the
-  same reason the drag places instead of keying: a placed line's size is design, not motion.
+- **Image slots are placed fields too.** The Data tab's Image add runs `addPlacedImageSlot`:
+  an `<img id="fN">` in a mask wrapper (a registry `image` part) with a sized slot box, a
+  dashed outline while empty (the house rule — image placeholders are visible), and an SPX
+  `filelist` DataField listing `images/` — the shared runtime's `setFieldValue` already
+  handles the img show/hide and `.has-image`. A hidden empty slot stays selectable and
+  draggable: the canvas lets the rendered WRAPPER stand in for a placed field's hidden
+  element (`partScreenEl` in CanvasInteraction), and the corner handle resizes the slot's
+  box (`slotSize`/`setSlotSize`, aspect preserved).
+- **Keyboard nudging.** Arrows move every selected layer 1 px (Shift = 10). A placed field
+  moves as placement (design px, the placement drag's inline preview, ONE `placeLine` apply
+  per burst); every other selected non-root layer moves on the keyframe channel — GSAP x/y
+  preview, x+y keyframes at the playhead, the drag's semantics key by key — so nudging works
+  the same across the whole editor, not just on imports. One undoable apply per burst; Esc
+  cancels. Precedence: the timeline's keyframe-set arrows listen in the CAPTURE phase and
+  claim the key with preventDefault, so an explicitly selected keyframe set always wins over
+  the layer nudge — selecting a diamond usually leaves its layer selected too, and only one
+  of the two may act.
+- **The corner handle resizes the DESIGN.** On a single selected placed field the corner
+  handle edits a text line's `font-size` (`lineFontSize`/`setLineFontSize`) or an image
+  slot's box (`slotSize`/`setSlotSize`), in the rules' own idiom — the keyframe scale/rotate
+  handles step aside for placed fields, for the same reason the drag places instead of
+  keying: a placed field's size is design, not motion.
 - **The artwork is its own layer.** `.{prefix}-art` is a registry part (kind `image`, label
   "Artwork"), so the PNG and every text field are independent layers throughout — style and
   animate each on its own. The whole-unit presets stay the wizard's (and the Design row's)
@@ -167,6 +181,6 @@ data → validated export) is pinned in e2e/import-graphic.spec.ts.
 
 ## Deliberately out of scope
 
-Layered/PSD imports, OCR/text detection, image data fields, Google Sheets, multi-step
-logic, state-machine workflows, advanced custom keyframes. Remotion is a separate module and
-did not influence any of this.
+Layered/PSD imports, OCR/text detection, Google Sheets, multi-step logic, state-machine
+workflows, advanced custom keyframes. Remotion is a separate module and did not influence
+any of this.

@@ -297,6 +297,78 @@ test('import graphic: an added field is live — sample data drives it with no m
   await expect(page.locator('.panel-body')).not.toContainText('✗');
 });
 
+test('import graphic: adding an image field creates a placed slot on the design', async ({ page }) => {
+  await createImported(page);
+  await page.getByTestId('dock-tab-data').click();
+  await page.locator('.field-add-row input').fill('Logo');
+  await page.locator('.field-add-row select').selectOption('filelist');
+  await awaitPreviewRebuild(page, () => page.getByRole('button', { name: '+ Add' }).click());
+
+  // The slot is real everywhere at once: a filelist DataField + a placed, sized wrapper.
+  const state = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { placedLines, slotSize } = await import('/src/blocks/designLayout.ts');
+    const s = useTemplateStore.getState();
+    const place = placedLines(s.template.html, s.template.css)['#f2'] ?? null;
+    return {
+      place,
+      slot: place ? slotSize(s.template.css, place.wrapperId) : null,
+      field: s.template.fields.find((f) => f.field === 'f2') ?? null,
+      selected: s.selectedPart,
+    };
+  });
+  expect(state.place).not.toBeNull();
+  expect(state.slot).toEqual({ width: 120, height: 120, scaled: true });
+  expect(state.field?.ftype).toBe('filelist');
+  expect(state.field?.assetfolder).toBe('./images/');
+  expect(state.selected).toBe('#f2');
+
+  // Empty slot: the img hides, the dashed wrapper shows — and the slot stays selectable
+  // (the wrapper stands in for the hidden element). The add already selected the new layer
+  // (clicking its row again would toggle-deselect), so its row and resize handle are live.
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('#f2')).toBeHidden();
+  await expect(frame.locator('#fw2')).toBeVisible();
+  await expect(page.locator('.tlv2-labels .timeline-label[data-part="#f2"]')).toContainText('Logo');
+  const handle = page.getByTestId('line-size-handle');
+  await expect(handle).toBeVisible();
+
+  // The corner handle resizes the slot's BOX in the CSS (aspect preserved, one apply).
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 80, box.y + 60, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const { useTemplateStore } = await import('/src/store/templateStore.ts');
+        const { slotSize } = await import('/src/blocks/designLayout.ts');
+        const s = slotSize(useTemplateStore.getState().template.css, 'fw2');
+        return s && s.width === s.height ? s.width : -1; // square slot keeps its aspect
+      }),
+    )
+    .toBeGreaterThan(120);
+
+  // Choosing an image fills the slot through update() — no manual wiring. (addAsset
+  // triggers a preview rebuild; the settle then pushes the sample value into the slot.)
+  await awaitPreviewRebuild(page, () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      const c = document.createElement('canvas');
+      c.width = 8;
+      c.height = 8;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = '#f5a623';
+      ctx.fillRect(0, 0, 8, 8);
+      const s = useTemplateStore.getState();
+      s.addAsset({ path: 'images/logo.png', data: c.toDataURL('image/png') });
+      s.setSampleValue('f2', 'images/logo.png');
+    }),
+  );
+  await expect(frame.locator('#f2')).toBeVisible();
+});
+
 test('import graphic: arrow keys nudge a selected field — one placement apply per burst', async ({ page }) => {
   await createImported(page);
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
