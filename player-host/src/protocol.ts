@@ -8,7 +8,7 @@
 // hash (#n=<nonce>) instead. The host additionally checks event.source === window.parent.
 
 export const PLAYER_CHANNEL = 'noacg-player';
-export const PLAYER_PROTOCOL_V = 1;
+export const PLAYER_PROTOCOL_V = 2;
 
 export interface PlayerCompSettings {
   width: number;
@@ -51,6 +51,9 @@ export interface ProbeMessage extends Base {
   id: number;
   /** Frames to render one by one, collecting errors (validation: [0, mid, last]). */
   frames: number[];
+  /** Frames to additionally run the READABILITY checks on (textChecks.ts). Only HOLD
+   *  frames belong here - an entrance or an exit is legitimately mid-clip. */
+  checkFrames?: number[];
 }
 
 export interface TransportMessage extends Base {
@@ -102,6 +105,9 @@ export interface ProbeResultEvent extends Base {
   id: number;
   ok: boolean;
   errors: { frame: number; message: string }[];
+  /** Readability findings, one entry per (checkFrame, issue). `ok` ignores them: the app
+   *  decides what counts, and only trusts a finding that repeats across every checkFrame. */
+  textIssues?: { frame: number; kind: string; key: string; message: string }[];
 }
 
 export interface FrameEvent extends Base {

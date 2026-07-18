@@ -13,16 +13,28 @@ import type { AssetFile } from '../model/types';
 import { assetMime, describeAssets, type VideoCompSettings } from './types';
 
 export const PLAYER_CHANNEL = 'noacg-player';
-export const PLAYER_PROTOCOL_V = 1;
+export const PLAYER_PROTOCOL_V = 2;
 export const PLAYER_HOST_URL = '/player-host/index.html';
 
 export interface PlayerFrameInfo {
   frame: number;
 }
 
+/** A readability finding from the host's textChecks (one per checked frame). */
+export interface ProbeTextIssue {
+  frame: number;
+  kind: string;
+  /** Stable across frames - the app intersects on this, never on the prose. */
+  key: string;
+  message: string;
+}
+
 export interface ProbeResult {
   ok: boolean;
   errors: { frame: number; message: string }[];
+  /** Optional: the HyperFrames bridge shares this result shape and has no readability
+   *  checks of its own yet (its driver would need the same pass - see src/video/hyperframes). */
+  textIssues?: ProbeTextIssue[];
 }
 
 /** load() outcome. `disposed` = this bridge was torn down (a newer player exists) -
@@ -40,6 +52,7 @@ interface HostEvent {
   frame?: number | null;
   ok?: boolean;
   errors?: { frame: number; message: string }[];
+  textIssues?: ProbeTextIssue[];
   playing?: boolean;
 }
 
@@ -95,7 +108,11 @@ export class PlayerBridge {
     this.queue = [];
     this.pendingLoad?.resolve({ ok: false, message: 'the player was replaced', disposed: true });
     this.pendingLoad = null;
-    this.pendingProbe?.resolve({ ok: false, errors: [{ frame: 0, message: 'the player was replaced' }] });
+    this.pendingProbe?.resolve({
+      ok: false,
+      errors: [{ frame: 0, message: 'the player was replaced' }],
+      textIssues: [],
+    });
     this.pendingProbe = null;
   }
 
@@ -153,16 +170,21 @@ export class PlayerBridge {
     return op;
   }
 
-  /** Probe frames on the current module (validation). Serialized like load. */
-  probe(frames: number[]): Promise<ProbeResult> {
+  /** Probe frames on the current module (validation). Serialized like load. `checkFrames`
+   *  additionally get the host's readability checks - pass HOLD frames only. */
+  probe(frames: number[], checkFrames: number[] = []): Promise<ProbeResult> {
     const run = (): Promise<ProbeResult> => {
       if (this.disposedFlag) {
-        return Promise.resolve({ ok: false, errors: [{ frame: 0, message: 'the player was replaced' }] });
+        return Promise.resolve({
+          ok: false,
+          errors: [{ frame: 0, message: 'the player was replaced' }],
+          textIssues: [],
+        });
       }
       const id = this.loadId;
       return new Promise((resolve) => {
         this.pendingProbe = { id, resolve };
-        this.post({ type: 'probe', id, frames });
+        this.post({ type: 'probe', id, frames, checkFrames });
       });
     };
     const op = this.chain.then(run, run);
@@ -234,7 +256,7 @@ export class PlayerBridge {
       case 'probe-result': {
         const pending = this.pendingProbe;
         if (pending && pending.id === msg.id) {
-          pending.resolve({ ok: !!msg.ok, errors: msg.errors ?? [] });
+          pending.resolve({ ok: !!msg.ok, errors: msg.errors ?? [], textIssues: msg.textIssues ?? [] });
           this.pendingProbe = null;
         }
         break;

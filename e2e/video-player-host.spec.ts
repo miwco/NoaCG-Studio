@@ -7,7 +7,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const SETTINGS = { width: 1920, height: 1080, fps: 30, durationInFrames: 90 };
-const BASE = { channel: 'noacg-player', v: 1, nonce: 'e2e' };
+const BASE = { channel: 'noacg-player', v: 2, nonce: 'e2e' };
 
 const GOOD_MODULE = `
   const React = require('react');
@@ -26,6 +26,30 @@ const THROWS_AFTER_40 = `
     const f = R.useCurrentFrame();
     if (f > 40) throw new Error('dies after frame 40');
     return React.createElement(R.AbsoluteFill, null, 'ok');
+  };
+`;
+
+/** A headline cropped by its own fixed-width, overflow-hidden card: "BROADCAST KITCHEN"
+ *  paints as "BROADCAST KITCH". The element's OWN box is 420px and reports no clipping -
+ *  only the glyph extent does, which is what textChecks measures. */
+const CLIPPED_TEXT = `
+  const React = require('react');
+  const R = require('remotion');
+  exports.default = function C() {
+    return React.createElement(R.AbsoluteFill, { style: { background: '#101318', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement('div', { style: { width: 420, overflow: 'hidden' } },
+        React.createElement('div', { style: { color: '#fff', fontSize: 96, fontWeight: 800, whiteSpace: 'nowrap' } }, 'BROADCAST KITCHEN')));
+  };
+`;
+
+/** The same headline, given room. Nothing to report - the false-positive guard. */
+const FITTED_TEXT = `
+  const React = require('react');
+  const R = require('remotion');
+  exports.default = function C() {
+    return React.createElement(R.AbsoluteFill, { style: { background: '#101318', alignItems: 'center', justifyContent: 'center' } },
+      React.createElement('div', { style: { width: 1600, overflow: 'hidden' } },
+        React.createElement('div', { style: { color: '#fff', fontSize: 96, fontWeight: 800, whiteSpace: 'nowrap' } }, 'BROADCAST KITCHEN')));
   };
 `;
 
@@ -114,4 +138,33 @@ test('probe renders the requested frames and catches frame-specific errors', asy
   const bad = results[1] as { ok: boolean; errors: { frame: number; message: string }[] };
   expect(bad.ok).toBe(false);
   expect(bad.errors.some((e) => e.frame >= 41 && e.message.includes('dies after frame 40'))).toBe(true);
+});
+
+test('the probe reports text clipped at the check frames - and stays quiet when it fits', async ({ page }) => {
+  type ProbeResult = {
+    ok: boolean;
+    textIssues: { frame: number; kind: string; key: string; message: string }[];
+  };
+  const probeResults = async () => (await eventsOfType(page, 'probe-result')) as unknown as ProbeResult[];
+
+  // A headline cropped by its card is reported at EVERY check frame (it never resolves -
+  // that is exactly what separates a real crop from an entrance still in flight).
+  await post(page, { type: 'load', id: 8, compiledJs: CLIPPED_TEXT, settings: SETTINGS, inputProps: {}, assets: [], autoplay: false });
+  await expect.poll(() => eventsOfType(page, 'loaded')).toHaveLength(1);
+  await post(page, { type: 'probe', id: 8, frames: [0, 45, 89], checkFrames: [45, 58] });
+  await expect.poll(async () => (await probeResults()).length).toBe(1);
+  const clipped = (await probeResults())[0];
+  // Runtime errors and readability findings are separate verdicts: the module renders fine.
+  expect(clipped.ok).toBe(true);
+  expect(clipped.textIssues.map((i) => i.frame).sort()).toEqual([45, 58]);
+  expect(clipped.textIssues.every((i) => i.kind === 'clip')).toBe(true);
+  expect(clipped.textIssues[0].message).toContain('BROADCAST KITCHEN');
+  expect(clipped.textIssues[0].message).toContain('CUT OFF');
+
+  // The same headline with room to breathe produces nothing.
+  await post(page, { type: 'load', id: 9, compiledJs: FITTED_TEXT, settings: SETTINGS, inputProps: {}, assets: [], autoplay: false });
+  await expect.poll(() => eventsOfType(page, 'loaded')).toHaveLength(2);
+  await post(page, { type: 'probe', id: 9, frames: [0, 45, 89], checkFrames: [45, 58] });
+  await expect.poll(async () => (await probeResults()).length).toBe(2);
+  expect((await probeResults())[1].textIssues).toEqual([]);
 });

@@ -279,8 +279,11 @@ async function generateValidated(
   onProgress?: VideoProgress,
 ): Promise<{ emitted: EmittedSource; validation: Awaited<ReturnType<VideoValidator>> | null }> {
   const cfg = emitConfig(engine);
+  // cacheSystem: the coder system prompt (contract + skills + the canonical example) is
+  // large and IDENTICAL across the first call and every repair round - one cache breakpoint
+  // turns those re-sends into cache reads. Cost only; the prompt itself is untouched.
   let emitted = cfg.toEmitted(
-    await callClaude({ system, messages: baseMessages, tool: cfg.tool, model }),
+    await callClaude({ system, messages: baseMessages, tool: cfg.tool, model, cacheSystem: true }),
   );
 
   if (!validate) return { emitted, validation: null };
@@ -300,16 +303,32 @@ async function generateValidated(
           { role: 'assistant', content: 'I generated a composition but validation rejected it.' },
           {
             role: 'user',
-            content: `Your composition failed validation. Fix ALL of these and re-emit the COMPLETE source (${cfg.repairNote}):\n${errorList}\n\n=== ${cfg.fileLabel} ===\n${emitted.source}`,
+            // The static checks QUOTE the offending source line (compile.ts / hyperframes
+            // validate.ts). Saying so explicitly is load-bearing: a banned window.* access
+            // once survived both repair rounds because the finding read as a general rule
+            // rather than an instruction about one specific line of the model's own code.
+            content: `Your composition failed validation. Fix ALL of these and re-emit the COMPLETE source (${cfg.repairNote}):\n${errorList}\n\nWhere a finding quotes an offending line, that EXACT line must not survive your fix - delete or rewrite it, do not merely work around it. Re-read your own source for every other place the same mistake appears.\n\n=== ${cfg.fileLabel} ===\n${emitted.source}`,
           },
         ],
         tool: cfg.tool,
         model,
+        cacheSystem: true,
       }),
     );
     validation = await validate(emitted.source);
   }
-  return { emitted, validation };
+  return { emitted, validation: demoteSoftFindings(validation) };
+}
+
+/** Findings that must DRIVE a repair round but must not, alone, throw the work away after
+ *  the rounds are spent - the SPX harness's doctrine for its editability findings. A clipped
+ *  headline is a real defect and worth two rewrites; a false positive that survives them
+ *  should ship with a warning, not silently discard a composition the user waited for. */
+const SOFT_RULES = new Set(['text-clip']);
+
+function demoteSoftFindings<T extends Awaited<ReturnType<VideoValidator>>>(validation: T): T {
+  if (validation.ok || validation.errors.some((e) => !SOFT_RULES.has(e.rule))) return validation;
+  return { ...validation, ok: true, errors: [], warnings: [...validation.warnings, ...validation.errors] };
 }
 
 // ── The provider ─────────────────────────────────────────────────────────────

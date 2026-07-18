@@ -247,16 +247,45 @@ out of the prompt A/B), §3.5 vision critic (only if quality plateaus), §3.6 ch
 
 ## 6. Follow-up hardening surfaced by the baseline and the A/B (independent of the prompt work)
 
-- **Text-clip check**: the bench's readability pass (and ideally the injected validator's
-  probe) should flag a text element whose rendered box is cut by an ancestor's overflow
-  clip or by the frame edge at hold frames - the baseline shipped "KITCH|" twice and an
-  edge-to-edge headline, all scored clean. Detection sketch: at the hold frames, for each
-  text element compare its bounding rect against the viewport and against each
-  overflow-hidden ancestor's rect; flag when a readable element loses more than a few
-  percent of its width/height.
-- **Repair reliability**: one run kept a banned window.* access through both repair
-  rounds. Consider making the repair prompt quote the offending line (the static check
-  knows the match) instead of just the rule text.
-- **Prompt-cache the coder system prompt**: generateValidated does not set cacheSystem,
-  so each repair round re-sends the full coder system prompt uncached (the SPX coder
-  path already marks it). Pure cost, no behaviour change.
+All three landed; §6.1 records the decisions worth knowing.
+
+- **Text-clip check** (DONE): the readability pass now measures the GLYPHS - a Range over
+  each text element's own text nodes - against the frame and every overflow-clipping
+  ancestor, and flags a loss of more than 12% of the text's width or height. Measuring the
+  range rather than the element box is what makes it work: nowrap type inside a fixed-width
+  clipped card overflows silently, and the element's own rect reports the uncut box. One
+  implementation (player-host/src/textChecks.ts, alongside the occlusion check it absorbed
+  from the bench) serves BOTH consumers: the injected validator, where a persistent crop
+  becomes a repair round, and scripts/video-bench.mjs, which calls it over CDP.
+- **Repair reliability** (DONE): the static checks now QUOTE the offending source line
+  (`Offending line 42: \`...\``, video/compile.ts + hyperframes/validate.ts), and the repair
+  prompt says that exact line must not survive the fix.
+- **Prompt-cache the coder system prompt** (DONE): generateValidated marks `cacheSystem` on
+  the first coder call and every repair round.
+
+### 6.1 Decisions behind the clip check
+
+- **Thresholds**: 12% of the text's own width/height, with an 8px floor. "WORLD REPORT" ->
+  "WORLD REP" loses ~17% and "KITCHEN" -> "KITCH" ~28%, so both trip it; a trailing space or
+  an antialiasing bleed cannot. Losing one glyph off a long headline is deliberately BELOW
+  the line - a false positive costs a discarded composition, a false negative costs a bench
+  note.
+- **Hold frames only, and only when it PERSISTS**: the validator checks two frames inside
+  the hold (never frame 0 or the last frame) and the bench three, and a clip counts only
+  when it is present at every one of them. An entrance still emerging from a mask clears
+  itself by the second sample; a cropped headline is cut at all of them. Occlusion keeps its
+  any-sample semantics - text buried behind a panel for part of the hold is still buried.
+- **Intentional masks read as clean**: a rect test cannot see clip-path or mask-image, so a
+  masked reveal is a false NEGATIVE, which is the side to err on.
+- **A surviving crop is demoted, not fatal**: it drives both repair rounds, but if it
+  outlives them the composition ships with the finding as a WARNING (the SPX harness's rule
+  for its editability findings) - the user waited for this, and a false positive must not
+  silently throw the work away.
+- **Latency is load-bearing in the e2e mocks**: the live probe only runs once the preview
+  has mounted its bridge. A real generation takes seconds and always clears that bar, but an
+  instantly-answered mock beats the player to the screen and validation quietly falls back
+  to the static checks - `mockClaude(..., { delayMs })` (e2e/_video.ts) is what keeps the
+  probe-dependent specs honest.
+- **HyperFrames has no clip check yet**: its driver would need the same pass. The Remotion
+  path (the default engine) is covered; the shared ProbeResult carries `textIssues` as
+  optional for exactly this reason.

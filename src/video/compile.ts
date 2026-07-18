@@ -42,6 +42,20 @@ const FORBIDDEN: { re: RegExp; what: string; instead: string }[] = [
   { re: /\bOffthreadVideo\b/, what: 'OffthreadVideo', instead: 'use <Video> - project assets are data/blob URLs, which OffthreadVideo’s frame extractor cannot read' },
 ];
 
+/**
+ * Quote the exact source line a pattern matched, as a suffix for the finding's message.
+ * The repair round gets the model's OWN line back instead of an abstract rule - the one
+ * change that reliably converts "understood the rule, edited around it" into a real fix
+ * (a banned window.* access once survived both rounds against rule text alone).
+ */
+export function quoteMatch(source: string, re: RegExp): string {
+  const m = new RegExp(re.source, re.flags.replace('g', '')).exec(source);
+  if (!m) return '';
+  const line = source.slice(0, m.index).split('\n').length;
+  const text = (source.split('\n')[line - 1] ?? '').trim();
+  return ` Offending line ${line}: \`${text.length > 160 ? `${text.slice(0, 160)}…` : text}\``;
+}
+
 export type CompileResult = { ok: true; js: string } | { ok: false; error: string };
 
 export function compileTsx(tsx: string): CompileResult {
@@ -86,7 +100,7 @@ export function staticValidate(tsx: string, assets: VideoAssetInfo[]): Validatio
     if (!ALLOWED_IMPORTS.has(m[1])) {
       issues.push({
         rule: 'imports',
-        message: `Import "${m[1]}" is not allowed - only 'react' and 'remotion' are available.`,
+        message: `Import "${m[1]}" is not allowed - only 'react' and 'remotion' are available.${quoteMatch(tsx, new RegExp(`import[^\\n]*['"]${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`))}`,
       });
     }
   }
@@ -103,7 +117,10 @@ export function staticValidate(tsx: string, assets: VideoAssetInfo[]): Validatio
 
   for (const f of FORBIDDEN) {
     if (f.re.test(tsx)) {
-      issues.push({ rule: 'forbidden-api', message: `${f.what} is not allowed - ${f.instead}.` });
+      issues.push({
+        rule: 'forbidden-api',
+        message: `${f.what} is not allowed - ${f.instead}.${quoteMatch(tsx, f.re)}`,
+      });
     }
   }
 
@@ -111,7 +128,7 @@ export function staticValidate(tsx: string, assets: VideoAssetInfo[]): Validatio
   if (/https?:\/\//.test(tsx)) {
     issues.push({
       rule: 'network-url',
-      message: 'http(s):// URLs are not allowed - reference uploaded assets via the `assets` prop instead.',
+      message: `http(s):// URLs are not allowed - reference uploaded assets via the \`assets\` prop instead.${quoteMatch(tsx, /https?:\/\//)}`,
     });
   }
 

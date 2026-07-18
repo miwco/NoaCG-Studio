@@ -41,16 +41,26 @@ function toolResponse(name: string, input: unknown) {
  * Answer every Claude call by its forced tool. `modules` are handed out in order to successive
  * emit_remotion_module calls (the first is the generation, the next are refinements); the last
  * one repeats once the list runs out.
+ *
+ * `delayMs` holds each emit back before answering. Set it whenever the test depends on the
+ * LIVE PROBE half of validation: a real generation takes seconds, by which time the preview
+ * has mounted and registered its bridge, but an instantly-answered mock beats the player to
+ * the screen and validation falls back to the static checks alone.
  */
-export async function mockClaude(page: Page, modules: EmittedModule[]): Promise<{ emits: () => number }> {
+export async function mockClaude(
+  page: Page,
+  modules: EmittedModule[],
+  { delayMs = 0 }: { delayMs?: number } = {},
+): Promise<{ emits: () => number }> {
   let emits = 0;
-  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+  await page.route('https://api.anthropic.com/v1/messages', async (route: Route) => {
     const body = route.request().postDataJSON() as { tools?: { name: string }[] };
     const tool = body.tools?.[0]?.name ?? '';
     if (tool === 'emit_motion_plan') return route.fulfill(toolResponse(tool, MOTION_PLAN));
     if (tool === 'detect_skills') return route.fulfill(toolResponse(tool, { skills: [] }));
     const module = modules[Math.min(emits, modules.length - 1)];
     emits += 1;
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs));
     return route.fulfill(toolResponse('emit_remotion_module', module));
   });
   return { emits: () => emits };

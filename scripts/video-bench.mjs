@@ -17,9 +17,12 @@
 // repeats each example (generation is stochastic — reliability needs more than one
 // sample).
 //
-// Beyond validation, every run gets RUNTIME READABILITY CHECKS at hold-phase frames:
-// hit-testing each text element against the actual paint order catches "the title is
-// behind the shape panels", the video counterpart of the SPX bench's overlap check.
+// Beyond validation, every run gets RUNTIME READABILITY CHECKS at hold-phase frames -
+// occlusion ("the title is behind the shape panels", the video counterpart of the SPX
+// bench's overlap check) and CLIPPING ("KITCHEN" painting as "KITCH"). Both come from the
+// player host itself (player-host/src/textChecks.ts), the same code the AI's injected
+// validator probes with, so the bench and the generation gate can never drift apart. A
+// stale built host has no checks to call: `npm run build:player-host`.
 
 import { chromium } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -119,68 +122,28 @@ async function seekTo(frameNo) {
 }
 
 /**
- * Readability check inside the player host at the current frame: hit-test every visible
- * text element against the real paint order (elementsFromPoint). A text element counts as
- * OCCLUDED when most of its sample points are covered by a PAINTED element (a shape panel,
- * an image) that is neither its ancestor nor its descendant — i.e. "the title is behind
- * the graphics".
+ * Readability at the current frame, run by the player host's own checks
+ * (player-host/src/textChecks.ts, installed on window.__noacgTextChecks at boot) so the
+ * bench and the AI's injected validator judge a composition by the SAME code:
+ *   - OCCLUSION: "the title is painted behind the shape panels" (paint-order hit test).
+ *   - CLIP: "KITCHEN" rendering as "KITCH" — glyphs cut by the frame or an
+ *     overflow-hidden ancestor.
+ * Returns [{kind, key, message}]; the caller decides how each kind is scored.
  */
 async function checkReadability(frame) {
   return frame.evaluate(() => {
-    const doc = document;
-    const win = window;
-    const painted = (el) => {
-      if (['IMG', 'VIDEO', 'CANVAS', 'SVG', 'svg'].includes(el.tagName)) return true;
-      const cs = win.getComputedStyle(el);
-      if (Number(cs.opacity) < 0.05) return false;
-      // background-clip: text paints only inside its own glyphs - the standard technique
-      // for a specular sweep over a wordmark (a duplicate glyph layer), not an occluder.
-      if ((cs.webkitBackgroundClip ?? cs.backgroundClip) === 'text') return false;
-      if (cs.backgroundImage !== 'none') return true;
-      const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/);
-      if (!m) return false;
-      const parts = m[1].split(',').map(Number);
-      return (parts[3] ?? 1) > 0.05;
-    };
-    const texts = [...doc.querySelectorAll('body *')].filter((el) => {
-      const cs = win.getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.3) return false;
-      if (parseFloat(cs.fontSize) < 12) return false;
-      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) return false;
-      const r = el.getBoundingClientRect();
-      return r.width * r.height > 500 && r.width > 0;
-    });
-    const issues = [];
-    for (const el of texts) {
-      const r = el.getBoundingClientRect();
-      const points = [
-        [r.left + r.width / 2, r.top + r.height / 2],
-        [r.left + r.width * 0.25, r.top + r.height / 2],
-        [r.left + r.width * 0.75, r.top + r.height / 2],
-        [r.left + r.width / 2, r.top + r.height * 0.25],
-        [r.left + r.width / 2, r.top + r.height * 0.75],
+    const checks = window.__noacgTextChecks;
+    if (!checks) {
+      return [
+        {
+          kind: 'harness',
+          key: 'harness:missing',
+          message:
+            'window.__noacgTextChecks is missing — the built player host is stale; run `npm run build:player-host`',
+        },
       ];
-      let blocked = 0;
-      let blocker = null;
-      for (const [x, y] of points) {
-        if (x < 0 || y < 0 || x >= win.innerWidth || y >= win.innerHeight) continue;
-        for (const hit of doc.elementsFromPoint(x, y)) {
-          if (hit === el || el.contains(hit) || hit.contains(el)) break; // reached our text — visible here
-          // A layer carrying the SAME text is deliberate duplicate-glyph layering (sweeps,
-          // glows), the same rule the SPX bench applies - never an occlusion.
-          if (hit.textContent.trim() === el.textContent.trim() && hit.textContent.trim()) break;
-          if (painted(hit)) {
-            blocked++;
-            blocker = blocker ?? `<${hit.tagName.toLowerCase()}${hit.className && typeof hit.className === 'string' ? '.' + hit.className.split(' ')[0] : ''}>`;
-            break;
-          }
-        }
-      }
-      if (blocked >= 3) {
-        issues.push(`"${el.textContent.trim().slice(0, 28)}" is painted BEHIND ${blocker} (${blocked}/5 sample points covered)`);
-      }
     }
-    return issues.slice(0, 5);
+    return [...checks.occlusion(), ...checks.clip()];
   });
 }
 
@@ -266,23 +229,32 @@ for (const example of selected) {
 
       // Readability at the hold-phase frames.
       const frame = await playerFrame();
-      const occlusions = [];
+      /** key -> {kind, message, fracs} across the hold samples. */
+      const seen = new Map();
       for (const frac of CHECK_FRACTIONS) {
         const f = Math.round(frac * (durationInFrames - 1));
         await seekTo(f);
         for (const issue of await checkReadability(frame)) {
-          const tagged = `@${Math.round(frac * 100)}%: ${issue}`;
-          if (!occlusions.some((o) => o.slice(o.indexOf(':')) === tagged.slice(tagged.indexOf(':')))) occlusions.push(tagged);
+          const entry = seen.get(issue.key) ?? { ...issue, fracs: [] };
+          entry.fracs.push(frac);
+          seen.set(issue.key, entry);
         }
       }
+      // An OCCLUSION at any hold sample is a finding (text buried behind a panel for part
+      // of the hold is still buried). A CLIP must persist across EVERY sample: text still
+      // emerging from a mask at the first sample is an entrance, not a defect — the same
+      // rule the injected validator applies, for the same reason.
+      const issues = [...seen.values()]
+        .filter((e) => (e.kind === 'clip' ? e.fracs.length === CHECK_FRACTIONS.length : true))
+        .map((e) => `@${e.fracs.map((f) => `${Math.round(f * 100)}%`).join(',')}: ${e.message}`);
 
-      results.push({ id, label, run, ok: !rejected, summary, inputs: state.inputs, shots, occlusions, rejectionErrors });
+      results.push({ id, label, run, ok: !rejected, summary, inputs: state.inputs, shots, issues, rejectionErrors });
       console.log(
         (rejected ? `REJECTED (validation: ${rejectionErrors.join(' · ').slice(0, 200)})` : 'OK') +
-          (occlusions.length ? `  ⚠ ${occlusions.length} occlusion(s)` : ''),
+          (issues.length ? `  ⚠ ${issues.length} readability issue(s)` : ''),
       );
     } catch (e) {
-      results.push({ id, label, run, ok: false, summary: String(e.message || e), inputs: [], shots: [], occlusions: [], rejectionErrors: [] });
+      results.push({ id, label, run, ok: false, summary: String(e.message || e), inputs: [], shots: [], issues: [], rejectionErrors: [] });
       console.log('FAILED: ' + (e.message || e));
     }
   }
@@ -297,9 +269,9 @@ const rows = results
       .map((s, i) => `<figure><img src="${s}" loading="lazy"><figcaption>${Math.round(SHOT_FRACTIONS[i] * 100)}%</figcaption></figure>`)
       .join('');
     return `
-  <section class="${r.ok && !r.occlusions.length ? 'ok' : 'bad'}">
+  <section class="${r.ok && !r.issues.length ? 'ok' : 'bad'}">
     <h2>${r.label}${r.run > 1 || r.id.includes('-r') ? ` · run ${r.run}` : ''} <em>${r.ok ? '✓' : '✗'}</em></h2>
-    ${r.occlusions.length ? `<p class="warn">⚠ ${r.occlusions.join(' · ')}</p>` : ''}
+    ${r.issues.length ? `<p class="warn">⚠ ${r.issues.join(' · ')}</p>` : ''}
     ${(r.rejectionErrors ?? []).length ? `<p class="warn">✗ validation: ${r.rejectionErrors.join(' · ')}</p>` : ''}
     <div class="strip">${strip}</div>
     <p>${r.summary}</p>
@@ -319,10 +291,10 @@ writeFileSync(
   img{height:150px;display:block;border-radius:4px}
   p{margin:8px 0 0;color:#8b95a5;font-size:13px} p.warn{color:#ffb35c} .meta a{color:#6ea8ff}
 </style>
-<h1>Video AI bench — ${results.filter((r) => r.ok && !r.occlusions.length).length}/${results.length} clean</h1>
+<h1>Video AI bench — ${results.filter((r) => r.ok && !r.issues.length).length}/${results.length} clean</h1>
 ${rows}`,
 );
 
 await browser.close();
-const clean = results.filter((r) => r.ok && !r.occlusions.length).length;
+const clean = results.filter((r) => r.ok && !r.issues.length).length;
 console.log(`\nDone: ${clean}/${results.length} clean → ${OUT}/review.html`);

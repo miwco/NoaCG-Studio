@@ -7,6 +7,7 @@
 import type { ValidationIssue } from '../../validation/validateTemplate';
 import type { AssetFile } from '../../model/types';
 import { describeAssets, type VideoCompSettings, type VideoValidationResult } from '../types';
+import { quoteMatch } from '../compile';
 import type { HyperframesBridge } from './bridge';
 import { HF_VARIABLE_TYPES, parseHyperframesComposition } from './parse';
 
@@ -76,7 +77,7 @@ export function staticValidateHyperframes(html: string, assets: AssetFile[], set
   if (/<script[^>]*\bsrc\s*=/i.test(html)) {
     issues.push({
       rule: 'external-script',
-      message: 'External <script src> tags are not allowed - gsap is provided as a global; write all code in inline <script> blocks.',
+      message: `External <script src> tags are not allowed - gsap is provided as a global; write all code in inline <script> blocks.${quoteMatch(html, /<script[^>]*\bsrc\s*=/i)}`,
     });
   }
   if (/<(video|audio)\b/i.test(html)) {
@@ -88,13 +89,16 @@ export function staticValidateHyperframes(html: string, assets: AssetFile[], set
   if (/https?:\/\//.test(html)) {
     issues.push({
       rule: 'network-url',
-      message: 'http(s):// URLs are not allowed - reference uploaded assets as asset:<name>; everything must work offline.',
+      message: `http(s):// URLs are not allowed - reference uploaded assets as asset:<name>; everything must work offline.${quoteMatch(html, /https?:\/\//)}`,
     });
   }
 
   for (const f of FORBIDDEN) {
     if (f.re.test(html)) {
-      issues.push({ rule: 'forbidden-api', message: `${f.what} is not allowed - ${f.instead}.` });
+      issues.push({
+        rule: 'forbidden-api',
+        message: `${f.what} is not allowed - ${f.instead}.${quoteMatch(html, f.re)}`,
+      });
     }
   }
 

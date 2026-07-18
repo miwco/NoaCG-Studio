@@ -6,6 +6,7 @@
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import { evalModule, type UserComponent } from './moduleEval';
+import { clipIssues } from './textChecks';
 import {
   PLAYER_CHANNEL,
   PLAYER_PROTOCOL_V,
@@ -166,22 +167,33 @@ export default function HostApp({ nonce }: Props) {
   }, [comp]);
 
   const handleProbe = useCallback(
-    async (id: number, frames: number[]) => {
+    async (id: number, frames: number[], checkFrames: number[] = []) => {
       if (probeBusyRef.current) return;
       probeBusyRef.current = true;
       try {
         const player = playerRef.current;
         const duration = durationRef.current;
+        const clamp = (f: number) => Math.max(0, Math.min(duration - 1, Math.round(f)));
+        const errorFrames = new Set(frames.map(clamp));
+        const readabilityFrames = new Set(checkFrames.map(clamp));
         const errors: { frame: number; message: string }[] = [];
+        const textIssues: { frame: number; kind: string; key: string; message: string }[] = [];
         player?.pause();
-        for (const f of frames) {
-          const frame = Math.max(0, Math.min(duration - 1, Math.round(f)));
+        // One seek per distinct frame, in order: error probing and the readability checks
+        // share the settle.
+        for (const frame of [...new Set([...errorFrames, ...readabilityFrames])].sort((a, b) => a - b)) {
           errorLogRef.current = [];
           player?.seekTo(frame);
           await settle();
-          for (const e of errorLogRef.current) errors.push({ frame, message: e.message });
+          if (errorFrames.has(frame)) {
+            for (const e of errorLogRef.current) errors.push({ frame, message: e.message });
+          }
+          // Skip the checks on a frame that just threw - the DOM is whatever survived.
+          if (readabilityFrames.has(frame) && errorLogRef.current.length === 0) {
+            for (const issue of clipIssues()) textIssues.push({ frame, ...issue });
+          }
         }
-        post({ type: 'probe-result', id, ok: errors.length === 0, errors });
+        post({ type: 'probe-result', id, ok: errors.length === 0, errors, textIssues });
       } finally {
         probeBusyRef.current = false;
       }
@@ -200,7 +212,7 @@ export default function HostApp({ nonce }: Props) {
           void handleLoad(msg);
           break;
         case 'probe':
-          void handleProbe(msg.id, msg.frames);
+          void handleProbe(msg.id, msg.frames, msg.checkFrames);
           break;
         case 'play':
           playerRef.current?.play();
