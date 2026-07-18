@@ -1,103 +1,84 @@
 # CLAUDE.md
 
 Guidance for AI agents working in this repo. Keep it accurate - update it when architecture or
-conventions change. This root file holds the product identity, the non-negotiables, and the
-working practices; **deep per-area contracts live in nested CLAUDE.md files** in `src/model`,
-`src/templates`, `src/store`, `src/blocks`, `src/ai`, `src/export`, `src/render`,
-`src/landing`, and `src/components` - they load automatically when you work on files there,
-and you should read the relevant one before editing that area from outside it.
+conventions change. This root file holds the product identity, the non-negotiables, and the working
+practices; **deep per-area contracts live in nested CLAUDE.md files** (directories marked * in the
+map below) - read the relevant one before editing that area from outside it.
+
+Be concise with all of your responses.
 
 ## What this is
 
 **NoaCG Studio** - an **AI-assisted, multi-platform** browser tool for creating modern, premium
 HTML broadcast graphics and exporting them to **many broadcast/streaming environments**
-("anything-goes export": SPX Graphics, CasparCG, OGraf, OBS/vMix overlays today; more over
-time). It's for organizations, TV channels, streamers, and universities, technical and
-non-technical users alike (it's also used in teaching, but the product is a production tool, not
-a code tutorial). Brand: dark control-room aesthetic, one amber "on-air" accent, restrained glow
-- full system in `NoaCG-Brand-Kit/BRAND-MANUAL.md`. **Business posture: free forever for the
-core; the only paid surface is hosted AI without a BYO key; the current goal is users/adoption,
-not revenue** (see `docs/GOALS.md`). The aim is to be **the best and most useful place to create
-broadcast graphics, and run them anywhere**.
-
-Binding project docs (read before generating or judging templates): **`docs/DESIGN_LANGUAGE.md`**
-(taste + motion + code-style rules) and **`docs/GOALS.md`** (north star + milestone checklist -
-keep it checked off as work lands).
+("anything-goes export": SPX Graphics, CasparCG, OGraf, OBS/vMix overlays today; more over time).
+For TV channels, streamers, organizations, and universities, technical and non-technical users
+alike - it's used in teaching, but it is a production tool, not a code tutorial. Brand: dark
+control-room, one amber "on-air" accent, restrained glow (`NoaCG-Brand-Kit/BRAND-MANUAL.md`).
+**Free forever for the core; the only paid surface is hosted AI without a BYO key; the current
+goal is users/adoption, not revenue.** Binding docs, read before generating or judging templates:
+**`docs/DESIGN_LANGUAGE.md`** (taste + motion + code style) and **`docs/GOALS.md`** (north star +
+milestones - keep it checked off as work lands).
 
 **The pillars (keep every change true to these):**
-- **Best & easiest to create** - the north star is premium output with the least friction; a
-  non-technical user can make a great graphic without ever touching code.
-- **AI-assisted** - AI and blocks help write the template; a pro stays in full control of the code.
-- **Export anywhere, SPX-canonical** - SPX is the canonical *internal* template format and the
-  strictest validation target; every other target is an export adapter off the same source, so
-  breadth is added without reworking the core. SPX compatibility stays rock-solid, but the
-  product is not "an SPX generator."
+- **Best & easiest to create** - premium output with the least friction; a non-technical user can
+  make a great graphic without ever touching code. **AI-assisted**, but a pro keeps full control.
+- **Export anywhere, SPX-canonical** - SPX is the canonical *internal* format and the strictest
+  validation target; every other target is an adapter off the same source. SPX compatibility stays
+  rock-solid, but the product is not "an SPX generator."
 - **Code is real & always available, view optional** - every visual/AI action writes real
-  HTML/CSS/JS you can open and edit; **nothing hides behind a visual-only scene model**. But the
-  code *view* is optional: no-code users keep it hidden, pros work in it directly.
-- **Clean, editable code** - generated code is clean and commented so a professional can read and
-  extend it.
-- **Reliable export** - an SPX package must always be valid and plug-and-play (see the
-  validation gate); the other targets hold the same bar.
+  HTML/CSS/JS; **nothing hides behind a visual-only scene model**. No-code users keep the view
+  hidden, pros work in it. Generated code is clean and commented; exports are always plug-and-play.
 
 ## Commands
 
 ```bash
 npm install
 npm run dev      # Vite dev server (landing at /, THE EDITOR AT /app)
-npm run build    # tsc && eslint && vite build -> dist/   <-- run this after changes; it's the CI gate
-npm run lint     # eslint . --max-warnings 0 (also part of build; config in eslint.config.js)
-npm run preview  # serve the production build
+npm run build    # tsc && eslint && vite build -> dist/   <-- run after changes; it's the CI gate
+npm run lint     # eslint . --max-warnings 0 (also part of build)
 ```
 
-**The dev port is per-checkout** (`scripts/dev-port.mjs`): 5174 in the main checkout (5175 for
-the live e2e suite), a stable path-derived port in a linked git worktree - so parallel worktrees
-never fight over one server. Vite (strictPort), both Playwright configs, and the dev scripts all
-derive the same number; `node scripts/dev-port.mjs` prints it. `.claude/launch.json` is
-GENERATED with that port by postinstall (gitignored - never hand-edit or commit it).
-`DEV_PORT=n` overrides everything if two worktrees ever hash to the same port.
+**The dev port is per-checkout** (`scripts/dev-port.mjs`, which prints it): 5174 in the main
+checkout (5175 for the live e2e suite), a stable path-derived port in a linked worktree - Vite,
+both Playwright configs, and the dev scripts derive the same number, so parallel worktrees never
+fight over one server. `.claude/launch.json` is GENERATED with that port by postinstall
+(gitignored - never hand-edit or commit it). `DEV_PORT=n` overrides everything.
 
-**Two pages (Vite MPA):** `index.html` is the static public landing at `/` (no React; carries a
-redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query).
-`app.html` is the editor at `/app` - dev/preview get the clean URL from the `app-clean-url`
-plugin in vite.config.ts; production gets it from Vercel `cleanUrls` (vercel.json). E2E specs
-navigate to `/app`.
+**Two pages (Vite MPA):** `index.html` is the static landing at `/` (no React; carries a redirect
+shim so old root `?chat=`/`?template=` share links land on `/app` with their query); `app.html` is
+the editor at `/app` (clean URL from the `app-clean-url` plugin in dev/preview, Vercel `cleanUrls`
+in production). E2E specs navigate to `/app`.
 
-There is **no unit-test suite**. Verify changes with `npm run build` plus in-browser checks (see
-Verifying, below). Never mark work done on a green build alone if behaviour is observable - check it.
+There is **no unit-test suite**. Verify with `npm run build` plus in-browser checks (below); never
+mark work done on a green build alone if the behaviour is observable.
 
 ## Non-negotiable principles (these override default behaviour)
 
 1. **Code is the single source of truth.** `SpxTemplate` (html/css/js + parsed definition) is
-   canonical. Visual/AI/block actions must emit *deterministic, readable code patches*, never a
-   hidden scene model. The editor always reflects exactly what was written.
+   canonical. Visual/AI/block actions emit *deterministic, readable code patches*, never a hidden
+   scene model; the editor always reflects exactly what was written.
 2. **Generated code must be clean, commented, and easy to edit.** Prefer simple, obvious code over
-   clever code - a professional should be able to read and extend it. Rich-but-commented CSS is the
-   house style.
+   clever code; rich-but-commented CSS is the house style.
 3. **Offline-first, no unnecessary dependencies.** GSAP is bundled locally
-   (`src/assets/gsap.min.js`); so is the Lottie player (`src/assets/lottie.min.js`,
-   lottie_light/MIT — injected into previews and exports ONLY when the template uses a
-   Lottie asset; detector in `src/assets/lottieSupport.ts`). Don't add runtime deps or
-   external/CDN references in generated templates. The exported package must be
-   plug-and-play (relative paths, bundled libraries).
+   (`src/assets/gsap.min.js`); so is the Lottie player (`src/assets/lottie.min.js`, lottie_light/
+   MIT - injected only when the template uses a Lottie asset; detector in `assets/lottieSupport.ts`).
+   No runtime deps or CDN references in generated templates; exports use relative paths only.
 4. **Validate before export.** `validation/validateTemplate.ts` is the gate; export is blocked on
    errors. Keep it authoritative - the platform owns SPX compatibility, not the AI.
-5. **Building blocks and AI are deterministic transforms** `(template) => template` that insert
-   clean code. No fragile free-form generation in the stub path.
+5. **Blocks and AI are deterministic transforms** `(template) => template` inserting clean code.
 
 ## SPX template format (the contract)
 
-Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from the real examples in
-`example_projects/`). Essentials:
+Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from `example_projects/`). Essentials:
 
 - A global `window.SPXGCTemplateDefinition = { ...settings, DataFields: [...] }` describes the
   operator's fields. Fields are `f0`, `f1`, … with an `ftype` (textfield, number, dropdown, …).
 - SPX calls global `play()`, `stop()`, `update(data)` (a **JSON string**), and `next(data)`.
-- **Field -> DOM convention (this project): each field `fN` maps to one element `id="fN"`.**
-  `update()` writes the value straight into it via `getElementById`. **No hidden `.spx-data`
-  holders, no `_gfx` display split** - that older "premium pack" style is documented but not what
-  we generate. An input-only value (e.g. a countdown duration) may live in a hidden `<div id="fN"
-  style="display:none">`.
+- **Field -> DOM convention (this project): each field `fN` maps to one element `id="fN"`**, which
+  `update()` writes into via `getElementById`. **No hidden `.spx-data` holders, no `_gfx` display
+  split** - that older "premium pack" style is documented but not what we generate. An input-only
+  value (e.g. a countdown duration) may live in a hidden `<div id="fN" style="display:none">`.
 
 ## Architecture map
 
@@ -105,265 +86,114 @@ Directories marked * have their own CLAUDE.md with the binding per-area contract
 
 ```
 src/
-  model/ *     data layer: SpxTemplate types, SPX definition parse/serialize, wizard catalog
-               data, fonts, brand, packets, easings, autosaved project, template import,
-               layout + prefs, structure.ts - the TemplatePart registry, THE shared
-               element-identity contract (timeline, canvas selection, and step assignment all
-               name elements through it) - and fieldModel.ts, THE shared editable-field
-               contract: an SPX DataField and a video input both become one FieldDescriptor,
-               so every surface that edits a field renders the same control
-  templates/ * the wizard catalog: shared assemblers (base/standard/clock) + 11 categories
-               (lower thirds, info cards, end credits, tickers, starting soon, game timers,
-               scoreboards, corner bug, infographics, versus cards, quiz); also the :root style contract,
-               the DOM-ready runtime rule, the field/image policy, and the easing doctrine
+  model/ *     SpxTemplate types, SPX parse/serialize, catalog data, fonts, brand, packets;
+               structure.ts (element identity) + fieldModel.ts (the FieldDescriptor contract)
+  templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
-               (plus a preview-only images/ -> data-URL shim, see src/templates/CLAUDE.md)
-  blocks/ *    deterministic template transforms: the block registry (the offline AI stub's
-               vocabulary), field editing, the Timeline v2 animation-data engine (animData
-               schema/serializer, animEdit mutators, animEval resolver, animImport legacy
-               converter, presetApply generators, presetRegistry = the preset library),
-               stepAssign (appears-on-press), and timelineModel - the READER for legacy regions
-               (Phase 8 deleted the patchers; nothing writes a legacy region any more)
-  ai/ *        the SPX GENERATION HARNESS: one small design-spec call routes each brief -
-               catalog-fit specs assemble DETERMINISTICALLY through the real wizard
-               assemblers (+ compositional design adjustments, + an optional bounded polish
-               patch with revert semantics); off-catalog briefs go to the free-form coder
-               (nearest catalog design as the canonical example) with a validated 2-round
-               repair loop. Callers inject the quality gate (validateTemplate + the runtime
-               bench); telemetry records cost/route/diversity per run; the stub serves
-               catalog-grade results offline. Value is PROVEN, not assumed - see
-               scripts/ai-compare.mjs and src/ai/CLAUDE.md
-  ai/video/    the VIDEO motion-design harness ("Video or animation with AI"): staged
-               generation - keyword-first skill detection (skills.ts; one cheap Haiku
-               call only when nothing matches) + design-DNA reference cards
-               (referenceCards.ts, keyword-picked, injected as inspiration not a template)
-               -> Motion Director (forced emit_motion_plan tool, a timed plan) -> the
-               ENGINE's coder -> bounded repair (2 rounds, exact validator errors with
-               frame numbers fed back). The skills are technique MENUS (commit to one
-               device), not recipes; each engine's contract lists the BUNDLED FONTS
-               (src/video/videoFonts.ts) the composition may use. Two engines share the
-               brief/plan/skills/assets/fonts stages: 'remotion' (default; forced
-               emit_remotion_module against prompts.ts) and 'hyperframes' (experimental;
-               forced emit_hyperframes_composition against hyperframesPrompts.ts - a
-               standalone HTML composition whose editable inputs are its own
-               data-composition-variables declarations). Each has a canonical example
-               that itself passes the pipeline. stubVideoProvider serves offline for
-               both (stubHyperframesSamples.ts); refinements send recent chat + the
-               current source and ask for minimal change
-  video/       the composition pipeline for the video project kind: compile.ts (sucrase
-               TSX->CJS + static contract checks: imports limited to react/remotion,
-               deterministic frame-derived animation, no network/DOM), validate.ts
-               (compile -> static -> live player probe of frames 0/mid/last, plus the
-               readability pass at two HOLD frames: a finding reported at BOTH becomes a
-               'text-clip' / 'text-safe-area' error the repair loop fights, then a warning
-               if it survives),
-               textChecks.js - the RUNTIME READABILITY checks (text clipped by the frame or
-               an overflow-hidden ancestor; text crowding the frame edge below the 5%
-               title-safe margin; text painted behind the graphics), authored as
-               plain JS because it must be INLINED into two opaque-origin runtimes that
-               cannot import from the app (the player host at build time, the HyperFrames
-               document at compose time) and is also called by scripts/video-bench.mjs -
-               one implementation, every surface; readability.ts (which frames to check and
-               the persist-across-frames rule, shared by both engines' validators),
-               playerBridge.ts (the postMessage client for the sandboxed player host;
-               SERIALIZED load/probe, disposed bridges resolve immediately),
-               bridgeRegistry.ts (holds whichever engine's bridge is mounted), types.ts
-               (asset logical names - the `assets` prop contract), videoFonts.ts - the
-               SINGLE SOURCE of the bundled broadcast fonts (the same OFL faces
-               model/fonts.ts ships), built into DATA-URL @font-face and injected
-               identically into every surface so preview == render: the Remotion preview
-               (build-player-host.mjs inlines it - the opaque-origin iframe can't fetch
-               fonts), the Remotion render (scripts/gen-video-font-css.mjs ->
-               render-worker, behind a delayRender gate), and both HyperFrames modes
-               (hyperframes/fontCss.ts fetches them once and compose.ts inlines them) -
-               and hyperframes/ - the 'hyperframes' engine runtime: parse.ts (composition
-               + variables -> VideoInputs; the code declares what is editable), driver.ts
-               (the injected in-page seek driver: clip windows + the ONE paused GSAP
-               timeline at window.__timelines[id]; preview postMessage protocol + the
-               render face __noacgHfRender), compose.ts (source -> self-contained
-               document: bundled GSAP + fonts inlined, asset:<name> -> data URLs, mode
-               preview|render), bridge.ts (the srcdoc preview client), validate.ts
-               (static contract checks with teaching messages + live probe)
-  validation/  validateTemplate.ts - runs before export and on AI output - and
-               runtimeBench.ts: the live-iframe bench (lifecycle, field binding, overlap/
-               overflow, doubled-text stress, house editability) the app injects into every
-               AI generation; e2e/bench.spec.ts keeps the whole catalog passing its own bench
-  control/     the modular control-panel engine: controlModel.ts (fields -> shared FieldDescriptors
-               by ftype, ONE generator, no per-template code; controlChannelName +
-               ControlMessage protocol), controlPanelHtml.ts (the standalone controlpanel.html:
-               the SAME descriptors rendered in dependency-free vanilla JS), receiverScript.ts
-               (BroadcastChannel listener injected into exported index.html), liveData.ts
-               (editable published-CSV -> update() polling block appended to template.js)
-  export/ *    the export registry - 6 targets (SPX starter, HTML overlay for OBS/vMix, H2R,
-               CasparCG, OGraf, LiveOS) + whole-packet export + packaging conventions
-  render/ *    video/image rendering contracts: the versioned RenderManifest, the
-               duration/HOLD schedule model, tier limits (ALL configurable numbers live
-               there), the virtual-clock runtime (__noacgRender - every frame a pure
-               function of the manifest), the render-document composer, and the UI-side
-               client + job store. The service is api/render/*; the renderer is
-               render-worker/. Feature-gated by VITE_RENDER_API; architecture + ops in
-               docs/RENDER.md
-  landing/ *   the landing page's GSAP motion system. POLICY: the landing never fakes product
-               UI - on-air output and real screenshots only; roadmap features are tagged
-               planned/coming, never shown as shipped
-  teach/       knowledge.ts + explain.ts + cssReference.ts - surfaced as Monaco HOVER tooltips
-               in the editor (registered in CodeEditor.tsx; an aid, not the point - there is no
-               Learn tab)
-  assets/      gsap.min.js (bundled) + assetUtils.ts (data-URL assets)
+  blocks/ *    deterministic transforms: block registry, field editing, the Timeline v2 engine
+  ai/ *        the SPX GENERATION HARNESS: catalog-fit briefs assemble deterministically through
+               the wizard assemblers; off-catalog briefs go to the coder + a 2-round repair loop
+  ai/video/    the VIDEO motion harness: skills + reference cards -> Motion Director -> the
+               engine's coder -> bounded repair; engines 'remotion' and 'hyperframes'
+  video/       the video pipeline: compile.ts, validate.ts (static + live probe + readability at
+               two HOLD frames), textChecks.js (plain JS - it is INLINED into two opaque-origin
+               runtimes), videoFonts.ts (SINGLE SOURCE of fonts, so preview == render), hyperframes/
+  validation/  validateTemplate.ts (export + AI gate) + runtimeBench.ts (the live-iframe bench)
+  control/     the control-panel engine off shared FieldDescriptors (ONE generator)
+  export/ *    the export registry - 6 targets + whole-packet export + packaging conventions
+  render/ *    RenderManifest, HOLD schedule, tier limits, virtual clock, job store; docs/RENDER.md
+  landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
   backend/     the OPTIONAL Supabase backend: config.ts isBackendConfigured is the ONE
-               feature-detection point (unset env = pure offline mode); supabase.ts (lazy
-               client), auth.ts (Google OAuth + email/password + subscribeAuth),
-               storage/supabaseProvider/sync/syncController (LWW cloud sync of
-               packets/looks/brand for signed-in users), assets.ts (Storage bucket)
-  community/   shared templates: communityData.ts (RPCs, signed-in only), gate.ts (validate +
-               bench at publish AND import), useIsModerator.ts
-  showchat/    audience send-in: SendIn page (?chat=<slug>), ModerationPanel, chatGraphicBlock
-               (polling graphic block), chatData.ts
-  components/ * the React app: AppShell (code | preview+Inspector row over full-width
-               panels; a new selection auto-opens the Inspector), CodeEditor (Monaco),
-               canvas direct manipulation + selection + position keyframing, PlayoutSimulator, the timeline dock
-               (StepTimeline for data-block templates - i.e. everything the wizard makes;
-               LegacyTimeline, read-only, for a saved region the importer refuses),
-               Inspector (properties + keyframes + Animations), the five-tab SidePanel
-               (Data / Control / Style / AI / Export - Motion lives on the timeline), wizard/,
-               auth/, and video/ - the PARALLEL editor shell for the AI video project
-               kind (VideoAppShell: TSX Monaco + the sandboxed Remotion Player preview +
-               Chat/Settings/Assets/Export; App.tsx switches shells on docKindStore)
-public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports;
-               jetbrains-mono.woff2 doubles as the app UI's mono face)
-scripts/       dev-port.mjs (per-checkout port), l3-sweep.mjs (catalog sweep - see Verifying),
-               ai-compare.mjs (the harness value proof: same brief, four arms, neutral
-               scoring + cost/diversity - the standing decision rule for harness stages) and
-               ai-bench.mjs (single-arm brief bank + review gallery; both SPEND TOKENS),
-               renderDevPlugin.mjs (mounts api/render on the dev server), render-smoke.mjs +
-               render-smoke-video.mjs (the video project's Content -> render round trip,
-               checked in pixels) + make-render-manifest.mjs (render verification - see
-               docs/RENDER.md),
-               hooks/ (Claude Code guard hooks wired in .claude/settings.json: commit-message
-               style, protected generated files, per-file lint on edit, dev-server policy,
-               e2e port preflight, session-start worktree sanity check + port orientation)
-docs/          GOALS.md (north star + milestones), DESIGN_LANGUAGE.md (taste rulebook),
-               SPX_TEMPLATE_FORMAT.md (SPX contract), RENDER.md (video/image rendering)
-api/           the render service's Vercel functions (start/status/cancel/complete/cleanup +
-               the local-output file route) with the JobStore + RenderExecutor seams in
-               api/_lib; typechecked by tsconfig.api.json inside the build gate
-render-worker/ the Remotion renderer - its own exact-pinned package so the dependency (and
-               its non-OSI license) never enters the AGPL app bundle
-player-host/   the Remotion Player host for the video editor's live preview - its own
-               exact-pinned package (same isolation posture as render-worker), built by
-               scripts/build-player-host.mjs into public/player-host/ as ONE
-               self-contained HTML page (inlined JS - module script fetches are
-               CORS-blocked from the sandbox's opaque origin). Loaded in an iframe with
-               sandbox="allow-scripts" ONLY (never add allow-same-origin: the opaque
-               origin keeps AI/user composition code away from localStorage and the
-               session); the app talks to it purely via postMessage with a per-session
-               nonce (protocol spec: player-host/src/protocol.ts, mirrored by
-               src/video/playerBridge.ts); the build also INLINES src/video/textChecks.js
-               (the runtime readability checks) into the page, the same way it inlines the
-               fonts - the iframe has no origin to fetch either from
+               feature-detection point (unset env = pure offline mode); auth, sync, assets
+  community/   shared templates (signed-in only), validated + benched at publish AND import;
+               showchat/ is audience send-in (SendIn page, ModerationPanel, chatGraphicBlock)
+  components/ * the React app: AppShell, CodeEditor, canvas, timeline dock, Inspector, the
+               five-tab SidePanel, wizard/, auth/, and video/ (the PARALLEL video shell)
+public/fonts/  the 7 bundled woff2 fonts (served at /fonts, copied into exports); src/assets/ has
+               the bundled gsap.min.js + data-URL asset helpers, src/teach/ the Monaco tooltips
+scripts/       dev-port.mjs, l3-sweep.mjs, ai-compare.mjs + ai-bench.mjs (both SPEND TOKENS),
+               render-smoke*.mjs, hooks/ (guard hooks wired in .claude/settings.json)
+api/           the render service's Vercel functions; typechecked by tsconfig.api.json
+render-worker/ the Remotion renderer and player-host/ the preview host - own exact-pinned packages
+player-host/   so the non-OSI license never enters the AGPL bundle. The player host is built into
+               public/player-host/ as ONE self-contained page (JS, fonts, textChecks.js inlined -
+               the opaque origin can fetch nothing), loaded with sandbox="allow-scripts" ONLY
+               (never add allow-same-origin), postMessage with a per-session nonce
 ```
 
 ### Auth posture (the open editor)
 
-**There is no login wall, ever.** The editor - create, preview, export, local packets - is open
-to everyone, hosted or self-hosted. Only *account features* gate themselves: cloud sync,
-community, show chat, and AI (hosted mode). Offline builds (no Supabase env) must grow **zero**
-auth UI (E2E-pinned in `e2e/auth.spec.ts`). Don't reintroduce an app-wide gate. The
-`needsSignIn`/`SignInPrompt` gating pattern and the open-signup migration note live in
-src/components/CLAUDE.md.
+**There is no login wall, ever.** The editor - create, preview, export, local packets - is open to
+everyone, hosted or self-hosted. Only *account features* gate themselves: cloud sync, community,
+show chat, and AI (hosted mode). Offline builds (no Supabase env) must grow **zero** auth UI
+(E2E-pinned in `e2e/auth.spec.ts`). Don't reintroduce an app-wide gate; the `needsSignIn`/
+`SignInPrompt` pattern lives in src/components/CLAUDE.md.
 
 ### The choose-first creation flow (primary UX)
 
 New projects go through the **CreationWizard** (Entry -> Category -> Template -> Fields -> Style
--> Animation, persistent live preview); `variant.create(options)` generates the complete,
-commented template. Four entry cards: templates, **"Create with AI"** (the merged
-describe/import step - a brief plus optional images and/or an existing .html/.zip; every AI
-result runs the harness with the runtime bench injected, and the byte-faithful no-AI "Open as
-code" import stays one click away, never gated on sign-in), **"Video or animation with AI"**
-(creates the parallel VIDEO project kind, fixed duration, with a GENERATION-ENGINE choice at
-create: Remotion (React, the default) or HyperFrames (HTML/CSS/JS + GSAP, experimental) - see
-src/ai/video, src/video, and components/video in the map above; creating/opening a video flips
-the persisted doc-kind switch and every SPX create path flips it back), and blank. After creation, code is the source of truth and two **live panels** keep
-working via deterministic patches: the **Style panel** writes the `:root` style contract
-(src/templates/CLAUDE.md) and **the step timeline under the preview** touches ONLY the marked
-ANIMATION region (src/blocks/CLAUDE.md) - user code outside the markers is never modified. The
-timeline dock picks its surface from the CODE, never from the category, which is what keeps a
-template saved before the migration working. The wizard applies
-with `resetSampleData: true` so a new project starts from its own field defaults
-(src/store/CLAUDE.md).
+-> Animation, persistent live preview); `variant.create(options)` generates the complete, commented
+template, applied with `resetSampleData: true` so a project starts from its own field defaults.
+Four entry cards: templates, **"Create with AI"** (a brief plus optional images and/or an existing
+.html/.zip - every AI result runs the harness with the runtime bench injected, and the no-AI "Open
+as code" import stays one click away, never gated on sign-in), **"Video or animation with AI"**
+(the parallel VIDEO project kind, engine chosen at create - creating/opening a video flips the
+persisted doc-kind switch and every SPX create path flips it back), and blank. After creation, code
+is the source of truth and two **live panels** keep working via deterministic patches: the **Style
+panel** writes the `:root` style contract and **the step timeline** touches ONLY the marked
+ANIMATION region - user code outside the markers is never modified. The timeline dock picks its
+surface from the CODE, never the category, which keeps pre-migration templates working.
 
 ## Verifying changes
 
-Always `npm run build` (typecheck + lint + build) after changes. The tree stays lint-clean:
-fix findings properly rather than sprinkling eslint-disable comments.
+Always `npm run build` (typecheck + lint + build) after changes. The tree stays lint-clean: fix
+findings properly rather than sprinkling eslint-disable comments.
 
-- **UI flows -> use Playwright.** Verify user-facing flows with the E2E suite in `e2e/` (specs
-  drive the real dev server). Run `npm run test:e2e`. Add a spec for any new user-facing flow
-  (gallery, blocks, undo, guides, branding, export, …). For the inner loop,
-  `npm run test:e2e:affected` maps your changed files to the specs that cover them
-  (curated map in `scripts/e2e-affected.mjs`; core changes fall back to the full suite) -
-  the FULL suite remains the merge gate. In specs, never sleep out the preview debounce:
-  use `awaitPreviewRebuild` from `e2e/_preview.ts` (it watches the iframe's `data-doc-rev`
-  stamp), and bootstrap non-wizard specs with `createProject` from `e2e/_create.ts` instead
-  of walking the wizard UI.
+- **UI flows -> Playwright.** Verify user-facing flows with the E2E suite in `e2e/` (specs drive the
+  real dev server): `npm run test:e2e`, and add a spec for any new flow. For the inner loop,
+  `npm run test:e2e:affected` maps changed files to covering specs (`scripts/e2e-affected.mjs`) -
+  the FULL suite is the merge gate. Bootstrap non-wizard specs with `createProject` (`e2e/_create.ts`).
 - **Logic checks without UI (fast path):** Vite serves source modules, so in a browser context you
   can `await import('/src/blocks/registry.ts?t=' + Date.now())`, apply blocks to
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
-  iframe to call `update()/play()/stop()`. Good for blocks, templates, validation, and export logic.
-- **Store/state checks:** `import('/src/store/templateStore.ts')` then `useTemplateStore.getState()`.
+  iframe to call `update()/play()/stop()`; store state via `useTemplateStore.getState()`.
 - **Template catalog sweep:** `node scripts/l3-sweep.mjs <shots-dir> <category>` (dev server must
-  be running; category = `lower-third` | `info-card` | `end-credits` | `ticker`) - validates every
-  variant × preset × easing (runtime, steps, auto-fit, credits/ticker track checks) and captures
-  settled-state taste screenshots. Run it for the affected category after template changes.
+  be running; `lower-third` | `info-card` | `end-credits` | `ticker`) - validates every variant ×
+  preset × easing. Run it for the affected category after template changes.
 
 **Gotchas:**
-- After many edits the Vite dev server can serve a **stale module** (HMR lag) - restart it if a
-  change isn't reflected.
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
   matching `<meta name="color-scheme" content="dark">` into the preview srcdoc. **Keep them
-  paired** - Chromium paints an iframe opaque (white stage) when embedder and iframe schemes
-  disagree. Exported packages get neither.
-- The e2e suite pins **offline mode** via `webServer.env` in playwright.config.ts, but
-  `reuseExistingServer: true` means a dev server already running on THIS checkout's port
-  (started by hand, with the real `.env`) gets reused - backend-sensitive specs then fail
-  confusingly. Kill any manual server on this checkout's port (`node scripts/dev-port.mjs`
-  prints it) before `npm run test:e2e`. Other worktrees' servers are harmless - they live on
-  their own ports.
-- Worse: after HMR updates, `import('/src/store/…')` in an eval/console context can resolve a
-  **different module instance** than the running app (a "ghost store" - your clicks patch the real
-  store while your assertions read the stale one). If state reads disagree with visible UI,
-  **restart the dev server and reload** before trusting any eval-based assertion.
-- Monaco isn't fully interactive in a headless preview and GSAP animations don't visibly tick (rAF);
-  assert on DOM/state, not screenshots, for those.
-- In Playwright specs, **never clear localStorage via `addInitScript`** - the script also runs in
-  the same-origin srcdoc preview iframe, so every preview rebuild wipes the key (this silently
-  deleted the project brand). Fresh browser contexts already isolate storage per test.
-- The preview rebuilds on a ~350 ms debounce after `applyTemplate` - Playwright specs must wait
-  for it before clicking Play or asserting inside the iframe, or they hit the previous document.
-  Use `awaitPreviewRebuild` (e2e/_preview.ts) - it waits for PreviewFrame's `data-doc-rev` stamp
-  to advance. Call it AROUND the action (`awaitPreviewRebuild(page, () => …)`) when anything slow
-  sits between the action and the wait; the bare post-action form is only safe immediately after
-  the mutating action (within the debounce window).
+  paired** - Chromium paints an iframe opaque (white stage) when the schemes disagree.
+- The e2e suite pins **offline mode** via `webServer.env`, but `reuseExistingServer: true` means a
+  dev server already running on THIS checkout's port (started by hand, with the real `.env`) gets
+  reused - backend-sensitive specs then fail confusingly. Kill any manual server on this
+  checkout's port first. Other worktrees' servers are harmless.
+- The dev server can serve a **stale module** after many edits (HMR lag) - restart it. Worse,
+  `import('/src/store/…')` in an eval context can then resolve a **different module instance** than
+  the running app (a "ghost store"): if state reads disagree with visible UI, restart and reload
+  before trusting the assertion. Monaco also isn't fully interactive headless and GSAP doesn't
+  visibly tick (rAF) - assert on DOM/state there.
+- In Playwright specs, **never clear localStorage via `addInitScript`** - it also runs in the
+  same-origin srcdoc preview iframe, so every rebuild wipes the key (this silently deleted the
+  project brand). Fresh browser contexts already isolate storage per test.
+- The preview rebuilds on a ~350 ms debounce after `applyTemplate` - never sleep it out. Use
+  `awaitPreviewRebuild` (`e2e/_preview.ts`) before clicking Play or asserting inside the iframe,
+  wrapping the action when anything slow sits between action and wait.
 
 ## Git
 
-- Most work happens on a **feature branch**, usually in a git worktree - several are typically active
-  at once. If a session starts on `main` with work to do, branch first.
-- The working rhythm in this repo: **commit each completed, verified phase/step** to the FEATURE
-  BRANCH with a descriptive message. **Never add a `Co-Authored-By` trailer or any agent co-author**
-  (the user's global rule).
+- Most work happens on a **feature branch**, usually in a worktree - several are typically active
+  at once. If a session starts on `main` with work to do, branch first. The rhythm: **commit each
+  completed, verified phase/step** to the FEATURE BRANCH with a descriptive message. **Never add a
+  `Co-Authored-By` trailer or any agent co-author.** Don't commit `dist/` in feature work.
 - **`main` is only ever touched when the user asks for it, in that message - from ANY checkout.**
   Nothing lands on your own initiative: no commit made while sitting on `main`, no `git merge` into
   main, no `git push origin main`, no `safe-merge`. Being in the primary checkout on `main` is not
-  permission to land - the user decides when work lands, and decides it *after* they know the change
-  is safe. Commit verified work to the feature branch, report what you did and what you verified, and
-  STOP. (This supersedes the older "push to main without asking" note - that was about not re-asking
-  before a push, not license to initiate a landing.)
-- **Commit messages:** write clear, human-readable messages that explain the actual change - they
-  must be understandable to any outside developer reading the history cold. No chat/session
-  language, internal planning names, or AI-sounding phrases ("as requested", "starting era 5",
-  "continued work", "made changes", "AI update", "per your instructions"). Never mention Claude,
-  Codex, ChatGPT, agents, prompts, or the conversation unless the commit is specifically about AI
-  tooling.
-- Don't commit `dist/` changes as part of feature work.
+  permission to land - the user decides when work lands, *after* they know the change is safe.
+  Commit verified work to the feature branch, report what you did and verified, and STOP.
+- **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
+  outside developer reading the history cold. No chat/session language, internal planning names, or
+  AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,
+  agents, prompts, or the conversation unless the commit is specifically about AI tooling.
