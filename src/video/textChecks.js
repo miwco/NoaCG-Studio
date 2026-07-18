@@ -108,8 +108,17 @@
     return out;
   }
 
-  /** The painted extent of an element's OWN glyphs (its direct text nodes), ignoring
-   *  descendants - a Range measures what is actually drawn, box overflow included. */
+  /**
+   * The painted extent of an element's OWN glyphs (its direct text nodes), ignoring
+   * descendants - a Range measures what is actually drawn, box overflow included.
+   *
+   * CAVEAT that shapes both checks: a Range's HEIGHT is the font's full ascent/descent box
+   * (~1.4em for a typical face), not the ink. Text set at lineHeight 1.02 inside an
+   * overflow:hidden wrapper - the standard masked-reveal idiom, used throughout the house
+   * style - therefore reports ~27% of its "height" clipped while not one pixel of glyph is
+   * cut. Measured on the offline stub's own title sample. Width has no such slack: glyph
+   * advances are exactly what gets painted. Hence the rules below.
+   */
   function textExtent(el, doc) {
     var box = null;
     for (var i = 0; i < el.childNodes.length; i++) {
@@ -214,18 +223,17 @@
         bottom: Math.min(text.bottom, region.bottom),
       };
 
+      // WIDTH ONLY. The height axis cannot be judged from a Range: its slack is leading, not
+      // ink (see textExtent), so every masked reveal would be reported as cropped - which is
+      // exactly what happened to the offline stub's own title sample. Distinguishing
+      // "leading clipped" from "glyphs clipped" needs ink metrics the DOM does not give us,
+      // and a false positive costs the user repair rounds. A line cut in half vertically is
+      // therefore a KNOWN GAP, accepted deliberately; horizontal crops - the failure class
+      // that actually shipped ("KITCHEN" as "KITCH") - are measured exactly.
       var lostW = width(text) - width(visible);
-      var lostH = height(text) - height(visible);
-      var axis = null;
-      var pct = 0;
-      if (lostW > Math.max(CLIP_MIN_PX, CLIP_LOSS * width(text))) {
-        axis = 'width';
-        pct = Math.round((lostW / width(text)) * 100);
-      } else if (lostH > Math.max(CLIP_MIN_PX, CLIP_LOSS * height(text))) {
-        axis = 'height';
-        pct = Math.round((lostH / height(text)) * 100);
-      }
-      if (!axis) continue;
+      if (lostW <= Math.max(CLIP_MIN_PX, CLIP_LOSS * width(text))) continue;
+      var axis = 'width';
+      var pct = Math.round((lostW / width(text)) * 100);
 
       // Name the culprit so the repair round has somewhere to go: the innermost clipper, or
       // the frame when nothing else took the bite.
@@ -266,11 +274,20 @@
       var fh = height(frame);
       if (fw <= 0 || fh <= 0) continue;
 
+      // Trim the Range's leading overhang before measuring the VERTICAL margins: the font's
+      // ascent/descent box can stand ~0.2em proud of the element's own line box at each end,
+      // which would report a comfortable top/bottom margin as a violation. The element's own
+      // box is the honest bound for that axis. Horizontal needs no such correction - and must
+      // not get one, or text overflowing its box (the clipped-headline case) would be hidden.
+      var ownBox = el.getBoundingClientRect();
+      var top = Math.max(text.top, Math.min(ownBox.top, text.bottom));
+      var bottom = Math.min(text.bottom, Math.max(ownBox.bottom, text.top));
+
       var margins = [
         { side: 'left', v: (text.left - frame.left) / fw },
         { side: 'right', v: (frame.right - text.right) / fw },
-        { side: 'top', v: (text.top - frame.top) / fh },
-        { side: 'bottom', v: (frame.bottom - text.bottom) / fh },
+        { side: 'top', v: (top - frame.top) / fh },
+        { side: 'bottom', v: (frame.bottom - bottom) / fh },
       ];
       var worst = margins[0];
       for (var m = 1; m < margins.length; m++) if (margins[m].v < worst.v) worst = margins[m];

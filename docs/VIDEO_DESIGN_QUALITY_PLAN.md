@@ -274,7 +274,16 @@ All three landed; §6.1 records the decisions worth knowing.
 
 ### 6.1 Decisions behind the clip check
 
-- **Thresholds**: 12% of the text's own width/height, with an 8px floor. "WORLD REPORT" ->
+- **WIDTH ONLY, and this is load-bearing.** A Range's height is the font's full
+  ascent/descent box (~1.4em), not the ink. Text set at a tight line-height inside an
+  overflow:hidden wrapper - the masked-reveal idiom the house style uses everywhere -
+  therefore measures ~27% of its "height" clipped with not one glyph cut. That is not a
+  hypothetical: it rejected the OFFLINE STUB's own title sample, and the full e2e suite
+  caught it during the merge, after the 14-generation bench had passed clean. Telling
+  leading from ink needs metrics the DOM does not expose, and a false positive costs repair
+  rounds, so a line cut in half vertically is a KNOWN, DELIBERATE GAP. Glyph advances carry
+  no such slack, so horizontal crops - the class that actually shipped - measure exactly.
+- **Thresholds**: 12% of the text's own width, with an 8px floor. "WORLD REPORT" ->
   "WORLD REP" loses ~17% and "KITCHEN" -> "KITCH" ~28%, so both trip it; a trailing space or
   an antialiasing bleed cannot. Losing one glyph off a long headline is deliberately BELOW
   the line - a false positive costs a discarded composition, a false negative costs a bench
@@ -337,10 +346,14 @@ check enabled: exactly one composition flags, at both hold frames, and the other
 silent. Same persistence rule and the same soft demotion as clipping - text still sliding in
 from off-frame is an entrance, not a defect.
 
-Two things this surfaced worth remembering: eyeballing a frame strip mis-ranked WHICH awards
-run was the tight one (11.3% vs 3.0%), which is the argument for measuring; and the safe-area
+Three things this surfaced worth remembering: eyeballing a frame strip mis-ranked WHICH awards
+run was the tight one (11.3% vs 3.0%), which is the argument for measuring; the safe-area
 check must exclude elements the clip check already reported, reading its UNCAPPED findings -
-against the capped list, a badly broken composition reported the same element twice.
+against the capped list, a badly broken composition reported the same element twice; and the
+VERTICAL margins must first trim the Range's leading overhang to the element's own box, or
+the same ascent/descent slack that broke the height axis (§6.1) would report a comfortable
+top/bottom margin as a violation. The horizontal margins take no such correction - it would
+hide text overflowing its box, which is the clipped-headline case.
 
 **The tool that made this cheap:** `scripts/probe-composition.mjs` replays a SAVED module
 through the real player host and prints the findings, spending nothing. Run the bench once,
