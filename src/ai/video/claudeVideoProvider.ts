@@ -324,7 +324,7 @@ async function generateValidated(
  *  the rounds are spent - the SPX harness's doctrine for its editability findings. A clipped
  *  headline is a real defect and worth two rewrites; a false positive that survives them
  *  should ship with a warning, not silently discard a composition the user waited for. */
-const SOFT_RULES = new Set(['text-clip']);
+const SOFT_RULES = new Set(['text-clip', 'text-safe-area']);
 
 function demoteSoftFindings<T extends Awaited<ReturnType<VideoValidator>>>(validation: T): T {
   if (validation.ok || validation.errors.some((e) => !SOFT_RULES.has(e.rule))) return validation;

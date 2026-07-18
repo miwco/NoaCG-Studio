@@ -23,13 +23,24 @@ export function holdFrames(durationInFrames: number): number[] {
  * the second one; a genuinely cropped headline is cut at both. This is the main defence
  * against burning a repair round on a false positive.
  */
-export function persistentTextIssues(issues: ProbeTextIssue[], frames: number[]): string[] {
+export function persistentTextIssues(
+  issues: ProbeTextIssue[],
+  frames: number[],
+): { rule: string; message: string }[] {
   if (frames.length === 0 || issues.length === 0) return [];
-  const seen = new Map<string, { frames: Set<number>; message: string }>();
+  const seen = new Map<string, { frames: Set<number>; kind: string; message: string }>();
   for (const i of issues) {
-    const entry = seen.get(i.key) ?? { frames: new Set<number>(), message: i.message };
+    const entry = seen.get(i.key) ?? { frames: new Set<number>(), kind: i.kind, message: i.message };
     entry.frames.add(i.frame);
     seen.set(i.key, entry);
   }
-  return [...seen.values()].filter((e) => e.frames.size >= frames.length).map((e) => e.message);
+  return [...seen.values()]
+    .filter((e) => e.frames.size >= frames.length)
+    .map((e) => ({ rule: ruleFor(e.kind), message: e.message }));
+}
+
+/** The validator rule each runtime finding reports under. Both are SOFT (see the provider's
+ *  SOFT_RULES): they drive repair rounds, but never throw finished work away on their own. */
+function ruleFor(kind: string): string {
+  return kind === 'safe-area' ? 'text-safe-area' : 'text-clip';
 }

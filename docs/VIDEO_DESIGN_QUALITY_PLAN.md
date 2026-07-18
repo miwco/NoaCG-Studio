@@ -321,10 +321,26 @@ All three landed; §6.1 records the decisions worth knowing.
   dial for exactly ONE sample mid-swap - a transition working as designed, reported as a
   defect by the any-sample rule. Occlusion now needs a MAJORITY of the hold samples; clipping
   still needs all of them.
-- **Still unaddressed: safe-area margins.** An awards reveal set its headline running nearly
-  frame-edge to frame-edge (~8% side margin). Nothing is cut, so the clip check is right to
-  stay quiet - but this is the second failure class §6 named, and it needs its own rule
-  (glyph extent vs a safe-area inset), not a wider clip threshold.
+### 6.3 Safe-area margins (DONE - the second failure class)
+
+Text that is not cut but has no margin reads as an accident on air, and is unsafe on any
+display that overscans. It needs its own rule, not a wider clip threshold: `safeArea()` in
+textChecks.js measures the glyph extent against the FRAME (the OUTERMOST clipping ancestor -
+the Player's container or the HyperFrames root; the clip check uses the INNERMOST, usually a
+card, because "who cut this?" and "how close to the edge?" are different questions).
+
+**The threshold was measured, not guessed.** Across the 14-generation corpus, every hero line
+that reads well sits at 11% from the edge or more; the one headline running genuinely
+edge-to-edge measured 3%. Nothing landed in between, so 5% (the broadcast title-safe
+convention) does not slice through a cluster of real designs. Re-probing the corpus with the
+check enabled: exactly one composition flags, at both hold frames, and the other 13 stay
+silent. Same persistence rule and the same soft demotion as clipping - text still sliding in
+from off-frame is an entrance, not a defect.
+
+Two things this surfaced worth remembering: eyeballing a frame strip mis-ranked WHICH awards
+run was the tight one (11.3% vs 3.0%), which is the argument for measuring; and the safe-area
+check must exclude elements the clip check already reported, reading its UNCAPPED findings -
+against the capped list, a badly broken composition reported the same element twice.
 
 **The tool that made this cheap:** `scripts/probe-composition.mjs` replays a SAVED module
 through the real player host and prints the findings, spending nothing. Run the bench once,

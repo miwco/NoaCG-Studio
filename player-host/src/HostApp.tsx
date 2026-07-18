@@ -21,7 +21,11 @@ import {
  *  the page was built without it, in which case the probe simply reports nothing. */
 declare global {
   interface Window {
-    __noacgTextChecks?: { clip: () => TextIssue[]; occlusion: () => TextIssue[] };
+    __noacgTextChecks?: {
+      clip: () => TextIssue[];
+      safeArea: () => TextIssue[];
+      occlusion: () => TextIssue[];
+    };
   }
 }
 
@@ -205,7 +209,8 @@ export default function HostApp({ nonce }: Props) {
           }
           // Skip the checks on a frame that just threw - the DOM is whatever survived.
           if (readabilityFrames.has(frame) && errorLogRef.current.length === 0) {
-            for (const issue of window.__noacgTextChecks?.clip() ?? []) {
+            const checks = window.__noacgTextChecks;
+            for (const issue of [...(checks?.clip() ?? []), ...(checks?.safeArea() ?? [])]) {
               textIssues.push({ frame, ...issue });
             }
           }

@@ -143,7 +143,7 @@ async function checkReadability(frame) {
         },
       ];
     }
-    return [...checks.occlusion(), ...checks.clip()];
+    return [...checks.occlusion(), ...checks.clip(), ...checks.safeArea()];
   });
 }
 
@@ -240,13 +240,14 @@ for (const example of selected) {
           seen.set(issue.key, entry);
         }
       }
-      // A CLIP must persist across EVERY sample (text still emerging from a mask at the
-      // first sample is an entrance, not a defect) — the same rule the injected validator
-      // applies. An OCCLUSION needs a MAJORITY: it can legitimately cover part of the hold,
+      // A CLIP or SAFE-AREA finding must persist across EVERY sample (text still emerging
+      // from a mask, or still sliding in from off-frame, is an entrance - not a defect) —
+      // the same rule the injected validator applies. An OCCLUSION needs a MAJORITY: it can
+      // legitimately cover part of the hold,
       // but a single sample is not enough. Measured, not guessed: a benched countdown put
       // its outgoing digit behind the dial for exactly one sample mid-swap — a transition
       // working as designed, reported as a defect under the old any-sample rule.
-      const minSamples = (kind) => (kind === 'clip' ? CHECK_FRACTIONS.length : 2);
+      const minSamples = (kind) => (kind === 'occlusion' ? 2 : CHECK_FRACTIONS.length);
       const issues = [...seen.values()]
         .filter((e) => e.fracs.length >= minSamples(e.kind))
         .map((e) => `@${e.fracs.map((f) => `${Math.round(f * 100)}%`).join(',')}: ${e.message}`);

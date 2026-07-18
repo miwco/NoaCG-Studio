@@ -56,6 +56,20 @@ const CLIPPED_TO_NOTHING = `
   };
 `;
 
+/** Nothing is cut - the headline simply runs to the frame edge with no margin, which reads
+ *  as an accident on air and is unsafe on any display that overscans. Measured across the
+ *  bench: every headline that reads well sat at 11%+ from the edge, this class at 3%. */
+const NO_SAFE_MARGIN = `
+  const React = require('react');
+  const R = require('remotion');
+  exports.default = function C() {
+    // Pinned 10px from a 1920px frame's left edge (0.5%), so the margin is a fact of the
+    // layout rather than a function of the font's metrics.
+    return React.createElement(R.AbsoluteFill, { style: { background: '#101318' } },
+      React.createElement('div', { style: { position: 'absolute', left: 10, top: '45%', color: '#fff', fontSize: 150, fontWeight: 900, whiteSpace: 'nowrap' } }, 'AURORA VANE'));
+  };
+`;
+
 /** The same headline, given room. Nothing to report - the false-positive guard. */
 const FITTED_TEXT = `
   const React = require('react');
@@ -191,4 +205,29 @@ test('the probe reports text clipped at the check frames - and stays quiet when 
   const blank = (await probeResults())[2];
   expect(blank.textIssues.length).toBeGreaterThan(0);
   expect(blank.textIssues[0].message).toContain('MERIDIAN');
+  // One finding per element: type that is CUT is reported as a clip, never also as a
+  // margin problem.
+  expect(blank.textIssues.every((i) => i.kind === 'clip')).toBe(true);
+});
+
+test('the probe reports text crowding the frame edge, even though nothing is cut', async ({ page }) => {
+  type ProbeResult = { textIssues: { frame: number; kind: string; message: string }[] };
+  const probeResults = async () => (await eventsOfType(page, 'probe-result')) as unknown as ProbeResult[];
+
+  await post(page, { type: 'load', id: 11, compiledJs: NO_SAFE_MARGIN, settings: SETTINGS, inputProps: {}, assets: [], autoplay: false });
+  await expect.poll(() => eventsOfType(page, 'loaded')).toHaveLength(1);
+  await post(page, { type: 'probe', id: 11, frames: [0, 45, 89], checkFrames: [45, 58] });
+  await expect.poll(async () => (await probeResults()).length).toBe(1);
+  const tight = (await probeResults())[0];
+  expect(tight.textIssues.map((i) => i.frame).sort()).toEqual([45, 58]);
+  expect(tight.textIssues.every((i) => i.kind === 'safe-area')).toBe(true);
+  expect(tight.textIssues[0].message).toContain('AURORA VANE');
+  expect(tight.textIssues[0].message).toContain('edge of the frame');
+
+  // A headline with room reports nothing - the same guard the clip check gets.
+  await post(page, { type: 'load', id: 12, compiledJs: FITTED_TEXT, settings: SETTINGS, inputProps: {}, assets: [], autoplay: false });
+  await expect.poll(() => eventsOfType(page, 'loaded')).toHaveLength(2);
+  await post(page, { type: 'probe', id: 12, frames: [0, 45, 89], checkFrames: [45, 58] });
+  await expect.poll(async () => (await probeResults()).length).toBe(2);
+  expect((await probeResults())[1].textIssues).toEqual([]);
 });

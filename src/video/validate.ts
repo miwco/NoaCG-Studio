@@ -59,9 +59,7 @@ export async function validateVideoModule(
     for (const e of probe.errors) {
       errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
     }
-    for (const issue of persistentTextIssues(probe.textIssues ?? [], holdFrames(d))) {
-      errors.push({ rule: 'text-clip', message: issue });
-    }
+    errors.push(...persistentTextIssues(probe.textIssues ?? [], holdFrames(d)));
     break;
   }
 

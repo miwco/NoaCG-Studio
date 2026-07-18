@@ -251,7 +251,7 @@ export const HF_DRIVER_JS = `(function () {
           }
           // Skip the checks on a frame that just threw - the DOM is whatever survived.
           if (checkFrames.indexOf(f) >= 0 && !threw && window.__noacgTextChecks) {
-            var found = window.__noacgTextChecks.clip();
+            var found = window.__noacgTextChecks.clip().concat(window.__noacgTextChecks.safeArea());
             for (var q = 0; q < found.length; q++) {
               textIssues.push({
                 frame: f,

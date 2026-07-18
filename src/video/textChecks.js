@@ -43,6 +43,15 @@
   /** …and an absolute floor, so a big headline losing a hairline never fires. */
   var CLIP_MIN_PX = 8;
 
+  /**
+   * SAFE AREA: how close readable text may come to the frame edge, as a fraction of the
+   * frame. 5% is the broadcast title-safe convention and, measured across a 14-generation
+   * bench, it separates cleanly: every hero line that reads well sits at 11% or more, while
+   * a headline running genuinely edge-to-edge measured 3%. Nothing landed in between, so the
+   * threshold is not slicing through a cluster of real designs.
+   */
+  var SAFE_AREA = 0.05;
+
   var CLIPS = /^(hidden|clip|scroll|auto)$/;
 
   function width(b) {
@@ -123,9 +132,17 @@
   }
 
   /** Clip a region down through the ancestor chain, per axis, remembering the clippers.
-   *  The frame itself (the viewport) is the outermost one. */
+   *  The frame itself (the viewport) is the outermost one.
+   *
+   *  Two different questions are answered from this walk, and they want different ancestors:
+   *  CLIPPING asks "who cut this text?" - the INNERMOST clipper, usually a card. SAFE AREA
+   *  asks "how close is it to the frame edge?" - the OUTERMOST clipper, which is the frame
+   *  itself (the Remotion Player's container, or the HyperFrames composition root). Measuring
+   *  the safe area against a card would be meaningless; measuring the cut against the frame
+   *  would miss every cropped card. */
   function clipRegion(el, win) {
     var region = { left: 0, top: 0, right: win.innerWidth, bottom: win.innerHeight };
+    var frame = { left: 0, top: 0, right: win.innerWidth, bottom: win.innerHeight };
     var clippers = [];
     for (var a = el.parentElement; a && a !== el.ownerDocument.documentElement; a = a.parentElement) {
       var cs = win.getComputedStyle(a);
@@ -145,8 +162,12 @@
         region.bottom = Math.min(region.bottom, r.bottom);
       }
       clippers.push(a);
+      // Last one wins: the walk ends at the outermost clipper, which is the frame.
+      if (r.width > 1 && r.height > 1) {
+        frame = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      }
     }
-    return { region: region, clippers: clippers };
+    return { region: region, clippers: clippers, frame: frame };
   }
 
   /** An element that clips its own overflow cuts its own text too (the fixed-width card). */
@@ -167,6 +188,13 @@
 
   /** Text whose glyphs are cut by the frame edge or by an overflow-clipping ancestor. */
   function clipIssues(doc, win) {
+    return computeClips(doc, win).slice(0, 5);
+  }
+
+  /** The UNCAPPED clip findings. The safe-area check needs the full set to exclude from -
+   *  reading the capped list let a badly broken composition report the same element as both
+   *  cut off AND crowding the edge, once the cap swallowed its clip finding. */
+  function computeClips(doc, win) {
     var issues = [];
     // No box-area gate here (see readableTextElements): the glyph extent decides what counts
     // as hero text, so type clipped away to nothing is still measured.
@@ -208,6 +236,53 @@
         message:
           '"' + label(el) + '" is CUT OFF - ' + pct + '% of its ' + axis + ' is clipped by ' + cutter +
           '. Give the text room (or fit the type to the box); readable text must never be cropped at the hold.',
+      });
+    }
+    return issues;
+  }
+
+  /**
+   * Readable text crowding the frame edge. NOT the same defect as clipping: nothing is cut,
+   * the piece just has no margin, which reads as an accident on air (and is unsafe on any
+   * display that overscans). Text the clip check already reported is skipped - a cropped
+   * line is one finding, not two.
+   */
+  function safeAreaIssues(doc, win) {
+    var issues = [];
+    var clipped = {};
+    var priorClips = computeClips(doc, win);
+    for (var c = 0; c < priorClips.length; c++) clipped[priorClips[c].key.split(':')[1]] = true;
+
+    var texts = readableTextElements(doc, win, false);
+    for (var i = 0; i < texts.length; i++) {
+      var el = texts[i];
+      var text = textExtent(el, doc);
+      if (!text || width(text) <= 0 || height(text) <= 0) continue;
+      if (width(text) * height(text) <= MIN_AREA_PX) continue;
+      if (clipped[label(el)]) continue;
+
+      var frame = clipRegion(el, win).frame;
+      var fw = width(frame);
+      var fh = height(frame);
+      if (fw <= 0 || fh <= 0) continue;
+
+      var margins = [
+        { side: 'left', v: (text.left - frame.left) / fw },
+        { side: 'right', v: (frame.right - text.right) / fw },
+        { side: 'top', v: (text.top - frame.top) / fh },
+        { side: 'bottom', v: (frame.bottom - text.bottom) / fh },
+      ];
+      var worst = margins[0];
+      for (var m = 1; m < margins.length; m++) if (margins[m].v < worst.v) worst = margins[m];
+      if (worst.v >= SAFE_AREA) continue;
+
+      issues.push({
+        kind: 'safe-area',
+        key: 'safe-area:' + label(el) + ':' + worst.side,
+        message:
+          '"' + label(el) + '" sits ' + Math.max(0, Math.round(worst.v * 100)) + '% from the ' +
+          worst.side + ' edge of the frame - readable text needs a margin of at least ' +
+          Math.round(SAFE_AREA * 100) + '%. Scale the type down or bring it in.',
       });
     }
     return issues.slice(0, 5);
@@ -281,6 +356,9 @@
   window.__noacgTextChecks = {
     clip: function () {
       return clipIssues(document, window);
+    },
+    safeArea: function () {
+      return safeAreaIssues(document, window);
     },
     occlusion: function () {
       return occlusionIssues(document, window);

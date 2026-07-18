@@ -155,10 +155,12 @@ src/
                TSX->CJS + static contract checks: imports limited to react/remotion,
                deterministic frame-derived animation, no network/DOM), validate.ts
                (compile -> static -> live player probe of frames 0/mid/last, plus the
-               readability pass at two HOLD frames: a crop reported at both becomes a
-               'text-clip' error the repair loop fights, then a warning if it survives),
+               readability pass at two HOLD frames: a finding reported at BOTH becomes a
+               'text-clip' / 'text-safe-area' error the repair loop fights, then a warning
+               if it survives),
                textChecks.js - the RUNTIME READABILITY checks (text clipped by the frame or
-               an overflow-hidden ancestor; text painted behind the graphics), authored as
+               an overflow-hidden ancestor; text crowding the frame edge below the 5%
+               title-safe margin; text painted behind the graphics), authored as
                plain JS because it must be INLINED into two opaque-origin runtimes that
                cannot import from the app (the player host at build time, the HyperFrames
                document at compose time) and is also called by scripts/video-bench.mjs -
