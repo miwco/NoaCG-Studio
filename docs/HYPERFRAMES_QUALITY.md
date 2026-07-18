@@ -163,15 +163,123 @@ no `<video>`/`<audio>` clips, no sub-compositions, image-variable changes reload
 > with a stricter persistence rule. Those figures are indicative, not a measurement of what
 > ships. The current pass re-measures against the real gate.
 
+## The varied-brief pass (14 generations, $1.62)
+
+Seven briefs through both engines, one sample each, chosen to exercise what had just
+changed rather than to re-measure known ground: the two hardest chips, a brief with a **real
+uploaded asset**, a **transparent overlay** (never benched before), a deliberately **long**
+title, and a **single-word** hero (the short-hero height carve-out).
+
+| | HyperFrames | Remotion |
+|---|---|---|
+| Contract-valid | 7/7 | 7/7 |
+| Clean | 6/7 | 7/7 |
+| Repair rounds | 4 | 2 |
+| Readability findings | 1 run | 0 runs |
+| Dead controls | 0 | 0 |
+| Tokens | 86,830 in / 70,674 out | 69,713 in / 60,085 out |
+| Cost | $0.88 | $0.74 |
+
+Both engines validated everything. **Input tokens roughly halved** against earlier rounds
+(~7-8k vs ~16-20k per run) because the coder prompt now carries one worked example rather
+than two - the second example was tried and dropped, and this is the measured cost it was
+adding.
+
+The **transparent overlay was the hardest brief on both engines** - the only readability
+finding in the set (HyperFrames) and the most repair rounds on each. Everything else,
+including the long title and the single-word hero, came through clean on both.
+
+### The one real defect, and what it revealed
+
+HyperFrames' transparent lower-third shipped with **both text lines completely invisible**.
+Measured in the preview: the strap sits at x = -1551 through the entire hold - still parked
+in its entrance position, ~124% of its own width off the left edge. The composition's own
+timing is correct (hold 0.70-3.15 s of 4 s), so the entrance tween never took effect;
+the likeliest cause is the script it wrote to re-measure and re-set the panel width running
+after the timeline was built, invalidating the percentage-based `from` value.
+
+Three things follow, and they matter more than the single defect:
+
+1. **The check was right.** "100% of its width is clipped" was not a false positive - the
+   text really was off-frame. Verified by measuring the geometry directly.
+2. **The current validator rejects this composition.** Re-run against the saved source with
+   the real bridge, it fails. So the gate catches it *today*.
+3. **Yet it was applied at generation time**, after two repair rounds that made it worse
+   (55% clipped → 100%). The app does not apply failed results - it keeps the previous
+   version and says so - which means validation *passed* at that moment and fails now on the
+   same source. That gap is unexplained and is the most valuable open thread here: something
+   about the state the validator probes differs from the settled preview. The reproducer is
+   saved and needs no tokens to chase.
+
+### A correction to this document's own metric
+
+**Dead space is meaningless for a transparent project.** An overlay is supposed to leave the
+frame empty - footage is playing there. The benched lower-third measured 67% "dead" on
+Remotion while being a perfectly reasonable design. The bench now reports `n/a (overlay)` for
+transparent runs instead of a number that invites the wrong reading. The earlier finding that
+dead space cannot A/B a prompt change stands; this narrows where it means anything at all.
+
+### Export self-containment, verified outside NoaCG
+
+An exported composition with an uploaded logo was opened over `file://` in a clean browser
+context **with every network request aborted**:
+
+- nothing was even attempted over the network (zero blocked requests);
+- no unresolved `asset:` references; the logo renders from its inlined data URL;
+- 7 `@font-face` rules present, and `document.fonts.check` confirms the bundled faces
+  (Archivo, Oswald, Bebas Neue) actually load from their embedded data URLs;
+- GSAP present, timeline registered, no page errors.
+
+(A first attempt reported the fonts as unusable; that was a flawed width-comparison probe,
+not a real failure - `fonts.check` is the authoritative test.)
+
 ## Open follow-ups
 
-1. **Sharpen the repair message when text looks duplicated.** A rejection was observed where
-   the finding told the model to resize a line whose real problem was that it had been
-   rendered twice ("NOACGNOACG"). A finding that notices a repeated substring and says so
-   would probably be fixable inside the two rounds.
-2. **The countdown-style minimal reveal is the weakest brief** - the most defects of any brief
-   benchmarked, and the "uncommitted default" look it falls into is unmoved by prose. Treat it
-   as its own problem rather than a symptom of general taste.
-3. **`<video>` / `<audio>` clips** - the largest deliberate divergence from real HyperFrames.
+Ordered by value. The first needs no tokens and is the most important.
+
+1. **Why did a composition the validator rejects get applied?** The transparent lower-third
+   above passed validation at generation time and fails the same validator now, on the same
+   source. Either the probe observes a state the settled preview does not (a script that
+   mutates layout after boot is one candidate - this composition has exactly that), or the
+   persistence rule dropped a finding that a later sample would have caught. **Reproducer,
+   no generation needed:** load the saved composition through
+   `validateHyperframesComposition` with the real bridge (`transparent: true`, 4 s) and
+   compare against the same source probed after an apply + replay. If the two disagree, the
+   gate has a state-dependence bug and every quality figure that rests on it is soft.
+2. **The transparent/overlay brief is the weakest case on both engines** - the only
+   readability finding in the varied pass, the most repairs on each engine, and the one
+   design shape neither contract says much about (where a strap sits, safe margins, not
+   filling the frame). This is the strongest candidate for a *measured* prompt improvement,
+   but it needs more than one sample per engine before anyone writes prose.
+3. **Sharpen the repair message when text looks duplicated.** An earlier rejection failed
+   because the finding told the model to resize a line whose real problem was that it had
+   been rendered twice ("NOACGNOACG"). A finding that notices a repeated substring and says
+   so would probably be fixable inside the two rounds.
+4. **The countdown-style minimal reveal** - historically the weakest brief, and the
+   "uncommitted default" look it falls into is unmoved by prose. It came through clean in
+   this pass, so treat the earlier finding as unconfirmed rather than settled.
+5. **`<video>` / `<audio>` clips** - the largest deliberate divergence from real HyperFrames.
    A real feature (validator, driver, compose, and the render worker all have to agree on how
    a media clip seeks deterministically), not a prompt change.
+
+## Handoff
+
+**State.** Everything described here is on `main`. The bench supports both engines
+(`--engine`), runs free against the offline provider (`--stub`), and records tokens, repair
+rounds and their causes, the sources that failed a repair round, dead space, and dead
+controls. Offline coverage is 14/14 clean across both engines and all seven briefs.
+
+**What is trustworthy.** Contract validity (36/36 across two earlier multi-sample runs, 14/14
+here), the deterministic checks (unbound variables, namespace URLs, asset inlining), the
+measured font widths, and export self-containment - all verified directly rather than
+inferred.
+
+**What is not.** Any figure resting on the readability gate is soft until follow-up 1 is
+resolved. Design-taste conclusions are unreliable at these sample sizes and should not be
+drawn from single runs; the within-brief spread is wide enough to swamp anything worth
+chasing.
+
+**Cost discipline.** A clean generation is ~7-8k in / ~6-7k out (about $0.08). A run with two
+repair rounds costs roughly three times that. Always prove a bench change with `--stub`
+first; never touch `.env` while a run is in flight; and keep `VITE_SUPABASE_*` unset on the
+dev server the bench drives.

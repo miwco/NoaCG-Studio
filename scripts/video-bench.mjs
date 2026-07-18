@@ -217,6 +217,11 @@ async function playerFrame() {
  * points across three samples of the same brief) is far too wide to judge a single run by.
  * It earns its place as an OUTLIER detector - "this one frame is mostly empty" - not as
  * something to tune a prompt against.
+ *
+ * NOT MEANINGFUL FOR A TRANSPARENT PROJECT. An overlay - a lower third, a corner bug - is
+ * SUPPOSED to leave most of the frame empty, because live footage is playing there. A
+ * benched lower-third measured 67% "dead" while being a perfectly good design. The runner
+ * marks transparent runs `n/a` rather than reporting a number that invites a wrong reading.
  */
 async function measureDeadSpace(frame) {
   return frame.evaluate(() => {
@@ -480,7 +485,8 @@ for (const example of selected) {
         await seekTo(Math.round(frac * (durationInFrames - 1)));
         deadSpaces.push(await measureDeadSpace(frame));
       }
-      const deadSpace = Math.max(0, ...deadSpaces);
+      // An overlay is meant to leave the frame empty - see measureDeadSpace.
+      const deadSpace = example.transparent ? null : Math.max(0, ...deadSpaces);
       const deadVars = ENGINE === 'hyperframes' ? checkVariableBindings(state.source) : [];
 
       // The generation's own trace: stages seen, calls made, and the findings each repair
@@ -515,7 +521,7 @@ for (const example of selected) {
           (repairs.length ? `  ↻ ${repairs.length} repair round(s)` : '') +
           (issues.length ? `  ⚠ ${issues.length} readability issue(s)` : '') +
           (deadVars.length ? `  ⚠ ${deadVars.length} dead control(s)` : '') +
-          `  dead space ${deadSpace}%  [${tokens.in}in/${tokens.out}out]`,
+          `  dead space ${deadSpace === null ? 'n/a (overlay)' : deadSpace + '%'}  [${tokens.in}in/${tokens.out}out]`,
       );
     } catch (e) {
       results.push({
@@ -549,7 +555,7 @@ const rows = results
     ${(r.deadVars ?? []).length ? `<p class="warn">⚠ dead controls: ${r.deadVars.join(' · ')}</p>` : ''}
     <div class="strip">${strip}</div>
     <p>${r.summary}</p>
-    <p class="meta">inputs: ${r.inputs.join(', ') || '(none)'} · largest empty region ${r.deadSpace ?? 0}% · ${r.tokens?.in ?? 0}in/${r.tokens?.out ?? 0}out over ${r.calls ?? 0} call(s) · <a href="${r.id}.${SOURCE.ext}">${SOURCE.label}</a> · <a href="${r.id}.plan.json">plan</a></p>
+    <p class="meta">inputs: ${r.inputs.join(', ') || '(none)'} · largest empty region ${r.deadSpace === null ? 'n/a (overlay)' : (r.deadSpace ?? 0) + '%'} · ${r.tokens?.in ?? 0}in/${r.tokens?.out ?? 0}out over ${r.calls ?? 0} call(s) · <a href="${r.id}.${SOURCE.ext}">${SOURCE.label}</a> · <a href="${r.id}.plan.json">plan</a></p>
   </section>`;
   })
   .join('\n');
