@@ -9,7 +9,6 @@ interface Props {
   resolution: Resolution;
   onArt: (art: DesignArt, images: AssetFile[]) => void;
   onClear: () => void;
-  onContinue: () => void;
 }
 
 /**
@@ -20,7 +19,7 @@ interface Props {
  * the design covers the frame or floats inside it, and where the text defaults land. Guessing
  * any of that would put the user's artwork somewhere they didn't draw it.
  */
-export default function ImportDesignStep({ art, images, resolution, onArt, onClear, onContinue }: Props) {
+export default function ImportDesignStep({ art, images, resolution, onArt, onClear }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,10 +132,6 @@ export default function ImportDesignStep({ art, images, resolution, onArt, onCle
           NoaCG only adds the broadcast behaviour around it, and exports it as a working template.
         </p>
       </div>
-
-      <button className="primary" disabled={!art} onClick={onContinue}>
-        Add text fields ›
-      </button>
     </div>
   );
 }
