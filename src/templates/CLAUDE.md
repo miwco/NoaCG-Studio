@@ -171,6 +171,9 @@ import a font post-creation. **Two size knobs:** every dimension is authored as
 `calc(Npx * var(--scale))` (whole-graphic size; resolution is folded into `--scale` by
 `computeScale`), and font sizes additionally multiply by `var(--type-scale)` (text-only size,
 a raw multiplier — S 0.9 · M 1 · L 1.15). Nothing but `font-size` consumes `--type-scale`.
+EXCEPTION: an imported design declares NO `--type-scale` (`rootVarsCss(..., { typeScale:
+false })`) — each placed line sizes itself from its own rule, and the Style panel keys its
+"Text size" section on the var's presence, so declaring it would show a dead knob.
 
 ## Template runtime rule
 

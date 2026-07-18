@@ -2134,6 +2134,10 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   width: 96px;
   text-align: left;
 }
+.inspector-style-text {
+  width: 128px;
+  text-align: left;
+}
 .inspector-preset-phase .tab { font-size: 10px; padding: 2px 8px; }
 .inspector-preset-apply {
   margin-left: auto;

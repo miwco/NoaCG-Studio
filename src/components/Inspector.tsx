@@ -13,6 +13,7 @@ import {
   type LineTextPatch,
   type LineTextStyle,
 } from '../blocks/designLayout';
+import { setFieldDefault, setFieldTitle } from '../blocks/edit';
 import { FONTS } from '../model/fonts';
 import type { SpxTemplate } from '../model/types';
 import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
@@ -120,6 +121,8 @@ export default function Inspector() {
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const patchCss = useTemplateStore((s) => s.patchCss);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
+  const sampleData = useTemplateStore((s) => s.sampleData);
+  const setSampleValue = useTemplateStore((s) => s.setSampleValue);
   const requestReplay = useTemplateStore((s) => s.requestReplay);
   const sendScrub = useTemplateStore((s) => s.sendScrub);
   const setPlayhead = useTemplateStore((s) => s.setPlayhead);
@@ -199,6 +202,23 @@ export default function Inspector() {
     if (!next || next === template) return;
     applyTemplate(next);
     setActiveTab('css');
+  };
+
+  // The Content commits (the Style tab's Label/Text rows). Both live in the MARKUP: the
+  // label is the DataField's title (the registry names the layer's row and chip from it),
+  // and the text follows the canvas inline editor's pattern exactly — definition default +
+  // static element text in one undoable apply, with the live sample value following.
+  const placedField = fieldId ? template.fields.find((f) => f.field === fieldId) ?? null : null;
+  const commitFieldTitle = (title: string) => {
+    if (!fieldId || !title.trim()) return;
+    applyTemplate(setFieldTitle(template, fieldId, title.trim()));
+    setActiveTab('html');
+  };
+  const commitFieldText = (value: string) => {
+    if (!fieldId) return;
+    applyTemplate(setFieldDefault(template, fieldId, value)); // definition + static text
+    setSampleValue(fieldId, value); // the live operator value follows the edit
+    setActiveTab('html');
   };
 
   // Where values are read and keyframes stamped: the parked playhead, else the layer's
@@ -495,8 +515,12 @@ export default function Inspector() {
           place={place}
           textStyle={textStyle}
           slot={slot}
+          fieldTitle={placedField?.title ?? ''}
+          fieldText={textStyle ? sampleData[fieldId!] ?? placedField?.value ?? '' : null}
           onCommit={applyStyle}
           onLiveCss={patchCss}
+          onTitle={commitFieldTitle}
+          onText={commitFieldText}
         />
       )}
 
@@ -777,12 +801,49 @@ function StyleNumRow({
   );
 }
 
+/** A commit-on-blur TEXT row (Enter commits too) — the string twin of StyleNumRow. */
+function StyleTextRow({
+  label,
+  value,
+  testid,
+  hint,
+  onCommit,
+}: {
+  label: string;
+  value: string;
+  testid: string;
+  hint?: string;
+  onCommit: (value: string) => void;
+}) {
+  return (
+    <div className="inspector-row">
+      <span className="inspector-row-label" title={hint}>{label}</span>
+      <span className="inspector-row-edit">
+        <input
+          className="inspector-input inspector-style-text"
+          key={value}
+          defaultValue={value}
+          data-testid={testid}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+          }}
+          onBlur={(e) => {
+            if (e.currentTarget.value !== value) onCommit(e.currentTarget.value);
+          }}
+        />
+      </span>
+    </div>
+  );
+}
+
 /**
  * The Style tab's body for a selected PLACED field (an imported design's text line or image
- * slot). Everything here is a DESIGN decision written into the field's own CSS rules — the
- * exact rules the canvas drag, nudge, and corner handle already read and write
- * (blocks/designLayout.ts) — never a keyframe. Discrete edits commit as ONE undoable apply
- * each; the color inputs patch live like the Style panel's swatches (no history spam).
+ * slot). The Content rows edit the field's markup-side identity (label + shown text — the
+ * canvas inline editor's pattern); everything else is a DESIGN decision written into the
+ * field's own CSS rules — the exact rules the canvas drag, nudge, and corner handle already
+ * read and write (blocks/designLayout.ts) — never a keyframe. Discrete edits commit as ONE
+ * undoable apply each; the color inputs patch live like the Style panel's swatches (no
+ * history spam).
  */
 function PlacedFieldStyle({
   template,
@@ -790,16 +851,26 @@ function PlacedFieldStyle({
   place,
   textStyle,
   slot,
+  fieldTitle,
+  fieldText,
   onCommit,
   onLiveCss,
+  onTitle,
+  onText,
 }: {
   template: SpxTemplate;
   fieldId: string;
   place: LinePlacement;
   textStyle: LineTextStyle | null;
   slot: { width: number; height: number; scaled: boolean } | null;
+  /** The DataField's operator-facing label. */
+  fieldTitle: string;
+  /** The field's live sample text; null for an image slot (its value is picked in Data). */
+  fieldText: string | null;
   onCommit: (next: SpxTemplate | null) => void;
   onLiveCss: (css: string) => void;
+  onTitle: (title: string) => void;
+  onText: (value: string) => void;
 }) {
   const patchText = (patch: LineTextPatch) => onCommit(setLineTextStyle(template, fieldId, patch));
   const liveText = (patch: LineTextPatch) => {
@@ -812,6 +883,24 @@ function PlacedFieldStyle({
 
   return (
     <div className="inspector-body" data-testid="inspector-style">
+      <div className="inspector-group-label">Content</div>
+      <StyleTextRow
+        label="Label"
+        value={fieldTitle}
+        testid="inspector-style-label"
+        hint="The name the operator sees in SPX and every panel — the element id never changes"
+        onCommit={onTitle}
+      />
+      {fieldText !== null && (
+        <StyleTextRow
+          label="Text"
+          value={fieldText}
+          testid="inspector-style-text-value"
+          hint="The field's shown text — updates the sample value and the definition default, like the canvas double-click edit"
+          onCommit={onText}
+        />
+      )}
+
       <div className="inspector-group-label">Position</div>
       <StyleNumRow
         label="X (design px)"

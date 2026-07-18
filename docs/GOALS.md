@@ -798,6 +798,10 @@ logo slot: here the image IS the design.
       slot box for image fields) - deterministic patches of the field's own rules
       (blocks/designLayout.ts lineTextStyle/setLineTextStyle), undoable, live in preview and
       export. Whole-unit and per-layer motion both live in the Inspector's Animations tab.
+      Follow-up (same day): the Style tab opens with CONTENT rows (field label via
+      setFieldTitle + shown text via the inline-edit pattern), and an imported design
+      declares no --type-scale, so the Style panel's global Text-size knob (keyed on the
+      var's presence) no longer appears as a dead control there.
 
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate

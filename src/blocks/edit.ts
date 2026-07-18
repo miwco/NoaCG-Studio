@@ -63,6 +63,18 @@ export function setFieldDefault(template: SpxTemplate, fieldId: string, value: s
 }
 
 /**
+ * Rename a field's operator-facing LABEL: the definition's DataField `title` plus the
+ * template's layer metadata (the registry names the layer's row and chip from it). The
+ * element id — and with it every binding, rule, and keyframe track — never changes.
+ */
+export function setFieldTitle(template: SpxTemplate, fieldId: string, title: string): SpxTemplate {
+  const fields = template.fields.map((f) => (f.field === fieldId ? { ...f, title } : f));
+  const html = replaceDefinitionInHtml(template.html, template.settings, fields);
+  const layers = template.layers.map((l) => (l.fieldId === fieldId ? { ...l, label: title } : l));
+  return { ...template, html, fields, layers };
+}
+
+/**
  * Append a structured layer entry to the template's model. Layers are best-effort
  * metadata describing the visual elements — authoritative when produced by templates,
  * building blocks, or the AI. They prepare the architecture for future visual editing

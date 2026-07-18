@@ -74,6 +74,18 @@ test('import graphic: the wizard is a setup flow — create lands in the editor,
     page.locator('.dock-tab.active [data-testid="dock-tab-data"]'),
   ).toBeVisible();
   await expect(page.locator('.panel-body')).toContainText('No fields on your design yet');
+
+  // No dead controls: an imported design sizes each line from its own rule and reads no
+  // --type-scale, so the var is not declared — which keeps the Style panel's global "Text
+  // size" knob (keyed on the var's presence) from appearing as a control that does nothing.
+  const css = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.css;
+  });
+  expect(css).not.toContain('--type-scale');
+  await page.getByTestId('dock-tab-style').click();
+  await expect(page.locator('.panel-body')).toContainText('Size');
+  await expect(page.locator('.panel-body')).not.toContainText('Text size');
 });
 
 test('import graphic: fields added from the Data tab are real placed layers — the wizard step, replaced', async ({ page }) => {
@@ -454,6 +466,37 @@ test('import graphic: the Inspector Style tab restyles a selected placed field',
   await page.locator('.tlv2-labels .timeline-label[data-part=".imported-design-art"]').click();
   await expect(page.getByTestId('inspector-part-label')).toHaveText('Artwork');
   await expect(page.getByTestId('inspector-tab-style')).toHaveCount(0);
+});
+
+test('import graphic: the Style tab\'s Content rows rename and retext a field', async ({ page }) => {
+  await createImported(page);
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  await expect(page.getByTestId('inspector')).toBeVisible({ timeout: 3000 });
+  await page.getByTestId('inspector-tab-style').click();
+
+  // Label: the DataField's operator-facing title — the timeline row (registry-named from
+  // the field) and the SPX definition both follow; the element id never changes.
+  await page.getByTestId('inspector-style-label').fill('Guest name');
+  await page.getByTestId('inspector-style-label').press('Enter');
+  await expect(page.locator('.tlv2-labels .timeline-label[data-part="#f0"]')).toContainText('Guest name');
+
+  // Text: the canvas inline editor's pattern — sample value + definition default together,
+  // so the preview shows it immediately and SPX starts from it.
+  await page.getByTestId('inspector-style-text-value').fill('Alexandra Riva');
+  await awaitPreviewRebuild(page, () =>
+    page.getByTestId('inspector-style-text-value').press('Enter'),
+  );
+  await expect(page.frameLocator('iframe.preview-frame').locator('#f0')).toHaveText('Alexandra Riva');
+
+  const state = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const s = useTemplateStore.getState();
+    const f0 = s.template.fields.find((f) => f.field === 'f0');
+    return { title: f0?.title, value: f0?.value, sample: s.sampleData['f0'] };
+  });
+  expect(state.title).toBe('Guest name');
+  expect(state.value).toBe('Alexandra Riva');
+  expect(state.sample).toBe('Alexandra Riva');
 });
 
 test('import graphic: the artwork and a field animate as separate layers from the Inspector', async ({ page }) => {

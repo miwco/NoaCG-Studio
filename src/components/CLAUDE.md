@@ -178,7 +178,10 @@ in src/blocks/CLAUDE.md.
   numeric prop needs only a PROP_ROWS entry - no runtime/resolver/validation change; a new FILTER
   function needs only a FILTER_FUNCS entry in blocks/filterTrack.ts plus its PROP_ROWS row.
   A selected PLACED FIELD (an imported design's line or slot - blocks/designLayout.ts
-  placedLines, code-derived) additionally offers a **Style tab**: numeric X/Y placement, and
+  placedLines, code-derived) additionally offers a **Style tab**: CONTENT rows (the field's
+  operator label via blocks/edit.ts setFieldTitle - definition title + layer metadata, the
+  registry renames the row/chip from it - and for text lines the shown text, the canvas
+  inline editor's pattern: setFieldDefault + the live sample value), numeric X/Y placement, and
   for a text line the full typography set (font incl. bundled-face shipping, size, weight,
   color, anchor, line-height, tracking), for an image slot its box - every control a
   deterministic patch of the field's OWN rules via designLayout (setLineTextStyle, placeLine,

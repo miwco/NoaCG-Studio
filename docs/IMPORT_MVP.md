@@ -187,9 +187,12 @@ template), and this phase makes the editor's data-field workflow first-class the
   restructuring.
 - **The Inspector grows a Style tab for a selected placed field** — the layer-specific
   styling surface (the Inspector is where layer-specific things live; animation already
-  does). For a text line: font (bundled list or the design font — picking a bundled face
-  also ships its @font-face, deduped), size, weight, color, anchor, line-height, tracking;
-  for an image slot: its box; for both: numeric X/Y. Every control reads and writes the
+  does). It opens with **Content**: the field's operator label (`setFieldTitle` — the
+  registry renames the timeline row and canvas chip from it) and, for text lines, the shown
+  text (the canvas inline editor's pattern: definition default + live sample value in one
+  commit). Then the design: for a text line font (bundled list or the design font — picking
+  a bundled face also ships its @font-face, deduped), size, weight, color, anchor,
+  line-height, tracking; for an image slot: its box; for both: numeric X/Y. Every control reads and writes the
   field's OWN rules through `blocks/designLayout.ts` (`lineTextStyle`/`setLineTextStyle` +
   the existing placement/size pairs) — the same rules the canvas gestures use, in the same
   idiom, one undoable apply per edit (the color inputs patch live like the Style panel's
