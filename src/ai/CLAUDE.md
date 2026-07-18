@@ -22,19 +22,21 @@ EARN that claim in scripts/ai-compare.mjs, never assume it. Its principles, in p
 4. **The smallest harness that wins.** A catalog-fit generation costs ONE small model call
    (the design spec); everything after it is deterministic. Stages that only add cost get cut.
 
-## The harness is OPT-IN (user decision after the first real benchmark)
+## The harness is ON BY DEFAULT (with a still-live off switch)
 
-The 2026-07-17 benchmark proved the harness on reliability, cost, and editability — but not
-a consistently better VISUAL result, and raw one-shot output already looks strong. So:
+The 2026-07-17 benchmark proved the harness a clean win on reliability, editability,
+overlaps, and cost (5/5 clean vs the baselines' 3/5, 0 overlaps, ~3x fewer output tokens,
+fastest); the earlier hesitation was about VISUAL taste, which the deterministic-conversion
+work (below) and the refreshed structure briefs closed enough to make it the default. So:
 
-- **Default (checkbox off): `generateRaw`** — ONE model call with `RAW_SYSTEM` (format
-  basics only, no taste teaching, no worked example), statically validated for display,
-  NO bench and NO repair loop. Keep this path pure: it is the baseline the harness is
-  measured against, and diluting it makes the comparison dishonest.
-- **"Use NoaCG harness" (checkbox on, `AiSettings.useHarness`): `generateAlternatives`** —
+- **Default (checkbox on, `AiSettings.useHarness` defaults true): `generateAlternatives`** —
   one design-stage call (forced `emit_design_alternatives`) returns THREE genuinely
   different directions; each assembles like a single harness generation. The AI step
   offers the pick.
+- **Off switch (checkbox cleared): `generateRaw`** — ONE model call with `RAW_SYSTEM` (format
+  basics only, no taste teaching, no worked example), statically validated for display,
+  NO bench and NO repair loop. Keep this path pure: it is the baseline the harness is
+  measured against, and diluting it makes the comparison dishonest.
 - **Preference learning (`preferences.ts`)**: the pick is staged on selection and COMMITTED
   when the project is created — aggregated shown/chosen facet counters (chassis, category,
   density, palette, zone, preset, route), localStorage-only. `preferenceHint()` feeds the
@@ -63,6 +65,30 @@ a consistently better VISUAL result, and raw one-shot output already looks stron
    coder: house contracts + the NEAREST catalog variant's real create() output as the
    canonical example + the design stage's direction, then the validated repair loop
    (`MAX_REPAIR_ROUNDS = 2`, RE-VALIDATED every round, exact findings fed back).
+   **The region contract is authored, not emitted:** the example's ANIMATION region is shown
+   in its AUTHORING shape (the legacy GSAP builders, via `emitPresetRegion`) and the prompt
+   teaches that grammar - natural GSAP the model is reliably good at, instead of the bespoke
+   strict-JSON data block it reliably got wrong. Every emit (first and repairs) runs
+   `convertEmittedRegion`: canonicalize a drifted open marker, then `convertToDataRegion` -
+   the SAME parity-proven importer every wizard category uses at create - so a convertible
+   emit ships as a timeline-editable data block.
+   **The STRUCTURE SPINE is the conversion's precondition, so the prompt states it as a hard
+   requirement** (root `<div class="PREFIX">` holding `<div class="PREFIX-box">`, that -box
+   class ALONE on the element; `PREFIX-mask` around each `#fN`; `PREFIX-accent`). Learned the
+   expensive way (ai-compare, 2026-07-17): the coder followed the authoring grammar perfectly
+   and `parseTimeline` read every region, but `importAnimData` bails on `detectPrefix` FIRST,
+   and detectPrefix keys entirely off `class="{prefix}-box"` - which the old prompt never named
+   (the example merely showed it, and models generalize the idea, not the literal class). Every
+   free-form result converted the moment a `-box` was injected. Worse, the bench's own repair
+   message told the model to "give the root a single class and prefix every child class",
+   which does NOT satisfy the check - so the custom route's repair rounds were UNWINNABLE by
+   construction. That message now names the real contract. If a future editability finding
+   looks model-shaped, suspect the teaching message before the model. An unconvertible region keeps the model's
+   own code (honest hand-crafted output, read-only timeline) and its `bench-editability`
+   findings DEMOTE TO WARNINGS at the end - they never burn a repair round alone, though
+   they ride along in any round a functional error triggers. Exception: when the template
+   being MODIFIED already carried a readable data block, losing it is a regression, so
+   editability stays a hard error there and the repair loop fights it.
 
 `modify` refines a grounded result at SPEC level while it is still house-shaped (the caller
 passes the result's `spec` back via `GenerateOptions.spec`); anything else refines at code
@@ -77,7 +103,10 @@ live-iframe lifecycle, field binding, overlap/overflow, doubled-text stress, and
 editability contract). Bench findings are teaching messages that drive repair rounds. A
 result that still fails is returned WITH its validation attached - surfaced, never
 auto-applied. Grounded assemblies get NO repair loop: one failing its own bench is a
-platform bug worth surfacing.
+platform bug worth surfacing. On the free-form path the editability contract is enforced
+deterministically first (`convertEmittedRegion`, pipeline item 5): repair rounds only fire
+on FUNCTIONAL findings, and residual `bench-editability` findings surface as warnings -
+except when a modify started from a data-shaped template, where they stay errors.
 
 ## Telemetry & the value proof
 

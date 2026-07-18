@@ -22,7 +22,7 @@ example_projects/
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand)
 bench-out/
 video-bench-out*/
-compare-out/
+compare-out*/
 
 # Catalog sweep taste screenshots (scripts/l3-sweep.mjs <shots-dir> <category>; multi-MB
 # PNGs, regenerated on demand - review them on disk, never commit them)

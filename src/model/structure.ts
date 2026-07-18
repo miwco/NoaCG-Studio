@@ -7,11 +7,25 @@
 
 import type { SpxField } from './types';
 
-const ROOT_PREFIX_RE = /class="([\w-]+)-box"/;
+/**
+ * The structure contract's spine: the token before `-box` on the first element carrying a
+ * `<prefix>-box` class. Resolved against the PARSED DOM (never a raw-text match), so other
+ * classes on the same element are fine (`class="lower-third-box glass"` still yields
+ * `lower-third`) — the classList lookup is what makes it robust. This is the ONE definition
+ * of the prefix; detectPrefix and getTemplateParts both read it here so they can never
+ * disagree about whether a template is house-shaped.
+ */
+function boxPrefix(doc: Document): string | null {
+  const box = doc.querySelector('[class*="-box"]');
+  const boxClass = box ? Array.from(box.classList).find((c) => c.endsWith('-box')) : undefined;
+  return boxClass ? boxClass.slice(0, -'-box'.length) : null;
+}
 
-/** The template's class prefix, or null when the HTML has no standard-contract box. */
+/** The template's class prefix, or null when the HTML has no standard-contract box. Parses
+ *  the HTML because the prefix is a DOM fact (a `-box` class among others on an element), not
+ *  a text pattern — matching getTemplateParts exactly. */
 export function detectPrefix(html: string): string | null {
-  return html.match(ROOT_PREFIX_RE)?.[1] ?? null;
+  return boxPrefix(new DOMParser().parseFromString(html, 'text/html'));
 }
 
 /**
@@ -57,10 +71,7 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
   const fieldTitle = (id: string) => fields.find((f) => f.field === id)?.title;
 
   // The structure contract's spine: .<prefix>-box inside .<prefix> (shared/standard.ts).
-  // Resolved against the parsed DOM, not the first raw-text match.
-  const box = doc.querySelector('[class*="-box"]');
-  const boxClass = box ? Array.from(box.classList).find((c) => c.endsWith('-box')) : undefined;
-  const prefix = boxClass ? boxClass.slice(0, -'-box'.length) : null;
+  const prefix = boxPrefix(doc);
 
   if (prefix) {
     if (unique(`.${prefix}`)) {

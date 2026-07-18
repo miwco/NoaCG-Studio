@@ -304,8 +304,11 @@ function editabilityIssues(template: SpxTemplate): ValidationIssue[] {
     issues.push(
       issue(
         'bench-editability',
-        'No recognizable root element - the canvas and timeline cannot identify the graphic\'s parts. ' +
-          'Give the root <div> a single class (e.g. class="lower-third") and prefix every child class with it.',
+        'No recognizable root element - the canvas, timeline and Style panel find the graphic through ' +
+          'its structure contract, and this template has no "-box" element. Pick one prefix for the ' +
+          'design (e.g. "lower-third") and wrap it in <div class="PREFIX"> holding ' +
+          '<div class="PREFIX-box">: that exact -box class, ALONE on the element, is what the editor ' +
+          'looks for. Prefix every other class with the same PREFIX.',
       ),
     );
   }
