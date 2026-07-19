@@ -32,6 +32,16 @@ export interface VideoValidationResult {
   warnings: ValidationIssue[];
   /** The sucrase CJS output when compilation succeeded (the preview/render module). */
   compiledJs: string | null;
+  /**
+   * Did the LIVE probe actually run? The runtime findings - frame errors, clipped text,
+   * occlusion - exist ONLY when a preview bridge was mounted to measure them, so `ok: true`
+   * with `probed: false` means "nothing was checked", NOT "nothing is wrong". They are not
+   * interchangeable and the difference is not cosmetic: a validator that reported the two
+   * identically is what let a composition with permanently off-frame text through the AI
+   * gate untouched, because the repair loop only runs on `!ok`. Anything gating quality on
+   * a clean result must require this flag too.
+   */
+  probed: boolean;
 }
 
 /**

@@ -317,7 +317,27 @@ async function generateValidated(
     );
     validation = await validate(emitted.source);
   }
-  return { emitted, validation: demoteSoftFindings(validation) };
+  return { emitted, validation: noteUnprobed(demoteSoftFindings(validation)) };
+}
+
+/** A validation that never reached a mounted player measured NOTHING at runtime - no clipped
+ *  or occluded text, no frame errors. Its empty error list means "not checked", and the
+ *  repair loop above (which only fires on `!ok`) therefore never ran. Say so in the warnings
+ *  the UI surfaces: an unverified composition must not be presented as a verified one. */
+function noteUnprobed<T extends Awaited<ReturnType<VideoValidator>>>(validation: T): T {
+  if (validation.probed) return validation;
+  return {
+    ...validation,
+    warnings: [
+      ...validation.warnings,
+      {
+        rule: 'not-probed',
+        message:
+          'The runtime checks did not run - no preview was mounted, so text the frame clips or ' +
+          'another layer covers would not have been caught. Open the preview and regenerate to verify.',
+      },
+    ],
+  };
 }
 
 /** Findings that must DRIVE a repair round but must not, alone, throw the work away after

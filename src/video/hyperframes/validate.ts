@@ -9,6 +9,7 @@ import type { AssetFile } from '../../model/types';
 import { describeAssets, type VideoCompSettings, type VideoValidationResult } from '../types';
 import { quoteMatch } from '../compile';
 import { holdFrames, persistentTextIssues } from '../readability';
+import { getActiveHyperframesBridge } from '../bridgeRegistry';
 import type { HyperframesBridge } from './bridge';
 import { HF_VARIABLE_TYPES, parseHyperframesComposition } from './parse';
 
@@ -218,25 +219,37 @@ export async function validateHyperframesComposition(
     (HF_WARNING_RULES.has(issue.rule) ? warnings : errors).push(issue);
   }
   if (errors.length > 0) {
-    return { ok: false, errors, warnings, compiledJs: null };
+    return { ok: false, errors, warnings, compiledJs: null, probed: false };
   }
 
   // Live probe (skipped when no preview is mounted - e.g. the offline stub in tests).
-  if (bridge && !bridge.disposed) {
-    const loaded = await bridge.load(html, settings, {}, assets, { autoplay: false });
-    if (!loaded.ok && !loaded.disposed) {
+  // A disposed bridge (the preview remounted mid-validation - a layout change, StrictMode)
+  // retries once on the CURRENT bridge instead of quietly skipping the checks, mirroring
+  // validateVideoModule. `probed` then tells the caller whether the runtime checks ran AT
+  // ALL: without it a skipped probe returns an empty error list, which reads as a clean
+  // composition and costs the AI harness its repair rounds.
+  let probed = false;
+  let probeBridge = bridge;
+  for (let attempt = 0; probeBridge && attempt < 2; attempt++) {
+    const loaded = await probeBridge.load(html, settings, {}, assets, { autoplay: false });
+    if (!loaded.ok && loaded.disposed) {
+      const fresh = getActiveHyperframesBridge();
+      probeBridge = fresh && fresh !== probeBridge ? fresh : null;
+      continue;
+    }
+    if (!loaded.ok) {
       errors.push({ rule: 'runtime', message: loaded.message });
-      return { ok: false, errors, warnings, compiledJs: null };
+      return { ok: false, errors, warnings, compiledJs: null, probed: false };
     }
-    if (loaded.ok) {
-      const d = settings.durationInFrames;
-      const probe = await bridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)], holdFrames(d));
-      for (const e of probe.errors) {
-        errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
-      }
-      errors.push(...persistentTextIssues(probe.textIssues ?? [], holdFrames(d)));
+    const d = settings.durationInFrames;
+    const probe = await probeBridge.probe([0, Math.floor(d / 2), Math.max(0, d - 1)], holdFrames(d));
+    for (const e of probe.errors) {
+      errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
     }
+    errors.push(...persistentTextIssues(probe.textIssues ?? [], holdFrames(d)));
+    probed = true;
+    break;
   }
 
-  return { ok: errors.length === 0, errors, warnings, compiledJs: null };
+  return { ok: errors.length === 0, errors, warnings, compiledJs: null, probed };
 }

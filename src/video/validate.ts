@@ -27,19 +27,22 @@ export async function validateVideoModule(
   const compiled = compileTsx(tsx);
   if (!compiled.ok) {
     errors.push({ rule: 'compile', message: compiled.error });
-    return { ok: false, errors, warnings, compiledJs: null };
+    return { ok: false, errors, warnings, compiledJs: null, probed: false };
   }
 
   for (const issue of staticValidate(tsx, describeAssets(assets))) {
     (WARNING_RULES.has(issue.rule) ? warnings : errors).push(issue);
   }
   if (errors.length > 0) {
-    return { ok: false, errors, warnings, compiledJs: compiled.js };
+    return { ok: false, errors, warnings, compiledJs: compiled.js, probed: false };
   }
 
   // Live probe (skipped when no player is mounted - e.g. the offline stub in tests).
   // A disposed bridge (the player remounted mid-validation - dev StrictMode, layout
-  // changes) retries once on the CURRENT bridge instead of failing the module.
+  // changes) retries once on the CURRENT bridge instead of failing the module. `probed`
+  // reports whether the checks ran at all - an empty error list from a probe that never
+  // happened must not read as a verified-clean module (see VideoValidationResult).
+  let probed = false;
   let probeBridge = bridge;
   for (let attempt = 0; probeBridge && attempt < 2; attempt++) {
     const loaded = await probeBridge.load(compiled.js, settings, {}, assets, { autoplay: false });
@@ -50,7 +53,7 @@ export async function validateVideoModule(
     }
     if (!loaded.ok) {
       errors.push({ rule: 'runtime', message: loaded.message });
-      return { ok: false, errors, warnings, compiledJs: compiled.js };
+      return { ok: false, errors, warnings, compiledJs: compiled.js, probed: false };
     }
     const d = settings.durationInFrames;
     const probe = await probeBridge.probe(
@@ -61,8 +64,9 @@ export async function validateVideoModule(
       errors.push({ rule: 'runtime', message: `frame ${e.frame}: ${e.message}` });
     }
     errors.push(...persistentTextIssues(probe.textIssues ?? [], holdFrames(d)));
+    probed = true;
     break;
   }
 
-  return { ok: errors.length === 0, errors, warnings, compiledJs: compiled.js };
+  return { ok: errors.length === 0, errors, warnings, compiledJs: compiled.js, probed };
 }
