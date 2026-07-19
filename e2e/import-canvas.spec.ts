@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import { awaitPreviewRebuild } from './_preview';
 import { lowerThirdPng, framedCardPng, CARD_TEXT_RECT } from './_png';
 import { elementPoint } from './_canvas';
+import JSZip from 'jszip';
+import { readFileSync } from 'node:fs';
 
 // Canvas usability on an imported design (docs/IMPORT_MVP.md): the artwork and the fields
 // placed on it are ONE composition — scaling keeps them together as design-layout CSS — and
@@ -386,4 +388,68 @@ test('import graphic: left-set baked text seeds a LEFT-anchored field on its lef
   expect(f.rendered.left).toBeCloseTo(CARD_TEXT_RECT.x, 2);
   expect(Math.abs(f.rendered.top - CARD_TEXT_RECT.y)).toBeLessThan(CARD_TEXT_RECT.height * 0.35);
   expect(f.style!.fontSize!.value).toBeGreaterThan(0);
+});
+
+test('import graphic: a JPEG or WebP design imports exactly like a PNG', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+
+  // Encode the fixture in the browser, so these are real JPEG/WebP bytes, not a PNG wearing
+  // another MIME type — the point is that the pipeline decodes the format, not that it
+  // trusts a label.
+  for (const mime of ['image/jpeg', 'image/webp']) {
+    const encoded = await page.evaluate((m) => {
+      const c = document.createElement('canvas');
+      c.width = 1280;
+      c.height = 720;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#f2f2ec';
+      g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#18191e';
+      g.fillRect(120, 470, 620, 90);
+      const url = c.toDataURL(m, 0.95);
+      return { mime: url.slice(5, url.indexOf(';')), base64: url.split(',')[1] };
+    }, mime);
+    expect(encoded.mime).toBe(mime); // the browser really produced this format
+
+    await page.locator('[data-entry="import-graphic"]').click();
+    await page.locator('.wz-drop input[type="file"]').setInputFiles({
+      name: `design.${mime === 'image/jpeg' ? 'jpg' : 'webp'}`,
+      mimeType: mime,
+      buffer: Buffer.from(encoded.base64, 'base64'),
+    });
+
+    // Measured and accepted, with no format complaint anywhere on the step.
+    await expect(page.locator('.asset-card')).toContainText('1280 × 720');
+    await expect(page.locator('.wz-step')).not.toContainText('not an image');
+    await page.getByRole('button', { name: '‹ Back' }).click();
+  }
+});
+
+test('import graphic: a scaled design still previews, validates, and exports', async ({ page }) => {
+  await createImported(page);
+  await page.locator('.tlv2-labels .timeline-label[data-part=".imported-design-art"]').click();
+  await dragHandle(page, 'scale-handle', 130, 74);
+  await awaitPreviewRebuild(page);
+  const scaled = await composition(page);
+  expect(scaled.cssScale).toBeGreaterThan(1);
+
+  // The preview still runs the graphic: play it and the field holds its sample text on the
+  // artwork (the composition survived the scale at RUNTIME, not just in the stylesheet).
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('#f0')).toHaveText('Name');
+  await expect(frame.locator('.imported-design-art')).toBeVisible();
+
+  // And it exports: validation passes and the package carries the artwork plus the scale.
+  await page.getByTestId('dock-tab-export').click();
+  await page.locator('.issue', { hasText: 'SPX export' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Validate & download/ }).click(),
+  ]);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  const css = await zip.file(Object.keys(zip.files).find((n) => n.endsWith('.css'))!)!.async('string');
+  expect(css).toContain(`--scale: ${scaled.cssScale}`);
+  expect(Object.keys(zip.files).some((n) => /\.png$/.test(n))).toBe(true);
 });

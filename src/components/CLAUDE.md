@@ -33,8 +33,13 @@ in src/blocks/CLAUDE.md.
   Learn tab).
 - **PreviewFrame** - the stage: the iframe + overlays live in a `.canvas-world` centred in the
   stage and translated by `pan`, scaled by fit × `zoom`. Zoom: the toolbar −/%/+ (the % resets
-  to fit), Ctrl/Cmd+wheel (and trackpad pinch) toward the cursor, clamped 0.2–8×. Pan: a plain
-  wheel when zoomed in, or a middle-mouse drag (captured before the overlay). Because the overlay
+  to fit), Ctrl/Cmd+wheel (and trackpad pinch) toward the cursor, clamped 0.2–8×. Pan: HOLD
+  SPACE and drag, a middle-mouse drag, or a plain wheel when zoomed in - all captured before
+  the overlay, so a pan can only ever move the VIEW, never a document element. Space arms only
+  while the pointer is over the stage (off it, Space stays the timeline's Play key) and never
+  while a text field/Monaco has focus; while armed its keydown is swallowed in the CAPTURE
+  phase so the graphic doesn't also play, and releasing it restores the previous tool at once
+  (as does losing window focus mid-drag). Because the overlay
   is sized `stageW × (fit×zoom)` and CanvasInteraction reads its live bounding rect, zoom and pan
   need NO coordinate changes there — the gesture math follows automatically (pinned by the zoom
   case in e2e/multi-select.spec.ts). Off-canvas VISIBILITY (a pasteboard so elements that start
@@ -43,12 +48,22 @@ in src/blocks/CLAUDE.md.
 
 ## Canvas direct manipulation (Era 6)
 
-- **CanvasInteraction** - always-on direct manipulation: hover cursors; drag the root -> nearest
+- **CanvasInteraction** - always-on direct manipulation: drag the root -> nearest
   zone + residual nudge -> the SAME zoneDecls patch the Style panel writes; dblclick a visible
   #fN -> inline edit -> sample value + definition default via blocks/edit.ts setFieldDefault;
   corner handle -> live --scale preview, diagonal-aware, clamped 0.25-4. Every gesture commits as
   ONE undoable applyTemplate and jumps the editor to the changed tab, highlighted; the root is
   detected via model/structure.ts detectPrefix.
+  CURSORS name the gesture IN PROGRESS, never one that is merely possible: hover is the plain
+  arrow (the hover outline + name chip say what a click would select), an active move reads
+  `move`, handles keep their resize arrows, an armed tool its own, and the HAND belongs to
+  panning alone (PreviewFrame's `.panning` / `.panning-active` on the stage outrank
+  everything while a pan is armed).
+  THE DESIGN UNIT (imported designs): `.{prefix}-art` and `.{prefix}-box` swap the keyframe
+  scale/rotate handles for the ROOT's --scale handle. The artwork's size IS the composition's
+  size - every placed field is `calc(Npx * var(--scale))` against it - so one --scale patch
+  moves artwork and fields together, where a scale KEYFRAME on the artwork alone would leave
+  every field behind. Keyframing its scale still lives in the Inspector's Properties tab.
   LAYER SCALE/ROTATE HANDLES (data-block, a single selected non-root layer): a corner scale
   handle + a top rotate handle on the selection box; dragging previews live via GSAP and, on
   release, keys `scale` / `rotation` at the playhead (keyframePlace + setKeyframe + spliceAnimData,
@@ -80,6 +95,17 @@ in src/blocks/CLAUDE.md.
   CAPTURE phase and preventDefault, so a selected keyframe set always beats the layer nudge
   (a diamond click usually leaves its layer selected too — only one may act). Pinned by
   e2e/import-graphic.spec.ts + e2e/canvas-keyframe.spec.ts.
+  DIRECT GRAB + LOCKS (imported designs): a press on a PLACED field grabs it - selects it and
+  starts its placement drag in ONE gesture, no select-then-drag round trip (the release then
+  skips the climb, since that click already made its selection). Scoped to placed fields on
+  purpose: their drag is a design decision costing one undo, while a keyframe layer's drag
+  WRITES MOTION, so selection stays the deliberate step there and catalog templates are
+  untouched. Store `partLocks` + `setPartLock` hold EXPLICIT locks; a locked part takes no
+  drag, handle, or lasso but stays selectable by click and from the timeline. With no explicit
+  entry an imported design's ARTWORK is locked (it is a full-bleed image UNDER every field,
+  so unlocked it swallows every press meant for the text) - a press on BARE artwork then falls
+  through to the root's zone drag, which moves the whole graphic. The selection chip carries
+  the padlock for the artwork; locks are UI state, cleared on a whole-project swap.
   The SELECTION model (multi, docs/TIMELINE_INTERACTION_MODEL.md): a click selects the
   innermost TemplatePart under the point (registry-driven closest-ancestor hit test,
   rect-containment fallback); clicking the sole selected part again climbs to its container;
@@ -372,7 +398,9 @@ it lands; Create here is the FAST PATH, byte-identical bare fixed-mode) -> Prepa
 The **Prepare step** carries the two artwork decisions: ERASE baked-in text (a source-px rect
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
 non-flat holds behind "Use it anyway"; re-runs always start from draft.designOriginal so fills
-never compound; the erased rect SEEDS the first field at create - the one amendment to "bare")
+never compound; the erase MEASURES the ink it removes and that seeds the first field at create
+- the one amendment to "bare" - built from the ink's bounds, one line's height and top, and
+the edge the text was set from, never from the loose rectangle the user drew)
 and the SCALING MODE (fixed default / horizontal 9-slice stretch with draggable guides + a
 content-width demo slider that pushes sample text through WizardPreview's demoText prop into
 the real emitted runtime; with stretch and no erase the PREVIEW build adds one demo line that
