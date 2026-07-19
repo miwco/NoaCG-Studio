@@ -249,9 +249,12 @@ function stop() {
   buildOutTimeline();
 }
 
-// next(): SPX Continue — reveals the next step on multi-step graphics (no-op otherwise).
+// next(): SPX Continue — advance the graphic one step along its default path. Returns the
+// timeline it started, or null when there is nothing to advance to (a single-step graphic, or
+// a state machine that refused the move) — a playout wrapper must not move its own step
+// pointer past a refusal.
 function next() {
-  if (typeof revealNextStep === 'function') revealNextStep();
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
 }
 
 ${animationBlock}

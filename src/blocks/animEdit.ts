@@ -6,6 +6,7 @@
 
 import type { AnimData, AnimKeyframe, AnimLayerTracks, AnimStep } from './animData';
 import { resolveValue } from './animEval';
+import { freshStateId, isWalkEdge, mainGroup, reconnectPath, stateById, syncWaypointNames } from './animMachine';
 import { filterKeysUsed, normalizeFilterTrack, withFilterComponent } from './filterTrack';
 
 /** Two stored times match within half a serializer step. */
@@ -214,10 +215,6 @@ export function setLayerActivation(
   toPress: number,
   channel: 'mask' | 'rise',
 ): AnimData | null {
-  // An explicit machine binds default-path states to steps POSITIONALLY — an edit that adds,
-  // removes or reorders steps would silently desync the graph. Those edits arrive with the
-  // machine-aware mutators (Phase 2); until then the press chain is read-only under a machine.
-  if (data.machine) return null;
   const next = clone(data);
   const fromPress = layerPress(next, selector);
   const presses = next.steps.length - 2;
@@ -247,7 +244,7 @@ export function setLayerActivation(
         reveals: [],
         layers: {},
       };
-      next.steps.splice(next.steps.length - 1, 0, step);
+      insertStepAt(next, next.steps.length - 1, step);
       destIdx = next.steps.length - 2;
     }
     const dest = next.steps[destIdx];
@@ -262,13 +259,14 @@ export function setLayerActivation(
   if (fromPress > -1) {
     const s = next.steps[fromIdx];
     if (s && (s.reveals ?? []).length === 0 && (s.hides ?? []).length === 0 && Object.keys(s.layers).length === 0) {
-      next.steps.splice(fromIdx, 1);
+      removeStepAt(next, fromIdx);
     }
   }
   // Default names follow their position (a user's rename is left alone).
   for (let i = 1; i < next.steps.length - 1; i++) {
     if (/^Step \d+$/.test(next.steps[i].name)) next.steps[i].name = `Step ${i + 1}`;
   }
+  syncWaypointNames(next);
   return next;
 }
 
@@ -398,6 +396,54 @@ function renumberSteps(data: AnimData): void {
 }
 
 /**
+ * Insert a step AND its bound default-path waypoint. `steps[i]` and `defaultPath[i]` are the
+ * same thing seen from two sides (docs/STATE_MACHINE_SCHEMA.md — the positional binding), so
+ * this is the ONE place a step is ever added: the binding cannot be forgotten at a call site
+ * that doesn't exist. Machine-less data just gets the splice.
+ */
+function insertStepAt(data: AnimData, at: number, step: AnimStep): void {
+  data.steps.splice(at, 0, step);
+  const main = mainGroup(data);
+  if (!main?.defaultPath) return;
+  const id = freshStateId(main, step.name);
+  // Keep `states` reading in walk order — the serializer emits them as authored.
+  const before = main.states.findIndex((s) => s.id === main.defaultPath![at]);
+  main.states.splice(before < 0 ? main.states.length : before, 0, { id, name: step.name });
+  main.defaultPath.splice(at, 0, id);
+  reconnectPath(main);
+}
+
+/**
+ * Remove the step at `at` AND its bound waypoint. A waypoint an authored BRANCH still points
+ * at is not deleted but DEMOTED — off the path, carrying its timeline inline — because
+ * dropping it would silently orphan the author's graph. (`reveals`/`hides` are stripped: they
+ * are the ordered walk's mechanics and are invalid on an inline timeline.)
+ */
+function removeStepAt(data: AnimData, at: number): AnimStep | null {
+  const [removed] = data.steps.splice(at, 1);
+  const main = mainGroup(data);
+  if (!main?.defaultPath) return removed ?? null;
+  const gone = main.defaultPath[at];
+  // Judge "is this an authored branch arrow?" against the path as it stands NOW. Splicing
+  // first would make the walk's own arrows into and out of this waypoint look like branches,
+  // and every deletion would demote instead of delete.
+  const branchRef = main.transitions.some((t) => (t.from === gone || t.to === gone) && !isWalkEdge(main, t));
+  main.defaultPath.splice(at, 1);
+  if (branchRef && removed) {
+    const state = stateById(main, gone);
+    if (state) {
+      const { reveals: _r, hides: _h, ...inline } = removed;
+      state.timeline = inline;
+    }
+  } else {
+    main.states = main.states.filter((s) => s.id !== gone);
+    main.transitions = main.transitions.filter((t) => t.from !== gone && t.to !== gone);
+  }
+  reconnectPath(main);
+  return removed ?? null;
+}
+
+/**
  * Duplicate a step: keyframes and calls copy verbatim in local time (the duplicate's
  * resolved starting state comes from its new predecessor — correct by construction; a
  * copied call is data, not magic, and the clock's start/stop are idempotent). Its
@@ -406,7 +452,6 @@ function renumberSteps(data: AnimData): void {
  * after the original — duplicating Out lands the copy before it, as a content step.
  */
 export function duplicateStep(data: AnimData, stepIndex: number): AnimData | null {
-  if (data.machine) return null; // positional binding — see setLayerActivation
   const src = data.steps[stepIndex];
   if (!src) return null;
   const next = clone(data);
@@ -415,8 +460,11 @@ export function duplicateStep(data: AnimData, stepIndex: number): AnimData | nul
   delete copy.hides; // a layer leaves once — a duplicated hide would re-hide an absent layer
   copy.name = /^Step \d+$/.test(src.name) ? src.name : `${src.name} copy`;
   const at = Math.min(stepIndex + 1, next.steps.length - 1); // never after Out
-  next.steps.splice(at, 0, copy);
+  // Outgoing BRANCH arrows are not copied, for the same reason `reveals` isn't: a copy is
+  // content, not wiring.
+  insertStepAt(next, at, copy);
   renumberSteps(next);
+  syncWaypointNames(next);
   return next;
 }
 
@@ -426,6 +474,7 @@ export function renameStep(data: AnimData, stepIndex: number, name: string): Ani
   if (!data.steps[stepIndex] || !trimmed || data.steps[stepIndex].name === trimmed) return null;
   const next = clone(data);
   next.steps[stepIndex].name = trimmed;
+  syncWaypointNames(next); // the bound state's LABEL follows; its id never does
   return next;
 }
 
@@ -439,21 +488,20 @@ export function deleteStep(
   stepIndex: number,
   channelOf: (selector: string) => 'mask' | 'rise',
 ): AnimData | null {
-  if (data.machine) return null; // positional binding — see setLayerActivation
   if (stepIndex <= 0 || stepIndex >= data.steps.length - 1) return null;
   const next = clone(data);
-  const [removed] = next.steps.splice(stepIndex, 1);
-  for (const selector of removed.reveals ?? []) {
+  const removed = removeStepAt(next, stepIndex);
+  for (const selector of removed?.reveals ?? []) {
     next.steps[0].layers[selector] = channelTracks(channelOf(selector), 0.45);
   }
   renumberSteps(next);
+  syncWaypointNames(next);
   return next;
 }
 
 /** Add an empty content step just before Out — an authoring target for the next reveal
  *  or keyframes (a press that still does nothing when the show airs is the user's call). */
 export function addStep(data: AnimData): AnimData | null {
-  if (data.machine) return null; // positional binding — see setLayerActivation
   const next = clone(data);
   const step: AnimStep = {
     name: `Step ${next.steps.length}`,
@@ -461,8 +509,9 @@ export function addStep(data: AnimData): AnimData | null {
     ease: next.steps[0].ease,
     layers: {},
   };
-  next.steps.splice(next.steps.length - 1, 0, step);
+  insertStepAt(next, next.steps.length - 1, step);
   renumberSteps(next);
+  syncWaypointNames(next);
   return next;
 }
 

@@ -5,7 +5,8 @@ import { nextFieldId, setCssDeclaration, setFieldDefault } from '../blocks/edit'
 import { getCssVariable, setCssVariable } from '../blocks/cssVars';
 import type { Zone9 } from '../model/wizard';
 import { detectPrefix, getTemplateParts, type TemplatePart } from '../model/structure';
-import { parseAnimData, spliceAnimData } from '../blocks/animData';
+import { parseAnimData } from '../blocks/animData';
+import { writeAnimData } from '../templates/shared/animRuntime';
 import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
@@ -393,7 +394,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       const y = Math.round((layer.baseY + ld.dy) * 100) / 100;
       next = setKeyframe(setKeyframe(next, at.step, layer.selector, 'x', at.tRel, x), at.step, layer.selector, 'y', at.tRel, y);
     }
-    const js = spliceAnimData(template.js, next);
+    const js = writeAnimData(template.js, next);
     if (!js || js === template.js) return;
     applyTemplate({ ...template, js });
     const place = playhead;
@@ -1185,7 +1186,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     const at = keyframePlace(d.selector);
     if (!at) return;
     const next = setKeyframe(dataModel, at.step, d.selector, d.kind === 'scale' ? 'scale' : 'rotation', at.tRel, d.value);
-    const js = spliceAnimData(template.js, next);
+    const js = writeAnimData(template.js, next);
     if (!js || js === template.js) return;
     applyTemplate({ ...template, js });
     const place = playhead;
@@ -1299,7 +1300,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
           const y = Math.round((k.baseY + burst.dy) * 100) / 100;
           nd = setKeyframe(setKeyframe(nd, at.step, k.selector, 'x', at.tRel, x), at.step, k.selector, 'y', at.tRel, y);
         }
-        const js = spliceAnimData(next.js, nd);
+        const js = writeAnimData(next.js, nd);
         if (js && js !== next.js) {
           next = { ...next, js };
           keyed = true;

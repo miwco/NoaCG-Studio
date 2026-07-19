@@ -20,7 +20,8 @@ import {
 import { setFieldDefault, setFieldTitle } from '../blocks/edit';
 import { FONTS } from '../model/fonts';
 import type { SpxTemplate } from '../model/types';
-import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
+import { parseAnimData, type AnimData } from '../blocks/animData';
+import { writeAnimData } from '../templates/shared/animRuntime';
 import { importAnimData } from '../blocks/animImport';
 import { deleteKeyframe, setFilterComponent, setKeyframe } from '../blocks/animEdit';
 import { filterComponent } from '../blocks/filterTrack';
@@ -248,7 +249,7 @@ export default function Inspector() {
 
   /** One undoable apply, then re-park the preview at the playhead after the rebuild. */
   const applyData = (next: AnimData) => {
-    const js = spliceAnimData(template.js, next);
+    const js = writeAnimData(template.js, next);
     if (!js || js === template.js) return;
     applyTemplate({ ...template, js });
     if (playhead && data) setTimeout(() => sendScrub(phaseIdOf(data, playhead.step), playhead.t), 650);
@@ -684,7 +685,7 @@ export default function Inspector() {
                     setPresetMsg('This style has no motion for this element.');
                     return;
                   }
-                  const js = spliceAnimData(template.js, next);
+                  const js = writeAnimData(template.js, next);
                   if (!js || js === template.js) {
                     setPresetMsg('No change — already at this style.');
                     return;

@@ -223,6 +223,34 @@ export function parseAnimData(js: string): AnimData | null {
   return isAnimData(raw) ? raw : null;
 }
 
+/** Why a NOACG_ANIM block did not parse. The distinction matters at the export gate: an
+ *  unreadable block is usually an honest hand-crafted or legacy region, which the platform
+ *  deliberately tolerates — but a block that declares a MACHINE and gets it wrong would ship
+ *  and then run UNCHECKED on air (the interpreter reads `NOACG_ANIM.machine` verbatim), so
+ *  that one case is an error rather than advice. */
+export type AnimDataFault = 'not-json' | 'off-shape' | 'off-shape-machine';
+
+/** Diagnose a block that failed to parse; null when it parses fine (or is absent). */
+export function animDataFault(js: string): AnimDataFault | null {
+  const loc = locateAnimData(js);
+  if (!loc) return null;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(js.slice(loc.start, loc.end));
+  } catch {
+    return 'not-json';
+  }
+  const version = (raw as { version?: unknown }).version;
+  if (version === 1) raw = migrateAnimData(raw);
+  if (isAnimData(raw)) return null;
+  // A version we don't know is a FUTURE document, not a broken one — degrading it to
+  // hand-crafted is the whole point of the version doctrine, and erroring would mean an older
+  // build could not export a project a newer one saved. Only a block speaking a version we DO
+  // understand can be judged as a broken machine.
+  const known = version === 1 || version === 2;
+  return known && (raw as { machine?: unknown })?.machine !== undefined ? 'off-shape-machine' : 'off-shape';
+}
+
 /** The version 1 → 2 migration. Deliberately trivial and total: the v1 step chain IS the
  *  default-path content under v2 (the machine stays implicit/derived), so migrating is the
  *  version bump alone. The format-version doctrine (docs/STATE_MACHINE_SCHEMA.md): any

@@ -12,6 +12,7 @@ import {
   type AnimGroup,
   type AnimMachine,
   type AnimState,
+  type AnimStep,
   type AnimTransition,
 } from './animData';
 
@@ -75,6 +76,75 @@ export function spxSteps(data: AnimData): number {
 
 export function stateById(group: AnimGroup, id: string): AnimState | null {
   return group.states.find((s) => s.id === id) ?? null;
+}
+
+/** The default-path group, or null when the data carries no explicit machine. Every
+ *  structural step edit goes through this: `steps` and `defaultPath` are bound positionally,
+ *  so an edit to one is an edit to the other. */
+export function mainGroup(data: AnimData): AnimGroup | null {
+  return data.machine?.groups[0] ?? null;
+}
+
+/** A state id for a new waypoint, folded from its step name exactly as deriveMachine folds
+ *  one, then de-duplicated — so a hand-added step is named like a derived one. */
+export function freshStateId(group: AnimGroup, name: string): string {
+  const base = slugify(name);
+  const taken = new Set(group.states.map((s) => s.id));
+  let id = base;
+  for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+  return id;
+}
+
+/** Every timeline a template can play: the default path's steps plus every state's inline
+ *  timeline. Anything that must consider ALL of a graphic's motion (the validator's dangling
+ *  reference guards, the bench's measured-motion exemptions) calls this rather than reading
+ *  `steps` and silently missing the branches. */
+export function allTimelines(data: AnimData): AnimStep[] {
+  const inline = data.machine?.groups.flatMap((g) => g.states.flatMap((s) => (s.timeline ? [s.timeline] : []))) ?? [];
+  return [...data.steps, ...inline];
+}
+
+/** Keep each waypoint's state NAME in step with its bound step. The state's ID deliberately
+ *  never follows: transitions, snap assignments and an exported control page all reference it,
+ *  so the id is identity while the name is only a label. */
+export function syncWaypointNames(data: AnimData): void {
+  const main = mainGroup(data);
+  if (!main?.defaultPath) return;
+  main.defaultPath.forEach((id, i) => {
+    const state = stateById(main, id);
+    const step = data.steps[i];
+    if (state && step) state.name = step.name;
+  });
+}
+
+/** Is this transition one of the default path's own consecutive-waypoint edges? An edge that
+ *  is NOT one is an authored branch arrow, which a structural edit must never silently drop. */
+export function isWalkEdge(group: AnimGroup, t: AnimTransition): boolean {
+  const path = group.defaultPath;
+  if (!path) return false;
+  const from = path.indexOf(t.from);
+  return from >= 0 && path[from + 1] === t.to;
+}
+
+/** Re-establish an operator arrow between every consecutive pair of waypoints, EXCEPT into
+ *  the final one (v1 parity — stop() plays the exit; an arrow there is the author's opt-in to
+ *  next-drives-out). These arrows exist for validateMachine's honesty check and for the graph
+ *  the node editor will draw: the runtime walks the path POSITIONALLY and fires a synthetic
+ *  edge when none is authored. An inserted waypoint INHERITS the event of the arrow it split,
+ *  so the operator's press keeps its name; the new second half gets `next`. */
+export function reconnectPath(group: AnimGroup): void {
+  const path = group.defaultPath;
+  if (!path) return;
+  const taken = (from: string, event: string) =>
+    group.transitions.some((t) => t.from === from && t.trigger === 'operator' && t.event === event);
+  for (let i = 0; i + 2 < path.length; i++) {
+    const [from, to] = [path[i], path[i + 1]];
+    if (group.transitions.some((t) => t.from === from && t.to === to && t.trigger !== 'data-condition')) continue;
+    // `(from, event)` must stay unique within a group or dispatch would be ambiguous.
+    let event = 'next';
+    for (let n = 2; taken(from, event); n++) event = `next${n}`;
+    group.transitions.push({ from, to, trigger: 'operator', event });
+  }
 }
 
 export function transitionsFrom(group: AnimGroup, stateId: string): AnimTransition[] {

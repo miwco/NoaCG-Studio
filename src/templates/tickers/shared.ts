@@ -97,8 +97,12 @@ function stop() {
   buildOutTimeline();
 }
 
-// next(): tickers have no steps.
-function next() {}
+// next(): SPX Continue — advance one step along the default path. This design ships
+// single-step, so it normally does nothing; it still funnels to the interpreter so a
+// template that GROWS a step (or a state machine) stays drivable through the SPX contract.
+function next() {
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
+}
 
 // Render once on load so the preview shows content before the first update().
 // This file loads in <head>, before the ticker elements exist — wait for the DOM.

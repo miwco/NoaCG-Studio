@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
+import { parseAnimData, type AnimData } from '../blocks/animData';
 import { importAnimData } from '../blocks/animImport';
 import {
   addStep,
@@ -20,7 +20,7 @@ import {
 } from '../blocks/animEdit';
 import { spxSteps } from '../blocks/animMachine';
 import { EASINGS } from '../model/easings';
-import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
+import { replaceRegionWithAnimData, writeAnimData } from '../templates/shared/animRuntime';
 import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
 import { getTemplateParts } from '../model/structure';
@@ -267,7 +267,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
    *  debounced rebuild settles. Structural edits (duplicate/delete/add a step) change the
    *  Continue count, so the SPX `steps` setting stays derived — same invariant as always. */
   const applyData = (next: AnimData) => {
-    const js = spliceAnimData(template.js, next);
+    const js = writeAnimData(template.js, next);
     if (!js || js === template.js) return;
     const steps = String(spxSteps(next));
     if (template.settings.steps !== steps) {
@@ -1470,9 +1470,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           >
             +
           </button>
-          {/* Structural step edits are read-only under an explicit machine (positional
-              binding — the machine-aware mutators arrive with Phase 2), so no dead button. */}
-          {editable && !data.machine && (
+          {editable && (
             <button
               className="timeline-zoom-btn tlv2-add-step"
               onClick={() => {
@@ -1525,19 +1523,17 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
             />
           ) : (
             <>
-              {!data.machine && (
-                <button
-                  className="tlv2-menu-item"
-                  data-testid="tlv2-menu-duplicate"
-                  onClick={() => {
-                    const next = duplicateStep(data, menu.step);
-                    setMenu(null);
-                    if (next) applyData(next);
-                  }}
-                >
-                  Duplicate step
-                </button>
-              )}
+              <button
+                className="tlv2-menu-item"
+                data-testid="tlv2-menu-duplicate"
+                onClick={() => {
+                  const next = duplicateStep(data, menu.step);
+                  setMenu(null);
+                  if (next) applyData(next);
+                }}
+              >
+                Duplicate step
+              </button>
               <button
                 className="tlv2-menu-item"
                 data-testid="tlv2-menu-rename"
@@ -1545,7 +1541,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
               >
                 Rename…
               </button>
-              {!data.machine && menu.step > 0 && menu.step < data.steps.length - 1 && (
+              {menu.step > 0 && menu.step < data.steps.length - 1 && (
                 <button
                   className="tlv2-menu-item danger"
                   data-testid="tlv2-menu-delete"

@@ -209,7 +209,7 @@ function stop() {
 // next(): SPX Continue — play the graphic's next step. Step 2 is the answer reveal: the
 // animation data below fires revealAnswer() on it (see that step's "calls").
 function next() {
-  if (typeof revealNextStep === 'function') revealNextStep();
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
 }
 
 ${animationBlock}

@@ -9,7 +9,8 @@
 
 import type { SpxTemplate } from '../model/types';
 import type { TemplatePart } from '../model/structure';
-import { parseAnimData, spliceAnimData } from './animData';
+import { parseAnimData } from './animData';
+import { writeAnimData } from '../templates/shared/animRuntime';
 import { setLayerActivation } from './animEdit';
 import { spxSteps } from './animMachine';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
@@ -45,7 +46,7 @@ export function changePartPress(
   const channel = parts.find((p) => p.selector === selector)?.channel ?? 'rise';
   const next = setLayerActivation(data, selector, toPress, channel);
   if (!next) return null;
-  const js = spliceAnimData(template.js, next);
+  const js = writeAnimData(template.js, next);
   if (!js) return null;
 
   const settings = { ...template.settings, steps: String(spxSteps(next)) };

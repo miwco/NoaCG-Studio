@@ -131,8 +131,12 @@ function resetScorePop() {
   }
 }
 
-// next(): scoreboards have no steps.
-function next() {}
+// next(): SPX Continue — advance one step along the default path. This design ships
+// single-step, so it normally does nothing; it still funnels to the interpreter so a
+// template that GROWS a step (or a state machine) stays drivable through the SPX contract.
+function next() {
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
+}
 
 ${animationBlock}
 `;

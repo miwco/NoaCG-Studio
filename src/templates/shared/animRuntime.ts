@@ -7,7 +7,7 @@
 // and write raw GSAP (the timeline UI then steps aside).
 
 import { ANIMATION_MARK_CLOSE, ANIMATION_MARK_OPEN } from '../lowerThirds/animPresets';
-import { serializeAnimData, type AnimData } from '../../blocks/animData';
+import { serializeAnimData, spliceAnimData, type AnimData } from '../../blocks/animData';
 
 /** The interpreter body — identical in every template. Kept as one exported string so the
  *  emitter, the AI prompt, and (later) the convert-on-edit path all ship the same code. */
@@ -640,6 +640,19 @@ ${ANIMATION_MARK_CLOSE}`;
  *  whole region (replaceRegionWithAnimData) when it is false. */
 export function hasMachineRuntime(js: string): boolean {
   return /function noacgDispatch/.test(js);
+}
+
+/**
+ * THE machine-safe write — what every editing surface should use.
+ *
+ * `spliceAnimData` replaces only the object literal, so a saved template keeps whatever
+ * interpreter it was emitted with. That is fine until the data grows a MACHINE: machine-bearing
+ * data under a pre-machine interpreter would parse and then do nothing. When that pairing would
+ * break, re-emit the whole region instead (the same move the `hides` early-exit makes).
+ */
+export function writeAnimData(js: string, data: AnimData): string | null {
+  if (data.machine && !hasMachineRuntime(js)) return replaceRegionWithAnimData(js, data);
+  return spliceAnimData(js, data);
 }
 
 /** Swap a template's marked region for the data-driven emit (the converter's writer). */

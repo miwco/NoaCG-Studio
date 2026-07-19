@@ -5,7 +5,8 @@
 import { ASPECTS, type AssetFile, type Resolution, type SpxTemplate } from '../../model/types';
 import { addPlacedLine } from '../../blocks/designLayout';
 import { anyPresetById, type AnimPhase } from '../../blocks/presetRegistry';
-import { parseAnimData, spliceAnimData } from '../../blocks/animData';
+import { parseAnimData } from '../../blocks/animData';
+import { writeAnimData } from '../../templates/shared/animRuntime';
 import { applyPresetData, presetDonor } from '../../blocks/presetApply';
 import { resolveEasing } from '../../model/easings';
 import type {
@@ -262,6 +263,6 @@ export function buildDraftTemplate(
   if (!data) return template; // no data block (a hand-written variant) — nothing to mix onto
   const donor = presetDonor(template, data, outId, { easeOut });
   const mixed = donor && applyPresetData(data, donor, 'out', 'all');
-  const js = mixed && spliceAnimData(template.js, mixed);
+  const js = mixed && writeAnimData(template.js, mixed);
   return js ? { ...template, js } : template;
 }

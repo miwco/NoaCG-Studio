@@ -13,6 +13,7 @@
 
 import { composeDocument } from '../preview/composeDocument';
 import { parseAnimData } from '../blocks/animData';
+import { allOperatorEvents, allTimelines } from '../blocks/animMachine';
 import { detectPrefix } from '../model/structure';
 import type { SpxTemplate } from '../model/types';
 import type { ValidationIssue, ValidationResult } from './validateTemplate';
@@ -50,6 +51,10 @@ const SETTLE_MS = 300;
  *  purpose: it costs nothing when the graphic is already up (the poll returns immediately),
  *  and it is what keeps a starved rAF from being reported as a broken entrance. */
 const ON_AIR_BUDGET_MS = 2_000;
+/** How many of a machine's operator events the bench renders. Each costs a settle wait, and
+ *  a graphic with more distinct events than this is past the point where one more pose check
+ *  earns its time. */
+const MAX_BENCH_EVENTS = 8;
 /** Title-safe margin (fraction of the canvas each side) - escaping it is a warning. */
 const TITLE_SAFE = 0.035;
 /** Overlap thresholds: intersection as a fraction of the SMALLER element's rect. */
@@ -130,7 +135,9 @@ function dynamicsRoots(template: SpxTemplate, win: Window): Element[] {
   const data = parseAnimData(template.js);
   if (!data) return [];
   const roots: Element[] = [];
-  for (const step of data.steps) {
+  // Every timeline the graphic can play, branch states included — a branch's measured motion
+  // travels off-canvas by design just as a default-path step's does.
+  for (const step of allTimelines(data)) {
     for (const d of step.dynamics ?? []) {
       if (!d.target) continue;
       try {
@@ -466,6 +473,7 @@ export async function benchTemplateRuntime(
     await wait(SETTLE_MS);
 
     const exempt = dynamicsRoots(template, win);
+    const parsedData = parseAnimData(template.js);
 
     // "On air" is measured by what a viewer can see: at least one visible text/image leaf
     // intersecting the canvas. (A root box can legitimately have zero height when all its
@@ -504,6 +512,35 @@ export async function benchTemplateRuntime(
     const flow = overflowIssues(leaves, exempt, win, { width, height }, 'with the default field values');
     errors.push(...flow.errors);
     warnings.push(...flow.warnings);
+
+    // ── Branch states: the default path is only half a machine ───────────────────────
+    // A branching graphic's alert badge or selection highlight only ever appears after an
+    // operator EVENT, so walking play/next/stop never renders it and its layout is never
+    // measured. Dispatch each authored event and check the pose it produces, then snap back
+    // so the stress phase still measures the default look.
+    const machine = parsedData?.machine;
+    if (machine) {
+      const events = allOperatorEvents(machine).slice(0, MAX_BENCH_EVENTS);
+      for (const event of events) {
+        phase = `event "${event}"`;
+        (win as unknown as { noacgDispatch?: (e: string) => void }).noacgDispatch?.(event);
+        await wait(80);
+        const branchLeaves = collectLeaves(win);
+        const bLap = overlapIssues(branchLeaves, exempt, `after the "${event}" event`);
+        errors.push(...bLap.errors);
+        warnings.push(...bLap.warnings);
+        const bFlow = overflowIssues(branchLeaves, exempt, win, { width, height }, `after the "${event}" event`);
+        errors.push(...bFlow.errors);
+        warnings.push(...bFlow.warnings);
+      }
+      if (events.length > 0) {
+        phase = 'restore (default path)';
+        (win as unknown as { noacgSnap?: (a: null, o: { timers: boolean }) => void }).noacgSnap?.(null, { timers: false });
+        call('play');
+        for (let i = 0; i < presses; i++) call('next');
+        await wait(SETTLE_MS);
+      }
+    }
 
     // ── Exit: the graphic must actually leave ────────────────────────────────────────
     phase = 'stop';
