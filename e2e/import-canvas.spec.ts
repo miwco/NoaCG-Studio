@@ -204,3 +204,87 @@ test('import graphic: unlocking the artwork gives it back its own layer gestures
   expect(after.artTracks).toContain('y');
   expect(after.rootRule).toBe(before.rootRule); // the graphic itself did not re-anchor
 });
+
+/** The canvas world's pan translation, in screen px. */
+async function panOf(page: Page) {
+  const t = await page.locator('.canvas-world').evaluate((el) => (el as HTMLElement).style.transform);
+  const m = t.match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+  return { x: parseFloat(m?.[1] ?? '0'), y: parseFloat(m?.[2] ?? '0') };
+}
+
+test('canvas: holding Space pans the view and moves nothing in the document', async ({ page }) => {
+  await createImported(page);
+  await page.keyboard.press('Escape');
+  const before = await writes(page);
+  expect(await panOf(page)).toEqual({ x: 0, y: 0 });
+
+  // Press straight on the TEXT — with Space held the canvas pans instead of placing it.
+  const c = await elementPoint(page, '#f0', 0.5, 0.5);
+  await page.mouse.move(c.x, c.y);
+  await page.keyboard.down('Space');
+  await expect(page.getByTestId('preview-stage')).toHaveClass(/ panning/);
+  await page.mouse.down();
+  await page.mouse.move(c.x - 90, c.y + 55, { steps: 8 });
+  await expect(page.getByTestId('preview-stage')).toHaveClass(/panning-active/);
+  await page.mouse.up();
+
+  expect(await panOf(page)).toEqual({ x: -90, y: 55 });
+  const after = await writes(page);
+  expect(after.place).toEqual(before.place); // the view moved, the document did not
+  expect(after.rootRule).toBe(before.rootRule);
+  expect(after.selected).toEqual([]);
+
+  // Releasing Space restores the previous tool and its cursor.
+  await page.keyboard.up('Space');
+  await expect(page.getByTestId('preview-stage')).not.toHaveClass(/panning/);
+});
+
+test('canvas: Space only pans over the stage, and never while typing', async ({ page }) => {
+  await createImported(page);
+
+  // Typing a field value: Space is a space, not a pan (and not Play).
+  await page.getByTestId('dock-tab-data').click();
+  const input = page.locator('.field-add-row input');
+  await input.fill('Sponsor name');
+  await expect(page.getByTestId('preview-stage')).not.toHaveClass(/panning/);
+  await expect(input).toHaveValue('Sponsor name');
+
+  // Pointer off the stage: Space stays the timeline's Play key.
+  await page.mouse.move(4, 4);
+  await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
+  await page.keyboard.down('Space');
+  await expect(page.getByTestId('preview-stage')).not.toHaveClass(/panning/);
+  await page.keyboard.up('Space');
+  expect(await panOf(page)).toEqual({ x: 0, y: 0 });
+});
+
+test('canvas: the cursor names the gesture in progress, not one that is merely possible', async ({ page }) => {
+  await createImported(page);
+  const layer = page.getByTestId('canvas-layer');
+  const cursorNow = () => layer.evaluate((el) => getComputedStyle(el).cursor);
+
+  // Hovering movable text is a plain arrow — selection, not a promise of a drag.
+  const c = await elementPoint(page, '#f0', 0.5, 0.5);
+  await page.mouse.move(c.x, c.y);
+  expect(['auto', 'default']).toContain(await cursorNow());
+
+  // Mid-drag it reads as a move…
+  await page.mouse.down();
+  await page.mouse.move(c.x + 40, c.y + 10, { steps: 4 });
+  expect(await cursorNow()).toBe('move');
+  await page.mouse.up();
+  await awaitPreviewRebuild(page);
+  expect(['auto', 'default']).toContain(await cursorNow());
+
+  // …a resize handle as a resize…
+  await expect(page.getByTestId('line-size-handle')).toHaveCSS('cursor', 'nwse-resize');
+
+  // …an armed type tool as text, and panning as the hand — the only hand on the canvas.
+  await page.getByTestId('tool-text').click();
+  expect(await cursorNow()).toBe('text');
+  await page.getByTestId('tool-select').click();
+  await page.mouse.move(c.x, c.y);
+  await page.keyboard.down('Space');
+  expect(await cursorNow()).toBe('grab');
+  await page.keyboard.up('Space');
+});

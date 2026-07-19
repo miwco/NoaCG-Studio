@@ -232,7 +232,6 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
    *  gesture), so the release knows not to climb out of a selection it just made. */
   const promotedRef = useRef<string | null>(null);
   const [editing, setEditing] = useState<EditState | null>(null);
-  const [cursor, setCursor] = useState<'default' | 'grab' | 'text'>('default');
   // The root's rect (doc px) while the pointer is over it — anchors the scale handle. Rendered
   // via × scale into the doc-space overlay, so no logical conversion is needed.
   const [hoverRect, setHoverRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -1096,29 +1095,16 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       return;
     }
     if (editing || scaleDragRef.current) return;
-    // Hover affordances: hand on the graphic, text cursor on an editable line, and the
-    // corner scale handle anchored to the root while the pointer is over it. A selected,
-    // position-armed layer reads as grabbable everywhere (its drag keys x/y).
+    // Hover affordance: the corner scale handle, anchored to the root while the pointer is
+    // over it. The CURSOR deliberately stays the arrow — the standard editor convention is
+    // that the pointer names the gesture in progress, not the one that would be possible.
+    // A hand over everything movable said "hand" over the entire graphic and taught nothing;
+    // what a click will select is shown by the hover outline and its name chip instead.
     const p = clientToDoc(e);
-    const overKfLayer =
-      (kfDraggable &&
-        kfSelectors.some((sel) => {
-          const el = doc()?.querySelector<HTMLElement>(sel);
-          return !!el && el.getClientRects().length > 0 && inRect(p, el.getBoundingClientRect());
-        })) ||
-      // A selected PLACED line is grabbable the same way — its drag re-places it.
-      selectedParts.some((sel) => {
-        const pl = placed[sel];
-        const el = pl ? doc()?.getElementById(pl.wrapperId) : null;
-        return !!el && el.getClientRects().length > 0 && inRect(p, el.getBoundingClientRect());
-      });
     const r = rootEl()?.getBoundingClientRect();
-    if (overKfLayer) setCursor('grab');
     if (r && inRect(p, r)) {
-      if (!overKfLayer) setCursor(textFieldAt(p) ? 'text' : 'grab');
       setHoverRect({ left: r.left, top: r.top, width: r.width, height: r.height });
     } else {
-      if (!overKfLayer) setCursor('default');
       // Keep the handle reachable: it sits just OUTSIDE the root's corner, so don't clear
       // the rect while the pointer is within its small halo.
       if (hoverRect) {
@@ -1633,6 +1619,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   };
 
   // Ghost rect (screen px) while an ACTIVE drag is under way.
+  // The one cursor the canvas sets for itself: MOVE, while something is actually being
+  // moved. Handles carry their own resize cursors, an armed tool its own, panning the hand.
+  const moving = !!(drag?.active || layerDrag?.active || placeDrag?.active);
+
   const ghost = drag?.active
     ? {
         left: drag.root.left * scale + drag.dx,
@@ -1714,7 +1704,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
 
   return (
     <div
-      className={`canvas-layer${ghost ? ' dragging' : ''} cursor-${cursor}${toolArmed !== 'select' ? ` tool-${toolArmed}` : ''}`}
+      className={`canvas-layer${ghost || moving ? ' moving' : ''}${toolArmed !== 'select' ? ` tool-${toolArmed}` : ''}`}
       style={{ width, height }}
       data-testid="canvas-layer"
       onDragOver={onAssetDragOver}
