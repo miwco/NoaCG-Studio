@@ -48,21 +48,29 @@ export interface EraseSampling {
  * the text — it says "somewhere in here" — while this says where the text really sat and how
  * tall it really was, which is what a useful replacement field is built from.
  */
+/** One LINE of erased text: an unbroken run of ink rows, and the columns it occupies. A
+ *  region the user drew around a name AND its title holds two of these, and each becomes its
+ *  own field — they had their own position, width, and size in the design. */
+export interface InkLine {
+  /** Source px: the line's own ink box. */
+  x: number;
+  width: number;
+  top: number;
+  /** `top` down to the BASELINE: the part of the line every glyph shares, with any descender
+   *  tail excluded. This is the measurement type size is read from — the full run is ~0.72 em
+   *  for "Riva" and ~0.94 em for "Gray", so a size taken from it would be right for one and
+   *  30% out for the other, while this is ~0.72 em for both. */
+  capHeight: number;
+}
+
 export interface RegionInk {
   x: number;
   y: number;
   width: number;
   height: number;
-  /** The tallest unbroken run of ink rows. On a region holding two stacked lines the box
-   *  above spans both, and only this says how tall ONE line of the original type was. */
-  lineHeight: number;
-  /** That run's top — the same line's own top, for the same reason. */
-  lineTop: number;
-  /** `lineTop` down to the BASELINE: the part of the line every glyph shares, with any
-   *  descender tail excluded. This is the measurement type size is read from — the full run
-   *  is ~0.72 em for "Riva" and ~0.94 em for "Gray", so a size taken from it would be right
-   *  for one and 30% out for the other, while this is ~0.72 em for both. */
-  capHeight: number;
+  /** The lines found in the region, top to bottom. Never empty (a region with no ink at all
+   *  reports no RegionInk). */
+  lines: InkLine[];
 }
 
 /** How far a pixel must differ from the sampled background (per 8-bit channel) to count as
@@ -75,6 +83,10 @@ const INK_TOLERANCE = 40;
  *  baseline. Measured against real type: the rows a whole line shares sit near the peak, while
  *  a descender tail carried by one or two letters of a dozen drops to under a tenth of it. */
 const BASELINE_SHARE = 0.35;
+
+/** How many rows tall a run must be to count as a LINE. Below this it is a rule, an underline,
+ *  or the edge of something the rectangle clipped — not type worth seeding a field from. */
+const MIN_LINE_ROWS = 5;
 
 export interface EraseResult {
   /** The cleaned artwork as a PNG data URL, at the SOURCE dimensions. */
@@ -197,10 +209,10 @@ export async function eraseRegionFlat(dataUrl: string, rect: EraseRect): Promise
 }
 
 /**
- * The tight box of everything inside `rect` that is not the background `fill`, plus the
- * tallest unbroken run of ink rows within it. Row/column occupancy is enough — glyphs of one
- * text line share every scanline between their cap top and their baseline, so a fully empty
- * row is a real gap between lines, not a gap inside one.
+ * The tight box of everything inside `rect` that is not the background `fill`, split into the
+ * LINES it holds. Row/column occupancy is enough — glyphs of one text line share every
+ * scanline between their cap top and their baseline, so a fully empty row is a real gap
+ * between lines, not a gap inside one.
  *
  * A row or column is only counted when at least TWO of its pixels are ink: a single stray
  * pixel is compression noise or a hairline of whatever the rectangle clipped, and letting one
@@ -240,43 +252,63 @@ function measureInk(
   const xRange = inked(cols);
   if (!yRange || !xRange) return null;
 
-  // The row runs, so a two-line region reports ONE line's height rather than both plus the
-  // gap between them.
-  let bestTop = yRange.first;
-  let bestRun = 0;
+  // Split the ink into unbroken row runs — one per line of text the region holds.
+  const runs: Array<{ top: number; height: number }> = [];
   let runTop = -1;
   for (let i = yRange.first; i <= yRange.last + 1; i++) {
     const on = i <= yRange.last && rows[i] >= 2;
     if (on && runTop === -1) runTop = i;
     if (!on && runTop !== -1) {
-      if (i - runTop > bestRun) {
-        bestRun = i - runTop;
-        bestTop = runTop;
-      }
+      if (i - runTop >= MIN_LINE_ROWS) runs.push({ top: runTop, height: i - runTop });
       runTop = -1;
     }
   }
-  // The BASELINE of that run: the lowest row still carrying a real share of the line's ink.
-  // Every glyph of a line reaches the baseline, so the rows above it are dense; only the few
-  // letters with a tail (g j p q y) reach below, which makes the count collapse there. Taking
-  // the last row above BASELINE_SHARE of the run's densest row therefore separates the shared
-  // part of the line from its descenders — without knowing a thing about the font.
-  //
-  // Its one blind spot is a string where MOST glyphs descend ("gypsy"): the tail stays dense,
-  // the baseline reads low, and the seeded type comes out large. Names and titles are not
-  // shaped like that, and the result is still a starting point the user drags.
-  const peak = Math.max(...rows.slice(bestTop, bestTop + bestRun));
-  let baseline = bestTop;
-  for (let i = bestTop; i < bestTop + bestRun; i++) {
-    if (rows[i] >= peak * BASELINE_SHARE) baseline = i;
-  }
+  if (runs.length === 0) return null;
+
+  const lines: InkLine[] = runs.map((run) => {
+    // The BASELINE of this run: the lowest row still carrying a real share of the line's ink.
+    // Every glyph of a line reaches the baseline, so the rows above it are dense; only the few
+    // letters with a tail (g j p q y) reach below, which makes the count collapse there. Taking
+    // the last row above BASELINE_SHARE of the run's densest row therefore separates the shared
+    // part of the line from its descenders — without knowing a thing about the font.
+    //
+    // Its one blind spot is a string where MOST glyphs descend ("gypsy"): the tail stays dense,
+    // the baseline reads low, and the seeded type comes out large. Names and titles are not
+    // shaped like that, and the result is still a starting point the user drags.
+    const peak = Math.max(...rows.slice(run.top, run.top + run.height));
+    let baseline = run.top;
+    for (let i = run.top; i < run.top + run.height; i++) {
+      if (rows[i] >= peak * BASELINE_SHARE) baseline = i;
+    }
+    // This line's own columns — the region's overall x-range spans every line at once, and a
+    // short title under a long name would inherit the name's width and left edge from it.
+    let first = -1;
+    let last = -1;
+    for (let rx = 0; rx < rect.width; rx++) {
+      let n = 0;
+      for (let ry = run.top; ry < run.top + run.height; ry++) {
+        const at = ((rect.y + ry) * imageWidth + rect.x + rx) * 4;
+        let diff = 0;
+        for (let c = 0; c < 4; c++) diff = Math.max(diff, Math.abs(px[at + c] - bg[c]));
+        if (diff > INK_TOLERANCE && ++n >= 2) break;
+      }
+      if (n < 2) continue;
+      if (first === -1) first = rx;
+      last = rx;
+    }
+    return {
+      x: rect.x + (first === -1 ? xRange.first : first),
+      width: (first === -1 ? xRange.last - xRange.first : last - first) + 1,
+      top: rect.y + run.top,
+      capHeight: baseline - run.top + 1,
+    };
+  });
+
   return {
     x: rect.x + xRange.first,
     y: rect.y + yRange.first,
     width: xRange.last - xRange.first + 1,
     height: yRange.last - yRange.first + 1,
-    lineHeight: bestRun,
-    lineTop: rect.y + bestTop,
-    capHeight: baseline - bestTop + 1,
+    lines,
   };
 }

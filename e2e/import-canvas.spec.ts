@@ -619,3 +619,123 @@ test('canvas: any part can be locked from the Inspector, and the rotate handle i
   expect(decoded).toBeGreaterThan(0);
   await expect(rotate).toHaveCount(0); // a placed field keeps its design handle, not rotate
 });
+
+/** Every seeded field: its title, its placement and its type size. */
+async function seededFields(page: Page) {
+  return page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { placedLines, lineTextStyle } = await import('/src/blocks/designLayout.ts');
+    const s = useTemplateStore.getState();
+    const placed = placedLines(s.template.html, s.template.css);
+    return s.template.fields.map((f) => ({
+      id: f.field,
+      title: f.title,
+      x: placed[`#${f.field}`]?.x ?? null,
+      y: placed[`#${f.field}`]?.y ?? null,
+      align: lineTextStyle(s.template.html, s.template.css, f.field)?.align ?? null,
+      fontSize: lineTextStyle(s.template.html, s.template.css, f.field)?.fontSize?.value ?? null,
+    }));
+  });
+}
+
+test('import graphic: each marked region seeds its own field', async ({ page }) => {
+  // Two separate pieces of baked text, at different sizes — a name over a strapline.
+  await dropCard(page, framedCardPng(1600, 900, { textRect: { x: 0.12, y: 0.55, width: 0.4, height: 0.09 } }));
+  await eraseRect(page, 0.08, 0.5, 0.58, 0.68);
+  // The second mark ADDS; it does not replace.
+  const surface = page.getByTestId('erase-surface');
+  const box = (await surface.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.08, box.y + box.height * 0.72);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.45, box.y + box.height * 0.84, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('erase-marks').locator('li')).toHaveCount(2);
+  await createBare(page);
+
+  // Only ONE of the marks held ink (the fixture paints a single bar), so the region with no
+  // text still contributes a field — the user marked it, so they meant something to go there.
+  const fields = await seededFields(page);
+  expect(fields.map((f) => f.title)).toEqual(['Name', 'Title']);
+  expect(fields[0].y).not.toBe(fields[1].y); // each landed on its own region
+  expect(fields.every((f) => f.x !== null)).toBe(true);
+});
+
+test('import graphic: one region holding two lines seeds a field per line', async ({ page }) => {
+  // A name and a title inside ONE marked box — the shape of every lower third — drawn as two
+  // bars of different width and height, with a clear gap between them.
+  const built = await page.evaluate(async () => {
+    const c = document.createElement('canvas');
+    c.width = 1600;
+    c.height = 900;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#f4f4ef';
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#15171b';
+    g.fillRect(200, 520, 620, 84); // the "name"
+    g.fillRect(200, 650, 380, 44); // the "title", narrower and smaller
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'two-lines.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(built, 'base64'),
+  });
+  // ONE loose box around BOTH.
+  await eraseRect(page, 0.08, 0.53, 0.58, 0.82);
+  await expect(page.getByTestId('erase-marks')).toContainText('2 lines');
+  await createBare(page);
+
+  const fields = await seededFields(page);
+  expect(fields.map((f) => f.title)).toEqual(['Name', 'Title']);
+  // Each line kept its OWN geometry: the title sits lower and is set smaller. A single field
+  // over the whole region would have averaged both away.
+  expect(fields[1].y!).toBeGreaterThan(fields[0].y!);
+  expect(fields[1].fontSize!).toBeLessThan(fields[0].fontSize! * 0.8);
+  // …and its own left edge and alignment, not the taller line's.
+  expect(fields[0].x).toBeCloseTo(200, -1);
+  expect(fields[1].x).toBeCloseTo(200, -1);
+  expect(fields.map((f) => f.align)).toEqual(['left', 'left']);
+});
+
+test('import graphic: a region marked over a graphic seeds text that FITS it', async ({ page }) => {
+  // Not every marked region held a line of type — a user marks a logo or an illustration to
+  // put editable text there. Its ink is as tall as it is wide, and cap height read off that
+  // is type the width could never hold: the fit runtime floors its shrink and then clips, so
+  // the field would open showing a fragment of its own name.
+  const built = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 1600;
+    c.height = 900;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#f4f4ef';
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#15171b';
+    g.fillRect(1150, 300, 260, 260); // a square block — a logo, not a line of text
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'block.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(built, 'base64'),
+  });
+  await eraseRect(page, 0.68, 0.29, 0.92, 0.66);
+  await createBare(page);
+
+  const shown = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('#f0')
+    .evaluate((el) => ({
+      text: el.textContent,
+      overflows: el.scrollWidth > (el.parentElement as HTMLElement).clientWidth + 1,
+      fontPx: parseFloat(getComputedStyle(el).fontSize),
+    }));
+  expect(shown.text).toBe('Name'); // its whole name, not a fragment of it
+  expect(shown.overflows).toBe(false);
+  expect(shown.fontPx).toBeLessThan(260); // nowhere near the block's own height
+});

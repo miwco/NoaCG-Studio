@@ -134,21 +134,28 @@ test('erase: a non-flat background is refused honestly, with continue-anyway ava
   expect(px.r).toBeGreaterThan(150); // the dark bar was filled (with the sampled mean)
 });
 
-test('erase: re-running starts from the original — fills never compound', async ({ page }) => {
+test('erase: dropping one mark replays the rest from the original — fills never compound', async ({ page }) => {
   await dropCard(page, framedCardPng(1000, 600));
   await toEraseSurface(page);
 
-  // First erase the text bar, then redraw the box over an empty area instead.
+  // Two marks: the text bar, and the blob standing in for cap-side artwork. Marks ACCUMULATE
+  // — a design usually has more than one piece of baked-in text.
   await drawRect(page, MARK.x0, MARK.y0, MARK.x1, MARK.y1);
-  await expect(page.getByTestId('erase-done')).toBeVisible();
-  await drawRect(page, 0.58, 0.6, 0.68, 0.7);
-  await expect(page.getByTestId('erase-done')).toBeVisible();
+  await expect(page.getByTestId('erase-marks').locator('li')).toHaveCount(1);
+  await drawRect(page, 0.7, 0.28, 0.88, 0.7);
+  await expect(page.getByTestId('erase-marks').locator('li')).toHaveCount(2);
 
+  // Dropping the FIRST one cannot un-fill pixels in place — the artwork is rebuilt from the
+  // untouched upload with only the survivor applied. So the bar comes back dark while the
+  // blob stays erased, which is exactly what "fills never compound" means.
+  await page.getByTestId('erase-remove-0').click();
+  await expect(page.getByTestId('erase-marks').locator('li')).toHaveCount(1);
   await createProject(page);
 
-  // The second run replaced the first: the text bar is BACK (dark), not still erased.
-  const px = await assetPixel(page, TEXT_CENTER.x, TEXT_CENTER.y);
-  expect(px.r).toBeLessThan(60);
+  const bar = await assetPixel(page, TEXT_CENTER.x, TEXT_CENTER.y);
+  expect(bar.r).toBeLessThan(60); // back
+  const blob = await assetPixel(page, 0.79, 0.49);
+  expect(blob.r).toBeGreaterThan(150); // still erased
 });
 
 test('erase: the erased region seeds the first text field, placed and sized from the mark', async ({ page }) => {

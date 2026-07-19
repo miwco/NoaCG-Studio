@@ -404,14 +404,18 @@ video, Import graphic, blank.
 
 **Import graphic** (mode 'design', steps/ImportDesignStep + steps/PrepareDesignStep) is a
 SETUP flow, not a second editor: Start -> Design (drop the image - any raster format the
-browser decodes: PNG, JPEG, WebP, GIF, AVIF; live preview from the moment
+browser decodes: PNG, JPEG, WebP, GIF, AVIF, rejecting only a file with no intrinsic pixel
+size, since every downstream number comes from that measurement; live preview from the moment
 it lands; Create here is the FAST PATH, byte-identical bare fixed-mode) -> Prepare -> Create.
-The **Prepare step** carries the two artwork decisions: ERASE baked-in text (a source-px rect
+The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
-non-flat holds behind "Use it anyway"; re-runs always start from draft.designOriginal so fills
-never compound; the erase MEASURES the ink it removes and that seeds the first field at create
-- the one amendment to "bare" - built from the ink's bounds, one line's height and top, and
-the edge the text was set from, never from the loose rectangle the user drew)
+non-flat holds behind "Use it anyway"). Marks ACCUMULATE into `draft.designErases` - a design
+usually has a name AND a title - each run against the artwork as it stands; removing one
+REPLAYS the survivors from draft.designOriginal, which is what keeps fills from compounding
+(a fill cannot be undone in place). The erase MEASURES the ink it removes, split into LINES,
+and every line seeds a real field at create - the one amendment to "bare" - built from that
+line's own bounds, cap height, top, and the edge it was set from, never from the loose
+rectangle the user drew)
 and the SCALING MODE (fixed default / horizontal 9-slice stretch with draggable guides + a
 content-width demo slider that pushes sample text through WizardPreview's demoText prop into
 the real emitted runtime; with stretch and no erase the PREVIEW build adds one demo line that

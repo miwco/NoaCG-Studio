@@ -301,8 +301,15 @@ leaving a visible seam after the fill.
   writes true transparency, not a tinted veil.
 - **Not flat** → the warning names the deviation, recommends re-exporting the design without
   the text, and offers **Use it anyway** (applies the average-colour fill the preview showed).
-- The cleaned PNG is downloadable (`<base>-clean.png`), the erase is removable, and every
-  re-run starts from the untouched upload (`draft.designOriginal`) — **fills never compound**.
+- **Marks ACCUMULATE.** A design usually carries more than one piece of baked text (a name and
+  a title, a scoreline and a clock), so each box is its own erase in `draft.designErases`, run
+  against the artwork as it stands — which is also what lets each region's ink be measured
+  before its own fill lands. Dropping one mark cannot un-fill pixels in place, so the step
+  REPLAYS the survivors from the untouched upload (`draft.designOriginal`): **fills never
+  compound**, and that replay is the only way an artwork can carry exactly the marks still
+  standing.
+- The cleaned PNG is downloadable (`<base>-clean.png`) and every mark is removable
+  individually or all at once.
 - Erasing happens in the file's **SOURCE pixels** (a 2× retina export is erased at 2×); only
   the seeded field's placement maps through the fitToFrame ratio into design px.
 
@@ -315,7 +322,13 @@ ink rows — a row/column needs two ink pixels to count, so compression noise ca
 box, and the run is what makes a region holding two stacked lines report ONE line's height
 instead of both plus the gap between them.
 
-Within that run it also finds the **baseline**: the lowest row still carrying `BASELINE_SHARE`
+The runs are the LINES, and each becomes its own field: a box drawn around a name *and* its
+title — the shape of every lower third — gives back two pieces of text, each with its own
+columns (a short title under a long name must not inherit the name's width and left edge),
+its own size, and its own anchor. A run under `MIN_LINE_ROWS` is a rule or an underline, not
+type, and seeds nothing.
+
+Within each run it also finds the **baseline**: the lowest row still carrying `BASELINE_SHARE`
 (0.35) of the line's densest row. Every glyph of a line reaches the baseline, so those rows are
 dense, while the two or three letters with a tail (g j p q y) collapse to under a tenth of the
 peak. That one measurement is what makes the type size readable at all — measured against real
@@ -328,7 +341,8 @@ right for one and 30% out for the other. Its blind spot is a string where most g
 
 | from the ink | into the field |
 |---|---|
-| cap-top-to-baseline ÷ 0.72, capped at half the artwork's height | `#fN` font-size. Cap height runs 0.677 em (all caps) to 0.76 em (ascender-heavy) across the bundled faces, so 0.72 is the midpoint: ±6% worst case, biased small because oversized type overflows its slot and gets shrunk, while undersized type is just nudged up. The cap catches a region marked over a logo, which has ink but no type |
+| cap-top-to-baseline ÷ 0.72 | `#fN` font-size. Cap height runs 0.677 em (all caps) to 0.76 em (ascender-heavy) across the bundled faces, so 0.72 is the midpoint: ±6% worst case, biased small because oversized type overflows its slot and gets shrunk, while undersized type is just nudged up |
+| …bounded by the line's own width ÷ (0.55 em × the field's name) | the same font-size. Not every marked region held type — a user marks a LOGO to put editable text over it, and its ink is as tall as it is wide, so cap height read off it is type the width could never hold. The fit runtime floors its shrink at 55% and then CLIPS, so the field would open showing "Tex". Half an em per glyph never binds on a real line (many times wider than it is tall) and always binds on a block |
 | the run's top, less a tenth of an em | `#fwN` top, with `line-height: 1` pinning the box to exactly one em so the glyphs land back on the ink |
 | the ink box's centre vs the ARTWORK's centre (±4.5%) | the anchor: `center` (a title card stays centred when the operator types a longer name — the one thing the field exists to survive), else `left`/`right` by which half it sits in |
 | the ink box's width, plus 0.12 em | the shrink slot — the room the ORIGINAL text had. The margin is the side bearings: type OCCUPIES more width than it PAINTS, and a slot set to the painted width alone is narrower than the very text it was measured from, so the fit runtime shrinks the seed on arrival |
