@@ -165,12 +165,27 @@ await page.addInitScript(() => {
   else document.addEventListener('DOMContentLoaded', watchStages);
 });
 
+/** Is this failure "the dev server is gone" rather than anything about the generation? */
+const serverIsDown = (e) => /ERR_CONNECTION_REFUSED|ECONNREFUSED|net::ERR_CONNECTION_RESET/.test(String(e?.message || e));
+
 // Preflight: confirm the app actually resolves to the transport this run expects before
 // spending anything (a settings-resolution change would otherwise fail mid-bench, or
 // silently bench the wrong transport). --stub inverts the expectation: it must resolve to
 // the OFFLINE provider, or the "free" run would quietly spend money.
 {
-  await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' });
+  // An unreachable dev server is the single most common way to start a bench wrong, and a
+  // raw Playwright stack trace buries the one thing worth saying about it.
+  try {
+    await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' });
+  } catch (e) {
+    console.error(
+      serverIsDown(e)
+        ? `Preflight failed: nothing is serving ${BASE}. Start it with preview_start (the dev-bench config, which blanks the backend vars) - never by hand.`
+        : `Preflight failed: could not open ${BASE}/app - ${e.message || e}`,
+    );
+    await browser.close();
+    process.exit(1);
+  }
   const resolved = await page.evaluate(async () => {
     const { loadAiSettings, aiConfigured } = await import('/src/ai/settings.ts');
     const s = loadAiSettings();
@@ -388,7 +403,13 @@ async function checkReadability(frame) {
 }
 
 const results = [];
-for (const example of selected) {
+// results.json is rewritten after EVERY run, not once at the end. A real pass is 40+ paid
+// generations over an hour or more, and the dev server has died mid-pass twice; writing only
+// at the end means a crash throws away every completed run, including what they cost.
+const saveResults = () => writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
+
+let aborted = null;
+outer: for (const example of selected) {
   const { label } = example;
   for (let run = 1; run <= RUNS; run++) {
     const id = RUNS > 1 ? `${slug(label)}-r${run}` : slug(label);
@@ -588,6 +609,7 @@ for (const example of selected) {
           `  gate ${gate.probed === true ? `probed (${gate.ok ? 'clean' : gate.rules.join(',')})` : gate.probed === false ? 'NOT PROBED' : 'unavailable'}` +
           `  dead space ${deadSpace === null ? 'n/a (overlay)' : deadSpace + '%'}  [${tokens.in}in/${tokens.out}out]`,
       );
+      saveResults();
     } catch (e) {
       results.push({
         id, label, run, engine: ENGINE, ok: false, summary: String(e.message || e), inputs: [], shots: [],
@@ -596,11 +618,19 @@ for (const example of selected) {
         calls: 0, tokens: { in: 0, out: 0 }, stages: [],
       });
       console.log('FAILED: ' + (e.message || e));
+      // A dead dev server is not a result about this brief, and every remaining run would
+      // fail the same way - 20 identical rows that read like generation failures. Stop with
+      // the cause named, keeping everything already paid for.
+      if (serverIsDown(e)) {
+        aborted = `the dev server at ${BASE} stopped responding`;
+        saveResults();
+        break outer;
+      }
     }
   }
 }
 
-writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
+saveResults();
 
 // ── The review gallery: one row per run, the frame strip left to right ──
 /** A run is clean when it validated AND showed no readability or editability defect.
@@ -647,7 +677,18 @@ const totals = results.reduce(
   (t, r) => ({ i: t.i + (r.tokens?.in ?? 0), o: t.o + (r.tokens?.out ?? 0), rep: t.rep + (r.repairRounds ?? 0) }),
   { i: 0, o: 0, rep: 0 },
 );
+const planned = selected.length * RUNS;
 console.log(
-  `\nDone (${ENGINE}): ${clean}/${results.length} clean, ${totals.rep} repair round(s), ` +
+  `\n${aborted ? 'STOPPED EARLY' : 'Done'} (${ENGINE}): ${clean}/${results.length} clean, ${totals.rep} repair round(s), ` +
     `${totals.i} input / ${totals.o} output tokens → ${OUT}/review.html`,
 );
+if (aborted) {
+  // Say what happened and what survived, then exit non-zero: a partial pass must not read
+  // as a completed one, and the runs above were paid for and are worth keeping.
+  console.error(
+    `\nAborted after ${results.length} of ${planned} runs: ${aborted}.\n` +
+      `Everything completed is saved in ${OUT}/results.json. Restart the dev server ` +
+      `(preview_start with the dev-bench config) and re-run to finish the set.`,
+  );
+  process.exit(1);
+}

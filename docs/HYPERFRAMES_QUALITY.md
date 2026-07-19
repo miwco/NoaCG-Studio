@@ -25,6 +25,25 @@ Two environment requirements, both learned the hard way:
 - Don't touch `.env` while a bench is in flight - Vite restarts on the change and the
   in-flight generation is lost.
 
+**When the dev server dies mid-pass** - it has, twice, unattended, taking a brief's worth of
+paid generations with it and leaving nothing to diagnose from. Three things now hold:
+
+- `results.json` is rewritten after **every** run, not once at the end, so a crash costs the
+  runs still to come and never the ones already paid for.
+- A connection failure stops the pass with the cause named and a non-zero exit, instead of
+  filling the remaining rows with identical failures that read like generation problems.
+  Restart the server and re-run; completed runs are on disk.
+- `npm run dev:bench` goes through `scripts/dev-bench.mjs`, which passes Vite's output through
+  unchanged (the preview harness still reads its ready banner) and copies it to a gitignored
+  `dev-bench.log` with a once-a-minute heartbeat. Read the end of that file after a death: a
+  crash message means Vite died of something it could describe, and a log ending at a
+  heartbeat means it was killed from outside without a word. The writes are synchronous
+  because a buffered stream loses exactly the lines that matter when the process is killed
+  outright - which is how the first version of this failed its own test.
+
+The cause of those two deaths is still **unknown**; the logging above exists to identify it
+next time rather than to guess now.
+
 Custom briefs are `{label, prompt, durationSec?, transparent?, assets?: [paths]}`; assets are
 really uploaded through the wizard, which is the only way to exercise the `asset:<name>`
 contract end to end.
@@ -532,7 +551,10 @@ and refuted.
 Ordered by value. The re-measurement turned up two; the total-crop half is done (above), so
 what remains of it is the spend.
 
-1. **Decide how a composition binds text it also animates.** The measured cause of the
+1. **Decide how a composition binds text it also animates.** *Deliberately deferred
+   (2026-07-19): the cost is ~9 findings across 18 runs and nothing ships broken often enough
+   to justify the change now. Reopen with the numbers below, not from scratch.* The measured
+   cause of the
    repair-round gap (above): `data-var-text` needs a leaf element, animated headline text is
    never one, and each of the three ways the model resolved that was bad - a hidden mirror that
    passes the rule while being dead, a dropped stagger, or a value written into every fragment.
