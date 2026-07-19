@@ -61,7 +61,19 @@
     return Math.max(0, b.bottom - b.top);
   }
 
+  /**
+   * Name an element the way its author would recognise it. The ID COMES FIRST and is the
+   * point: this string is fed to the model verbatim in a repair round, and generated
+   * compositions select their structure by id (`#name-mask`, `#strap`, `#title-mask`) far
+   * more than by class. Describing them by class alone rendered nine of eleven measured clip
+   * findings as a bare `<div>` - "your text is clipped by <div>", in a document holding
+   * thirty of them - which leaves the model guessing at which box to fix. Every other
+   * finding in this file already learned the same lesson the expensive way
+   * (docs/HYPERFRAMES_QUALITY.md): a finding that does not point at the right thing burns
+   * the repair round it triggers.
+   */
   function describe(el) {
+    if (el.id) return '<' + el.tagName.toLowerCase() + ' id="' + el.id + '">';
     var cls = typeof el.className === 'string' && el.className ? '.' + el.className.split(' ')[0] : '';
     return '<' + el.tagName.toLowerCase() + cls + '>';
   }
@@ -238,6 +250,19 @@
       // Name the culprit so the repair round has somewhere to go: the innermost clipper, or
       // the frame when nothing else took the bite.
       var cutter = found.clippers.length ? describe(found.clippers[0]) : 'the frame edge';
+
+      // Hand over the ARITHMETIC, not just the verdict. "Fit the type to the box" is only
+      // actionable if the model knows how wide the box is, and it cannot measure a rendered
+      // frame - it is writing code against a description. Both numbers come free from
+      // geometry already computed above: how much room the line wants, and how much it got.
+      // Measured need for this: the benched compositions size type against the FRAME while
+      // the text sits in a strap the composition itself invented, so the two numbers are
+      // computed from unrelated bases and a repair round has no way to discover the gap.
+      var needPx = Math.round(width(text));
+      var roomPx = Math.round(Math.max(0, width(region)));
+      var sizing =
+        ' The line needs ' + needPx + 'px but ' +
+        (found.clippers.length ? 'that box gives it ' : 'the frame leaves ') + roomPx + 'px.';
       issues.push({
         kind: 'clip',
         // How much of the glyph run is gone, so a caller can tell a near-miss from text that
@@ -247,7 +272,8 @@
         key: 'clip:' + label(el) + ':' + axis,
         message:
           '"' + label(el) + '" is CUT OFF - ' + pct + '% of its ' + axis + ' is clipped by ' + cutter +
-          '. Give the text room (or fit the type to the box); readable text must never be cropped at the hold.',
+          '.' + sizing +
+          ' Give the text room (or fit the type to the box); readable text must never be cropped at the hold.',
       });
     }
     return issues;

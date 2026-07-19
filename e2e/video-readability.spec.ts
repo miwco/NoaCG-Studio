@@ -89,7 +89,9 @@ test('the HyperFrames runtime runs the same checks as the Remotion host', async 
 <body>
 <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="${secs}">
   <section class="clip" data-start="0" data-duration="${secs}" data-track-index="1">
-    <div class="card"><div class="headline">BROADCAST KITCHEN</div></div>
+    <!-- id AND class: generated compositions overwhelmingly select structure by id, so the
+         finding must name the id even when a class is also present. -->
+    <div id="hero-mask" class="card"><div class="headline">BROADCAST KITCHEN</div></div>
   </section>
 </div>
 <script>
@@ -136,6 +138,14 @@ test('the HyperFrames runtime runs the same checks as the Remotion host', async 
   expect(cropped!.length).toBeGreaterThan(0);
   expect(cropped![0].message).toContain('BROADCAST KITCHEN');
   expect(cropped![0].message).toContain('CUT OFF');
+
+  // The finding has to be ACTIONABLE, not merely correct - it is fed to the model verbatim
+  // and is the only thing a repair round has to work from. Two things make it so, and both
+  // were missing: the box is named by its id (measured: nine of eleven real clip findings
+  // said only "<div>", in documents holding thirty of them), and the arithmetic is handed
+  // over, because "fit the type to the box" is unanswerable without the box's width.
+  expect(cropped![0].message).toContain('id="hero-mask"');
+  expect(cropped![0].message).toMatch(/needs \d+px but that box gives it 420px/);
 
   expect(await clipFindings(1600)).toEqual([]);
 });
