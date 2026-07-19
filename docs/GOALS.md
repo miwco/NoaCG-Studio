@@ -813,6 +813,38 @@ logo slot: here the image IS the design.
       document.fonts.ready so it never fits against the fallback face. Inspector Style tab
       group + E2E for all three modes.
 
+### State machines in the graphic model (2026-07-19 — Phase 1 of the template-library stage)
+
+The stage this opens (types × themes catalog, node editor, generated control pages) is planned
+in `docs/noacg-master-goals.md`; the model itself is contracted in `docs/STATE_MACHINE_SCHEMA.md`.
+
+- [x] **The model exists in the code** - `NOACG_ANIM` format version 2 adds an optional
+      `machine`: parallel state GROUPS, each a small graph of states (a state's content is a
+      timeline) joined by transitions fired by operator events or timers, plus the DEFAULT PATH
+      that `next` walks. One data block, in the marked ANIMATION region - no second scene model.
+- [x] **The multi-step reveal feature was ABSORBED, not duplicated** - `steps` IS the default
+      path (`defaultPath[i]`'s timeline is `steps[i]`, the positional binding), so every existing
+      timeline surface keeps working and `settings.steps` stays derived, now through one rule
+      (`animMachine.ts spxSteps`).
+- [x] **Existing templates are untouched and behave identically** - a template with no `machine`
+      key IS the implicit one-group linear machine, derived on read and never persisted; the
+      version-1 interpreter statements are kept verbatim as the machine-less path. The whole
+      catalog gained dispatch / snap / introspection without one template file changing.
+- [x] **Format-version + migration mechanism** - a normalizing parse migrates version 1 on read,
+      serialization always writes the current version, an unknown version degrades read-only.
+      Promoted to a root non-negotiable, so every persisted format follows it.
+- [x] **Snap-to-state works in preview** - `noacgSnap` composes a state's pose instantly with
+      suppressed callbacks (recovery, emergency jumps, preview without playback); `snap(null)` is
+      the visual half of reset, kept distinct from resetting data. Store `sendSnap`/`sendEvent`
+      drive it; the simulator grows a minimal event strip for explicit-machine templates only.
+- [x] **The five acceptance criteria pass** against hand-written definitions
+      (`e2e/state-machine.spec.ts` + `e2e/_machines.ts`): the simplicity guard (a lower third is
+      three states, drivable with `next` alone), the Millionaire test (selection is DATA on one
+      state; after Lock, select is structurally illegal), the scorebug test (parallel groups,
+      simultaneous events through one serial queue), the ticker test (timer auto-advance,
+      pause/resume, and a settled preview that never advances), and the compatibility test
+      (`update`/`play`/`next`/`stop` alone walk the default path). Zero export-target changes.
+
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate
 - [x] Playwright E2E for core UI flows

@@ -1,6 +1,8 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { detectPrefix } from '../model/structure';
+import { parseAnimData } from '../blocks/animData';
+import { allOperatorEvents } from '../blocks/animMachine';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -29,6 +31,15 @@ export type SpxWindow = Window & {
   buildOutTimeline?: () => GsapTimeline;
   /** Steps templates: reveal the next Continue line; returns the tween (null when done). */
   revealNextStep?: () => GsapTimeline | null;
+  /** State machine (v2 interpreter): dispatch one operator event through the serial queue. */
+  noacgDispatch?: (event: string, payload?: Record<string, string>) => GsapTimeline | null;
+  /** State machine: snap to states instantly ({group: state}; null = all to initial). */
+  noacgSnap?: (
+    assignments: Record<string, string> | null,
+    opts?: { timers?: boolean },
+  ) => { groups: Record<string, string> };
+  /** State machine: the current state pointers (the event strip's chip reads it). */
+  noacgMachineState?: () => { groups: Record<string, string> };
   /** The timeline the simulator is currently running (drives the timeline strip's playhead).
    *  Phase: 'in' | 'out' | 'step-N' (N = the 2-based Continue step). */
   __activeTl?: { phase: string; tl: GsapTimeline } | null;
@@ -79,6 +90,17 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
   const replayNonce = useTemplateStore((s) => s.replayNonce);
   const controlCommand = useTemplateStore((s) => s.controlCommand);
   const scrubCommand = useTemplateStore((s) => s.scrubCommand);
+  const templateJs = useTemplateStore((s) => s.template.js);
+  const sendEvent = useTemplateStore((s) => s.sendEvent);
+
+  // The EVENT STRIP (Phase 1's minimal machine surface): one button per authored operator
+  // event plus a current-state chip — only when the template carries an EXPLICIT machine, so
+  // ordinary templates see zero change. The graph editor itself is later work (Phase 4).
+  const machineEvents = useMemo(() => {
+    const data = parseAnimData(templateJs);
+    return data?.machine ? allOperatorEvents(data.machine) : null;
+  }, [templateJs]);
+  const [machineState, setMachineState] = useState('');
 
   const win = (): SpxWindow | null => (iframeRef.current?.contentWindow as SpxWindow) ?? null;
 
@@ -209,8 +231,35 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
     else if (controlCommand.action === 'play') playIn();
     else if (controlCommand.action === 'stop') playOut();
     else if (controlCommand.action === 'next') playNext();
+    else if (controlCommand.action === 'event') {
+      clearAutoOut(); // the operator is driving the machine — don't auto-leave under them
+      w.noacgDispatch?.(controlCommand.event ?? '', controlCommand.payload);
+    } else if (controlCommand.action === 'snap') {
+      clearAutoOut();
+      killAll(w); // snap owns the wipe-and-compose; drop the simulator's timeline handles
+      // The preview PARKS the snapped state ({timers: false}): a design view must never
+      // auto-advance under the user. Recovery-style snaps (timers armed) are the runtime's
+      // default for exports and tests.
+      w.noacgSnap?.(controlCommand.snap ?? null, { timers: false });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlCommand?.nonce]);
+
+  // The state chip tracks the machine's pointers (a cheap poll — the machine has no
+  // subscription surface inside the sandboxed iframe, and 500 ms is plenty for a readout).
+  useEffect(() => {
+    if (!machineEvents) return;
+    const tick = () => {
+      const state = win()?.noacgMachineState?.();
+      if (!state) return;
+      const groups = Object.entries(state.groups);
+      setMachineState(groups.map(([g, s]) => (groups.length > 1 ? `${g}:${s}` : s)).join(' · '));
+    };
+    tick();
+    const handle = setInterval(tick, 500);
+    return () => clearInterval(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [machineEvents]);
 
   // Timeline scrub: pause the phase's timeline at the requested time. The paused timeline is
   // cached on the preview window per phase; an iframe rebuild clears it naturally. Scrubbing
@@ -263,6 +312,23 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
       <button onClick={playNext} title="Advance multi-step templates (SPX Continue)">
         » Next
       </button>
+      {machineEvents && machineEvents.length > 0 && (
+        <div className="simulator-events" data-testid="sim-events">
+          {machineEvents.map((event) => (
+            <button
+              key={event}
+              onClick={() => sendEvent(event)}
+              title={`Dispatch the "${event}" event (fires only where the graph allows it)`}
+              data-testid={`sim-event-${event}`}
+            >
+              ⚡ {event}
+            </button>
+          ))}
+          <span className="simulator-state mono" title="The machine's current state" data-testid="sim-state-chip">
+            {machineState}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

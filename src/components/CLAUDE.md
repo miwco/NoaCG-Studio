@@ -118,6 +118,12 @@ in src/blocks/CLAUDE.md.
 
 - **PlayoutSimulator** - owns the running preview timeline `__activeTl`; settles the design view
   after every rebuild (progress(1, true) + a second update()); auto-replays on replayNonce;
+  handles the store's `event`/`snap` commands against the template's STATE MACHINE
+  (docs/STATE_MACHINE_SCHEMA.md) - snapping with `{ timers: false }`, because a parked design
+  view must never auto-advance - and, ONLY for a template carrying an EXPLICIT machine, renders
+  the **event strip**: one button per authored operator event plus a current-state chip. That is
+  Phase 1's entire machine UI; the graph editor is later work, and an ordinary template shows
+  nothing new. The four cue buttons stay THE lifecycle surface for both kinds of template;
   playNext owns each Continue's reveal tween as `__activeTl` step-N. resetGraphic clears GSAP
   inline props on the root subtree before every entrance so a prior exit never leaks its end
   state (e.g. a Blur exit's filter into a Slide entrance that never resets it). Honors the SPX

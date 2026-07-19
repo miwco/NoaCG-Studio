@@ -18,6 +18,7 @@ import {
   setLayerHide,
   setStepEase,
 } from '../blocks/animEdit';
+import { spxSteps } from '../blocks/animMachine';
 import { EASINGS } from '../model/easings';
 import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
 import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/animEval';
@@ -268,7 +269,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   const applyData = (next: AnimData) => {
     const js = spliceAnimData(template.js, next);
     if (!js || js === template.js) return;
-    const steps = String(next.steps.length - 1);
+    const steps = String(spxSteps(next));
     if (template.settings.steps !== steps) {
       const settings = { ...template.settings, steps };
       applyTemplate({ ...template, js, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
@@ -1469,10 +1470,15 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           >
             +
           </button>
-          {editable && (
+          {/* Structural step edits are read-only under an explicit machine (positional
+              binding — the machine-aware mutators arrive with Phase 2), so no dead button. */}
+          {editable && !data.machine && (
             <button
               className="timeline-zoom-btn tlv2-add-step"
-              onClick={() => applyData(addStep(data))}
+              onClick={() => {
+                const next = addStep(data);
+                if (next) applyData(next);
+              }}
               title="Add a step — a new » Next press before Out, ready for reveals and keyframes"
               data-testid="tlv2-add-step"
             >
@@ -1519,17 +1525,19 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
             />
           ) : (
             <>
-              <button
-                className="tlv2-menu-item"
-                data-testid="tlv2-menu-duplicate"
-                onClick={() => {
-                  const next = duplicateStep(data, menu.step);
-                  setMenu(null);
-                  if (next) applyData(next);
-                }}
-              >
-                Duplicate step
-              </button>
+              {!data.machine && (
+                <button
+                  className="tlv2-menu-item"
+                  data-testid="tlv2-menu-duplicate"
+                  onClick={() => {
+                    const next = duplicateStep(data, menu.step);
+                    setMenu(null);
+                    if (next) applyData(next);
+                  }}
+                >
+                  Duplicate step
+                </button>
+              )}
               <button
                 className="tlv2-menu-item"
                 data-testid="tlv2-menu-rename"
@@ -1537,7 +1545,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
               >
                 Rename…
               </button>
-              {menu.step > 0 && menu.step < data.steps.length - 1 && (
+              {!data.machine && menu.step > 0 && menu.step < data.steps.length - 1 && (
                 <button
                   className="tlv2-menu-item danger"
                   data-testid="tlv2-menu-delete"

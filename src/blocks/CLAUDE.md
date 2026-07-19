@@ -99,7 +99,8 @@ fixed interpreter in the marked ANIMATION region (emitted by
 src/templates/shared/animRuntime.ts). These modules are the editor's side of that contract;
 editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 
-- **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps;
+- **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps
+  **/machine?** (the STATE MACHINE, format version 2 - docs/STATE_MACHINE_SCHEMA.md);
   a step = name/duration/ease/reveals?/hides?/calls?/dynamics?/loops?/layers (durations and keyframe times
   are speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become
   visible in that step, `hides` the layers that LEAVE in it - the early-exit twin, its existence
@@ -131,6 +132,34 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   (serialize(parse(serialize(x))) === serialize(x)) so a small visual edit only touches the
   lines it changed. `spliceAnimData` replaces ONLY the object literal; every other character
   of the file (interpreter, user code) is untouched.
+  **FORMAT VERSION (the doctrine, docs/STATE_MACHINE_SCHEMA.md §5):** `parseAnimData` is a
+  NORMALIZING parse - a valid version-1 block migrates on read (`migrateAnimData`), so
+  everything downstream sees only the current shape - and serialization ALWAYS writes the
+  current version (one canonical shape, one fixed-point proof; a saved v1 document flips on
+  its first edit, a one-line diff). Additive optional fields never bump the version; a
+  BREAKING shape change bumps it and ships its migration here the same commit; an unknown
+  version degrades to hand-crafted, never a crash.
+- **animMachine.ts** - the machine's editor-side seam (animData owns the literal, this owns the
+  GRAPH questions). `deriveMachine` builds the implicit ONE-GROUP linear machine for data with
+  no `machine` key - states named after the steps, a synthesized pose-only `off`, a `next` arrow
+  along the path, and NO arrow into Out (exact v1 parity: next() no-ops when only Out remains).
+  It is derived on read and NEVER persisted, which is why the whole catalog gained dispatch /
+  snap / introspection without one template file changing. `spxSteps(data)` is THE
+  `settings.steps` rule (default-path length - 1; numerically identical to the historical
+  `steps.length - 1` by the positional-binding invariant) - every re-sync site calls it, so the
+  rule lives once. Plus `canonicalPath` (the snap route: default-path prefix for a main-group
+  waypoint, else BFS from the group's initial, ties by declaration order - MIRRORED by the
+  interpreter's `noacgCanonicalPath`, the animEval precedent), `operatorEvents` (the spec's
+  "Action" - what an operator may do right now, which IS the structural guard),
+  `allOperatorEvents` (the simulator's event strip), `timerTransition`, and `validateMachine`
+  (semantic errors/warnings for validateTemplate; the SHAPE gate stays in animData's
+  `isAnimData`).
+  THE POSITIONAL BINDING, the one thing to hold onto: `defaultPath[i]`'s timeline IS `steps[i]`.
+  No stored indices to go stale - and it is why every timeline surface keeps working under a
+  machine. Its price: edits that add, remove or reorder steps (`addStep`, `deleteStep`,
+  `duplicateStep`, `setLayerActivation`) return null under an explicit machine and the timeline
+  hides those affordances; the machine-aware versions arrive in Phase 2, before any wizard
+  template carries a machine.
 - **animEdit.ts** - pure keyframe mutators; every editing surface routes through these, then
   spliceAnimData + one applyTemplate makes the edit real, undoable code. setKeyframe /
   deleteKeyframe (per property), moveLayerKeyframes / deleteLayerKeyframes (the aggregate

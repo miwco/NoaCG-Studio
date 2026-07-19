@@ -11,6 +11,7 @@ import type { SpxTemplate } from '../model/types';
 import type { TemplatePart } from '../model/structure';
 import { parseAnimData, spliceAnimData } from './animData';
 import { setLayerActivation } from './animEdit';
+import { spxSteps } from './animMachine';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
 
 export interface PressChange {
@@ -47,7 +48,7 @@ export function changePartPress(
   const js = spliceAnimData(template.js, next);
   if (!js) return null;
 
-  const settings = { ...template.settings, steps: String(next.steps.length - 1) };
+  const settings = { ...template.settings, steps: String(spxSteps(next)) };
   const html = replaceDefinitionInHtml(template.html, settings, template.fields);
   const pressesAfter = next.steps.length - 2;
   return {

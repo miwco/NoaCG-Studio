@@ -59,7 +59,14 @@ templateStore.ts (zustand) holds the template plus editor UI state.
 - **replayNonce** - motion applies (timeline/Inspector edits) auto-replay via PlayoutSimulator.
 - **patchCss** - Style-panel patches: highlight without history spam.
 - **sendScrub** - timeline view -> simulator pauses the preview's in/out timeline at a time.
-- **sendControl** - the Control panel live-drives the preview through the simulator.
+- **sendControl** - the Control panel live-drives the preview through the simulator
+  (update/play/stop/next). **sendEvent(name, payload?) / sendSnap(assignments)** are its
+  state-machine twins (docs/STATE_MACHINE_SCHEMA.md): dispatch one operator event (the optional
+  flat {field: value} payload lands only if the machine's structural guard accepts it), or enter
+  states INSTANTLY - `null` assignments = every group to its initial, the VISUAL half of reset
+  (the data half is resetSampleData; the two are never conflated). Both ride the same
+  `controlCommand` nonce and are no-ops on templates without the machine runtime; the preview
+  snaps with `{ timers: false }` so a parked design view never auto-advances.
 - **selectedParts / selectedPart** - the SHARED SELECTION (multi since the interaction
   model, docs/TIMELINE_INTERACTION_MODEL.md): an ordered list of TemplatePart selectors the
   canvas, the timeline, and the Inspector all highlight; selectedPart is the PRIMARY

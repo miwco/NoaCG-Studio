@@ -186,5 +186,5 @@ export function importAnimData(template: SpxTemplate): AnimData | null {
   attachCalls(out, outPhase.calls, speed);
   attachDynamics(out, outPhase.dynamics, speed);
 
-  return { version: 1, root, speed, steps: [enter, ...middles, out] };
+  return { version: 2, root, speed, steps: [enter, ...middles, out] };
 }

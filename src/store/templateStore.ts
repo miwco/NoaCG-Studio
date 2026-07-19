@@ -16,8 +16,11 @@ export type PreviewBg = 'checkerboard' | 'black' | 'video';
  *  PanelId — `code` is not a tab (mobile mounts it on demand under the panels). */
 export type SidePanel = 'inspector' | 'data' | 'control' | 'style' | 'assets' | 'ai' | 'export';
 
-/** A live playout action the Control panel asks the simulator to run on the preview. */
-export type PlayoutAction = 'update' | 'play' | 'stop' | 'next';
+/** A live playout action the Control panel asks the simulator to run on the preview.
+ *  'event' dispatches a state-machine operator event (noacgDispatch) and 'snap' jumps
+ *  the machine to states instantly (noacgSnap) — both no-ops on templates without the
+ *  machine runtime. */
+export type PlayoutAction = 'update' | 'play' | 'stop' | 'next' | 'event' | 'snap';
 
 /** The armed canvas tool (the stage toolbar's tool switch): 'select' is the always-on
  *  gesture layer; 'text' places point text on click; 'area-text' drags out a bounded,
@@ -101,8 +104,16 @@ interface TemplateState {
   lastChange: LastChange | null;
   /** Bumped by panels after an apply to make the playout simulator replay the graphic. */
   replayNonce: number;
-  /** The Control panel's latest live command (executed immediately by the simulator). */
-  controlCommand: { action: PlayoutAction; nonce: number } | null;
+  /** The Control panel's latest live command (executed immediately by the simulator).
+   *  `event`/`payload` ride an 'event' action; `snap` rides a 'snap' action ({group: state}
+   *  assignments; null = every group to its initial — the visual reset). */
+  controlCommand: {
+    action: PlayoutAction;
+    nonce: number;
+    event?: string;
+    payload?: Record<string, string>;
+    snap?: Record<string, string> | null;
+  } | null;
   /** The timeline view's scrub position (Era 6) — the simulator seeks the live preview.
    *  Phase: 'in' | 'out' | 'step-N' (a Continue segment, N is the 2-based step number). */
   scrubCommand: { phase: string; time: number; nonce: number } | null;
@@ -148,6 +159,11 @@ interface TemplateState {
   requestReplay: () => void;
   /** Drive the live preview from the Control panel (update/play/stop/next), immediately. */
   sendControl: (action: PlayoutAction) => void;
+  /** Dispatch a state-machine operator event on the preview, with an optional flat
+   *  {field: value} payload applied only if the machine accepts the event. */
+  sendEvent: (event: string, payload?: Record<string, string>) => void;
+  /** Snap the preview's machine to states instantly ({group: state}; null = all initial). */
+  sendSnap: (assignments: Record<string, string> | null) => void;
   /** Seek the live preview's in/out/step timeline to a time (the timeline view's scrubber). */
   sendScrub: (phase: string, time: number) => void;
   /** Select ONE element by its TemplatePart selector (null deselects) — replaces the
@@ -322,6 +338,12 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   requestReplay: () => set((s) => ({ replayNonce: s.replayNonce + 1 })),
 
   sendControl: (action) => set((s) => ({ controlCommand: { action, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
+
+  sendEvent: (event, payload) =>
+    set((s) => ({ controlCommand: { action: 'event', event, payload, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
+
+  sendSnap: (assignments) =>
+    set((s) => ({ controlCommand: { action: 'snap', snap: assignments, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
 
   sendScrub: (phase, time) => set((s) => ({ scrubCommand: { phase, time, nonce: (s.scrubCommand?.nonce ?? 0) + 1 } })),
 

@@ -214,6 +214,10 @@ export function setLayerActivation(
   toPress: number,
   channel: 'mask' | 'rise',
 ): AnimData | null {
+  // An explicit machine binds default-path states to steps POSITIONALLY — an edit that adds,
+  // removes or reorders steps would silently desync the graph. Those edits arrive with the
+  // machine-aware mutators (Phase 2); until then the press chain is read-only under a machine.
+  if (data.machine) return null;
   const next = clone(data);
   const fromPress = layerPress(next, selector);
   const presses = next.steps.length - 2;
@@ -402,6 +406,7 @@ function renumberSteps(data: AnimData): void {
  * after the original — duplicating Out lands the copy before it, as a content step.
  */
 export function duplicateStep(data: AnimData, stepIndex: number): AnimData | null {
+  if (data.machine) return null; // positional binding — see setLayerActivation
   const src = data.steps[stepIndex];
   if (!src) return null;
   const next = clone(data);
@@ -434,6 +439,7 @@ export function deleteStep(
   stepIndex: number,
   channelOf: (selector: string) => 'mask' | 'rise',
 ): AnimData | null {
+  if (data.machine) return null; // positional binding — see setLayerActivation
   if (stepIndex <= 0 || stepIndex >= data.steps.length - 1) return null;
   const next = clone(data);
   const [removed] = next.steps.splice(stepIndex, 1);
@@ -446,7 +452,8 @@ export function deleteStep(
 
 /** Add an empty content step just before Out — an authoring target for the next reveal
  *  or keyframes (a press that still does nothing when the show airs is the user's call). */
-export function addStep(data: AnimData): AnimData {
+export function addStep(data: AnimData): AnimData | null {
+  if (data.machine) return null; // positional binding — see setLayerActivation
   const next = clone(data);
   const step: AnimStep = {
     name: `Step ${next.steps.length}`,

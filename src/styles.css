@@ -484,6 +484,17 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   flex-wrap: wrap;
 }
 .simulator .bg-switch { margin-left: auto; display: flex; gap: 4px; }
+/* The state-machine event strip (explicit-machine templates only): authored operator events
+   as buttons + the current-state chip, sitting after the four playout cues. */
+.simulator-events { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.simulator-state {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+}
 
 /* ---------- Field controls (the shared control: Data, Control, video Content) ---------- */
 .ctl-step { width: 40px; flex: 0 0 auto; font-weight: 700; font-size: 16px; }
