@@ -628,7 +628,7 @@ test('import graphic: wrap flows a long value onto more rows, Free lets it run',
     const t = useTemplateStore.getState().template;
     return lineFit(t.html, t.css, 'f0');
   });
-  expect(fit).toEqual({ mode: 'overflow', maxWidth: null, scaled: true });
+  expect(fit).toEqual({ mode: 'overflow', maxWidth: null, scaled: true, stretch: false });
 });
 
 test('import graphic: the artwork and a field animate as separate layers from the Inspector', async ({ page }) => {

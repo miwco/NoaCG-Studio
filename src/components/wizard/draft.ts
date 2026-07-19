@@ -209,9 +209,39 @@ function withEraseSeedField(template: SpxTemplate, draft: WizardDraft): SpxTempl
   return added ? added.template : template;
 }
 
-export function buildDraftTemplate(variant: TemplateVariant, draft: WizardDraft): SpxTemplate {
+/**
+ * PREVIEW-ONLY: a sample line for the Prepare step's stretch demo. With stretch picked but
+ * nothing erased, the created template is bare — there is no field for the content-width
+ * slider to widen — so the preview build (and only it) places one demo line in the middle
+ * band, through the same addPlacedLine transform as everything else. This is the ONE
+ * sanctioned deviation from preview == created code (docs/IMPORT_MVP.md): the demo exists
+ * exactly so the user can verify the guides before creating.
+ */
+function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemplate {
+  const art = draft.designArt;
+  const hz = art?.stretch?.horizontal;
+  if (!art || !hz || draft.designErase) return template; // the erase-seeded field is the demo
+  const added = addPlacedLine(template, {
+    title: 'Sample',
+    ftype: 'textfield',
+    text: 'Alexandra Riva',
+    at: { x: Math.round(hz.left + art.width * 0.03), y: Math.round(art.height * 0.4) },
+    fontSize: Math.min(64, Math.max(12, Math.round(art.height * 0.12))),
+  });
+  return added ? added.template : template;
+}
+
+export function buildDraftTemplate(
+  variant: TemplateVariant,
+  draft: WizardDraft,
+  // The wizard PREVIEW passes stretchDemo; create() never does — see withStretchDemoLine.
+  opts: { stretchDemo?: boolean } = {},
+): SpxTemplate {
   let template = variant.create(draftToOptions(variant, draft));
-  if (variant.category === 'imported-design') template = withEraseSeedField(template, draft);
+  if (variant.category === 'imported-design') {
+    template = withEraseSeedField(template, draft);
+    if (opts.stretchDemo) template = withStretchDemoLine(template, draft);
+  }
   const inId = draft.animation.presetId ?? variant.animationPresets[0];
   const outId = draft.animation.outPresetId;
   if (!outId || outId === inId) return template;

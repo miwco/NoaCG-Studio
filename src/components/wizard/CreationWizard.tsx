@@ -57,6 +57,9 @@ export default function CreationWizard() {
   // graphics in the same package).
   const [brand, setBrand] = useState<ProjectBrand | null>(null);
   const [matchBrand, setMatchBrand] = useState(false);
+  // Prepare step's content-width slider (Import graphic, stretch mode): preview-only demo
+  // text pushed into the live preview — never part of the draft or the created template.
+  const [stretchDemo, setStretchDemo] = useState<string | null>(null);
   // Backdrop click-to-close must only fire on a genuine outside click - not when a text
   // selection drag STARTED inside an input (e.g. the video duration field) and released
   // over the backdrop. The browser routes that release's `click` to the backdrop (the
@@ -70,6 +73,7 @@ export default function CreationWizard() {
       setMode('template');
       setDraft(initialDraft());
       setAiResult(null);
+      setStretchDemo(null);
       const b = loadBrand();
       setBrand(b);
       // Off by default: reusing the previous project's look is an explicit choice,
@@ -90,10 +94,11 @@ export default function CreationWizard() {
 
   const variant = draft.variantId ? variantById(draft.variantId) : undefined;
 
-  // The live preview always renders the draft as real template code.
+  // The live preview always renders the draft as real template code. Design mode's preview
+  // may additionally carry the stretch-demo line (preview-only; create() builds without it).
   const previewTemplate = useMemo(
-    () => (variant ? buildDraftTemplate(variant, draft) : null),
-    [variant, draft],
+    () => (variant ? buildDraftTemplate(variant, draft, { stretchDemo: mode === 'design' }) : null),
+    [variant, draft, mode],
   );
 
   // On the Animation step the preview demos the full lifecycle (in → hold → out → in)
@@ -145,7 +150,9 @@ export default function CreationWizard() {
 
   const create = () => {
     if (!previewTemplate || !variant) return;
-    void applyGenerated(previewTemplate);
+    // Design mode rebuilds WITHOUT the preview-only stretch-demo line; every other mode's
+    // preview is exactly the created code already.
+    void applyGenerated(mode === 'design' ? buildDraftTemplate(variant, draft) : previewTemplate);
     // An imported design creates BARE and hands off to the editor's Data tab — that is
     // where its fields are added, as real placed layers (docs/IMPORT_MVP.md).
     if (variant.category === 'imported-design') useTemplateStore.getState().setActivePanel('data');
@@ -340,6 +347,7 @@ export default function CreationWizard() {
             {step === 2 && mode === 'design' && draft.designArt && (
               <PrepareDesignStep
                 art={draft.designArt}
+                resolution={draftResolution(draft)}
                 images={draft.importedImages}
                 original={draft.designOriginal}
                 erase={draft.designErase}
@@ -352,6 +360,10 @@ export default function CreationWizard() {
                     importedImages: draft.designOriginal ? [draft.designOriginal] : draft.importedImages,
                   })
                 }
+                onStretch={(stretch) =>
+                  patch({ designArt: { ...draft.designArt!, stretch: stretch ?? undefined } })
+                }
+                onDemoText={setStretchDemo}
               />
             )}
             {step === 2 && mode !== 'design' && (
@@ -392,6 +404,7 @@ export default function CreationWizard() {
                 template={mode === 'ai' ? aiResult!.template : previewTemplate!}
                 replayKey={replayKey}
                 demoOut={demoOut}
+                demoText={mode === 'design' ? stretchDemo : null}
               />
             </aside>
           )}

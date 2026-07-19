@@ -26,9 +26,13 @@ async function toEraseSurface(page: Page) {
   await expect(page.getByTestId('erase-surface')).toBeVisible();
 }
 
-/** Drag a rectangle on the erase surface, in fractions of the displayed artwork. */
+/** Drag a rectangle on the erase surface, in fractions of the displayed artwork. The box
+ *  is polled until the <img> inside has laid out — its data-URL decode is async, and a box
+ *  read too early points at a collapsed strip (the drag would land on the header). */
 async function drawRect(page: Page, fx0: number, fy0: number, fx1: number, fy1: number) {
-  const box = (await page.getByTestId('erase-surface').boundingBox())!;
+  const surface = page.getByTestId('erase-surface');
+  await expect.poll(async () => (await surface.boundingBox())?.height ?? 0).toBeGreaterThan(100);
+  const box = (await surface.boundingBox())!;
   await page.mouse.move(box.x + box.width * fx0, box.y + box.height * fy0);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * fx1, box.y + box.height * fy1, { steps: 4 });
