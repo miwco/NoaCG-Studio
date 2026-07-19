@@ -331,19 +331,28 @@ what remains of it is the spend.
    bench's MAJORITY persistence rule rather than the all-frames rule `persistentTextIssues`
    applies to crops, and `ruleFor()` needs a rule name of its own instead of folding it into
    `text-clip`.
-3. **The transparent/overlay brief is the weakest case on both engines** - the only
+3. **A preview rebuild can replace the document the gate is probing.** `HyperframesBridge`
+   serializes load and probe on its own chain, but the panel rebuilds the frame's `srcdoc`
+   through React on a debounce, which does not go through that chain. A rebuild landing
+   mid-probe therefore has the checks measure the project's own composition instead of the
+   candidate being validated - and report it clean, for the wrong composition. Found while
+   fixing a readability spec that failed about one run in eight under load; the spec now waits
+   for a quiet preview and asserts the candidate was still mounted when the probe finished,
+   but the underlying race is the app's, not the test's. The fix is ownership: validation
+   should probe a frame the panel cannot rebuild under it.
+4. **The transparent/overlay brief is the weakest case on both engines** - the only
    readability finding in the varied pass, the most repairs on each engine, and the one
    design shape neither contract says much about (where a strap sits, safe margins, not
    filling the frame). This is the strongest candidate for a *measured* prompt improvement,
    but it needs more than one sample per engine before anyone writes prose.
-4. **Sharpen the repair message when text looks duplicated.** An earlier rejection failed
+5. **Sharpen the repair message when text looks duplicated.** An earlier rejection failed
    because the finding told the model to resize a line whose real problem was that it had
    been rendered twice ("NOACGNOACG"). A finding that notices a repeated substring and says
    so would probably be fixable inside the two rounds.
-5. **The countdown-style minimal reveal** - historically the weakest brief, and the
+6. **The countdown-style minimal reveal** - historically the weakest brief, and the
    "uncommitted default" look it falls into is unmoved by prose. It came through clean in
    this pass, so treat the earlier finding as unconfirmed rather than settled.
-6. **`<video>` / `<audio>` clips** - the largest deliberate divergence from real HyperFrames.
+7. **`<video>` / `<audio>` clips** - the largest deliberate divergence from real HyperFrames.
    A real feature (validator, driver, compose, and the render worker all have to agree on how
    a media clip seeks deterministically), not a prompt change.
 

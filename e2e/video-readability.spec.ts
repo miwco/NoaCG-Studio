@@ -246,6 +246,26 @@ test.describe('the gate reports whether it actually ran', () => {
     await createHyperframesProject(page);
     await expect(page.locator('.ai-msg.assistant').first()).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('.video-player-frame')).toBeVisible();
+    // Wait for the preview to go QUIET before validating. The panel rebuilds the frame's
+    // srcdoc on a debounce after a generation applies, and validation mounts its candidate
+    // into that same frame - so a rebuild still pending here lands mid-probe and the checks
+    // measure the project's own composition instead of the fixture. It then reports clean,
+    // for the composition nobody asked about. Observed as a ~1-in-8 failure under four-worker
+    // contention, diagnosed by reading back the srcdoc the probe had actually measured.
+    let previousDoc = '';
+    await expect
+      .poll(
+        async () => {
+          const now = await page
+            .locator('.video-player-frame')
+            .evaluate((el: HTMLIFrameElement) => el.getAttribute('srcdoc') ?? '');
+          const settled = now.length > 0 && now === previousDoc;
+          previousDoc = now;
+          return settled;
+        },
+        { timeout: 15_000, intervals: [250] },
+      )
+      .toBe(true);
 
     const results = await page.evaluate(
       async ([html, settings]) => {
@@ -262,9 +282,21 @@ test.describe('the gate reports whether it actually ran', () => {
         // validator retries against whatever preview is mounted NOW.
         const dead = new HyperframesBridge({});
         dead.dispose();
+        // Whether the fixture is still the mounted document when the probe finishes. If a
+        // preview rebuild raced in and replaced it, the findings describe some other
+        // composition and a "clean" verdict means nothing - so the assertions check this
+        // rather than silently trusting an empty list.
+        const fixtureStillMounted = () =>
+          (document.querySelector('.video-player-frame') as HTMLIFrameElement | null)
+            ?.getAttribute('srcdoc')
+            ?.includes('name-mask') ?? false;
+        const a = live ? sum(await validateHyperframesComposition(html, settings, [], live)) : null;
+        const aMounted = fixtureStillMounted();
+        const b = sum(await validateHyperframesComposition(html, settings, [], dead));
+        const bMounted = fixtureStillMounted();
         return {
-          mountedPreview: live ? sum(await validateHyperframesComposition(html, settings, [], live)) : null,
-          deadBridgeRecovers: sum(await validateHyperframesComposition(html, settings, [], dead)),
+          mountedPreview: a ? { ...a, fixtureStillMounted: aMounted } : null,
+          deadBridgeRecovers: { ...b, fixtureStillMounted: bMounted },
         };
       },
       [OFF_FRAME_LOWER_THIRD, FIXTURE_SETTINGS] as const,
@@ -273,6 +305,11 @@ test.describe('the gate reports whether it actually ran', () => {
     expect(results.mountedPreview, 'the mounted preview registers itself for sibling validators').not.toBeNull();
     for (const [name, r] of Object.entries(results)) {
       expect(r!.probed, `${name}: the checks must have actually run`).toBe(true);
+      expect(
+        r!.fixtureStillMounted,
+        `${name}: the probe measured whatever was mounted - if a rebuild replaced the fixture, ` +
+          'its verdict is about the wrong composition',
+      ).toBe(true);
       // Nothing of this fixture's text is painted, so it escalates past the soft rule.
       expect(r!.rules, `${name}: text painted nowhere is a TOTAL clip`).toContain('text-clip-total');
       expect(r!.ok, `${name}: an unreadable composition must not validate`).toBe(false);
