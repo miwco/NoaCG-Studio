@@ -305,7 +305,7 @@ defect, by two different routes:
    driver probes `clip().concat(safeArea())` and the Remotion host the same pair. Text painted
    behind a panel therefore ships unflagged on both engines. This also qualifies the claim in
    `src/video/readability.ts` that the engines judge a composition identically: they do, but
-   both are blind in the same place (follow-up 3).
+   both are blind in the same place (follow-up 2).
 
 The bench now records a **gate self-check** per run - it re-validates the finished source
 against the live bridge and reports whether the gate `probed`, so no readability figure from
