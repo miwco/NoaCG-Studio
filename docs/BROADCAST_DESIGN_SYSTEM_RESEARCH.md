@@ -1,9 +1,9 @@
 # Broadcast design system - skills evaluation and reference-library architecture
 
-Research and implementation plan. **Nothing here is built, and the build is on hold** (§13.1).
-No production code changed and no generation path touched. One authoring-side skill was
-installed, narrowed and gitignored - see §13.2 for the exact record. The measured-before/after
-rule from `docs/VIDEO_DESIGN_QUALITY_PLAN.md` governs everything proposed below.
+Research and implementation plan. **Steps 1-2 are built and verified; the paid A/B has not
+run**, so the change is proven correct, not yet proven better (§13.1). The
+measured-before/after rule from `docs/VIDEO_DESIGN_QUALITY_PLAN.md` governs what remains, and
+the contrast selector ships behind a one-line flag precisely so both arms can be benched.
 
 Goal being served: future AI generations that look art-directed, differ from each other in
 real ways, draw on broader design vocabulary than the model's defaults, move with intent, and
@@ -923,18 +923,56 @@ official. Korean sourcing (KBS/SBS mark origins) is Namuwiki-derived and medium 
 
 ## 13. Summary of what was done, and what to do next
 
-### 13.1 Status: HELD
+### 13.1 Status: steps 1-2 BUILT, step 3 (paid A/B) not started
 
-**Decision, 2026-07-20: no `src/ai` work proceeds for now.** Neither the motion additions nor
-the reference PoC is built. The research stands as the plan; §8 and §9 are the spec for whenever
-it starts.
+The hold was lifted on 2026-07-20 and the two no-spend steps landed. **No real-token bench has
+run**, so nothing here is measured against the arm it replaces - the change is verified as
+*correct*, not yet as *better*.
 
-**Recorded decision for when it does start:** the first authoring pass covers **both** contrast
-sets, roughly 12 cards - the regional extremes (Nordic, Japanese) *and* the underserved genres
-(financial, game show, esports). Broader coverage and more axis positions filled, at the cost of
-a bigger authoring pass and a noisier first measurement. Note the tradeoff recorded in §12.1:
-the Nordic/Japanese pair is the sharpest *test* of whether contrast selection works at all, so
-it is worth reading that pair's result separately rather than only in aggregate.
+| Step | State |
+|---|---|
+| 1. Seven motion additions to `MOTION_PRINCIPLES` | **done** |
+| 2. Card schema + 12 cards + contrast selection behind a flag | **done** |
+| 3. Real-token A/B on distinctiveness across briefs | **not started** - the next decision |
+| 4. SPX-side library | not started, gated on step 3 |
+
+**Verified:** `npm run build` green (typecheck + lint + build); **all 293 e2e specs pass**
+(5.1 min); selector exercised directly through the dev server against 9 briefs.
+
+Measured selector behaviour versus the shipped keyword pick:
+
+| | keyword pick | contrast |
+|---|---|---|
+| Brief-matched card survives | - | 9/9 |
+| Returns a full pair | 3/9 | 9/9 |
+| Mean pair separation (0-1) | 0.39-0.58 where a pair existed | 0.688 |
+| Companion rotates over 4 repeats of one brief | no | 4 distinct |
+
+#### Two things the free verification caught
+
+Both are recorded because they are easy to reintroduce.
+
+**Unanchored max-min discards the relevant card.** The first implementation selected the two
+most mutually-unlike cards in the pool. That is a correct reading of "maximise contrast" and it
+is wrong: an awards brief returned `editorial-warm` + `dense-telop` and **dropped
+`celebration`** - the one card that actually matched. A nordic brief lost
+`public-service-nordic` the same way. Relevance must PIN the first pick (`pickContrasting`'s
+`seed` argument) and contrast may only choose the companions. Anything that maximises spread
+over an unpinned pool will rediscover this bug.
+
+**Keyword eligibility alone is too narrow for contrast to act.** Most briefs match one or two
+cards, so the selector had nothing to choose between and returned exactly what the legacy path
+returned. The fix is that matched cards *vote on genre* and cards sharing a voted genre join the
+pool - which widens the field without letting a cooking brief reach the data-terminal card.
+
+#### Known characteristic, for the A/B to judge
+
+`dense-telop` is the axis outlier (6 info layers, density 5, cut motion, screen-native), so on a
+**cold** ledger it wins the companion slot for 5 of the 9 test briefs. The recency ledger
+disperses this within a session - four repeats of one brief gave four distinct companions - but
+a first-ever generation will often see it. This is left untuned deliberately: tuning selection
+weights before the measured A/B is exactly the kind of unmeasured prompt-fiddling this repo's
+decision rule exists to prevent.
 
 ### 13.2 Record of changes
 
