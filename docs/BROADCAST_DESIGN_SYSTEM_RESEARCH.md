@@ -1,8 +1,9 @@
 # Broadcast design system - skills evaluation and reference-library architecture
 
-Research and implementation plan. **Nothing here is built yet.** No production code changed;
-no third-party skill installed. The measured-before/after rule from
-`docs/VIDEO_DESIGN_QUALITY_PLAN.md` governs everything proposed below.
+Research and implementation plan. **Nothing here is built, and the build is on hold** (§13.1).
+No production code changed and no generation path touched. One authoring-side skill was
+installed, narrowed and gitignored - see §13.2 for the exact record. The measured-before/after
+rule from `docs/VIDEO_DESIGN_QUALITY_PLAN.md` governs everything proposed below.
 
 Goal being served: future AI generations that look art-directed, differ from each other in
 real ways, draw on broader design vocabulary than the model's defaults, move with intent, and
@@ -922,18 +923,52 @@ official. Korean sourcing (KBS/SBS mark origins) is Namuwiki-derived and medium 
 
 ## 13. Summary of what was done, and what to do next
 
-### 13.1 Record of changes
+### 13.1 Status: HELD
 
-**Installed: nothing.** No third-party skill was installed, in any scope. No `npx skills add`
-was run. No `.claude/skills/` directory was modified. No plugin was enabled.
+**Decision, 2026-07-20: no `src/ai` work proceeds for now.** Neither the motion additions nor
+the reference PoC is built. The research stands as the plan; §8 and §9 are the spec for whenever
+it starts.
 
-**Changed: one file** - `docs/BROADCAST_DESIGN_SYSTEM_RESEARCH.md` (this document). No
-production code, no configuration, no prompt text, no generation path.
+**Recorded decision for when it does start:** the first authoring pass covers **both** contrast
+sets, roughly 12 cards - the regional extremes (Nordic, Japanese) *and* the underserved genres
+(financial, game show, esports). Broader coverage and more axis positions filled, at the cost of
+a bigger authoring pass and a noisier first measurement. Note the tradeoff recorded in §12.1:
+the Nordic/Japanese pair is the sharpest *test* of whether contrast selection works at all, so
+it is worth reading that pair's result separately rather than only in aggregate.
 
-All skill contents were read directly from the source repositories over HTTPS (GitHub API and
-`raw.githubusercontent.com`) rather than installed, which was sufficient to evaluate them fully.
+### 13.2 Record of changes
 
-### 13.2 The recommendation in one paragraph
+**Product code: untouched.** No change to any generation path, prompt text, or configuration.
+All skill contents were evaluated by reading the source repositories over HTTPS (GitHub API and
+`raw.githubusercontent.com`), which was sufficient to judge them fully.
+
+Housekeeping performed alongside the research:
+
+| Change | Detail |
+|---|---|
+| `docs/BROADCAST_DESIGN_SYSTEM_RESEARCH.md` | this document (new) |
+| `.gitignore` | `.claude/skills/` -> `.claude/skills/*` plus named re-includes for the three first-party skills. Git cannot un-ignore a path inside an ignored *directory*, so ignoring the *contents* is what makes the exceptions possible. Vendor skills stay ignored - verified |
+| `.claude/skills/video-quality-round/` | **rescued.** Was untracked, gitignored and worktree-local, never committed; deleting this worktree would have destroyed it. Now tracked by rule rather than by `git add -f` |
+| `.claude/skills/video-quality-round/SKILL.md` | corrected one stale "known trap": it claimed the bench has no engine flag, but `--engine=remotion\|hyperframes` exists (`scripts/video-bench.mjs:50`). Also documented `--stub`, which runs the whole rig free. Fixed rather than enshrined, since tracking the file makes it official |
+| user-level stale skills | pre-rebrand duplicates of `ograf-expert` and `spx-html-template-expert` removed from `~/.claude/skills/`. They shadowed the repo copies with no deterministic precedence, which is why each appeared twice in the skill list. Verified first: each differed from the repo copy by exactly one line, the old product name. **Moved to the session scratchpad rather than hard-deleted**, so the action is reversible |
+
+**Installed: `emilkowalski/skills`, narrowed to `review-animations` only.** Project-scoped, so it
+lands in the gitignored `.claude/skills/` and never enters git history. Two files
+(`SKILL.md` + `STANDARDS.md`).
+
+The narrowing is deliberate and worth keeping if this is ever revisited. Five of the six skills
+in that repo are **model-invocable**, and they carry motion numbers this document establishes as
+wrong for broadcast by 2-3x with an inverted exit curve (§2.1). A skill auto-firing while someone
+edits `src/ai/video/prompts.ts` would inject "UI animations stay under 300ms" and "ease-out on
+exits" into exactly the wrong session. `review-animations` alone carries
+`disable-model-invocation: true`, so it cannot fire unbidden - and its verdict-tier and
+Before/After/Why structure is the part actually worth reusing (§2.3). The specific *values* from
+the other five are already transcribed in §2.3, so the files were not needed.
+
+**To reverse:** `npx skills remove review-animations`. The lockfile (`skills-lock.json`) is
+gitignored, so nothing about the install is committed.
+
+### 13.3 The recommendation in one paragraph
 
 Install none of the three into the generation path - they are agent skills and cannot reach it
 (§0). Harvest seven motion principles from Emil and roughly eight typographic and colour rules
@@ -943,20 +978,19 @@ Skill outright. Then spend the real effort on the thing that actually addresses 
 goals are variety problems and no amount of taste prose fixes a mechanism that asks one model in
 one pass to differentiate from itself (§4).
 
-### 13.3 Suggested order
+### 13.4 Order for when the hold lifts
 
 1. **The seven motion additions** to `MOTION_PRINCIPLES` - smallest, safest, independently
-   valuable, and testable against the existing bench.
-2. **The PoC in §8** - schema fields, six orthogonal cards, contrast selection, free stub run,
-   then a real-token A/B judged on distinctiveness across briefs.
-3. **Only if that measures well:** the SPX-side library and the `specSystemPrompt()` splice.
+   valuable, and one append-only edit to a single file, so it merges trivially against other
+   in-flight branches. Note the standing rule from `docs/GOALS.md` Era 3: re-run the bank after
+   any system-prompt change. Cheap to write, but not trustworthy until a bench pass.
+2. **The PoC in §8** - schema fields, ~12 cards per §13.1, contrast selection behind a flag.
+   Verifiable free via `video-bench.mjs --stub` and the 57-file fixture replay through
+   `probe-composition.mjs`, before any paid run.
+3. **The measured A/B** - real tokens, two arms, judged on distinctiveness across briefs against
+   the five-axis rubric in `docs/VIDEO_DESIGN_QUALITY_PLAN.md` §5. This is what earns the change
+   its place and clears the deferral recorded in `src/ai/CLAUDE.md`.
+4. **Only if that measures well:** the SPX-side library and the `specSystemPrompt()` splice.
 
-### 13.4 Open questions for the user
-
-- Whether to install `emilkowalski/skills` for the **authoring** loop only (gitignored,
-  one-command removal). Recommended but not required; it changes nothing user-facing.
-- Whether `.claude/skills/video-quality-round/` should be rescued from its untracked, gitignored,
-  worktree-local state before it is lost (§5.1).
-- Whether the stale pre-rebrand skill duplicates in `C:\Users\ahonemi\.claude\skills\` should be
-  deleted - they currently shadow the repo copies with no deterministic precedence.
+Steps 1 and 2-4 are independent; step 1 can land at any time without touching the reference work.
 
