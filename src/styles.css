@@ -2525,6 +2525,23 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   color: var(--text);
 }
 
+/* The chip's padlock: whether this part takes canvas drags at all. Locked reads as the
+   quiet, resting state (it is the imported artwork's default), unlocked as the live one. */
+.canvas-chip button.canvas-lock {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  padding: 1px 5px;
+  background: rgba(27, 34, 48, 0.9);
+  border: 1px solid rgba(246, 166, 35, 0.45);
+  border-radius: 3px;
+  color: var(--text);
+  white-space: nowrap;
+}
+.canvas-chip button.canvas-lock.locked {
+  border-color: rgba(154, 165, 184, 0.35);
+  color: var(--text-dim);
+}
+
 /* ---------- Video editor shell (the AI Remotion project kind) ---------- */
 /* Desktop: [ code | divider | right ]; the right column stacks the player stage over the
    tabbed panel (Chat / Settings / Assets / Export). Columns come from inline styles

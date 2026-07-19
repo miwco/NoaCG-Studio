@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { awaitPreviewRebuild } from './_preview';
 import { lowerThirdPng } from './_png';
+import { elementPoint } from './_canvas';
 
 // Canvas usability on an imported design (docs/IMPORT_MVP.md): the artwork and the fields
 // placed on it are ONE composition — scaling keeps them together as design-layout CSS — and
@@ -114,4 +115,92 @@ test('import graphic: scaling the design scales the artwork and its fields toget
   // is back the moment it is selected.
   await page.locator('.tlv2-labels .timeline-label[data-part="#f0"]').click();
   await expect(page.getByTestId('line-size-handle')).toBeVisible();
+});
+
+/** What a gesture wrote: the field's placement, the artwork's motion, the root's anchor. */
+async function writes(page: Page) {
+  return page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { placedLines } = await import('/src/blocks/designLayout.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const s = useTemplateStore.getState();
+    const data = parseAnimData(s.template.js);
+    const tracksOf = (sel: string) =>
+      (data?.steps ?? []).flatMap((step) => Object.keys(step.layers[sel] ?? {})).sort();
+    const root = s.template.css.match(/\.imported-design\s*\{([^}]*)\}/)?.[1] ?? '';
+    return {
+      place: placedLines(s.template.html, s.template.css)['#f0'] ?? null,
+      artTracks: tracksOf('.imported-design-art'),
+      rootRule: root.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim(),
+      selected: s.selectedParts,
+    };
+  });
+}
+
+/** A press-and-drag straight from a point in the preview — no selection click first. */
+async function dragFrom(page: Page, selector: string, at: [number, number], by: [number, number]) {
+  const c = await elementPoint(page, selector, at[0], at[1]);
+  await page.mouse.move(c.x, c.y);
+  await page.mouse.down();
+  await page.mouse.move(c.x + by[0], c.y + by[1], { steps: 8 });
+  await page.mouse.up();
+  return c.scale;
+}
+
+test('import graphic: dragging visible text moves the TEXT, not the artwork under it', async ({ page }) => {
+  await createImported(page);
+  // Start from nothing selected (a field arrives selected, so Escape clears it): the press
+  // itself has to do both jobs.
+  await page.keyboard.press('Escape');
+  const before = await writes(page);
+  expect(before.selected).toEqual([]);
+
+  const scale = await dragFrom(page, '#f0', [0.5, 0.5], [110, -70]);
+  await awaitPreviewRebuild(page);
+
+  const after = await writes(page);
+  // One gesture selected the text AND placed it — no select-then-drag round trip.
+  expect(after.selected).toEqual(['#f0']);
+  expect(after.place!.x).toBeCloseTo(before.place!.x + 110 / scale, -1);
+  expect(after.place!.y).toBeCloseTo(before.place!.y - 70 / scale, -1);
+  // The artwork under the text was NOT dragged, and the graphic did not re-anchor.
+  expect(after.artTracks).toEqual(before.artTracks);
+  expect(after.rootRule).toBe(before.rootRule);
+});
+
+test('import graphic: the locked artwork never captures a drag — bare artwork moves the graphic', async ({ page }) => {
+  await createImported(page);
+
+  // The artwork is locked by default: selecting it says so, and it offers no move handles.
+  await page.locator('.tlv2-labels .timeline-label[data-part=".imported-design-art"]').click();
+  await expect(page.getByTestId('canvas-lock')).toContainText('Locked');
+  await expect(page.getByTestId('selection-chip')).toContainText('Locked —');
+  await expect(page.getByTestId('layer-scale-handle')).toHaveCount(0);
+
+  const before = await writes(page);
+  // Drag from BARE artwork, well clear of the text.
+  await dragFrom(page, '.imported-design-art', [0.82, 0.2], [-60, 90]);
+  await awaitPreviewRebuild(page);
+
+  const after = await writes(page);
+  expect(after.artTracks).toEqual(before.artTracks); // no motion keyed on the locked artwork
+  expect(after.place).toEqual(before.place); // and the text stayed put
+  expect(after.rootRule).not.toBe(before.rootRule); // the WHOLE graphic re-anchored instead
+});
+
+test('import graphic: unlocking the artwork gives it back its own layer gestures', async ({ page }) => {
+  await createImported(page);
+  await page.locator('.tlv2-labels .timeline-label[data-part=".imported-design-art"]').click();
+  await page.getByTestId('canvas-lock').click();
+  await expect(page.getByTestId('canvas-lock')).toContainText('Unlocked');
+
+  const before = await writes(page);
+  await dragFrom(page, '.imported-design-art', [0.82, 0.2], [-60, 90]);
+  await awaitPreviewRebuild(page);
+
+  const after = await writes(page);
+  // Now it moves as its own layer — position keyframes, the channel every layer uses.
+  expect(after.artTracks).toContain('x');
+  expect(after.artTracks).toContain('y');
+  expect(after.rootRule).toBe(before.rootRule); // the graphic itself did not re-anchor
 });
