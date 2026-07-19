@@ -546,6 +546,66 @@ The `variables` mechanism is the part that is solid: it was traced to specific c
 in the app twice, and the competing explanation (that Remotion hides the same defect) was tested
 and refuted.
 
+### Why HyperFrames clips text more (answered from the same 42 generations, no new spend)
+
+The residual gap above - `text-clip` ×8 across 4 runs against Remotion's ×3 across 1 - has a
+single mechanical cause, and it is visible in the findings before opening a single source:
+
+- every HyperFrames clip is **`clipped by <div>`** - an inner element;
+- every Remotion clip is **`clipped by <div.__remotion-player>`** - the frame itself.
+
+Remotion's text is only ever cut by the edge of the world. HyperFrames' text is cut by a box the
+composition built around it. The determinant is narrow: **an explicit width on an ancestor of
+`white-space: nowrap` text.**
+
+The within-engine control is the cleanest evidence, because it holds the engine fixed. All three
+HyperFrames overlay runs were the same brief:
+
+| run | how the strap is built | result |
+|---|---|---|
+| r1 | `#strap` 100%×100% (a positioning layer), `#panel` an **empty sibling** bar, `#text-block` **no width** | clean, 0 repairs |
+| r2, r3 | text **nested inside** `#strap { width: 34% }`, behind `#name-mask { overflow: hidden }` | 3 repair rounds, clips of 20%, 26%, **49%** |
+
+Nothing bounds the text in r1, so nothing can crop it. In r3 a `nowrap` role line lives inside a
+653 px strap while the contract's fit arithmetic sizes type against the **frame**, so the box and
+the type are computed from unrelated numbers and disagree by as much as half the line.
+
+Remotion lands in r1's shape by default. Its idiom is `AbsoluteFill` siblings ordered by
+`zIndex`, so the panel is a self-closing backing bar and the text lockup is a separate layer with
+no width and no clipping ancestor - text may legitimately overhang its bar. Measured in
+`transparent-lower-third-r1.tsx`: `panelWidth = width * 0.34` (the *same* 34% as the failing
+HyperFrames strap) with the name sized to span 60% of the frame, and it is clean, because the
+text is not inside the panel. Where Remotion does bound text it derives the bound *from* the
+text - `namePanelWidth = targetNameWidth / 0.86` in r3 - so the two cannot disagree.
+
+This is not the examples' fault, which was the first guess and is wrong: **both** canonical
+examples teach an `overflow: hidden` reveal mask. The difference is that Remotion's mask is a
+flex child with auto width, while HyperFrames' sits inside a strap the model gave an explicit
+percentage width - the natural way to build a card in CSS. Confirmed outside the overlay brief:
+`esports-opener-r1` clips "NOVA" inside `.slab-wrap { width: 62% }`.
+
+So the fix, when it is worth making, is one sentence in the HyperFrames contract rather than a
+new rule: hero and strap text either sits in a layer with no width bound (panel painted as a
+sibling behind it), or the fit arithmetic runs against **the container's** width rather than the
+frame's. Not done here - it is a prompt change, and this document's own standing lesson is that
+prompt changes need a measured before/after rather than prose.
+
+### Correcting an earlier claim about the overlay brief
+
+The varied pass concluded the transparent overlay was "the hardest brief on both engines". At one
+sample per engine that was over-read. At three:
+
+| | HyperFrames | Remotion |
+|---|---|---|
+| Clean runs | 1/3 | **3/3** |
+| Repair rounds | 3 | **0** |
+| Shipped readability defect | 1 | 0 |
+
+It is a hard brief on **HyperFrames only**, for the containment reason above - a lower-third is
+the one shape whose whole design is text inside a box. Follow-up 2 below asked for exactly this
+sample size before anyone wrote prose about it; this is that prose, and it narrows the follow-up
+from "both engines" to one.
+
 ## Open follow-ups
 
 Ordered by value. The re-measurement turned up two; the total-crop half is done (above), so
@@ -562,11 +622,14 @@ what remains of it is the spend.
    changes; validator rules against a shared `data-var-text` id and a hidden bound element
    (correct, but leaves no legal path and would *raise* repair rounds unless paired with the
    first); or a taught pattern in the contract. Needs a decision before code.
-2. **The transparent/overlay brief is the weakest case on both engines** - the only
-   readability finding in the varied pass, the most repairs on each engine, and the one
-   design shape neither contract says much about (where a strap sits, safe margins, not
-   filling the frame). This is the strongest candidate for a *measured* prompt improvement,
-   but it needs more than one sample per engine before anyone writes prose.
+2. **Stop HyperFrames text being cropped by the box the composition built around it.**
+   Narrowed from "the overlay brief is weakest on both engines", which three samples per
+   engine disproved: Remotion is 3/3 clean on it, HyperFrames 1/3. The cause is measured
+   (above) - an explicit width on an ancestor of `nowrap` text, while the fit arithmetic sizes
+   type against the frame. The candidate change is one sentence of contract: paint the panel
+   as a sibling behind the text, or fit the type to **the container's** width. It is a prompt
+   change, so it needs a measured before/after on the overlay and single-word-hero briefs
+   rather than prose - the one thing this document keeps insisting on.
 3. ~~**Sharpen the repair message when text looks duplicated.**~~ **Explained, not a message
    problem.** "NOACGNOACG" is the driver writing one variable's value into every element that
    shares its `data-var-text` id - what the model does when it splits animated text and binds
