@@ -218,14 +218,15 @@ function withEraseSeedField(template: SpxTemplate, draft: WizardDraft): SpxTempl
   // things that ARE in the pixels: the text's bounds, which edge it was set from, how tall
   // one line of it was, and where that line's top was. That is what makes the field land on
   // the erased text instead of near it; the user restyles from there.
-  if (ink && ink.lineHeight > 0) {
+  if (ink && ink.capHeight > 0) {
     const box = { x: ink.x * k, y: ink.y * k, width: ink.width * k, height: ink.height * k };
-    // Ink spans roughly cap-top to baseline, ~0.78 em for the mixed-case text a name field
-    // holds. One LINE's run, so a two-line region seeds one line's size, not both plus the
-    // gap between them.
-    // …and never absurd: a region marked over a logo or an illustration has ink metres tall
-    // and no type in it at all, so the estimate is bounded by the artwork itself.
-    const fontSize = Math.max(10, Math.min(Math.round((ink.lineHeight * k) / 0.78), Math.round(art.height * 0.5)));
+    // Cap-top to baseline is ~0.72 em in every face the product bundles (and close to it in
+    // anything a broadcast design is set in), which is why the measurement stops at the
+    // baseline: the FULL ink run is 0.72 em for a word without descenders and 0.94 em for one
+    // with them, so a size read off it would be right for "Riva" and 30% out for "Gray".
+    // Verified against real typeset text, not a stand-in bar (e2e/import-canvas.spec.ts).
+    // Bounded, too: a region marked over a logo has ink but no type in it at all.
+    const fontSize = Math.max(10, Math.min(Math.round((ink.capHeight * k) / 0.72), Math.round(art.height * 0.5)));
     // Which edge the type was set from. Centred is a real design decision (a title card, a
     // badge) and worth detecting: text whose middle sits on the artwork's middle was almost
     // certainly centred, and seeding it left-anchored would drift the moment the operator
@@ -246,8 +247,12 @@ function withEraseSeedField(template: SpxTemplate, draft: WizardDraft): SpxTempl
       at: { x: Math.round(anchorX), y: Math.round(ink.lineTop * k - fontSize * 0.1) },
       fontSize,
       align,
-      // The slot is the room the erased text had, measured from its own anchor.
-      maxWidth: Math.max(64, Math.round(align === 'center' ? box.width * 2 : box.width)),
+      // The slot is the room the erased text had, measured from its own anchor — plus the
+      // side bearings, which is the difference between what type PAINTS and the width it
+      // OCCUPIES. Without that margin the slot is a hair narrower than the very text it was
+      // measured from, and the fit runtime shrinks the seed on arrival: the field would open
+      // ~10% under the size the design was set in, every time.
+      maxWidth: Math.max(64, Math.round((align === 'center' ? box.width * 2 : box.width) + fontSize * 0.12)),
     });
     return added ? added.template : template;
   }

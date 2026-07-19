@@ -193,11 +193,13 @@ test('erase: the erased region seeds the first text field, placed and sized from
   // Left-set text (its middle is well left of the artwork's), anchored on its own left edge.
   expect(state.style!.align).toBe('left');
   expect(Math.abs(state.placed!.x - bar.x)).toBeLessThan(6);
-  // The slot is the room the ORIGINAL text had, so a long value shrinks where it did.
   expect(state.fit!.mode).toBe('shrink');
-  expect(Math.abs((state.fit!.maxWidth ?? 0) - bar.width)).toBeLessThan(10);
-  // Its size: the ink spans about 78% of an em, so the em is the ink over 0.78…
-  const font = Math.round(bar.height / 0.78);
+  // Its size: cap-top to baseline is about 72% of an em, so the em is that over 0.72. (A
+  // solid bar has no descenders to find, so its whole height reads as the cap.)
+  const font = Math.round(bar.height / 0.72);
+  // The slot is the room the ORIGINAL text had — its ink plus the side bearings type
+  // occupies beyond what it paints — so a long value shrinks where it did.
+  expect(Math.abs((state.fit!.maxWidth ?? 0) - (bar.width + font * 0.12))).toBeLessThan(10);
   expect(Math.abs((state.font!.value ?? 0) - font)).toBeLessThan(8);
   // …and the box starts a tenth of an em above the ink, so the glyphs land back on it.
   expect(Math.abs(state.placed!.y - (bar.y - font * 0.1))).toBeLessThan(8);
@@ -228,7 +230,7 @@ test('erase: on a 2x export the seeded field maps to design pixels', async ({ pa
     y: Math.round(2160 * CARD_TEXT_RECT.y) * k,
     height: Math.round(2160 * CARD_TEXT_RECT.height) * k,
   };
-  const font = Math.round(bar.height / 0.78);
+  const font = Math.round(bar.height / 0.72);
   expect(Math.abs(state.placed!.x - bar.x)).toBeLessThan(8);
   expect(Math.abs(state.placed!.y - (bar.y - font * 0.1))).toBeLessThan(10);
   expect(Math.abs((state.font!.value ?? 0) - font)).toBeLessThan(10);

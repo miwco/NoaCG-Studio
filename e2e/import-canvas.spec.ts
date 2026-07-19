@@ -452,3 +452,110 @@ test('import graphic: a scaled design still previews, validates, and exports', a
   expect(css).toContain(`--scale: ${scaled.cssScale}`);
   expect(Object.keys(zip.files).some((n) => /\.png$/.test(n))).toBe(true);
 });
+
+// ── The seeded field's numbers, checked against REAL glyphs ───────────────────────────────
+//
+// Every other erase fixture paints a solid bar, where the measured ink height IS the bar. Real
+// type is not a bar: its ink runs from cap top to baseline (plus descenders), a fraction of the
+// em the designer actually set. So the two constants the seed rests on — a font size of ink
+// ÷ 0.78, and a box top a tenth of an em above the ink — are only meaningful against text that
+// was really typeset. This draws some, in the same bundled face the template will use (so the
+// test measures the HEURISTIC, not a font mismatch), erases it, and asks what came back.
+
+// Weight 400 because that is what the seeded field emits: recovering a WEIGHT from flattened
+// pixels is not something this claims to do, so the fixture doesn't smuggle that question in.
+const TYPESET = { text: 'Alexandra Riva', fontPx: 96, weight: 400, penX: 210, baseline: 620 };
+
+test('import graphic: the seed recovers the size and position of REAL typeset text', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+
+  // Paint the artwork with actual glyphs, and record where their ink truly landed.
+  const source = await page.evaluate(async (s) => {
+    const face = new FontFace('Inter', 'url(/fonts/inter.woff2)');
+    await face.load();
+    document.fonts.add(face);
+    const c = document.createElement('canvas');
+    c.width = 1600;
+    c.height = 900;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#f4f4ef';
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = '#15171b';
+    g.font = `${s.weight} ${s.fontPx}px Inter`;
+    g.textBaseline = 'alphabetic';
+    g.fillText(s.text, s.penX, s.baseline);
+    const m = g.measureText(s.text);
+    return {
+      base64: c.toDataURL('image/png').split(',')[1],
+      ink: {
+        left: s.penX - m.actualBoundingBoxLeft,
+        right: s.penX + m.actualBoundingBoxRight,
+        top: s.baseline - m.actualBoundingBoxAscent,
+        bottom: s.baseline + m.actualBoundingBoxDescent,
+      },
+    };
+  }, TYPESET);
+
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'typeset.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(source.base64, 'base64'),
+  });
+  // A deliberately loose lasso: well outside the glyphs on every side.
+  await eraseRect(page, 0.09, 0.55, 0.66, 0.76);
+  await createBare(page);
+
+  // Give the field the SAME string, so the two ink boxes are comparable.
+  await page.evaluate(async (text) => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    useTemplateStore.getState().setSampleValue('f0', text);
+    useTemplateStore.getState().sendControl('update');
+  }, TYPESET.text);
+
+  // Where the replacement's glyphs actually render, in the artwork's own pixels. Measured
+  // through the font's metrics rather than the element box: the box is the em, the ink is
+  // what a reader sees, and the ink is what has to land back on the original.
+  const shown = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('#f0')
+    .evaluate(async (el, text) => {
+      const doc = el.ownerDocument;
+      await doc.fonts.ready;
+      const art = doc.querySelector('.imported-design-art')!.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      const g = doc.createElement('canvas').getContext('2d')!;
+      g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const m = g.measureText(text);
+      const size = parseFloat(cs.fontSize);
+      // line-height: 1 → the box is one em tall, so the baseline sits half the leading
+      // plus the ascent below its top.
+      const baseline = r.top + (size - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      return {
+        fontPx: size,
+        left: r.left - m.actualBoundingBoxLeft - art.left,
+        top: baseline - m.actualBoundingBoxAscent - art.top,
+        bottom: baseline + m.actualBoundingBoxDescent - art.top,
+      };
+    }, TYPESET.text);
+
+  // The artwork is smaller than the frame, so design px are source px — compare directly.
+  const sourceInkHeight = source.ink.bottom - source.ink.top;
+  // The SEED itself, before the fit runtime has a say: cap-height ÷ 0.72 against type whose
+  // cap runs 0.68–0.76 em, so it can never be exact — close enough to tweak, not retype.
+  const seeded = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { lineFontSize } = await import('/src/blocks/designLayout.ts');
+    const s = useTemplateStore.getState();
+    return lineFontSize(s.template.css, 'f0')!.value;
+  });
+  expect(Math.abs(seeded - TYPESET.fontPx) / TYPESET.fontPx).toBeLessThan(0.08);
+
+  // And what the reader sees: the replacement's ink lands ON the ink that was erased.
+  expect(Math.abs(shown.fontPx - TYPESET.fontPx) / TYPESET.fontPx).toBeLessThan(0.08);
+  expect(Math.abs(shown.left - source.ink.left)).toBeLessThan(6);
+  expect(Math.abs(shown.top - source.ink.top)).toBeLessThan(sourceInkHeight * 0.08);
+  expect(Math.abs(shown.bottom - source.ink.bottom)).toBeLessThan(sourceInkHeight * 0.08);
+});

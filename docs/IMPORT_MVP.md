@@ -315,14 +315,30 @@ ink rows — a row/column needs two ink pixels to count, so compression noise ca
 box, and the run is what makes a region holding two stacked lines report ONE line's height
 instead of both plus the gap between them.
 
+Within that run it also finds the **baseline**: the lowest row still carrying `BASELINE_SHARE`
+(0.35) of the line's densest row. Every glyph of a line reaches the baseline, so those rows are
+dense, while the two or three letters with a tail (g j p q y) collapse to under a tenth of the
+peak. That one measurement is what makes the type size readable at all — measured against real
+typeset Inter, the FULL ink run is 0.708 em for "Alexandra Riva" but 0.917 em for "Jonathan
+Gray", while cap-top-to-baseline is 0.698 em for **both**. A size read off the run would be
+right for one and 30% out for the other. Its blind spot is a string where most glyphs descend
+("gypsy"); names and titles are not shaped that way.
+
 `draft.ts withEraseSeedField` → `addPlacedLine` then seeds from that:
 
 | from the ink | into the field |
 |---|---|
-| the run's height ÷ 0.78 (ink spans ≈ 0.78 em), capped at half the artwork's height | `#fN` font-size — the cap catches a region marked over a logo, which has ink but no type |
+| cap-top-to-baseline ÷ 0.72, capped at half the artwork's height | `#fN` font-size. Cap height runs 0.677 em (all caps) to 0.76 em (ascender-heavy) across the bundled faces, so 0.72 is the midpoint: ±6% worst case, biased small because oversized type overflows its slot and gets shrunk, while undersized type is just nudged up. The cap catches a region marked over a logo, which has ink but no type |
 | the run's top, less a tenth of an em | `#fwN` top, with `line-height: 1` pinning the box to exactly one em so the glyphs land back on the ink |
 | the ink box's centre vs the ARTWORK's centre (±4.5%) | the anchor: `center` (a title card stays centred when the operator types a longer name — the one thing the field exists to survive), else `left`/`right` by which half it sits in |
-| the ink box's width | the shrink slot — the room the ORIGINAL text had, so a long value shrinks where it did |
+| the ink box's width, plus 0.12 em | the shrink slot — the room the ORIGINAL text had. The margin is the side bearings: type OCCUPIES more width than it PAINTS, and a slot set to the painted width alone is narrower than the very text it was measured from, so the fit runtime shrinks the seed on arrival |
+
+**Measured, not assumed** (`e2e/import-canvas.spec.ts`, "REAL typeset text"): a fixture that
+renders actual glyphs in the bundled face at a known size, erases them, and compares the
+replacement's rendered INK against the original's. Recovered size lands within 0.5% and the ink
+within 3 px horizontally / 1.2 px vertically at 96 px type. Every other erase fixture paints a
+solid bar, where the measured ink height *is* the bar — which is exactly why these constants
+needed type to be checked against.
 
 The field's colour contrasts against the erase's own sampled fill (dark ink on a light fill,
 white on a dark one) — the palette default is invisible on a light design. Nothing here

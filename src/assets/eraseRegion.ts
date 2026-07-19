@@ -58,6 +58,11 @@ export interface RegionInk {
   lineHeight: number;
   /** That run's top — the same line's own top, for the same reason. */
   lineTop: number;
+  /** `lineTop` down to the BASELINE: the part of the line every glyph shares, with any
+   *  descender tail excluded. This is the measurement type size is read from — the full run
+   *  is ~0.72 em for "Riva" and ~0.94 em for "Gray", so a size taken from it would be right
+   *  for one and 30% out for the other, while this is ~0.72 em for both. */
+  capHeight: number;
 }
 
 /** How far a pixel must differ from the sampled background (per 8-bit channel) to count as
@@ -65,6 +70,11 @@ export interface RegionInk {
  *  antialiasing around the glyphs don't inflate the box, and far below the contrast any
  *  legible text has against what it sits on. */
 const INK_TOLERANCE = 40;
+
+/** How dense a row must stay, relative to the line's densest row, to still count as above the
+ *  baseline. Measured against real type: the rows a whole line shares sit near the peak, while
+ *  a descender tail carried by one or two letters of a dozen drops to under a tenth of it. */
+const BASELINE_SHARE = 0.35;
 
 export interface EraseResult {
   /** The cleaned artwork as a PNG data URL, at the SOURCE dimensions. */
@@ -246,6 +256,20 @@ function measureInk(
       runTop = -1;
     }
   }
+  // The BASELINE of that run: the lowest row still carrying a real share of the line's ink.
+  // Every glyph of a line reaches the baseline, so the rows above it are dense; only the few
+  // letters with a tail (g j p q y) reach below, which makes the count collapse there. Taking
+  // the last row above BASELINE_SHARE of the run's densest row therefore separates the shared
+  // part of the line from its descenders — without knowing a thing about the font.
+  //
+  // Its one blind spot is a string where MOST glyphs descend ("gypsy"): the tail stays dense,
+  // the baseline reads low, and the seeded type comes out large. Names and titles are not
+  // shaped like that, and the result is still a starting point the user drags.
+  const peak = Math.max(...rows.slice(bestTop, bestTop + bestRun));
+  let baseline = bestTop;
+  for (let i = bestTop; i < bestTop + bestRun; i++) {
+    if (rows[i] >= peak * BASELINE_SHARE) baseline = i;
+  }
   return {
     x: rect.x + xRange.first,
     y: rect.y + yRange.first,
@@ -253,5 +277,6 @@ function measureInk(
     height: yRange.last - yRange.first + 1,
     lineHeight: bestRun,
     lineTop: rect.y + bestTop,
+    capHeight: baseline - bestTop + 1,
   };
 }
