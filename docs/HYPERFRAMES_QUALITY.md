@@ -363,16 +363,49 @@ this bench can ever again rest on a gate nobody confirmed had run. Every run abo
 Not re-measured: Remotion, and the other six briefs. The samples went where the known defect
 was.
 
+## The full re-measurement against the fixed gate (28 generations, ~$4.73)
+
+Seven briefs (`scripts/video-bench-briefs.varied.json`, committed this time so the next round
+compares against the same input) through both engines, two samples each.
+
+| | HyperFrames | Remotion |
+|---|---|---|
+| Contract-valid | 14/14 | 14/14 |
+| Clean - no readability defect shipped | **14/14** | **14/14** |
+| Gate probed | 14/14 | 14/14 |
+| Post-hoc audit rejected what shipped | 0 | 0 |
+| Repair rounds | 8 | 0 |
+| Dead controls | 0 | 0 |
+| Tokens | 177,398 in / 152,187 out | 109,964 in / 105,953 out |
+
+**The occlusion check earned itself on real generations.** HyperFrames' repair causes were
+`variables` ×9, `text-safe-area` ×1, and `text-occluded` ×2 - the newly wired check fired on
+`single-word-hero-r2`, where the hero and its kicker were both painted behind a panel at 5 of 5
+sample points. One repair round later it shipped clean. Before this round that generation would
+have shipped with its headline invisible, and every number in this table would have called it
+clean - which is precisely what happened to r2 in the varied pass above.
+
+**What this does and does not establish.** It does establish that the gate now measures what it
+judges: every run carries `probed: true`, and the bench's independent checks agree with the
+gate's post-hoc audit on all 28. It does **not** establish a defect-rate improvement over the
+varied pass. Those briefs were reconstructed from this document's prose rather than restored
+from a stored set, the sample counts differ, and - the point of this whole thread - the earlier
+figures were collected through a gate that could report an unrun check as a pass. Two samples
+per brief is still small, and the demotion path was never exercised here, because no crop
+survived its repair rounds.
+
+**The engines diverged sharply on repair rounds** - 8 against 0, on identical briefs. One pass
+cannot say whether that is the HyperFrames contract being harder to satisfy, the Remotion coder
+being better served by its example, or noise at this sample size. Recorded, not explained.
+
 ## Open follow-ups
 
 Ordered by value. The re-measurement turned up two; the total-crop half is done (above), so
 what remains of it is the spend.
 
-1. **Widen the re-measurement.** Three samples of one brief established that the 19% → 0%
-   figure does not reproduce, but they cannot replace it with a number. A cross-brief rate
-   needs the seven-brief set on both engines, which is what makes it a spend rather than a
-   free follow-up. Until then this document quotes no defect rate at all, which is the honest
-   position.
+1. **Explain the repair-round gap between the engines** (8 against 0 on identical briefs).
+   Worth one more pass at a larger sample before drawing any conclusion; if it holds, the
+   HyperFrames contract or its worked example is costing real tokens for no quality gain.
 2. **The transparent/overlay brief is the weakest case on both engines** - the only
    readability finding in the varied pass, the most repairs on each engine, and the one
    design shape neither contract says much about (where a strap sits, safe margins, not
@@ -402,13 +435,14 @@ here), the deterministic checks (unbound variables, namespace URLs, asset inlini
 measured font widths, and export self-containment - all verified directly rather than
 inferred.
 
-**What is not.** Every readability figure collected before the gate fix, since a probe that
-could not run was recorded as clean and the bias is one-directional (optimistic). The gate is
-sound now - it reports `probed`, and the bench records that per run - but the replacement
-numbers do not exist yet: the re-measurement covered three samples of one brief, enough to
-retire the old 0% and no more. **This document quotes no defect rate**, deliberately.
-Design-taste conclusions are unreliable at these sample sizes and should not be drawn from
-single runs; the within-brief spread is wide enough to swamp anything worth chasing.
+**What is not.** Every readability figure collected BEFORE the gate fix, since a probe that
+could not run was recorded as clean and the bias is one-directional (optimistic) - treat the
+varied pass's counts and the 19% → 0% pair as history, not evidence. The 28-generation pass
+above is sound (every run carries `probed: true`, and two independent measurements agree), but
+it is a snapshot of the fixed system, **not a before/after**: its briefs were reconstructed
+rather than restored, so it cannot be differenced against the earlier numbers. Design-taste
+conclusions are unreliable at these sample sizes and should not be drawn from single runs; the
+within-brief spread is wide enough to swamp anything worth chasing.
 
 **Cost discipline.** A clean generation is ~7-8k in / ~6-7k out (about $0.08). A run with two
 repair rounds costs roughly three times that. Always prove a bench change with `--stub`
