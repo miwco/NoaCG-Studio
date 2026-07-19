@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { awaitPreviewRebuild } from './_preview';
-import { lowerThirdPng } from './_png';
+import { lowerThirdPng, framedCardPng, CARD_TEXT_RECT } from './_png';
 import { elementPoint } from './_canvas';
 
 // Canvas usability on an imported design (docs/IMPORT_MVP.md): the artwork and the fields
@@ -287,4 +287,103 @@ test('canvas: the cursor names the gesture in progress, not one that is merely p
   await page.keyboard.down('Space');
   expect(await cursorNow()).toBe('grab');
   await page.keyboard.up('Space');
+});
+
+// ── The Prepare step's replacement field: it should land ON the text it replaced ──────────
+//
+// The rectangle the user draws is a loose lasso — you box text in with air around it — so
+// every one of these cases draws it deliberately off-centre and larger than the text. What
+// the seeded field matches is the INK the erase measured, not that rectangle.
+
+const CENTRED_TEXT = { x: 0.35, y: 0.4, width: 0.3, height: 0.1 };
+
+async function dropCard(page: Page, buffer: Buffer) {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'card.png',
+    mimeType: 'image/png',
+    buffer,
+  });
+}
+
+/** Design step -> Prepare, open the erase surface, and drag a rect over it (image fractions). */
+async function eraseRect(page: Page, fx0: number, fy0: number, fx1: number, fy1: number) {
+  await page.getByRole('button', { name: 'Next ›' }).click();
+  await page.getByTestId('baked-yes').click();
+  const surface = page.getByTestId('erase-surface');
+  await expect(surface).toBeVisible();
+  await expect.poll(async () => (await surface.boundingBox())?.height ?? 0).toBeGreaterThan(100);
+  const box = (await surface.boundingBox())!;
+  await page.mouse.move(box.x + box.width * fx0, box.y + box.height * fy0);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * fx1, box.y + box.height * fy1, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByTestId('erase-download')).toBeVisible();
+}
+
+/** The seeded field as the design sees it: its own rules, and where it actually renders
+ *  inside the artwork (as fractions of the artwork, the space the source rect was given in). */
+async function seededField(page: Page) {
+  const css = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { lineTextStyle } = await import('/src/blocks/designLayout.ts');
+    const s = useTemplateStore.getState();
+    return {
+      style: lineTextStyle(s.template.html, s.template.css, 'f0'),
+      lineHeightPinned: /#f0\s*\{[^}]*line-height:\s*1\b/.test(s.template.css),
+    };
+  });
+  const rendered = await page
+    .frameLocator('iframe.preview-frame')
+    .locator('.imported-design-art')
+    .evaluate((art) => {
+      const a = art.getBoundingClientRect();
+      const f = art.ownerDocument.getElementById('f0')!.getBoundingClientRect();
+      return {
+        left: (f.left - a.left) / a.width,
+        right: (f.right - a.left) / a.width,
+        centre: (f.left + f.width / 2 - a.left) / a.width,
+        top: (f.top - a.top) / a.height,
+        height: f.height / a.height,
+      };
+    });
+  return { ...css, rendered };
+}
+
+test('import graphic: centred baked text seeds a CENTRED field on the same centre line', async ({ page }) => {
+  await dropCard(page, framedCardPng(1600, 900, { textRect: CENTRED_TEXT }));
+  // A lasso with far more air on the left than the right: its own centre is nowhere near
+  // the text's, so matching the text can only come from measuring the ink.
+  await eraseRect(page, 0.18, 0.34, 0.69, 0.56);
+  await createBare(page);
+
+  const f = await seededField(page);
+  expect(f.style!.align).toBe('center');
+  expect(f.lineHeightPinned).toBe(true);
+
+  const textCentre = CENTRED_TEXT.x + CENTRED_TEXT.width / 2;
+  // The replacement sits on the erased text's own centre line…
+  expect(f.rendered.centre).toBeCloseTo(textCentre, 2);
+  // …at its height, and starting at its top (line-height 1 puts the glyphs just under it).
+  expect(f.rendered.height).toBeGreaterThan(CENTRED_TEXT.height * 0.9);
+  expect(f.rendered.height).toBeLessThan(CENTRED_TEXT.height * 1.6);
+  expect(Math.abs(f.rendered.top - CENTRED_TEXT.y)).toBeLessThan(CENTRED_TEXT.height * 0.35);
+  // The slot is the room the original text had, not the room the lasso had.
+  expect(f.style!.fontSize!.value).toBeGreaterThan(0);
+});
+
+test('import graphic: left-set baked text seeds a LEFT-anchored field on its left edge', async ({ page }) => {
+  await dropCard(page, framedCardPng(1600, 900));
+  // Again a loose lasso — generous on every side of the bar at CARD_TEXT_RECT.
+  await eraseRect(page, 0.12, 0.35, 0.62, 0.6);
+  await createBare(page);
+
+  const f = await seededField(page);
+  expect(f.style!.align).toBe('left');
+  // It starts where the erased text started, and is about as wide as the text was.
+  expect(f.rendered.left).toBeCloseTo(CARD_TEXT_RECT.x, 2);
+  expect(Math.abs(f.rendered.top - CARD_TEXT_RECT.y)).toBeLessThan(CARD_TEXT_RECT.height * 0.35);
+  expect(f.style!.fontSize!.value).toBeGreaterThan(0);
 });

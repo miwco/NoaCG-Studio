@@ -42,10 +42,36 @@ export interface EraseSampling {
   sampleCount: number;
 }
 
+/**
+ * The INK the erase removed: the tight bounding box of the pixels that actually differed
+ * from the background, in SOURCE pixels. The rectangle the user drew is a loose lasso around
+ * the text — it says "somewhere in here" — while this says where the text really sat and how
+ * tall it really was, which is what a useful replacement field is built from.
+ */
+export interface RegionInk {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** The tallest unbroken run of ink rows. On a region holding two stacked lines the box
+   *  above spans both, and only this says how tall ONE line of the original type was. */
+  lineHeight: number;
+  /** That run's top — the same line's own top, for the same reason. */
+  lineTop: number;
+}
+
+/** How far a pixel must differ from the sampled background (per 8-bit channel) to count as
+ *  ink. Well above FLAT_BG_TOLERANCE's notion of "the same colour", so JPEG ringing and PNG
+ *  antialiasing around the glyphs don't inflate the box, and far below the contrast any
+ *  legible text has against what it sits on. */
+const INK_TOLERANCE = 40;
+
 export interface EraseResult {
   /** The cleaned artwork as a PNG data URL, at the SOURCE dimensions. */
   dataUrl: string;
   sampling: EraseSampling;
+  /** What was erased, measured — null when the region held nothing but background. */
+  ink: RegionInk | null;
 }
 
 /** Decode a data URL into a ready <img> (the only thing that knows the real pixel size). */
@@ -137,6 +163,9 @@ export async function eraseRegionFlat(dataUrl: string, rect: EraseRect): Promise
       ? { r: 0, g: 0, b: 0, a: 0 }
       : { r: mean[0], g: mean[1], b: mean[2], a: mean[3] };
 
+  // Measure the ink BEFORE the fill removes it (see RegionInk).
+  const ink = measureInk(px, w, clamped, fill);
+
   // Fill by mutating the pixel data directly: fillRect would COMPOSITE a semi-transparent
   // fill over the text underneath, leaving it ghosted through — writing the bytes replaces it.
   for (let y = clamped.y; y < clamped.y + clamped.height; y++) {
@@ -153,5 +182,76 @@ export async function eraseRegionFlat(dataUrl: string, rect: EraseRect): Promise
   return {
     dataUrl: canvas.toDataURL('image/png'),
     sampling: { fill, maxDeviation, uniform, sampleCount },
+    ink,
+  };
+}
+
+/**
+ * The tight box of everything inside `rect` that is not the background `fill`, plus the
+ * tallest unbroken run of ink rows within it. Row/column occupancy is enough — glyphs of one
+ * text line share every scanline between their cap top and their baseline, so a fully empty
+ * row is a real gap between lines, not a gap inside one.
+ *
+ * A row or column is only counted when at least TWO of its pixels are ink: a single stray
+ * pixel is compression noise or a hairline of whatever the rectangle clipped, and letting one
+ * decide the box would undo the point of measuring tightly.
+ */
+function measureInk(
+  px: Uint8ClampedArray,
+  imageWidth: number,
+  rect: EraseRect,
+  fill: { r: number; g: number; b: number; a: number },
+): RegionInk | null {
+  const bg = [fill.r, fill.g, fill.b, fill.a];
+  const rows = new Array<number>(rect.height).fill(0);
+  const cols = new Array<number>(rect.width).fill(0);
+  for (let ry = 0; ry < rect.height; ry++) {
+    let at = ((rect.y + ry) * imageWidth + rect.x) * 4;
+    for (let rx = 0; rx < rect.width; rx++, at += 4) {
+      let diff = 0;
+      for (let c = 0; c < 4; c++) diff = Math.max(diff, Math.abs(px[at + c] - bg[c]));
+      if (diff > INK_TOLERANCE) {
+        rows[ry]++;
+        cols[rx]++;
+      }
+    }
+  }
+  const inked = (counts: number[]) => {
+    let first = -1;
+    let last = -1;
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] < 2) continue;
+      if (first === -1) first = i;
+      last = i;
+    }
+    return first === -1 ? null : { first, last };
+  };
+  const yRange = inked(rows);
+  const xRange = inked(cols);
+  if (!yRange || !xRange) return null;
+
+  // The row runs, so a two-line region reports ONE line's height rather than both plus the
+  // gap between them.
+  let bestTop = yRange.first;
+  let bestRun = 0;
+  let runTop = -1;
+  for (let i = yRange.first; i <= yRange.last + 1; i++) {
+    const on = i <= yRange.last && rows[i] >= 2;
+    if (on && runTop === -1) runTop = i;
+    if (!on && runTop !== -1) {
+      if (i - runTop > bestRun) {
+        bestRun = i - runTop;
+        bestTop = runTop;
+      }
+      runTop = -1;
+    }
+  }
+  return {
+    x: rect.x + xRange.first,
+    y: rect.y + yRange.first,
+    width: xRange.last - xRange.first + 1,
+    height: yRange.last - yRange.first + 1,
+    lineHeight: bestRun,
+    lineTop: rect.y + bestTop,
   };
 }

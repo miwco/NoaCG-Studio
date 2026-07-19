@@ -23,7 +23,7 @@ import type {
 import { paletteById } from '../../model/wizard';
 import type { EasingId } from '../../model/easings';
 import type { CustomFont } from '../../model/fonts';
-import type { EraseRect } from '../../assets/eraseRegion';
+import type { EraseRect, RegionInk } from '../../assets/eraseRegion';
 
 /** The applied baked-text erase: the marked rectangle (in the artwork's SOURCE pixels) and
  *  the sampling verdict it ran with. The rectangle also seeds the first text field at create. */
@@ -34,6 +34,10 @@ export interface DesignEraseState {
   maxDeviation: number;
   /** The applied fill colour — the seeded field contrasts against exactly this. */
   fill: { r: number; g: number; b: number; a: number };
+  /** Where the erased text ACTUALLY sat, measured from the pixels (SOURCE px). The seeded
+   *  field is built from this rather than from the loose rectangle the user drew. Absent on
+   *  a region that held only background — and on drafts made before it was measured. */
+  ink?: RegionInk;
 }
 
 export interface WizardDraft {
@@ -200,19 +204,64 @@ function withEraseSeedField(template: SpxTemplate, draft: WizardDraft): SpxTempl
   const art = draft.designArt;
   const k = art.width / (art.sourceWidth ?? art.width);
   const r = draft.designErase.rect;
+  const ink = draft.designErase.ink;
   // The field sits ON the erased fill, so contrast against exactly that: dark ink on a
   // light fill, white on a dark one (a transparent fill reads as the dark broadcast frame).
   const f = draft.designErase.fill;
   const luminance = f.a < 64 ? 0 : (0.2126 * f.r + 0.7152 * f.g + 0.0722 * f.b) / 255;
+
+  // Build the replacement from what was MEASURED, not from the lasso the user drew: the
+  // rectangle is deliberately loose (you draw it around text, with air), so its edges say
+  // nothing about where the type sat. The ink box does.
+  //
+  // Nothing here reconstructs the font — flattened pixels don't carry one. It reproduces the
+  // things that ARE in the pixels: the text's bounds, which edge it was set from, how tall
+  // one line of it was, and where that line's top was. That is what makes the field land on
+  // the erased text instead of near it; the user restyles from there.
+  if (ink && ink.lineHeight > 0) {
+    const box = { x: ink.x * k, y: ink.y * k, width: ink.width * k, height: ink.height * k };
+    // Ink spans roughly cap-top to baseline, ~0.78 em for the mixed-case text a name field
+    // holds. One LINE's run, so a two-line region seeds one line's size, not both plus the
+    // gap between them.
+    // …and never absurd: a region marked over a logo or an illustration has ink metres tall
+    // and no type in it at all, so the estimate is bounded by the artwork itself.
+    const fontSize = Math.max(10, Math.min(Math.round((ink.lineHeight * k) / 0.78), Math.round(art.height * 0.5)));
+    // Which edge the type was set from. Centred is a real design decision (a title card, a
+    // badge) and worth detecting: text whose middle sits on the artwork's middle was almost
+    // certainly centred, and seeding it left-anchored would drift the moment the operator
+    // types a name of a different length — the one thing this field exists to survive.
+    const centre = box.x + box.width / 2;
+    const align =
+      Math.abs(centre - art.width / 2) <= art.width * 0.045 ? 'center' as const
+      : centre < art.width / 2 ? 'left' as const
+      : 'right' as const;
+    const anchorX = align === 'center' ? centre : align === 'right' ? box.x + box.width : box.x;
+    const added = addPlacedLine(template, {
+      color: luminance > 0.5 ? '#16181c' : '#ffffff',
+      title: 'Name',
+      ftype: 'textfield',
+      // line-height 1 makes the box exactly one em tall, so the glyphs land predictably
+      // inside it: the ink starts about a tenth of an em below the box top.
+      lineHeight: 1,
+      at: { x: Math.round(anchorX), y: Math.round(ink.lineTop * k - fontSize * 0.1) },
+      fontSize,
+      align,
+      // The slot is the room the erased text had, measured from its own anchor.
+      maxWidth: Math.max(64, Math.round(align === 'center' ? box.width * 2 : box.width)),
+    });
+    return added ? added.template : template;
+  }
+
+  // No measurable ink (an empty region, or a draft saved before the measurement existed):
+  // fall back to the rectangle, sized from its box — ~72% of the height (the box wraps
+  // ascenders/descenders with air), CAPPED by width/7, since a name is roughly a dozen
+  // glyphs at ~half an em each and a tall script original would otherwise seed type twice
+  // the size the design was drawn with.
   const added = addPlacedLine(template, {
     color: luminance > 0.5 ? '#16181c' : '#ffffff',
     title: 'Name',
     ftype: 'textfield',
     at: { x: Math.round(r.x * k), y: Math.round(r.y * k) },
-    // Approximate the erased text's size from its box: ~72% of the height (the box wraps
-    // ascenders/descenders with air), CAPPED by width/7 — a name is roughly a dozen glyphs
-    // at ~half an em each, and a tall script original (whose box height far exceeds its cap
-    // height) would otherwise seed type twice the visual size the design was drawn with.
     fontSize: Math.max(10, Math.round(Math.min(r.height * k * 0.72, (r.width * k) / 7))),
     maxWidth: Math.max(64, Math.round(r.width * k)),
   });
