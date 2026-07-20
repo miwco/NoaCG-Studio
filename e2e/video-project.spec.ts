@@ -397,3 +397,31 @@ test('a declared input the module never reads is rejected as a control that woul
   expect(results.spread).not.toContain('inputs');
   expect(results.none).toEqual([]);
 });
+
+test('video: a modal takes the shortcuts - Ctrl+Z behind My videos leaves the project alone', async ({ page }) => {
+  await createCountdownProject(page);
+
+  // Make something UNDOABLE first: patchSettings snapshots history (setSource deliberately
+  // does not - Monaco owns keystroke undo). Without a real undo target this test would pass
+  // no matter what the guard did.
+  const fps = () =>
+    page.evaluate(async () => {
+      const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+      return useVideoProjectStore.getState().project.fps;
+    });
+  const original = await fps();
+  await page.evaluate(async () => {
+    const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
+    useVideoProjectStore.getState().patchSettings({ fps: 50 });
+  });
+  expect(await fps()).toBe(50);
+
+  // The video shell binds undo/redo globally, exactly like the SPX one. Both stand down while
+  // a dialog is up (src/components/spaceKey.ts) - a keystroke aimed at the dialog must never
+  // rewind the project behind it.
+  await page.getByTestId('video-my-videos').click();
+  await expect(page.getByTestId('saved-videos')).toBeVisible();
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(200);
+  expect(await fps()).toBe(50);
+});
