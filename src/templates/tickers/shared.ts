@@ -34,6 +34,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import type { PresetConfig } from '../lowerThirds/animPresets';
+import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
 import { tickerPresetById } from './tickerPresets';
 import { TICKER_MOTION_JS } from './tickerMotion';
@@ -61,6 +62,10 @@ function tickerRuntimeJs(name: string, animationBlock: string): string {
 // rebuildTicker(): re-render the items from the hidden #f0 source (one item per line).
 function rebuildTicker() {
   var track = document.getElementById('ticker-track');
+  // A ROTATING ticker shows one item at a time and the graphic's own timer advances it, so
+  // rendering the whole list here would both look wrong and pile every item into the strip at
+  // once. Hand it back to the rotator instead.
+  if (TICKER_ROTATE && typeof tickerShowNext === 'function') { tickerShowCurrent(); return; }
   var lines = document.getElementById('f0').textContent.split('\\n');
   var html = '';
   lines.forEach(function (raw) {
@@ -97,8 +102,12 @@ function stop() {
   buildOutTimeline();
 }
 
-// next(): tickers have no steps.
-function next() {}
+// next(): SPX Continue — advance one step along the default path. This design ships
+// single-step, so it normally does nothing; it still funnels to the interpreter so a
+// template that GROWS a step (or a state machine) stays drivable through the SPX contract.
+function next() {
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
+}
 
 // Render once on load so the preview shows content before the first update().
 // This file loads in <head>, before the ticker elements exist — wait for the DOM.
@@ -112,6 +121,43 @@ ${animationBlock}
 `;
 }
 
+/**
+ * Rotating tickers show ONE item at a time, advanced by the graphic's own state machine.
+ *
+ * Every ticker design is built for the marquee: the track is one endless nowrap row that
+ * TRAVELS past a clipping viewport, so a long story is fine — it scrolls by. A rotating strip
+ * has nowhere to travel to, so the same markup would just push a long story off the end of the
+ * strip and into whatever cap sits there. These rules turn the track back into an ordinary
+ * block that fits its viewport and wraps, which is the auto-fit pattern used everywhere else.
+ */
+const ROTATE_CSS = `
+/* ── Rotating strip: the item FITS the viewport instead of travelling past it. ── */
+
+/* The viewport clips because a marquee's items have to vanish at the strip's edges. Nothing
+   travels here, so clipping would only ever cut a wrapped story in half — let the strip grow
+   to whatever the current item needs instead. */
+.ticker-viewport {
+  overflow: visible;
+}
+
+#ticker-track {
+  display: block;                  /* not an endless row — one item, in normal flow */
+  width: 100%;                     /* fill the space the caps leave */
+  white-space: normal;             /* a long story wraps rather than running off the strip */
+  will-change: opacity, transform; /* the machine's beat fades and lifts it */
+}
+
+.ticker-item {
+  display: block;                  /* the item is the line, not a cell in a row */
+  overflow-wrap: break-word;       /* break a very long unbroken word */
+}
+
+/* The separator punctuates a ROW of stories; a rotating strip shows one at a time. */
+.ticker-sep {
+  display: none;
+}
+`;
+
 const ITEMS_SAMPLE = [
   'Welcome to tonight’s live show',
   'Guest lineup announced for next week',
@@ -120,7 +166,11 @@ const ITEMS_SAMPLE = [
 ].join('\n');
 
 /** Build the complete ticker SpxTemplate. */
-export function assembleTicker(meta: TickerMeta, design: TickerDesign, o: ResolvedOptions): SpxTemplate {
+export function assembleTicker(meta: TickerMeta, design: TickerDesign, o: ResolvedOptions,
+  /** Refine the converted animation data — the seam a graphic TYPE injects its machine
+   *  through (see shared/standard.ts composeRefine for the ordering rule). */
+  refine?: (data: AnimData) => AnimData,
+): SpxTemplate {
   const font = resolveHeadingFont(o);
   const scale = computeScale(o);
 
@@ -161,7 +211,7 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Design ── */
 ${design.css}
-`;
+${o.animation.presetId === 'ticker-rotate' ? ROTATE_CSS : ''}`;
 
   const preset = tickerPresetById(o.animation.presetId);
   const ease = resolveEasing(o.animation.easing, preset.autoEase);
@@ -178,7 +228,11 @@ ${design.css}
   const js = tickerRuntimeJs(
     meta.name,
     `// Marquee designs render the items twice for a seamless loop; flip designs don't.
-var TICKER_DOUBLE_ITEMS = ${design.doubleItems};
+var TICKER_DOUBLE_ITEMS = ${o.animation.presetId === 'ticker-rotate' ? false : design.doubleItems};
+
+// A ROTATING ticker shows one item at a time, advanced by the graphic's state machine rather
+// than by endless motion — so the whole list never goes into the strip at once.
+var TICKER_ROTATE = ${o.animation.presetId === 'ticker-rotate'};
 
 ${design.rowBuilderJs}
 
@@ -205,7 +259,7 @@ ${preset.emit(cfg)}`,
   // becomes ordinary keyframes; the measured travel rides across as a `dynamics` segment
   // naming its builder above (docs/DYNAMIC_MOTION_SCOPE.md). The builders themselves sit
   // outside the region and are untouched by the conversion.
-  return convertToDataRegion(template);
+  return convertToDataRegion(template, refine);
 }
 
 /** The authoring API for ticker variant modules. */
@@ -213,12 +267,15 @@ export function defineTickerVariant(
   spec: Omit<TemplateVariant, 'create'>,
   meta: TickerMeta,
   buildDesign: (o: ResolvedOptions) => TickerDesign,
+  /** Optional animation-data refinement (a graphic type's machine rides in here). It is
+   *  built per create() because a type's compiled machine depends on the resolved options. */
+  refine?: (o: ResolvedOptions) => ((data: AnimData) => AnimData) | undefined,
 ): TemplateVariant {
   const variant: TemplateVariant = {
     ...spec,
     create(options?: WizardOptions) {
       const o = resolveOptions(variant, options);
-      return assembleTicker(meta, buildDesign(o), o);
+      return assembleTicker(meta, buildDesign(o), o, refine?.(o));
     },
   };
   return variant;

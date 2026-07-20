@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useTemplateStore } from '../store/templateStore';
-import { parseAnimData, spliceAnimData, type AnimData } from '../blocks/animData';
+import { parseAnimData, type AnimData } from '../blocks/animData';
 import { importAnimData } from '../blocks/animImport';
 import {
   addStep,
@@ -18,8 +18,9 @@ import {
   setLayerHide,
   setStepEase,
 } from '../blocks/animEdit';
+import { spxSteps } from '../blocks/animMachine';
 import { EASINGS } from '../model/easings';
-import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
+import { replaceRegionWithAnimData, writeAnimData } from '../templates/shared/animRuntime';
 import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
 import { getTemplateParts } from '../model/structure';
@@ -266,9 +267,9 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
    *  debounced rebuild settles. Structural edits (duplicate/delete/add a step) change the
    *  Continue count, so the SPX `steps` setting stays derived — same invariant as always. */
   const applyData = (next: AnimData) => {
-    const js = spliceAnimData(template.js, next);
+    const js = writeAnimData(template.js, next);
     if (!js || js === template.js) return;
-    const steps = String(next.steps.length - 1);
+    const steps = String(spxSteps(next));
     if (template.settings.steps !== steps) {
       const settings = { ...template.settings, steps };
       applyTemplate({ ...template, js, settings, html: replaceDefinitionInHtml(template.html, settings, template.fields) });
@@ -1472,7 +1473,10 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
           {editable && (
             <button
               className="timeline-zoom-btn tlv2-add-step"
-              onClick={() => applyData(addStep(data))}
+              onClick={() => {
+                const next = addStep(data);
+                if (next) applyData(next);
+              }}
               title="Add a step — a new » Next press before Out, ready for reveals and keyframes"
               data-testid="tlv2-add-step"
             >

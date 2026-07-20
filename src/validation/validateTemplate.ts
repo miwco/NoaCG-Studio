@@ -2,7 +2,9 @@
 // owns SPX compatibility. Returns errors (block export) and warnings (allow but flag).
 
 import { parseDefinition } from '../model/spxDefinition';
-import { parseAnimData } from '../blocks/animData';
+import { animDataFault, parseAnimData } from '../blocks/animData';
+import { allTimelines, validateMachine } from '../blocks/animMachine';
+import { hasMachineRuntime } from '../templates/shared/animRuntime';
 import { DATA_FTYPES, type SpxTemplate } from '../model/types';
 
 export interface ValidationIssue {
@@ -206,14 +208,29 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
   if (template.js.includes('var NOACG_ANIM')) {
     const data = parseAnimData(template.js);
     if (!data) {
-      warnings.push({
-        rule: 'anim-data',
-        message:
-          'The NOACG_ANIM block is not readable as animation data (strict JSON, version 1) — the timeline and Inspector will treat this template as hand-crafted code.',
-      });
+      // An unreadable block is normally an honest hand-crafted or legacy region, which the
+      // platform deliberately tolerates. A block that DECLARES a machine and gets its shape
+      // wrong is different in kind: the interpreter reads `NOACG_ANIM.machine` verbatim, so it
+      // would ship and run unchecked on air. That one blocks export.
+      if (animDataFault(template.js) === 'off-shape-machine') {
+        errors.push({
+          rule: 'machine',
+          message:
+            'The NOACG_ANIM block declares a state machine whose shape is invalid — it would run unchecked on air. Fix the machine (or remove it) before exporting.',
+        });
+      } else {
+        warnings.push({
+          rule: 'anim-data',
+          message:
+            'The NOACG_ANIM block is not readable as animation data (strict JSON, version 1 or 2) — the timeline and Inspector will treat this template as hand-crafted code.',
+        });
+      }
     } else {
+      // A machine state's INLINE timeline plays exactly like a step, so it gets the same
+      // dangling-selector / call / builder guards.
+      const allSteps = allTimelines(data);
       const selectors = new Set<string>();
-      for (const step of data.steps) {
+      for (const step of allSteps) {
         Object.keys(step.layers).forEach((s) => selectors.add(s));
         (step.reveals ?? []).forEach((s) => selectors.add(s));
         // A dynamic segment's target is handed to its builder, which will query for it —
@@ -250,7 +267,7 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
         new RegExp(`\\bwindow\\.${name}\\s*=`).test(template.js);
 
       const calledNames = new Set<string>();
-      for (const step of data.steps) for (const c of step.calls ?? []) calledNames.add(c.call);
+      for (const step of allSteps) for (const c of step.calls ?? []) calledNames.add(c.call);
       for (const name of calledNames) {
         if (!definedInJs(name)) {
           warnings.push({
@@ -263,7 +280,7 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
       // A dynamic segment's builder measures the DOM and returns the tween. Without it the
       // step loses its measured motion entirely — a ticker would fade in and never travel.
       const builderNames = new Set<string>();
-      for (const step of data.steps) for (const d of step.dynamics ?? []) builderNames.add(d.build);
+      for (const step of allSteps) for (const d of step.dynamics ?? []) builderNames.add(d.build);
       for (const name of builderNames) {
         if (!definedInJs(name)) {
           warnings.push({
@@ -271,6 +288,22 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
             message: `The animation data builds measured motion with "${name}()", but no such function is defined in template.js — that motion will not play.`,
           });
         }
+      }
+
+      // 5d. The state machine's SEMANTIC judgement (shape already gated by the parser):
+      //     a disconnected default path etc. blocks export; advice lands as warnings.
+      const machineVerdict = validateMachine(data);
+      for (const message of machineVerdict.errors) errors.push({ rule: 'machine', message });
+      for (const message of machineVerdict.warnings) warnings.push({ rule: 'machine', message });
+
+      // Machine data under an interpreter that predates the machine engine would parse but
+      // never run — the frozen-interpreter pairing rule (templates/shared/animRuntime.ts).
+      if (data.machine && !hasMachineRuntime(template.js)) {
+        errors.push({
+          rule: 'machine',
+          message:
+            'The animation data declares a state machine, but the interpreter in this template predates the machine engine — re-emit the ANIMATION region (replaceRegionWithAnimData) so the machine can run.',
+        });
       }
     }
   }

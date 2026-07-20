@@ -7,7 +7,7 @@
 // and write raw GSAP (the timeline UI then steps aside).
 
 import { ANIMATION_MARK_CLOSE, ANIMATION_MARK_OPEN } from '../lowerThirds/animPresets';
-import { serializeAnimData, type AnimData } from '../../blocks/animData';
+import { serializeAnimData, spliceAnimData, type AnimData } from '../../blocks/animData';
 
 /** The interpreter body — identical in every template. Kept as one exported string so the
  *  emitter, the AI prompt, and (later) the convert-on-edit path all ship the same code. */
@@ -15,13 +15,16 @@ export const ANIM_INTERPRETER_JS = `// ---- The interpreter (the same in every t
 // Steps play on the operator's cues: steps[0] on play(), each middle step on one next()
 // press, the last step on stop(). Keyframe times sit on the step's local clock and are
 // divided by the speed knob. A keyframe's ease is the ease INTO it (default: the step's).
+// When the data carries a "machine", the same cues drive its default path, and the state
+// engine below adds operator events (noacgDispatch), timers, and instant snap (noacgSnap).
 var noacgStepsPlayed = 0; // how many steps have run (play() = the first)
 
 // Build one step's GSAP timeline from its keyframe data. The first keyframe of a track
 // is the starting state, applied instantly at the step start (it "holds backward" —
 // the familiar keyframe convention); later keyframes tween from the previous one.
+// Takes a step index — or a state's inline timeline object, which plays the same way.
 function buildStepTimeline(index) {
-  var step = NOACG_ANIM.steps[index];
+  var step = typeof index === 'number' ? NOACG_ANIM.steps[index] : index;
   var speed = NOACG_ANIM.speed || 1;
   var tl = gsap.timeline();
   Object.keys(step.layers).forEach(function (selector) {
@@ -127,23 +130,17 @@ function noacgApplyReveals(tl) {
   }
 }
 
-// buildInTimeline(): the entrance — the first step. Called by play().
-function buildInTimeline() {
-  noacgStepsPlayed = 1;
+// The entrance recipe: step 0, the root reveal, and the reveal pre-arm — shared by play(),
+// the machine's entrance, and snap's pose composition, so they can never drift apart.
+function noacgEntranceTimeline() {
   var tl = buildStepTimeline(0);
   tl.set(NOACG_ANIM.root, { opacity: 1 }, 0); // reveal the (CSS-hidden) graphic
   noacgApplyReveals(tl);
   return tl;
 }
 
-// revealNextStep(): one middle step per next() press; null when only Out remains.
-function revealNextStep() {
-  if (noacgStepsPlayed >= NOACG_ANIM.steps.length - 1) return null;
-  return buildStepTimeline(noacgStepsPlayed++);
-}
-
-// buildOutTimeline(): the Out step — the last one. Called by stop().
-function buildOutTimeline() {
+// The exit recipe — the Out step plus the off-air cleanup, shared the same way.
+function noacgExitTimeline() {
   var steps = NOACG_ANIM.steps;
   var tl = buildStepTimeline(steps.length - 1);
   // Press-revealed layers OUTSIDE the root miss its hide — fade them with the exit
@@ -159,6 +156,453 @@ function buildOutTimeline() {
   }
   tl.set(NOACG_ANIM.root, { opacity: 0 }); // fully hidden; ready to play again
   return tl;
+}
+
+// buildInTimeline(): the entrance. Called by play(). With a machine, play() is the built-in
+// reset-and-enter event; without one, the classic linear walk (byte-for-byte).
+function buildInTimeline() {
+  if (NOACG_ANIM.machine) return noacgMachinePlay();
+  noacgStepsPlayed = 1;
+  var tl = noacgEntranceTimeline();
+  noacgTrackPath(); // pointer bookkeeping only — playback is untouched
+  return tl;
+}
+
+// revealNextStep(): one default-path advance per next() press; null when only Out remains.
+function revealNextStep() {
+  if (NOACG_ANIM.machine) return noacgMachineNext();
+  if (noacgStepsPlayed >= NOACG_ANIM.steps.length - 1) return null;
+  var tl = buildStepTimeline(noacgStepsPlayed++);
+  noacgTrackPath();
+  return tl;
+}
+
+// buildOutTimeline(): the exit. Called by stop() — the built-in event that is legal from
+// EVERY state (an operator can always take the graphic off air).
+function buildOutTimeline() {
+  if (NOACG_ANIM.machine) return noacgMachineStop();
+  var tl = noacgExitTimeline();
+  noacgResetPointers();
+  return tl;
+}
+
+// ---- The state machine (docs/STATE_MACHINE_SCHEMA.md) ----
+// States are what the graphic looks like (each one's content is a timeline); transitions are
+// arrows fired by operator events or timers; parallel groups run independent small graphs.
+// When NOACG_ANIM.machine is absent, the implicit ONE-GROUP linear machine is derived from
+// the step chain (mirrors blocks/animMachine.ts deriveMachine — keep them in agreement) and
+// playback still runs the classic statements above; the derived machine exists so
+// noacgDispatch / noacgSnap / noacgMachineState answer for every template.
+var noacgMachine = (function () {
+  if (NOACG_ANIM.machine) return NOACG_ANIM.machine;
+  function slug(name) {
+    var s = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return s || 'state';
+  }
+  var used = { off: true };
+  var states = [{ id: 'off', name: 'Off' }];
+  var path = [];
+  for (var i = 0; i < NOACG_ANIM.steps.length; i++) {
+    var stepName = NOACG_ANIM.steps[i].name;
+    var id = slug(stepName);
+    for (var n = 2; used[id]; n++) id = slug(stepName) + '-' + n;
+    used[id] = true;
+    states.push({ id: id, name: stepName });
+    path.push(id);
+  }
+  var transitions = [];
+  for (var j = 0; j + 2 < path.length; j++) {
+    transitions.push({ from: path[j], to: path[j + 1], trigger: 'operator', event: 'next' });
+  }
+  return { groups: [{ id: 'main', initial: 'off', defaultPath: path, states: states, transitions: transitions }] };
+})();
+
+var noacgCurrent = {};      // group id -> current state id (pointers move SYNCHRONOUSLY)
+var noacgGroupTl = {};      // group id -> that group's running entry timeline
+var noacgTimers = {};       // group id -> the armed gsap.delayedCall (timer transitions)
+var noacgQueue = [];        // the serial event queue — one event at a time, FIFO
+var noacgDraining = false;  // re-entrancy guard: a dispatch during a drain queues behind
+(function () {
+  for (var g = 0; g < noacgMachine.groups.length; g++) {
+    noacgCurrent[noacgMachine.groups[g].id] = noacgMachine.groups[g].initial;
+  }
+})();
+
+function noacgPathIndex(stateId) {
+  var path = noacgMachine.groups[0].defaultPath || [];
+  for (var i = 0; i < path.length; i++) if (path[i] === stateId) return i;
+  return -1;
+}
+
+// Keep the main pointer in step with the classic walk (machine-less playback).
+function noacgTrackPath() {
+  var main = noacgMachine.groups[0];
+  noacgCurrent[main.id] = noacgStepsPlayed > 0 ? main.defaultPath[noacgStepsPlayed - 1] : main.initial;
+}
+
+function noacgStateOf(group, id) {
+  for (var i = 0; i < group.states.length; i++) if (group.states[i].id === id) return group.states[i];
+  return null;
+}
+
+function noacgOperatorEdge(group, from, event) {
+  for (var i = 0; i < group.transitions.length; i++) {
+    var t = group.transitions[i];
+    if (t.from === from && t.trigger === 'operator' && t.event === event) return t;
+  }
+  return null;
+}
+
+function noacgTimerEdge(group, from) {
+  for (var i = 0; i < group.transitions.length; i++) {
+    var t = group.transitions[i];
+    if (t.from === from && t.trigger === 'timer') return t;
+  }
+  return null;
+}
+
+function noacgCancelTimer(groupId) {
+  if (noacgTimers[groupId]) { noacgTimers[groupId].kill(); noacgTimers[groupId] = null; }
+}
+
+function noacgCancelAllTimers() {
+  for (var g = 0; g < noacgMachine.groups.length; g++) noacgCancelTimer(noacgMachine.groups[g].id);
+}
+
+function noacgResetPointers() {
+  for (var g = 0; g < noacgMachine.groups.length; g++) {
+    noacgCurrent[noacgMachine.groups[g].id] = noacgMachine.groups[g].initial;
+  }
+}
+
+// The step a state's content comes from: a default-path state's positional step, an off-path
+// state's inline timeline, or null for a pose-only state.
+function noacgStepFor(group, stateId) {
+  if (group === noacgMachine.groups[0]) {
+    var idx = noacgPathIndex(stateId);
+    if (idx >= 0) return NOACG_ANIM.steps[idx];
+  }
+  var state = noacgStateOf(group, stateId);
+  return state && state.timeline ? state.timeline : null;
+}
+
+// The timeline ENTERING a state plays: a default-path state plays its positional step (the
+// first through the entrance recipe, the last through the exit recipe), an off-path state
+// its inline timeline, a pose-only state nothing (instant).
+function noacgEnterTimeline(group, stateId) {
+  if (group === noacgMachine.groups[0]) {
+    var idx = noacgPathIndex(stateId);
+    if (idx === 0) return noacgEntranceTimeline();
+    if (idx > 0 && idx === (group.defaultPath || []).length - 1) return noacgExitTimeline();
+  }
+  var step = noacgStepFor(group, stateId);
+  return step ? buildStepTimeline(step) : null;
+}
+
+// Run a step's lifecycle calls once, immediately. Snap composes a pose with SUPPRESSED
+// callbacks, which is what keeps clocks and loops idle along the route — but a state whose
+// look is painted by a call (a quiz's lock dim) would then snap to an incomplete pose. So
+// the TARGET state's own calls run once the pose is composed; the states merely passed
+// THROUGH stay suppressed, so nothing replays a side effect on the way.
+function noacgFireCalls(step) {
+  var calls = (step && step.calls) || [];
+  for (var i = 0; i < calls.length; i++) {
+    var fn = window[calls[i].call];
+    if (typeof fn === 'function') fn();
+  }
+}
+
+// A timer transition arms when its state's entry timeline SETTLES (a tl.call at the authored
+// end). gsap.delayedCall rides the GSAP clock, so time-scaling and callback suppression hold:
+// a settled or scrubbed graphic (progress(1, true)) never arms a timer and never
+// auto-advances under the operator.
+function noacgArmTimer(group, stateId, tl) {
+  var edge = noacgTimerEdge(group, stateId);
+  if (!edge) return;
+  var arm = function () {
+    noacgCancelTimer(group.id);
+    noacgTimers[group.id] = gsap.delayedCall(edge.after / (NOACG_ANIM.speed || 1), function () {
+      noacgTimers[group.id] = null;
+      noacgDispatch({ timerGroup: group.id, from: stateId });
+    });
+  };
+  if (tl) tl.call(arm, null, tl.duration());
+  else arm();
+}
+
+// Payload fields ride an ACCEPTED event, written through the same helper update() uses —
+// a bare update() still never causes a transition.
+function noacgApplyPayload(payload) {
+  for (var key in payload) {
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) continue;
+    var el = document.getElementById(key);
+    if (!el) continue;
+    if (typeof setFieldValue === 'function') setFieldValue(el, payload[key]);
+    else el.textContent = payload[key];
+  }
+}
+
+// Fire one transition: the pointer moves SYNCHRONOUSLY (an event arriving mid-animation
+// evaluates against the NEW state), the previous group timeline finishes instantly with
+// suppressed callbacks (nothing double-fires), the target state's timeline plays, and the
+// target's entry timer arms. Entering the exit state takes the graphic off air.
+function noacgFire(group, edge) {
+  noacgCancelTimer(group.id);
+  var prev = noacgGroupTl[group.id];
+  if (prev) {
+    if (prev.progress() < 1) prev.progress(1, true);
+    prev.kill();
+    noacgGroupTl[group.id] = null;
+  }
+  noacgCurrent[group.id] = edge.to;
+  var main = noacgMachine.groups[0];
+  if (group === main) {
+    var idx = noacgPathIndex(edge.to);
+    if (idx >= 0) noacgStepsPlayed = idx + 1;
+  }
+  var tl = noacgEnterTimeline(group, edge.to);
+  if (tl) noacgGroupTl[group.id] = tl;
+  var path = main.defaultPath || [];
+  if (group === main && edge.to === path[path.length - 1]) {
+    // The exit was reached (an authored next-drives-out arrow): off air, like stop().
+    noacgCancelAllTimers();
+    noacgResetPointers();
+  } else {
+    noacgArmTimer(group, edge.to, tl);
+  }
+  return tl;
+}
+
+// next() under a machine: the default-path walk. On-path it enters the next waypoint
+// (whatever event name the authored arrow carries); the arrow INTO the exit is an authored
+// opt-in (without one, next() no-ops when only Out remains — the classic contract). Off-path
+// it fires an authored 'next' rejoin arrow if the author drew one; otherwise a deterministic
+// no-op.
+function noacgProcessNext() {
+  var main = noacgMachine.groups[0];
+  var path = main.defaultPath || [];
+  var cur = noacgCurrent[main.id];
+  var i = noacgPathIndex(cur);
+  if (i < 0 && cur === main.initial && path.length > 0) {
+    // Off air: next() does nothing — play() is how the graphic enters.
+    return null;
+  }
+  if (i >= 0) {
+    if (i + 1 >= path.length) return null;
+    var target = path[i + 1];
+    var authored = null;
+    for (var k = 0; k < main.transitions.length; k++) {
+      var t = main.transitions[k];
+      if (t.from === cur && t.to === target && t.trigger === 'operator') { authored = t; break; }
+    }
+    if (i + 1 === path.length - 1 && !authored) return null;
+    return noacgFire(main, authored || { from: cur, to: target, trigger: 'operator' });
+  }
+  var rejoin = noacgOperatorEdge(main, cur, 'next');
+  return rejoin ? noacgFire(main, rejoin) : null;
+}
+
+// Process one queued entry. Timer firings re-check their arming state — the graphic may have
+// moved while they sat in the queue — so a stale timer is dropped, never misfired.
+function noacgProcessOne(e) {
+  if (e.timerGroup) {
+    for (var g = 0; g < noacgMachine.groups.length; g++) {
+      var tg = noacgMachine.groups[g];
+      if (tg.id !== e.timerGroup) continue;
+      if (noacgCurrent[tg.id] !== e.from) return null;
+      var timerEdge = noacgTimerEdge(tg, e.from);
+      return timerEdge ? noacgFire(tg, timerEdge) : null;
+    }
+    return null;
+  }
+  if (e.pathStep) return noacgProcessNext();
+  if (!NOACG_ANIM.machine) {
+    // Machine-less templates keep the classic playback exactly; 'next' is their one event.
+    return e.event === 'next' ? revealNextStep() : null;
+  }
+  // Structural guarding: only groups whose CURRENT state has an arrow for this event fire —
+  // several may (parallel groups), none means the event is illegal right now and is dropped.
+  var firing = [];
+  for (var g2 = 0; g2 < noacgMachine.groups.length; g2++) {
+    var group = noacgMachine.groups[g2];
+    var edge = noacgOperatorEdge(group, noacgCurrent[group.id], e.event);
+    if (edge) firing.push({ group: group, edge: edge });
+  }
+  if (firing.length === 0) return null;
+  if (e.payload) noacgApplyPayload(e.payload);
+  var last = null;
+  for (var f = 0; f < firing.length; f++) {
+    var tl = noacgFire(firing[f].group, firing[f].edge);
+    if (tl) last = tl;
+  }
+  return last;
+}
+
+// noacgDispatch(event, payload?): send one operator event through the SERIAL queue. Events
+// resolve one at a time in arrival order — near-simultaneous events and multi-part updates
+// land deterministically and atomically. The optional payload is a flat {field: value} map
+// applied only when the event is accepted. Returns the last timeline the event started
+// (null when guarded out or queued behind a running drain).
+function noacgDispatch(event, payload) {
+  noacgQueue.push(typeof event === 'string' ? { event: event, payload: payload } : event);
+  if (noacgDraining) return null;
+  noacgDraining = true;
+  var last = null;
+  while (noacgQueue.length > 0) {
+    var tl = noacgProcessOne(noacgQueue.shift());
+    if (tl) last = tl;
+  }
+  noacgDraining = false;
+  return last;
+}
+
+// play() under a machine: the built-in reset-and-enter — every group to its initial state,
+// the queue cleared, the entrance played, the first waypoint's timer armed.
+function noacgMachinePlay() {
+  noacgCancelAllTimers();
+  noacgQueue.length = 0;
+  noacgGroupTl = {};
+  noacgResetPointers();
+  noacgStepsPlayed = 1;
+  var main = noacgMachine.groups[0];
+  var tl = noacgEntranceTimeline();
+  noacgCurrent[main.id] = (main.defaultPath || [])[0];
+  noacgGroupTl[main.id] = tl;
+  noacgArmTimer(main, noacgCurrent[main.id], tl);
+  return tl;
+}
+
+function noacgMachineNext() {
+  return noacgDispatch({ pathStep: true });
+}
+
+// stop() under a machine: the built-in out — legal from every state, cancels timers, flushes
+// the queue, plays the exit, and rests every group at its initial state.
+function noacgMachineStop() {
+  noacgCancelAllTimers();
+  noacgQueue.length = 0;
+  var tl = noacgExitTimeline();
+  noacgGroupTl = {};
+  noacgResetPointers();
+  return tl;
+}
+
+// The canonical route to a state: for a main-group waypoint, the default-path prefix; else
+// BFS shortest path from the group's initial over authored operator/timer arrows
+// (data-condition never fires) plus the walk's own edges, ties resolved by declaration
+// order. Mirrors blocks/animMachine.ts canonicalPath — keep them in agreement.
+function noacgCanonicalPath(group, targetId) {
+  if (targetId === group.initial) return [];
+  var isMain = group === noacgMachine.groups[0];
+  var path = group.defaultPath || [];
+  if (isMain) {
+    var pi = noacgPathIndex(targetId);
+    if (pi >= 0) return path.slice(0, pi + 1);
+  }
+  var edges = [];
+  if (isMain && path.length > 0) {
+    edges.push({ from: group.initial, to: path[0] });
+    for (var w = 0; w + 1 < path.length; w++) edges.push({ from: path[w], to: path[w + 1] });
+  }
+  for (var i = 0; i < group.transitions.length; i++) {
+    if (group.transitions[i].trigger !== 'data-condition') edges.push(group.transitions[i]);
+  }
+  var cameFrom = {};
+  var seen = {};
+  seen[group.initial] = true;
+  var queue = [group.initial];
+  while (queue.length > 0) {
+    var at = queue.shift();
+    for (var e = 0; e < edges.length; e++) {
+      var edge = edges[e];
+      if (edge.from !== at || seen[edge.to]) continue;
+      seen[edge.to] = true;
+      cameFrom[edge.to] = at;
+      if (edge.to === targetId) {
+        var route = [];
+        var id = targetId;
+        while (id !== group.initial) { route.unshift(id); id = cameFrom[id]; }
+        return route;
+      }
+      queue.push(edge.to);
+    }
+  }
+  return null;
+}
+
+// Return the graphic to its CSS rest: clear every inline style the animations wrote.
+// Self-contained (no editor needed), so snap works identically in exports.
+function noacgResetGraphic() {
+  var root = document.querySelector(NOACG_ANIM.root);
+  if (root) {
+    gsap.set(root, { clearProps: 'all' });
+    var all = root.querySelectorAll('*');
+    for (var i = 0; i < all.length; i++) gsap.set(all[i], { clearProps: 'all' });
+  }
+  // Press-revealed layers can sit OUTSIDE the root — clear them too.
+  for (var s = 1; s < NOACG_ANIM.steps.length - 1; s++) {
+    var reveals = NOACG_ANIM.steps[s].reveals || [];
+    for (var r = 0; r < reveals.length; r++) {
+      var el = document.querySelector(reveals[r]);
+      if (el) gsap.set(el, { clearProps: 'all' });
+    }
+  }
+}
+
+// noacgSnap(assignments, opts?): enter states INSTANTLY — no animation replay. assignments
+// is a {groupId: stateId} map; groups not named keep their current state; null means every
+// group to its initial — the VISUAL half of reset (data reset stays update()'s job, the two
+// are never conflated). The pose is composed by replaying each group's canonical path with
+// suppressed callbacks, so clocks, loops and timers stay silent during composition. Entry
+// timers then arm by default (recovery: a snapped-into ticker resumes cycling); pass
+// { timers: false } to park the graphic (the editor's preview does).
+function noacgSnap(assignments, opts) {
+  opts = opts || {};
+  var want = {};
+  var g, group;
+  for (g = 0; g < noacgMachine.groups.length; g++) {
+    group = noacgMachine.groups[g];
+    var target = assignments === null || assignments === undefined
+      ? group.initial
+      : (assignments[group.id] !== undefined ? assignments[group.id] : noacgCurrent[group.id]);
+    if (!noacgStateOf(group, target)) target = group.initial;
+    want[group.id] = target;
+  }
+  noacgCancelAllTimers();
+  noacgQueue.length = 0;
+  gsap.killTweensOf('*');
+  noacgGroupTl = {};
+  noacgResetGraphic();
+  noacgStepsPlayed = 0;
+  noacgResetPointers();
+  for (g = 0; g < noacgMachine.groups.length; g++) {
+    group = noacgMachine.groups[g];
+    if (want[group.id] === group.initial) continue;
+    var route = noacgCanonicalPath(group, want[group.id]);
+    if (!route) continue; // unreachable — the group rests at its initial state
+    for (var s = 0; s < route.length; s++) {
+      var tl = noacgEnterTimeline(group, route[s]);
+      if (tl) { tl.pause(0); tl.progress(1, true); tl.kill(); }
+      noacgCurrent[group.id] = route[s];
+      if (group === noacgMachine.groups[0]) {
+        var idx = noacgPathIndex(route[s]);
+        if (idx >= 0) noacgStepsPlayed = idx + 1;
+      }
+    }
+    noacgFireCalls(noacgStepFor(group, want[group.id])); // the target state's own effects
+    if (opts.timers !== false) noacgArmTimer(group, want[group.id], null);
+  }
+  return noacgMachineState();
+}
+
+// A copy of the machine's pointers — for tests, the editor's state chip, and recovery.
+function noacgMachineState() {
+  var out = { groups: {} };
+  for (var g = 0; g < noacgMachine.groups.length; g++) {
+    var id = noacgMachine.groups[g].id;
+    out.groups[id] = noacgCurrent[id];
+  }
+  return out;
 }`;
 
 /** The data block's header comment — emitted above the literal (JSON carries no comments,
@@ -172,7 +616,11 @@ const DATA_HEADER = `// The graphic's animation as DATA. Steps play in order —
 // repeat (repeat -1 = forever, yoyo = breathe back and forth); "dynamics" adds MEASURED
 // motion — a named builder function (defined below, outside this block) reads the DOM and
 // returns the tween, which is how a marquee travels exactly one track-width no matter how
-// much text the operator types. The timeline UI reads and writes this block — and so can
+// much text the operator types. An optional "machine" adds a STATE GRAPH over the steps:
+// parallel groups of states (each state's content is a timeline — the steps are the default
+// path's, in order), transitions fired by operator events (noacgDispatch) or timers, and
+// instant snap to any state (noacgSnap). Without it the steps ARE the machine: a linear
+// walk driven by play/next/stop. The timeline UI reads and writes this block — and so can
 // you: edit a number and press play.`;
 
 /** Emit the full marked ANIMATION region for a data-driven template. */
@@ -183,6 +631,28 @@ var NOACG_ANIM = ${serializeAnimData(data)};
 
 ${ANIM_INTERPRETER_JS}
 ${ANIMATION_MARK_CLOSE}`;
+}
+
+/** THE UPGRADE GATE: true when a template's frozen interpreter carries the state-machine
+ *  engine. spliceAnimData replaces only the data literal — a saved template keeps whatever
+ *  interpreter it was emitted with — so machine-bearing data must NEVER be spliced under an
+ *  older interpreter that can't run it. A machine writer checks this first and re-emits the
+ *  whole region (replaceRegionWithAnimData) when it is false. */
+export function hasMachineRuntime(js: string): boolean {
+  return /function noacgDispatch/.test(js);
+}
+
+/**
+ * THE machine-safe write — what every editing surface should use.
+ *
+ * `spliceAnimData` replaces only the object literal, so a saved template keeps whatever
+ * interpreter it was emitted with. That is fine until the data grows a MACHINE: machine-bearing
+ * data under a pre-machine interpreter would parse and then do nothing. When that pairing would
+ * break, re-emit the whole region instead (the same move the `hides` early-exit makes).
+ */
+export function writeAnimData(js: string, data: AnimData): string | null {
+  if (data.machine && !hasMachineRuntime(js)) return replaceRegionWithAnimData(js, data);
+  return spliceAnimData(js, data);
 }
 
 /** Swap a template's marked region for the data-driven emit (the converter's writer). */

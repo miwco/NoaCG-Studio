@@ -67,6 +67,13 @@ mark work done on a green build alone if the behaviour is observable.
 4. **Validate before export.** `validation/validateTemplate.ts` is the gate; export is blocked on
    errors. Keep it authoritative - the platform owns SPX compatibility, not the AI.
 5. **Blocks and AI are deterministic transforms** `(template) => template` inserting clean code.
+6. **Every persisted format carries a version, and a breaking change ships its migration in the
+   same commit.** The catalog is large and templates are saved documents, so a shape change
+   without a migration is data loss. The pattern (`docs/STATE_MACHINE_SCHEMA.md` §5, implemented
+   in `blocks/animData.ts` and `model/layout.ts`): additive optional fields never bump the
+   version; a breaking change bumps it and migrates ON READ, normalizing so everything
+   downstream sees one shape; serialization always writes the current version; an unknown
+   version degrades honestly (read-only, never a crash), so an older build never eats newer data.
 
 ## SPX template format (the contract)
 
@@ -80,6 +87,35 @@ Full reference: **`docs/SPX_TEMPLATE_FORMAT.md`** (derived from `example_project
   split** - that older "premium pack" style is documented but not what we generate. An input-only
   value (e.g. a countdown duration) may live in a hidden `<div id="fN" style="display:none">`.
 
+## The state-machine model (what a graphic IS)
+
+Full reference: **`docs/STATE_MACHINE_SCHEMA.md`**. A graphic is data fields + one or more
+PARALLEL state groups, all inside the one `NOACG_ANIM` data block (format version 2) in the
+marked ANIMATION region - no second scene model, no parallel format. Essentials:
+
+- A **state** is what the graphic looks like; its content is a timeline. A **transition** is an
+  animated change, fired by an operator **event** or a **timer**. Guarding is STRUCTURAL - a
+  transition fires only if the author drew that arrow from the current state. No expression
+  language, ever.
+- **The default path** is the ordered walk `next` follows - the SPX/CasparCG compatibility
+  contract. Every template, however complex, degrades to dumb-stepping along it. `steps` IS that
+  path: `defaultPath[i]`'s timeline is `steps[i]` (the positional binding), which is why the
+  multi-step reveal feature became the default path rather than being duplicated by it.
+- **Data updates never cause transitions.** `update()` writes fields; state changes come only
+  from events (a payload may ride an accepted event, which is what makes a multi-part change
+  atomic). **Parameterize with data, not states** - one `Selected` state plus a field, never
+  four near-identical states.
+- **Every state is enterable two ways:** by transition (animated) or by SNAP (instant - recovery,
+  emergency jumps, preview without playback). **Reset is two operations**, never conflated: reset
+  visual state (snap every group to its initial) and reset data.
+- Events are processed SERIALLY through one queue per graphic, and that queue lives INSIDE the
+  template - so the determinism holds identically in the editor, in an exported overlay, and
+  under SPX.
+- A template with no `machine` key IS the implicit one-group linear machine, derived on read and
+  never persisted: the whole existing catalog behaves exactly as before. A **graphic type**
+  (`docs/GRAPHIC_TYPES.md`) follows the same rule - it persists a machine only when the derived
+  one is wrong, which is why most types add nothing to what they emit.
+
 ## Architecture map
 
 Directories marked * have their own CLAUDE.md with the binding per-area contracts.
@@ -88,10 +124,13 @@ Directories marked * have their own CLAUDE.md with the binding per-area contract
 src/
   model/ *     SpxTemplate types, SPX parse/serialize, catalog data, fonts, brand, packets;
                structure.ts (element identity) + fieldModel.ts (the FieldDescriptor contract)
-  templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract
+  templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract;
+               types/ = the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md) - what a graphic IS,
+               independent of its look; compiles into catalog variants, replacing by id
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
-  blocks/ *    deterministic transforms: block registry, field editing, the Timeline v2 engine
+  blocks/ *    deterministic transforms: block registry, field editing, the Timeline v2 engine,
+               animMachine.ts (the STATE MACHINE's graph seam - docs/STATE_MACHINE_SCHEMA.md)
   ai/ *        the SPX GENERATION HARNESS: catalog-fit briefs assemble deterministically through
                the wizard assemblers; off-catalog briefs go to the coder + a 2-round repair loop
   ai/video/    the VIDEO motion harness: skills + reference cards -> Motion Director -> the

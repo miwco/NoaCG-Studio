@@ -40,6 +40,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
+import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
 
 export interface SbDesign {
@@ -131,15 +132,56 @@ function resetScorePop() {
   }
 }
 
-// next(): scoreboards have no steps.
-function next() {}
+// ── Match state (driven by the graphic's state machine, when it has one) ────────────────
+// A match clock and a full-time marker are PLAYOUT logic, not motion, so they live out here
+// with the score pop rather than inside the marked region. A scoreboard with no machine never
+// calls them and behaves exactly as before.
+var matchClockTimer = null;      // the 1-second interval while the match clock runs
+var matchSeconds = 0;            // elapsed match time, in seconds
+
+function paintMatchClock() {
+  var el = document.querySelector('.scoreboard-clock');
+  if (!el) return;                                  // a design without a clock: nothing to paint
+  var m = Math.floor(matchSeconds / 60);
+  var s = matchSeconds % 60;
+  el.textContent = m + ':' + (s < 10 ? '0' + s : s);
+}
+
+// startMatchClock(): run the clock from where it stands — a restart after a stoppage must
+// not reset the match to 0:00.
+function startMatchClock() {
+  if (matchClockTimer) return;
+  matchClockTimer = setInterval(function () { matchSeconds = matchSeconds + 1; paintMatchClock(); }, 1000);
+}
+
+function stopMatchClock() {
+  if (matchClockTimer) { clearInterval(matchClockTimer); matchClockTimer = null; }
+}
+
+// markFinal(): the match is over — the design's CSS decides what "final" looks like.
+function markFinal() {
+  stopMatchClock();
+  var root = document.querySelector('.scoreboard');
+  if (root) root.classList.add('scoreboard-final');
+}
+
+// next(): SPX Continue — advance one step along the default path. This design ships
+// single-step, so it normally does nothing; it still funnels to the interpreter so a
+// template that GROWS a step (or a state machine) stays drivable through the SPX contract.
+function next() {
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
+}
 
 ${animationBlock}
 `;
 }
 
 /** Build the complete scoreboard SpxTemplate. */
-export function assembleScoreboard(meta: SbMeta, design: SbDesign, o: ResolvedOptions): SpxTemplate {
+export function assembleScoreboard(meta: SbMeta, design: SbDesign, o: ResolvedOptions,
+  /** Refine the converted animation data — the seam a graphic TYPE injects its machine
+   *  through (see shared/standard.ts composeRefine for the ordering rule). */
+  refine?: (data: AnimData) => AnimData,
+): SpxTemplate {
   const font = resolveHeadingFont(o); // imported font wins over the bundled set
   const scale = computeScale(o);
   // Scoreboards span two team groups side by side — cap wider than a single strap.
@@ -227,7 +269,7 @@ ${design.css}
       text: f.value,
       styles: {},
     })),
-  });
+  }, refine);
 }
 
 /** The authoring API for scoreboard variant modules. */
@@ -235,12 +277,15 @@ export function defineScoreboardVariant(
   spec: Omit<TemplateVariant, 'create'>,
   meta: SbMeta,
   buildDesign: (o: ResolvedOptions) => SbDesign,
+  /** Optional animation-data refinement (a graphic type's machine rides in here). It is
+   *  built per create() because a type's compiled machine depends on the resolved options. */
+  refine?: (o: ResolvedOptions) => ((data: AnimData) => AnimData) | undefined,
 ): TemplateVariant {
   const variant: TemplateVariant = {
     ...spec,
     create(options?: WizardOptions) {
       const o = resolveOptions(variant, options);
-      return assembleScoreboard(meta, buildDesign(o), o);
+      return assembleScoreboard(meta, buildDesign(o), o, refine?.(o));
     },
   };
   return variant;

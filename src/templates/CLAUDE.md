@@ -50,6 +50,23 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   keyframe time by `speed`. `emitAnimRegion` emits the full marked region (data header + literal +
   interpreter); `replaceRegionWithAnimData` swaps a template's region for the data-driven
   emit (the converter's writer).
+  It also carries the **STATE MACHINE engine** (docs/STATE_MACHINE_SCHEMA.md): the version-1
+  statements stay VERBATIM as the machine-less path (a template with no `machine` key runs the
+  identical code it always did), and the engine adds three globals - `noacgDispatch(event,
+  payload?)` (one operator event through the SERIAL queue; the flat {field: value} payload is
+  applied only if the guard accepts), `noacgSnap(assignments, opts?)` (enter states INSTANTLY
+  by replaying the canonical path with suppressed callbacks; `null` = every group to its
+  initial, the VISUAL half of reset - the data half stays update()'s job), and
+  `noacgMachineState()`. The four SPX globals stay THE lifecycle surface and become
+  machine-aware INSIDE (play = reset-and-enter, next = the default-path walk, stop = the
+  built-in out legal from every state), which is why no export target, transport or preview
+  path changed. Timers are `gsap.delayedCall` armed by a `tl.call` at the entry timeline's end,
+  never setTimeout: GSAP's callback suppression then means a settled/scrubbed graphic never
+  arms one, and the bench's timeScale + the render virtual clock drive them for free.
+  **THE PAIRING RULE:** `spliceAnimData` replaces only the literal, so a saved template keeps
+  its FROZEN interpreter - machine-bearing data must never land under one that predates the
+  engine. Check `hasMachineRuntime(js)` first and re-emit the whole region when false (the
+  `hides` precedent); validateTemplate treats a mismatch as an export-blocking error.
 - **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS + `{prefix}-done` at zero;
   DOM-ready-safe.
 - **shared/textFit.ts** - the FIT-TO-SLOT runtime for placed text lines (the imported-design
@@ -59,6 +76,34 @@ blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/varian
   `ensureTextFitRuntime`; the shared `update()` calls it via an optional hook (the
   `revealNextStep` idiom). It re-fits on `document.fonts.ready` as well as DOM-ready - a
   DOM-ready-only pass measures the FALLBACK face and overflows once the real one swaps in.
+
+## types/ - the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md)
+
+A **type** declares what a graphic IS - structure contract, fields, state groups and default
+path, control events - independent of what it looks like; a **design** is one look. A type is a
+DECLARATION, not a second way to build a template: `variantsFromType` compiles one into
+ordinary TemplateVariants that go through the category assemblers below, so
+`variant.create(options)` stays the single contract the wizard, the AI, the sweeps and every
+spec speak. `catalog.ts` merges them with `mergeCatalog`, REPLACING BY ID, so a type that
+promotes an existing variant keeps that variant's id and its slot in the browse grid.
+
+**THE RULE:** *persist a machine only when the derived one is wrong.* `deriveMachine` already
+gives every template a correct one-group linear machine, so a type with no branches, parallel
+groups or event overrides compiles to NO `machine` key and emits byte-identical output. Seven
+of the twelve types are in that class.
+
+Fields are declared with LOGICAL keys and a `role` (`line` first, `logo` last - both enforced
+with a throw, because the order is what keeps the compiled `fN` ids in step with the assembler
+that emits them). The main group's default path is DERIVED, never declared: its length must
+equal the step count, which depends on the preset and the line count. `attachMachine` puts the
+compiled machine on after assembly and THROWS if it is off-shape - unlike `convertToDataRegion`
+it is compiling our own declaration, so degrading would ship a control page whose buttons do
+nothing.
+
+**The trap to know:** a timer never arms on a timeline that never ends (the arming call is
+scheduled at the timeline's end). A `repeat: -1` loop or a measured `dynamics` builder makes
+that unreachable, so `validateMachine` errors on it. This is why the ticker type is a rotator
+with its own `ticker-rotate` preset rather than the endless marquee.
 
 ## Categories
 

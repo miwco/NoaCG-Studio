@@ -59,13 +59,26 @@ templateStore.ts (zustand) holds the template plus editor UI state.
 - **replayNonce** - motion applies (timeline/Inspector edits) auto-replay via PlayoutSimulator.
 - **patchCss** - Style-panel patches: highlight without history spam.
 - **sendScrub** - timeline view -> simulator pauses the preview's in/out timeline at a time.
-- **sendControl** - the Control panel live-drives the preview through the simulator.
+- **sendControl** - the Control panel live-drives the preview through the simulator
+  (update/play/stop/next). **sendEvent(name, payload?) / sendSnap(assignments)** are its
+  state-machine twins (docs/STATE_MACHINE_SCHEMA.md): dispatch one operator event (the optional
+  flat {field: value} payload lands only if the machine's structural guard accepts it), or enter
+  states INSTANTLY - `null` assignments = every group to its initial, the VISUAL half of reset
+  (the data half is resetSampleData; the two are never conflated). Both ride the same
+  `controlCommand` nonce and are no-ops on templates without the machine runtime; the preview
+  snaps with `{ timers: false }` so a parked design view never auto-advances.
 - **selectedParts / selectedPart** - the SHARED SELECTION (multi since the interaction
   model, docs/TIMELINE_INTERACTION_MODEL.md): an ordered list of TemplatePart selectors the
   canvas, the timeline, and the Inspector all highlight; selectedPart is the PRIMARY
   (first) and every setter keeps the two in sync. setSelectedPart replaces, setSelectedParts
   replaces wholesale (the lasso), toggleSelectedPart is shift-click. UI state only - no
   history, never written into the template.
+- **partLocks / setPartLock** - EXPLICIT canvas locks by part selector. A locked part takes no
+  direct-manipulation gesture (drag, handle, lasso) but stays selectable by click and from the
+  timeline. Only user toggles live here; a part with no entry follows the canvas's own default
+  (an imported design's artwork starts locked - see src/components/CLAUDE.md). UI state, no
+  history, never in the template; CLEARED on a whole-project swap, because part selectors
+  repeat across projects.
 - **playhead / setPlayhead** - the step timeline's parked playhead `{ step, t }` (step index +
   local time in effective seconds). UI state only - no history; the Inspector stamps
   keyframes at it.

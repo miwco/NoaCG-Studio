@@ -16,8 +16,11 @@ export type PreviewBg = 'checkerboard' | 'black' | 'video';
  *  PanelId — `code` is not a tab (mobile mounts it on demand under the panels). */
 export type SidePanel = 'inspector' | 'data' | 'control' | 'style' | 'assets' | 'ai' | 'export';
 
-/** A live playout action the Control panel asks the simulator to run on the preview. */
-export type PlayoutAction = 'update' | 'play' | 'stop' | 'next';
+/** A live playout action the Control panel asks the simulator to run on the preview.
+ *  'event' dispatches a state-machine operator event (noacgDispatch) and 'snap' jumps
+ *  the machine to states instantly (noacgSnap) — both no-ops on templates without the
+ *  machine runtime. */
+export type PlayoutAction = 'update' | 'play' | 'stop' | 'next' | 'event' | 'snap';
 
 /** The armed canvas tool (the stage toolbar's tool switch): 'select' is the always-on
  *  gesture layer; 'text' places point text on click; 'area-text' drags out a bounded,
@@ -101,8 +104,16 @@ interface TemplateState {
   lastChange: LastChange | null;
   /** Bumped by panels after an apply to make the playout simulator replay the graphic. */
   replayNonce: number;
-  /** The Control panel's latest live command (executed immediately by the simulator). */
-  controlCommand: { action: PlayoutAction; nonce: number } | null;
+  /** The Control panel's latest live command (executed immediately by the simulator).
+   *  `event`/`payload` ride an 'event' action; `snap` rides a 'snap' action ({group: state}
+   *  assignments; null = every group to its initial — the visual reset). */
+  controlCommand: {
+    action: PlayoutAction;
+    nonce: number;
+    event?: string;
+    payload?: Record<string, string>;
+    snap?: Record<string, string> | null;
+  } | null;
   /** The timeline view's scrub position (Era 6) — the simulator seeks the live preview.
    *  Phase: 'in' | 'out' | 'step-N' (a Continue segment, N is the 2-based step number). */
   scrubCommand: { phase: string; time: number; nonce: number } | null;
@@ -116,6 +127,13 @@ interface TemplateState {
    *  interaction-model contract (docs/TIMELINE_INTERACTION_MODEL.md): plain click
    *  replaces, shift-click toggles, empty-canvas drag lassos. UI state only. */
   selectedParts: string[];
+  /** EXPLICIT canvas locks, by TemplatePart selector. A locked part takes no direct-
+   *  manipulation gesture — it can't be dragged, resized, or lassoed — but stays selectable
+   *  by click, from the timeline, and fully editable everywhere else. Only entries the user
+   *  toggled live here; a part with no entry follows the canvas's own default (an imported
+   *  design's artwork starts locked, so dragging the text on top of it moves the TEXT).
+   *  Editor UI state only — no history, never written into the template. */
+  partLocks: Record<string, boolean>;
   /** The step timeline's parked playhead (step index + local time in effective seconds).
    *  The Inspector stamps keyframes here. UI state only — no history, never in code. */
   playhead: { step: number; t: number } | null;
@@ -148,6 +166,11 @@ interface TemplateState {
   requestReplay: () => void;
   /** Drive the live preview from the Control panel (update/play/stop/next), immediately. */
   sendControl: (action: PlayoutAction) => void;
+  /** Dispatch a state-machine operator event on the preview, with an optional flat
+   *  {field: value} payload applied only if the machine accepts the event. */
+  sendEvent: (event: string, payload?: Record<string, string>) => void;
+  /** Snap the preview's machine to states instantly ({group: state}; null = all initial). */
+  sendSnap: (assignments: Record<string, string> | null) => void;
   /** Seek the live preview's in/out/step timeline to a time (the timeline view's scrubber). */
   sendScrub: (phase: string, time: number) => void;
   /** Select ONE element by its TemplatePart selector (null deselects) — replaces the
@@ -157,6 +180,8 @@ interface TemplateState {
   setSelectedParts: (selectors: string[]) => void;
   /** Shift-click: add the selector to the selection, or remove it when present. */
   toggleSelectedPart: (selector: string) => void;
+  /** Lock or unlock a part for canvas gestures (see partLocks). */
+  setPartLock: (selector: string, locked: boolean) => void;
   /** Park the step timeline's playhead (see playhead). */
   setPlayhead: (playhead: { step: number; t: number } | null) => void;
   /** Mark a canvas gesture as started/ended (see canvasGestureActive). */
@@ -235,6 +260,7 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   scrubCommand: null,
   selectedPart: null,
   selectedParts: [],
+  partLocks: {},
   playhead: null,
   canvasGestureActive: false,
   canvasTool: 'select',
@@ -277,6 +303,10 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
         // In-place edits (panels, AI) keep typed sample values; creating a NEW project
         // must not leak the previous template's values into matching field ids.
         sampleData: syncSampleData(synced, opts?.resetSampleData ? {} : s.sampleData),
+        // Canvas locks belong to the project being edited: part selectors repeat across
+        // projects (every imported design has an `.imported-design-art`), so a whole-project
+        // swap must not carry the last graphic's unlocked artwork into the new one.
+        partLocks: opts?.resetSampleData ? {} : s.partLocks,
         validation: null,
         galleryOpen: false,
         // Snapshot the pre-apply template so the action can be undone; a fresh edit
@@ -323,6 +353,12 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
   sendControl: (action) => set((s) => ({ controlCommand: { action, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
 
+  sendEvent: (event, payload) =>
+    set((s) => ({ controlCommand: { action: 'event', event, payload, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
+
+  sendSnap: (assignments) =>
+    set((s) => ({ controlCommand: { action: 'snap', snap: assignments, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
+
   sendScrub: (phase, time) => set((s) => ({ scrubCommand: { phase, time, nonce: (s.scrubCommand?.nonce ?? 0) + 1 } })),
 
   setSelectedPart: (selectedPart) =>
@@ -338,6 +374,9 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
         : [...s.selectedParts, selector];
       return { selectedParts, selectedPart: selectedParts[0] ?? null };
     }),
+
+  setPartLock: (selector, locked) =>
+    set((s) => ({ partLocks: { ...s.partLocks, [selector]: locked } })),
 
   setPlayhead: (playhead) => set({ playhead }),
 

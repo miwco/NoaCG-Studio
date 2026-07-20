@@ -9,6 +9,7 @@ import gsapSource from '../../assets/gsap.min.js?raw';
 import lottieSource from '../../assets/lottie.min.js?raw';
 import { inlineAssetRefs, isLottieAsset, parseDataUrl } from '../../assets/assetUtils';
 import { templateUsesLottie } from '../../assets/lottieSupport';
+import { parseAnimData } from '../../blocks/animData';
 import type { Ftype, SpxField, SpxTemplate } from '../../model/types';
 import { addReferencedFonts, slug } from '../common';
 import type { ExportTarget } from '../registry';
@@ -93,6 +94,12 @@ function templateHtmlForModule(template: SpxTemplate): string {
 /** graphic.mjs: a readable Web Component wrapping the template's own runtime. */
 function graphicModule(template: SpxTemplate): string {
   const stepCount = Math.max(1, Number(template.settings.steps) || 1);
+  // Each state group's off-air (initial) state, so the wrapper can tell when a press took the
+  // graphic off air by itself. Empty for a template with no machine — such a graphic never
+  // reports off air here and behaves exactly as before.
+  const offStates = Object.fromEntries(
+    (parseAnimData(template.js)?.machine?.groups ?? []).map((g) => [g.id, g.initial]),
+  );
   const usesLottie = templateUsesLottie(template);
   const ensureLottieFn = usesLottie
     ? `
@@ -138,12 +145,20 @@ const TEMPLATE_HTML = ${JSON.stringify(bodyContent(templateHtmlForModule(templat
 
 const TEMPLATE_CSS = ${JSON.stringify(template.css)};
 
+// Each state group's off-air state. Empty when this graphic has no state machine.
+const OFF_STATES = ${JSON.stringify(offStates)};
+
 // initTemplate(): runs the template's own JS AFTER the markup is in the DOM and returns
 // its runtime entry points. The code inside is exactly what the editor shows.
 function initTemplate() {
 ${template.js.replace(/^/gm, '  ')}
 
-  return { play: play, stop: stop, update: update, next: next };
+  // The machine globals ride along when the template has a state machine, so the wrapper can
+  // ASK where the graphic is instead of assuming its own step pointer stayed in step.
+  return {
+    play: play, stop: stop, update: update, next: next,
+    machineState: (typeof noacgMachineState === 'function') ? noacgMachineState : null
+  };
 }
 
 class Graphic extends HTMLElement {
@@ -186,10 +201,19 @@ class Graphic extends HTMLElement {
       this._runtime.play();
       this._step = 0;
     }
-    // Advance through the remaining steps with the template's next().
+    // Advance through the remaining steps with the template's next(). next() RETURNS what it
+    // started, or null when there was nothing to advance to — a state machine can decline the
+    // move (off the default path, or nothing left but the exit). Our pointer must not run
+    // ahead of the graphic, so a refusal ends the walk.
     while (this._step < target && this._step < stepCount - 1) {
-      this._runtime.next();
+      if (!this._runtime.next()) break;
       this._step += 1;
+      // A machine may author the arrow INTO its exit, in which case that press took the
+      // graphic off air and reset its own pointers. OGraf reports no current step off air.
+      if (this._offAir()) {
+        this._step = -1;
+        return { statusCode: 200, currentStep: undefined };
+      }
     }
     if (target >= stepCount) {
       // Past the last step = go to the end (animate out, per the OGraf step model).
@@ -198,6 +222,14 @@ class Graphic extends HTMLElement {
       return { statusCode: 200, currentStep: undefined };
     }
     return { statusCode: 200, currentStep: this._step };
+  }
+
+  // True when the graphic's state machine says every group is back at its initial state.
+  // Templates without a machine never report off air here — their behaviour is unchanged.
+  _offAir() {
+    if (!this._runtime || !this._runtime.machineState) return false;
+    const state = this._runtime.machineState();
+    return Object.keys(state.groups).every(function (id) { return state.groups[id] === OFF_STATES[id]; });
   }
 
   async stopAction() {

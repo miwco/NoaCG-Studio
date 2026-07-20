@@ -49,7 +49,7 @@ import {
   setFieldValueJs,
   zoneCssText,
 } from '../shared/base';
-import { convertToDataRegion } from '../shared/standard';
+import { composeRefine, convertToDataRegion } from '../shared/standard';
 import type { AnimData, AnimStep } from '../../blocks/animData';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { quizPresetById } from './quizPresets';
@@ -95,6 +95,21 @@ const QUIZ_FIELDS: SpxField[] = [
     title: 'Correct answer',
     value: 'B',
     items: [
+      { text: 'A', value: 'A' },
+      { text: 'B', value: 'B' },
+      { text: 'C', value: 'C' },
+      { text: 'D', value: 'D' },
+    ],
+  },
+  // The contestant's pick. This is DATA, not state: one "Selected" state plus this value is
+  // what keeps a four-answer quiz at a handful of states instead of one per answer.
+  {
+    field: 'f6',
+    ftype: 'dropdown',
+    title: 'Selected answer',
+    value: '',
+    items: [
+      { text: '—', value: '' },
       { text: 'A', value: 'A' },
       { text: 'B', value: 'B' },
       { text: 'C', value: 'C' },
@@ -153,13 +168,44 @@ function motionSpeed() {
 ${setFieldValueJs}
 
 // clearReveal(): remove a previous reveal so the graphic is back to the neutral state
-// (fresh data, replay, or a second question all start un-revealed).
+// (fresh data, replay, or a second question all start un-revealed). It clears the SELECTION
+// and the lock too: a visual reset that left a board looking judged would be a lie, and snap
+// clears inline styles but never classes.
 function clearReveal() {
   var options = document.querySelectorAll('.quiz-option');
   for (var i = 0; i < options.length; i++) {
     options[i].classList.remove('quiz-correct');
     options[i].classList.remove('quiz-dim');
+    options[i].classList.remove('quiz-sel');
+    options[i].classList.remove('quiz-wrong');
   }
+  var root = document.querySelector('.quiz');
+  if (root) root.classList.remove('quiz-locked');
+}
+
+// quizRow(letter): the option row a letter names, or null. A -> row 0, B -> row 1, …
+function quizRow(letter) {
+  var index = 'ABCD'.indexOf(String(letter || '').trim().toUpperCase());
+  var options = document.querySelectorAll('.quiz-option');
+  return index === -1 ? null : (options[index] || null);
+}
+
+// applySelection(): mark the contestant's pick, read from the hidden #f6. One state and this
+// value carry every answer — there is deliberately no state per option.
+function applySelection() {
+  var options = document.querySelectorAll('.quiz-option');
+  for (var i = 0; i < options.length; i++) options[i].classList.remove('quiz-sel');
+  var row = quizRow(document.getElementById('f6').textContent);
+  if (!row) return;                // nothing picked yet, or an unknown letter
+  row.classList.add('quiz-sel');
+  gsap.fromTo(row, { scale: 1.04 }, { scale: 1, duration: 0.25 / motionSpeed(), ease: 'back.out(1.6)' });
+}
+
+// applyLock(): the answer is locked in. The dimming says so; the MACHINE is what actually
+// makes it final, by simply having no "select" arrow leaving this state.
+function applyLock() {
+  var root = document.querySelector('.quiz');
+  if (root) root.classList.add('quiz-locked');
 }
 
 // update(data): SPX sends field values as JSON, e.g. {"f0":"…","f1":"Venus","f5":"B"}.
@@ -182,6 +228,8 @@ function revealAnswer() {
   var index = 'ABCD'.indexOf(letter);        // A -> row 0, B -> row 1, …
   var options = document.querySelectorAll('.quiz-option');
   if (index === -1 || !options[index]) return;  // unknown letter — do nothing
+  var picked = document.getElementById('f6');
+  var pickedLetter = picked ? picked.textContent.trim().toUpperCase() : '';
   clearReveal();                   // a second Continue press stays clean
   for (var i = 0; i < options.length; i++) {
     options[i].classList.add(i === index ? 'quiz-correct' : 'quiz-dim');
@@ -191,6 +239,16 @@ function revealAnswer() {
     { scale: 1.06 },
     { scale: 1, duration: ${REVEAL_SECONDS} / motionSpeed(), ease: 'back.out(2)' }
   );
+  // A WRONG pick gets its own treatment — the criterion asks for the selected and the correct
+  // answer to be told apart, not just for the right one to light up.
+  if (pickedLetter && pickedLetter !== letter) {
+    var wrong = quizRow(pickedLetter);
+    if (wrong) {
+      wrong.classList.remove('quiz-dim');
+      wrong.classList.add('quiz-wrong');
+      gsap.fromTo(wrong, { x: -6 }, { x: 0, duration: 0.4 / motionSpeed(), ease: 'elastic.out(1, 0.4)' });
+    }
+  }
 }
 
 // play(): take the quiz on air — start un-revealed, run the entrance timeline.
@@ -209,7 +267,7 @@ function stop() {
 // next(): SPX Continue — play the graphic's next step. Step 2 is the answer reveal: the
 // animation data below fires revealAnswer() on it (see that step's "calls").
 function next() {
-  if (typeof revealNextStep === 'function') revealNextStep();
+  return (typeof revealNextStep === 'function') ? revealNextStep() : null;
 }
 
 ${animationBlock}
@@ -217,7 +275,14 @@ ${animationBlock}
 }
 
 /** Build the complete quiz SpxTemplate. */
-export function assembleQuiz(meta: QuizMeta, design: QuizDesign, o: ResolvedOptions): SpxTemplate {
+export function assembleQuiz(
+  meta: QuizMeta,
+  design: QuizDesign,
+  o: ResolvedOptions,
+  /** Refine the converted animation data — the seam a graphic TYPE injects its machine
+   *  through (see shared/standard.ts composeRefine for the ordering rule). */
+  refine?: (data: AnimData) => AnimData,
+): SpxTemplate {
   const font = resolveHeadingFont(o); // imported font wins over the bundled set
   const scale = computeScale(o);
   // A question plus four answer rows reads best a bit wider than a single strap.
@@ -232,8 +297,11 @@ export function assembleQuiz(meta: QuizMeta, design: QuizDesign, o: ResolvedOpti
     body: `  <!-- Quiz root — the question, four answer rows, and the hidden correct letter. -->
   <div class="quiz">
 ${design.html}
-    <!-- Hidden correct-answer source — SPX writes field f5 here; next() reads it. -->
+    <!-- Hidden correct-answer source — SPX writes field f5 here; the reveal reads it. -->
     <div id="f5" style="display: none">B</div>
+    <!-- Hidden selected-answer source — the contestant's pick (field f6). It is DATA: one
+         "selected" state plus this letter, never one state per answer. -->
+    <div id="f6" style="display: none"></div>
   </div>`,
   });
 
@@ -312,7 +380,9 @@ ${design.css}
 
   // Timeline v2: the preset's region becomes the NOACG_ANIM data block, and the operator's
   // Continue becomes a real middle step (the answer reveal) on top of it.
-  return convertToDataRegion(template, withRevealStep(ease.easeIn));
+  // The reveal step must be inserted BEFORE a machine compiles, because the machine derives
+  // its default path from the final step list (shared/standard.ts composeRefine).
+  return convertToDataRegion(template, composeRefine(withRevealStep(ease.easeIn), refine));
 }
 
 /** The authoring API for quiz variant modules. */
@@ -320,12 +390,15 @@ export function defineQuizVariant(
   spec: Omit<TemplateVariant, 'create'>,
   meta: QuizMeta,
   buildDesign: (o: ResolvedOptions) => QuizDesign,
+  /** Optional animation-data refinement (a graphic type's machine rides in here). It is
+   *  built per create() because a type's compiled machine depends on the resolved options. */
+  refine?: (o: ResolvedOptions) => ((data: AnimData) => AnimData) | undefined,
 ): TemplateVariant {
   const variant: TemplateVariant = {
     ...spec,
     create(options?: WizardOptions) {
       const o = resolveOptions(variant, options);
-      return assembleQuiz(meta, buildDesign(o), o);
+      return assembleQuiz(meta, buildDesign(o), o, refine?.(o));
     },
   };
   return variant;
