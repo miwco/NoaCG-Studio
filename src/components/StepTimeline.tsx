@@ -904,6 +904,11 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
         return;
       }
       if (e.key === ' ') {
+        // PreviewFrame's Space-pan claims the key first, with preventDefault. Both listeners sit
+        // on `window` in the CAPTURE phase, where stopPropagation cannot reach a sibling on the
+        // same node — so the split rests on this guard, exactly as the keyframe-set arrows and
+        // the canvas nudge share the arrow keys below.
+        if (e.defaultPrevented) return;
         e.preventDefault();
         sendControl('play');
         return;

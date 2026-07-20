@@ -37,8 +37,15 @@ in src/blocks/CLAUDE.md.
   SPACE and drag, a middle-mouse drag, or a plain wheel when zoomed in - all captured before
   the overlay, so a pan can only ever move the VIEW, never a document element. Space arms only
   while the pointer is over the stage (off it, Space stays the timeline's Play key) and never
-  while a text field/Monaco has focus; while armed its keydown is swallowed in the CAPTURE
-  phase so the graphic doesn't also play, and releasing it restores the previous tool at once
+  while a text field/Monaco has focus; while armed its keydown is claimed with preventDefault
+  and StepTimeline's Space-to-play stands down on `defaultPrevented`, so the graphic doesn't
+  also play under the pan. That HANDSHAKE is what splits the key, not propagation: both
+  listeners sit on `window` in the capture phase, where stopPropagation cannot reach a sibling
+  on the same node - so they fire in REGISTRATION order and PreviewFrame's effect (empty deps,
+  subscribed once at mount ahead of the timeline's) must stay the earlier one. Note this is the
+  same GUARD the keyframe-set arrows use, but not the same arrangement: there the claimer is in
+  capture and the canvas nudge in bubble, so the DOM orders them and nothing rests on
+  subscription time. Releasing Space restores the previous tool at once
   (as does losing window focus mid-drag). Because the overlay
   is sized `stageW × (fit×zoom)` and CanvasInteraction reads its live bounding rect, zoom and pan
   need NO coordinate changes there — the gesture math follows automatically (pinned by the zoom

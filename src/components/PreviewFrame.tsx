@@ -134,8 +134,14 @@ export default function PreviewFrame({ iframeRef }: Props) {
   //    sees them and no document element can move under a pan.
   //
   //    Space arms only while the pointer is over the stage — off the stage it stays the
-  //    timeline's Play key. While armed the keydown is swallowed in the CAPTURE phase, so
-  //    the graphic does not also start playing under the pan.
+  //    timeline's Play key. While armed the keydown is claimed with preventDefault and
+  //    StepTimeline's Space-to-play stands down on defaultPrevented, so the graphic does not
+  //    also start playing under the pan. That handshake, not stopPropagation, is what splits
+  //    the key: both listeners are on `window` in the capture phase, and stopPropagation
+  //    cannot reach a sibling on the SAME node. Same node, same phase means they fire in
+  //    REGISTRATION order, so this effect must keep subscribing FIRST — it holds because this
+  //    one runs once at mount ahead of the timeline's, while StepTimeline's re-subscribes on
+  //    every data/playhead change. Give either effect different deps and re-check both.
   const panDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [panActive, setPanActive] = useState(false);
   const [spacePan, setSpacePan] = useState(false);
@@ -154,7 +160,7 @@ export default function PreviewFrame({ iframeRef }: Props) {
     const onDown = (e: KeyboardEvent) => {
       if (e.code !== 'Space' || e.repeat || !overStage.current || claimed(e.target)) return;
       e.preventDefault();
-      e.stopPropagation(); // capture phase: Space belongs to the pan while it is armed
+      e.stopPropagation(); // keeps it off the overlay below; the timeline reads defaultPrevented
       setSpacePan(true);
     };
     const onUp = (e: KeyboardEvent) => {

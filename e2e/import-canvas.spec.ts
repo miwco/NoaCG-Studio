@@ -240,6 +240,46 @@ test('canvas: holding Space pans the view and moves nothing in the document', as
   await expect(page.getByTestId('preview-stage')).not.toHaveClass(/panning/);
 });
 
+test('canvas: an armed Space-pan does not also play the graphic', async ({ page }) => {
+  await createImported(page);
+  await page.keyboard.press('Escape');
+
+  // PreviewFrame and StepTimeline both listen for Space on `window` in the capture phase, so
+  // stopPropagation cannot separate them — only the defaultPrevented handshake can. The pan
+  // class alone would not catch a regression here: a play tween touches none of the things
+  // the pan test above asserts, so this watches the running timeline itself.
+  // Stamp whatever timeline is parked, then read it back as one of three states. play() builds
+  // a FRESH timeline, so 'fresh' is the regression and an unchanged state is the pass — this
+  // holds whether the design view settled a parked timeline or left none at all.
+  const tlState = () =>
+    page.evaluate(() => {
+      const w = (document.querySelector('iframe.preview-frame') as HTMLIFrameElement | null)
+        ?.contentWindow as unknown as { __activeTl?: { __panProbe?: number } } | null;
+      if (!w?.__activeTl) return 'none';
+      return w.__activeTl.__panProbe === 1 ? 'parked' : 'fresh';
+    });
+  await page.evaluate(() => {
+    const w = (document.querySelector('iframe.preview-frame') as HTMLIFrameElement | null)
+      ?.contentWindow as unknown as { __activeTl?: { __panProbe?: number } } | null;
+    if (w?.__activeTl) w.__activeTl.__panProbe = 1;
+  });
+  const atRest = await tlState();
+
+  const c = await elementPoint(page, '#f0', 0.5, 0.5);
+  await page.mouse.move(c.x, c.y);
+  await page.keyboard.down('Space');
+  await expect(page.getByTestId('preview-stage')).toHaveClass(/ panning/);
+  await page.waitForTimeout(400);
+
+  expect(await tlState()).toBe(atRest);
+  await page.keyboard.up('Space');
+
+  // The same key off the stage still IS Play — the guard narrows Space, it does not take it.
+  await page.mouse.move(4, 4);
+  await page.keyboard.press(' ');
+  await expect.poll(tlState).toBe('fresh');
+});
+
 test('canvas: Space only pans over the stage, and never while typing', async ({ page }) => {
   await createImported(page);
 
