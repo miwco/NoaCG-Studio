@@ -32,6 +32,7 @@ import {
 import { publishGate } from '../community/gate';
 import type { ValidationResult } from '../validation/validateTemplate';
 import type { SpxTemplate } from '../model/types';
+import { useModalGate } from './spaceKey';
 
 /** What the publish sheet is about to share. Graphics carry a pre-run gate result; looks are always
  *  valid (just palette + font) so they skip the gate. */
@@ -56,6 +57,7 @@ interface Props {
  * share as a .json file). Everything lives in this browser's localStorage.
  */
 export default function PacketManager({ onClose }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const template = useTemplateStore((s) => s.template);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);

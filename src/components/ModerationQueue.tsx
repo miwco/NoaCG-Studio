@@ -10,6 +10,7 @@ import {
   type CommunityReport,
   type ModeratorItem,
 } from '../community/communityData';
+import { useModalGate } from './spaceKey';
 
 interface Props {
   onClose: () => void;
@@ -36,6 +37,7 @@ const PREVIEW_W = Math.min(460, (typeof window !== 'undefined' ? window.innerWid
  * mounted when useIsModerator() is true, so the offline / non-moderator app never sees it.
  */
 export default function ModerationQueue({ onClose }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const [items, setItems] = useState<ModeratorItem[]>([]);
   const [reports, setReports] = useState<CommunityReport[]>([]);
   const [filter, setFilter] = useState<Filter>('reported');

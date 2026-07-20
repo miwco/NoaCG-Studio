@@ -37,21 +37,32 @@ in src/blocks/CLAUDE.md.
   SPACE and drag, a middle-mouse drag, or a plain wheel when zoomed in - all captured before
   the overlay, so a pan can only ever move the VIEW, never a document element. Space arms only
   while the pointer is over the stage (off it, Space stays the timeline's Play key) and never
-  while a text field/Monaco has focus; while armed its keydown is claimed with preventDefault
-  and StepTimeline's Space-to-play stands down on `defaultPrevented`, so the graphic doesn't
-  also play under the pan. That HANDSHAKE is what splits the key, not propagation: both
-  listeners sit on `window` in the capture phase, where stopPropagation cannot reach a sibling
-  on the same node - so they fire in REGISTRATION order and PreviewFrame's effect (empty deps,
-  subscribed once at mount ahead of the timeline's) must stay the earlier one. Note this is the
-  same GUARD the keyframe-set arrows use, but not the same arrangement: there the claimer is in
-  capture and the canvas nudge in bubble, so the DOM orders them and nothing rests on
-  subscription time. Releasing Space restores the previous tool at once
-  (as does losing window focus mid-drag). Because the overlay
+  while a text field/Monaco has focus. Releasing Space restores the previous tool at once (as
+  does losing window focus mid-drag). **spaceKey.ts owns who gets the key** — see below; the
+  pan does not claim it and the timeline does not stand down, they both just ask. Because the overlay
   is sized `stageW × (fit×zoom)` and CanvasInteraction reads its live bounding rect, zoom and pan
   need NO coordinate changes there — the gesture math follows automatically (pinned by the zoom
   case in e2e/multi-select.spec.ts). Off-canvas VISIBILITY (a pasteboard so elements that start
   off-screen render) is a separate step — it needs the iframe to render past the canvas bounds.
 - **CanvasGuides**.
+- **spaceKey.ts - WHO OWNS A KEY.** Several components listen on `window` for the same keys.
+  They are SIBLINGS ON ONE NODE, so `stopPropagation` cannot reach across and the order they
+  fire in is only the order they subscribed - which an unrelated `useEffect` dep can change.
+  So no surface CLAIMS a contested key; each asks this module and acts only if the answer is
+  its own. `spacePansCanvas()` is true when the CANVAS is the active surface, the pointer is
+  over the stage, and nothing is being typed into; PreviewFrame arms the pan on it and
+  StepTimeline plays when it is false. `activeSurface` (store) flips on a pointerdown on the
+  stage or the timeline strip - panels and dialogs deliberately leave it alone, so a trip to
+  the Inspector keeps whichever of the two you were in; it defaults to 'canvas'.
+  `editorShortcutsLive()` gates every document-editing shortcut on "no modal, not typing", and
+  `useModalGate(open)` is how a modal declares itself - **pass `open` explicitly for a surface
+  that stays mounted and renders null when closed** (the wizard and the sign-in dialog both
+  do), or the gate holds down for the whole session and silently kills every shortcut.
+  Two rules worth keeping: a guard must answer on EVERY keydown including OS auto-repeat (a
+  claim-based design covers only the first one, and a held key is the real gesture); and Space
+  belongs to a focused button - the pan takes it anyway on purpose (clicking a stage tool
+  leaves that button focused), play never does. Pinned by e2e/keyboard.spec.ts + the Space
+  cases in e2e/import-canvas.spec.ts, which assert what did NOT happen.
 
 ## Canvas direct manipulation (Era 6)
 

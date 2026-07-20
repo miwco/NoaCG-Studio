@@ -3,6 +3,7 @@ import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../../backen
 import { useAuthState } from './useAuthState';
 import { useAuthUi } from './authUi';
 import BrandLogo from '../BrandLogo';
+import { useModalGate } from '../spaceKey';
 
 /**
  * The on-demand sign-in dialog (Era 5.6 — the open editor). The app is never walled behind it:
@@ -16,6 +17,9 @@ export default function SignInDialog() {
   const reason = useAuthUi((s) => s.reason);
   const close = useAuthUi((s) => s.closeSignIn);
   const { signedIn, backendConfigured } = useAuthState();
+  // This component stays mounted and renders null when closed, so the gate keys on the OPEN
+  // state — gating on mount would disable every editor shortcut for the whole session.
+  useModalGate(open && backendConfigured);
 
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');

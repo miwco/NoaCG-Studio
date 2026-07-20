@@ -137,6 +137,21 @@ interface TemplateState {
   /** The step timeline's parked playhead (step index + local time in effective seconds).
    *  The Inspector stamps keyframes here. UI state only — no history, never in code. */
   playhead: { step: number; t: number } | null;
+  /** Which of the two KEY-CLAIMING surfaces the user is working in. Set by a pointerdown on
+   *  the stage or on the timeline strip; panels and dialogs deliberately leave it alone, so
+   *  clicking the Inspector keeps whichever of the two you were last in. It decides who owns
+   *  Space (see components/spaceKey.ts) — pan on the canvas, play on the timeline. Defaults
+   *  to 'canvas': the stage is the subject of a fresh editor. UI state only — no history. */
+  activeSurface: 'canvas' | 'timeline';
+  /** Whether the pointer is over the preview stage. Half of the Space predicate, so it lives
+   *  here rather than in a PreviewFrame ref — the timeline has to read it too. Written on
+   *  enter/leave; read through getState(), never subscribed, so it costs no renders. */
+  pointerOverStage: boolean;
+  /** How many modal surfaces are mounted (see spaceKey.ts useModalGate). Counted rather than
+   *  flagged so nested/stacked modals close correctly, and so a modal that unmounts can never
+   *  leave the gate stuck open. Every global editor shortcut stands down while it is > 0 — a
+   *  keystroke aimed at a dialog must never edit the document behind it. UI state only. */
+  modalCount: number;
   /** True while a canvas gesture is in flight (inline edit, root/layer/scale drag). The
    *  Inspector's deferred auto-open skips while this is set — a workspace resize would move
    *  the canvas under the pointer mid-gesture. UI state only — no history. */
@@ -183,6 +198,11 @@ interface TemplateState {
   /** Lock or unlock a part for canvas gestures (see partLocks). */
   setPartLock: (selector: string, locked: boolean) => void;
   /** Park the step timeline's playhead (see playhead). */
+  setActiveSurface: (surface: 'canvas' | 'timeline') => void;
+  setPointerOverStage: (over: boolean) => void;
+  /** Balanced pair — always through useModalGate, never called by hand. */
+  pushModal: () => void;
+  popModal: () => void;
   setPlayhead: (playhead: { step: number; t: number } | null) => void;
   /** Mark a canvas gesture as started/ended (see canvasGestureActive). */
   setCanvasGestureActive: (active: boolean) => void;
@@ -261,6 +281,9 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   selectedPart: null,
   selectedParts: [],
   partLocks: {},
+  activeSurface: 'canvas',
+  pointerOverStage: false,
+  modalCount: 0,
   playhead: null,
   canvasGestureActive: false,
   canvasTool: 'select',
@@ -377,6 +400,13 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
   setPartLock: (selector, locked) =>
     set((s) => ({ partLocks: { ...s.partLocks, [selector]: locked } })),
+
+  setActiveSurface: (activeSurface) => set({ activeSurface }),
+
+  setPointerOverStage: (pointerOverStage) => set({ pointerOverStage }),
+
+  pushModal: () => set((s) => ({ modalCount: s.modalCount + 1 })),
+  popModal: () => set((s) => ({ modalCount: Math.max(0, s.modalCount - 1) })),
 
   setPlayhead: (playhead) => set({ playhead }),
 
