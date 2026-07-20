@@ -46,10 +46,12 @@ header, or readable metadata. A LINK satisfies none of those, and §2 is trigger
 REDISTRIBUTION, not by sale, so the product being free does not retire it. The binaries have
 name ID 13 stripped and an empty WOFF2 metadata block, so there is no in-binary fallback either.
 
-`public/fonts/OFL.txt` is the single source: the full licence plus all seven copyright lines. It
-is served at `/fonts/OFL.txt` beside the fonts, imported `?raw` into `model/fonts.ts` as
-`FONT_LICENSE_NOTE` (stand-alone form) and `fontLicenseComment()` (header form), and read from
-disk by the two build scripts that embed font bytes. Two consequences worth remembering:
+`src/assets/OFL.txt` is the single source: the full licence plus all seven copyright lines. It
+sits in `src/assets/` beside the other bundled-and-inlined sources rather than next to the fonts
+in `public/`, because Vite refuses `?raw` imports out of the public directory. It is imported
+into `model/fonts.ts` as `FONT_LICENSE_NOTE` (stand-alone form) and `fontLicenseComment()`
+(header form), and read from disk by the two build scripts that embed font bytes. Two
+consequences worth remembering:
 `addReferencedFonts` keys the notice off the BYTES in the package (CSS refs OR a font in
 `template.assets`) rather than off a regex match, and a surface that embeds fonts and cannot
 ship a sibling file - a single-file export, the player host, the generated worker CSS - carries

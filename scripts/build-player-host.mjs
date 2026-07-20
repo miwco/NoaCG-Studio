@@ -41,7 +41,7 @@ const textChecksJs = readFileSync(join(root, 'src', 'video', 'textChecks.js'), '
 // "human-readable header" form. (public/fonts/OFL.txt is the same text, served beside the fonts
 // themselves for every surface that CAN resolve a sibling.) Read here, beside the other inlined
 // sources, because sourceHash() below has to see it.
-const oflText = readFileSync(join(fontsDir, 'OFL.txt'), 'utf8').replace(/--!?>/g, '-- >');
+const oflText = readFileSync(join(root, 'src', 'assets', 'OFL.txt'), 'utf8').replace(/--!?>/g, '-- >');
 
 function* walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

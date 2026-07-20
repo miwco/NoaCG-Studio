@@ -51,7 +51,15 @@ export async function composeSelfContainedHtml(
     `<style>\n${css}\n</style>\n`;
   html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${headInjection}</head>`) : headInjection + html;
 
-  const scripts = [template.js, ...extraBodyScripts].join('\n\n');
+  // The extra scripts get the same asset pass as the markup and the styles. The HTML overlay's
+  // autoplay block BAKES the Data panel's values, and a filelist field's value is an asset path
+  // — so without this the block calls update() on load with `images/logo.png` and overwrites the
+  // data: URL that inlineAssetRefs just put in the markup. The logo painted on the first frame
+  // and then vanished, with nothing in the console: a broken <img alt=""> over transparent video
+  // is indistinguishable from an empty slot.
+  const scripts = [template.js, ...extraBodyScripts]
+    .map((script) => inlineAssetRefs(script, template.assets))
+    .join('\n\n');
   const bodyInjection = `<script>\n${scripts}\n</script>\n`;
   html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${bodyInjection}</body>`) : html + bodyInjection;
   return html;

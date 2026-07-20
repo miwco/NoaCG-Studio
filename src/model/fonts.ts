@@ -125,13 +125,18 @@ export function labelFontFaceCss(font: BundledFont): string {
 }`;
 }
 
-// The OFL itself, vendored at public/fonts/OFL.txt (served at /fonts/OFL.txt, copied into the
-// build) and imported here so the licence travels with the fonts rather than being linked.
-// OFL §2 requires each redistributed copy of the Font Software to CONTAIN the copyright notice
-// and this licence — as a stand-alone text file, a human-readable header, or readable metadata.
-// A URL pointing at the licence satisfies none of those, and §2 is triggered by redistribution,
-// not by sale, so shipping the product free does not retire the obligation.
-import oflLicenseText from '../../public/fonts/OFL.txt?raw';
+// The OFL itself, vendored at src/assets/OFL.txt and imported here so the licence TRAVELS with
+// the fonts rather than being linked. OFL §2 requires each redistributed copy of the Font
+// Software to CONTAIN the copyright notice and this licence — as a stand-alone text file, a
+// human-readable header, or readable metadata. A URL pointing at the licence satisfies none of
+// those, and §2 is triggered by redistribution, not by sale, so shipping the product free does
+// not retire the obligation.
+//
+// It lives in src/assets/ and not beside the fonts in public/ because Vite refuses to let
+// JavaScript import out of the public directory ("Assets in public directory cannot be imported
+// from JavaScript") — it serves such an import today but warns on every request. src/assets is
+// where the other bundled-and-inlined sources already live (gsap.min.js, lottie.min.js).
+import oflLicenseText from '../assets/OFL.txt?raw';
 
 /** The full OFL 1.1 text plus every bundled font's copyright line. */
 export const OFL_TEXT = oflLicenseText;

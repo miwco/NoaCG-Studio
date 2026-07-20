@@ -241,6 +241,71 @@ test('ograf: a valid v1 Graphic whose Web Component passes the action contract',
 // inherit the DEV SERVER's base URL, where /fonts/ happens to exist. So this test insists on the
 // real destination: the file alone in a directory, opened over file://, with no sibling anything.
 
+// A single-file export must survive its own autoplay. The overlay target BAKES the Data panel's
+// values into a load handler, and a filelist field's value is an asset path — so the markup's
+// correctly inlined data: URL got overwritten by `images/<file>` the moment the page loaded, in
+// a package that has no images/ folder. The logo painted on frame one and then disappeared, with
+// no console error: a broken <img alt=""> over transparent video looks like an empty slot.
+// Measured before the fix on cr01 — naturalWidth 0 and a failed file:// request.
+const IMAGE_ROUNDTRIP = `(async () => {
+  const { CATALOG } = await import('/src/templates/catalog.ts');
+  const { EXPORT_TARGETS } = await import('/src/export/registry.ts');
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  let tpl = null, field = null;
+  for (const variant of Object.values(CATALOG).flat().filter(Boolean)) {
+    for (const opts of [{ logo: true }, {}]) {
+      let t; try { t = variant.create(opts); } catch (e) { continue; }
+      const f = t.fields.find((x) => x.ftype === 'filelist');
+      if (f) { tpl = t; field = f; break; }
+    }
+    if (field) break;
+  }
+  if (!field) return { skipped: true };
+  tpl.assets = [...(tpl.assets ?? []), { path: 'images/acme-logo.png', data: PNG }];
+  field.value = 'images/acme-logo.png';
+  const sampleData = {};
+  for (const f of tpl.fields) sampleData[f.field] = f.value ?? '';
+
+  const target = EXPORT_TARGETS.find((t) => t.id === 'html-overlay');
+  const zip = await target.build(tpl, { sampleData });
+  let html = '';
+  for (const [p, f] of Object.entries(zip.files)) {
+    if (/\\.html$/i.test(p) && !/controlpanel/i.test(p)) html = await f.async('string');
+  }
+  return { skipped: false, html, rawPaths: (html.match(/images\\/acme-logo\\.png/g) || []).length };
+})()`;
+
+test('a single-file export survives its own autoplay: the baked logo stays inlined', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const built = (await page.evaluate(IMAGE_ROUNDTRIP)) as { skipped: boolean; html: string; rawPaths: number };
+  test.skip(built.skipped, 'no catalog variant produces an image field');
+
+  expect(built.rawPaths, 'a raw images/ path survived into the single-file export').toBe(0);
+
+  const dir = testInfo.outputPath('overlay-lone');
+  mkdirSync(dir, { recursive: true });
+  const onDisk = nodePath.join(dir, 'index.html');
+  writeFileSync(onDisk, built.html, 'utf8');
+
+  const lone = await page.context().newPage();
+  const failed: string[] = [];
+  lone.on('requestfailed', (r) => failed.push(r.url().slice(0, 120)));
+  await lone.goto(`file://${onDisk.replace(/\\/g, '/')}`);
+  await lone.waitForTimeout(800); // let the autoplay load handler run and call update()
+  const broken = await lone.evaluate(() =>
+    Array.from(document.querySelectorAll('img'))
+      .filter((el) => el.getAttribute('src'))
+      .filter((el) => el.naturalWidth === 0)
+      .map((el) => `${el.id || '(no id)'} -> ${el.src.slice(0, 60)}`),
+  );
+  await lone.close();
+
+  expect(broken, 'an image was broken AFTER the autoplay block ran').toEqual([]);
+  expect(failed, 'the lone export requested a file that is not there').toEqual([]);
+});
+
 /** Text entries of a package, keyed by path (binaries skipped). */
 async function textEntries(zip: JSZip): Promise<Record<string, string>> {
   const out: Record<string, string> = {};

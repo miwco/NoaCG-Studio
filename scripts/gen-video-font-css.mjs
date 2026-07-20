@@ -23,7 +23,7 @@ const css = videoFontFaceCss(dataUrl);
 
 // This module carries the font BYTES, so it carries their licence too — the copyright notice
 // and the OFL text as a human-readable header (OFL §2). Source: public/fonts/OFL.txt.
-const oflHeader = readFileSync(join(fontsDir, 'OFL.txt'), 'utf8')
+const oflHeader = readFileSync(join(root, 'src', 'assets', 'OFL.txt'), 'utf8')
   .split('\n')
   .map((line) => `// ${line}`.trimEnd())
   .join('\n');
