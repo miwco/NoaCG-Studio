@@ -110,6 +110,8 @@ export const topicCardType: GraphicType = {
       // The slab's lean is painted so it survives the stinger's skew — promoting this card
       // into the type's list dropped snap-stinger entirely, the one preset it is built around.
       animationPresets: ['snap-stinger', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
+      // The slab leans forward from the left edge; mirroring it to the right fights the lean.
+      defaultZone: 'mid-left',
       create: (_type, options) => card02.create(options),
     },
     {

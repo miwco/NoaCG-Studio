@@ -115,8 +115,10 @@ export const quizBoardType: GraphicType = {
       name: 'Arena Quiz',
       description: 'The game-show board: a leaning question slab over four lettered answer rows.',
       styleTag: 'sport',
-      palette: paletteById('volt'),
-      fontId: 'oswald',
+      // The board's own authored pairing — royal behind the accent edge, archivo in the
+      // letter chips. This entry had transcribed the sport family's volt/oswald instead.
+      palette: paletteById('royal'),
+      fontId: 'archivo',
       create: (_type, options) => qz01.create(options),
     },
   ],

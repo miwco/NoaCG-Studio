@@ -106,6 +106,8 @@ export const countdownType: GraphicType = {
       samples: { label: 'SHOT CLOCK' },
       // The slab flips to the accent on the run-in; it was never a line reveal.
       animationPresets: ['timer-run'],
+      // A corner slab, not a centred clock — it is drawn to sit against the top-right edge.
+      defaultZone: 'top-right',
       create: (_type, options) => gt02.create(options),
     },
   ],

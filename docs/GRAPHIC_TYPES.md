@@ -133,14 +133,14 @@ weakest of the checks and the only obvious one. All six have to hold:
 | **parts** | a required selector is absent | `attachMachine` / `missingParts` |
 | **fields** | the design emits a different field COUNT than the type declares | `graphic-types.spec.ts` |
 | **machine + motion** | a timer transition on a design whose timeline never ends | `validateMachine` |
-| **capabilities** | design and type disagree on `logo`, `maxLines` or `animationPresets` | `graphic-types.spec.ts` (presets); read the other two |
+| **capabilities** | design and type disagree on any offered default | `graphic-types.spec.ts` |
 | **samples** | the design's starting text differs from the type's field values | nothing — read it |
 | **semantics** | the fields line up but MEAN different things | nothing — judgement |
 
 The last three are the dangerous ones, and the last two are not mechanically checkable at all.
 Measured on the first pass: 24 cells looked promotable on parts alone, 8 actually were.
 
-#### The capabilities gate has a third limb: motion
+#### The capabilities gate is the whole offered default set, not just `logo` and `maxLines`
 
 `animationPresets` is a capability like the other two, and the loudest of them — **`[0]` is the
 default a new project is created with**, and the list is exactly what the wizard, the Inspector
@@ -164,6 +164,16 @@ gate in this table with that shape (`samples` is the first).
 design keeps the vocabulary it was authored around, the type still declares the default for
 designs that do not care. Like samples and unlike theme-token overrides, entries here are **not
 conformance debt** — a sport slab and a glass panel are *supposed* to enter differently.
+
+**`defaultZone` is the same story**, and it drifted on four designs. A type says a sponsor bug is
+"parked in a corner"; *which* corner is a drawing decision, and bug01's frosted tile is authored
+for the top-right safe area in its own file's opening comment. `TypeDesign.defaultZone` overrides
+it the same way. (`palette` and `fontId` were already per-design — qz01's entry had simply
+transcribed the sport family's volt/oswald over the board's own royal/archivo.)
+
+The rule that falls out, and the one the spec now enforces: **a type may WIDEN what a design
+offers — a longer preset list, more lines — but it may never change that design's own default or
+take something away.**
 
 Two worked examples, both real:
 - `lt01` into **social-bug** passed every shape check — that type shares the lower-third prefix,

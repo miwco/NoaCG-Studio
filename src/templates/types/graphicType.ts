@@ -264,6 +264,13 @@ export interface TypeDesign {
    * preset set read the compiled list. `graphic-types.spec.ts` now checks it directly.
    */
   animationPresets?: AnimPresetId[];
+  /**
+   * Where this design sits, when it differs from the type's. The same escape hatch again, for
+   * the third capability that is really a property of the design: a type says a sponsor bug is
+   * "parked in a corner", but WHICH corner is a drawing decision — bug01's frosted tile is
+   * authored for the top-right safe area, and the type was moving it to the top-left.
+   */
+  defaultZone?: Zone9;
   /** Build the template. A type reuses its category's existing assembler here — it never
    *  grows an assembly path of its own. */
   create(type: GraphicType, options?: Parameters<TemplateVariant['create']>[0]): SpxTemplate;
@@ -457,7 +464,7 @@ export function variantsFromType(type: GraphicType): TemplateVariant[] {
       animationPresets: design.animationPresets ?? type.capabilities.animationPresets,
       defaultPalette: design.palette,
       defaultFontId: design.fontId,
-      defaultZone: type.capabilities.defaultZone,
+      defaultZone: design.defaultZone ?? type.capabilities.defaultZone,
       create(options) {
         const template = attachMachine(type, design.create(type, options));
         const missing = missingParts(type, template);

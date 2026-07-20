@@ -159,6 +159,8 @@ export const scoreboardType: GraphicType = {
       // A quiet corner stack reveals its lines; it must not inherit the sport strip's slam
       // just because the sport design happens to be this type's first.
       animationPresets: ['line-reveal', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
+      // A panel-free corner stack, drawn against the top-left edge rather than centred.
+      defaultZone: 'top-left',
       create: (_type, options) => sb02.create(options),
     },
   ],

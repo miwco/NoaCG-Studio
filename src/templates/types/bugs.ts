@@ -59,6 +59,8 @@ export const sponsorBugType: GraphicType = {
       samples: { caption: 'LIVE' },
       // The frosted tile resolves out of a blur — that IS the glass entrance.
       animationPresets: ['blur-in', 'pop-spring', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
+      // Drawn for the top-right safe area; the house bug is the one that sits top-left.
+      defaultZone: 'top-right',
       create: (_type, options) => bug01.create(options),
     },
   ],

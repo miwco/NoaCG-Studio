@@ -127,7 +127,7 @@ test('promotion is byte-identical apart from the machine the type adds', async (
   }
 });
 
-test('a promoted design keeps the motion vocabulary it was authored with', async ({ page }) => {
+test('a promoted design keeps the capabilities it was authored with', async ({ page }) => {
   test.setTimeout(120_000);
   await toApp(page);
   // THE CAPABILITIES GATE, mechanically (docs/GRAPHIC_TYPES.md §5). A compiled variant takes
@@ -166,28 +166,34 @@ test('a promoted design keeps the motion vocabulary it was authored with', async
         // A design authored only as a TypeDesign has no separate source to disagree with.
         const own = authored[variant.id];
         if (!own) continue;
-        out.push({
-          variant: variant.id,
-          type: type.id,
-          // The default a new project gets must be the one the design was authored with.
-          defaultPreset: variant.animationPresets[0],
-          authoredDefault: own.animationPresets[0],
-          // ...and no preset the design offers may become unreachable.
-          dropped: own.animationPresets.filter((p) => !variant.animationPresets.includes(p)),
-        });
+        // Every capability the compiled variant carries, against the design's authored one.
+        // A type may legitimately WIDEN what is offered (a longer preset list, more lines);
+        // it may never change the design's own default or take something away.
+        const drift = [];
+        if (variant.animationPresets[0] !== own.animationPresets[0])
+          drift.push('default entrance ' + own.animationPresets[0] + ' -> ' + variant.animationPresets[0]);
+        const lost = own.animationPresets.filter((p) => !variant.animationPresets.includes(p));
+        if (lost.length) drift.push('presets no longer offered: ' + lost.join(', '));
+        if (variant.defaultZone !== own.defaultZone)
+          drift.push('zone ' + own.defaultZone + ' -> ' + variant.defaultZone);
+        if (variant.defaultPalette.id !== own.defaultPalette.id)
+          drift.push('palette ' + own.defaultPalette.id + ' -> ' + variant.defaultPalette.id);
+        if (variant.defaultFontId !== own.defaultFontId)
+          drift.push('font ' + own.defaultFontId + ' -> ' + variant.defaultFontId);
+        if (variant.logo !== own.logo) drift.push('logo ' + own.logo + ' -> ' + variant.logo);
+        if (variant.maxLines < own.maxLines)
+          drift.push('maxLines narrowed ' + own.maxLines + ' -> ' + variant.maxLines);
+        out.push({ variant: variant.id, type: type.id, drift });
       }
     }
     return out;
   })()`);
-  const rows = report as Array<{ variant: string; defaultPreset: string; authoredDefault: string; dropped: string[] }>;
+  const rows = report as Array<{ variant: string; type: string; drift: string[] }>;
   expect(rows.length).toBeGreaterThan(0);
   expect(
-    rows.filter((r) => r.defaultPreset !== r.authoredDefault).map((r) => `${r.variant}: ${r.authoredDefault} -> ${r.defaultPreset}`),
-    'a promoted design’s DEFAULT entrance changed — set TypeDesign.animationPresets to keep its own',
-  ).toEqual([]);
-  expect(
-    rows.filter((r) => r.dropped.length).map((r) => `${r.variant}: lost ${r.dropped.join(', ')}`),
-    'a promoted design lost presets it was authored with — they are no longer offered anywhere',
+    rows.filter((r) => r.drift.length).map((r) => `${r.variant} (${r.type}): ${r.drift.join('; ')}`),
+    'promotion changed a design’s authored capabilities — give the TypeDesign its own ' +
+      'animationPresets / defaultZone / palette / fontId instead of taking the type’s',
   ).toEqual([]);
 });
 
