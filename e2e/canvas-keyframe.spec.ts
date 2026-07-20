@@ -134,9 +134,24 @@ test('arrow keys nudge a selected layer — x/y keyframes at the playhead, one a
   const before = await historyLen(page);
 
   // The same channel the drag writes, key by key: 1 canvas px per press, Shift = 10.
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Shift+ArrowDown');
+  //
+  // The three presses are dispatched in ONE page task on purpose. Coalescing is time-based -
+  // the burst commits 450 ms after the LAST press - and three separate driver round-trips are
+  // not guaranteed to land inside that window on a saturated machine. A stall between two of
+  // them splits one burst into two commits, and the history assertion below then fails for a
+  // reason that has nothing to do with the behaviour under test (the final x/y are identical
+  // either way, since each burst re-reads its base from the live element). Measured gaps are
+  // 2-3 ms idle and up to ~73 ms at eight workers, but a full suite run has exceeded the
+  // window. These events drive the same window keydown listener with the same values -
+  // verified identical - so the test keeps its subject and drops the timing assumption.
+  // Real key DELIVERY is asserted at the end of this test, where no burst timing is involved.
+  await page.evaluate(() => {
+    const send = (key: string, shiftKey = false) =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }));
+    send('ArrowRight');
+    send('ArrowRight');
+    send('ArrowDown', true);
+  });
 
   // The burst commits once the keys go quiet — one undoable apply for all three presses.
   await expect
@@ -160,6 +175,20 @@ test('arrow keys nudge a selected layer — x/y keyframes at the playhead, one a
       return (t?.x?.length ?? 0) + (t?.y?.length ?? 0);
     })
     .toBe(0);
+});
+
+test('a real arrow key press reaches the nudge handler', async ({ page }) => {
+  // The burst test above dispatches its presses in one page task to keep the coalescing
+  // window out of the harness's hands, so genuine key delivery is asserted here instead:
+  // ONE press is one burst, which needs no timing assumption at all.
+  await createHairline(page);
+  await selectAndPark(page);
+  const before = await historyLen(page);
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(async () => Number((await animData(page))!.steps[0].layers['#f0']?.x?.[0]?.value ?? 0))
+    .toBeCloseTo(1, 0);
+  expect(await historyLen(page)).toBe(before + 1);
 });
 
 test('with nothing selected, the drag still re-anchors the root (zone patch)', async ({ page }) => {
