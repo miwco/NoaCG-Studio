@@ -58,6 +58,28 @@ const sim = await page.evaluate(
     const RECENCY_KEY = 'spx-gfx-ai-reference-recency';
     const byId = new Map(rc.REFERENCE_CARDS.map((c) => [c.id, c]));
 
+    // THE PADDED-LEGACY CONTROL. `detectReferenceCards` is `filter(...).slice(0, 2)`, so a brief
+    // matching ONE card is handed ONE card; `selectReferenceCards` anchors one and always widens
+    // to two. So the shipped A/B varies TWO things at once - which companion is chosen, and how
+    // many cards are injected at all. A gallery win under that design is unattributable, because
+    // "two cards of design DNA beat one" is a rival explanation costing a one-line change to the
+    // legacy path rather than the whole contrast mechanism.
+    //
+    // This control keeps legacy's CHOICE rule (declaration order, no contrast, no recency) and
+    // only removes the dosage difference: it tops up to two from the same genre-compatible field
+    // contrast draws from. Contrast measured against THIS is the honest read of the feature.
+    const paddedLegacy = (prompt) => {
+      const matched = rc.REFERENCE_CARDS.filter((c) => c.keywords.test(prompt));
+      if (matched.length === 0) return [];
+      if (matched.length >= 2) return matched.slice(0, 2);
+      const anchor = matched[0];
+      const voted = new Set(matched.flatMap((c) => c.genres));
+      const cands = rc.REFERENCE_CARDS.filter(
+        (c) => c !== anchor && c.genres.some((g) => voted.has(g)),
+      );
+      return cands.length ? [anchor, cands[0]] : [anchor];
+    };
+
     // Distance between two PICKS: mean cross distance over every card pair. Two picks sharing
     // a card score low, which is what we want - a shared card is shared design DNA.
     const setDistance = (a, b) => {
@@ -68,12 +90,12 @@ const sim = await page.evaluate(
     };
 
     // One arm = one pass over the bench's exact order, on one continuously-warming ledger.
-    const runArm = (useContrast) => {
+    const runArm = (pick) => {
       localStorage.removeItem(RECENCY_KEY);
       const seq = [];
       for (const b of briefs) {
         for (let run = 1; run <= runs; run++) {
-          const picked = useContrast ? rc.selectReferenceCards(b.prompt) : rc.detectReferenceCards(b.prompt);
+          const picked = pick(b.prompt);
           rs.noteReferenceUse(picked.map((c) => c.id)); // exactly what the provider does
           seq.push({ label: b.label, run, ids: picked.map((c) => c.id) });
         }
@@ -87,21 +109,28 @@ const sim = await page.evaluate(
       for (const g of seq) for (const id of g.ids) histogram[id] = (histogram[id] ?? 0) + 1;
 
       // The PRIMARY metric's proxy: how far apart are the references handed to DIFFERENT briefs?
+      // SD and the collision count travel WITH the mean on purpose. The mean alone can rise while
+      // the gallery gets more uniform: two briefs handed byte-identical cards still score a
+      // non-zero setDistance (the cross terms between two different cards are not zero), so a
+      // mechanism that concentrates every brief onto the same widely-spread pair raises the mean
+      // AND raises collisions. The pre-registered primary metric is a COUNT of visually distinct
+      // designs, which that would move DOWN. Reporting only the mean can green-light such a bank.
       const across = (gens) => {
-        let sum = 0;
-        let n = 0;
+        const ds = [];
         let collisions = 0;
         for (let i = 0; i < gens.length; i++) {
           for (let j = i + 1; j < gens.length; j++) {
             if (gens[i].label === gens[j].label) continue;
             const d = setDistance(gens[i].ids, gens[j].ids);
             if (d == null) continue;
-            sum += d;
-            n++;
+            ds.push(d);
             if (gens[i].ids.join() === gens[j].ids.join()) collisions++;
           }
         }
-        return { mean: n ? +(sum / n).toFixed(3) : null, pairs: n, collisions };
+        if (!ds.length) return { mean: null, sd: null, pairs: 0, collisions };
+        const mean = ds.reduce((a, b) => a + b, 0) / ds.length;
+        const sd = Math.sqrt(ds.reduce((a, b) => a + (b - mean) ** 2, 0) / ds.length);
+        return { mean: +mean.toFixed(3), sd: +sd.toFixed(3), pairs: ds.length, collisions };
       };
       const all = across(withCards);
       // Run 1 only: every brief on the SAME ledger state it would have had first time round,
@@ -113,23 +142,31 @@ const sim = await page.evaluate(
       const perBrief = {};
       for (const g of seq) (perBrief[g.label] ??= new Set()).add(g.ids.join('+') || '(none)');
 
+      // How many cards each generation actually received. This is the DOSAGE the arms differ on.
+      const dosage = {};
+      for (const g of seq) dosage[g.ids.length] = (dosage[g.ids.length] ?? 0) + 1;
+
       return {
         generations: seq.length,
         withCards: withCards.length,
         distinctPicks: new Set(seq.map((g) => g.ids.join('+'))).size,
         acrossBriefMean: all.mean,
+        acrossBriefSd: all.sd,
         acrossBriefMeanRun1: run1.mean,
+        acrossBriefSdRun1: run1.sd,
         run1Collisions: run1.collisions,
         run1Pairs: run1.pairs,
         crossBriefCollisions: all.collisions,
         crossBriefPairs: all.pairs,
+        dosage,
         histogram,
         perBriefVariants: Object.fromEntries(Object.entries(perBrief).map(([k, v]) => [k, v.size])),
       };
     };
 
-    const seqA = runArm(true);
-    const seqB = runArm(false);
+    const seqA = runArm((p) => rc.selectReferenceCards(p));
+    const seqB = runArm((p) => rc.detectReferenceCards(p));
+    const seqC = runArm(paddedLegacy);
 
     // Why a brief lands where it does: how many cards its prose matches at all, and which one
     // ends up anchoring. The anchor is exempt from anti-dominance by design, so an anchor that
@@ -153,6 +190,7 @@ const sim = await page.evaluate(
       poolSize: rc.REFERENCE_CARDS.length,
       A: analyse(seqA),
       B: analyse(seqB),
+      C: analyse(seqC),
       matchProfile,
       seqA,
       seqB,
@@ -164,25 +202,39 @@ const sim = await page.evaluate(
 await browser.close();
 
 const pct = (n, d) => (d ? `${((n / d) * 100).toFixed(0)}%` : 'n/a');
-const line = (label, a, b) => console.log(`  ${label.padEnd(28)} ${String(a).padEnd(18)} ${b}`);
+const line = (label, a, b, c) =>
+  console.log(`  ${label.padEnd(28)} ${String(a).padEnd(14)} ${String(b).padEnd(14)} ${c}`);
 
 console.log(`bank ${BANK}   ${briefs.length} briefs x ${RUNS} runs = ${sim.A.generations} generations/arm`);
 console.log(`pool ${sim.poolSize} cards\n`);
-console.log(`  ${''.padEnd(28)} ${'CONTRAST'.padEnd(18)} LEGACY`);
-line('generations with cards', `${sim.A.withCards}`, `${sim.B.withCards}`);
-line('distinct picks', sim.A.distinctPicks, sim.B.distinctPicks);
-line('across-brief mean distance', sim.A.acrossBriefMean, sim.B.acrossBriefMean);
-line('  same, run 1 only', sim.A.acrossBriefMeanRun1, sim.B.acrossBriefMeanRun1);
+console.log(`  ${''.padEnd(28)} ${'CONTRAST'.padEnd(14)} ${'LEGACY'.padEnd(14)} PADDED-LEGACY`);
+line('generations with cards', sim.A.withCards, sim.B.withCards, sim.C.withCards);
+line('distinct picks', sim.A.distinctPicks, sim.B.distinctPicks, sim.C.distinctPicks);
+line('across-brief mean distance', sim.A.acrossBriefMean, sim.B.acrossBriefMean, sim.C.acrossBriefMean);
+line('  same, run 1 only', sim.A.acrossBriefMeanRun1, sim.B.acrossBriefMeanRun1, sim.C.acrossBriefMeanRun1);
+line('across-brief spread (sd)', sim.A.acrossBriefSd, sim.B.acrossBriefSd, sim.C.acrossBriefSd);
+line('  same, run 1 only', sim.A.acrossBriefSdRun1, sim.B.acrossBriefSdRun1, sim.C.acrossBriefSdRun1);
 line(
   'across-brief collisions',
   `${sim.A.crossBriefCollisions} (${pct(sim.A.crossBriefCollisions, sim.A.crossBriefPairs)})`,
   `${sim.B.crossBriefCollisions} (${pct(sim.B.crossBriefCollisions, sim.B.crossBriefPairs)})`,
+  `${sim.C.crossBriefCollisions} (${pct(sim.C.crossBriefCollisions, sim.C.crossBriefPairs)})`,
 );
 line(
   '  same, run 1 only',
   `${sim.A.run1Collisions} (${pct(sim.A.run1Collisions, sim.A.run1Pairs)})`,
   `${sim.B.run1Collisions} (${pct(sim.B.run1Collisions, sim.B.run1Pairs)})`,
+  `${sim.C.run1Collisions} (${pct(sim.C.run1Collisions, sim.C.run1Pairs)})`,
 );
+
+// THE DOSAGE ROW. If contrast and legacy disagree here, the shipped A/B is confounded: the arms
+// differ in how much reference prose was injected, not only in which cards were picked.
+const dose = (d) =>
+  Object.entries(d)
+    .sort()
+    .map(([n, count]) => `${n}x${count}`)
+    .join(' ');
+line('cards injected (n x gens)', dose(sim.A.dosage), dose(sim.B.dosage), dose(sim.C.dosage));
 
 const topOf = (h) =>
   Object.entries(h)
@@ -220,22 +272,43 @@ if (dead > 0) {
 // Judge on the RUN 1 figure. The full-pass number folds in ledger rotation, which the review
 // rubric scores separately as within-brief variation - charging it against distinctiveness
 // across briefs would be marking the same mechanism twice, once as a virtue and once as a fault.
-const gain =
-  sim.A.acrossBriefMeanRun1 != null && sim.B.acrossBriefMeanRun1 != null
-    ? +(sim.A.acrossBriefMeanRun1 - sim.B.acrossBriefMeanRun1).toFixed(3)
-    : null;
-const fullGain =
-  sim.A.acrossBriefMean != null && sim.B.acrossBriefMean != null
-    ? +(sim.A.acrossBriefMean - sim.B.acrossBriefMean).toFixed(3)
-    : null;
-console.log(`\n  across-brief gain: ${gain ?? 'n/a'} on run 1  (${fullGain ?? 'n/a'} over the full pass)`);
-if (gain != null && gain <= 0) {
-  console.log('  VETO: contrast is no better than the keyword pick on the primary metric.');
-  console.log('  A paid pass would be buying a null result.');
-} else if (gain != null && gain < 0.05) {
-  console.log('  MARGINAL: contrast is ahead, but not by much. A paid pass is a gamble on the');
-  console.log('  references mattering more to the model than their measured spread suggests.');
+const diff = (a, b) => (a != null && b != null ? +(a - b).toFixed(3) : null);
+const gain = diff(sim.A.acrossBriefMeanRun1, sim.B.acrossBriefMeanRun1);
+const fullGain = diff(sim.A.acrossBriefMean, sim.B.acrossBriefMean);
+const cleanGain = diff(sim.A.acrossBriefMeanRun1, sim.C.acrossBriefMeanRun1);
+
+console.log(`\n  across-brief gain vs LEGACY:        ${gain ?? 'n/a'} on run 1  (${fullGain ?? 'n/a'} full pass)`);
+console.log(`  across-brief gain vs PADDED control: ${cleanGain ?? 'n/a'} on run 1`);
+
+// The dosage check runs FIRST, because it decides whether the headline number means anything.
+const dosesDiffer = JSON.stringify(sim.A.dosage) !== JSON.stringify(sim.B.dosage);
+if (dosesDiffer) {
+  const share = gain ? `${(((gain - (cleanGain ?? 0)) / gain) * 100).toFixed(0)}%` : 'n/a';
+  console.log(
+    `\n  CONFOUNDED: the arms differ in HOW MANY cards are injected, not only which.\n` +
+      `  ${share} of the headline gain is dosage, not selection. A paid A/B flipping only\n` +
+      `  USE_CONTRAST_SELECTION cannot attribute a win to the mechanism - "two cards beat one"\n` +
+      `  explains it and costs a one-line change to the legacy path. Judge against PADDED-LEGACY.`,
+  );
+}
+
+// Collisions veto independently of the mean: the pre-registered primary is a COUNT of visually
+// distinct designs, and a mechanism that concentrates briefs onto one widely-spread pair moves
+// the mean up and that count down at the same time.
+if (sim.A.run1Collisions > sim.C.run1Collisions) {
+  console.log(
+    `\n  VETO (collisions): contrast produces MORE identical run-1 reference sets than the\n` +
+      `  padded control (${sim.A.run1Collisions} vs ${sim.C.run1Collisions}). The mean can still rise while the gallery gets\n` +
+      `  more uniform - and uniformity is what the primary metric counts against.`,
+  );
+} else if (cleanGain != null && cleanGain <= 0) {
+  console.log('\n  VETO: against a dosage-matched control, contrast is no better than the keyword');
+  console.log('  pick on the primary metric. A paid pass would be buying a null result.');
+} else if (cleanGain != null && cleanGain < 0.05) {
+  console.log('\n  MARGINAL: contrast is ahead of the dosage-matched control, but not by much.');
+  console.log('  A paid pass is a gamble on the references mattering more to the model than');
+  console.log('  their measured spread suggests.');
 } else {
-  console.log('  Clear separation: a paid pass can measure something.');
+  console.log('\n  Clear separation against the dosage-matched control: a paid pass can measure something.');
 }
 console.log('  (None of this predicts output quality - only real generations can.)');
