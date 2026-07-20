@@ -1,83 +1,85 @@
-// ig02 "Glass Bars" — glass style. A frosted glass panel (the infographic sibling of
-// lt08 "Frosted Card" / lt09 "Gradient Pill") holding a horizontal bar chart: a small
-// accent caps heading on top, then label/value rows with fully-rounded tracks that the
-// 'bars-grow' preset fills one after another. Data-driven like the tickers: the operator
-// types "Label | value" lines into a textarea and rebuildInfographic() renders the rows.
+// ig13 "Clean Poll" — the MINIMAL poll board, sibling of lt01 "Hairline" / ig06 "Schedule
+// Board". One quiet near-black panel holding a horizontal bar chart: an accent tracking-caps
+// heading over a dim keyline, then label/value rows with slim rounded tracks whose accent
+// fills grow to each value. Same bars rebuild as ig02 (dataRuntimes.ts), in the minimal skin.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineInfographicVariant } from './shared';
 import { barsRuntimeJs } from './dataRuntimes';
 
-const BARS_SAMPLE = 'Streaming | 78\nBroadcast | 54\nOn demand | 36';
+const BARS_SAMPLE = 'Agree | 64\nNeutral | 22\nDisagree | 14';
 
-export const ig02: TemplateVariant = defineInfographicVariant(
+export const ig13: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig02',
+    id: 'ig13',
     category: 'infographic',
-    name: 'Glass Bars',
-    styleTag: 'glass',
-    description: 'A frosted glass panel with growing rounded bars - one "Label | value" per line.',
+    name: 'Clean Poll',
+    styleTag: 'minimal',
+    description: 'A quiet dark panel bar chart: an accent heading over slim growing bars.',
     maxLines: 2,
     suggestedLines: [
       { title: 'Bars', sample: BARS_SAMPLE },
-      { title: 'Heading', sample: 'HOW WE WATCH' },
+      { title: 'Heading', sample: 'VIEWER POLL' },
     ],
     logo: 'none',
     animationPresets: ['bars-grow'],
-    defaultPalette: paletteById('orchid'),
-    defaultFontId: 'manrope',
+    defaultPalette: paletteById('ivory'),
+    defaultFontId: 'inter',
     defaultZone: 'mid-left',
   },
   {
-    name: 'Glass Bars',
+    name: 'Clean Poll',
     description:
-      'A translucent frosted panel - the sibling of the Frosted Card lower third - holding ' +
-      'a horizontal bar chart. An accent caps heading sits on top; each data row shows its ' +
-      'label, its value and a fully-rounded track whose accent fill grows to the value. ' +
-      'Type one "Label | value" line per bar (values 0-100).',
-    uicolor: '3',
+      'The minimal poll board, sibling of lt01 Hairline and ig06 Schedule Board: one ' +
+      'restrained near-black panel with an accent tracking-caps heading over a dim keyline, ' +
+      'and label/value rows whose slim rounded accent fills grow to each value. Type one ' +
+      '"Label | value" line per bar (values 0-100).',
+    uicolor: '1',
   },
   (o) => {
     const barsText = o.lines[0]?.sample || BARS_SAMPLE;
-    const headingText = o.lines[1]?.sample || 'HOW WE WATCH';
+    const headingText = o.lines[1]?.sample || 'VIEWER POLL';
 
     return {
-      // Structure: .infographic-box is the frosted panel; #infographic-bars is rebuilt from the hidden
-      // #f0 source by rebuildInfographic() — exactly like a ticker rebuilds its track.
-      html: `    <!-- Glass Bars: one frosted panel — caps heading on top, the bar rows below. -->
+      html: `    <!-- Clean Poll: one dark panel — caps heading, keyline, the bar rows below. -->
     <div class="infographic-box">
-      <!-- Heading — the panel's small-caps kicker (SPX writes field f1 here). -->
+      <!-- Heading — the panel's accent tracking-caps kicker (SPX writes field f1 here). -->
       <div class="infographic-heading" id="f1">${headingText}</div>
+      <!-- The rule — a dim keyline under the heading. -->
+      <div class="infographic-rule"></div>
       <!-- Bar rows — rendered by rebuildInfographic() from the hidden source below. -->
       <div id="infographic-bars"></div>
     </div>
     <!-- Hidden bars source — SPX writes field f0 here; JS renders it. One "Label | value" per line. -->
     <div id="f0" style="display: none">${barsText}</div>`,
 
-      css: `/* The frosted panel — same glass language as the Frosted Card lower third. */
+      css: `/* The panel — restrained and near-black: the minimal family's quiet slab (lt01's sibling). */
 .infographic-box {
   width: calc(560px * var(--scale));  /* fixed chart width — the tracks need a stable length */
   box-sizing: border-box;          /* padding stays inside the fixed width */
-  padding: calc(26px * var(--scale)) calc(32px * var(--scale));  /* generous inner air */
-  background: var(--panel-bg);     /* the palette's glass tint — retints via the :root contract */
-  backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
-  -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
-  border-radius: var(--panel-radius);  /* the family's panel radius */
-  box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the family's keyline and lift */
+  padding: calc(28px * var(--scale)) calc(34px * var(--scale));  /* generous inner air */
+  background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */
+  border-radius: var(--panel-radius);  /* the family's near-square radius */
+  box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the authored edge and family lift */
 }
 
-/* Heading — a small-caps kicker in the accent color, like the Frosted Card's third line. */
+/* Heading — the accent tracking-wide caps kicker, the panel's loudest color moment. */
 .infographic-heading {
-  margin-bottom: calc(20px * var(--scale));  /* air before the first bar row */
-  font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small label size */
+  font-size: calc(19px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
-  line-height: 1.2;                /* compact label leading */
+  line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
-  text-transform: uppercase;       /* label voice */
-  color: var(--label-color);        /* the family's label color */
+  text-transform: uppercase;       /* reads as a label, whatever the operator types */
+  color: var(--accent);            /* the heading wears the accent */
   overflow-wrap: break-word;       /* break very long unbroken words */
   text-wrap: balance;              /* wrapped rows get even lengths */
+}
+
+/* The rule — a thin dim keyline under the heading. */
+.infographic-rule {
+  height: 1px;                     /* a true keyline — 1px at every resolution */
+  margin: calc(16px * var(--scale)) 0 calc(22px * var(--scale));  /* air above and below */
+  background: rgba(255, 255, 255, 0.16);  /* dim, not accent — the color stays in the caps and fills */
 }
 
 /* The chart — bar rows stacked with even air between them. */
@@ -91,7 +93,7 @@ export const ig02: TemplateVariant = defineInfographicVariant(
 .infographic-bar-head {
   display: flex;                   /* label and value share one line */
   justify-content: space-between;  /* label hugs left, value hugs right */
-  align-items: baseline;           /* both sit on the same text baseline */
+  align-items: baseline;           /* both sit on the same baseline */
   gap: calc(24px * var(--scale));  /* never let label and value touch */
   margin-bottom: calc(8px * var(--scale));  /* small gap down to the track */
 }
@@ -115,24 +117,21 @@ export const ig02: TemplateVariant = defineInfographicVariant(
   color: var(--text-color);        /* primary text color */
 }
 
-/* The track — a fully-rounded rgba-white lane the fill grows inside. */
+/* The track — a slim rounded lane the fill grows inside. */
 .infographic-bar-track {
-  height: calc(12px * var(--scale));  /* slim lane — the chart stays elegant */
+  height: calc(10px * var(--scale));  /* a slim minimal lane */
   border-radius: 999px;            /* full pill — a cap, not a size, so it is not scaled */
-  background: rgba(255, 255, 255, 0.14);  /* translucent white lane on the glass */
+  background: rgba(255, 255, 255, 0.10);  /* a quiet lane on the near-black panel */
   overflow: hidden;                /* the growing fill is clipped to the lane */
 }
 
-/* The fill — the preset grows its width from 0% to its data-value percent.
-   Deliberate deviation from the "transform/opacity only" motion rule: the fill tweens
-   WIDTH because scaleX would squash its rounded cap; the lane is a clipped 12px strip,
-   so relayout stays cheap. */
+/* The fill — the preset grows its width from 0% to its data-value percent. */
 .infographic-bar-fill {
   width: 0;                        /* fallback — the rebuild renders an inline width at the value */
   height: 100%;                    /* fill the whole lane height */
   border-radius: inherit;          /* the growing end stays rounded like the lane */
   background: var(--accent);       /* the bars are the accent moment of this graphic */
-  will-change: width;              /* hint for the width tween (the deviation noted above) */
+  will-change: width;              /* hint for the width tween */
 }`,
 
       fields: [
@@ -140,8 +139,7 @@ export const ig02: TemplateVariant = defineInfographicVariant(
         { field: 'f1', ftype: 'textfield', title: o.lines[1]?.title || 'Heading', value: headingText },
       ],
 
-      // rebuildInfographic(): re-render the bar rows from the hidden #f0 source (one
-      // "Label | value" per line). Shared by every poll design — see dataRuntimes.ts.
+      // Shared bars rebuild — one "Label | value" per line (dataRuntimes.ts).
       runtimeExtraJs: barsRuntimeJs(),
     };
   },
