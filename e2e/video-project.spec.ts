@@ -426,6 +426,7 @@ test('video: a modal takes the shortcuts - Ctrl+Z behind My videos leaves the pr
       return useVideoProjectStore.getState().project.fps;
     });
   const original = await fps();
+  expect(original).not.toBe(50); // the premise: 50 is a real change, so undo has something to rewind
   await page.evaluate(async () => {
     const { useVideoProjectStore } = await import('/src/store/videoProjectStore.ts');
     useVideoProjectStore.getState().patchSettings({ fps: 50 });
