@@ -19,6 +19,7 @@
 
 import {
   pickContrasting,
+  recencyPenaltyFor,
   recentReferenceIds,
   USE_CONTRAST_SELECTION,
   type ReferenceAxes,
@@ -481,6 +482,44 @@ export function detectReferenceCards(prompt: string): ReferenceCard[] {
  * chosen set. That is what stops rating and repetition from collapsing everything into one
  * house style over time.
  */
+/**
+ * Which matched card the brief means MOST, rather than which happens to sit earliest in the
+ * array. The old rule was `matched[0]`, i.e. declaration order - so a brief matching two cards
+ * anchored on whichever was authored first, which is not a relevance signal at all.
+ *
+ * Strength is the count of DISTINCT phrases from the card's keyword list that appear in the
+ * prose, then their total length. Counting distinct hits rather than total hits keeps one
+ * repeated word ("logo ... logo ... logo") from outvoting a card the brief matched three
+ * different ways; length breaks the remaining ties toward the more specific phrase, since a card
+ * matched on "stream overlay" is a better read of the brief than one matched on "fast".
+ *
+ * Recency breaks ties LAST and only among equally strong matches, so anti-dominance can never
+ * override relevance - the property that stops an awards brief losing the celebration card.
+ */
+function strongestMatch(
+  matched: ReferenceCard[],
+  prompt: string,
+  recent: string[],
+): ReferenceCard {
+  const strength = (card: ReferenceCard): [number, number] => {
+    const hits = prompt.match(new RegExp(card.keywords.source, 'gi')) ?? [];
+    const distinct = [...new Set(hits.map((h) => h.toLowerCase()))];
+    return [distinct.length, distinct.join('').length];
+  };
+  return matched.reduce((best, card) => {
+    const [bc, bl] = strength(best);
+    const [cc, cl] = strength(card);
+    if (cc !== bc) return cc > bc ? card : best;
+    if (cl !== bl) return cl > bl ? card : best;
+    // Equally good reads of the brief: prefer the one used less recently, then array order.
+    const bi = recent.indexOf(best.id);
+    const ci = recent.indexOf(card.id);
+    const bRank = bi < 0 ? Infinity : bi;
+    const cRank = ci < 0 ? Infinity : ci;
+    return cRank > bRank ? card : best;
+  });
+}
+
 export function selectReferenceCards(prompt: string, count = 2): ReferenceCard[] {
   if (!USE_CONTRAST_SELECTION) return detectReferenceCards(prompt);
 
@@ -504,20 +543,21 @@ export function selectReferenceCards(prompt: string, count = 2): ReferenceCard[]
   // So: the best match anchors, and every companion is chosen from the wider genre-compatible
   // field. Widening stays appropriate because the MATCHED cards vote on genre - a cooking
   // brief never reaches the data-terminal card.
-  const anchor = matched[0];
+  const recent = recentReferenceIds();
+  const anchor = strongestMatch(matched, prompt, recent);
   const voted = new Set(matched.flatMap((c) => c.genres));
   const candidates = REFERENCE_CARDS.filter(
     (c) => c !== anchor && c.genres.some((g) => voted.has(g)),
   );
   if (candidates.length === 0) return [anchor];
 
-  // Anti-dominance applies to ELIGIBILITY only: drop recently-used companions while enough
-  // remain, then let the (never re-weighted) contrast step run on what is left.
-  const recent = recentReferenceIds();
-  const fresh = candidates.filter((c) => !recent.includes(c.id));
-  const pool = fresh.length >= count - 1 ? fresh : candidates;
-
-  return pickContrasting([anchor, ...pool], count, [anchor]);
+  // Anti-dominance is a PREFERENCE, not an eligibility filter. Filtering only moved the problem:
+  // the contrast step still argmaxes distance over whatever survived, so the furthest-out card
+  // available won every time and the ledger merely rotated which extreme that was. Scoring
+  // recency into the choice rotates the winner properly. See RECENCY_WEIGHT for the magnitude.
+  return pickContrasting([anchor, ...candidates], count, [anchor], (c) =>
+    recencyPenaltyFor(c.id, recent),
+  );
 }
 
 /** The Director-prompt section for the picked cards ('' when none matched). */

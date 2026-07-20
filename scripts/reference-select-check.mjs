@@ -80,6 +80,7 @@ const result = await page.evaluate(async (briefs) => {
     localStorage.removeItem(RECENCY_KEY); // cold every time - selection only, no anti-dominance
     const contrast = rc.selectReferenceCards(b.prompt);
     const legacy = rc.detectReferenceCards(b.prompt);
+    const matchedIds = rc.REFERENCE_CARDS.filter((c) => c.keywords.test(b.prompt)).map((c) => c.id);
     rows.push({
       label: b.label,
       contrast: ids(contrast),
@@ -87,8 +88,12 @@ const result = await page.evaluate(async (briefs) => {
       differs: ids(contrast).join() !== ids(legacy).join(),
       spreadContrast: spread(contrast),
       spreadLegacy: spread(legacy),
-      // The legacy path's FIRST card is the best keyword match - the thing the anchor must keep.
-      anchorKept: legacy.length > 0 ? ids(contrast).includes(ids(legacy)[0]) : null,
+      // The invariant is that SOME card the brief actually matched survives into the pick - the
+      // failure this guards is unanchored max-min discarding the match entirely and returning
+      // two extremes. Deliberately not "legacy's first card": that is declaration order, not a
+      // relevance signal, and pinning the check to it would forbid ever choosing a better anchor.
+      anchorKept:
+        matchedIds.length > 0 ? ids(contrast).some((id) => matchedIds.includes(id)) : null,
     });
   }
 

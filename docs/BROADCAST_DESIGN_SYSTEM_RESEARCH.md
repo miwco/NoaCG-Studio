@@ -722,6 +722,44 @@ winner but does not stop the pattern. Adding a card at a novel axis position the
 just add a genre - it installs a new default companion, which is worth knowing before authoring
 more of them.
 
+### 8.3e Fixing the two structural causes
+
+Causes 1 and 2 from §8.3b were then fixed directly, since both are indefensible on their own
+terms regardless of the metric.
+
+**The anchor was `matched[0]` - declaration order.** It is now the strongest match: the count of
+DISTINCT keyword phrases the prose contains, then their total length, with recency breaking ties
+only among equally strong matches so anti-dominance can never override relevance. The effect is
+small but real and clearly correct where it fires: the esports opener anchored `sport` (matched
+once, on "energy") purely because that card is declared earlier, and now anchors
+`competitive-overlay` (matched twice, on "esport" and "gaming"). An esports brief was being read
+as a generic sports brief by an accident of array order.
+
+**Anti-dominance was an eligibility FILTER, so it could not fix companion dominance.** Filtering
+recent cards still leaves the contrast step taking argmax-distance over the survivors, so the
+furthest-out remaining card wins every time and the ledger only rotates which extreme that is.
+It is now a continuous penalty subtracted from the candidate's score (`RECENCY_WEIGHT`, 0.25 in
+axis-distance units - see the constant for why that magnitude), which discourages without banning.
+
+| 11 briefs x 3 runs | coverage only | + mechanism fix |
+|---|---|---|
+| across-brief gain, run 1 | +0.019 | **+0.043** |
+| across-brief gain, full pass | -0.010 | **+0.040** |
+| run-1 collisions, contrast vs legacy | - | 1 vs 1 (tied) |
+| top-3 cards' share of all slots | 47% | **41%** |
+
+The full-pass figure is now positive too, so the result no longer depends on which read you take.
+Note the full-pass COLLISION count rose (7 -> 14 against legacy's 9) while the run-1 count stayed
+tied at 1: a global ledger pushes different briefs onto the same alternatives in lockstep on
+later runs. That is runs 2-3 behaviour, scored under axis (4), and it is the honest cost of
+rotation.
+
+Two cards (`stage-format`, `public-service-nordic`) now go unused across the whole corpus. They
+are narrow-genre cards that nothing in this bank asks for - worth knowing, not worth forcing.
+
+None of this changes the standing conclusion: these are still measurements of REFERENCES, not of
+videos. The gain is real and roughly doubled, and it is still a proxy.
+
 ### 8.3d The paid pass's verdict, written down before it runs
 
 Fixed here, in advance, because the free work above already tells us the expected effect is

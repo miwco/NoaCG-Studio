@@ -92,12 +92,19 @@ export function axisDistance(a: ReferenceAxes, b: ReferenceAxes): number {
  * extremes instead. Callers that have a relevance signal should pin it and let contrast
  * choose only the companions.
  *
+ * `penalty` is subtracted from a candidate's score, letting a caller discourage a card without
+ * banning it. Plain argmax-distance has no notion of what OTHER calls chose, so whichever card
+ * sits furthest out on the axes wins the companion slot almost every time - measured: the single
+ * card at a unique axis position took 9 of 33 companion slots. A continuous penalty rotates that
+ * winner; a hard exclusion filter cannot, because it still argmaxes over whatever survives it.
+ *
  * Fully deterministic: ties resolve to the earlier card in the input order.
  */
 export function pickContrasting<T extends { axes: ReferenceAxes }>(
   pool: T[],
   n: number,
   seed: T[] = [],
+  penalty: (item: T) => number = () => 0,
 ): T[] {
   if (n <= 0) return [];
   const chosen: T[] = seed.slice(0, n);
@@ -121,15 +128,16 @@ export function pickContrasting<T extends { axes: ReferenceAxes }>(
 
   while (chosen.length < n) {
     let best: T | null = null;
-    let bestMin = -1;
+    let bestScore = -Infinity;
     for (const candidate of pool) {
       if (chosen.includes(candidate)) continue;
       let minD = Infinity;
       for (const already of chosen) {
         minD = Math.min(minD, axisDistance(candidate.axes, already.axes));
       }
-      if (minD > bestMin) {
-        bestMin = minD;
+      const score = minD - penalty(candidate);
+      if (score > bestScore) {
+        bestScore = score;
         best = candidate;
       }
     }
@@ -144,6 +152,24 @@ export function pickContrasting<T extends { axes: ReferenceAxes }>(
 
 const RECENCY_KEY = 'spx-gfx-ai-reference-recency';
 const RECENCY_DEPTH = 6;
+
+/**
+ * How hard a recent use counts against a card, in the same units as `axisDistance` (0..1).
+ *
+ * This is the one tuned number in the file, so here is the reasoning rather than just the value.
+ * Among genre-compatible candidates the distance from an anchor typically spans about 0.3 to 0.9,
+ * so 0.25 is large enough to displace the leader when the runner-up is within roughly a quarter
+ * of that range - which is the case that produces the same companion over and over - and too
+ * small to promote a card that is genuinely much closer to the anchor. It discourages; it never
+ * decides on its own.
+ */
+export const RECENCY_WEIGHT = 0.25;
+
+/** Penalty for a card given the current ledger: freshest use hurts most, decaying to nothing. */
+export function recencyPenaltyFor(id: string, recent: string[]): number {
+  const i = recent.indexOf(id);
+  return i < 0 ? 0 : RECENCY_WEIGHT * (1 - i / RECENCY_DEPTH);
+}
 
 export function recentReferenceIds(): string[] {
   try {
