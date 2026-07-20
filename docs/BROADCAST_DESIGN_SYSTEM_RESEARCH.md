@@ -694,6 +694,34 @@ the money rather than after. The earlier encouraging figure (0.765 vs 0.505) mea
 WITHIN a pick, which is a different quantity from distinctiveness ACROSS briefs; the feature was
 being justified on the wrong one.
 
+### 8.3c Closing the coverage hole changed the answer
+
+Cause 3 above was fixed first, because it is a product defect regardless of how the A/B lands:
+a brief matching no card is generated with **no design DNA at all**, in either arm. Two genuinely
+missing worlds were authored (`brand-ident`, `countdown-clock`) and `graphic-poster` - which
+already described the stark full-frame register - had `stark|full-frame|cold open` added to its
+keywords. Pool 12 -> 14.
+
+| 11 briefs x 3 runs | before | after |
+|---|---|---|
+| briefs matching any card | 7/11 | **11/11** |
+| across-brief gain, run 1 | -0.005 | **+0.019** |
+| across-brief gain, full pass | -0.017 | -0.010 |
+| cross-brief collisions (contrast vs legacy) | 5 vs 0 | 7 vs 9 |
+
+So the selector was being judged largely on briefs it never saw. With coverage closed it moves
+ahead of the keyword pick on the primary metric and now produces FEWER duplicate pairs than
+legacy rather than more. The verdict is nonetheless **marginal, not vindicated**: +0.019 is a
+small edge, and the full-pass figure is still slightly negative.
+
+One artifact the fix exposed, and it is the mechanism's own shape rather than a bug: **max-min
+contrast makes the most axis-extreme card the universal companion.** `brand-ident` is the only
+card at `fused-3d`, so it is maximally far from everything and takes the companion slot 9 times
+of 33; on a cold ledger `data-terminal` does the same. The anti-dominance ledger rotates the
+winner but does not stop the pattern. Adding a card at a novel axis position therefore does not
+just add a genre - it installs a new default companion, which is worth knowing before authoring
+more of them.
+
 ### 8.4 Explicitly out of scope for the PoC
 
 Generating a library of graphics. Touching the SPX harness. Adding a critique model call.
@@ -710,7 +738,7 @@ Tight by design. Everything below is additive; nothing replaces working function
 
 | File | Change |
 |---|---|
-| `src/ai/video/referenceCards.ts` | add `axes`/`genres`/`provenance`; grow 6 -> 12 cards |
+| `src/ai/video/referenceCards.ts` | add `axes`/`genres`/`provenance`; grow 6 -> 14 cards |
 | `src/ai/referenceSelect.ts` | **new** - contrast selection + recency ledger |
 | `src/ai/video/claudeVideoProvider.ts` | selection call site only (~1 line, behind a flag) |
 | `src/ai/video/prompts.ts` | the 7 motion additions from §2.3 (~200-300 tokens) |
@@ -978,7 +1006,7 @@ run**, so nothing here is measured against the arm it replaces - the change is v
 | Step | State |
 |---|---|
 | 1. Seven motion additions to `MOTION_PRINCIPLES` | **done** |
-| 2. Card schema + 12 cards + contrast selection behind a flag | **done** |
+| 2. Card schema + 14 cards + contrast selection behind a flag | **done** |
 | 3. Real-token A/B on distinctiveness across briefs | **not started** - the next decision |
 | 4. SPX-side library | not started, gated on step 3 |
 

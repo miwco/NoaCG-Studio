@@ -360,8 +360,12 @@ is the real break from sport and news, where a resting element is genuinely stat
   },
   {
     id: 'graphic-poster',
-    keywords: /bold|poster|graphic|statement|typographic|brand film|manifesto|striking|loud/i,
-    genres: ['promo', 'entertainment', 'music', 'corporate'],
+    // "stark", "full-frame" and "cold open" were added after a measured coverage gap: a brief
+    // asking for a stark full-frame single-word title matched NOTHING, and so was generated with
+    // no reference at all - even though this card already described exactly that register.
+    keywords:
+      /bold|poster|graphic|statement|typographic|brand film|manifesto|striking|loud|stark|full.?frame|cold open/i,
+    genres: ['promo', 'entertainment', 'music', 'corporate', 'news'],
     axes: {
       infoLayers: 1,
       graphicImageRelation: 'is-the-image',
@@ -386,6 +390,77 @@ design adds material, this one removes it and gets its power from commitment.`,
     provenance: {
       kind: OBSERVED,
       note: 'flat graphic/typographic channel-branding conventions, abstracted',
+    },
+  },
+  {
+    id: 'brand-ident',
+    // Deliberately NOT matching "title card": a cooking-series title card is an editorial job,
+    // not an ident, and letting this card claim the phrase stole briefs from editorial-warm.
+    keywords: /logo|ident\b|sting\b|bumper|wordmark|brand mark|channel id|on.air/i,
+    genres: ['promo', 'corporate'],
+    axes: {
+      infoLayers: 1,
+      // The only card using this position, and it earns it: an ident resolves a mark THROUGH
+      // space rather than laying one beside a picture.
+      graphicImageRelation: 'fused-3d',
+      density: 1,
+      geometry: 'chamfered',
+      typeVoice: 'geometric-sans',
+      colorBehavior: 'committed',
+      motionLanguage: 'organic',
+      surface: 'lit-material',
+      holdCharacter: 'dramatised',
+      idleLoop: false,
+      reducesVideoWindow: false,
+    },
+    card: `BRAND-IDENT convention - one device, executed once, remembered. The whole piece exists
+to deliver a mark, so everything else is subtraction: a single element (a shape, a stroke, a
+light, a fold) performs ONE gesture that RESOLVES into the mark's final geometry, and that
+gesture is the piece's whole idea - never two ideas competing. Construction is precise: the mark
+sits on optical centre, given generous clear space (at least the height of its own cap on every
+side), and never touches another element. Depth is implied by a chamfered edge or a single
+directional light rather than by drop shadows. One brand hue owns the frame; a second colour
+appears only as the light on an edge. Motion eases into rest and STOPS DEAD - a resolve that
+keeps drifting reads as unfinished - then the mark holds, still and unanimated, for the last
+third of the duration, because the hold is what the viewer actually remembers. Any wordmark
+beneath is small, tracked wide (0.15-0.3em), and optically centred to the mark, not the frame.`,
+    provenance: {
+      kind: OBSERVED,
+      note: 'channel ident / logo sting conventions, abstracted - no specific package',
+    },
+  },
+  {
+    id: 'countdown-clock',
+    keywords:
+      /countdown|counting down|clock|timer|starting soon|kick.?off|anticipation|minutes? to|seconds? to/i,
+    genres: ['entertainment', 'sport', 'promo'],
+    axes: {
+      infoLayers: 2,
+      graphicImageRelation: 'is-the-image',
+      density: 2,
+      geometry: 'circular',
+      typeVoice: 'mono-technical',
+      colorBehavior: 'committed',
+      motionLanguage: 'mechanical',
+      surface: 'flat-graphic',
+      holdCharacter: 'brief',
+      idleLoop: true,
+      reducesVideoWindow: false,
+    },
+    card: `COUNTDOWN-CLOCK convention - time made physical, on a metronome. The numeral IS the
+graphic: it dominates the frame, and everything else (a ring, a label, a rule) exists to frame
+it. Digits MUST be tabular - proportional numerals change width as they change value and the
+number visibly jitters in place, which is the single most common failure in this genre. Motion
+is MECHANICAL, not eased: each step lands on an exact beat with the same duration and the same
+curve every time, because an irregular tick reads as a bug rather than as design. Give the step
+itself weight - a scale punch of 1.0 to roughly 1.06 settling back, or a mask wipe replacing the
+digit - and let a ring or bar deplete continuously underneath so the eye has something moving
+between beats. The last beat is different from all the others: it earns a longer hold, a colour
+shift, or a scale that overshoots further, because the whole structure has been building to it.
+Keep the palette to one committed hue plus a neutral; a countdown is rhythm, not decoration.`,
+    provenance: {
+      kind: OBSERVED,
+      note: 'countdown/clock conventions across live-event opens, abstracted',
     },
   },
 ];
