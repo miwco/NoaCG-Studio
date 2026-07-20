@@ -81,8 +81,9 @@ for like. A quality claim without a before/after at equal sample size is not a r
   the whole rig runs without spending anything. Use it to verify the RIG - navigation, engine
   pick, capture, checks, gallery output - before a paid pass. It does NOT exercise anything
   inside `claudeVideoProvider`: prompt assembly, reference-card selection and skill injection
-  all live on the paid path, and `stubVideoProvider` never imports them. Verify those by
-  importing the module directly in a browser context instead.
+  all live on the paid path, and `stubVideoProvider` never imports them. For selection, run
+  `node scripts/reference-select-check.mjs` (also free) - it imports the real module through
+  the dev server and prints both arms over the real brief bank.
 - **Ghost store** - after HMR, an eval-context `import('/src/store/…')` can resolve a
   different module instance than the running app. If state reads disagree with the visible
   UI, restart the dev server and reload before trusting any assertion.

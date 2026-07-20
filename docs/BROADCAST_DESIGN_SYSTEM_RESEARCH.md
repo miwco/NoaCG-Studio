@@ -637,11 +637,11 @@ rubric with no new measurement infrastructure.
    verify selection: `--stub` seeds an empty key, so `getVideoAiProvider()` resolves to
    `stubVideoProvider`, which never imports `referenceCards`. `selectReferenceCards` is called
    from exactly one place, `claudeVideoProvider.ts`, on the paid path. Verify the selector
-   itself the free way instead: import `/src/ai/video/referenceCards.ts` in a browser context
-   and call it on the REAL brief prose from the bank. Keyword-shaped test strings are worthless
-   here - they hid that an earlier selector was inert on 6 of 7 real briefs. Also replay the
-   57-file corpus in `e2e/fixtures/generations/` through `scripts/probe-composition.mjs` for
-   free.
+   itself with `node scripts/reference-select-check.mjs`, which imports the real module through
+   the dev server and prints both arms over the real brief bank, with the axis spread of each
+   pick. It reads the BANK rather than invented strings on purpose: keyword-shaped test strings
+   hid that an earlier selector was inert on 6 of 7 real briefs. Also replay the 57-file corpus
+   in `e2e/fixtures/generations/` through `scripts/probe-composition.mjs` for free.
 5. **Real-token A/B.** Same brief bank, same model, two arms: current keyword selection vs
    contrast selection. `scripts/video-bench.mjs` with the varied brief bank.
 6. **Judge on the existing five axes**, with distinctiveness-across-briefs as the primary
@@ -1055,10 +1055,9 @@ one pass to differentiate from itself (§4).
    in-flight branches. Note the standing rule from `docs/GOALS.md` Era 3: re-run the bank after
    any system-prompt change. Cheap to write, but not trustworthy until a bench pass.
 2. **The PoC in §8** - schema fields, ~12 cards per §13.1, contrast selection behind a flag.
-   The selector is verifiable free by calling it directly in a browser context on real brief
-   prose; `video-bench.mjs --stub` and the 57-file fixture replay through
-   `probe-composition.mjs` check the surrounding rig, not selection (§8.2 step 4). All of that
-   comes before any paid run.
+   The selector is verifiable free with `scripts/reference-select-check.mjs`; `video-bench.mjs
+   --stub` and the 57-file fixture replay through `probe-composition.mjs` check the surrounding
+   rig, not selection (§8.2 step 4). All of that comes before any paid run.
 3. **The measured A/B** - real tokens, two arms, judged on distinctiveness across briefs against
    the five-axis rubric in `docs/VIDEO_DESIGN_QUALITY_PLAN.md` §5. This is what earns the change
    its place and clears the deferral recorded in `src/ai/CLAUDE.md`.
