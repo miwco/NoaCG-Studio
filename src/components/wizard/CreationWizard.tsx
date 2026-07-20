@@ -24,6 +24,7 @@ import type { SpxTemplate } from '../../model/types';
 import type { VideoProject } from '../../model/videoTypes';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useDocKindStore } from '../../store/docKindStore';
+import { useModalGate } from '../spaceKey';
 
 const STEP_TITLES = ['Start', 'Category', 'Template', 'Fields', 'Style', 'Animation'];
 const STEP_TITLES_IMPORT = ['Start', 'Images', 'Template', 'Fields', 'Style', 'Animation'];
@@ -43,6 +44,9 @@ const STEP_TITLES_DESIGN = ['Start', 'Design', 'Prepare'];
  */
 export default function CreationWizard() {
   const open = useTemplateStore((s) => s.galleryOpen);
+  // Mounted for the session, rendering null when closed — so the gate keys on `open`, not on
+  // mount, or every editor shortcut in the app would be dead from first paint.
+  useModalGate(open);
   const closeGallery = useTemplateStore((s) => s.closeGallery);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);

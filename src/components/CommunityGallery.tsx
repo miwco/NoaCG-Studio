@@ -12,6 +12,7 @@ import {
 } from '../community/communityData';
 import { publishGate } from '../community/gate';
 import type { SpxTemplate } from '../model/types';
+import { useModalGate } from './spaceKey';
 
 interface Props {
   onClose: () => void;
@@ -28,6 +29,7 @@ type Filter = 'all' | CommunityKind;
  * or unsafe template. Only rendered when a backend is configured; the offline app never mounts it.
  */
 export default function CommunityGallery({ onClose, initialSlug }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
 

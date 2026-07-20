@@ -26,6 +26,7 @@ import { isBackendConfigured } from '../backend/config';
 import { useIsModerator } from '../community/useIsModerator';
 import { useIsMobile } from './useIsMobile';
 import { useSplitter, type Splitter } from './useSplitter';
+import { modalOpen } from './spaceKey';
 import {
   ALL_PANELS,
   clampRatio,
@@ -243,6 +244,8 @@ export default function AppShell() {
         tag === 'SELECT' ||
         !!el?.isContentEditable;
       if (inEditable) return;
+      // A dialog's Ctrl+Z belongs to the dialog, never to the document behind it.
+      if (modalOpen()) return;
       e.preventDefault();
       if (isY || e.shiftKey) redo();
       else undo();

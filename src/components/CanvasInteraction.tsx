@@ -18,6 +18,7 @@ import { fileToDataUrl, isImageAsset, isLottieAsset, uniqueAssetPath } from '../
 import { ASSET_DRAG_TYPE } from './AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { partLocked } from './partLocks';
+import { editorShortcutsLive } from './spaceKey';
 import { phaseIdOf } from './StepTimeline';
 import type { SpxWindow } from './PlayoutSimulator';
 import { useIsMobile } from './useIsMobile';
@@ -732,9 +733,14 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (editingRef.current) return; // the inline editor owns its keys
-      const t = e.target as HTMLElement | null;
-      if (t?.closest?.('input, textarea, select, .monaco-editor')) return;
+      if (!editorShortcutsLive(e.target)) return;
       if (e.key === 'Escape' && canvasTool !== 'select') {
+        // CLAIM it. The deselect handler below reads canvasTool to know it should stand down,
+        // but this line is about to change that value — so whichever of the two listeners runs
+        // second would read 'select' and deselect as well. Both guards together make the split
+        // hold in EITHER order: run first and preventDefault stops it, run second and it still
+        // sees the armed tool. Neither depends on who subscribed when.
+        e.preventDefault();
         setCanvasTool('select');
         setAreaDraft(null);
         textPressRef.current = null;
@@ -858,7 +864,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       if (dragRef.current || editingRef.current || scaleDragRef.current || layerDragRef.current || placeDragRef.current || lassoRef.current) return;
       const t = e.target as HTMLElement | null;
       if (t?.closest?.('input, textarea, select, .monaco-editor')) return;
-      // An armed text tool claims Escape for its own disarm — the selection survives it.
+      // An armed text tool claims Escape for its own disarm — the selection survives it. Two
+      // guards, because the tool handler SETS canvasTool: if it ran first this reads 'select'
+      // and only defaultPrevented catches it; if it runs second only the tool check does.
+      if (e.defaultPrevented) return;
       if (useTemplateStore.getState().canvasTool !== 'select') return;
       setSelected(null);
     };
@@ -1392,6 +1401,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     const onKey = (e: KeyboardEvent) => {
       if (!e.key.startsWith('Arrow')) return;
       if (e.defaultPrevented) return; // the timeline's keyframe-set nudge already claimed it
+      if (!editorShortcutsLive(e.target)) return; // never move a layer behind an open dialog
       if (
         editingRef.current || dragRef.current || placeDragRef.current || layerDragRef.current ||
         lassoRef.current || scaleDragRef.current || layerTfRef.current || lineSizeRef.current

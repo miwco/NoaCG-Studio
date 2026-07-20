@@ -9,12 +9,14 @@ import {
   upsertSavedVideoProject,
 } from '../../model/videoProject';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
+import { useModalGate } from '../spaceKey';
 
 interface Props {
   onClose: () => void;
 }
 
 export default function SavedVideoProjects({ onClose }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const project = useVideoProjectStore((s) => s.project);
   const loadProject = useVideoProjectStore((s) => s.loadProject);
   const [items, setItems] = useState(listSavedVideoProjects);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AI_MODELS, loadAiSettings, saveAiSettings } from '../ai/settings';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { EXPORT_TARGETS } from '../export/registry';
+import { useModalGate } from './spaceKey';
 
 interface Props {
   onClose: () => void;
@@ -14,6 +15,7 @@ interface Props {
  * 📦 Packets brand looks — so this dialog stays small on purpose.
  */
 export default function SettingsDialog({ onClose }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const [ai, setAi] = useState(loadAiSettings);
   const [prefs, setPrefs] = useState(loadPrefs);
 
