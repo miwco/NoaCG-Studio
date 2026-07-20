@@ -5,6 +5,12 @@
 // piece to 2 s and its exit is simply cut off; tick "transparent" and a background the AI
 // painted is still there, so the alpha render comes out opaque. The editor has to SAY so, and
 // offer to fix it, rather than quietly rendering something nobody asked for.
+//
+// The Export-tab case asserts UI inside VideoRenderPanel, which mounts only when
+// isRenderConfigured() - the offline suite runs with VITE_RENDER_API=1 (playwright.config.ts
+// webServer env). A hand-started server on this checkout's port gets REUSED without that pin
+// (and _offline-guard.ts only catches pins meant to be EMPTY), so the case then fails as if
+// the drift warning broke. Kill any manual server on this port first.
 
 import { test, expect } from '@playwright/test';
 import { createVideoProject, mockClaude, useFakeAiKey, type EmittedModule } from './_video';
