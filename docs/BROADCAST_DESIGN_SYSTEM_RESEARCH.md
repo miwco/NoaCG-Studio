@@ -722,6 +722,40 @@ winner but does not stop the pattern. Adding a card at a novel axis position the
 just add a genre - it installs a new default companion, which is worth knowing before authoring
 more of them.
 
+### 8.3d The paid pass's verdict, written down before it runs
+
+Fixed here, in advance, because the free work above already tells us the expected effect is
+SMALL - and a small expected effect is exactly the situation where a bar chosen after seeing the
+gallery stops being a measurement. The repo's doctrine is a trustworthy before/after; deciding
+what counts as a win afterwards voids it.
+
+**Design.** Both arms over the same bank, same model, same engine (`--engine` defaults to
+remotion, so one engine unless stated). Flip `USE_CONTRAST_SELECTION` between arms and change
+nothing else. Run `reference-select-simulate.mjs` on the bank first and paste its output into the
+result write-up, so the references each arm was handed are on the record beside the videos.
+
+**Primary metric - distinctiveness across briefs (§5 axis 3).** Judged on hold-phase frames,
+comparing briefs against each other. Contrast wins only if a reviewer can identify MORE briefs as
+visually distinct designs than in the legacy arm. A tie is not a win: the feature costs
+maintenance and card authoring, so it must clear the bar, not reach it.
+
+**Guardrail - clean rate.** `isClean` must not regress at all. A distinctiveness gain bought with
+more validation failures is a loss.
+
+**Judged separately, and NOT admissible for the primary.** Within-brief variation (§5 axis 4).
+Contrast will win this by construction - the ledger rotates companions, which is the mechanism's
+one uncontested effect. Counting it toward the primary would be scoring the same behaviour twice.
+Judge axis 4 on runs 2-3, and judge axis 3 on run 1 only, where every brief sees the same ledger.
+
+**Confounds to state in the write-up, not discover afterwards.** The 4 briefs that used to match
+nothing now do (§8.3c), so this bank is not comparable to any earlier pass. The most
+axis-extreme card dominates the companion slot, so a distinctiveness gain may be that ONE card's
+effect rather than the selection mechanism's - check the histogram before crediting the mechanism.
+
+**What ends it.** If the primary is a tie or a loss, contrast selection reverts. The 14 cards and
+the seven motion additions in §2.3 stay either way: coverage and motion principles earned their
+place independently, and neither depends on how the companion is chosen.
+
 ### 8.4 Explicitly out of scope for the PoC
 
 Generating a library of graphics. Touching the SPX harness. Adding a critique model call.
