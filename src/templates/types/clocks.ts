@@ -104,6 +104,8 @@ export const countdownType: GraphicType = {
       palette: paletteById('inferno'),
       fontId: 'archivo',
       samples: { label: 'SHOT CLOCK' },
+      // The slab flips to the accent on the run-in; it was never a line reveal.
+      animationPresets: ['timer-run'],
       create: (_type, options) => gt02.create(options),
     },
   ],

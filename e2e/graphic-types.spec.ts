@@ -127,6 +127,70 @@ test('promotion is byte-identical apart from the machine the type adds', async (
   }
 });
 
+test('a promoted design keeps the motion vocabulary it was authored with', async ({ page }) => {
+  test.setTimeout(120_000);
+  await toApp(page);
+  // THE CAPABILITIES GATE, mechanically (docs/GRAPHIC_TYPES.md §5). A compiled variant takes
+  // its TYPE's capabilities, so promotion can quietly rewrite a design's motion: the wizard,
+  // the Inspector and the AI's legal-preset set all read the compiled list, and
+  // `animationPresets[0]` IS the default a new project is created with.
+  //
+  // Nothing caught this before, and the reason is worth keeping: `create({})` resolves the
+  // preset from the design's OWN variant record, so the emitted code never moves and neither
+  // does any baseline taken from it. The drift lives entirely in what the UI offers, which is
+  // why it has to be compared against the hand-written variant rather than against output.
+  const report = await page.evaluate(`(async () => {
+    ${HARNESS}
+    const { variantsFromType } = await import('/src/templates/types/graphicType.ts');
+    // The hand-written lists, BEFORE the merge — a design's authored capabilities.
+    const sources = await Promise.all([
+      import('/src/templates/lowerThirds/index.ts'),
+      import('/src/templates/infoCards/index.ts'),
+      import('/src/templates/cornerBug/index.ts'),
+      import('/src/templates/infographics/index.ts'),
+      import('/src/templates/gameTimers/index.ts'),
+      import('/src/templates/startingSoon/index.ts'),
+      import('/src/templates/tickers/index.ts'),
+      import('/src/templates/scoreboards/index.ts'),
+      import('/src/templates/quiz/index.ts'),
+    ]);
+    const authored = {};
+    for (const mod of sources) {
+      for (const value of Object.values(mod)) {
+        if (Array.isArray(value)) for (const v of value) if (v && v.id) authored[v.id] = v;
+      }
+    }
+    const out = [];
+    for (const type of await types()) {
+      for (const variant of variantsFromType(type)) {
+        // A design authored only as a TypeDesign has no separate source to disagree with.
+        const own = authored[variant.id];
+        if (!own) continue;
+        out.push({
+          variant: variant.id,
+          type: type.id,
+          // The default a new project gets must be the one the design was authored with.
+          defaultPreset: variant.animationPresets[0],
+          authoredDefault: own.animationPresets[0],
+          // ...and no preset the design offers may become unreachable.
+          dropped: own.animationPresets.filter((p) => !variant.animationPresets.includes(p)),
+        });
+      }
+    }
+    return out;
+  })()`);
+  const rows = report as Array<{ variant: string; defaultPreset: string; authoredDefault: string; dropped: string[] }>;
+  expect(rows.length).toBeGreaterThan(0);
+  expect(
+    rows.filter((r) => r.defaultPreset !== r.authoredDefault).map((r) => `${r.variant}: ${r.authoredDefault} -> ${r.defaultPreset}`),
+    'a promoted design’s DEFAULT entrance changed — set TypeDesign.animationPresets to keep its own',
+  ).toEqual([]);
+  expect(
+    rows.filter((r) => r.dropped.length).map((r) => `${r.variant}: lost ${r.dropped.join(', ')}`),
+    'a promoted design lost presets it was authored with — they are no longer offered anywhere',
+  ).toEqual([]);
+});
+
 // ── The acceptance criteria, met by SHIPPED types ────────────────────────────────────────
 // docs/noacg-master-goals.md §1.4 states these as tests of the model. Phase 1 proved them
 // against hand-written definitions; a type that ships has to pass them for real.

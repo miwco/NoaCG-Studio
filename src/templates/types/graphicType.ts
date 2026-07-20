@@ -246,6 +246,24 @@ export interface TypeDesign {
    * need listing; anything absent falls through to the type's value.
    */
   samples?: Record<string, string>;
+  /**
+   * This design's own motion vocabulary, when it differs from the type's. Same escape hatch as
+   * `samples`, for the same reason: a type declares one list, but a design is authored around
+   * its own — lt05's lean is drawn to survive the snap-stinger slam, and card03's glass panel
+   * was tuned for pop-spring.
+   *
+   * The FIRST entry is the default, so this is not a cosmetic list: `resolveOptions` falls back
+   * to `animationPresets[0]`, and the wizard offers only what the list contains. Without this a
+   * promoted design defaults to a preset it was never designed for and loses the one it was —
+   * card02's snap-stinger stopped being reachable at all, and sb02 "Quiet Score" (minimal)
+   * defaulted to a sport stinger because its type's other design happened to be a sport one.
+   *
+   * The drift is invisible to every mechanical check, which is why it survived: `create({})`
+   * resolves the preset from the design's OWN variant record, so the emitted code — and every
+   * baseline taken from it — never moves. Only the wizard, the Inspector and the AI's legal-
+   * preset set read the compiled list. `graphic-types.spec.ts` now checks it directly.
+   */
+  animationPresets?: AnimPresetId[];
   /** Build the template. A type reuses its category's existing assembler here — it never
    *  grows an assembly path of its own. */
   create(type: GraphicType, options?: Parameters<TemplateVariant['create']>[0]): SpxTemplate;
@@ -435,7 +453,8 @@ export function variantsFromType(type: GraphicType): TemplateVariant[] {
       maxLines: type.capabilities.maxLines,
       suggestedLines: typeLines(type.fields, design.samples),
       logo: type.capabilities.logo,
-      animationPresets: type.capabilities.animationPresets,
+      // The design's own vocabulary wins where it has one — see TypeDesign.animationPresets.
+      animationPresets: design.animationPresets ?? type.capabilities.animationPresets,
       defaultPalette: design.palette,
       defaultFontId: design.fontId,
       defaultZone: type.capabilities.defaultZone,

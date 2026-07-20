@@ -154,6 +154,11 @@ export const scoreboardType: GraphicType = {
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
+      // A quiet corner stack reveals its lines; it must not inherit the sport strip's slam
+      // just because the sport design happens to be this type's first.
+      // A quiet corner stack reveals its lines; it must not inherit the sport strip's slam
+      // just because the sport design happens to be this type's first.
+      animationPresets: ['line-reveal', 'slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
       create: (_type, options) => sb02.create(options),
     },
   ],

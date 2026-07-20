@@ -107,6 +107,9 @@ export const topicCardType: GraphicType = {
       palette: paletteById('volt'),
       fontId: 'oswald',
       samples: { heading: 'MATCH STATS' },
+      // The slab's lean is painted so it survives the stinger's skew — promoting this card
+      // into the type's list dropped snap-stinger entirely, the one preset it is built around.
+      animationPresets: ['snap-stinger', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
       create: (_type, options) => card02.create(options),
     },
     {
@@ -117,6 +120,8 @@ export const topicCardType: GraphicType = {
       palette: paletteById('frost'),
       fontId: 'manrope',
       samples: { heading: '20:00 — Opening keynote' },
+      // Glass springs and resolves out of blur; the type's line reveal is a news motion.
+      animationPresets: ['pop-spring', 'blur-in', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
       create: (_type, options) => card03.create(options),
     },
   ],

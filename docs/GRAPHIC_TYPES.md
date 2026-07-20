@@ -133,12 +133,37 @@ weakest of the checks and the only obvious one. All six have to hold:
 | **parts** | a required selector is absent | `attachMachine` / `missingParts` |
 | **fields** | the design emits a different field COUNT than the type declares | `graphic-types.spec.ts` |
 | **machine + motion** | a timer transition on a design whose timeline never ends | `validateMachine` |
-| **capabilities** | design and type disagree on `logo` or `maxLines` | nothing — read it |
+| **capabilities** | design and type disagree on `logo`, `maxLines` or `animationPresets` | `graphic-types.spec.ts` (presets); read the other two |
 | **samples** | the design's starting text differs from the type's field values | nothing — read it |
 | **semantics** | the fields line up but MEAN different things | nothing — judgement |
 
 The last three are the dangerous ones, and the last two are not mechanically checkable at all.
 Measured on the first pass: 24 cells looked promotable on parts alone, 8 actually were.
+
+#### The capabilities gate has a third limb: motion
+
+`animationPresets` is a capability like the other two, and the loudest of them — **`[0]` is the
+default a new project is created with**, and the list is exactly what the wizard, the Inspector
+and the AI's legal-preset check offer. A type declaring one list for all its designs therefore
+rewrites the motion of every design it promotes.
+
+Measured across the twenty shipped promotions: **six drifted their default entrance and four
+lost presets outright.** bug02, the house sponsor bug, opened with a plain fade instead of rising
+into its corner. card02's `snap-stinger` — the preset its painted lean exists to survive — stopped
+being offered anywhere. sb02 "Quiet Score", a *minimal* design, defaulted to a sport slam purely
+because its type's other design is a sport one.
+
+**Why nothing caught it, which is the durable part.** `create({})` resolves the preset from the
+design's OWN variant record, not from the compiled one, so the emitted code never moves — and
+neither does `catalog-baseline.json`, nor the render fingerprint, nor the byte-identity check
+that exists precisely to police promotion. The drift lives entirely in what the UI offers. **A
+baseline taken from output cannot see a gate that only changes input**, and this is the second
+gate in this table with that shape (`samples` is the first).
+
+`TypeDesign.animationPresets` is the escape hatch, exactly mirroring `TypeDesign.samples`: the
+design keeps the vocabulary it was authored around, the type still declares the default for
+designs that do not care. Like samples and unlike theme-token overrides, entries here are **not
+conformance debt** — a sport slab and a glass panel are *supposed* to enter differently.
 
 Two worked examples, both real:
 - `lt01` into **social-bug** passed every shape check — that type shares the lower-third prefix,

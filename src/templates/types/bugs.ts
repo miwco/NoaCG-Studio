@@ -44,6 +44,8 @@ export const sponsorBugType: GraphicType = {
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
+      // The house bug rises into its corner; the type's list leads with a plain fade.
+      animationPresets: ['slide-up', 'blur-in', 'pop-spring', 'fade', 'slide-down', 'flip-3d'],
       create: (_type, options) => bug02.create(options),
     },
     {
@@ -55,6 +57,8 @@ export const sponsorBugType: GraphicType = {
       fontId: 'manrope',
       // This type declares "On Air" (bug02's caption); bug01 has always suggested "LIVE".
       samples: { caption: 'LIVE' },
+      // The frosted tile resolves out of a blur — that IS the glass entrance.
+      animationPresets: ['blur-in', 'pop-spring', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
       create: (_type, options) => bug01.create(options),
     },
   ],
