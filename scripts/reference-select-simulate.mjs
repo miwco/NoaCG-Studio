@@ -197,13 +197,25 @@ if (dead > 0) {
   );
 }
 
-const gain = sim.A.acrossBriefMean != null && sim.B.acrossBriefMean != null
-  ? +(sim.A.acrossBriefMean - sim.B.acrossBriefMean).toFixed(3)
-  : null;
-console.log(`\n  across-brief distance gain: ${gain ?? 'n/a'}`);
-if (gain != null && gain <= 0.02) {
-  console.log('  VETO: the arms hand over near-identical references. A paid pass would measure nothing.');
+// Judge on the RUN 1 figure. The full-pass number folds in ledger rotation, which the review
+// rubric scores separately as within-brief variation - charging it against distinctiveness
+// across briefs would be marking the same mechanism twice, once as a virtue and once as a fault.
+const gain =
+  sim.A.acrossBriefMeanRun1 != null && sim.B.acrossBriefMeanRun1 != null
+    ? +(sim.A.acrossBriefMeanRun1 - sim.B.acrossBriefMeanRun1).toFixed(3)
+    : null;
+const fullGain =
+  sim.A.acrossBriefMean != null && sim.B.acrossBriefMean != null
+    ? +(sim.A.acrossBriefMean - sim.B.acrossBriefMean).toFixed(3)
+    : null;
+console.log(`\n  across-brief gain: ${gain ?? 'n/a'} on run 1  (${fullGain ?? 'n/a'} over the full pass)`);
+if (gain != null && gain <= 0) {
+  console.log('  VETO: contrast is no better than the keyword pick on the primary metric.');
+  console.log('  A paid pass would be buying a null result.');
+} else if (gain != null && gain < 0.05) {
+  console.log('  MARGINAL: contrast is ahead, but not by much. A paid pass is a gamble on the');
+  console.log('  references mattering more to the model than their measured spread suggests.');
 } else {
-  console.log('  No veto: the arms differ enough that a paid pass can measure something.');
-  console.log('  (This does NOT predict output quality - only real generations can.)');
+  console.log('  Clear separation: a paid pass can measure something.');
 }
+console.log('  (None of this predicts output quality - only real generations can.)');
