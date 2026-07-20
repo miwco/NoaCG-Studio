@@ -5,7 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // THE CATALOG BASELINE — the safety net the theme-token migration is built on
-// (docs/THEMES.md, Phase 3 step 1). Two baselines, because they answer different questions.
+// (src/model/themeTokens.ts holds the tokens; DESIGN_LANGUAGE §8 holds the rationale).
+// Two baselines, because they answer different questions.
 //
 // **Source** — a hash of each emitted pane. Tokenizing REWRITES the CSS text by design
 // (`calc(18px * var(--scale))` becomes `var(--panel-radius)`), so this baseline is EXPECTED
