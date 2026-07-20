@@ -3,7 +3,10 @@
 // and the derived linear machine already describes that exactly.
 
 import { paletteById } from '../../model/wizard';
+import { bug01 } from '../cornerBug/bug01';
 import { bug02 } from '../cornerBug/bug02';
+import { lt01 } from '../lowerThirds/lt01';
+import { lt05 } from '../lowerThirds/lt05';
 import { lt14 } from '../lowerThirds/lt14';
 import type { GraphicType } from './graphicType';
 
@@ -44,6 +47,15 @@ export const sponsorBugType: GraphicType = {
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       create: (_type, options) => bug02.create(options),
+    },
+    {
+      id: 'bug01',
+      name: 'Glass Mark',
+      description: 'A small frosted tile with a logo slot and a tiny caption — the persistent on-air mark.',
+      styleTag: 'glass',
+      palette: paletteById('frost'),
+      fontId: 'manrope',
+      create: (_type, options) => bug01.create(options),
     },
   ],
 };
@@ -89,6 +101,24 @@ export const socialBugType: GraphicType = {
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       create: (_type, options) => lt14.create(options),
+    },
+    {
+      id: 'lt01',
+      name: 'Hairline',
+      description: 'Pure typography beside one thin vertical line - no panel, whitespace does the work.',
+      styleTag: 'minimal',
+      palette: paletteById('ivory'),
+      fontId: 'inter',
+      create: (_type, options) => lt01.create(options),
+    },
+    {
+      id: 'lt05',
+      name: 'Angle Slab',
+      description: 'A forward-leaning dark slab with a chunky accent edge - fast, aggressive sport energy.',
+      styleTag: 'sport',
+      palette: paletteById('volt'),
+      fontId: 'oswald',
+      create: (_type, options) => lt05.create(options),
     },
   ],
 };

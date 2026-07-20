@@ -6,7 +6,9 @@
 // animation needed no machine at all, and the validator still vouches for its builder.
 
 import { paletteById } from '../../model/wizard';
+import { ig01 } from '../infographics/ig01';
 import { ig02 } from '../infographics/ig02';
+import { ig03 } from '../infographics/ig03';
 import { ig06 } from '../infographics/ig06';
 import type { GraphicType } from './graphicType';
 
@@ -55,6 +57,19 @@ export const agendaType: GraphicType = {
       fontId: 'inter',
       create: (_type, options) => ig06.create(options),
     },
+    {
+      id: 'ig03',
+      name: 'Timing Tower',
+      description: 'A live-timing standings stack - leaning slab rows with position chips and gaps.',
+      styleTag: 'sport',
+      palette: paletteById('signal'),
+      fontId: 'oswald',
+      create: (_type, options) => ig03.create(options),
+    },
+    // ig04 is NOT promotable here: this type declares two fields and ig04 emits three. A type's
+    // field count is part of its contract (the control page and the compiled fN ids are built
+    // from it), so a design with an extra field is a different graphic rather than the same one
+    // restyled. It is also a poll ring by design, which is the other type's subject.
   ],
 };
 
@@ -93,6 +108,15 @@ export const pollType: GraphicType = {
       palette: paletteById('orchid'),
       fontId: 'manrope',
       create: (_type, options) => ig02.create(options),
+    },
+    {
+      id: 'ig01',
+      name: 'Big Stat',
+      description: 'One enormous figure over a short accent rule and a quiet caps label.',
+      styleTag: 'minimal',
+      palette: paletteById('ivory'),
+      fontId: 'inter',
+      create: (_type, options) => ig01.create(options),
     },
   ],
 };

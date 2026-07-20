@@ -4,6 +4,9 @@
 
 import { paletteById } from '../../model/wizard';
 import { card01 } from '../infoCards/card01';
+import { card02 } from '../infoCards/card02';
+import { card03 } from '../infoCards/card03';
+import { card04 } from '../infoCards/card04';
 import { card05 } from '../infoCards/card05';
 import type { GraphicType } from './graphicType';
 
@@ -46,6 +49,15 @@ export const titleCardType: GraphicType = {
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       create: (_type, options) => card05.create(options),
+    },
+    {
+      id: 'card04',
+      name: 'Quote Card',
+      description: 'A panel-free centered quote: large accent quote marks, light italic text, a short hairline, quiet attribution.',
+      styleTag: 'minimal',
+      palette: paletteById('ivory'),
+      fontId: 'manrope',
+      create: (_type, options) => card04.create(options),
     },
   ],
 };
@@ -91,6 +103,24 @@ export const topicCardType: GraphicType = {
       palette: paletteById('ivory'),
       fontId: 'inter',
       create: (_type, options) => card01.create(options),
+    },
+    {
+      id: 'card02',
+      name: 'Slab Card',
+      description: 'A forward-leaning stat slab with a chunky accent edge - lt05 Angle Slab, card-sized.',
+      styleTag: 'sport',
+      palette: paletteById('volt'),
+      fontId: 'oswald',
+      create: (_type, options) => card02.create(options),
+    },
+    {
+      id: 'card03',
+      name: 'Frosted Panel',
+      description: 'A translucent blurred glass panel for schedules and lineups, with an optional logo slot.',
+      styleTag: 'glass',
+      palette: paletteById('frost'),
+      fontId: 'manrope',
+      create: (_type, options) => card03.create(options),
     },
   ],
 };
