@@ -24,6 +24,7 @@ import VideoSettingsPanel from './VideoSettingsPanel';
 import VideoAssetsPanel from './VideoAssetsPanel';
 import VideoExportPanel from './VideoExportPanel';
 import SavedVideoProjects from './SavedVideoProjects';
+import { modalOpen } from '../spaceKey';
 import { upsertSavedVideoProject } from '../../model/videoProject';
 
 const VideoCodeEditorLazy = lazy(() => import('./VideoCodeEditor'));
@@ -103,6 +104,9 @@ export default function VideoAppShell() {
         tag === 'SELECT' ||
         !!el?.isContentEditable;
       if (inEditable) return;
+      // A dialog's Ctrl+Z belongs to the dialog, never to the project behind it — the same
+      // rule the SPX shell follows, and this shell mounts modals too (My videos, sign-in).
+      if (modalOpen()) return;
       e.preventDefault();
       if (isY || e.shiftKey) redo();
       else undo();

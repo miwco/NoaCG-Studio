@@ -413,6 +413,14 @@ test('v2: Space plays; arrows nudge the selected keyframe on the grid', async ({
   await page.waitForTimeout(400);
   const after = await times();
   expect(Math.min(...after)).toBeCloseTo(Math.min(...before) + 0.05, 2);
+
+  // …and the CANVAS nudge stood down. Clicking a diamond usually leaves its layer selected
+  // too, so both arrow handlers are armed at once and only one may act — asserting the
+  // keyframe moved says nothing about whether the layer ALSO got x/y keyframes written at the
+  // playhead, which is exactly the shape of bug this handshake exists to prevent.
+  const layer = (await animData(page))!.steps[0].layers['#f0'];
+  expect(layer.x).toBeUndefined();
+  expect(layer.y).toBeUndefined();
 });
 
 test('v2 polish: the playhead cap drags; the view follows playback when zoomed in', async ({ page }) => {

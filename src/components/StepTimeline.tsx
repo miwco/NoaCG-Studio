@@ -26,6 +26,7 @@ import { changePartPress } from '../blocks/stepAssign';
 import { getTemplateParts } from '../model/structure';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import LegacyTimeline from './LegacyTimeline';
+import { activatableFocus, editorShortcutsLive, spacePansCanvas } from './spaceKey';
 import type { SpxWindow } from './PlayoutSimulator';
 
 // Timeline v2 Phase 3 (docs/TIMELINE_V2_PLAN.md) — the step timeline, read-first.
@@ -896,14 +897,17 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   // shift-clicking, or lassoing diamonds.) Never while typing in a field or the code editor.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = document.activeElement as HTMLElement | null;
-      if (
-        el &&
-        (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.closest('.monaco-editor'))
-      ) {
-        return;
-      }
+      // A keystroke aimed at a dialog must never reach the document behind it, and one aimed at
+      // a text field belongs to the field. Both branches below edit the project, so the gate
+      // comes first.
+      if (!editorShortcutsLive()) return;
       if (e.key === ' ') {
+        // The canvas gets Space while it owns it (components/spaceKey.ts answers that for both
+        // of us). Repeats never re-fire play: one held key is one press.
+        if (e.repeat || spacePansCanvas()) return;
+        // Space is the button key. Taking it from a focused control would leave the editor
+        // unusable without a mouse — the pan's deliberate exception does not extend to play.
+        if (activatableFocus()) return;
         e.preventDefault();
         sendControl('play');
         return;
@@ -911,6 +915,10 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
       if (!editable) return;
       const speed = data.speed || 1;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && kfSels.length > 0) {
+        // A live text selection owns Ctrl+C — the browser's copy only exists when there is
+        // something to copy, so yielding costs the keyframe copy nothing in its real case, and
+        // swallowing it would silently strand text the user just highlighted anywhere on screen.
+        if (!window.getSelection()?.isCollapsed) return;
         // Copy: the set's keyframes as (selector, property, offset-from-earliest, value).
         e.preventDefault();
         const entries: typeof kfClipboard.current = [];
@@ -1024,7 +1032,13 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
   const cueOf = (seg: (typeof segs)[number]) => (seg.i === 0 ? '▶' : seg.isOut ? '■' : '»');
 
   return (
-    <div className={`timeline-strip tlv2${tight ? ' tight' : ''}`} ref={stripRef} data-testid="timeline-v2">
+    <div
+      className={`timeline-strip tlv2${tight ? ' tight' : ''}`}
+      ref={stripRef}
+      data-testid="timeline-v2"
+      // Working in the timeline hands Space back to Play; a press on the stage takes it again.
+      onPointerDownCapture={() => useTemplateStore.getState().setActiveSurface('timeline')}
+    >
       <div className="tlv2-body">
         {/* Left: layer names — the shared-selection handles, same as the classic strip.
             A ▸ caret expands a layer into its property sub-rows. */}

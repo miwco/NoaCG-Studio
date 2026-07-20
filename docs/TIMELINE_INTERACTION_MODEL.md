@@ -67,8 +67,9 @@ The audit below is against the ten principles of the interaction brief.
 - **State:** a layer's lifecycle is hidden → entering (its activation step's keyframes) →
   visible (persistence by evaluation) → exiting (its Out-step keyframes, else the root
   hide). The timeline renders this as the layer's BLOCK; `reveals` stays the only
-  activation data. An explicit early-exit (`hides`) list is a future model extension and
-  is NOT faked in the UI.
+  activation data for ENTRY. An explicit early exit is real: `hides` names the step a layer
+  leaves in, written by the state block's right-edge drag through `animEdit setLayerHide`,
+  and dragging it back to Out clears it.
 
 ## 3. Amendments to the ratified plan
 
@@ -108,6 +109,6 @@ The audit below is against the ten principles of the interaction brief.
 6. Cursor/hover pass: pointer by default, contextual cursors on handles, block/diamond
    hover states.
 
-Deferred with their designs: step calls (plan §3b, drafted), early-exit `hides` list,
-canvas scale/rotate keyframe handles (needs per-layer transform chrome), quiz
-wrapper-steps, loop categories.
+Deferred with their designs: step calls (plan §3b, drafted), quiz wrapper-steps, loop
+categories. (The early-exit `hides` list and the canvas scale/rotate keyframe handles were
+on this list and have both SHIPPED — see §2 and src/components/CLAUDE.md.)

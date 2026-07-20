@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import { loadPackets, loadLooks, type Packet, type SavedGraphic } from '../model/packets';
+import { useModalGate } from './spaceKey';
 
 interface Props {
   /** The signed-in account's email (shown in the header). */
@@ -21,6 +22,7 @@ interface HomeRow {
  * signed-in users), so there is exactly ONE source of saved designs.
  */
 export default function Homebase({ email, onClose }: Props) {
+  useModalGate(); // global editor shortcuts stand down while this is up
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const openGallery = useTemplateStore((s) => s.openGallery);

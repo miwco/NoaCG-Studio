@@ -79,6 +79,13 @@ templateStore.ts (zustand) holds the template plus editor UI state.
   (an imported design's artwork starts locked - see src/components/CLAUDE.md). UI state, no
   history, never in the template; CLEARED on a whole-project swap, because part selectors
   repeat across projects.
+- **activeSurface / setActiveSurface, pointerOverStage, modalCount** - who owns a contested
+  key. `activeSurface` ('canvas' | 'timeline', default 'canvas') flips on a pointerdown on the
+  stage or the timeline strip and NOTHING else - panels and dialogs leave it alone on purpose.
+  `modalCount` is pushed/popped by components/spaceKey.ts `useModalGate`, counted rather than
+  flagged so stacked modals unwind correctly. Read through `getState()` in the key handlers,
+  never subscribed, so they cost no renders. The predicates that combine them live in
+  components/spaceKey.ts - do not re-derive one at a call site. UI state only - no history.
 - **playhead / setPlayhead** - the step timeline's parked playhead `{ step, t }` (step index +
   local time in effective seconds). UI state only - no history; the Inspector stamps
   keyframes at it.

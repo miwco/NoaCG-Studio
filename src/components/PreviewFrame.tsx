@@ -3,6 +3,7 @@ import { composeDocument } from '../preview/composeDocument';
 import { useTemplateStore } from '../store/templateStore';
 import { designBoxInfo } from '../blocks/designLayout';
 import { computePad } from './pasteboard';
+import { spacePansCanvas } from './spaceKey';
 import CanvasGuides from './CanvasGuides';
 import CanvasInteraction from './CanvasInteraction';
 
@@ -38,6 +39,8 @@ export default function PreviewFrame({ iframeRef }: Props) {
   const setGuide = useTemplateStore((s) => s.setGuide);
   const canvasTool = useTemplateStore((s) => s.canvasTool);
   const setCanvasTool = useTemplateStore((s) => s.setCanvasTool);
+  const setActiveSurface = useTemplateStore((s) => s.setActiveSurface);
+  const setPointerOverStage = useTemplateStore((s) => s.setPointerOverStage);
 
   // The TEXT TOOLS exist where placed fields do: the placed-design shape (an artwork box),
   // code-derived like every gate. Catalog templates keep their Data-tab add untouched.
@@ -133,29 +136,23 @@ export default function PreviewFrame({ iframeRef }: Props) {
   //    mouse button. Both are captured BEFORE the overlay, so the canvas gesture layer never
   //    sees them and no document element can move under a pan.
   //
-  //    Space arms only while the pointer is over the stage — off the stage it stays the
-  //    timeline's Play key. While armed the keydown is swallowed in the CAPTURE phase, so
-  //    the graphic does not also start playing under the pan.
+  //    Space pans while the CANVAS owns it — see components/spaceKey.ts, which is the one place
+  //    that question is answered. The timeline asks the same function on the same keydown, so
+  //    the two never both act and neither has to claim the key from the other.
   const panDrag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const [panActive, setPanActive] = useState(false);
   const [spacePan, setSpacePan] = useState(false);
-  const overStage = useRef(false);
   const spacePanRef = useRef(false);
   spacePanRef.current = spacePan;
 
   useEffect(() => {
-    // Space belongs to a text field that has focus — there it types a space and nothing else.
-    // A focused BUTTON does yield it: clicking a stage tool leaves that button focused, and a
-    // pan that stopped working until you clicked elsewhere would be the more surprising rule.
-    // Enter still activates the button, so nothing becomes unreachable from the keyboard.
-    const claimed = (t: EventTarget | null) =>
-      t instanceof HTMLElement &&
-      !!t.closest('input, textarea, select, [contenteditable="true"], .monaco-editor');
     const onDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || e.repeat || !overStage.current || claimed(e.target)) return;
+      if (e.code !== 'Space' || !spacePansCanvas(e.target)) return;
+      // Repeats re-assert the same answer rather than being ignored: preventDefault has to cover
+      // EVERY keydown of the hold, or the browser scrolls and the key looks unclaimed downstream.
       e.preventDefault();
-      e.stopPropagation(); // capture phase: Space belongs to the pan while it is armed
-      setSpacePan(true);
+      e.stopPropagation(); // keeps it off the overlay below
+      if (!e.repeat) setSpacePan(true);
     };
     const onUp = (e: KeyboardEvent) => {
       if (e.code !== 'Space' || !spacePanRef.current) return;
@@ -179,6 +176,8 @@ export default function PreviewFrame({ iframeRef }: Props) {
   }, []);
 
   const onStagePointerDown = (e: React.PointerEvent) => {
+    // Working here hands Space to the canvas; a press on the timeline strip hands it back.
+    setActiveSurface('canvas');
     if (e.button === 1 || (spacePan && e.button === 0)) {
       e.preventDefault();
       e.stopPropagation();
@@ -245,8 +244,8 @@ export default function PreviewFrame({ iframeRef }: Props) {
       onPointerMove={onStagePointerMove}
       onPointerUp={onStagePointerUp}
       onPointerCancel={onStagePointerUp}
-      onPointerEnter={() => { overStage.current = true; }}
-      onPointerLeave={() => { overStage.current = false; }}
+      onPointerEnter={() => setPointerOverStage(true)}
+      onPointerLeave={() => setPointerOverStage(false)}
     >
       <div
         className="canvas-world"
