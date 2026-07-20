@@ -128,7 +128,23 @@ const sim = await page.evaluate(
 
     const seqA = runArm(true);
     const seqB = runArm(false);
-    return { poolSize: rc.REFERENCE_CARDS.length, A: analyse(seqA), B: analyse(seqB), seqA, seqB };
+
+    // Why a brief lands where it does: how many cards its prose matches at all, and which one
+    // ends up anchoring. The anchor is exempt from anti-dominance by design, so an anchor that
+    // recurs across many briefs puts a ceiling on how far apart their picks can ever be.
+    const matchProfile = briefs.map((b) => {
+      const matched = rc.REFERENCE_CARDS.filter((c) => c.keywords.test(b.prompt));
+      return { label: b.label, matched: matched.length, anchor: matched[0]?.id ?? '(none)' };
+    });
+
+    return {
+      poolSize: rc.REFERENCE_CARDS.length,
+      A: analyse(seqA),
+      B: analyse(seqB),
+      matchProfile,
+      seqA,
+      seqB,
+    };
   },
   { briefs, runs: RUNS },
 );
@@ -158,6 +174,15 @@ const topOf = (h) =>
     .join('  ');
 console.log(`\n  card usage, contrast:  ${topOf(sim.A.histogram)}`);
 console.log(`  card usage, legacy:    ${topOf(sim.B.histogram)}`);
+
+console.log('\n  keyword matches per brief -> anchor (anchor never rotates, never ages out):');
+const anchorCount = {};
+for (const m of sim.matchProfile) {
+  if (m.matched > 0) anchorCount[m.anchor] = (anchorCount[m.anchor] ?? 0) + 1;
+  console.log(`    ${m.label.padEnd(26)} ${String(m.matched).padStart(2)} match  ->  ${m.anchor}`);
+}
+const anchorShare = Object.entries(anchorCount).sort((a, b) => b[1] - a[1]);
+console.log(`  anchor share: ${anchorShare.map(([id, n]) => `${id}:${n}`).join('  ')}`);
 
 console.log('\n  distinct picks per brief (contrast / legacy):');
 for (const label of Object.keys(sim.A.perBriefVariants)) {

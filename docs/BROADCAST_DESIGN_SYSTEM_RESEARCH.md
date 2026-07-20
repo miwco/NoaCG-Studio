@@ -655,6 +655,45 @@ this change is **zero** - which means the bar is simply "measurably more distinc
 clean rate". If it does not clear that, the cards revert and the seven motion additions from
 §2.3 stand on their own.
 
+### 8.3b Measured before paying: the mechanism does not move the primary metric
+
+`scripts/reference-select-simulate.mjs` replays a whole pass deterministically, so the two arms
+could be compared on REFERENCES for free before buying generations. Over 11 real briefs (the
+varied bank plus the four shipped chips), 3 runs, the bench's exact order and warming ledger:
+
+| | contrast | legacy |
+|---|---|---|
+| distinct picks | 17 | 8 |
+| across-brief mean distance | 0.505 | 0.522 |
+| across-brief mean, run 1 only | 0.517 | 0.522 |
+| two briefs given the same pair | 5 | 0 |
+
+**Contrast selection does not improve distinctiveness across briefs - the primary metric.** On
+run 1, which is the honest read (it takes ledger rotation out, since the rubric scores that
+separately as within-brief variation), the two arms are a wash and contrast is fractionally
+behind. Every measurable gain lands on within-brief rotation instead: 17 distinct picks against
+8, and 3 variants per brief against 1.
+
+Three structural causes, all visible for free:
+
+1. **The anchor dominates the pick and is exempt from anti-dominance by design.** Of 7 matching
+   briefs, `editorial-warm` anchors 3 and `sport` 2 - so five of seven share two anchors, and
+   the anchor never rotates and never ages out. Contrast only ever chooses the COMPANION, the
+   lesser half of the pick, while the metric is dominated by the anchor.
+2. **The anchor is `matched[0]` - array order, not match strength.** Where several cards match,
+   nothing picks the best or the least-recently-used one.
+3. **Keyword coverage has a hole.** 4 of 11 briefs (single-word hero, logo sting, logo reveal,
+   countdown) match NO card, so both arms inject no reference at all - 36% of a paid pass would
+   buy no signal on selection, and those generations get zero design DNA either way.
+
+Note what this does and does not settle. It compares the references handed over, not the videos
+made from them, so it cannot prove the feature worthless - two more-contrasting companions might
+still yield a better single design. What it does establish is that the paid A/B **as designed**
+would very likely return "no improvement on the primary metric", which is worth knowing before
+the money rather than after. The earlier encouraging figure (0.765 vs 0.505) measured spread
+WITHIN a pick, which is a different quantity from distinctiveness ACROSS briefs; the feature was
+being justified on the wrong one.
+
 ### 8.4 Explicitly out of scope for the PoC
 
 Generating a library of graphics. Touching the SPX harness. Adding a critique model call.
