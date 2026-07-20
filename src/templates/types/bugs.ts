@@ -8,6 +8,9 @@ import { bug02 } from '../cornerBug/bug02';
 import { bug03 } from '../cornerBug/bug03';
 import { bug04 } from '../cornerBug/bug04';
 import { lt14 } from '../lowerThirds/lt14';
+import { lt16 } from '../lowerThirds/lt16';
+import { lt17 } from '../lowerThirds/lt17';
+import { lt18 } from '../lowerThirds/lt18';
 import type { GraphicType } from './graphicType';
 
 /** SPONSOR / LOGO BUG — 37 of the 60 reference formats want one (sponsor bug, partner logo,
@@ -138,13 +141,46 @@ export const socialBugType: GraphicType = {
       fontId: 'space-grotesk',
       create: (_type, options) => lt14.create(options),
     },
-    // No general lower third can be promoted here, and the reason is worth stating because
-    // nothing structural stops it: this type shares the lower-third prefix, category, parts AND
-    // field count, so lt01 and lt05 compiled cleanly and passed every shape check. They are
-    // still the wrong graphic. Promotion replaces a catalog variant BY ID, so claiming lt01
-    // turned the catalog's default lower third into a handle bug - its fields became
-    // handle/platform and its sample data "@noacg", which broke the wizard, the canvas chip and
-    // every spec that starts from a lower third. A type this close to another is exactly where
-    // "the parts resolve" stops being evidence that a design belongs to it.
+    {
+      // Designed FOR this cell. No general lower third can be PROMOTED here, and the reason is
+      // worth stating because nothing structural stops it: this type shares the lower-third
+      // prefix, category, parts AND field count, so lt01 and lt05 compiled cleanly and passed
+      // every shape check. They are still the wrong graphic — their fields mean name/title, not
+      // handle/platform, and promotion replaces a catalog variant BY ID, so claiming lt01 would
+      // turn the catalog's default lower third into a handle bug. So the glass/sport/minimal
+      // handles are DESIGNED as compact handle strips instead — small siblings of the lower
+      // thirds in each family, each carrying a real accent element this type requires.
+      id: 'lt16',
+      name: 'Frost Handle',
+      description: 'A compact frosted social strip: a handle over its platform, led by an accent dot.',
+      styleTag: 'glass',
+      palette: paletteById('frost'),
+      fontId: 'manrope',
+      samples: { handle: '@lunamakes', platform: 'INSTAGRAM' },
+      animationPresets: ['blur-in', 'pop-spring', 'fade', 'slide-down', 'flip-3d'],
+      create: (_type, options) => lt16.create(options),
+    },
+    {
+      id: 'lt17',
+      name: 'Volt Handle',
+      description: 'A compact sport strip with an accent edge — a handle in heavy caps over its platform.',
+      styleTag: 'sport',
+      palette: paletteById('volt'),
+      fontId: 'oswald',
+      samples: { handle: '@TEAMVOLTA', platform: 'TIKTOK' },
+      animationPresets: ['slide-up', 'mask-wipe', 'fade', 'slide-down', 'flip-3d'],
+      create: (_type, options) => lt17.create(options),
+    },
+    {
+      id: 'lt18',
+      name: 'Line Handle',
+      description: 'A panel-free social mark: a handle over its platform beside a thin accent hairline.',
+      styleTag: 'minimal',
+      palette: paletteById('signal'),
+      fontId: 'inter',
+      samples: { handle: '@marcuschen', platform: 'YOUTUBE' },
+      animationPresets: ['line-reveal', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
+      create: (_type, options) => lt18.create(options),
+    },
   ],
 };

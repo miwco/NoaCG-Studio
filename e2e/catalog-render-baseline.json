@@ -802,6 +802,58 @@
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
+    "lt15": {
+      "#count": "10",
+      "body": "e9384811efda3b35",
+      "body>div.lower-third[1]": "fbb01aa24a6233fe",
+      "body>div.lower-third[1]>div.lower-third-accent[1]": "fc627137812b3962",
+      "body>div.lower-third[1]>div.lower-third-box[1]": "f64d3e08eb1127bc",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]": "4bff8180ddd7d1bc",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]>span.lower-third-name[1]": "7c3dd7a8d2ef430c",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]": "b0b1b3ea105d35af",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]>span.lower-third-title[1]": "7132c96d15286365",
+      "body>script[1]": "82d7438e5a12ea26",
+      "body>script[2]": "82d7438e5a12ea26"
+    },
+    "lt16": {
+      "#count": "10",
+      "body": "e9384811efda3b35",
+      "body>div.lower-third[1]": "e1a9f6bcd66cc669",
+      "body>div.lower-third[1]>div.lower-third-accent[1]": "37fcb3dc1221d2b0",
+      "body>div.lower-third[1]>div.lower-third-box[1]": "66d67d461eaf0407",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]": "80f15126bc670e59",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]>span.lower-third-name[1]": "8df86536365a6ce7",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]": "83c29d897afeb32a",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]>span.lower-third-title[1]": "165569d61a03f1f6",
+      "body>script[1]": "82d7438e5a12ea26",
+      "body>script[2]": "82d7438e5a12ea26"
+    },
+    "lt17": {
+      "#count": "10",
+      "body": "eb7734706eb8ee01",
+      "body>div.lower-third[1]": "3e56c4d2c3682a27",
+      "body>div.lower-third[1]>div.lower-third-accent[1]": "dd546964dcb2f06e",
+      "body>div.lower-third[1]>div.lower-third-box[1]": "eea2b41d12c07969",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]": "0417914023d71fc0",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]>span.lower-third-name[1]": "22e799e8505a172b",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]": "760882891907180c",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]>span.lower-third-title[1]": "9caa5bd1cc6fdea9",
+      "body>script[1]": "a09c79f61a84b019",
+      "body>script[2]": "a09c79f61a84b019"
+    },
+    "lt18": {
+      "#count": "10",
+      "body": "8d64b94dad61c592",
+      "body>div.lower-third[1]": "1c5826ce5415176f",
+      "body>div.lower-third[1]>div.lower-third-accent[1]": "f45d2f37702cc6fa",
+      "body>div.lower-third[1]>div.lower-third-box[1]": "711ab80a42cd4882",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]": "ce23a0fc33960f87",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[1]>span.lower-third-name[1]": "3707b463ac296b7c",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]": "874346c3aee5660a",
+      "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-mask[2]>span.lower-third-title[1]": "f97f97b5b5031441",
+      "body>script[1]": "931a670cd9f9a032",
+      "body>script[2]": "931a670cd9f9a032"
+    },
     "qz01": {
       "#count": "22",
       "body": "8f4467beac6ca09a",
