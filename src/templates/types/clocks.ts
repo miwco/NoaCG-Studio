@@ -11,6 +11,8 @@
 import { paletteById } from '../../model/wizard';
 import { gt01 } from '../gameTimers/gt01';
 import { gt02 } from '../gameTimers/gt02';
+import { gt05 } from '../gameTimers/gt05';
+import { gt06 } from '../gameTimers/gt06';
 import { ss01 } from '../startingSoon/ss01';
 import { ss02 } from '../startingSoon/ss02';
 import { ss03 } from '../startingSoon/ss03';
@@ -109,6 +111,33 @@ export const countdownType: GraphicType = {
       // A corner slab, not a centred clock — it is drawn to sit against the top-right edge.
       defaultZone: 'top-right',
       create: (_type, options) => gt02.create(options),
+    },
+    {
+      // Designed FOR this cell: no noacg countdown existed. The house strap as a timer —
+      // amber bar, void panel, mono label, display clock. Sibling of lt11 House Strap.
+      id: 'gt05',
+      name: 'House Countdown',
+      description: 'The house timer: an amber bar and void panel, a mono label over a display clock.',
+      styleTag: 'noacg',
+      palette: paletteById('noacg'),
+      fontId: 'space-grotesk',
+      animationPresets: ['timer-line-reveal', 'timer-run'],
+      defaultZone: 'top-center',
+      create: (_type, options) => gt05.create(options),
+    },
+    {
+      // Designed FOR this cell: no glass countdown existed. A frosted card with the clock in
+      // an accent-ringed pill — sibling of lt08 Frosted Card and the ss03 Frost Hold.
+      id: 'gt06',
+      name: 'Frost Countdown',
+      description: 'A frosted card with a soft label over a clock set in an accent-ringed glass pill.',
+      styleTag: 'glass',
+      palette: paletteById('frost'),
+      fontId: 'manrope',
+      samples: { label: 'BREAK' },
+      animationPresets: ['timer-run', 'timer-line-reveal'],
+      defaultZone: 'top-center',
+      create: (_type, options) => gt06.create(options),
     },
   ],
 };

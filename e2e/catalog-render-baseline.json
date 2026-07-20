@@ -348,6 +348,32 @@
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
+    "gt05": {
+      "#count": "10",
+      "body": "7656d82cb777eea8",
+      "body>div.game-timer[1]": "9c57fc1bf198a982",
+      "body>div.game-timer[1]>div.game-timer-accent[1]": "de1b1687d4517eac",
+      "body>div.game-timer[1]>div.game-timer-box[1]": "401a8f188a779656",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]": "a2f27b3865b05104",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span.game-timer-label[1]": "b800dbfdef79c13c",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-clock[1]": "b18669070f6ee475",
+      "body>div.game-timer[1]>div[1]": "c41646ce27b0f36d",
+      "body>script[1]": "c41646ce27b0f36d",
+      "body>script[2]": "c41646ce27b0f36d"
+    },
+    "gt06": {
+      "#count": "10",
+      "body": "e9384811efda3b35",
+      "body>div.game-timer[1]": "f20d03f54451ad14",
+      "body>div.game-timer[1]>div.game-timer-box[1]": "86898ae48b1343bd",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]": "6bf9d5ef192439f7",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span.game-timer-label[1]": "61b02d3482858721",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-pill[1]": "fbcf6fdd8565c354",
+      "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-pill[1]>span.game-timer-clock[1]": "2248bb2958664c88",
+      "body>div.game-timer[1]>div[1]": "82d7438e5a12ea26",
+      "body>script[1]": "82d7438e5a12ea26",
+      "body>script[2]": "82d7438e5a12ea26"
+    },
     "ig01": {
       "#count": "8",
       "body": "8d64b94dad61c592",
