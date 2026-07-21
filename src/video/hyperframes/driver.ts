@@ -253,7 +253,9 @@ export const HF_DRIVER_JS = `(function () {
           if (checkFrames.indexOf(f) >= 0 && !threw && window.__noacgTextChecks) {
             var found = window.__noacgTextChecks.clip()
               .concat(window.__noacgTextChecks.safeArea())
-              .concat(window.__noacgTextChecks.occlusion());
+              .concat(window.__noacgTextChecks.occlusion())
+              .concat(window.__noacgTextChecks.contrast ? window.__noacgTextChecks.contrast() : [])
+              .concat(window.__noacgTextChecks.overlap ? window.__noacgTextChecks.overlap() : []);
             for (var q = 0; q < found.length; q++) {
               textIssues.push({
                 frame: f,

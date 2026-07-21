@@ -398,7 +398,13 @@ async function checkReadability(frame) {
         },
       ];
     }
-    return [...checks.occlusion(), ...checks.clip(), ...checks.safeArea()];
+    return [
+      ...checks.occlusion(),
+      ...checks.clip(),
+      ...checks.safeArea(),
+      ...(checks.contrast ? checks.contrast() : []),
+      ...(checks.overlap ? checks.overlap() : []),
+    ];
   });
 }
 

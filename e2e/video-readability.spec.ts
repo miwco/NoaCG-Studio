@@ -419,3 +419,86 @@ test('text painted behind a panel is caught by the gate, not just by the bench',
     'text-occluded',
   );
 });
+
+test('dark-on-dark text and text painted across other text are caught by the gate', async ({ page }) => {
+  // Two real bench failures shipped "clean" before these checks existed (scripts/
+  // video-bench-briefs.varied.json): esports-opener drew its second title word in a
+  // near-background fill on the background itself - no check measured contrast at all - and
+  // single-word-hero laid its kicker across the wordmark's baseline, which occlusion cannot
+  // see because a text element with a transparent background never registers as a blocker.
+  // Both halves of each are pinned: the broken document is flagged, the corrected one is not.
+  await createHyperframesProject(page);
+  await expect(page.locator('.ai-msg.assistant').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.video-player-frame')).toBeVisible();
+
+  const results = await page.evaluate(async () => {
+    const { validateHyperframesComposition } = await import('/src/video/hyperframes/validate.ts');
+    const { getActiveHyperframesBridge } = await import('/src/video/bridgeRegistry.ts');
+    const settings = { width: 1920, height: 1080, fps: 30, durationInFrames: 120, transparent: false };
+
+    const documentWith = (body: string, css: string) => `<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8" /><title>t</title>
+<style>
+  body { margin: 0; }
+  #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #16101e; }
+  ${css}
+</style></head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="4">
+  <section class="clip" data-start="0" data-duration="4" data-track-index="1">${body}</section>
+</div>
+<script>
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  tl.to('#root', { opacity: 1, duration: 0.1 }, 0);
+  window.__timelines['main'] = tl;
+</script>
+</body>
+</html>`;
+
+    const verdict = async (body: string, css: string) => {
+      const r = await validateHyperframesComposition(
+        documentWith(body, css),
+        settings,
+        [],
+        getActiveHyperframesBridge(),
+      );
+      return { probed: r.probed, rules: r.errors.map((e) => e.rule), messages: r.errors.map((e) => e.message) };
+    };
+
+    // `color` decides the contrast verdict: a fill a shade off the #16101e background, vs white.
+    const heroWith = (color: string) =>
+      verdict(
+        `<div id="second-word" style="position:absolute;left:600px;top:450px;font:900 180px Arial;color:${color};">RIFT</div>`,
+        '',
+      );
+    // `top` decides the overlap verdict: 660 lays the kicker across the wordmark's glyphs,
+    // 820 clears it.
+    const kickerAt = (top: number) =>
+      verdict(
+        `<div id="mark" style="position:absolute;left:200px;top:400px;font:900 280px Arial;color:#fff;">LANDFALL</div>
+         <div id="kicker" style="position:absolute;left:560px;top:${top}px;font:700 40px Arial;color:#9fb8bb;">STORM COVERAGE // COLD OPEN</div>`,
+        '',
+      );
+
+    return {
+      darkOnDark: await heroWith('#231a30'),
+      lightOnDark: await heroWith('#f2eefa'),
+      crossed: await kickerAt(660),
+      cleared: await kickerAt(820),
+    };
+  });
+
+  expect(results.darkOnDark.probed, 'the dark-on-dark case must actually have been measured').toBe(true);
+  expect(results.darkOnDark.rules, 'a fill matching its backdrop is a contrast finding').toContain('text-contrast');
+  expect(results.darkOnDark.messages.join(' '), 'the repair message must name the COLOR, not size or position').toContain(
+    'Change the TEXT COLOR',
+  );
+  expect(results.lightOnDark.rules, 'the same word in white is clean').not.toContain('text-contrast');
+
+  expect(results.crossed.probed, 'the crossed case must actually have been measured').toBe(true);
+  expect(results.crossed.rules, 'a kicker across a wordmark is an overlap finding').toContain('text-overlap');
+  expect(results.crossed.messages.join(' '), 'the repair message must name SPACING').toContain('SPACING problem');
+  expect(results.cleared.rules, 'the same kicker moved clear of the wordmark is clean').not.toContain('text-overlap');
+});

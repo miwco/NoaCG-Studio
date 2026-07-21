@@ -25,6 +25,8 @@ declare global {
       clip: () => TextIssue[];
       safeArea: () => TextIssue[];
       occlusion: () => TextIssue[];
+      contrast?: () => TextIssue[];
+      overlap?: () => TextIssue[];
     };
   }
 }
@@ -216,6 +218,8 @@ export default function HostApp({ nonce }: Props) {
               ...(checks?.clip() ?? []),
               ...(checks?.safeArea() ?? []),
               ...(checks?.occlusion() ?? []),
+              ...(checks?.contrast?.() ?? []),
+              ...(checks?.overlap?.() ?? []),
             ]) {
               textIssues.push({ frame, ...issue });
             }

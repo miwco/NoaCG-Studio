@@ -78,6 +78,11 @@ export function persistentTextIssues(
 function ruleFor(kind: string, minLossPct: number): string {
   if (kind === 'safe-area') return 'text-safe-area';
   if (kind === 'occlusion') return 'text-occluded';
+  // Both soft, same reasoning as occlusion: contrast is judged from computed colors (a
+  // point can abstain but not be wrong about pixels it never saw), and overlap is measured
+  // on Range boxes that carry leading slack - each can be a legible near-miss.
+  if (kind === 'contrast') return 'text-contrast';
+  if (kind === 'overlap') return 'text-overlap';
   return minLossPct >= TOTAL_CLIP_PCT ? 'text-clip-total' : 'text-clip';
 }
 

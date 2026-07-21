@@ -30,7 +30,12 @@
 // thresholds below ignore sub-glyph bleeds, and callers only trust a finding that PERSISTS
 // across several hold frames - which is what excludes an entrance still in flight.
 //
-// Issue shape: { kind: 'clip' | 'occlusion', key, message }. `key` is stable across frames
+// CONTRAST: "the second word is dark-on-dark" - the fill judged against the color actually
+// painted beneath the glyphs. OVERLAP: "the kicker crosses the wordmark's baseline" - two
+// text runs colliding, which occlusion cannot see (text has no painted background).
+//
+// Issue shape: { kind: 'clip' | 'occlusion' | 'contrast' | 'overlap', key, message }.
+// `key` is stable across frames
 // (the percentages in `message` are not) - callers dedupe and intersect on it.
 
 (function () {
@@ -448,6 +453,212 @@
     return issues.slice(0, 5);
   }
 
+  /** Parse a CSS color into [r,g,b,a], or null for anything unparseable (keywords other
+   *  than transparent never reach us - getComputedStyle resolves to rgb()/rgba()). */
+  function parseColor(str) {
+    if (!str) return null;
+    var m = str.match(/rgba?\(([^)]+)\)/);
+    if (!m) return null;
+    var p = m[1].split(',').map(Number);
+    return [p[0], p[1], p[2], p[3] === undefined ? 1 : p[3]];
+  }
+
+  /** WCAG relative luminance of an opaque [r,g,b]. */
+  function luminance(c) {
+    var chan = function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2]);
+  }
+
+  /** WCAG contrast ratio between two opaque colors. */
+  function contrastRatio(a, b) {
+    var la = luminance(a);
+    var lb = luminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  /** Every color literal inside a gradient (or any) backgroundImage string. Empty when the
+   *  image is a url() or holds nothing parseable - the caller treats that as unjudgeable. */
+  function gradientColors(bgImage) {
+    if (!bgImage || bgImage === 'none' || bgImage.indexOf('url(') >= 0) return [];
+    var out = [];
+    var re = /rgba?\([^)]+\)/g;
+    var m;
+    while ((m = re.exec(bgImage))) {
+      var c = parseColor(m[0]);
+      if (c && c[3] > 0.05) out.push(c);
+    }
+    return out;
+  }
+
+  /**
+   * Contrast below which hero text is judged unreadable. WCAG's large-text minimum is 3:1;
+   * broadcast type usually carries glow/shadow that helps, so the gate only fires on the
+   * clearly-broken band. The failure that shipped ("RIFT" in a near-background fill on the
+   * background itself) measures ~1.3; well-designed dark-on-mid straps sit above 3.
+   */
+  var CONTRAST_MIN = 2.0;
+
+  /**
+   * Text whose fill is close to the color actually PAINTED beneath it - dark-on-dark,
+   * light-on-light. Judged from the DOM, not pixels: at each sample point the paint stack
+   * (elementsFromPoint) is walked for the first element with a judgeable painted surface -
+   * ancestor or not, because the card the text sits IN is its backdrop too. Deliberately
+   * conservative, in this file's house style (a false positive burns a repair round):
+   *   - text with a shadow, stroke, or gradient fill is skipped (the fill color alone no
+   *     longer decides readability);
+   *   - an IMG/VIDEO/CANVAS backdrop, a url() background, or a semi-transparent stack that
+   *     never accumulates a solid color is UNJUDGEABLE and that point abstains;
+   *   - a gradient backdrop is judged by its BEST-contrast stop - if any stop would read,
+   *     the point passes;
+   *   - the finding needs at least 3 judged points, every one of them failing.
+   */
+  function contrastIssues(doc, win) {
+    var issues = [];
+    var texts = readableTextElements(doc, win, true);
+    for (var i = 0; i < texts.length; i++) {
+      var el = texts[i];
+      var cs = win.getComputedStyle(el);
+      // A shadowed, stroked, or gradient-filled glyph is readable (or not) for reasons the
+      // fill color cannot capture - abstain rather than guess.
+      if (cs.textShadow !== 'none') continue;
+      if (parseFloat(cs.webkitTextStrokeWidth || '0') > 0) continue;
+      if ((cs.webkitBackgroundClip || cs.backgroundClip) === 'text') continue;
+      var textColor = parseColor(cs.color);
+      if (!textColor || textColor[3] < 0.5) continue;
+
+      var r = el.getBoundingClientRect();
+      var points = [
+        [r.left + r.width / 2, r.top + r.height / 2],
+        [r.left + r.width * 0.25, r.top + r.height / 2],
+        [r.left + r.width * 0.75, r.top + r.height / 2],
+        [r.left + r.width / 2, r.top + r.height * 0.25],
+        [r.left + r.width / 2, r.top + r.height * 0.75],
+      ];
+      var judged = 0;
+      var low = 0;
+      var backdrop = null;
+      for (var p = 0; p < points.length; p++) {
+        var x = points[p][0];
+        var y = points[p][1];
+        if (x < 0 || y < 0 || x >= win.innerWidth || y >= win.innerHeight) continue;
+        var stack = doc.elementsFromPoint(x, y);
+        var best = -1; // best contrast any judgeable paint at this point offers
+        var el2 = null;
+        var judgeable = false;
+        for (var s = 0; s < stack.length; s++) {
+          var hit = stack[s];
+          if (hit === el || el.contains(hit)) continue; // our own text/descendants
+          var hitText = (hit.textContent || '').trim();
+          if (hitText && hitText === (el.textContent || '').trim() && !hit.contains(el)) continue; // glyph duplicate
+          if (['IMG', 'VIDEO', 'CANVAS', 'SVG', 'svg'].indexOf(hit.tagName) >= 0) break; // pixels unknowable
+          var hcs = win.getComputedStyle(hit);
+          if (Number(hcs.opacity) < 0.05) continue;
+          var candidates = gradientColors(hcs.backgroundImage);
+          if (hcs.backgroundImage !== 'none' && hcs.backgroundImage.indexOf('url(') >= 0) break;
+          var bg = parseColor(hcs.backgroundColor);
+          if (bg && bg[3] > 0.05) candidates.push(bg);
+          if (!candidates.length) continue; // paints nothing - keep walking down
+          var solid = false;
+          for (var c = 0; c < candidates.length; c++) {
+            var ratio = contrastRatio(textColor, [candidates[c][0], candidates[c][1], candidates[c][2]]);
+            if (ratio > best) {
+              best = ratio;
+              el2 = hit;
+            }
+            if (candidates[c][3] >= 0.85) solid = true;
+          }
+          // A translucent wash tints what is below rather than replacing it - only a
+          // near-opaque paint settles the backdrop. Until one is found, keep walking, but
+          // remember the best contrast seen: a scrim that ALREADY reads keeps the point clean.
+          if (solid || best >= CONTRAST_MIN) {
+            judgeable = true;
+            break;
+          }
+        }
+        if (!judgeable) continue;
+        judged++;
+        if (best < CONTRAST_MIN) {
+          low++;
+          if (!backdrop) backdrop = el2 ? describe(el2) : 'the background';
+        }
+      }
+      if (judged >= 3 && low === judged) {
+        issues.push({
+          kind: 'contrast',
+          key: 'contrast:' + label(el),
+          message:
+            '"' + label(el) + '" is nearly INVISIBLE - its fill is too close to the color painted' +
+            ' behind it (' + backdrop + '); the contrast is under ' + CONTRAST_MIN + ':1 at every' +
+            ' sampled point. Change the TEXT COLOR (or the backdrop) so the line reads - moving or' +
+            ' resizing it will not help while the colors match.',
+        });
+      }
+    }
+    return issues.slice(0, 5);
+  }
+
+  /** A Range's height is the font's ascent/descent box, ~0.15 of it slack above and below
+   *  the ink (see textExtent) - so before two runs are intersected, each box is DEFLATED by
+   *  that much per side. Without this, an 80px headline's descent slack alone reaches ~14px
+   *  into a caption sitting tightly (and cleanly) below it. */
+  var LEADING_SLACK = 0.15;
+
+  /**
+   * Two readable text runs painted over EACH OTHER - a kicker across a wordmark's baseline.
+   * The occlusion check cannot see this: text elements have no painted background, so
+   * neither ever registers as a blocker. Measured on glyph extents (Ranges), pairwise;
+   * ancestor/descendant pairs and duplicate glyph layers (sweeps, glows) are skipped.
+   */
+  function overlapIssues(doc, win) {
+    var issues = [];
+    var texts = readableTextElements(doc, win, false);
+    var boxes = [];
+    for (var i = 0; i < texts.length; i++) {
+      var t = textExtent(texts[i], doc);
+      if (!t || width(t) * height(t) <= MIN_AREA_PX) continue;
+      var slack = LEADING_SLACK * height(t);
+      boxes.push({
+        el: texts[i],
+        box: { left: t.left, right: t.right, top: t.top + slack, bottom: t.bottom - slack },
+      });
+    }
+    for (var a = 0; a < boxes.length; a++) {
+      for (var b = a + 1; b < boxes.length; b++) {
+        var A = boxes[a];
+        var B = boxes[b];
+        if (A.el.contains(B.el) || B.el.contains(A.el)) continue;
+        var ta = (A.el.textContent || '').trim();
+        var tb = (B.el.textContent || '').trim();
+        if (ta === tb) continue; // duplicate glyph layer - deliberate
+        var iw = Math.min(A.box.right, B.box.right) - Math.max(A.box.left, B.box.left);
+        var ih = Math.min(A.box.bottom, B.box.bottom) - Math.max(A.box.top, B.box.top);
+        if (iw <= 0 || ih <= 0) continue;
+        // Boxes are already deflated, so any remaining intersection is ink-on-ink; the
+        // floors below just keep a sub-glyph graze from firing.
+        var minH = Math.min(height(A.box), height(B.box));
+        var minW = Math.min(width(A.box), width(B.box));
+        if (ih < Math.max(4, 0.25 * minH)) continue;
+        if (iw < Math.max(8, 0.25 * minW)) continue;
+        // The smaller run is the one that moved into the other's space - name it first.
+        var small = width(A.box) * height(A.box) <= width(B.box) * height(B.box) ? A : B;
+        var big = small === A ? B : A;
+        issues.push({
+          kind: 'overlap',
+          key: 'overlap:' + label(small.el) + ':' + label(big.el),
+          message:
+            '"' + label(small.el) + '" is painted ACROSS "' + label(big.el) + '" - their glyphs' +
+            ' overlap, degrading both. This is a SPACING problem: move ' + describe(small.el) +
+            ' clear of ' + describe(big.el) + ' (adjust its offset or the stack\'s gap) so the two' +
+            ' lines never touch at the hold.',
+        });
+      }
+    }
+    return issues.slice(0, 5);
+  }
+
   window.__noacgTextChecks = {
     clip: function () {
       return clipIssues(document, window);
@@ -457,6 +668,12 @@
     },
     occlusion: function () {
       return occlusionIssues(document, window);
+    },
+    contrast: function () {
+      return contrastIssues(document, window);
+    },
+    overlap: function () {
+      return overlapIssues(document, window);
     },
   };
 })();
