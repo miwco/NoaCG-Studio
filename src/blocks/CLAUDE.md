@@ -106,6 +106,9 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 
 - **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps
   **/machine?** (the STATE MACHINE, format version 2 - docs/STATE_MACHINE_SCHEMA.md);
+  `machine.controls` (MachineControl[]) is the ADDITIVE OPTIONAL control-surface metadata -
+  label/section/order/payload-field-ids/destructive per operator event, travelling INSIDE the
+  template so exported control pages keep their labels (docs/CONTROL_LAYER.md);
   a step = name/duration/ease/reveals?/hides?/calls?/dynamics?/loops?/layers (durations and keyframe times
   are speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become
   visible in that step, `hides` the layers that LEAVE in it - the early-exit twin, its existence
@@ -171,9 +174,11 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   waypoint, else BFS from the group's initial, ties by declaration order - MIRRORED by the
   interpreter's `noacgCanonicalPath`, the animEval precedent), `operatorEvents` (the spec's
   "Action" - what an operator may do right now, which IS the structural guard),
-  `allOperatorEvents` (the simulator's event strip), `timerTransition`, and `validateMachine`
-  (semantic errors/warnings for validateTemplate; the SHAPE gate stays in animData's
-  `isAnimData`).
+  `allOperatorEvents`, `machineControls` (THE one button-list merge every control surface
+  renders - declared `machine.controls` entries dressed over the authored events; an
+  undeclared `next` is skipped because the lifecycle button already fires it),
+  `timerTransition`, and `validateMachine` (semantic errors/warnings for validateTemplate;
+  the SHAPE gate stays in animData's `isAnimData`).
   THE POSITIONAL BINDING, the one thing to hold onto: `defaultPath[i]`'s timeline IS `steps[i]`.
   No stored indices to go stale - and it is why every timeline surface keeps working under a
   machine. Its consequence: step-structural edits (`addStep`, `deleteStep`, `duplicateStep`,

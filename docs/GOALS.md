@@ -968,6 +968,39 @@ it, never the editor. Optimized for inspect-and-tweak first, authoring-from-blan
       states and groups, break something, restore the shipped state — plus the styled-change
       pose landing and the pairing rule, driven end-to-end.
 
+### Control layer & profiles (2026-07-21 — Phase 5 of the template-library stage)
+
+Contract: `docs/CONTROL_LAYER.md`. Control pages GENERATED from the state machine — every
+operator transition a button, every field an input, from one generator; the existing basic
+control-page export absorbed, not duplicated.
+
+- [x] **Event buttons from the machine** — the additive `machine.controls` metadata (declared
+      on graphic types as TypeControlEvent, logical payload keys resolved to field ids at
+      attach) travels INSIDE the template; `machineControls` is the one merge all four
+      surfaces render (Control tab, controlpanel.html, the hosted page, the simulator strip).
+      Legality = the structural guard mirrored as greying. `ControlMessage` grew event/snap
+      cues, forwarded by all three receivers to `noacgDispatch`/`noacgSnap`.
+- [x] **Shows** — the rundown unit (`model/shows.ts`, packet conventions, sync kind 'show'):
+      ordered graphics, one aggregated `show_controlpanel.html` per export, each card on its
+      own channel driving its graphic independently. A single graphic is a show of one.
+- [x] **Prepared vs published** — with Live off, edits are STAGED (badge) and air only on an
+      explicit ⟳ Take or riding an event's payload; nothing airs merely because it was typed.
+- [x] **The event log + recovery** — the standalone panel logs every command per channel
+      (capped history + merged latest data + last reported state); a rebooted graphic
+      announces itself and is rebuilt (data half, then snap — reset is two operations,
+      recovery is both), a reloaded panel resumes from the log. Pinned end-to-end in
+      `e2e/control.spec.ts`.
+- [x] **Hosted control over a durable command log** (migration 0008) — the INSERT is the
+      send: control_events (DB-ordered, Realtime-delivered, tail-fillable), control_shows
+      (capability slug, panel spec, SHARED staging, each graphic's own live report).
+      Operating needs no account (SECURITY DEFINER RPCs; the slug is the capability); the
+      hosted receiver block rebuilds a rebooted graphic from its own last report. The
+      ?control=<slug> page is multi-operator by construction. Live paths await verification
+      against a real project (checklist in docs/CONTROL_LAYER.md).
+- [x] **Profiles** — the homebase is the one place: graphics across packets, video projects,
+      shows with hosted-page links, community submissions; sync kinds grew 'show' and
+      'video' (video tombstones strip payloads to readable stubs).
+
 ### Quality bar (always-on)
 - [x] `npm run build` green as the CI gate
 - [x] Playwright E2E for core UI flows

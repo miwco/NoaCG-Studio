@@ -357,7 +357,16 @@ e2e/layout.spec.ts.
   off-shape templates) keep the definition-only add.
 - **ControlPanel** - operator view from the control/ engine (the same shared field rows, `live`
   on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
-  simulator; downloads controlpanel.html; adds the Google-Sheets live-data block.
+  simulator; renders the state machine's EVENT BUTTONS (controlModel eventButtons - labels/
+  sections/payloads from `machine.controls`, payload values from sampleData via
+  store.sendEvent); downloads controlpanel.html; hosts the SHOWS section (model/shows.ts
+  rundowns, aggregated show export, and - signed-in - publishing the hosted control page,
+  docs/CONTROL_LAYER.md); adds the Google-Sheets live-data block.
+- **HostedControlPage** - the `?control=<slug>` operator page (routed in App.tsx like ?chat=):
+  one card per graphic off the stored panel spec - event buttons with structural-guard
+  greying, shared staged fields (local echo + debounced control_stage), explicit take, state
+  chip from the graphics' own reports. Login-optional by design (the slug is the capability);
+  offline builds answer the route honestly.
 - **StylePanel** - reads/writes the :root style contract (src/templates/CLAUDE.md): colors,
   font swap, zone re-anchoring, post-creation font import (an imported font still lands in
   template.assets and shows in the Assets panel's list).
@@ -379,9 +388,10 @@ e2e/layout.spec.ts.
   sample data changes; job state lives in src/render/renderJobStore.ts (sessionStorage resume).
   Contracts in src/render/CLAUDE.md; specs in e2e/render.spec.ts (stubbed API).
 - **PacketManager** (📦 topbar modal), **CommunityGallery** (🌐), **ModerationQueue** (🛡),
-  **SyncStatus**, **Homebase** (signed-in dashboard: all saved graphics across packets, one
-  store with 📦 Packets), **SettingsDialog** (AI key/model + workflow defaults from
-  model/prefs.ts).
+  **SyncStatus**, **Homebase** (THE PROFILE - signed-in dashboard: saved graphics across
+  packets, video projects, shows with their hosted control-page links, community
+  submissions; one store with 📦 Packets), **SettingsDialog** (AI key/model + workflow
+  defaults from model/prefs.ts).
 
 ## Video editor shell (video/)
 

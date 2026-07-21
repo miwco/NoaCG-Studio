@@ -35,6 +35,10 @@ validation gates every export (root non-negotiables 3 and 4).
   graphics engine is OGraf-compliant, so that target is the same package with NetOn.Live install
   steps in the README.
 - **packetExport.ts** - whole packet -> one zip, a Starter folder per graphic.
+- **showExport.ts** - whole SHOW -> one zip: a Starter folder per graphic + ONE aggregated
+  show_controlpanel.html (a card per graphic, each on its own channel). A PUBLISHED show
+  (hostedSlug set) bakes the hosted-control receiver block into each graphic AT EXPORT - the
+  saved snapshot stays clean, an unpublished show exports 100% offline (docs/CONTROL_LAYER.md).
 - **common.ts** - addSharedAssets, addReferencedFonts, injectControlReceiver + addControlPanel,
   FONT_LICENSES.md.
 

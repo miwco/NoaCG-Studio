@@ -34,6 +34,9 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   Create.
 - **packets.ts** - packet manager data layer: graphics collections 'spx-gfx-packets' + brand
   looks 'spx-gfx-looks' + captureLookFromTemplate/applyLookToTemplate.
+- **shows.ts** - the RUNDOWN unit (docs/CONTROL_LAYER.md): an ORDERED set of graphics that run
+  together, one aggregated control page. Packet conventions ('spx-gfx-shows', updatedAt LWW,
+  tombstones), sync kind 'show'; `hostedSlug` records the published control page's capability.
 - **easings.ts** - the easing catalog; the doctrine is in src/templates/CLAUDE.md +
   DESIGN_LANGUAGE §4.
 - **defaultTemplate.ts** - the fallback template.

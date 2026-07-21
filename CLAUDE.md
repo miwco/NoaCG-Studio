@@ -111,6 +111,11 @@ marked ANIMATION region - no second scene model, no parallel format. Essentials:
 - Events are processed SERIALLY through one queue per graphic, and that queue lives INSIDE the
   template - so the determinism holds identically in the editor, in an exported overlay, and
   under SPX.
+- **Control pages are GENERATED from the machine** (docs/CONTROL_LAYER.md): every operator
+  event becomes a button (labels/sections/payloads ride in the additive `machine.controls`
+  metadata), every field an input, legality = the structural guard mirrored as greying.
+  Staged data airs only on an explicit take; the event log is what makes refresh/crash
+  recovery possible (data half, then snap - reset is two operations, recovery is both).
 - A template with no `machine` key IS the implicit one-group linear machine, derived on read and
   never persisted: the whole existing catalog behaves exactly as before. A **graphic type**
   (`docs/GRAPHIC_TYPES.md`) follows the same rule - it persists a machine only when the derived
@@ -123,7 +128,8 @@ Directories marked * have their own CLAUDE.md with the binding per-area contract
 ```
 src/
   model/ *     SpxTemplate types, SPX parse/serialize, catalog data, fonts, brand, packets;
-               structure.ts (element identity) + fieldModel.ts (the FieldDescriptor contract)
+               shows.ts (the RUNDOWN unit - docs/CONTROL_LAYER.md); structure.ts (element
+               identity) + fieldModel.ts (the FieldDescriptor contract)
   templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract;
                types/ = the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md) - what a graphic IS,
                independent of its look; compiles into catalog variants, replacing by id
@@ -140,8 +146,12 @@ src/
                two HOLD frames), textChecks.js (plain JS - it is INLINED into two opaque-origin
                runtimes), videoFonts.ts (SINGLE SOURCE of fonts, so preview == render), hyperframes/
   validation/  validateTemplate.ts (export + AI gate) + runtimeBench.ts (the live-iframe bench)
-  control/     the control-panel engine off shared FieldDescriptors (ONE generator)
-  export/ *    the export registry - 6 targets + whole-packet export + packaging conventions
+  control/     the CONTROL LAYER (docs/CONTROL_LAYER.md): ONE generator - fields off shared
+               FieldDescriptors + event buttons off the state machine; the ControlMessage
+               protocol, three receivers (BroadcastChannel / Realtime / the hosted log),
+               the staged-vs-take model, and the hosted-control client (migration 0008)
+  export/ *    the export registry - 6 targets + whole-packet + whole-SHOW export (one
+               aggregated control page) + packaging conventions
   render/ *    RenderManifest, HOLD schedule, tier limits, virtual clock, job store; docs/RENDER.md
   landing/ *   the landing page's GSAP motion system. POLICY: never fakes product UI
   backend/     the OPTIONAL Supabase backend: config.ts isBackendConfigured is the ONE

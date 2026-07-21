@@ -3,8 +3,10 @@
 The contract for how a graphic's STATES live in the code. Phase 1 of the template-library /
 state-machine / control-layer stage put the model in the schema, the runtime, the serializer
 and the validator; Phase 4 added the NODE EDITOR on top (the machine graph surface,
-`src/components/MachineGraph.tsx` + `src/blocks/machineEdit.ts` — see §6a); the generated
-control pages (Phase 5) come later.
+`src/components/MachineGraph.tsx` + `src/blocks/machineEdit.ts` — see §6a); Phase 5 built the
+GENERATED CONTROL PAGES on it (`docs/CONTROL_LAYER.md` — every operator event a button via
+the additive `machine.controls` metadata, the event/snap transport cues, staging, the event
+log, hosted control).
 
 Companion docs: `TIMELINE_V2_PLAN.md` (the step/keyframe model this extends),
 `TIMELINE_INTERACTION_MODEL.md` (the timeline's interaction contract),
@@ -124,7 +126,7 @@ which is how a ticker's cycle beat works without duplicating a state.
 | `play()` | Reset every group to its initial state, clear the queue, play the entrance, arm the first waypoint's timer. |
 | `next()` | Advance the default path: fire the arrow toward the next waypoint (whatever event name it carries). Off-path, fire an authored `next` rejoin arrow if the author drew one, else a deterministic no-op. Exhausted, or off air: `null`. |
 | `stop()` | The reserved out - legal from EVERY state. Cancel timers, flush the queue, play the exit, rest every group at its initial state. |
-| `update(data)` | Fields only. Stays outside the queue (it is already synchronous and atomic); Phase 5's event log is the seam where that changes. |
+| `update(data)` | Fields only. Stays outside the queue (it is already synchronous and atomic). Phase 5's event log records updates as COMMANDS (panel log + the hosted control_events table) without changing this runtime semantic. |
 
 **Guarding is structural.** An event with no arrow from any group's current state is dropped
 silently, payload and all. "Reveal cannot fire before Lock" is true because the author never
@@ -209,10 +211,12 @@ land under an interpreter that predates the machine engine: check
 
 ## 6. What the model deliberately does not do (yet)
 
-- **No control-layer generation.** All three transports still speak `update|play|stop|next` and
-  funnel into the four globals - which is exactly why the queue lives INSIDE the template: the
-  serial guarantee holds identically in the editor, in an exported overlay, and under SPX.
-  Phase 5's seam.
+- **Control-layer generation SHIPPED (Phase 5, docs/CONTROL_LAYER.md).** The transports grew
+  `event`/`snap` cues that forward to `noacgDispatch`/`noacgSnap`; the queue still lives
+  INSIDE the template — the serial guarantee holds identically in the editor, in an exported
+  overlay, under SPX, and under every control page. `update()` stays outside the queue; the
+  event log records commands panel-side (and in the hosted command log) rather than changing
+  the runtime's update semantics.
 - **Dynamic collections, data-condition triggers, interruption priorities, external feeds,
   operator permissions, nested machines** - all consciously deferred. The schema does not block
   any of them.
