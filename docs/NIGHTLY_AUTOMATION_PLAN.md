@@ -12,8 +12,14 @@ tool), the validate + bench gate (`src/validation/` + `src/community/gate.ts`), 
 harness (`scripts/ai-bench.mjs`), and the Era 5.5 community backend (`community_templates` + the 🛡
 moderator queue).
 
-> Status: **PLAN ONLY**. Nothing here is implemented. Read `docs/ERA5_PLAN.md` and `docs/GOALS.md`
-> first; this plan slots in as a new operability layer on top of the shipped Era 5.5 community feature.
+> Status: **job A is BUILT** (2026-07-21): `.github/workflows/nightly-health.yml` runs build +
+> offline E2E + the template-factory gates (six promotion gates, pack taxonomy, literal token
+> drift — `scripts/factory.mjs`) + `npm audit` nightly, files a rolling issue on red, and holds
+> no secrets. The cron activates when it lands on main. This closes Phase 3's scheduling-harness
+> item (docs/noacg-master-goals.md). **Jobs B/C (generation + staging + the review agent) remain
+> PLAN ONLY** — they spend real API money nightly, require migration `0006`, and wait on the §10
+> decisions. Read `docs/ERA5_PLAN.md` and `docs/GOALS.md` first; this plan slots in as a new
+> operability layer on top of the shipped Era 5.5 community feature.
 
 ---
 
