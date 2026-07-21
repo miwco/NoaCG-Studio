@@ -13,6 +13,7 @@ import EntryStep from './steps/EntryStep';
 import ImportStep from './steps/ImportStep';
 import ImportDesignStep from './steps/ImportDesignStep';
 import PrepareDesignStep from './steps/PrepareDesignStep';
+import PlaceFieldsStep from './steps/PlaceFieldsStep';
 import CategoryStep from './steps/CategoryStep';
 import TemplateStep from './steps/TemplateStep';
 import FieldsStep from './steps/FieldsStep';
@@ -33,10 +34,11 @@ const STEP_TITLES_IMPORT = ['Start', 'Images', 'Template', 'Fields', 'Style', 'A
 const STEP_TITLES_AI = ['Start', 'Create'];
 const STEP_TITLES_VIDEO = ['Start', 'Video'];
 // Import-graphic mode is a SETUP flow, not a second editor: bring the artwork in, prepare it
-// (erase baked-in text, pick how it meets long text), create, and land in the real canvas
-// editor with the Data tab focused — fields, styling, and animation all happen there
-// (docs/IMPORT_MVP.md, "the wizard hands off").
-const STEP_TITLES_DESIGN = ['Start', 'Design', 'Prepare'];
+// (erase baked-in text, pick how it meets long text), PLACE editable text on it, choose the
+// in/out animation, create — and land in the real canvas editor with a graphic that already
+// works. Text and Animation are optional stops: Create is available from the Design step on
+// (docs/IMPORT_MVP.md).
+const STEP_TITLES_DESIGN = ['Start', 'Design', 'Prepare', 'Text', 'Animation'];
 
 /**
  * The choose-first creation wizard (replaces the old template gallery). Six steps —
@@ -109,10 +111,11 @@ export default function CreationWizard() {
 
   // On the Animation step the preview demos the full lifecycle (in → hold → out → in)
   // so the exit is actually seen — unless the user is tuning the entrance only.
+  const onAnimationStep = mode === 'design' ? step === 4 : step === 5;
   const demoOut =
-    step === 5 &&
+    onAnimationStep &&
     !!variant &&
-    ['lower-third', 'info-card', 'scoreboard', 'corner-bug'].includes(variant.category) &&
+    ['lower-third', 'info-card', 'scoreboard', 'corner-bug', 'imported-design'].includes(variant.category) &&
     draft.animation.direction !== 'in';
 
   if (!open) return null;
@@ -316,6 +319,7 @@ export default function CreationWizard() {
                     // erase's source, and any erase from a previous artwork is meaningless.
                     designOriginal: importedImages[0] ?? null,
                     designErases: [],
+                    designFields: [],
                     category: 'imported-design',
                     // There is no design to choose — the artwork IS it — so the variant is
                     // settled here, and the graphic creates BARE: its text/number/image
@@ -359,6 +363,17 @@ export default function CreationWizard() {
                   patch({ category });
                   setStep(2);
                 }}
+              />
+            )}
+            {step === 3 && mode === 'design' && draft.designArt && (
+              <PlaceFieldsStep art={draft.designArt} draft={draft} onDraft={patch} />
+            )}
+            {step === 4 && mode === 'design' && variant && (
+              <AnimationStep
+                variant={variant}
+                draft={draft}
+                onDraft={patch}
+                onReplay={() => setReplayKey((k) => k + 1)}
               />
             )}
             {step === 2 && mode === 'design' && draft.designArt && (
@@ -466,24 +481,24 @@ export default function CreationWizard() {
             )}
             {/* "Create project" is the quiet shortcut (primary only on the last step,
                 where it's the sole forward action); "Next ›" is the highlighted path.
-                Design mode: Create from the Design step is the fast path (a design with no
-                baked-in text and no scaling choice needs nothing from Prepare); the Prepare
-                step is its last step, where Create is the one CTA. */}
+                Design mode: Create is available from the Design step on (a design that
+                needs no erase, fields, or animation choice creates immediately); the
+                Animation step is its last, where Create is the one CTA. */}
             {mode !== 'ai' && mode !== 'video' && (mode === 'design' ? step >= 1 : step >= 2) && (
               <button
-                className={step === 5 || (mode === 'design' && step === 2) ? 'primary' : undefined}
+                className={step === 5 || (mode === 'design' && step === 4) ? 'primary' : undefined}
                 disabled={!previewTemplate}
                 onClick={create}
                 title={
                   mode === 'design'
-                    ? 'Create the project — you add the fields in the editor next'
+                    ? 'Create the project with everything chosen so far — refine anything later in the editor'
                     : 'Create the project now — remaining steps keep their defaults'
                 }
               >
                 Create project
               </button>
             )}
-            {mode !== 'ai' && mode !== 'video' && (mode === 'design' ? step === 1 : step > 0 && step < 5) && (
+            {mode !== 'ai' && mode !== 'video' && (mode === 'design' ? step >= 1 && step < 4 : step > 0 && step < 5) && (
               <button className="primary wz-next" disabled={nextDisabled} onClick={() => goToStep(1)}>
                 Next ›
               </button>

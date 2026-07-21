@@ -3,7 +3,7 @@
 // WizardOptions, and resolveOptions() (model/wizard.ts) fills the rest.
 
 import { ASPECTS, type AssetFile, type Resolution, type SpxTemplate } from '../../model/types';
-import { addPlacedLine } from '../../blocks/designLayout';
+import { addPlacedLine, setLineFit, setLineTextStyle } from '../../blocks/designLayout';
 import { anyPresetById, type AnimPhase } from '../../blocks/presetRegistry';
 import { parseAnimData } from '../../blocks/animData';
 import { writeAnimData } from '../../templates/shared/animRuntime';
@@ -40,6 +40,39 @@ export interface DesignEraseState {
    *  field is built from this rather than from the loose rectangle the user drew. Absent on
    *  a region that held only background — and on drafts made before it was measured. */
   ink?: RegionInk;
+}
+
+/**
+ * ONE editable text field placed on the imported artwork in the wizard's Text step
+ * (docs/IMPORT_MVP.md). Coordinates are DESIGN px (the fitted artwork space addPlacedLine
+ * speaks); the step's canvas maps pointer positions into it. At create (and in the live
+ * preview, which is the same build) each spec becomes a REAL placed field through the exact
+ * transforms the editor uses — addPlacedLine + setLineTextStyle + setLineFit — so the
+ * wizard's placement, the editor, the preview, and the export can never disagree.
+ */
+export interface DesignFieldSpec {
+  /** Draft-local id (selection + list keys); the real fN id is minted at build. */
+  id: string;
+  /** The operator-facing field name ("Name", "Title") — the control panel's label. */
+  title: string;
+  /** Representative preview text, shown on the artwork and seeded as the field default. */
+  text: string;
+  /** The text anchor in design px (which edge depends on `align`, addPlacedLine's idiom). */
+  x: number;
+  y: number;
+  /** 'point' = click-placed free line; 'area' = dragged box whose width wraps the text. */
+  kind: 'point' | 'area';
+  /** The area box's slot width in design px (area only). */
+  width?: number;
+  /** A bundled font id, or null = the design's default font (--font-heading). */
+  fontId: string | null;
+  fontSize: number;
+  weight: number | null;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  lineHeight: number | null;
+  /** Letter-spacing in design px; null = normal. */
+  letterSpacing: number | null;
 }
 
 export interface WizardDraft {
@@ -94,6 +127,9 @@ export interface WizardDraft {
    *  A design usually has more than one piece of baked text — a name AND a title, a scoreline
    *  AND a clock — so each marked region is its own erase, and each seeds its own field(s). */
   designErases: DesignEraseState[];
+  /** The Text step's placed fields (Import Graphic). Ordered; each becomes a real placed
+   *  field at build, AFTER the erase-seeded ones. */
+  designFields: DesignFieldSpec[];
 }
 
 /** A draft update: top-level fields replace; `animation` and `nudge` deep-merge. */
@@ -136,6 +172,7 @@ export function initialDraft(): WizardDraft {
     designArt: null,
     designOriginal: null,
     designErases: [],
+    designFields: [],
   };
 }
 
@@ -329,6 +366,43 @@ function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemp
   return added ? added.template : template;
 }
 
+/**
+ * The Text step's placed fields, realized. Runs after the erase seeds so field numbering
+ * reads top of the flow first; every spec goes through the editor's own transforms, which
+ * is what keeps "the position shown in the wizard" and "the final editor/preview/export"
+ * one and the same thing by construction.
+ */
+function withDesignFieldSpecs(template: SpxTemplate, draft: WizardDraft): SpxTemplate {
+  if (draft.designFields.length === 0) return template;
+  let next = template;
+  for (const spec of draft.designFields) {
+    const added = addPlacedLine(next, {
+      title: spec.title,
+      ftype: 'textfield',
+      text: spec.text,
+      at: { x: Math.round(spec.x), y: Math.round(spec.y) },
+      fontSize: Math.round(spec.fontSize),
+      color: spec.color,
+      align: spec.align,
+      lineHeight: spec.lineHeight ?? undefined,
+      maxWidth: spec.kind === 'area' && spec.width ? Math.round(spec.width) : undefined,
+    });
+    if (!added) continue;
+    next = added.template;
+    const styled = setLineTextStyle(next, added.fieldId, {
+      ...(spec.fontId !== null ? { fontId: spec.fontId } : {}),
+      ...(spec.weight !== null ? { weight: spec.weight } : {}),
+      ...(spec.letterSpacing !== null ? { letterSpacing: spec.letterSpacing } : {}),
+    });
+    if (styled) next = styled;
+    if (spec.kind === 'area' && spec.width) {
+      const fitted = setLineFit(next, added.fieldId, { mode: 'wrap', maxWidth: Math.round(spec.width) });
+      if (fitted) next = fitted;
+    }
+  }
+  return next;
+}
+
 export function buildDraftTemplate(
   variant: TemplateVariant,
   draft: WizardDraft,
@@ -338,6 +412,7 @@ export function buildDraftTemplate(
   let template = variant.create(draftToOptions(variant, draft));
   if (variant.category === 'imported-design') {
     template = withEraseSeedFields(template, draft);
+    template = withDesignFieldSpecs(template, draft);
     if (opts.stretchDemo) template = withStretchDemoLine(template, draft);
   }
   const inId = draft.animation.presetId ?? variant.animationPresets[0];

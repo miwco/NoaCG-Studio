@@ -54,16 +54,26 @@ export default function App() {
     }
   }, [route]);
 
-  // The wizard is routed (`#/new`): opening the route opens it, Back closes it. The store
-  // flag stays the source the shells read; this effect just keeps the two in agreement.
-  // Only a wizard the ROUTE opened is closed by leaving the route — the startup wizard
-  // (galleryOpen's initial true) must not be closed by the plain '' route on boot.
+  // The wizard is routed (`#/new`): opening the route opens it, Back closes it, and closing
+  // it IN the app (create, ✕, Escape) rewinds the route — otherwise the still-current `#/new`
+  // would immediately reopen it. The store flag stays the source the shells read; this effect
+  // only keeps the two in agreement. Only a wizard the ROUTE opened is closed by leaving the
+  // route — the startup wizard (galleryOpen's initial true) must not be closed by the plain
+  // '' route on boot.
   const galleryOpen = useTemplateStore((s) => s.galleryOpen);
   const routedWizard = useRef(false);
   useEffect(() => {
     if (route.view === 'new') {
-      routedWizard.current = true;
-      if (!galleryOpen) useTemplateStore.getState().openGallery();
+      if (galleryOpen) {
+        routedWizard.current = true;
+      } else if (routedWizard.current) {
+        // Closed from inside the app while the route still says wizard: rewind the URL.
+        routedWizard.current = false;
+        useRouter.getState().replace({ view: 'editor' });
+      } else {
+        routedWizard.current = true;
+        useTemplateStore.getState().openGallery();
+      }
     } else {
       if (galleryOpen && routedWizard.current) useTemplateStore.getState().closeGallery();
       routedWizard.current = false;
