@@ -26,6 +26,8 @@ import VideoExportPanel from './VideoExportPanel';
 import SavedVideoProjects from './SavedVideoProjects';
 import { modalOpen } from '../spaceKey';
 import { upsertSavedVideoProject } from '../../model/videoProject';
+import { useRouter } from '../../app/router';
+import { useDocKindStore } from '../../store/docKindStore';
 
 const VideoCodeEditorLazy = lazy(() => import('./VideoCodeEditor'));
 function VideoCodeEditor() {
@@ -150,9 +152,16 @@ export default function VideoAppShell() {
   return (
     <div className="app" data-testid="video-shell">
       <header className="topbar">
-        <button className="brand brand-home" onClick={openGallery} title="NoaCG Studio - start a new project">
+        <button
+          className="brand brand-home"
+          onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
+          title="NoaCG Studio — Home"
+        >
           <BrandLogo size={24} />
         </button>
+        <span className="video-workspace-badge" title="The Video workspace makes standalone videos — separate from live broadcast graphics">
+          🎬 Video <span className="wz-beta-tag">Beta</span>
+        </span>
         <span className="divider-dot" aria-hidden="true">·</span>
         <span className="tpl-name">{project.name}</span>
         <span className="mono muted" style={{ fontSize: 11, marginLeft: 6 }}>
@@ -188,6 +197,24 @@ export default function VideoAppShell() {
         </button>
         <button onClick={openGallery} title="Start a new project">
           + New project
+        </button>
+        <button
+          onClick={() => {
+            useDocKindStore.getState().setKind('spx');
+            useRouter.getState().navigate({ view: 'editor' });
+          }}
+          data-testid="back-to-graphics"
+          title="Back to the broadcast-graphics editor"
+        >
+          ◫ Graphics
+        </button>
+        <button
+          className="home-btn"
+          onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
+          data-testid="open-home"
+          title="Home — your graphics, packages, control panels, and videos"
+        >
+          🏠 Home
         </button>
         <SyncStatus />
         <AuthStatus />

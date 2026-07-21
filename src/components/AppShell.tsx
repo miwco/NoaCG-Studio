@@ -12,11 +12,14 @@ import AssetsPanel from './AssetsPanel';
 import AIPromptPanel from './AIPromptPanel';
 import ExportPanel from './ExportPanel';
 import WorkspaceDock from './WorkspaceDock';
-import PacketManager from './PacketManager';
 import CommunityGallery from './CommunityGallery';
 import ModerationQueue from './ModerationQueue';
 import CreationWizard from './wizard/CreationWizard';
 import BrandLogo from './BrandLogo';
+import SaveControls from './save/SaveControls';
+import SaveDialogs from './save/SaveDialogs';
+import { useRouter } from '../app/router';
+import { useSaveUi } from '../store/saveActions';
 import AuthStatus from './auth/AuthStatus';
 import SignInDialog from './auth/SignInDialog';
 import { useAuthState } from './auth/useAuthState';
@@ -74,11 +77,10 @@ function Divider({ orient, splitter, testid }: { orient: 'v' | 'h'; splitter: Sp
 export default function AppShell() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const template = useTemplateStore((s) => s.template);
-  const openGallery = useTemplateStore((s) => s.openGallery);
   const undo = useTemplateStore((s) => s.undo);
   const redo = useTemplateStore((s) => s.redo);
   const resetToBaseline = useTemplateStore((s) => s.resetToBaseline);
-  const [packetsOpen, setPacketsOpen] = useState(false);
+  const navigate = useRouter((s) => s.navigate);
   // The topbar Reset control uses a two-step inline confirm (arm, then confirm).
   const [resetArmed, setResetArmed] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,7 +325,7 @@ export default function AppShell() {
   return (
     <div className="app">
       <header className="topbar">
-        <button className="brand brand-home" onClick={openGallery} title="NoaCG Studio — start a new project">
+        <button className="brand brand-home" onClick={() => navigate({ view: 'home', section: null })} title="NoaCG Studio — Home">
           <BrandLogo size={24} />
         </button>
         <span className="divider-dot" aria-hidden="true">·</span>
@@ -331,6 +333,7 @@ export default function AppShell() {
         <span className="mono muted" style={{ fontSize: 11, marginLeft: 6 }}>
           {template.resolution.width}×{template.resolution.height} · {template.fps}&thinsp;fps
         </span>
+        <SaveControls />
         <div className="spacer" />
         {!isMobile && (
           <button
@@ -352,9 +355,6 @@ export default function AppShell() {
             ◨ Inspector
           </button>
         )}
-        <button onClick={() => setPacketsOpen(true)} title="Save this show's graphics together + manage brand looks">
-          📦 Packets
-        </button>
         {backendConfigured && (
           <button onClick={openCommunity} title="Browse and reuse templates shared by other users">
             🌐 Community
@@ -389,8 +389,19 @@ export default function AppShell() {
         >
           {resetArmed ? '↺ Confirm reset?' : '↺ Reset'}
         </button>
-        <button onClick={openGallery} title="Start a new project from a template">
+        <button
+          onClick={() => useSaveUi.getState().requestSwitch(() => navigate({ view: 'new' }))}
+          title="Start a new project from a template"
+        >
           + New project
+        </button>
+        <button
+          className="home-btn"
+          onClick={() => navigate({ view: 'home', section: null })}
+          data-testid="open-home"
+          title="Home — your graphics, packages, control panels, and videos"
+        >
+          🏠 Home
         </button>
         {/* Both render nothing offline; cloud status + account appear in hosted mode. */}
         <SyncStatus />
@@ -472,8 +483,8 @@ export default function AppShell() {
       {/* Creation wizard overlay — shown on startup and via "New project". */}
       <CreationWizard />
 
-      {/* Packet manager overlay — saved graphics collections + brand looks. */}
-      {packetsOpen && <PacketManager onClose={() => setPacketsOpen(false)} />}
+      {/* Save dialogs: first-save naming + the unsaved-changes guard. */}
+      <SaveDialogs />
 
       {/* Community gallery overlay — browse + import shared templates (hosted mode only). */}
       {communityOpen && (

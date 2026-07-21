@@ -26,6 +26,7 @@ import {
 import { loadBrand, saveBrand, clearBrand, type ProjectBrand } from '../model/brand';
 import { loadProject, upsertProject, clearProject, type SavedProject } from '../model/project';
 import { loadAllShows, upsertShow, deleteShow, type Show } from '../model/shows';
+import { loadAllGraphics, upsertGraphic, deleteGraphic, type GraphicDoc } from '../model/library';
 import {
   loadAllSavedVideoRecords,
   upsertSavedVideoRecord,
@@ -34,7 +35,7 @@ import {
 } from '../model/videoProject';
 
 /** The kinds of records that sync. */
-export type SyncKind = 'packet' | 'look' | 'brand' | 'project' | 'show' | 'video';
+export type SyncKind = 'packet' | 'look' | 'brand' | 'project' | 'show' | 'video' | 'graphic';
 
 // ── denied puts ──────────────────────────────────────────────────────────────
 // A put() the backend rejected for OWNERSHIP (Supabase RLS: the row id belongs to another
@@ -120,6 +121,7 @@ export class LocalStorageProvider implements StorageProvider {
     if (kind === 'packet') return loadAllPackets().map((p) => toStoredRecord('packet', p.id, p));
     if (kind === 'look') return loadAllLooks().map((l) => toStoredRecord('look', l.id, l));
     if (kind === 'show') return loadAllShows().map((s) => toStoredRecord('show', s.id, s));
+    if (kind === 'graphic') return loadAllGraphics().map((g) => toStoredRecord('graphic', g.id, g));
     if (kind === 'video') return loadAllSavedVideoRecords().map((v) => toStoredRecord('video', v.id, v));
     if (kind === 'project') {
       const project = loadProject();
@@ -140,6 +142,7 @@ export class LocalStorageProvider implements StorageProvider {
     if (record.kind === 'packet') upsertPacket(record.body as Packet);
     else if (record.kind === 'look') upsertLook(record.body as SavedLook);
     else if (record.kind === 'show') upsertShow(record.body as Show);
+    else if (record.kind === 'graphic') upsertGraphic(record.body as GraphicDoc);
     else if (record.kind === 'video') upsertSavedVideoRecord(record.body as SavedVideoRecord);
     else if (record.kind === 'project') upsertProject(record.body as SavedProject);
     else saveBrand(record.body as ProjectBrand);
@@ -149,6 +152,7 @@ export class LocalStorageProvider implements StorageProvider {
     if (kind === 'packet') deletePacket(id);
     else if (kind === 'look') deleteLook(id);
     else if (kind === 'show') deleteShow(id);
+    else if (kind === 'graphic') deleteGraphic(id);
     else if (kind === 'video') deleteSavedVideoProject(id);
     else if (kind === 'project') clearProject();
     else clearBrand();

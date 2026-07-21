@@ -28,6 +28,13 @@ interface EmittedImage {
   src: string;
 }
 
+/** A saved data entry baked into the panel (model/library.ts ControlEntry, values only). */
+interface EmittedEntry {
+  id: string;
+  label: string;
+  values: Record<string, string>;
+}
+
 /** Everything the page needs to render and drive ONE graphic. */
 interface EmittedGraphic {
   name: string;
@@ -37,6 +44,8 @@ interface EmittedGraphic {
   /** event -> group -> the states it fires from (the structural guard, precomputed). */
   legal: Record<string, Record<string, string[]>>;
   images: EmittedImage[];
+  /** Saved entries the operator switches between (docs/SAVED_CONTENT_MODEL.md §4). */
+  entries: EmittedEntry[];
   /** {ref,key,topic} when this graphic has remote control enabled, else null. */
   remote: RemoteControlConfig | null;
 }
@@ -58,7 +67,7 @@ function emitControls(fields: SpxField[]): EmittedControl[] {
 function emitGraphic(
   template: PanelTemplate,
   remote: RemoteControlConfig | null,
-  opts?: { inlineAssets?: boolean },
+  opts?: { inlineAssets?: boolean; entries?: EmittedEntry[] },
 ): EmittedGraphic {
   const images = template.assets
     .filter((a) => isImageAsset(a.path))
@@ -79,6 +88,7 @@ function emitGraphic(
     events: eventButtons(template.js),
     legal: eventLegality(template.js),
     images,
+    entries: (opts?.entries ?? []).map((e) => ({ id: e.id, label: e.label, values: e.values })),
     remote,
   };
 }
@@ -99,7 +109,7 @@ function jsonForScript(value: unknown): string {
 export function renderControlPanelHtml(
   template: PanelTemplate,
   remote?: RemoteControlConfig | null,
-  opts?: { inlineAssets?: boolean },
+  opts?: { inlineAssets?: boolean; entries?: EmittedEntry[] },
 ): string {
   return renderPanelPage(template.name, [emitGraphic(template, remote ?? null, opts)]);
 }
@@ -394,9 +404,35 @@ GRAPHICS.forEach(function (g) {
     card.appendChild(evHost);
   }
 
+  // ── Saved ENTRIES: named data rows baked into the panel. Selecting one loads its values
+  // into the fields (staged under the same Live rule as typing); ▶ plays the graphic with
+  // it — the lower-third rundown flow: pick "Anna · Presenter", play, pick the next, play.
   var fieldHost = el('div', {});
-  g.controls.forEach(function (c) { fieldHost.appendChild(buildControl(c)); });
-  if (g.controls.length === 0) fieldHost.appendChild(el('p', {}, ['This graphic has no editable fields.']));
+  function rebuildFields() {
+    while (fieldHost.firstChild) fieldHost.removeChild(fieldHost.firstChild);
+    g.controls.forEach(function (c) { fieldHost.appendChild(buildControl(c)); });
+    if (g.controls.length === 0) fieldHost.appendChild(el('p', {}, ['This graphic has no editable fields.']));
+  }
+  if (g.entries.length > 0) {
+    var entrySel = el('select', {});
+    g.entries.forEach(function (en, i) { entrySel.appendChild(el('option', { value: String(i) }, [en.label])); });
+    function applyEntry(send) {
+      var en = g.entries[parseInt(entrySel.value, 10)];
+      if (!en) return;
+      for (var ek in en.values) { if (state[ek] !== undefined) state[ek] = en.values[ek]; }
+      rebuildFields();
+      if (send || live()) sendUpdate(); else paintStaged();
+    }
+    var entryPlay = el('button', { class: 'primary', title: 'Play the graphic with this entry' }, ['▶ Play entry']);
+    entryPlay.onclick = function () { applyEntry(true); post({ t: 'play' }); };
+    var entryLoad = el('button', { title: 'Load this entry into the fields (airs on Take unless live)' }, ['Load']);
+    entryLoad.onclick = function () { applyEntry(false); };
+    entrySel.onchange = function () { applyEntry(false); };
+    var entriesWrap = el('div', { class: 'events' }, [el('h3', {}, ['Entries'])]);
+    entriesWrap.appendChild(el('div', { class: 'row' }, [entrySel, entryLoad, entryPlay]));
+    card.appendChild(entriesWrap);
+  }
+  rebuildFields();
   card.appendChild(fieldHost);
 
   var play = el('button', { class: 'primary' }, ['▶ Play']);

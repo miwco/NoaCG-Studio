@@ -1521,14 +1521,15 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .auth-status { position: relative; display: inline-flex; align-items: center; gap: 8px; }
 .auth-signin { font-size: 12px; padding: 4px 12px; }
 
-/* The account avatar chip (signed in) — Google photo, or an initial on the amber accent. */
+/* The account avatar chip (signed in) — Google photo, or initials on the amber accent.
+   Deliberately the LARGEST control in the topbar: it is the door to Home/profile/settings. */
 .avatar-btn {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2931,3 +2932,167 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .video-transport button { padding: 3px 10px; }
 .video-scrubber { accent-color: var(--accent); min-width: 60px; }
 .video-timecode { font-size: 11px; white-space: nowrap; }
+
+/* ══ Save controls (topbar) — docs/SAVED_CONTENT_MODEL.md §2 ══════════════════════════════ */
+
+.save-controls { position: relative; display: inline-flex; align-items: center; gap: 6px; margin-left: 14px; }
+.save-status {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.save-status-dirty { color: var(--amber); }
+.save-status-dirty::before { content: '● '; font-size: 8px; vertical-align: 1px; }
+.save-status-ok { color: #5fb26a; }
+.save-status-ok::before { content: '✓ '; }
+.save-status-bad { color: #e0763a; }
+.save-btn { white-space: nowrap; }
+.save-menu-btn { padding: 4px 6px; }
+.save-menu { top: calc(100% + 8px); left: auto; right: 0; }
+.save-menu .muted { font-size: 11px; margin-left: 6px; }
+
+/* The save + confirm dialogs: compact centred cards over the standard backdrop. */
+.save-dialog { max-width: 460px; width: min(460px, 92vw); }
+.save-dialog .wz-header h2 { font-size: 16px; margin: 0; }
+.save-dialog-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.save-field { display: flex; flex-direction: column; gap: 6px; }
+.save-field > span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.save-field input, .save-field select { width: 100%; }
+
+/* ══ Home (routed dashboard) + the per-graphic control panel page ═════════════════════════ */
+
+.home-page .topbar .home-btn { font-weight: 600; }
+.home-body { display: grid; grid-template-columns: 200px 1fr; gap: 0; flex: 1; min-height: 0; }
+.home-nav {
+  border-right: 1px solid var(--border);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.home-nav button {
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.home-nav button:hover { background: rgba(232, 237, 242, 0.05); }
+.home-nav button.active { background: rgba(246, 166, 35, 0.12); color: var(--amber); }
+.home-content { padding: 18px 22px 40px; overflow: auto; min-width: 0; }
+.home-content h2 { font-size: 17px; margin: 14px 0 8px; }
+.home-content h2:first-child { margin-top: 0; }
+.home-search { margin-bottom: 12px; }
+.home-search input { max-width: 420px; }
+
+/* The per-graphic control panel page (#/control/<id>). */
+.control-page-body { display: grid; grid-template-columns: 1fr 380px; gap: 0; flex: 1; min-height: 0; }
+.control-page-preview { display: flex; flex-direction: column; min-width: 0; background: #05070b; }
+.control-page-preview iframe { flex: 1; width: 100%; border: 0; min-height: 0; }
+.control-page-transport {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.control-events-sep { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+.control-page-side {
+  border-left: 1px solid var(--border);
+  padding: 14px 16px 30px;
+  overflow: auto;
+}
+.control-entries { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.control-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 6px;
+}
+.control-entry.active { border-color: rgba(246, 166, 35, 0.55); background: rgba(246, 166, 35, 0.07); }
+.control-entry-label {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.control-entry.active .control-entry-label { color: var(--amber); }
+
+@media (max-width: 900px) {
+  .home-body { grid-template-columns: 1fr; }
+  .home-nav { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
+  .control-page-body { grid-template-columns: 1fr; grid-template-rows: minmax(240px, 40vh) 1fr; }
+  .control-page-side { border-left: none; border-top: 1px solid var(--border); }
+}
+
+/* ══ Wizard entry: Continue working + the separated video strip ═══════════════════════════ */
+
+.wz-continue { display: flex; align-items: stretch; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
+.wz-continue-card { flex: 1 1 260px; }
+.wz-recent { display: flex; flex-direction: column; gap: 6px; justify-content: center; min-width: 200px; }
+.wz-recent-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+.wz-recent-chip {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+.wz-beta-tag {
+  display: inline-block;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border: 1px solid rgba(246, 166, 35, 0.45);
+  background: rgba(246, 166, 35, 0.09);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: 2px;
+}
+.wz-video-strip {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.wz-video-strip-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex: 0 0 auto;
+}
+.wz-video-strip .wz-entry-card--video { flex: 1 1 320px; }
+
+/* The video shell's workspace badge — the constant reminder this is the OTHER workspace. */
+.video-workspace-badge {
+  font-size: 12px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-left: 8px;
+  white-space: nowrap;
+}

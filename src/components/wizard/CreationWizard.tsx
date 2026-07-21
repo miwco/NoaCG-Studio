@@ -25,6 +25,8 @@ import type { VideoProject } from '../../model/videoTypes';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { useDocKindStore } from '../../store/docKindStore';
 import { useModalGate } from '../spaceKey';
+import { useRouter } from '../../app/router';
+import { openGraphicDoc, useSaveUi } from '../../store/saveActions';
 
 const STEP_TITLES = ['Start', 'Category', 'Template', 'Fields', 'Style', 'Animation'];
 const STEP_TITLES_IMPORT = ['Start', 'Images', 'Template', 'Fields', 'Style', 'Animation'];
@@ -260,6 +262,17 @@ export default function CreationWizard() {
                 onAi={() => { setMode('ai'); setStep(1); }}
                 onVideo={() => { setMode('video'); setStep(1); }}
                 onBlank={startBlank}
+                onHome={() => {
+                  closeGallery();
+                  useRouter.getState().navigate({ view: 'home', section: null });
+                }}
+                onOpenGraphic={(g) => {
+                  useSaveUi.getState().requestSwitch(() => {
+                    openGraphicDoc(g);
+                    closeGallery();
+                    useRouter.getState().navigate({ view: 'graphic', id: g.id });
+                  });
+                }}
               />
             )}
             {step === 1 && mode === 'video' && (

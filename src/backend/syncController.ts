@@ -12,6 +12,7 @@ import { runSync, type SyncResult } from './sync';
 import { purgeOldTombstones } from '../model/packets';
 import { purgeOldShowTombstones } from '../model/shows';
 import { purgeOldVideoTombstones } from '../model/videoProject';
+import { purgeOldGraphicTombstones } from '../model/library';
 
 export type SyncPhase = 'offline' | 'syncing' | 'synced' | 'error';
 export interface SyncState {
@@ -78,6 +79,7 @@ export async function syncNow(): Promise<void> {
       purgeOldTombstones(cutoff);
       purgeOldShowTombstones(cutoff);
       purgeOldVideoTombstones(cutoff);
+      purgeOldGraphicTombstones(cutoff);
     } catch {
       // Never fail a sync on cleanup.
     }

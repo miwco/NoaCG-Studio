@@ -159,6 +159,12 @@ interface TemplateState {
   /** The armed canvas tool (see CanvasTool). UI state only — no history; creating a text
    *  field with a tool commits through applyTemplate like every other edit. */
   canvasTool: CanvasTool;
+  /** The SAVE LINK (docs/SAVED_CONTENT_MODEL.md): which library graphic this working document
+   *  IS (null = never saved), whether it changed since the last Save, and the Save button's
+   *  live status. `dirty` flips on in the template subscription below and off in
+   *  store/saveActions.ts; both halves persist with the autosave slot so a reload keeps an
+   *  honest badge. */
+  saved: { graphicId: string | null; dirty: boolean; status: 'idle' | 'saving' | 'failed' };
 
   setActiveTab: (tab: EditorTab) => void;
   setPreviewBg: (bg: PreviewBg) => void;
@@ -204,6 +210,8 @@ interface TemplateState {
   pushModal: () => void;
   popModal: () => void;
   setPlayhead: (playhead: { step: number; t: number } | null) => void;
+  /** Set the save link/status wholesale (store/saveActions.ts owns the semantics). */
+  setSaved: (saved: TemplateState['saved']) => void;
   /** Mark a canvas gesture as started/ended (see canvasGestureActive). */
   setCanvasGestureActive: (active: boolean) => void;
   /** Arm a canvas tool (see canvasTool). */
@@ -287,6 +295,11 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   playhead: null,
   canvasGestureActive: false,
   canvasTool: 'select',
+  saved: {
+    graphicId: initialProject?.graphicId ?? null,
+    dirty: initialProject?.dirty ?? false,
+    status: 'idle',
+  },
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setPreviewBg: (bg) => set({ previewBg: bg }),
@@ -330,6 +343,10 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
         // projects (every imported design has an `.imported-design-art`), so a whole-project
         // swap must not carry the last graphic's unlocked artwork into the new one.
         partLocks: opts?.resetSampleData ? {} : s.partLocks,
+        // A whole-project swap severs the save link — a freshly created project must never
+        // inherit the previous document's library id (Save would overwrite that graphic).
+        // Opening a SAVED graphic re-links right after (store/saveActions.ts openGraphicDoc).
+        saved: opts?.resetSampleData ? { graphicId: null, dirty: true, status: 'idle' as const } : s.saved,
         validation: null,
         galleryOpen: false,
         // Snapshot the pre-apply template so the action can be undone; a fresh edit
@@ -410,6 +427,8 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
   setPlayhead: (playhead) => set({ playhead }),
 
+  setSaved: (saved) => set({ saved }),
+
   setCanvasGestureActive: (canvasGestureActive) => set({ canvasGestureActive }),
 
   setCanvasTool: (canvasTool) => set({ canvasTool }),
@@ -466,12 +485,19 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 // restores it instead of a blank default. Covers every mutation that touches the template — panels,
 // AI, wizard, and manual edits — in one place. Local only for now; cloud sync of this single
 // 'project' record lands with the singleton work.
+//
+// The same subscription flips the save link DIRTY: any template change means the working
+// document has drifted from its library record. saveActions' open/save paths set the link
+// AFTER their applyTemplate returns, so their state wins over this generic marking.
 let projectSaveTimer: ReturnType<typeof setTimeout> | null = null;
 useTemplateStore.subscribe((state, prev) => {
   if (state.template === prev.template) return;
+  if (!state.saved.dirty) {
+    useTemplateStore.setState((s) => ({ saved: { ...s.saved, dirty: true } }));
+  }
   if (projectSaveTimer) clearTimeout(projectSaveTimer);
   projectSaveTimer = setTimeout(() => {
     const s = useTemplateStore.getState();
-    saveProject(s.template, s.baseline);
+    saveProject(s.template, s.baseline, { graphicId: s.saved.graphicId, dirty: s.saved.dirty });
   }, 800);
 });

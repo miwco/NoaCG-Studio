@@ -37,7 +37,16 @@ export interface SavedGraphic {
 export interface Packet {
   id: string;
   name: string;
+  /**
+   * LEGACY EMBEDDED GRAPHICS (pre-library, docs/SAVED_CONTENT_MODEL.md). Version 2 packets are
+   * FOLDERS: graphics live in the library (model/library.ts) pointing back via `packageId`, and
+   * this array stays empty. Any embedded graphic found here (a v1 record, or one written by an
+   * older build) is extracted into the library on read (library.ts migrateEmbeddedGraphics).
+   * Kept as a real array — never undefined — so an older build reading a v2 packet still works.
+   */
   graphics: SavedGraphic[];
+  /** 2 = folder-over-the-library shape. Absent = v1 (embedded graphics, migrated on read). */
+  version?: number;
   /** When the packet last changed (ISO). Bumped on every mutation; drives Era-5 cloud sync (LWW). */
   updatedAt: string;
   /**
@@ -106,8 +115,29 @@ export function loadPackets(): Packet[] {
 
 export function createPacket(name: string): Packet[] {
   const all = loadAllPackets();
-  all.push({ id: newId(), name: name.trim() || 'Untitled packet', graphics: [], updatedAt: nowIso() });
+  all.push({ id: newId(), name: name.trim() || 'Untitled package', graphics: [], version: 2, updatedAt: nowIso() });
   saveList(PACKETS_KEY, all);
+  return all.filter((p) => !p.deleted);
+}
+
+/** Create a package and return the new record itself (the Save dialog's "new package" path). */
+export function createPacketNamed(name: string): Packet {
+  const packet: Packet = { id: newId(), name: name.trim() || 'Untitled package', graphics: [], version: 2, updatedAt: nowIso() };
+  const all = loadAllPackets();
+  all.push(packet);
+  saveList(PACKETS_KEY, all);
+  return packet;
+}
+
+/** Rename a package. */
+export function renamePacket(packetId: string, name: string): Packet[] {
+  const all = loadAllPackets();
+  const packet = all.find((p) => p.id === packetId && !p.deleted);
+  if (packet) {
+    packet.name = name.trim() || packet.name;
+    packet.updatedAt = nowIso();
+    saveList(PACKETS_KEY, all);
+  }
   return all.filter((p) => !p.deleted);
 }
 

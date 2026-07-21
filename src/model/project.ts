@@ -16,6 +16,12 @@ export interface SavedProject {
    *  Optional so projects saved before this existed still load (Reset falls back to the
    *  loaded template in that case). */
   baseline?: SpxTemplate;
+  /** Which library graphic (model/library.ts GraphicDoc) this working document IS — the Save
+   *  button writes there. null/absent = never saved (a fresh creation). Additive optional. */
+  graphicId?: string | null;
+  /** True when the working document has changed since its last explicit Save. Persisted so a
+   *  reload keeps the honest "Unsaved changes" badge. Additive optional. */
+  dirty?: boolean;
   /** Soft-delete tombstone (for cloud sync parity — see Packet.deleted). */
   deleted?: boolean;
 }
@@ -41,8 +47,14 @@ export function loadProject(): SavedProject | null {
 /**
  * Persist the working template as the current project, keeping the existing project id (so it stays
  * ONE slot / one cloud row). Non-fatal if storage is full — the working doc just won't persist.
+ * `link` records which library graphic this document is and whether it has unsaved changes;
+ * omitted, both carry over from the existing slot (a plain autosave).
  */
-export function saveProject(template: SpxTemplate, baseline?: SpxTemplate): void {
+export function saveProject(
+  template: SpxTemplate,
+  baseline?: SpxTemplate,
+  link?: { graphicId: string | null; dirty: boolean },
+): void {
   try {
     const existing = loadProject();
     const rec: SavedProject = {
@@ -52,6 +64,8 @@ export function saveProject(template: SpxTemplate, baseline?: SpxTemplate): void
       template,
       // Keep the baseline stable across autosaves; fall back to the existing one.
       baseline: baseline ?? existing?.baseline,
+      graphicId: link ? link.graphicId : existing?.graphicId ?? null,
+      dirty: link ? link.dirty : existing?.dirty ?? false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rec));
     notifyDataChanged();

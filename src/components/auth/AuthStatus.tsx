@@ -2,21 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { signOut } from '../../backend/auth';
 import { useAuthState } from './useAuthState';
 import { useAuthUi } from './authUi';
-import Homebase from '../Homebase';
+import { useRouter } from '../../app/router';
 import SettingsDialog from '../SettingsDialog';
 
 /**
  * Topbar account control. Renders nothing in offline / self-host mode (no backend, no login
- * UI). In hosted mode: signed out → a "Sign in" button opening the SignInDialog; signed in →
- * an avatar chip opening the account menu (Homebase · Settings · Sign out). The app itself is
- * never gated — this is the only always-visible entry point into an account.
+ * UI — the 🏠 Home button next to it is the always-available door to saved work). In hosted
+ * mode: signed out → a "Sign in" button opening the SignInDialog; signed in → an avatar chip
+ * (Google avatar, or an initials fallback) opening the account menu (Home · Settings · Sign
+ * out). The app itself is never gated — this is the only always-visible entry point into an
+ * account.
  */
 export default function AuthStatus() {
   const { backendConfigured, status, user } = useAuthState();
   const openSignIn = useAuthUi((s) => s.openSignIn);
+  const navigate = useRouter((s) => s.navigate);
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [homebaseOpen, setHomebaseOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
 
@@ -48,16 +50,22 @@ export default function AuthStatus() {
   }
 
   const email = user?.email ?? null;
-  // Google accounts carry an avatar; email/password accounts get an initial-letter chip.
+  // Google accounts carry an avatar; email/password accounts get an initials chip.
   const meta = (user?.user_metadata ?? {}) as { avatar_url?: string; full_name?: string };
-  const initial = (meta.full_name || email || '?').trim().charAt(0).toUpperCase();
+  const initials = (meta.full_name || email || '?')
+    .trim()
+    .split(/[\s.@_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('') || '?';
 
   return (
     <span className="auth-status" ref={wrapRef}>
       <button
         className="avatar-btn"
         onClick={() => setMenuOpen((o) => !o)}
-        title={email ?? 'Account'}
+        title={email ? `${email} — Home, profile & settings` : 'Account'}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         data-testid="account-button"
@@ -65,15 +73,19 @@ export default function AuthStatus() {
         {meta.avatar_url ? (
           <img className="avatar-img" src={meta.avatar_url} alt="" referrerPolicy="no-referrer" />
         ) : (
-          <span className="avatar-initial">{initial}</span>
+          <span className="avatar-initial">{initials}</span>
         )}
       </button>
 
       {menuOpen && (
         <div className="account-menu" role="menu" data-testid="account-menu">
           <div className="account-menu-head" title={email ?? undefined}>{email ?? 'Signed in'}</div>
-          <button role="menuitem" onClick={() => { setMenuOpen(false); setHomebaseOpen(true); }}>
-            🏠 Your homebase
+          <button
+            role="menuitem"
+            onClick={() => { setMenuOpen(false); navigate({ view: 'home', section: null }); }}
+            data-testid="menu-home"
+          >
+            🏠 Home — your work
           </button>
           <button role="menuitem" onClick={() => { setMenuOpen(false); setSettingsOpen(true); }}>
             ⚙ Settings
@@ -85,7 +97,6 @@ export default function AuthStatus() {
         </div>
       )}
 
-      {homebaseOpen && <Homebase email={email} onClose={() => setHomebaseOpen(false)} />}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </span>
   );
