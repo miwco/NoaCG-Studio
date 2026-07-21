@@ -56,7 +56,8 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   user would ever see the new tab); anything older resets to the default; the mobile layout
   ignores all of this. See src/components/CLAUDE.md (AppShell / WorkspaceDock).
 - **prefs.ts** - small device-level workflow defaults (localStorage 'spx-gfx-prefs'):
-  defaultExportTarget, timelineCollapsed. Not synced; keep it tiny.
+  defaultExportTarget, timelineCollapsed, renderSettings, commentVisibility (the code editors'
+  comment view mode - src/editor/). Not synced; keep it tiny.
 - **id.ts** - uuid() that ALWAYS returns a valid RFC-4122 v4, even where crypto.randomUUID is
   undefined (plain-HTTP LAN hosts, CasparCG's CEF). Record ids must be real UUIDs: the cloud
   `documents.id` column is a uuid PK, and a non-UUID id would be rejected by Postgres and poison

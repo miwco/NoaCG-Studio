@@ -30,7 +30,14 @@ in src/blocks/CLAUDE.md.
   useIsMobile/useSplitter support the mobile and resizable layouts.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
-  Learn tab).
+  Learn tab). Its toolbar also carries the **Comments** control (src/editor/, shared with the
+  video shell's VideoCodeEditor): Normal / Dimmed / Hidden is a VIEW preference - comment spans
+  come from Monaco's own tokenizer and are painted with DECORATIONS, so the code, the undo stack,
+  the cursor and every export stay untouched, and hidden comments leave their blank line where it
+  was. It reapplies on every model swap (each tab is its own model, and a language's tokenizer
+  loads lazily - hence the bounded retry) and, in Hidden, temporarily reveals any comment holding
+  the selection, a diagnostic marker, or a find match. Persisted in model/prefs.ts. Pinned by
+  e2e/comments.spec.ts.
 - **PreviewFrame** - the stage: the iframe + overlays live in a `.canvas-world` centred in the
   stage and translated by `pan`, scaled by fit × `zoom`. Zoom: the toolbar −/%/+ (the % resets
   to fit), Ctrl/Cmd+wheel (and trackpad pinch) toward the cursor, clamped 0.2–8×. Pan: HOLD

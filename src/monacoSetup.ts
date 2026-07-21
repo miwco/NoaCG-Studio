@@ -26,6 +26,10 @@ self.MonacoEnvironment = {
 
 loader.config({ monaco });
 
+// The bundled namespace, re-exported for code that needs Monaco outside an editor callback
+// (src/editor/commentVisibility.ts takes it as an argument, and the E2E specs drive it directly).
+export { monaco };
+
 // TSX support for the video editor's Composition.tsx model. Syntax-only diagnostics: without
 // react/remotion type acquisition, semantic checking would drown the editor in "cannot find
 // module" noise. Only the typescript defaults change — the SPX JS tab uses javascriptDefaults

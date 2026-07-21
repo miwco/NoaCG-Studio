@@ -4,6 +4,7 @@ import Editor, { type OnMount } from '@monaco-editor/react';
 import { useTemplateStore, type EditorTab } from '../store/templateStore';
 import { explain, tokenAt } from '../teach/explain';
 import { formatCode, minimalTextChange, hasProtectedRegion, type CodeLang } from '../format/formatCode';
+import { CommentVisibilitySelect, useCommentVisibility } from '../editor/CommentVisibilityControl';
 
 const TABS: { id: EditorTab; label: string; language: string }[] = [
   { id: 'html', label: 'HTML', language: 'html' },
@@ -95,6 +96,7 @@ export default function CodeEditor() {
 
   const setEditorContext = useTemplateStore((s) => s.setEditorContext);
 
+  const comments = useCommentVisibility();
   const editorRef = useRef<MonacoEditor | null>(null);
   const decorationsRef = useRef<ReturnType<MonacoEditor['createDecorationsCollection']> | null>(null);
   // Flips once Monaco has mounted, so effects that need the editor re-run when it arrives —
@@ -170,6 +172,7 @@ export default function CodeEditor() {
     setEditorReady(true);
     registerHoverExplanations(monaco);
     registerFormatters(monaco);
+    comments.attach(monaco, editor);
     // When the editor mounts into a just-shown box (e.g. the mobile "Show code" panel), Monaco can
     // read a ~0 size at creation and stay collapsed at 5×5. Force a layout to the REAL container size
     // (bypassing Monaco's own measurement), after paint and once more shortly after, to fill it.
@@ -214,6 +217,7 @@ export default function CodeEditor() {
             </button>
           ))}
         </div>
+        <CommentVisibilitySelect mode={comments.mode} onChange={comments.setMode} />
         <button
           className="format-btn"
           onClick={formatActive}

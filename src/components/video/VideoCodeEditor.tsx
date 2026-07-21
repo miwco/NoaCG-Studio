@@ -8,12 +8,14 @@ import '../../monacoSetup'; // bundled Monaco + workers - no CDN, fully offline
 import Editor from '@monaco-editor/react';
 import { useVideoProjectStore } from '../../store/videoProjectStore';
 import { videoSource } from '../../model/videoTypes';
+import { CommentVisibilitySelect, useCommentVisibility } from '../../editor/CommentVisibilityControl';
 
 export default function VideoCodeEditor() {
   const engine = useVideoProjectStore((s) => s.project.engine);
   const source = useVideoProjectStore((s) => videoSource(s.project));
   const setSource = useVideoProjectStore((s) => s.setSource);
   const hyperframes = engine === 'hyperframes';
+  const comments = useCommentVisibility();
 
   return (
     <>
@@ -21,6 +23,7 @@ export default function VideoCodeEditor() {
         <div className="tabs">
           <button className="tab active">{hyperframes ? 'composition.html' : 'Composition.tsx'}</button>
         </div>
+        <CommentVisibilitySelect mode={comments.mode} onChange={comments.setMode} />
       </div>
       <div className="editor-host">
         <Editor
@@ -30,6 +33,7 @@ export default function VideoCodeEditor() {
           path={hyperframes ? 'file:///video/composition.html' : 'file:///video/Composition.tsx'}
           value={source}
           onChange={(next) => setSource(next ?? '')}
+          onMount={(editor, monaco) => comments.attach(monaco, editor)}
           options={{
             fontSize: 13,
             minimap: { enabled: false },

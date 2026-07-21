@@ -356,6 +356,32 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   border: 1px solid transparent;
 }
 .tab.active { background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); color: var(--text); }
+/* Comments visibility — a VIEW preference for the editor (src/editor/commentVisibility.ts).
+   It leads the right-hand group of the code pane's tab bar; Format follows it. */
+.comment-vis {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.comment-vis select {
+  padding: 3px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.comment-vis select:hover { color: var(--text); border-color: var(--text-dim); }
+
+/* Comment decorations. Dimmed stays readable; hidden paints the text transparent, leaving the
+   line (and every line number) exactly where it was. Monaco's own token colours are single-class
+   rules injected at runtime, so these need !important to win. */
+.comment-dimmed { opacity: 0.35 !important; }
+.comment-hidden { color: transparent !important; }
+
 /* Format button — pushed to the right edge of the code pane's tab bar. */
 .format-btn {
   margin-left: auto;
@@ -366,6 +392,7 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   border: 1px solid var(--border);
   color: var(--text-dim);
 }
+.comment-vis + .format-btn { margin-left: 0; }
 .format-btn:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
 .format-btn:disabled { opacity: 0.4; cursor: default; }
 

@@ -2,6 +2,8 @@
 // device-level workflow defaults, not project data). Kept intentionally tiny: every entry
 // must be a genuine default someone sets once, not hidden app state.
 
+import type { CommentVisibility } from '../editor/commentVisibility';
+
 const PREFS_KEY = 'spx-gfx-prefs';
 
 export interface UserPrefs {
@@ -11,12 +13,15 @@ export interface UserPrefs {
   timelineCollapsed: boolean | null;
   /** Last-used video/image render settings (Export tab). null = the panel's defaults. */
   renderSettings: { format: string; scale: number; fps: number | null; durationSec: number } | null;
+  /** How the code editors render comments — a VIEW preference; the code itself never changes. */
+  commentVisibility: CommentVisibility;
 }
 
 const DEFAULTS: UserPrefs = {
   defaultExportTarget: '', // empty = the registry's first target
   timelineCollapsed: null,
   renderSettings: null,
+  commentVisibility: 'normal',
 };
 
 export function loadPrefs(): UserPrefs {

@@ -135,6 +135,9 @@ src/
                independent of its look; compiles into catalog variants, replacing by id
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
   preview/     composeDocument.ts - inlines CSS + GSAP + JS + assets into the iframe srcdoc
+  editor/      Monaco VIEW-only helpers, shared by the SPX and video code panes: comment
+               visibility (normal/dimmed/hidden) as tokenizer-derived DECORATIONS - it never
+               edits the code, so undo/cursors/export are untouched
   blocks/ *    deterministic transforms: block registry, field editing, the Timeline v2 engine,
                animMachine.ts (the STATE MACHINE's graph seam - docs/STATE_MACHINE_SCHEMA.md)
                + machineEdit.ts (the NODE EDITOR's mutators; UI = components/MachineGraph.tsx)
