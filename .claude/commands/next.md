@@ -55,6 +55,13 @@ quick scan, not an audit.
 headers, phone-glanceable.** Terse wording never excuses vague content - every fact below
 still lands, in fewer words.
 
+### 0. Pending question / obvious next step comes first
+
+The user may have missed that the conversation already contains an unanswered question, a
+choice waiting on them, or one obvious next action. Check for that before anything else. If it
+exists, restate it in 1-2 compact lines at the very top and make it option 1 (or the whole
+answer) - never bury it under new options, and never invent new work while it is open.
+
 ### 1. Where this session stands
 
 ONE line: what the session set out to do; done/verified/committed or not.
