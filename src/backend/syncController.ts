@@ -10,6 +10,8 @@ import { LocalStorageProvider } from './storage';
 import { SupabaseProvider } from './supabaseProvider';
 import { runSync, type SyncResult } from './sync';
 import { purgeOldTombstones } from '../model/packets';
+import { purgeOldShowTombstones } from '../model/shows';
+import { purgeOldVideoTombstones } from '../model/videoProject';
 
 export type SyncPhase = 'offline' | 'syncing' | 'synced' | 'error';
 export interface SyncState {
@@ -74,6 +76,8 @@ export async function syncNow(): Promise<void> {
       const cutoff = new Date(Date.now() - 90 * 86_400_000).toISOString();
       await remote.purgeTombstones(cutoff);
       purgeOldTombstones(cutoff);
+      purgeOldShowTombstones(cutoff);
+      purgeOldVideoTombstones(cutoff);
     } catch {
       // Never fail a sync on cleanup.
     }

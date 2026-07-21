@@ -139,10 +139,40 @@ export function upsertSavedVideoProject(project: VideoProject): boolean {
   return writeSaved([rec, ...rest]);
 }
 
-/** Tombstone a saved project (kept in storage for future cloud-sync deletes). */
+/** Tombstone a saved project (kept in storage for cloud-sync deletes). The payload is
+ *  stripped to a minimal stub — video assets are big, and a tombstone only needs to carry
+ *  the id + timestamp (the stub still passes isVideoProject, so the record stays readable). */
 export function deleteSavedVideoProject(id: string): void {
   const list = readSaved().map((r) =>
-    r.id === id ? { ...r, deleted: true, updatedAt: new Date().toISOString() } : r,
+    r.id === id
+      ? {
+          ...r,
+          deleted: true,
+          updatedAt: new Date().toISOString(),
+          project: { ...r.project, tsx: '', html: '', assets: [], chat: [], inputs: [] },
+        }
+      : r,
   );
   writeSaved(list);
+}
+
+// ── The cloud-sync seam (backend/storage.ts 'video' kind) ────────────────────
+
+/** All saved records INCLUDING tombstones — for the sync engine. */
+export function loadAllSavedVideoRecords(): SavedVideoRecord[] {
+  return readSaved();
+}
+
+/** Insert or replace a whole record by id (the storage seam's put('video'), incl. a pulled
+ *  tombstone). Preserves the given updatedAt and deleted flag — never restamps. */
+export function upsertSavedVideoRecord(record: SavedVideoRecord): void {
+  const rest = readSaved().filter((r) => r.id !== record.id);
+  writeSaved([record, ...rest]);
+}
+
+/** Drop local tombstones older than the cutoff (the sync controller's coordinated purge). */
+export function purgeOldVideoTombstones(beforeIso: string): void {
+  const all = readSaved();
+  const kept = all.filter((r) => !r.deleted || r.updatedAt >= beforeIso);
+  if (kept.length !== all.length) writeSaved(kept);
 }

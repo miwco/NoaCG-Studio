@@ -14,7 +14,7 @@
 import { isSingleton, type StorageProvider, type StoredRecord, type SyncKind } from './storage';
 import { uuid } from '../model/id';
 
-export const SYNC_KINDS: SyncKind[] = ['packet', 'look', 'brand', 'project'];
+export const SYNC_KINDS: SyncKind[] = ['packet', 'look', 'brand', 'project', 'show', 'video'];
 
 const SYNC_META_KEY = 'spx-gfx-sync';
 const EPOCH = '1970-01-01T00:00:00.000Z';

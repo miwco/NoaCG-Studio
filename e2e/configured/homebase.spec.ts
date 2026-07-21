@@ -18,10 +18,11 @@ test.describe('account menu + homebase (configured / signed-in)', () => {
     await expect(menu).toBeVisible();
     await expect(menu).toContainText(process.env.E2E_EMAIL ?? '');
 
-    // Homebase: opens, shows the saved-graphics summary (empty state or list), closes on Esc.
+    // Homebase: opens, shows the profile summary (graphics · videos · shows · looks, or the
+    // empty state — both mention graphics), closes on Esc.
     await menu.getByRole('menuitem', { name: /homebase/i }).click();
     await expect(page.getByTestId('homebase')).toBeVisible();
-    await expect(page.getByTestId('homebase')).toContainText(/saved graphic/);
+    await expect(page.getByTestId('homebase')).toContainText(/graphic/);
     await page.locator('[data-testid="homebase"] .gallery-close').click();
     await expect(page.getByTestId('homebase')).toHaveCount(0);
 

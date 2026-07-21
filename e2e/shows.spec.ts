@@ -126,6 +126,41 @@ test('offline: the hosted control route answers honestly and the Shows section g
   await expect(section.getByText(/host.*online/i)).toHaveCount(0);
 });
 
+test('shows and videos ride the storage seam (the sync engine sees and writes both kinds)', async ({ page }) => {
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const result = await page.evaluate(async () => {
+    const { LocalStorageProvider } = await import('/src/backend/storage.ts');
+    const { SYNC_KINDS } = await import('/src/backend/sync.ts');
+    const { createShow, loadShows } = await import('/src/model/shows.ts');
+    const provider = new LocalStorageProvider();
+
+    createShow('Sync Me');
+    const shows = await provider.list('show');
+
+    // A pulled video record (another device's save) lands through put(), tombstone and all.
+    const videoBody = {
+      id: '7f9b2f6a-1111-4222-8333-444455556666',
+      name: 'Pulled clip',
+      updatedAt: '2026-07-21T00:00:00.000Z',
+      project: { kind: 'video', id: '7f9b2f6a-1111-4222-8333-444455556666', name: 'Pulled clip', tsx: 'export default 1' },
+    };
+    await provider.put({ kind: 'video', id: videoBody.id, updatedAt: videoBody.updatedAt, body: videoBody });
+    const videos = await provider.list('video');
+
+    return {
+      kinds: SYNC_KINDS,
+      showListed: shows.some((r) => (r.body as { name: string }).name === 'Sync Me'),
+      showLive: loadShows().some((s) => s.name === 'Sync Me'),
+      videoListed: videos.some((r) => r.id === videoBody.id),
+    };
+  });
+  expect(result.kinds).toEqual(['packet', 'look', 'brand', 'project', 'show', 'video']);
+  expect(result.showListed).toBe(true);
+  expect(result.showLive).toBe(true);
+  expect(result.videoListed).toBe(true);
+});
+
 test('the rundown reorders and removes; deleting the show keeps nothing behind', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await addCurrentToShow(page, 'Reorder Show', true);
