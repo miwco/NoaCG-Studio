@@ -101,8 +101,11 @@ export default function TimelineDock({ iframeRef }: Props) {
     applyTemplate({ ...template, js });
     setActiveTab('js'); // the rewritten region is real, highlighted code
   };
+  // The chip band is RESERVED space (styles.css .timeline-dock.has-chips), so the switch can
+  // never sit on top of the surface's own controls — only claim it when there is a chip.
+  const hasChips = native !== null || data !== null;
   return (
-    <div className="timeline-dock">
+    <div className={`timeline-dock${hasChips ? ' has-chips' : ''}`}>
       {data ? (
         surface === 'machine' && native ? (
           <MachineGraph
