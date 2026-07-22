@@ -68,6 +68,30 @@ export default function CreationWizard() {
   // Prepare step's content-width slider (Import graphic, stretch mode): preview-only demo
   // text pushed into the live preview — never part of the draft or the created template.
   const [stretchDemo, setStretchDemo] = useState<string | null>(null);
+  // The step scroller flags when content hides below the fold (short laptop windows), so the
+  // CSS can show a bottom fade cue — without it the overflow is invisible and a first-run
+  // user never learns the lower entry cards exist. Scroll + resize + DOM changes all re-check.
+  const stepRef = useRef<HTMLDivElement>(null);
+  const [stepOverflow, setStepOverflow] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const el = stepRef.current;
+    if (!el) return;
+    const check = () =>
+      setStepOverflow(el.scrollHeight - el.clientHeight - el.scrollTop > 12);
+    check();
+    el.addEventListener('scroll', check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    const mo = new MutationObserver(check);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => {
+      el.removeEventListener('scroll', check);
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [open]);
+
   // Backdrop click-to-close must only fire on a genuine outside click - not when a text
   // selection drag STARTED inside an input (e.g. the video duration field) and released
   // over the backdrop. The browser routes that release's `click` to the backdrop (the
@@ -259,7 +283,7 @@ export default function CreationWizard() {
 
         {/* Body: step content (+ live preview from step 2) */}
         <div className={`wz-body ${showPreview ? 'with-preview' : ''}`}>
-          <div className="wz-step">
+          <div className="wz-step" ref={stepRef} data-overflow={stepOverflow || undefined}>
             {step === 0 && (
               <EntryStep
                 onTemplates={() => { setMode('template'); setStep(1); }}
@@ -434,6 +458,7 @@ export default function CreationWizard() {
                 onReplay={() => setReplayKey((k) => k + 1)}
               />
             )}
+            <div className="wz-step-fade" aria-hidden="true" />
           </div>
 
           {showPreview && (mode === 'ai' ? aiResult : previewTemplate) && (

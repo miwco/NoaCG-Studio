@@ -870,7 +870,28 @@ kbd {
 .wz-dot:disabled { opacity: 0.45; cursor: default; }
 
 .wz-body { flex: 1; display: flex; min-height: 0; }
-.wz-step { flex: 1; overflow: auto; padding: 20px; min-width: 0; }
+/* The step scroller keeps a REAL scrollbar (the standard properties — Chromium ignores the
+   ::-webkit pseudo elements once scrollbar-width is set), and a sticky bottom fade appears
+   while more content hides below the fold (data-overflow, set by CreationWizard). */
+.wz-step {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232, 237, 242, 0.22) transparent;
+}
+.wz-step-fade {
+  position: sticky;
+  bottom: -20px;               /* flush with the scrollport under the step's own padding */
+  height: 56px;
+  margin: -56px -20px -20px;   /* zero net height; spans the padding edge to edge */
+  background: linear-gradient(to bottom, transparent, var(--bg-2));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.wz-step[data-overflow] .wz-step-fade { opacity: 1; }
 .wz-side {
   flex: 0 0 50%;                    /* the preview deserves half the modal */
   border-left: 1px solid var(--border);
@@ -920,17 +941,19 @@ kbd {
 
 /* Step 0: the home hero + entry cards */
 .wz-entry-wrap { display: flex; flex-direction: column; align-items: center; }
-.wz-hero { text-align: center; max-width: 660px; padding: 30px 16px 4px; }
+/* The whole step must fit a 768px-tall laptop without scrolling — every vertical margin here
+   is budgeted. If you grow one, take the height from another. */
+.wz-hero { text-align: center; max-width: 660px; padding: 16px 16px 0; }
 .wz-hero-title {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.01em;
-  margin: 20px 0 12px;
+  margin: 12px 0 10px;
 }
 .wz-hero-title span { color: var(--amber); }
-.wz-hero-sub { font-size: 15px; line-height: 1.55; color: var(--text-dim); margin: 0 auto; max-width: 540px; }
-.wz-hero-tags { display: flex; gap: 8px; justify-content: center; margin-top: 18px; }
+.wz-hero-sub { font-size: 15px; line-height: 1.5; color: var(--text-dim); margin: 0 auto; max-width: 600px; }
+.wz-hero-tags { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .wz-hero-tags span {
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -941,14 +964,14 @@ kbd {
   padding: 3px 11px;
 }
 
-.wz-entry { display: flex; gap: 14px; padding: 26px 10px 8px; justify-content: center; flex-wrap: wrap; }
+.wz-entry { display: flex; gap: 14px; padding: 14px 0 0; justify-content: center; flex-wrap: wrap; }
 .wz-entry-card {
   width: 264px;
-  padding: 22px 20px;
+  padding: 16px 18px;
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   border-radius: 12px;
   line-height: 1.4;
   transition: border-color 0.14s, background 0.14s, transform 0.14s;
@@ -2781,6 +2804,9 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   .wz-header { padding: 12px 14px; gap: 10px; }
   .wz-entry { padding: 16px 4px; }
   .wz-entry-card { width: 100%; }
+  /* The compact one-line rows stack again on a phone — a row layout has no width to share. */
+  .wz-continue-card,
+  .wz-video-strip .wz-entry-card--video { flex-direction: column; align-items: flex-start; }
   .pk-body { padding: 12px 14px; }
   .gallery-modal { width: 100vw; max-height: 100dvh; border-radius: 0; }
 }
@@ -3132,9 +3158,13 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 
 /* ══ Wizard entry: Continue working + the separated video strip ═══════════════════════════ */
 
-.wz-continue { display: flex; align-items: stretch; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
-.wz-continue-card { flex: 1 1 260px; }
-.wz-recent { display: flex; flex-direction: column; gap: 6px; justify-content: center; min-width: 200px; }
+/* Continue working is a compact one-line ROW (icon · title · hint), not a tall card — the
+   entry step's height budget goes to the five creation cards, and this block sits above
+   them on every launch. Width tracks the 4-card grid (4 × 264px + 3 × 14px gaps). */
+.wz-continue { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; width: 100%; max-width: 1098px; }
+.wz-continue-card { width: 100%; flex-direction: row; align-items: center; gap: 12px; padding: 12px 18px; }
+.wz-continue-card .hint { flex: 1; min-width: 0; }
+.wz-recent { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 4px; }
 .wz-recent-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
 .wz-recent-chip {
   text-align: left;
@@ -3158,14 +3188,18 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   margin-left: 6px;
   vertical-align: 2px;
 }
+/* The video strip stays visually apart (dashed rule) but flat: the card lays out as one
+   ROW so the whole strip is on screen at 768px viewport height, below the entry grid. */
 .wz-video-strip {
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px dashed var(--border);
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 1098px;
 }
 .wz-video-strip-label {
   font-size: 10px;
@@ -3174,7 +3208,14 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   color: var(--text-dim);
   flex: 0 0 auto;
 }
-.wz-video-strip .wz-entry-card--video { flex: 1 1 320px; }
+.wz-video-strip .wz-entry-card--video {
+  flex: 1 1 320px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+}
+.wz-video-strip .wz-entry-card--video .hint { flex: 1; min-width: 0; }
 
 /* The video shell's workspace badge — the constant reminder this is the OTHER workspace. */
 .video-workspace-badge {

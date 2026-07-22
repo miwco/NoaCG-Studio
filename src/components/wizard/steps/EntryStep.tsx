@@ -35,7 +35,7 @@ export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo,
   return (
     <div className="wz-entry-wrap">
       <div className="wz-hero">
-        <BrandLogo size={44} />
+        <BrandLogo size={36} />
         <h1 className="wz-hero-title">
           Broadcast graphics, <span>built in minutes.</span>
         </h1>
