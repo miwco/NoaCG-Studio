@@ -414,10 +414,25 @@ function insertStepAt(data: AnimData, at: number, step: AnimStep): void {
   const main = mainGroup(data);
   if (!main?.defaultPath) return;
   const id = freshStateId(main, step.name);
+  const splitFrom = at > 0 ? main.defaultPath[at - 1] : null;
+  const splitTo = main.defaultPath[at] ?? null;
   // Keep `states` reading in walk order — the serializer emits them as authored.
   const before = main.states.findIndex((s) => s.id === main.defaultPath![at]);
   main.states.splice(before < 0 ? main.states.length : before, 0, { id, name: step.name });
   main.defaultPath.splice(at, 0, id);
+  // The SPLIT arrow follows its from-state: an arrow prev → next described how the walk
+  // leaves prev, and inserting a waypoint between them must not retime or rename that (a
+  // fresh `next` used to be minted while the original lingered as a stray skip-arrow). It
+  // is re-pointed at the inserted waypoint — trigger, event, delay and style intact — and
+  // reconnectPath draws the new second half as a plain `next`. The lifecycle stop edge is
+  // rehomeLifecycleEdges' business; data-condition is reserved and left untouched.
+  if (splitFrom && splitTo) {
+    for (const t of main.transitions) {
+      if (t.from === splitFrom && t.to === splitTo && t.trigger !== 'lifecycle' && t.trigger !== 'data-condition') {
+        t.to = id;
+      }
+    }
+  }
   // Inserting before Out moves the exit pair — the stop edge (and its style) moves with it.
   rehomeLifecycleEdges(main);
   reconnectPath(main);
@@ -434,6 +449,8 @@ function removeStepAt(data: AnimData, at: number): AnimStep | null {
   const main = mainGroup(data);
   if (!main?.defaultPath) return removed ?? null;
   const gone = main.defaultPath[at];
+  const prev = main.defaultPath[at - 1];
+  const succ = main.defaultPath[at + 1];
   // Judge "is this an authored branch arrow?" against the path as it stands NOW. Splicing
   // first would make the walk's own arrows into and out of this waypoint look like branches,
   // and every deletion would demote instead of delete.
@@ -450,6 +467,21 @@ function removeStepAt(data: AnimData, at: number): AnimStep | null {
       state.timeline = inline;
     }
   } else {
+    // Carry the walk's ARRIVAL: the arrow into the deleted waypoint says how the walk
+    // leaves its predecessor, and deleting the waypoint must not silently retime that — a
+    // timer auto-advance used to come back as a plain minted Next press here. It is
+    // re-pointed at the successor (trigger, event, delay and style intact) — EXCEPT into
+    // the final waypoint: carrying there would grant next-drives-out, or an auto-stop the
+    // author never drew, so an arrival at a deleted penultimate step is dropped and next()
+    // keeps its no-op.
+    const succIsFinal = succ === main.defaultPath[main.defaultPath.length - 1];
+    if (prev && succ && !succIsFinal) {
+      for (const t of main.transitions) {
+        if (t.from === prev && t.to === gone && t.trigger !== 'lifecycle' && t.trigger !== 'data-condition') {
+          t.to = succ;
+        }
+      }
+    }
     main.states = main.states.filter((s) => s.id !== gone);
     main.transitions = main.transitions.filter((t) => t.from !== gone && t.to !== gone);
   }

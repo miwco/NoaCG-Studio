@@ -729,6 +729,72 @@ test('the stop edge and its style survive step inserts and deletes (rehoming)', 
   });
 });
 
+test('structural step edits carry the walk\'s arrows: a timer survives a delete, a split keeps its event', async ({ page }) => {
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const result = await page.evaluate(async () => {
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const { setTransitionEvent, setTransitionTrigger } = await import('/src/blocks/machineEdit.ts');
+    const { addStep, deleteStep, duplicateStep } = await import('/src/blocks/animEdit.ts');
+    type Data = NonNullable<ReturnType<typeof parseAnimData>>;
+    const arrows = (d: Data) => d.machine!.groups[0].transitions;
+    const tpl = variantById('lt01')!.create({});
+
+    // ── A timer arriving at a deleted middle step is CARRIED to its successor. ──
+    // Four steps [Enter, Step 2, Step 3, Out]; retime the walk's Enter → Step 2 arrow to a
+    // timer (transitions parse sorted: play, next, next, stop — index 1), then delete Step 2.
+    const four = addStep(addStep(parseAnimData(tpl.js)!)!)!;
+    const timed = setTransitionTrigger(four, 'main', 1, 'timer')!;
+    const afterDelete = deleteStep(timed, 1, () => 'rise')!;
+    const carried = arrows(afterDelete).find((t) => t.from === 'enter' && t.to === 'step-3');
+    // The predecessor's auto-advance survived — same trigger, same delay, and reconnectPath
+    // minted no parallel `next` for a pair the carried arrow already connects.
+    const carriedTimer = carried?.trigger === 'timer' && carried?.after === 3;
+    const noMintedNext = !arrows(afterDelete).some(
+      (t) => t.from === 'enter' && t.to === 'step-3' && t.trigger === 'operator',
+    );
+
+    // ── …EXCEPT into the final waypoint: that would grant an auto-stop nobody drew. ──
+    // Deleting the (now penultimate) Step 3 drops the arrival; the exit pair keeps only its
+    // lifecycle stop edge, so next() keeps its no-op and nothing auto-stops the graphic.
+    const atOut = deleteStep(afterDelete, 1, () => 'rise')!;
+    const noTimerLeft = !arrows(atOut).some((t) => t.trigger === 'timer');
+    const onlyStopIntoOut = arrows(atOut)
+      .filter((t) => t.to === 'out')
+      .every((t) => t.trigger === 'lifecycle' && t.event === 'stop');
+
+    // ── An inserted waypoint keeps the split arrow's EVENT on its first half. ──
+    // Three steps, the walk arrow renamed to "go"; duplicating the entrance splits that
+    // pair. The original arrow follows its from-state (Enter → the copy, still "go") and
+    // only the new second half arrives as a plain `next`.
+    const three = addStep(parseAnimData(tpl.js)!)!;
+    const named = setTransitionEvent(three, 'main', 1, 'go')!;
+    const split = duplicateStep(named, 0)!;
+    const firstHalf = arrows(split).find((t) => t.from === 'enter' && t.to === 'enter-copy');
+    const secondHalf = arrows(split).find((t) => t.from === 'enter-copy' && t.to === 'step-2');
+    const noStray = !arrows(split).some((t) => t.from === 'enter' && t.to === 'step-2');
+    return {
+      carriedTimer,
+      noMintedNext,
+      noTimerLeft,
+      onlyStopIntoOut,
+      splitKeepsEvent: firstHalf?.trigger === 'operator' && firstHalf?.event === 'go',
+      secondHalfIsNext: secondHalf?.trigger === 'operator' && secondHalf?.event === 'next',
+      noStray,
+    };
+  });
+  expect(result).toEqual({
+    carriedTimer: true,
+    noMintedNext: true,
+    noTimerLeft: true,
+    onlyStopIntoOut: true,
+    splitKeepsEvent: true,
+    secondHalfIsNext: true,
+    noStray: true,
+  });
+});
+
 test('a styled lifecycle edge under an older interpreter re-emits the region (the pairing rule, one step on)', async ({ page }) => {
   await page.goto('/app');
   await page.keyboard.press('Escape');

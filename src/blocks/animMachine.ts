@@ -181,8 +181,10 @@ export function isWalkEdge(group: AnimGroup, t: AnimTransition): boolean {
  *  the final one (v1 parity — stop() plays the exit; an arrow there is the author's opt-in to
  *  next-drives-out). These arrows exist for validateMachine's honesty check and for the graph
  *  the node editor will draw: the runtime walks the path POSITIONALLY and fires a synthetic
- *  edge when none is authored. An inserted waypoint INHERITS the event of the arrow it split,
- *  so the operator's press keeps its name; the new second half gets `next`. */
+ *  edge when none is authored. This only MINTS plain `next` arrows for genuinely new pairs —
+ *  the step mutators re-point a split or orphaned arrow first (trigger, event, delay and
+ *  style intact), so an inserted waypoint's first half keeps the operator's own event and
+ *  only the new second half arrives as `next`. */
 export function reconnectPath(group: AnimGroup): void {
   const path = group.defaultPath;
   if (!path) return;

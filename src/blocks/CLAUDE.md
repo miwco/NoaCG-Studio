@@ -208,9 +208,14 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   No stored indices to go stale - and it is why every timeline surface keeps working under a
   machine. Its consequence: step-structural edits (`addStep`, `deleteStep`, `duplicateStep`,
   `setLayerActivation`, `renameStep`) are MACHINE-AWARE - they move the bound waypoint with the
-  step (insert inherits the split arrow's event via `reconnectPath`, names sync one way via
-  `syncWaypointNames`) - and they are the ONLY way waypoints are added or removed: the node
-  editor deliberately edits off-path structure and arrows, never the walk itself.
+  step and CARRY the walk's arrows across the change (an insert re-points the split arrow at
+  the new waypoint, a delete re-points the arrival at the successor - trigger, event, delay
+  and style intact, so a timer auto-advance survives; the one exception is an arrival that
+  would land on the FINAL waypoint, dropped rather than silently granting next-drives-out or
+  an auto-stop; `reconnectPath` then only mints plain `next` for genuinely new pairs; names
+  sync one way via `syncWaypointNames`) - and they are the ONLY way waypoints are added or
+  removed: the node editor deliberately edits off-path structure and arrows, never the walk
+  itself.
 - **animEdit.ts** - pure keyframe mutators; every editing surface routes through these, then
   spliceAnimData + one applyTemplate makes the edit real, undoable code. setKeyframe /
   deleteKeyframe (per property), moveLayerKeyframes / deleteLayerKeyframes (the aggregate
