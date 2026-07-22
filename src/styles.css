@@ -1886,7 +1886,12 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-zoom-btn:hover { color: var(--text); border-color: rgba(246, 166, 35, 0.4); background: transparent; }
 
 /* ---------- Timeline v2 — the step timeline (read-first; opt-in via the dock chip) ---------- */
+/* The chips (the ≡ Timeline | ◇ States switch, or the legacy convert chip) sit in a RESERVED
+   band at the top: the surface below them starts under it. They used to float over the
+   surface, which was harmless while a chip was one small button and became a bug when the
+   switch grew wide enough to cover the timeline's own zoom column and eat its clicks. */
 .timeline-dock { position: relative; }
+.timeline-dock.has-chips { padding-top: 30px; }
 .timeline-dock-toggle {
   position: absolute;
   top: -1px;
@@ -2161,8 +2166,15 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   pointer-events: none;
   z-index: 6;
 }
-.timeline-dock-chips { position: absolute; top: -1px; right: 14px; display: inline-flex; gap: 6px; }
-.timeline-dock-chips .timeline-dock-toggle { position: static; }
+.timeline-dock-chips { position: absolute; top: 0; right: 10px; display: inline-flex; gap: 6px; }
+/* In the band the chips are ordinary pills — the bottom-rounded "hanging tab" shape only read
+   as attached while they overlapped the surface's top edge. */
+.timeline-dock-chips .timeline-dock-toggle {
+  position: static;
+  border-radius: 6px;
+  border-top: 1px solid var(--border);
+  padding: 3px 9px;
+}
 .timeline-dock-toggle.convert { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
 
 /* ---------- The machine graph (Phase 4 — the node editor's read-first surface) ---------- */
