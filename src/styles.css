@@ -1469,7 +1469,19 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   color: var(--text-dim);
 }
 .asset-badge-lottie { color: var(--amber); border-color: var(--amber); }
+.asset-badge-video { color: #6fb3ff; border-color: #3a5d84; }
+/* "This asset is placed in the graphic" — the per-row usage mark (count when >1). */
+.asset-row-used {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+}
 .asset-row-size { flex: 0 0 auto; font-size: 11px; color: var(--text-dim); }
+.asset-info-preview video { max-width: 100%; max-height: 100%; object-fit: contain; }
 .asset-totals { margin-top: 6px; }
 .asset-info { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px; }
 .asset-info h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin: 0 0 8px; }
@@ -2661,6 +2673,24 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 /* Armed labels scrub: drag horizontally to change the value. */
 .inspector-row-label.scrubbable { cursor: ew-resize; touch-action: none; user-select: none; }
 .inspector-row-label.scrubbable:hover { color: var(--text); }
+/* The Animations tab's lifecycle rows: Appears / Disappears — one select each, speaking
+   the step names (the same transforms the canvas chip and timeline block edges write). */
+.inspector-lifecycle { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.inspector-lifecycle label { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.inspector-lifecycle label > span { flex: 0 0 72px; color: var(--text-dim); }
+.inspector-lifecycle select {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+.inspector-preset-target { flex: 1 1 100%; margin: 0; }
+
 /* Phase 5 — the Animations tab's preset row: style · In/Out/Both · Apply. */
 .inspector-preset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
 .inspector-preset-select {

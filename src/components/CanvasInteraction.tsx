@@ -10,11 +10,12 @@ import { writeAnimData } from '../templates/shared/animRuntime';
 import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
+import { createStepFromLayer } from '../blocks/layerTimeline';
 import { addPlacedLine, designBoxInfo, lineFit, lineFontSize, placedLines, placeLine, placementCss, setLineFit, setLineFontSize, setSlotSize, slotSize, type LinePlacement } from '../blocks/designLayout';
-import { insertImageElement } from '../blocks/assetOps';
+import { insertImageElement, insertVideoElement } from '../blocks/assetOps';
 import { insertLottieElement } from '../blocks/lottieInsert';
 import { probeAsset } from '../assets/assetInfo';
-import { fileToDataUrl, isImageAsset, isLottieAsset, uniqueAssetPath } from '../assets/assetUtils';
+import { MAX_VIDEO_ASSET_BYTES, fileToDataUrl, isImageAsset, isLottieAsset, isVideoAsset, uniqueAssetPath } from '../assets/assetUtils';
 import { ASSET_DRAG_TYPE } from './AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { partLocked } from './partLocks';
@@ -316,12 +317,19 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
     () => (dataModel ? dataModel.steps.slice(1, -1).map((s) => s.reveals ?? []) : null),
     [dataModel],
   );
-  const stepsOn = (dataModel?.steps.length ?? 0) > 2;
-  const chainGroupable = (presses?.length ?? 0) > 0;
+  /** The middle steps' NAMES, so the control speaks the timeline/states vocabulary
+   *  ("appears in 'Logo In'"), not an invented press numbering. */
+  const stepNames = useMemo(
+    () => (dataModel ? dataModel.steps.slice(1, -1).map((s) => s.name) : null),
+    [dataModel],
+  );
   const firstLine = parts.find((p) => p.kind === 'line')?.selector;
+  // Eligible on ANY editable data block — including a template that has no middle steps
+  // yet: "appears in a new step" is what CREATES the first one (setLayerActivation mints
+  // the step), which is how a freshly dropped logo becomes the graphic's next step in one
+  // click, right where it landed.
   const pressEligible =
-    stepsOn &&
-    chainGroupable &&
+    !!presses &&
     !!selectedPart &&
     (selectedPart.kind === 'line' ||
       selectedPart.kind === 'image' ||
@@ -508,6 +516,16 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
 
   const changePress = (toPress: number) => {
     if (!selectedPart || !dataModel) return;
+    // "In a new step »" goes through the composed layer-timeline transform so the fresh
+    // step is NAMED after the layer ("Logo In") — the same one the Inspector and the
+    // states graph use. Moves between existing steps keep the plain press patch.
+    if (toPress >= (presses?.length ?? 0)) {
+      const next = createStepFromLayer(template, parts, selectedPart.selector);
+      if (!next) return;
+      applyTemplate(next); // one undoable apply
+      requestReplay();
+      return;
+    }
     const change = changePartPress(template, parts, selectedPart.selector, selectedPress, toPress);
     if (!change) return;
     applyTemplate({ ...template, ...change.patch }); // one undoable apply — same as the gutter
@@ -1657,7 +1675,9 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   };
   const onAssetDrop = (e: React.DragEvent) => {
     const assetPath = e.dataTransfer.getData(ASSET_DRAG_TYPE);
-    const osFiles = Array.from(e.dataTransfer.files ?? []).filter((f) => isImageAsset(f.name));
+    const osFiles = Array.from(e.dataTransfer.files ?? []).filter(
+      (f) => isImageAsset(f.name) || (isVideoAsset(f.name) && f.size <= MAX_VIDEO_ASSET_BYTES),
+    );
     if (!assetPath && osFiles.length === 0) return;
     e.preventDefault();
     // Capture everything synchronously — the probe below is async.
@@ -1668,7 +1688,13 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       if (assetPath) {
         const asset = template.assets.find((a) => a.path === assetPath);
         if (!asset) return;
-        const insert = isImageAsset(assetPath) ? insertImageElement : isLottieAsset(assetPath) ? insertLottieElement : null;
+        const insert = isImageAsset(assetPath)
+          ? insertImageElement
+          : isLottieAsset(assetPath)
+            ? insertLottieElement
+            : isVideoAsset(assetPath)
+              ? insertVideoElement
+              : null;
         if (!insert) return; // fonts/other: no canvas placement
         const info = await probeAsset(asset);
         const { template: next, selector } = insert(template, {
@@ -1691,7 +1717,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
         const asset = { path: uniqueAssetPath(file.name, next.assets), data };
         next = { ...next, assets: [...next.assets, asset] };
         const info = await probeAsset(asset);
-        const placed = insertImageElement(next, {
+        const placed = (isVideoAsset(asset.path) ? insertVideoElement : insertImageElement)(next, {
           assetPath: asset.path,
           x: point.x + i * 24, // stagger a multi-file drop so the images don't pile up
           y: point.y + i * 24,
@@ -1798,7 +1824,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
                     >
                       <option value={-1}>appears with ▶ Play</option>
                       {presses!.map((_, k) => (
-                        <option key={k} value={k}>{`appears on press ${k + 1}`}</option>
+                        <option key={k} value={k}>{`appears in “${stepNames![k] ?? `Step ${k + 2}`}”`}</option>
                       ))}
                       {/* The last press's only part moving to "a new press" would re-create
                           the same press — the gutter hides the option; so does the chip. */}
@@ -1806,7 +1832,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
                         selectedPress === presses!.length - 1 &&
                         selectedPress >= 0 &&
                         presses![selectedPress].length === 1
-                      ) && <option value={presses!.length}>appears on a new press</option>}
+                      ) && <option value={presses!.length}>appears in a new step »</option>}
                     </select>
                     )}
                     </>
