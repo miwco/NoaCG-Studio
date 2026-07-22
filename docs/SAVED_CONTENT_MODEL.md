@@ -73,8 +73,16 @@ An **entry** is a named, saved data row for one graphic ("Anna Andersson — Pre
 create / duplicate / edit / delete / select; the ACTIVE entry's values feed the editor
 preview (sample data), the in-app control panel's Play, and the exported standalone
 `controlpanel.html` (entries are baked into the panel spec as a switcher). Entries live
-ON the GraphicDoc, so they save, reopen, and sync with the graphic. Hosted-page entry
-sync is a later step (the hosted `staged`/`live` model is per-show, not per-entry).
+ON the GraphicDoc, so they save, reopen, and sync with the graphic.
+
+The HOSTED control page (`?control=<slug>`) publishes them the same way: `publishControlShow`
+reads each show graphic's entries out of the library into the `panel` spec, and the page
+renders a READ-ONLY switcher. Picking an entry loads its values into the SHARED staging
+buffer — the same path typing takes — so it airs on an explicit take, and the hosted
+`staged`/`live` model stays per-graphic, not per-entry. Authoring stays in the app; a change
+reaches operators on the next publish. A show's copy of a graphic records `graphicId` (the
+library record it came from) so the lookup is by stable id, not by name — see
+docs/CONTROL_LAYER.md.
 
 ## 5. Versioning
 

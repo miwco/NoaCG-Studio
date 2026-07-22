@@ -32,6 +32,13 @@ export interface SavedGraphic {
   type: TemplateType;
   savedAt: string; // ISO date
   template: SpxTemplate;
+  /**
+   * The LIBRARY record this copy was taken from (model/library.ts GraphicDoc.id), when the
+   * document was a saved graphic. Additive and optional - a copy without it stays valid; it
+   * is what lets a show's hosted control page find the graphic's saved ENTRIES
+   * (control/hostedControl.ts). Not an ownership link: the copy is still a copy.
+   */
+  graphicId?: string;
 }
 
 export interface Packet {

@@ -379,8 +379,13 @@ e2e/layout.spec.ts.
 - **HostedControlPage** - the `?control=<slug>` operator page (routed in App.tsx like ?chat=):
   one card per graphic off the stored panel spec - event buttons with structural-guard
   greying, shared staged fields (local echo + debounced control_stage), explicit take, state
-  chip from the graphics' own reports. Login-optional by design (the slug is the capability);
-  offline builds answer the route honestly.
+  chip from the graphics' own reports, and the graphic's saved ENTRIES as a READ-ONLY
+  switcher (published in the panel spec; picking one stages its values for every operator,
+  ▶ Play entry takes and plays, a hand edit drops the selection - authoring stays in
+  GraphicControlPage). Login-optional by design (the slug is the capability); offline builds
+  answer the route honestly, which is also why the page's UI is covered by the maintainer's
+  live checklist rather than the offline e2e suite (e2e/hosted-control.spec.ts pins the
+  publish-side spec build).
 - **StylePanel** - reads/writes the :root style contract (src/templates/CLAUDE.md): colors,
   font swap, zone re-anchoring, post-creation font import (an imported font still lands in
   template.assets and shows in the Assets panel's list).

@@ -605,6 +605,10 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   margin: 8px 0 6px;
   font-weight: 600;
 }
+.hosted-entries select { flex: 1 1 auto; min-width: 0; }
+/* The button keeps its label on one line; the switcher takes whatever is left. */
+.hosted-entries button { flex: 0 0 auto; white-space: nowrap; }
+.hosted-entries .hint { margin: 6px 0 0; }
 .hosted-error { color: #e07a5f; font-size: 13px; }
 
 /* ---------- Category grouping (Essentials / Specials) ---------- */

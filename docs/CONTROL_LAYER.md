@@ -72,8 +72,18 @@ hosted receiver into each graphic at export (the saved snapshot stays clean).
   Realtime Postgres Changes deliver rows; a (re)joining side fills its gap from
   `control_tail`. There is no second command path.
 - `control_shows` (id = the local Show.id) carries the capability `slug`, the `panel` spec
-  (name/fields/js/image paths per graphic — never full templates), the shared `staged`
+  (name/fields/js/image paths/entries per graphic — never full templates), the shared `staged`
   buffer, and `live` — each graphic's own report of applied data + machine state.
+- **Entries are published, not authored, on the hosted page.** The panel spec carries each
+  graphic's saved `ControlEntry` rows (docs/SAVED_CONTENT_MODEL.md §4), read out of the
+  library at publish time; the page renders a READ-ONLY switcher, and picking one loads its
+  values into the SHARED staging buffer — the same path typing takes — so an entry airs on an
+  explicit take, never on selection. Editing entries stays in the app (`#/control/<id>`), one
+  re-publish away from air. The library record is found by `SavedGraphic.graphicId` (recorded
+  when the graphic is added to the show), falling back to a unique library name for copies
+  added before that link existed; an ambiguous name publishes no entries rather than guessing.
+  `panel` is jsonb with no version of its own, so a row published by an older build simply
+  carries no entries and is normalized to `[]` on read.
 - **Capability model:** owning/publishing requires sign-in (RLS); OPERATING needs only the
   slug, through SECURITY DEFINER RPCs (`control_show_by_slug`, `control_send`,
   `control_stage`, `control_report`, `control_tail`). Revoke = unpublish or rotate.
@@ -100,6 +110,10 @@ stub). All local-first; cloud mirrors for signed-in users.
    has slug/panel; Unpublish deletes it and the link 404s honestly.
 3. Signed OUT (incognito): open `?control=<slug>` → cards render; edits stage (second
    incognito window follows them live); ⟳ Take airs; event buttons grey/enable with state.
+3b. Entries: a graphic with saved entries shows the switcher; picking one fills the fields and
+   stages them (the second window follows), ⟳ Take airs them, ▶ Play entry takes and plays;
+   a hand edit afterwards drops the selection back to "Choose an entry…"; editing an entry in
+   the app changes the hosted page only after a re-publish.
 4. Export the published show; run a graphic's `index.html` as a browser source (another
    machine ideally): hosted page drives it; kill + reload the graphic → it snaps back to the
    pre-kill state with the aired data; reload the hosted page mid-show → chip + fields

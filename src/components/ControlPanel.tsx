@@ -43,6 +43,7 @@ export default function ControlPanel() {
   const sendControl = useTemplateStore((s) => s.sendControl);
   const sendEvent = useTemplateStore((s) => s.sendEvent);
   const sampleData = useTemplateStore((s) => s.sampleData);
+  const savedGraphicId = useTemplateStore((s) => s.saved.graphicId);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
   const [live, setLive] = useState(true);
@@ -67,7 +68,9 @@ export default function ControlPanel() {
   };
   const addCurrent = () => {
     if (!activeShow) return;
-    const { shows: next, error } = addGraphicToShow(activeShow.id, template);
+    // A saved document carries its library id into the show, so publishing the hosted control
+    // page can find the graphic's saved entries (control/hostedControl.ts).
+    const { shows: next, error } = addGraphicToShow(activeShow.id, template, { graphicId: savedGraphicId });
     setShows(next);
     setShowNote(error ?? `✓ "${template.name}" is in the show (same name updates in place).`);
   };

@@ -7,6 +7,7 @@ import {
   stageHostedData,
   subscribeControlEvents,
   type ControlEventRow,
+  type PanelEntry,
   type PanelGraphicSpec,
   type ResolvedControlShow,
 } from '../control/hostedControl';
@@ -24,6 +25,11 @@ import { FieldControl } from './fields/FieldControl';
  * what it actually applied — the live state every page's chip and button-greying read. All
  * of it rides the one durable log, so a refresh of any participant recovers: this page
  * re-reads the row, a rebooted graphic rebuilds from its own last report.
+ *
+ * The graphic's saved ENTRIES travel in the panel spec and render as a READ-ONLY switcher:
+ * picking one loads its values into the shared staging buffer — the same path typing takes —
+ * so an entry airs on an explicit take, never merely because it was selected. Authoring
+ * entries stays in the app; this page only plays them.
  */
 export default function HostedControlPage({ slug }: { slug: string }) {
   const [show, setShow] = useState<ResolvedControlShow | null | 'loading'>('loading');
@@ -147,6 +153,9 @@ function HostedGraphicCard({
     ...(live?.data ?? {}),
     ...staged,
   }));
+  /** Which saved entry this operator last loaded — a local convenience, not shared state:
+   *  what every page follows is the staged DATA the pick produced. */
+  const [entryId, setEntryId] = useState('');
   useEffect(() => {
     setValues((v) => ({ ...v, ...staged }));
   }, [staged]);
@@ -167,6 +176,14 @@ function HostedGraphicCard({
       pendingRef.current = {};
       void stageHostedData(slug, spec.name, batch);
     }, 400);
+  };
+  /** Stage a whole batch at once (an entry load), flushing whatever typing was still pending. */
+  const stageNow = (batch: Record<string, string>) => {
+    if (stageTimer.current) clearTimeout(stageTimer.current);
+    stageTimer.current = null;
+    const merged = { ...pendingRef.current, ...batch };
+    pendingRef.current = {};
+    void stageHostedData(slug, spec.name, merged);
   };
 
   const state = live?.state ?? null;
@@ -193,9 +210,39 @@ function HostedGraphicCard({
     return data;
   };
   // Edits STAGE (shared, visible to every operator); nothing airs until an explicit take.
+  // A hand edit also drops the entry selection — the fields no longer are that entry.
   const stage = (key: string, value: string) => {
     setValues((v) => ({ ...v, [key]: value }));
+    setEntryId('');
     stageSoon(key, value);
+  };
+
+  // ── Entries: the graphic's saved data rows, published read-only with the panel ──
+  // Picking one LOADS it: the values stage for every operator, exactly as typing them would,
+  // so it airs on ⟳ Take (or ▶ Play entry, which takes and plays in one gesture).
+  const entryData = (entry: PanelEntry) => {
+    const data: Record<string, string> = {};
+    for (const d of descriptors) {
+      const v = entry.values[d.key];
+      if (v !== undefined) data[d.key] = v;
+    }
+    return data;
+  };
+  const loadEntry = (id: string) => {
+    setEntryId(id);
+    const entry = spec.entries.find((e) => e.id === id);
+    if (!entry) return;
+    const data = entryData(entry);
+    setValues((v) => ({ ...v, ...data }));
+    stageNow(data);
+  };
+  const playEntry = () => {
+    const entry = spec.entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    // Built from the entry over the current values: `values` has not re-rendered yet when a
+    // pick and a play land in the same tick.
+    send({ t: 'update', data: { ...currentData(), ...entryData(entry) } });
+    send({ t: 'play' });
   };
   const take = () => send({ t: 'update', data: currentData() });
   const fire = (event: string, payloadKeys?: string[]) => {
@@ -238,6 +285,31 @@ function HostedGraphicCard({
           </div>
         </div>
       ))}
+      {spec.entries.length > 0 && (
+        <div className="hosted-events hosted-entries">
+          <h3>Entries</h3>
+          <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+            <select
+              value={entryId}
+              onChange={(e) => loadEntry(e.target.value)}
+              data-testid="hosted-entry-select"
+              title="Saved data rows published with this graphic"
+            >
+              <option value="">Choose an entry…</option>
+              {spec.entries.map((e) => (
+                <option key={e.id} value={e.id}>{e.label}</option>
+              ))}
+            </select>
+            <button className="primary" disabled={!entryId} onClick={playEntry} data-testid="hosted-entry-play">
+              ▶ Play entry
+            </button>
+          </div>
+          <p className="hint">
+            Picking an entry stages its data for every operator — ⟳ Take airs it. Entries are
+            edited in the app.
+          </p>
+        </div>
+      )}
       {descriptors.map((d) => (
         <div key={d.key} className="field-row">
           <label>{d.label}</label>

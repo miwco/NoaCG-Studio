@@ -83,7 +83,11 @@ export function upsertShow(show: Show): void {
  * replaced in place (adding twice = updating it, keeping its rundown position); a new name
  * appends at the end of the rundown.
  */
-export function addGraphicToShow(showId: string, template: SpxTemplate): { shows: Show[]; error: string | null } {
+export function addGraphicToShow(
+  showId: string,
+  template: SpxTemplate,
+  opts?: { graphicId?: string | null },
+): { shows: Show[]; error: string | null } {
   const all = loadAllShows();
   const show = all.find((s) => s.id === showId && !s.deleted);
   if (!show) return { shows: all.filter((s) => !s.deleted), error: 'That show no longer exists.' };
@@ -93,6 +97,9 @@ export function addGraphicToShow(showId: string, template: SpxTemplate): { shows
     type: template.type,
     savedAt: nowIso(),
     template,
+    // Which LIBRARY record this copy came from, when the document was a saved graphic - the
+    // link the hosted control page follows to publish that graphic's entries.
+    ...(opts?.graphicId ? { graphicId: opts.graphicId } : {}),
   };
   const existing = show.graphics.findIndex((g) => g.name === template.name);
   if (existing >= 0) show.graphics[existing] = graphic;

@@ -3,12 +3,25 @@
 // unguessable slug opens the hosted page at ?control=<slug>, no account needed. Commands
 // are INSERTS into the control_events log (DB-ordered, recoverable); staging and the
 // graphics' applied-state reports ride the same log as meta rows.
+//
+// The published `panel` spec also carries each graphic's saved ENTRIES, read out of the
+// library at publish time (docs/SAVED_CONTENT_MODEL.md §4) — the hosted page renders them as
+// a read-only switcher, so picking one stages its data and airing it stays a deliberate take.
 
 import { getSupabase } from '../backend/supabase';
 import type { Show } from '../model/shows';
+import type { SavedGraphic } from '../model/packets';
+import { loadGraphics, type GraphicDoc } from '../model/library';
 import type { SpxField } from '../model/types';
 import { isImageAsset } from '../assets/assetUtils';
 import type { ControlMessage } from './controlModel';
+
+/** A saved data row published with the panel (model/library.ts ControlEntry, values only). */
+export interface PanelEntry {
+  id: string;
+  label: string;
+  values: Record<string, string>;
+}
 
 /** What the hosted page needs to render one graphic's card — never the full template. */
 export interface PanelGraphicSpec {
@@ -16,6 +29,14 @@ export interface PanelGraphicSpec {
   fields: SpxField[];
   js: string;
   images: { value: string; label: string }[];
+  /**
+   * The graphic's saved entries, published READ-ONLY (docs/SAVED_CONTENT_MODEL.md §4): the
+   * operator picks one, its values STAGE like any typed edit, and nothing airs until a take.
+   * Authoring entries stays in the app (`#/control/<id>`) — the hosted page never writes back.
+   * Additive: `panel` is jsonb with no version of its own, so a row published by an older
+   * build simply carries no entries and is normalized to `[]` on read.
+   */
+  entries: PanelEntry[];
 }
 
 export interface ControlShowRow {
@@ -42,7 +63,26 @@ export interface ControlEventRow {
     | { t: 'live'; data?: Record<string, string>; state?: { groups: Record<string, string> } | null };
 }
 
-function panelSpec(show: Show): PanelGraphicSpec[] {
+/**
+ * A show graphic's saved ENTRIES, resolved out of the library. A graphic added to a show
+ * since the library landed carries `graphicId` — the exact record. An older embedded copy
+ * carries none: fall back to a UNIQUE name match (a show graphic's name IS its identity —
+ * adding the same name updates it in place), and publish NO entries when the name is
+ * ambiguous rather than guessing which graphic the operator meant.
+ */
+function entriesFor(graphic: SavedGraphic, library: GraphicDoc[]): PanelEntry[] {
+  const byName = library.filter((d) => d.name === graphic.name);
+  const doc = graphic.graphicId
+    ? library.find((d) => d.id === graphic.graphicId)
+    : byName.length === 1
+      ? byName[0]
+      : undefined;
+  return (doc?.entries ?? []).map((e) => ({ id: e.id, label: e.label, values: { ...e.values } }));
+}
+
+/** The stored operator spec for a show — one entry per graphic, no template payload. */
+export function buildPanelSpec(show: Show): PanelGraphicSpec[] {
+  const library = loadGraphics();
   return show.graphics.map((g) => ({
     name: g.name,
     fields: g.template.fields,
@@ -50,15 +90,28 @@ function panelSpec(show: Show): PanelGraphicSpec[] {
     images: g.template.assets
       .filter((a) => isImageAsset(a.path))
       .map((a) => ({ value: a.path, label: a.path })),
+    entries: entriesFor(g, library),
   }));
 }
 
-/** Publish (or update) a show's hosted control page. Returns its slug, or null offline. */
+/** Normalize a stored panel row to the current shape (additive fields defaulted, never a crash). */
+function readPanel(panel: unknown): PanelGraphicSpec[] {
+  if (!Array.isArray(panel)) return [];
+  return (panel as PanelGraphicSpec[]).map((g) => ({
+    ...g,
+    images: Array.isArray(g.images) ? g.images : [],
+    entries: Array.isArray(g.entries) ? g.entries : [],
+  }));
+}
+
+/** Publish (or update) a show's hosted control page — entries included, re-read from the
+ *  library on every publish (so editing them in the app is one re-publish away from air).
+ *  Returns its slug, or null offline. */
 export async function publishControlShow(show: Show): Promise<string | null> {
   const sb = await getSupabase();
   if (!sb) return null;
   const { error } = await sb.from('control_shows').upsert(
-    { id: show.id, title: show.name, panel: panelSpec(show) },
+    { id: show.id, title: show.name, panel: buildPanelSpec(show) },
     { onConflict: 'id' },
   );
   if (error) throw new Error(error.message);
@@ -94,7 +147,7 @@ export async function controlShowBySlug(slug: string): Promise<ResolvedControlSh
   return {
     id: row.id as string,
     title: row.title as string,
-    panel: (row.panel ?? []) as PanelGraphicSpec[],
+    panel: readPanel(row.panel),
     staged: (row.staged ?? {}) as ResolvedControlShow['staged'],
     live: (row.live ?? {}) as ResolvedControlShow['live'],
   };
