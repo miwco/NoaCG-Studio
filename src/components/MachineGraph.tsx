@@ -479,11 +479,22 @@ export default function MachineGraph({ iframeRef, data, onOpenStep }: Props) {
   //    CONNECT: drag from a box's port to another box of the SAME group, and the released
   //    arrow becomes a real operator transition, selected for immediate renaming.
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const suppressClickRef = useRef(false);
   const [moveDraft, setMoveDraft] = useState<{ groupId: string; id: string; x: number; y: number } | null>(null);
   const [wireDraft, setWireDraft] = useState<{ groupId: string; fromId: string; x: number; y: number } | null>(null);
-  /** Which lane's "+ state" menu is open (the main lane's three-way add). */
-  const [addMenu, setAddMenu] = useState<string | null>(null);
+  /** The open "+ state" menu (the main lane's three-way add), placed in FRAME coordinates
+   *  measured off its button. It renders beside the detail card rather than inside the
+   *  scrolling viewport, so it can size against the dock — a lower third's menu is taller
+   *  than its own diagram — and so panning never drags it away from what it belongs to. */
+  const [addMenu, setAddMenu] = useState<{ laneId: string; x: number; y: number } | null>(null);
+
+  /** Where a lane-head control sits inside the frame — the popover's anchor. */
+  const framePoint = (el: HTMLElement) => {
+    const frame = frameRef.current?.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return frame ? { x: r.left - frame.left, y: r.bottom - frame.top + 6 } : { x: 0, y: 0 };
+  };
 
   const canvasPoint = (e: PointerEvent | React.PointerEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -601,215 +612,226 @@ export default function MachineGraph({ iframeRef, data, onOpenStep }: Props) {
 
   const model_ = displayModel;
 
+  /** A pose-only branch state, parked below the group's lowest box: never under the detail
+   *  card (top-right), and visibly "a branch" rather than another waypoint. Shared by a
+   *  parallel lane's "+ state" and the main lane's menu entry. */
+  const addPoseState = (laneId: string, laneY: number) => {
+    const groupBoxes = model_.boxes.filter((b) => b.groupId === laneId);
+    const x = groupBoxes.reduce((a, b) => Math.min(a, b.x), PAD_X);
+    const bottom = groupBoxes.reduce((a, b) => Math.max(a, b.y + b.h), laneY + LANE_PAD_TOP);
+    const next = addState(data, laneId, 'New state', [x, bottom + ROW_GAP]);
+    if (next && applyData(next)) {
+      const group = next.machine!.groups.find((g) => g.id === laneId)!;
+      setSel({ kind: 'state', groupId: laneId, id: group.states[group.states.length - 1].id });
+    }
+  };
+
+  const menuLane = addMenu ? model_.lanes.find((l) => l.group.id === addMenu.laneId) ?? null : null;
+
   return (
-    <div className="machine-graph" data-testid="machine-graph">
+    <div className="machine-graph" ref={frameRef} data-testid="machine-graph">
       <div
-        ref={canvasRef}
-        className="mg-canvas"
-        style={{ width: model_.width, height: model_.height }}
+        className="mg-viewport"
+        data-testid="mg-viewport"
         onPointerDown={(e) => {
-          // Empty canvas clears the selection, like the stage. The wires SVG covers the
-          // whole canvas, so a press on it (not on a hit path/label, which stop at their
-          // own handlers) counts as empty too.
+          // Empty canvas clears the selection, like the stage — and closes the add menu, the
+          // way a press outside dismisses any popover. The wires SVG covers the whole canvas,
+          // so a press on it (not on a hit path/label, which stop at their own handlers)
+          // counts as empty too, as does the viewport's own slack now that the frame is
+          // taller than the diagram.
           const t = e.target as Element;
-          if (t === e.currentTarget || t.classList.contains('mg-wires')) setSel(null);
+          if (t === e.currentTarget || t.classList.contains('mg-canvas') || t.classList.contains('mg-wires')) {
+            setSel(null);
+            setAddMenu(null);
+          }
         }}
       >
-        <svg className="mg-wires" width={model_.width} height={model_.height}>
-          <defs>
-            <marker id="mg-head-walk" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M 0 0 L 8 4 L 0 8 z" className="mg-head-walk" />
-            </marker>
-            <marker id="mg-head-dim" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M 0 0 L 8 4 L 0 8 z" className="mg-head-dim" />
-            </marker>
-          </defs>
-          {!model_.freeform &&
-            model_.lanes.length > 1 &&
-            model_.lanes.slice(1).map((lane) => (
-              <line key={lane.group.id} x1="0" y1={lane.y} x2={model_.width} y2={lane.y} className="mg-lane-line" />
-            ))}
-          {model_.arrows.map((a) => {
-            const selectable = a.tIndex !== null;
-            const isSel = selectedArrow === a;
-            return (
-              <g key={a.key} className={`${ARROW_CLASS[a.kind]}${isSel ? ' mg-arrow-selected' : ''}`}>
-                <path
-                  d={a.path}
-                  fill="none"
-                  markerEnd={`url(#${isSel || a.kind === 'walk' || a.kind === 'walk-stop' ? 'mg-head-walk' : 'mg-head-dim'})`}
-                />
-                <text
-                  x={a.labelX}
-                  y={a.labelY}
-                  textAnchor="middle"
-                  className={selectable ? 'mg-label-hit' : undefined}
-                  onClick={selectable ? () => setSel({ kind: 'arrow', groupId: a.groupId, tIndex: a.tIndex! }) : undefined}
-                >
-                  {a.label}
-                </text>
-                {selectable && (
+        <div
+          ref={canvasRef}
+          className="mg-canvas"
+          style={{ width: model_.width, height: model_.height }}
+        >
+          <svg className="mg-wires" width={model_.width} height={model_.height}>
+            <defs>
+              <marker id="mg-head-walk" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 z" className="mg-head-walk" />
+              </marker>
+              <marker id="mg-head-dim" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 z" className="mg-head-dim" />
+              </marker>
+            </defs>
+            {!model_.freeform &&
+              model_.lanes.length > 1 &&
+              model_.lanes.slice(1).map((lane) => (
+                <line key={lane.group.id} x1="0" y1={lane.y} x2={model_.width} y2={lane.y} className="mg-lane-line" />
+              ))}
+            {model_.arrows.map((a) => {
+              const selectable = a.tIndex !== null;
+              const isSel = selectedArrow === a;
+              return (
+                <g key={a.key} className={`${ARROW_CLASS[a.kind]}${isSel ? ' mg-arrow-selected' : ''}`}>
                   <path
                     d={a.path}
                     fill="none"
-                    className="mg-hit"
-                    onClick={() => setSel({ kind: 'arrow', groupId: a.groupId, tIndex: a.tIndex! })}
-                    data-testid={`mg-arrow-${a.key}`}
+                    markerEnd={`url(#${isSel || a.kind === 'walk' || a.kind === 'walk-stop' ? 'mg-head-walk' : 'mg-head-dim'})`}
                   />
-                )}
-              </g>
-            );
-          })}
-          {wireFrom && wireDraft && (
-            <path
-              className="mg-wire-draft"
-              d={`M ${wireFrom.x + wireFrom.w} ${wireFrom.y + wireFrom.h / 2} L ${wireDraft.x} ${wireDraft.y}`}
-              markerEnd="url(#mg-head-walk)"
-            />
-          )}
-        </svg>
-        {model_.lanes.map((lane, li) => (
-          <span key={lane.group.id} className="mg-lane-head" style={{ top: lane.labelY }}>
-            <span className="mg-lane-label">{lane.group.id}</span>
-            <button
-              type="button"
-              className="mg-lane-btn"
-              title={
-                li === 0
-                  ? 'Add a state — a branch pose, a step on the path, or a layer’s own timeline'
-                  : 'Add a state to this group'
-              }
-              onClick={() => {
-                if (li === 0) {
-                  setAddMenu((open) => (open === lane.group.id ? null : lane.group.id));
-                  return;
-                }
-                // Below the group's lowest box: never under the detail card (top-right),
-                // and visibly "a branch", not another waypoint.
-                const groupBoxes = model_.boxes.filter((b) => b.groupId === lane.group.id);
-                const x = groupBoxes.reduce((a, b) => Math.min(a, b.x), PAD_X);
-                const bottom = groupBoxes.reduce((a, b) => Math.max(a, b.y + b.h), lane.y + LANE_PAD_TOP);
-                const next = addState(data, lane.group.id, 'New state', [x, bottom + ROW_GAP]);
-                if (next && applyData(next)) {
-                  const group = next.machine!.groups.find((g) => g.id === lane.group.id)!;
-                  setSel({ kind: 'state', groupId: lane.group.id, id: group.states[group.states.length - 1].id });
-                }
-              }}
-              data-testid={`mg-add-state-${lane.group.id}`}
-            >
-              + state
-            </button>
-            {li === 0 && addMenu === lane.group.id && (
-              <span className="mg-add-menu" data-testid="mg-add-menu">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddMenu(null);
-                    const groupBoxes = model_.boxes.filter((b) => b.groupId === lane.group.id);
-                    const x = groupBoxes.reduce((a, b) => Math.min(a, b.x), PAD_X);
-                    const bottom = groupBoxes.reduce((a, b) => Math.max(a, b.y + b.h), lane.y + LANE_PAD_TOP);
-                    const next = addState(data, lane.group.id, 'New state', [x, bottom + ROW_GAP]);
-                    if (next && applyData(next)) {
-                      const group = next.machine!.groups.find((g) => g.id === lane.group.id)!;
-                      setSel({ kind: 'state', groupId: lane.group.id, id: group.states[group.states.length - 1].id });
-                    }
-                  }}
-                  title="A pose-only branch state — entering it plays nothing (Off, Paused, a hold)"
-                  data-testid="mg-add-pose"
-                >
-                  ○ Pose state
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAddMenu(null);
-                    applyStepData(addStep(data));
-                  }}
-                  title="A new » step on the default path, just before Out — a graphic timeline to fill with keyframes"
-                  data-testid="mg-add-step"
-                >
-                  ◇ Step on the path
-                </button>
-                <span className="mg-add-menu-sep" />
-                <span className="mg-add-menu-label">▤ Timeline from layer:</span>
-                {parts
-                  .filter((p) => p.kind !== 'root')
-                  .map((p) => (
-                    <button
-                      key={p.selector}
-                      type="button"
-                      onClick={() => {
-                        setAddMenu(null);
-                        addStepFromLayer(p.selector);
-                      }}
-                      title={`A new step named "${p.label} In" that this layer's reveal moves into — its own separately editable timeline on the path`}
-                      data-testid={`mg-add-layer-${p.selector.replace(/[^a-z0-9-]/gi, '')}`}
-                    >
-                      ▤ {p.label}
-                    </button>
-                  ))}
-              </span>
+                  <text
+                    x={a.labelX}
+                    y={a.labelY}
+                    textAnchor="middle"
+                    className={selectable ? 'mg-label-hit' : undefined}
+                    onClick={selectable ? () => setSel({ kind: 'arrow', groupId: a.groupId, tIndex: a.tIndex! }) : undefined}
+                  >
+                    {a.label}
+                  </text>
+                  {selectable && (
+                    <path
+                      d={a.path}
+                      fill="none"
+                      className="mg-hit"
+                      onClick={() => setSel({ kind: 'arrow', groupId: a.groupId, tIndex: a.tIndex! })}
+                      data-testid={`mg-arrow-${a.key}`}
+                    />
+                  )}
+                </g>
+              );
+            })}
+            {wireFrom && wireDraft && (
+              <path
+                className="mg-wire-draft"
+                d={`M ${wireFrom.x + wireFrom.w} ${wireFrom.y + wireFrom.h / 2} L ${wireDraft.x} ${wireDraft.y}`}
+                markerEnd="url(#mg-head-walk)"
+              />
             )}
-            {li > 0 && (
+          </svg>
+          {model_.lanes.map((lane, li) => (
+            <span key={lane.group.id} className="mg-lane-head" style={{ top: lane.labelY }}>
+              <span className="mg-lane-label">{lane.group.id}</span>
               <button
                 type="button"
                 className="mg-lane-btn"
-                title="Delete this parallel group (undo with Ctrl+Z)"
-                onClick={() => applyData(removeGroup(data, lane.group.id))}
-                data-testid={`mg-del-group-${lane.group.id}`}
-              >
-                ✕
-              </button>
-            )}
-          </span>
-        ))}
-        {model_.boxes.map((box) => (
-          <button
-            key={`${box.groupId}/${box.id}`}
-            type="button"
-            className={[
-              'mg-state',
-              box.initial ? 'mg-initial' : '',
-              current && current[box.groupId] === box.id ? 'mg-current' : '',
-              selectedBox === box ? 'mg-selected' : '',
-              wireDraft && wireDraft.groupId !== box.groupId ? 'mg-dim' : '',
-              wireDraft && wireDraft.groupId === box.groupId && wireDraft.fromId !== box.id ? 'mg-target' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
-            onClick={() => selectState(box)}
-            onPointerDown={(e) => startMove(box, e)}
-            title={
-              current
-                ? `Snap the preview to "${box.name}" — instant, no animation replay`
-                : 'This preview was emitted before the machine engine — re-emit via any timeline edit to enable snapping'
-            }
-            data-testid={`mg-state-${box.groupId}-${box.id}`}
-          >
-            {box.badge && <span className="mg-badge">{box.badge}</span>}
-            {box.kind !== 'pose' && (
-              <span
-                className={`mg-kind mg-kind-${box.kind}`}
                 title={
-                  box.kind === 'layer'
-                    ? `Layer timeline — animates one layer${box.layerSelector ? ` (${box.layerSelector})` : ''}`
-                    : 'Graphic timeline — a complete look (several layers together)'
+                  li === 0
+                    ? 'Add a state — a branch pose, a step on the path, or a layer’s own timeline'
+                    : 'Add a state to this group'
                 }
+                onClick={(e) => {
+                  if (li === 0) {
+                    const at = framePoint(e.currentTarget);
+                    setAddMenu((open) => (open?.laneId === lane.group.id ? null : { laneId: lane.group.id, ...at }));
+                    return;
+                  }
+                  addPoseState(lane.group.id, lane.y);
+                }}
+                data-testid={`mg-add-state-${lane.group.id}`}
               >
-                {box.kind === 'layer' ? '▤' : '◇'}
-              </span>
-            )}
-            <span className="mg-name">{box.name}</span>
-            <span
-              className="mg-port"
-              title="Drag to another state of this group to draw a transition"
-              onPointerDown={(e) => startWire(box, e)}
-              data-testid={`mg-port-${box.groupId}-${box.id}`}
-            />
-          </button>
-        ))}
+                + state
+              </button>
+              {li > 0 && (
+                <button
+                  type="button"
+                  className="mg-lane-btn"
+                  title="Delete this parallel group (undo with Ctrl+Z)"
+                  onClick={() => applyData(removeGroup(data, lane.group.id))}
+                  data-testid={`mg-del-group-${lane.group.id}`}
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+          ))}
+          {model_.boxes.map((box) => (
+            <button
+              key={`${box.groupId}/${box.id}`}
+              type="button"
+              className={[
+                'mg-state',
+                box.initial ? 'mg-initial' : '',
+                current && current[box.groupId] === box.id ? 'mg-current' : '',
+                selectedBox === box ? 'mg-selected' : '',
+                wireDraft && wireDraft.groupId !== box.groupId ? 'mg-dim' : '',
+                wireDraft && wireDraft.groupId === box.groupId && wireDraft.fromId !== box.id ? 'mg-target' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
+              onClick={() => selectState(box)}
+              onPointerDown={(e) => startMove(box, e)}
+              title={
+                current
+                  ? `Snap the preview to "${box.name}" — instant, no animation replay`
+                  : 'This preview was emitted before the machine engine — re-emit via any timeline edit to enable snapping'
+              }
+              data-testid={`mg-state-${box.groupId}-${box.id}`}
+            >
+              {box.badge && <span className="mg-badge">{box.badge}</span>}
+              {box.kind !== 'pose' && (
+                <span
+                  className={`mg-kind mg-kind-${box.kind}`}
+                  title={
+                    box.kind === 'layer'
+                      ? `Layer timeline — animates one layer${box.layerSelector ? ` (${box.layerSelector})` : ''}`
+                      : 'Graphic timeline — a complete look (several layers together)'
+                  }
+                >
+                  {box.kind === 'layer' ? '▤' : '◇'}
+                </span>
+              )}
+              <span className="mg-name">{box.name}</span>
+              <span
+                className="mg-port"
+                title="Drag to another state of this group to draw a transition"
+                onPointerDown={(e) => startWire(box, e)}
+                data-testid={`mg-port-${box.groupId}-${box.id}`}
+              />
+            </button>
+          ))}
+        </div>
       </div>
+      {addMenu && menuLane && (
+        <span className="mg-add-menu" style={{ left: addMenu.x, top: addMenu.y }} data-testid="mg-add-menu">
+          <button
+            type="button"
+            onClick={() => {
+              setAddMenu(null);
+              addPoseState(menuLane.group.id, menuLane.y);
+            }}
+            title="A pose-only branch state — entering it plays nothing (Off, Paused, a hold)"
+            data-testid="mg-add-pose"
+          >
+            ○ Pose state
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAddMenu(null);
+              applyStepData(addStep(data));
+            }}
+            title="A new » step on the default path, just before Out — a graphic timeline to fill with keyframes"
+            data-testid="mg-add-step"
+          >
+            ◇ Step on the path
+          </button>
+          <span className="mg-add-menu-sep" />
+          <span className="mg-add-menu-label">▤ Timeline from layer:</span>
+          {parts
+            .filter((p) => p.kind !== 'root')
+            .map((p) => (
+              <button
+                key={p.selector}
+                type="button"
+                onClick={() => {
+                  setAddMenu(null);
+                  addStepFromLayer(p.selector);
+                }}
+                title={`A new step named "${p.label} In" that this layer's reveal moves into — its own separately editable timeline on the path`}
+                data-testid={`mg-add-layer-${p.selector.replace(/[^a-z0-9-]/gi, '')}`}
+              >
+                ▤ {p.label}
+              </button>
+            ))}
+        </span>
+      )}
       <span className="mg-foot-chips">
         <button
           type="button"

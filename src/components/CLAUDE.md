@@ -214,8 +214,18 @@ in src/blocks/CLAUDE.md.
   there ("Open its timeline" parks the playhead at the step). Every write is a
   blocks/machineEdit.ts mutator → `writeAnimData` → ONE applyTemplate; illegal edits (reserved
   or duplicate event, deleting the walk's only edge) return null and the control reverts.
-  Gotcha: the box button must NOT have `overflow: hidden` — it would clip the connect port
-  half off the right edge and eat its pointerdown (the name span does its own ellipsis).
+  STRUCTURE: `.machine-graph` is a FRAME that fills the dock (`.timeline-dock` grows into the
+  splitter's room via `flex: 1 0 auto`, so the surface is sized by the DOCK, never by the
+  diagram); `.mg-viewport` inside it scrolls the `.mg-canvas`, and the OVERLAYS — the detail
+  card, the foot chips, and the "+ state" menu (placed in frame coordinates by `framePoint`)
+  — are siblings of the viewport, so they size against the dock and panning can't drag them
+  away from what they describe. That is not cosmetic: while the diagram sized the surface, a
+  two-state lower third made the card 104px around 211px of content, putting the whole
+  Cut/Fade picker below an invisible fold, and hid every "▤ timeline from layer" entry.
+  Gotchas: the box button must NOT have `overflow: hidden` — it would clip the connect port
+  half off the right edge and eat its pointerdown (the name span does its own ellipsis); and
+  `toBeVisible()` is blind to overflow clipping, so anything about reaching a control is
+  pinned by comparing rects (`boxInside` in e2e/machine-graph.spec.ts), never by visibility.
   Pinned by e2e/machine-graph.spec.ts.
 - **TimelineDock / StepTimeline** (Timeline v2, both in StepTimeline.tsx) - the dock picks the
   timeline surface from the CODE, never from the category (which is what lets a template saved

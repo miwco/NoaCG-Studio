@@ -336,3 +336,80 @@ test('two complete graphic timelines chain on the path (the ◇ > ◇ rundown ca
   await expect(page.locator('.mg-state', { hasText: 'Presenter Lower Third' }).locator('.mg-kind-graphic')).toBeVisible();
   await expect(page.locator('.mg-state', { hasText: 'Guest Lower Third' }).locator('.mg-kind-graphic')).toBeVisible();
 });
+
+/**
+ * Is `sel`'s box inside `clipper`'s box?
+ *
+ * `toBeVisible()` says YES to an element clipped away by an ancestor's overflow, which is
+ * exactly how the "▤ timeline from layer" entries and the transition card's style picker both
+ * shipped unreachable while this suite stayed green. Reaching a control is a question about
+ * geometry, so ask it about geometry.
+ */
+async function boxInside(page: Page, sel: string, clipper: string): Promise<boolean> {
+  return page.evaluate(([s, c]) => {
+    const el = document.querySelector(s);
+    const clip = document.querySelector(c);
+    if (!el || !clip) return false;
+    const a = el.getBoundingClientRect();
+    const b = clip.getBoundingClientRect();
+    return a.top >= b.top - 0.5 && a.bottom <= b.bottom + 0.5 && a.left >= b.left - 0.5 && a.right <= b.right + 0.5;
+  }, [sel, clipper]);
+}
+
+test('every "+ state" entry is reachable at the default dock size', async ({ page }) => {
+  await createProject(page, { category: 'lower-third', index: 0 });
+  await openGraph(page);
+  await page.getByTestId('mg-add-state-main').click();
+  await expect(page.getByTestId('mg-add-menu')).toBeVisible();
+
+  // The menu sizes against the DOCK, not against the two-state diagram it hangs off — which
+  // is what it used to do, leaving every layer entry below the fold.
+  expect(await boxInside(page, '[data-testid="mg-add-menu"]', '[data-testid="machine-graph"]')).toBe(true);
+
+  // A lower third offers a layer timeline per part, and a short window cannot show them all
+  // at once — so the bar is REACHABLE, not "fits without scrolling": each entry lands inside
+  // the menu's visible box once scrolled to. (Clipped-with-nowhere-to-scroll is the failure
+  // this pins; `toBeVisible()` cannot tell the two apart.)
+  const layers = page.locator('[data-testid^="mg-add-layer-"]');
+  await expect(layers).toHaveCount(4);
+  for (const testid of await layers.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.testid!))) {
+    await page.getByTestId(testid).scrollIntoViewIfNeeded();
+    expect(await boxInside(page, `[data-testid="${testid}"]`, '[data-testid="mg-add-menu"]'), `${testid} is unreachable`).toBe(true);
+  }
+  // And it really adds the layer's own step, from the last entry — the one that used to be
+  // furthest out of sight.
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-add-layer-f1').click());
+  await expect(page.locator('.mg-state', { hasText: 'Title In' })).toBeVisible();
+});
+
+test('the transition card is reachable and stays put while the diagram scrolls', async ({ page }) => {
+  await createProject(page, { category: 'lower-third', index: 0 });
+  await openGraph(page);
+  // A two-step lower third has no authored arrow at all (play and the edge into Out are the
+  // walk's own): a third waypoint is what gives the graph something to select.
+  await page.getByTestId('mg-add-state-main').click();
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-add-step').click());
+  await page.getByTestId('mg-arrow-main-walk-1').dispatchEvent('click');
+  await expect(page.getByTestId('mg-transition-card')).toBeVisible();
+
+  // The card sizes against the DOCK now, not against the diagram, so it opens on its controls
+  // rather than on "fires on" alone — the style picker is there without touching anything.
+  expect(await boxInside(page, '[data-testid="mg-transition-card"]', '[data-testid="machine-graph"]')).toBe(true);
+  for (const testid of ['mg-trigger', 'mg-event', 'mg-style']) {
+    expect(await boxInside(page, `[data-testid="${testid}"]`, '[data-testid="mg-transition-card"]'), `${testid} is below the fold`).toBe(true);
+  }
+  // A short window still scrolls the tail of the card — reachable is the bar there, since
+  // being clipped with nowhere to scroll is the failure this pins.
+  await page.getByTestId('mg-delete-transition').scrollIntoViewIfNeeded();
+  expect(await boxInside(page, '[data-testid="mg-delete-transition"]', '[data-testid="mg-transition-card"]')).toBe(true);
+  // …and reachable means operable: the change really lands in the code.
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-style').selectOption('fade'));
+  expect(await templateJs(page)).toContain('"style": "fade"');
+
+  // The card is pinned to the graph FRAME, not to the diagram: panning sideways used to drag
+  // it across the very boxes it describes.
+  const before = await page.getByTestId('mg-transition-card').boundingBox();
+  await page.locator('.mg-viewport').evaluate((v) => { v.scrollLeft = 400; });
+  const after = await page.getByTestId('mg-transition-card').boundingBox();
+  expect(after).toEqual(before);
+});

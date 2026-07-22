@@ -1894,7 +1894,13 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
    band at the top: the surface below them starts under it. They used to float over the
    surface, which was harmless while a chip was one small button and became a bug when the
    switch grew wide enough to cover the timeline's own zoom column and eat its clicks. */
-.timeline-dock { position: relative; }
+/* The dock GROWS into the room the splitter gives it but never shrinks below its content
+   (`flex-basis: auto` is load-bearing): a short graph fills the dock — which is what lets the
+   detail card and the "+ state" menu size against real height instead of against the diagram's
+   own 138px — while a tall one (a scoreboard's four lanes) still overflows .center-timeline and
+   scrolls there rather than being squashed. The step timeline keeps `flex: 0 0 auto`; it is
+   sized by its rows, and simply has room beneath it now. */
+.timeline-dock { position: relative; display: flex; flex-direction: column; flex: 1 0 auto; min-height: 0; }
 .timeline-dock.has-chips { padding-top: 30px; }
 .timeline-dock-toggle {
   position: absolute;
@@ -2182,7 +2188,21 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .timeline-dock-toggle.convert { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
 
 /* ---------- The machine graph (Phase 4 — the node editor's read-first surface) ---------- */
-.machine-graph { position: relative; overflow: auto; height: 100%; }
+/* The graph is a FRAME around a scrolling viewport, not one scrolling box: the diagram moves
+   under the detail card and the foot chips, which stay put. (They used to be absolutely
+   positioned inside the scroller, so panning sideways dragged the card across the boxes it was
+   describing.) The frame fills the dock, so the card's max-height means something. */
+.machine-graph { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* A diagram wider than the dock is normal — say so with a real scrollbar rather than clipping
+   silently. The standard properties, not ::-webkit-scrollbar: Chromium ignores the pseudo
+   elements once scrollbar-width is set, so styling both would leave dead rules behind. */
+.mg-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232, 237, 242, 0.22) transparent;
+}
 .mg-canvas { position: relative; }
 .mg-wires { position: absolute; inset: 0; pointer-events: none; }
 .mg-wires text {
@@ -2297,8 +2317,13 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   top: 26px;
   right: 12px;
   width: 210px;
-  max-height: calc(100% - 34px); /* a short dock scrolls the card, never clips it */
+  /* The card sizes against the DOCK (the graph frame fills it), so on a normal window every
+     control — including the style picker and Delete — is simply there. A short window still
+     scrolls it, and says so: a silent scroll here is what hid the Cut/Fade picker. */
+  max-height: calc(100% - 34px);
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232, 237, 242, 0.22) transparent;
   padding: 10px 12px;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -3226,17 +3251,23 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .mg-kind-layer { color: #7fb8e8; }
 .mg-kind-graphic { color: var(--amber); }
 
+/* Placed in FRAME coordinates measured off its button (MachineGraph `framePoint`), not hung
+   under it inside the scroller: a lower third's menu is taller than its own two-state diagram,
+   so anchoring it to the diagram clipped every "▤ timeline from layer" entry out of sight. */
 .mg-add-menu {
   position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
   z-index: 6;
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 200px;
-  max-height: 240px;
+  /* Capped to the dock and scrolled inside it. A graphic with many layers will always outgrow
+     a short dock, so the menu has to scroll — the part that must never happen again is
+     scrolling INVISIBLY, hence the explicit scrollbar. */
+  max-height: calc(100% - 40px);
   overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232, 237, 242, 0.22) transparent;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
