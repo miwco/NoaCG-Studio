@@ -67,7 +67,8 @@ are wrong - fix the code, not the table.
 - `app` -> (nothing)
 - `components` -> any lower domain, **through its seam column in §2**
 
-Hard invariants (1, 3 and 4 are lint-enforced - §7; 2 and 5 stay review-time until Stage B):
+Hard invariants (1, 3 and 4 are lint-enforced, 5 and the whole edge table are
+dependency-cruiser-enforced - §7; only 2 stays review-time):
 
 1. **`@supabase/supabase-js` is value-imported only inside `backend/`** (type-only imports of
    `SupabaseClient` are fine anywhere). All client access goes through `getSupabase()`; all
@@ -146,9 +147,16 @@ the row. Do not add rows without updating §3's justification trail.
   exemption (`src/blocks/registry.ts`) mirrors its §6 row; delete both together. Invariants 2
   and 5 stay review-time: they need different mechanisms (`no-restricted-globals`/syntax for the
   purity trio, a resolver-aware tool for the model layer rule).
-- **Stage B - the full ratchet (proposed, needs a go-ahead).** `dependency-cruiser`
-  (devDependency) encoding §3's edge table plus cycle detection, wired into `npm run build` next
-  to eslint, with §6 as the explicit exception list. Every debt fixed shrinks the config.
+- **Stage B - wired.** `dependency-cruiser` (devDependency) runs in `npm run build` next to
+  eslint (`npm run depcruise` standalone). `.dependency-cruiser.cjs` is default-deny: its
+  `allowed` array IS §3's edge table, so a new cross-domain edge edits the doc and the config in
+  the same PR; the §6 debts appear as commented allowances that get deleted with their rows. The
+  `no-circular` rule bans cycles made entirely of value imports (the module-init-time hazard);
+  cycles containing an `import type` edge are tolerated - they are erased at compile time, and
+  the registry/type-hub patterns in `export/`, `ai/`, and `templates/shared` depend on them.
+  Scope is `src/` only: `api/`, `render-worker/`, and `player-host/` are separate programs whose
+  sanctioned imports into `src/render` live outside this graph. This subsumes invariant 5;
+  invariant 2 (the purity trio's no-DOM/`?raw`/`import.meta` rule) remains review-time.
 
 Until then, `scripts/e2e-affected.mjs` remains the de-facto machine-readable domain map (its
 `CORE` list is the "shared kernel" statement); keep it in step with this doc when domains move.
