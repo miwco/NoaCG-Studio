@@ -99,6 +99,12 @@ in src/blocks/CLAUDE.md.
   release, keys `scale` / `rotation` at the playhead (keyframePlace + setKeyframe + spliceAnimData,
   ONE undoable apply, re-parked) - pivoting around the layer's transform-origin (the Inspector
   pivot). Escape springs it back. The root keeps its own --scale corner handle.
+  THROUGH THE LENS: this file keyframes at the PLAYHEAD, and the playhead belongs to whichever
+  timeline is open - so its `dataModel` is `lensRead(…, timelineTarget)` and every write folds
+  back through `projectedJs` (blocks/timelineLens.ts), never raw `parseAnimData`/`writeAnimData`.
+  Reading the raw document meant that, with a branch state's timeline on screen, a canvas drag
+  wrote its x/y into the default path's step: the strip showed the branch, the keyframe landed
+  on the walk, and nothing said so.
   CANVAS POSITION KEYFRAMING (docs/TIMELINE_INTERACTION_MODEL.md, amendment 3): on a
   data-block template, dragging any SELECTED non-root layer moves the WHOLE selection (layers
   contained in another dragged layer are excluded - the parent's transform carries them) and,
@@ -180,6 +186,12 @@ in src/blocks/CLAUDE.md.
 
 - **PlayoutSimulator** - owns the running preview timeline `__activeTl`; settles the design view
   after every rebuild (progress(1, true) + a second update()); auto-replays on replayNonce;
+  resolves the SCRUB phases, including `state:<group>:<state>` for a BRANCH timeline
+  (blocks/timelineLens.ts `scrubPhase`): snap the group to the state's canonical predecessor
+  (`branchRoute`, off animMachine's `canonicalPath`, which the interpreter's own
+  `noacgCanonicalPath` mirrors) so the segment animates FROM the right look, then hold the
+  runtime's `noacgEnterTimeline` paused. A branch used to send no scrub at all, so its timeline
+  was authored blind - the playhead moved and the picture did not;
   handles the store's `event`/`snap` commands against the template's STATE MACHINE
   (docs/STATE_MACHINE_SCHEMA.md) - snapping with `{ timers: false }`, because a parked design
   view must never auto-advance - and, ONLY for a template carrying an EXPLICIT machine, renders
@@ -241,6 +253,14 @@ in src/blocks/CLAUDE.md.
   away from what they describe. That is not cosmetic: while the diagram sized the surface, a
   two-state lower third made the card 104px around 211px of content, putting the whole
   Cut/Fade picker below an invisible fold, and hid every "▤ timeline from layer" entry.
+  PROBLEM MARKS: a box whose state `validateMachine` has something to say about (animMachine
+  `stateProblems` — unreachable, or a timer on a timeline that never ends) wears a coloured
+  dot, and its card carries the finding phrased as the NEXT MOVE rather than the export
+  report's verdict (`problemAdvice`). The finding used to reach only the Export panel, so a
+  branch could carry a whole hand-built timeline and never be entered with nothing said where
+  it was authored. `boxWidth` takes an allowance for the dot — without it a two-word state
+  ellipsizes exactly when its name matters most. An off-path POSE now wears ○ like the rest
+  state; it was previously the one box on the graph with no mark at all.
   Gotchas: the box button must NOT have `overflow: hidden` — it would clip the connect port
   half off the right edge and eat its pointerdown (the name span does its own ellipsis); and
   `toBeVisible()` is blind to overflow clipping, so anything about reaching a control is
@@ -469,12 +489,18 @@ Home, both routed (src/app/router.ts) so browser Back/Forward walk between surfa
   and the iframe is the template's OWN resolution scaled into it, so a non-16:9 graphic keeps
   its shape.
 - **home/GraphicControlPage** - `#/control/<graphicId>`: the saved graphic's operator
-  panel - live preview iframe + transport + machine event buttons + ENTRIES (named data
+  panel - live preview iframe + transport + machine event buttons (GREYED by controlModel
+  `isEventLegal` against a 500ms poll of the preview's own `noacgMachineState`, exactly as the
+  editor's Control panel, the event strip and the hosted page do — this surface shipped without
+  it, so every button looked pressable whether or not the graphic would drop the press) + a
+  STATE CHIP naming where the preview is (the fact the greying is judged against; its title
+  says "preview", because this page rehearses and does not drive a playout) + ENTRIES (named data
   rows: add/duplicate/rename/delete/select-active, ▶ Play with an entry, ★ make an entry
   the template's default data via setFieldDefault) + the downloadable controlpanel.html
   with entries baked in (control/controlPanelHtml.ts opts.entries renders an entry
   switcher). Entry mutations compose through a read-fresh `patch(cur => …)` - two edits in
-  one tick must never overwrite each other.
+  one tick must never overwrite each other. An entry's ✕ is ARMED (two-step, like Home's
+  graphic delete): typed-in data with no undo behind it, on a row someone drives live.
 - **AuthStatus** now routes 🏠 Home from the account menu (initials avatar fallback); the
   topbar's always-visible 🏠 Home button is the no-account door to the same place.
 
