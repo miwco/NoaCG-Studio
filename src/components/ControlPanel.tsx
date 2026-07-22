@@ -209,11 +209,12 @@ export default function ControlPanel() {
   return (
     <div>
       <div className="panel-section">
-        <h3>Control panel <span className="muted">— operator view</span></h3>
+        <h3>Rehearse <span className="muted">— operator view</span></h3>
         <p className="hint">
-          Auto-built from this graphic's fields. Edits drive the preview live; the buttons play
-          it out. <strong>Download</strong> a standalone copy to run the graphic as a browser
-          source and operate it from another tab.
+          The operator view, here for <strong>rehearsal</strong>: auto-built from this graphic's
+          fields, its edits and buttons drive <strong>this preview</strong> so you can play it
+          through before air. The real on-air surface is the graphic's own <strong>Control
+          panel</strong> (Home → Control panels, or the standalone copy you download below).
         </p>
       </div>
 

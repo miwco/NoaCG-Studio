@@ -35,9 +35,10 @@ test('layout: code dock left ONCE OPENED, canvas + timeline in the centre, tool 
   // …and the tool tabs are a dock to the RIGHT of the stage.
   expect(rightTabs!.x).toBeGreaterThanOrEqual(stage!.x + stage!.width - 4);
   // The right dock holds the Inspector plus the focused tool panels — Blocks/Learn/Validate
-  // are gone; Control is the operator view; Motion lives on the timeline, not in a tab.
+  // are gone; Content = design values, Rehearse = the in-editor operator view; Motion lives on
+  // the timeline, not in a tab.
   await expect(page.locator('[data-testid="dock-right"] .dock-tab-label')).toHaveText([
-    'Inspector', 'Data', 'Control', 'Style', 'Assets', 'AI', 'Export',
+    'Inspector', 'Content', 'Rehearse', 'Style', 'Assets', 'AI', 'Export',
   ]);
 });
 

@@ -164,7 +164,7 @@ test('mobile: the Inspector is a panel tab, so a selected layer can still be edi
 
   // The tool panels still render in the shared padded body beside it.
   await page.getByTestId('panel-tab-data').click();
-  await expect(page.locator('.panel-body')).toContainText('Sample data');
+  await expect(page.locator('.panel-body')).toContainText('Content');
 });
 
 test('mobile: the wizard preview keeps a real stage instead of collapsing', async ({ page }) => {
