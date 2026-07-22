@@ -65,6 +65,15 @@ test('Home lists the library; a package opens with its graphics; Back walks the 
   await expect(page.locator('.tpl-name')).toHaveText('Presenter lower third');
 });
 
+test('a first-ever visit is offered creation, not a door to an empty Home', async ({ page }) => {
+  // Nothing saved anywhere (a fresh context): "Continue working" would be the loudest card on
+  // the screen and would lead to an empty Home, so it stays away until there IS work.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await expect(page.getByTestId('wz-continue')).toHaveCount(0);
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+});
+
 test('the wizard leads with Continue working: recent graphics reopen from the entry step', async ({ page }) => {
   await createProject(page, 'Hairline');
   await saveAs(page, 'Presenter lower third');
