@@ -2345,6 +2345,12 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
   color: var(--text-dim);
 }
 .mg-card-row select { flex: 1; min-width: 0; }
+/* The "change" select's longest option is a sentence ("state timeline (animated)") and cannot
+   share a 210px row with its label without truncating the very words that distinguish it from
+   a Cut or a Fade — so that one row stacks. Only that one: every stacked row costs ~14px of a
+   card that a short window already has to scroll. */
+.mg-card-row.stacked { flex-direction: column; align-items: stretch; gap: 3px; }
+.mg-card-row.stacked select { width: 100%; }
 .mg-card-input {
   flex: 1;
   min-width: 0;

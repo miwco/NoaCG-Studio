@@ -100,8 +100,15 @@ export function freshStateId(group: AnimGroup, name: string): string {
  * What KIND of timeline a state's content is — DERIVED from the code, never stored (the
  * one-source-of-truth rule): a LAYER timeline moves exactly one element (Box In, Name In),
  * a GRAPHIC timeline moves several (a complete graphic's entrance, a composite change), a
- * POSE has no timeline at all. The timeline dock and the node editor badge with this so the
- * two levels stay visually distinct everywhere.
+ * POSE genuinely does nothing on entry — it holds whatever the previous state left. The
+ * timeline dock and the node editor badge with this so the two levels stay visually distinct
+ * everywhere.
+ *
+ * "Does nothing" has to mean nothing AT ALL, not "keyframes none": a step whose timeline only
+ * fires a lifecycle `call` still changes the graphic (a quiz's `applySelection` repaints the
+ * board, a clock's `startClock` sets it running). Counting only the animated layers read those
+ * as poses and had the state card telling an operator that Answer selected and Reveal "play
+ * nothing" — two of the states that do the most.
  */
 export type TimelineKind = 'layer' | 'graphic' | 'pose';
 export function timelineKind(step: AnimStep | null | undefined): TimelineKind {
@@ -110,7 +117,8 @@ export function timelineKind(step: AnimStep | null | undefined): TimelineKind {
   const touched = new Set(Object.keys(step.layers));
   for (const sel of step.reveals ?? []) touched.add(sel);
   for (const sel of step.hides ?? []) touched.add(sel);
-  if (touched.size === 0) return 'pose';
+  // A call has no target layer to attribute it to, so its effect is the graphic's.
+  if (touched.size === 0) return (step.calls?.length ?? 0) > 0 ? 'graphic' : 'pose';
   return touched.size === 1 ? 'layer' : 'graphic';
 }
 

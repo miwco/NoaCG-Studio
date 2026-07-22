@@ -195,7 +195,13 @@ in src/blocks/CLAUDE.md.
   graph surface toggling with the step timeline in the bottom dock (the SEGMENTED
   `≡ Timeline | ◇ States` switch - both surfaces always visible, active highlighted;
   data-block templates only). Boxes carry the ▤ layer / ◇ graphic timeline badge
-  (animMachine `timelineKind`, derived never stored); the main lane's "+ state" is a
+  (animMachine `timelineKind`, derived never stored - a timeline that only fires a lifecycle
+  `call` counts as ◇, since its effect has no one layer to attribute it to; a POSE is a state
+  that does nothing at all on entry). The card's description composes TWO facts - what
+  entering does, and where the timeline lives (`stateContent`) - rather than gluing a kind
+  word to a suffix, which is how a state came to say "entering plays nothing · its own inline
+  timeline" in one breath; and it names a transition's ends the way the BOXES do, with the
+  ids (which never follow a rename, by design) one hover away. The main lane's "+ state" is a
   three-way menu (pose / step on the path / ▤ timeline from layer via
   blocks/layerTimeline.ts, shared with the Inspector's Animations-tab button); Delete
   removes the selection (arrow / branch state / middle waypoint through the step mutators +

@@ -251,9 +251,11 @@ The machine GRAPH surface, toggling with the step timeline in the bottom dock (R
   named after the layer whose reveal the layer's activation moves into. Deleting a middle
   waypoint deletes its bound step the same way the clip's Delete does.
 - **Two timeline LEVELS, derived never stored** (`animMachine.ts timelineKind`): a state whose
-  content animates exactly ONE layer is a ▤ LAYER timeline (Name In); several layers make a
-  ◇ GRAPHIC timeline (a complete look); no timeline is a pose. The graph boxes, the state
-  card, and the step clips all badge with the same classifier, so the two levels stay
+  content animates exactly ONE layer is a ▤ LAYER timeline (Name In); several layers - or a
+  timeline that only fires a lifecycle `call`, whose effect has no one layer to attribute it
+  to (a quiz's `applySelection`) - make a ◇ GRAPHIC timeline (a complete look). A POSE is a
+  state that does nothing AT ALL on entry: it holds the look it arrives with. The graph boxes,
+  the state card, and the step clips all badge with the same classifier, so the two levels stay
   visually distinct everywhere without a second stored model.
 - **Break fearlessly:** the topbar ↺ Reset restores the create-time `baseline` snapshot.
 

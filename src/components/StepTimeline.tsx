@@ -1241,8 +1241,8 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                         timelineKind(seg.step) === 'layer'
                           ? 'Layer timeline — this step animates one layer'
                           : timelineKind(seg.step) === 'graphic'
-                            ? 'Graphic timeline — this step animates the whole look'
-                            : 'Pose — this step animates nothing yet'
+                            ? 'Graphic timeline — this step changes the whole look'
+                            : 'Pose — this step holds the look it arrives with'
                       }
                     >
                       {timelineKind(seg.step) === 'layer' ? '▤' : timelineKind(seg.step) === 'graphic' ? '◇' : '·'}

@@ -8,7 +8,15 @@ import {
   type AnimGroup,
   type AnimTransition,
 } from '../blocks/animData';
-import { deriveMachine, isWalkEdge, spxSteps, timelineKind, timelineLayer, type TimelineKind } from '../blocks/animMachine';
+import {
+  deriveMachine,
+  isWalkEdge,
+  spxSteps,
+  stateById,
+  timelineKind,
+  timelineLayer,
+  type TimelineKind,
+} from '../blocks/animMachine';
 import { addStep, deleteStep, renameStep } from '../blocks/animEdit';
 import { createStepFromLayer } from '../blocks/layerTimeline';
 import { getTemplateParts } from '../model/structure';
@@ -796,7 +804,7 @@ export default function MachineGraph({ iframeRef, data, onOpenStep }: Props) {
               setAddMenu(null);
               addPoseState(menuLane.group.id, menuLane.y);
             }}
-            title="A pose-only branch state — entering it plays nothing (Off, Paused, a hold)"
+            title="A branch state that holds the look it arrives with — entering it changes nothing on its own (Off, Paused, a hold)"
             data-testid="mg-add-pose"
           >
             ○ Pose state
@@ -877,6 +885,33 @@ export default function MachineGraph({ iframeRef, data, onOpenStep }: Props) {
   );
 }
 
+/**
+ * What the card says a state's content IS: two facts — what ENTERING it does, and WHERE its
+ * timeline lives — composed so they can never contradict each other. They used to be glued
+ * together from a kind word and a suffix, which is how a quiz board's `Answer selected` came
+ * to describe itself as "pose only — entering plays nothing · its own inline timeline".
+ */
+function stateContent(box: StateBox): string {
+  const does =
+    box.kind === 'layer'
+      ? `▤ animates one layer${box.layerSelector ? ` (${box.layerSelector})` : ''}`
+      : box.kind === 'graphic'
+        ? '◇ changes the whole graphic'
+        : 'holds the look it arrives with — entering changes nothing';
+  // The rest state gets no "where": the card already says what it is on its own line, and
+  // calling the graphic's off-air state "a branch" would be the next small lie.
+  if (box.initial) return does;
+  const where =
+    box.pathIndex !== null
+      ? `step ${box.pathIndex + 1} of the default path`
+      : box.poseOnly
+        ? 'a branch off the path'
+        : box.kind === 'pose'
+          ? 'its own timeline, still empty'
+          : 'its own timeline, off the path';
+  return `${does} · ${where}`;
+}
+
 /** The selected state's detail card: identity, what its content is, and the way into its
  *  timeline (a default-path state's step). Renaming an off-path state edits its label; a
  *  path state's name IS its step's name, renamed through the same mutator the timeline uses
@@ -911,18 +946,7 @@ function StateCard({
         : renameOffPathState(data, box.groupId, box.id, name);
     if (!applyData(next)) setName(box.name);
   };
-  const kindWord =
-    box.kind === 'layer'
-      ? `▤ layer timeline${box.layerSelector ? ` (${box.layerSelector})` : ''}`
-      : box.kind === 'graphic'
-        ? '◇ graphic timeline'
-        : 'pose only — entering plays nothing';
-  const content =
-    box.pathIndex !== null
-      ? `${kindWord} · step ${box.pathIndex + 1} of the default path`
-      : box.poseOnly
-        ? kindWord
-        : `${kindWord} · its own inline timeline`;
+  const content = stateContent(box);
   const deletable = box.pathIndex === null && !box.initial;
   // The entrance and Out anchor the walk; the middle waypoints can go (their bound step
   // goes with them — the positional binding, same as the clip's Delete on the timeline).
@@ -1000,6 +1024,12 @@ function TransitionCard({
   onDeleted: () => void;
 }) {
   const t = arrow.t!;
+  // The card names the two ends the way the BOXES do. A state's id deliberately never follows
+  // a rename (transitions, snap assignments and an exported control page all reference it),
+  // which is right — but it left this card reading "enter → step-3" beside a box labelled
+  // "Step 2". The ids stay one hover away, where the machine's own vocabulary belongs.
+  const group = (data.machine ?? deriveMachine(data)).groups.find((g) => g.id === groupId) ?? null;
+  const stateName = (id: string) => (group ? stateById(group, id)?.name ?? id : id);
   const [event, setEvent] = useState(t.event ?? '');
   const [after, setAfter] = useState(String(t.after ?? ''));
   const [styleDur, setStyleDur] = useState(String(t.duration ?? ''));
@@ -1022,8 +1052,8 @@ function TransitionCard({
   return (
     <div className="mg-card" data-testid="mg-transition-card">
       <div className="mg-card-title">Transition</div>
-      <div className="mg-card-name mono">
-        {t.from} → {t.to}
+      <div className="mg-card-name" title={`${t.from} → ${t.to}`}>
+        {stateName(t.from)} → {stateName(t.to)}
       </div>
       {t.trigger === 'data-condition' ? (
         <div className="mg-card-row">reserved data-condition trigger — it never fires in this version</div>
@@ -1075,7 +1105,7 @@ function TransitionCard({
               />
             </label>
           )}
-          <label className="mg-card-row">
+          <label className="mg-card-row stacked">
             change
             <select
               value={t.style ?? ''}

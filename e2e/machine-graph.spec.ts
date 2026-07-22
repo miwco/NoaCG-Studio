@@ -82,7 +82,7 @@ test('the transition card edits an arrow: event rename, illegal names refused, s
   // The lock arrow (selected → locked). dispatchEvent: the visible stroke is 1.5px and the
   // hit twin is a curve — a center click would miss both.
   await page.getByTestId('mg-arrow-main-t-2').dispatchEvent('click');
-  await expect(page.getByTestId('mg-transition-card')).toContainText('selected → locked');
+  await expect(page.getByTestId('mg-transition-card')).toContainText('Answer selected → Locked in');
 
   // Rename the event; one undoable apply lands in the code.
   await awaitPreviewRebuild(page, async () => {
@@ -113,7 +113,7 @@ test('a styled transition plays the arrow\'s change and lands exactly on the tar
   await openGraph(page);
   // Style the enter → selected arrow (fade), then fire it in the live preview.
   await page.getByTestId('mg-arrow-main-t-1').dispatchEvent('click');
-  await expect(page.getByTestId('mg-transition-card')).toContainText('enter → selected');
+  await expect(page.getByTestId('mg-transition-card')).toContainText('Enter → Answer selected');
   await awaitPreviewRebuild(page, () => page.getByTestId('mg-style').selectOption('fade'));
 
   const result = await page.evaluate(async (frameSel) => {
@@ -157,7 +157,7 @@ test('drawing an arrow from a port creates a transition; the walk\'s only edge r
     await page.mouse.up();
   });
   expect(await templateJs(page)).toContain('"from": "enter", "to": "locked", "trigger": "operator", "event": "go"');
-  await expect(page.getByTestId('mg-transition-card')).toContainText('enter → locked');
+  await expect(page.getByTestId('mg-transition-card')).toContainText('Enter → Locked in');
 
   // Delete it again through its card.
   await awaitPreviewRebuild(page, () => page.getByTestId('mg-delete-transition').click());
@@ -165,7 +165,7 @@ test('drawing an arrow from a port creates a transition; the walk\'s only edge r
 
   // The only arrow behind a default-path edge cannot go — the walk must stay connected.
   await page.getByTestId('mg-arrow-main-walk-1').dispatchEvent('click');
-  await expect(page.getByTestId('mg-transition-card')).toContainText('enter → reveal');
+  await expect(page.getByTestId('mg-transition-card')).toContainText('Enter → Reveal');
   await page.getByTestId('mg-delete-transition').click();
   await page.waitForTimeout(300);
   expect(await templateJs(page)).toContain('"from": "enter", "to": "reveal"');
@@ -335,6 +335,54 @@ test('two complete graphic timelines chain on the path (the ◇ > ◇ rundown ca
   await openGraph(page);
   await expect(page.locator('.mg-state', { hasText: 'Presenter Lower Third' }).locator('.mg-kind-graphic')).toBeVisible();
   await expect(page.locator('.mg-state', { hasText: 'Guest Lower Third' }).locator('.mg-kind-graphic')).toBeVisible();
+});
+
+test('a state that only fires a lifecycle call is not described as doing nothing', async ({ page }) => {
+  await createProject(page, { category: 'quiz' });
+  await openGraph(page);
+
+  // `Answer selected` animates no layer at all — its timeline calls applySelection, which
+  // repaints the board from the data. Counting only animated layers scored that as a pose and
+  // had the card saying "entering plays nothing · its own inline timeline", both at once.
+  await page.getByTestId('mg-state-main-selected').click();
+  const card = page.getByTestId('mg-state-card');
+  await expect(card).toContainText('changes the whole graphic');
+  await expect(card).not.toContainText('nothing');
+  await expect(page.getByTestId('mg-state-main-selected').locator('.mg-kind-graphic')).toBeVisible();
+
+  // A genuine pose — one with no timeline at all — describes itself as a hold, not as an
+  // omission: "Off" is the graphic's rest state, not an unfinished step.
+  await page.getByTestId('mg-state-main-off').click();
+  await expect(card).toContainText('holds the look it arrives with');
+  await expect(card).toContainText('the rest state');
+});
+
+test('the transition card names the two ends the way the boxes do', async ({ page }) => {
+  await createProject(page, { category: 'lower-third', index: 0 });
+  await openGraph(page);
+  await page.getByTestId('mg-add-state-main').click();
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-add-step').click());
+  // A styled arrow MATERIALIZES the derived machine, freezing the ids at today's names.
+  await page.getByTestId('mg-arrow-main-walk-1').dispatchEvent('click');
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-style').selectOption('cut'));
+
+  // Now rename the waypoint. Its id deliberately stays `step-2` — transitions, snap
+  // assignments and exported control pages reference it — so the card would otherwise read
+  // "enter → step-2" beside a box labelled "Hold".
+  await page.locator('.mg-state', { hasText: 'Step 2' }).click();
+  await awaitPreviewRebuild(page, async () => {
+    await page.getByTestId('mg-state-name').fill('Hold');
+    await page.keyboard.press('Enter');
+  });
+  const js = await templateJs(page);
+  expect(js).toContain('"id": "step-2"');
+  expect(js).toContain('"name": "Hold"');
+
+  await page.getByTestId('mg-arrow-main-walk-1').dispatchEvent('click');
+  const name = page.getByTestId('mg-transition-card').locator('.mg-card-name');
+  await expect(name).toHaveText('Enter → Hold');
+  // The machine's own vocabulary is one hover away, not gone.
+  await expect(name).toHaveAttribute('title', 'enter → step-2');
 });
 
 /**
