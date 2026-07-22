@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { eventButtons, eventLegality, fieldDescriptors, type ControlMessage } from '../control/controlModel';
+import { eventButtons, eventLegality, fieldDescriptors, isEventLegal, type ControlMessage } from '../control/controlModel';
 import {
   controlShowBySlug,
   hostedControlTail,
@@ -192,12 +192,7 @@ function HostedGraphicCard({
         .map(([gid, sid]) => (Object.keys(state.groups).length > 1 ? `${gid}: ${sid}` : sid))
         .join(' · ')
     : null;
-  const legalNow = (event: string) => {
-    if (!state) return true;
-    const perGroup = legality[event];
-    if (!perGroup) return false;
-    return Object.entries(perGroup).some(([gid, froms]) => froms.includes(state.groups[gid]));
-  };
+  const legalNow = (event: string) => isEventLegal(legality, event, state);
 
   const send = (msg: ControlMessage) => {
     void sendHostedControl(slug, spec.name, msg).catch((e: Error) =>

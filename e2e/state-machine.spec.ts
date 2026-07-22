@@ -452,8 +452,14 @@ test('preview: snap-to-state works in the editor, and the event strip guards lik
   });
   expect(pose).toEqual({ state: 'locked', root: 1, rows: 1 });
 
-  // The strip dispatches REAL events, guarded by the graph: select after lock is dead.
-  await page.getByTestId('sim-event-select').click();
+  // The strip is guarded by the graph: select after lock is dead — and now SAYS so, rather
+  // than taking the press and silently dropping it. (Dispatching it anyway still moves
+  // nothing; that is the runtime guard, covered by the dispatch cases above.)
+  await expect(page.getByTestId('sim-event-select')).toBeDisabled();
+  await page.evaluate(`(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    useTemplateStore.getState().sendEvent('select');
+  })()`);
   await page.waitForTimeout(200);
   await expect(page.getByTestId('sim-state-chip')).toHaveText('locked');
 

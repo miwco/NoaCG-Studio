@@ -192,6 +192,13 @@ interface TemplateState {
   sendEvent: (event: string, payload?: Record<string, string>) => void;
   /** Snap the preview's machine to states instantly ({group: state}; null = all initial). */
   sendSnap: (assignments: Record<string, string> | null) => void;
+  /** The preview's live machine pointers ({group: state}), or null before the graphic has
+   *  reported. The simulator owns the iframe and polls it ONCE; every surface that shows
+   *  operator event buttons reads this to grey what the machine would drop, so the editor's
+   *  strip, the Control panel and a hosted control page all mirror the same structural guard.
+   *  Editor UI state - never persisted, never written into the template. */
+  machineGroups: Record<string, string> | null;
+  setMachineGroups: (groups: Record<string, string> | null) => void;
   /** Seek the live preview's in/out/step timeline to a time (the timeline view's scrubber). */
   sendScrub: (phase: string, time: number) => void;
   /** Select ONE element by its TemplatePart selector (null deselects) — replaces the
@@ -293,6 +300,7 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
   pointerOverStage: false,
   modalCount: 0,
   playhead: null,
+  machineGroups: null,
   canvasGestureActive: false,
   canvasTool: 'select',
   saved: {
@@ -343,6 +351,9 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
         // projects (every imported design has an `.imported-design-art`), so a whole-project
         // swap must not carry the last graphic's unlocked artwork into the new one.
         partLocks: opts?.resetSampleData ? {} : s.partLocks,
+        // Same reason: the previous graphic's machine pointers would grey the new graphic's
+        // event buttons against a state it was never in, until the next poll corrected it.
+        machineGroups: opts?.resetSampleData ? null : s.machineGroups,
         // A whole-project swap severs the save link — a freshly created project must never
         // inherit the previous document's library id (Save would overwrite that graphic).
         // Opening a SAVED graphic re-links right after (store/saveActions.ts openGraphicDoc).
@@ -398,6 +409,11 @@ export const useTemplateStore = create<TemplateState>((set, get) => ({
 
   sendSnap: (assignments) =>
     set((s) => ({ controlCommand: { action: 'snap', snap: assignments, nonce: (s.controlCommand?.nonce ?? 0) + 1 } })),
+
+  // The poll runs every 500 ms; keep the previous object when nothing moved so subscribers
+  // re-render on a real state change, not on the tick.
+  setMachineGroups: (groups) =>
+    set((s) => (JSON.stringify(s.machineGroups) === JSON.stringify(groups) ? {} : { machineGroups: groups })),
 
   sendScrub: (phase, time) => set((s) => ({ scrubCommand: { phase, time, nonce: (s.scrubCommand?.nonce ?? 0) + 1 } })),
 

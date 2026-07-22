@@ -18,7 +18,7 @@ import {
   setLayerHide,
   setStepEase,
 } from '../blocks/animEdit';
-import { spxSteps, timelineKind } from '../blocks/animMachine';
+import { deriveMachine, spxSteps, timelineKind, walkEntry } from '../blocks/animMachine';
 import { EASINGS } from '../model/easings';
 import { replaceRegionWithAnimData, writeAnimData } from '../templates/shared/animRuntime';
 import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/animEval';
@@ -1079,7 +1079,33 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editable, kfSels, data, template, head]);
 
-  const cueOf = (seg: (typeof segs)[number]) => (seg.i === 0 ? '▶' : seg.isOut ? '■' : '»');
+  // HOW EACH CLIP IS REACHED, read off the machine rather than guessed from the index. The
+  // index only ever knew "press N of Next", which is a lie the moment an author retimes that
+  // arrow to a timer in the States tab — the graphic advanced by itself while the timeline
+  // still promised the operator a press. A machine-less template derives the ordinary `next`
+  // chain, so the whole existing catalog reads exactly as before.
+  const walkGroup = useMemo(() => (data.machine ?? deriveMachine(data)).groups[0] ?? null, [data]);
+  const entryOf = (seg: (typeof segs)[number]) => (walkGroup ? walkEntry(walkGroup, seg.i) : null);
+
+  const cueOf = (seg: (typeof segs)[number]) => {
+    if (seg.i === 0) return '▶';
+    const entry = entryOf(seg);
+    if (entry?.trigger === 'timer') return '⏱';
+    return seg.isOut && !entry ? '■' : '»';
+  };
+
+  /** What the clip's tooltip says about when it plays — the same answer the States tab gives. */
+  const playsOn = (seg: (typeof segs)[number]) => {
+    if (seg.i === 0) return 'Plays on ▶ Play';
+    const entry = entryOf(seg);
+    if (!entry) return seg.isOut ? 'Plays on ■ Stop' : `Plays on press ${seg.i} of » Next`;
+    if (entry.trigger === 'timer') {
+      return `Plays by itself, ${entry.after ?? 0}s after the previous step settles`;
+    }
+    return entry.event === 'next'
+      ? `Plays on press ${seg.i} of » Next`
+      : `Plays on the “${entry.event}” event`;
+  };
 
   return (
     <div
@@ -1219,11 +1245,7 @@ function StepTimeline({ iframeRef, data, editable }: Props & { data: AnimData; e
                     className={`tlv2-clip${head.step === seg.i ? ' active' : ''}`}
                     style={{ left: seg.x, width: seg.w }}
                     title={
-                      (seg.i === 0
-                        ? 'Plays on ▶ Play'
-                        : seg.isOut
-                          ? 'Plays on ■ Stop'
-                          : `Plays on press ${seg.i} of » Next`) +
+                      playsOn(seg) +
                       (editable ? '. Right-click for step actions; drag the right edge to retime.' : '')
                     }
                     data-testid={`tlv2-clip-${seg.i}`}

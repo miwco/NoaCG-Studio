@@ -107,6 +107,14 @@ templateStore.ts (zustand) holds the template plus editor UI state.
 - **playhead / setPlayhead** - the step timeline's parked playhead `{ step, t }` (step index +
   local time in effective seconds). UI state only - no history; the Inspector stamps
   keyframes at it.
+- **machineGroups / setMachineGroups** - the preview's live machine pointers `{group: state}`,
+  null before the graphic reports. PlayoutSimulator owns the iframe and is the only thing that
+  can poll it, so it publishes here and every surface showing operator event buttons (its own
+  strip, the Control panel) greys from ONE source via controlModel `isEventLegal` - the same
+  structural guard a hosted control page mirrors. The setter drops a tick that changed nothing,
+  so subscribers re-render on a real state change rather than every 500ms. UI state, no
+  history; CLEARED on a whole-project swap, or the previous graphic's pointers would grey the
+  new one's buttons against a state it was never in.
 - **addAsset / addAssets / removeAsset** - undoable in-place snapshots (NOT applyTemplate:
   an asset add must not re-parse the definition, close the gallery, or repaint the change
   highlight). `addAssets` batches a multi-file import into ONE history slot; `addAsset`

@@ -183,9 +183,12 @@ in src/blocks/CLAUDE.md.
   handles the store's `event`/`snap` commands against the template's STATE MACHINE
   (docs/STATE_MACHINE_SCHEMA.md) - snapping with `{ timers: false }`, because a parked design
   view must never auto-advance - and, ONLY for a template carrying an EXPLICIT machine, renders
-  the **event strip**: one button per authored operator event plus a current-state chip. That is
-  Phase 1's entire machine UI; the graph editor is later work, and an ordinary template shows
-  nothing new. The four cue buttons stay THE lifecycle surface for both kinds of template;
+  the **event strip**: one button per authored operator event plus a current-state chip, each
+  button DISABLED where the machine would drop the press (controlModel `isEventLegal`). It owns
+  the iframe, so it runs the ONE 500ms poll of `noacgMachineState()` and publishes the pointers
+  to store.machineGroups - the Control panel greys its own copy of the same buttons from there,
+  and the rule lives once for the editor, the hosted page and the exported panel. An ordinary
+  template shows nothing new. The four cue buttons stay THE lifecycle surface for both kinds of template;
   playNext owns each Continue's reveal tween as `__activeTl` step-N. resetGraphic clears GSAP
   inline props on the root subtree before every entrance so a prior exit never leaks its end
   state (e.g. a Blur exit's filter into a Slide entrance that never resets it). Honors the SPX
@@ -389,7 +392,8 @@ e2e/layout.spec.ts.
   on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
   simulator; renders the state machine's EVENT BUTTONS (controlModel eventButtons - labels/
   sections/payloads from `machine.controls`, payload values from sampleData via
-  store.sendEvent); downloads controlpanel.html; hosts the SHOWS section (model/shows.ts
+  store.sendEvent), GREYED by `isEventLegal` against store.machineGroups exactly as a hosted
+  control page greys them; downloads controlpanel.html; hosts the SHOWS section (model/shows.ts
   rundowns, aggregated show export, and - signed-in - publishing the hosted control page,
   docs/CONTROL_LAYER.md); adds the Google-Sheets live-data block.
 - **HostedControlPage** - the `?control=<slug>` operator page (routed in App.tsx like ?chat=):

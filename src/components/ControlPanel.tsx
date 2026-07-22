@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { saveAs } from 'file-saver';
-import { eventButtons, fieldDescriptors, type ControlButton } from '../control/controlModel';
+import { eventButtons, eventLegality, fieldDescriptors, isEventLegal, type ControlButton } from '../control/controlModel';
 import SpxFieldRow from './fields/SpxFieldRow';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
 import { hasLiveData, liveDataBlock, stripLiveData } from '../control/liveData';
@@ -114,6 +114,10 @@ export default function ControlPanel() {
   // The machine's event buttons (empty without an explicit machine — the derived linear
   // machine's one event is `next`, which the lifecycle row already carries).
   const events = useMemo(() => eventButtons(template.js), [template.js]);
+  // Greyed exactly where the graphic would drop the press — the same structural guard the
+  // hosted control page mirrors, read against the live pointers the simulator publishes.
+  const eventLegal = useMemo(() => eventLegality(template.js), [template.js]);
+  const machineGroups = useTemplateStore((s) => s.machineGroups);
   const eventSections = useMemo(() => {
     const sections = new Map<string, ControlButton[]>();
     for (const e of events) {
@@ -229,20 +233,26 @@ export default function ControlPanel() {
             <div key={section} className="ctl-event-section">
               <h4>{section}</h4>
               <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-                {btns.map((e) => (
-                  <button
-                    key={e.event}
-                    className={e.destructive ? 'ctl-event-destructive' : undefined}
-                    onClick={() => fireEvent(e)}
-                    title={
-                      e.payload?.length
-                        ? `Fires "${e.event}" with ${e.payload.join(', ')} — only where the graph allows it`
-                        : `Fires "${e.event}" — only where the graph allows it`
-                    }
-                  >
-                    ⚡ {e.label}
-                  </button>
-                ))}
+                {btns.map((e) => {
+                  const legal = isEventLegal(eventLegal, e.event, machineGroups && { groups: machineGroups });
+                  return (
+                    <button
+                      key={e.event}
+                      className={e.destructive ? 'ctl-event-destructive' : undefined}
+                      onClick={() => fireEvent(e)}
+                      disabled={!legal}
+                      title={
+                        !legal
+                          ? `"${e.event}" has no arrow out of the current state, so the graphic would drop it`
+                          : e.payload?.length
+                            ? `Fires "${e.event}" with ${e.payload.join(', ')}`
+                            : `Fires "${e.event}"`
+                      }
+                    >
+                      ⚡ {e.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

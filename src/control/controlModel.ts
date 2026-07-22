@@ -95,6 +95,28 @@ export function eventLegality(js: string): Record<string, Record<string, string[
   return legal;
 }
 
+/**
+ * Would this event fire RIGHT NOW? The structural guard, asked from outside the graphic: an
+ * event is legal when some group's current state has an arrow carrying it. `state` null means
+ * nothing has reported yet — treat every button as live rather than greying the whole panel
+ * out on a graphic that simply has not answered.
+ *
+ * Every surface that shows event buttons asks THIS, so the editor's strip and a hosted
+ * control page can never disagree about what an operator may press. (controlPanelHtml.ts
+ * keeps its own inline copy: it ships dependency-free vanilla JS and is the one deliberate
+ * second renderer.)
+ */
+export function isEventLegal(
+  legality: Record<string, Record<string, string[]>>,
+  event: string,
+  state: { groups: Record<string, string> } | null | undefined,
+): boolean {
+  if (!state) return true;
+  const perGroup = legality[event];
+  if (!perGroup) return false;
+  return Object.entries(perGroup).some(([groupId, froms]) => froms.includes(state.groups[groupId]));
+}
+
 // ── The control ⇄ graphic message protocol ──────────────────────────────────
 // A control panel and the graphic it drives talk over a BroadcastChannel (same browser,
 // same origin — local, Era 4). Era 5.3 added a Supabase Realtime transport with the SAME

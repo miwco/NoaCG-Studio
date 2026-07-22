@@ -17,7 +17,10 @@ is the binding contract for `src/control/`, the show model, and the hosted-contr
   2. the standalone **`controlpanel.html`** (`control/controlPanelHtml.ts`, vanilla JS —
      the one deliberate second renderer, show-shaped: one card per graphic),
   3. the **hosted page** (`components/HostedControlPage.tsx`, `?control=<slug>`).
-- The simulator's event strip uses the same `machineControls` merge for its labels.
+- The simulator's event strip is the FOURTH renderer of the same vocabulary: the same
+  `machineControls` merge for its labels and the same `isEventLegal` for its greying. It owns
+  the preview iframe, so it runs the one poll of `noacgMachineState()` and publishes the
+  pointers to `templateStore.machineGroups`, which is where the in-app Control tab reads them.
 
 ## Buttons come from the machine
 
@@ -32,8 +35,14 @@ is the binding contract for `src/control/`, the show model, and the hosted-contr
   field has warns in `validateTemplate`.
 - Legality is the structural guard mirrored as greying: while a surface knows the graphic's
   state it disables buttons the machine would drop; before it knows, everything is enabled
-  and the runtime guard decides. Never invent a third "legal events" implementation —
-  editor-side is `operatorEvents`/`eventLegality`, runtime-side is the interpreter.
+  and the runtime guard decides. `eventLegality(js)` precomputes the table and
+  `isEventLegal(table, event, state)` asks it — every React surface calls THAT one, so a
+  press refused in the editor is refused identically on the hosted page. The editor's strip
+  was the last surface that only pretended: it took every press and dropped the illegal ones
+  silently, which reads as a broken button rather than an impossible one. Never invent a
+  third "legal events" implementation — editor-side is `operatorEvents`/`eventLegality`,
+  runtime-side is the interpreter, and `controlPanelHtml.ts` inlines the same rule because it
+  ships without React.
 
 ## The protocol
 

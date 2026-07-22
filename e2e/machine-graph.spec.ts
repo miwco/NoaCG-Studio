@@ -337,6 +337,60 @@ test('two complete graphic timelines chain on the path (the ◇ > ◇ rundown ca
   await expect(page.locator('.mg-state', { hasText: 'Guest Lower Third' }).locator('.mg-kind-graphic')).toBeVisible();
 });
 
+test('the timeline says how each step is really reached, timers included', async ({ page }) => {
+  await createProject(page, { category: 'lower-third', index: 0 });
+  await openGraph(page);
+  await page.getByTestId('mg-add-state-main').click();
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-add-step').click());
+
+  // Before: the ordinary walk. The derived machine authors `next`, so a machine-less
+  // template reads exactly as it always did.
+  await page.getByTestId('timeline-surface-timeline').click();
+  await expect(page.getByTestId('tlv2-clip-0')).toHaveAttribute('title', /Plays on ▶ Play/);
+  await expect(page.getByTestId('tlv2-clip-1')).toHaveAttribute('title', /Plays on press 1 of » Next/);
+
+  // Turn that arrow into a 1.5s timer in the States tab.
+  await openGraph(page);
+  await page.getByTestId('mg-arrow-main-walk-1').dispatchEvent('click');
+  await awaitPreviewRebuild(page, () => page.getByTestId('mg-trigger').selectOption('timer'));
+  await awaitPreviewRebuild(page, async () => {
+    await page.getByTestId('mg-after').fill('1.5');
+    await page.keyboard.press('Enter');
+  });
+
+  // The timeline has to say so. It used to keep promising the operator a press, because the
+  // cue and the tooltip were computed from the step INDEX and never consulted the machine.
+  await page.getByTestId('timeline-surface-timeline').click();
+  const clip = page.getByTestId('tlv2-clip-1');
+  await expect(clip).toHaveAttribute('title', /Plays by itself, 1\.5s after the previous step settles/);
+  await expect(clip).not.toHaveAttribute('title', /Next/);
+  await expect(clip.locator('.tlv2-cue')).toHaveText('⏱');
+});
+
+test('the editor greys an event the machine would drop', async ({ page }) => {
+  await createProject(page, { category: 'quiz' });
+  const select = page.getByTestId('sim-event-select');
+  const lock = page.getByTestId('sim-event-lock');
+
+  // The preview settles on the entrance after every rebuild, so that is where this starts.
+  // From there `select` has an arrow and `lock` does not.
+  await expect.poll(() => machineState(page).then((s) => s.main)).toBe('enter');
+  await expect(select).toBeEnabled();
+  await expect(lock).toBeDisabled();
+
+  await select.click();
+  await expect.poll(() => machineState(page).then((s) => s.main)).toBe('selected');
+  await expect(lock).toBeEnabled();
+
+  // Once locked, selecting again is structurally impossible — there is no select arrow out of
+  // `locked`. The guard already dropped the press; the button now says so instead of taking
+  // it and doing nothing.
+  await lock.click();
+  await expect.poll(() => machineState(page).then((s) => s.main)).toBe('locked');
+  await expect(select).toBeDisabled();
+  await expect(select).toHaveAttribute('title', /no arrow out of the current state/);
+});
+
 test('a state that only fires a lifecycle call is not described as doing nothing', async ({ page }) => {
   await createProject(page, { category: 'quiz' });
   await openGraph(page);

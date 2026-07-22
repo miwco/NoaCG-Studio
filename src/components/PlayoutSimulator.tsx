@@ -3,6 +3,7 @@ import { useTemplateStore } from '../store/templateStore';
 import { detectPrefix } from '../model/structure';
 import { parseAnimData } from '../blocks/animData';
 import { machineControls } from '../blocks/animMachine';
+import { eventLegality, isEventLegal } from '../control/controlModel';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -100,7 +101,17 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
     const data = parseAnimData(templateJs);
     return data?.machine ? machineControls(data.machine) : null;
   }, [templateJs]);
+  // Which states each event fires from — the structural guard, mirrored as greying exactly
+  // the way a generated control page mirrors it. Without this the strip took every press and
+  // silently dropped the illegal ones, so "Select answer" after "Lock it in" looked broken
+  // rather than impossible.
+  const eventLegal = useMemo(() => eventLegality(templateJs), [templateJs]);
   const [machineState, setMachineState] = useState('');
+  // The machine's raw pointers go to the STORE, not to local state: the simulator owns the
+  // iframe and is the only thing that can poll it, but the Control panel shows the same event
+  // buttons and has to grey them by the same rule.
+  const machineGroups = useTemplateStore((s) => s.machineGroups);
+  const setMachineGroups = useTemplateStore((s) => s.setMachineGroups);
 
   const win = (): SpxWindow | null => (iframeRef.current?.contentWindow as SpxWindow) ?? null;
 
@@ -258,8 +269,9 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlCommand?.nonce]);
 
-  // The state chip tracks the machine's pointers (a cheap poll — the machine has no
-  // subscription surface inside the sandboxed iframe, and 500 ms is plenty for a readout).
+  // The state chip and the buttons' legality both track the machine's pointers (ONE cheap
+  // poll — the machine has no subscription surface inside the sandboxed iframe, and 500 ms is
+  // plenty for a readout).
   useEffect(() => {
     if (!machineEvents) return;
     const tick = () => {
@@ -267,6 +279,7 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
       if (!state) return;
       const groups = Object.entries(state.groups);
       setMachineState(groups.map(([g, s]) => (groups.length > 1 ? `${g}:${s}` : s)).join(' · '));
+      setMachineGroups(state.groups);
     };
     tick();
     const handle = setInterval(tick, 500);
@@ -327,16 +340,24 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
       </button>
       {machineEvents && machineEvents.length > 0 && (
         <div className="simulator-events" data-testid="sim-events">
-          {machineEvents.map((e) => (
-            <button
-              key={e.event}
-              onClick={() => sendEvent(e.event)}
-              title={`Dispatch the "${e.event}" event (fires only where the graph allows it)`}
-              data-testid={`sim-event-${e.event}`}
-            >
-              ⚡ {e.label}
-            </button>
-          ))}
+          {machineEvents.map((e) => {
+            const legal = isEventLegal(eventLegal, e.event, machineGroups && { groups: machineGroups });
+            return (
+              <button
+                key={e.event}
+                onClick={() => sendEvent(e.event)}
+                disabled={!legal}
+                title={
+                  legal
+                    ? `Dispatch the "${e.event}" event`
+                    : `"${e.event}" has no arrow out of the current state, so the graphic would drop it`
+                }
+                data-testid={`sim-event-${e.event}`}
+              >
+                ⚡ {e.label}
+              </button>
+            );
+          })}
           <span className="simulator-state mono" title="The machine's current state" data-testid="sim-state-chip">
             {machineState}
           </span>

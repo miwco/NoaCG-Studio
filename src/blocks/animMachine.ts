@@ -200,6 +200,26 @@ export function timerTransition(group: AnimGroup, stateId: string): AnimTransiti
   return transitionsFrom(group, stateId).find((t) => t.trigger === 'timer') ?? null;
 }
 
+/**
+ * The arrow the WALK follows into `defaultPath[i]` — how that step is REACHED. This is what
+ * lets the step timeline stop guessing from the index: a step is only "press N of Next"
+ * because an operator `next` arrow says so, and once an author retimes that arrow to a timer
+ * the clip has to say the graphic advances by itself.
+ *
+ * `null` for the entrance (play() takes it on air) and for the final waypoint when nobody
+ * drew an arrow into it — v1 parity, where stop() plays the exit. Pass the DERIVED group for
+ * a machine-less template and the answer is the ordinary `next` chain, unchanged.
+ */
+export function walkEntry(group: AnimGroup, i: number): AnimTransition | null {
+  const path = group.defaultPath ?? [];
+  if (i <= 0 || i >= path.length) return null;
+  const from = path[i - 1];
+  const to = path[i];
+  return (
+    group.transitions.find((t) => t.from === from && t.to === to && t.trigger !== 'data-condition') ?? null
+  );
+}
+
 /** Every distinct authored operator event across the machine — the simulator's event strip. */
 export function allOperatorEvents(machine: AnimMachine): string[] {
   const events: string[] = [];
