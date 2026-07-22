@@ -20,6 +20,7 @@ import {
   uniqueAssetPath,
 } from '../assets/assetUtils';
 import type { AssetFile } from '../model/types';
+import InsertTemplateDialog from './InsertTemplateDialog';
 
 /** Soft per-asset size warning — big data-URL assets weigh on share/render budgets. */
 const WARN_ASSET_BYTES = 1_500_000;
@@ -270,6 +271,8 @@ export default function AssetsPanel() {
   // an asset's path) once something lands in it — persisting a cosmetic empty-folder
   // list would need a new template field.
   const [pendingFolders, setPendingFolders] = useState<string[]>([]);
+  // "Add template graphic" — insert a catalog graphic into THIS project (never replacing it).
+  const [insertOpen, setInsertOpen] = useState(false);
 
   const assets = template.assets;
   const selected = assets.find((a) => a.path === selectedPath) ?? null;
@@ -436,6 +439,13 @@ export default function AssetsPanel() {
           <button className="primary" onClick={() => fileInput.current?.click()} data-testid="assets-import">
             + Import assets…
           </button>
+          <button
+            onClick={() => setInsertOpen(true)}
+            title="Insert a graphic from the template catalog into this project — it joins the canvas, timeline, and states without replacing anything"
+            data-testid="assets-insert-template"
+          >
+            ✚ Template graphic…
+          </button>
           <button onClick={newFolder} data-testid="assets-new-folder">🗀 New folder…</button>
         </div>
         {note && <p className={note.startsWith('✗') ? 'status-bad' : 'hint'} style={{ marginTop: 8 }}>{note}</p>}
@@ -470,6 +480,7 @@ export default function AssetsPanel() {
       )}
 
       {selected && <AssetInfoSection asset={selected} bucketFolders={foldersFor(selected)} onMove={handleMove} />}
+      <InsertTemplateDialog open={insertOpen} onClose={() => setInsertOpen(false)} />
     </div>
   );
 }
