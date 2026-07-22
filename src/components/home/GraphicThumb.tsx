@@ -34,6 +34,26 @@ interface ThumbWindow {
  *  graphic (a lower third fills a fraction of the frame) still reads as its own shape. */
 const THUMB_W = 144;
 
+/** On a phone the row's text and actions need the width more than the preview does — the box
+ *  shrinks and the iframe scale follows, so nothing crops. Matches the `@media (max-width: 480px)`
+ *  home rules in styles.css; keep the two in sync. */
+const THUMB_W_COMPACT = 96;
+const COMPACT_QUERY = '(max-width: 480px)';
+
+function useCompactThumb(): boolean {
+  const [compact, setCompact] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(COMPACT_QUERY).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(COMPACT_QUERY);
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  return compact;
+}
+
 export default function GraphicThumb({
   template,
   values,
@@ -47,9 +67,11 @@ export default function GraphicThumb({
   const boxRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [visible, setVisible] = useState(false);
+  const compact = useCompactThumb();
 
+  const boxW = compact ? THUMB_W_COMPACT : THUMB_W;
   const { width, height } = template.resolution;
-  const scale = THUMB_W / width;
+  const scale = boxW / width;
 
   // Mount the iframe only when the card reaches the viewport — a library of a hundred graphics
   // must not parse a hundred copies of GSAP to show the eight rows a user can actually see.
@@ -119,7 +141,7 @@ export default function GraphicThumb({
     <div
       ref={boxRef}
       className="gfx-thumb"
-      style={{ width: THUMB_W, height: Math.round(THUMB_W * (height / width)) }}
+      style={{ width: boxW, height: Math.round(boxW * (height / width)) }}
       data-testid="graphic-thumb"
       aria-hidden="true"
     >

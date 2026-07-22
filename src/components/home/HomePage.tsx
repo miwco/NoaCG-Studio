@@ -458,28 +458,31 @@ function GraphicRow({
   return (
     <div className="pk-graphic" data-testid={`graphic-row-${g.id}`}>
       <GraphicThumb template={g.template} values={activeValues(g)} label={g.name} />
-      {renaming ? (
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={commitRename}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitRename();
-            if (e.key === 'Escape') { setName(g.name); setRenaming(false); }
-          }}
-          data-testid="rename-input"
-        />
-      ) : (
-        <strong>{g.name}</strong>
-      )}
-      <span className="muted">
-        {g.type}
-        {packageLabel ? ` · 📦 ${packageLabel}` : ''}
-        {' · '}
-        {new Date(g.updatedAt).toLocaleDateString()}
-      </span>
+      <div className="pk-info">
+        {renaming ? (
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename();
+              if (e.key === 'Escape') { setName(g.name); setRenaming(false); }
+            }}
+            data-testid="rename-input"
+          />
+        ) : (
+          <strong>{g.name}</strong>
+        )}
+        <span className="muted">
+          {g.type}
+          {packageLabel ? ` · 📦 ${packageLabel}` : ''}
+          {' · '}
+          {new Date(g.updatedAt).toLocaleDateString()}
+        </span>
+      </div>
       <div className="spacer" />
+      <div className="pk-actions">
       {moving ? (
         <select autoFocus defaultValue="__keep" onChange={(e) => move(e.target.value)} onBlur={() => setMoving(false)} data-testid="move-select">
           <option value="__keep" disabled>Move to…</option>
@@ -527,6 +530,7 @@ function GraphicRow({
           </button>
         </>
       )}
+      </div>
     </div>
   );
 }
@@ -683,12 +687,16 @@ function PackageView({
         {graphics.map((g) => (
           <div className="pk-graphic" key={g.id}>
             <GraphicThumb template={g.template} values={activeValues(g)} label={g.name} />
-            <strong>{g.name}</strong>
-            <span className="muted">{g.type} · {new Date(g.updatedAt).toLocaleDateString()}</span>
+            <div className="pk-info">
+              <strong>{g.name}</strong>
+              <span className="muted">{g.type} · {new Date(g.updatedAt).toLocaleDateString()}</span>
+            </div>
             <div className="spacer" />
-            <button className="primary" onClick={() => onOpen(g)}>Open</button>
-            <button onClick={() => navigate({ view: 'control', id: g.id })} title="Open its control panel">🎛</button>
-            <button onClick={() => { updateGraphic(g.id, { packageId: null }); onChanged(); }} title="Remove from the package (kept as standalone)">✕</button>
+            <div className="pk-actions">
+              <button className="primary" onClick={() => onOpen(g)}>Open</button>
+              <button onClick={() => navigate({ view: 'control', id: g.id })} title="Open its control panel">🎛</button>
+              <button onClick={() => { updateGraphic(g.id, { packageId: null }); onChanged(); }} title="Remove from the package (kept as standalone)">✕</button>
+            </div>
           </div>
         ))}
       </div>
@@ -709,11 +717,15 @@ function VideoList({
     <>
       {videos.map((v) => (
         <div className="pk-graphic" key={v.id}>
-          <strong>{v.name}</strong>
-          <span className="muted">{v.project.engine} · {new Date(v.updatedAt).toLocaleDateString()}</span>
+          <div className="pk-info">
+            <strong>{v.name}</strong>
+            <span className="muted">{v.project.engine} · {new Date(v.updatedAt).toLocaleDateString()}</span>
+          </div>
           <div className="spacer" />
-          <button className="primary" onClick={() => onOpen(v)} title="Open in the video editor">Open</button>
-          <button onClick={() => { deleteSavedVideoProject(v.id); onChanged(); }} title="Delete">🗑</button>
+          <div className="pk-actions">
+            <button className="primary" onClick={() => onOpen(v)} title="Open in the video editor">Open</button>
+            <button onClick={() => { deleteSavedVideoProject(v.id); onChanged(); }} title="Delete">🗑</button>
+          </div>
         </div>
       ))}
     </>
@@ -776,9 +788,12 @@ function LooksSection({ looks, onChanged, onDone }: { looks: SavedLook[]; onChan
               <i key={i} style={{ background: c }} />
             ))}
           </span>
-          <strong>{look.name}</strong>
-          <span className="muted">{look.brand.customFont?.family ?? look.brand.fontId ?? ''}</span>
+          <div className="pk-info">
+            <strong>{look.name}</strong>
+            <span className="muted">{look.brand.customFont?.family ?? look.brand.fontId ?? ''}</span>
+          </div>
           <div className="spacer" />
+          <div className="pk-actions">
           <button
             onClick={() => {
               applyTemplate(applyLookToTemplate(template, look.brand));
@@ -806,6 +821,7 @@ function LooksSection({ looks, onChanged, onDone }: { looks: SavedLook[]; onChan
             ⬇
           </button>
           <button onClick={() => { deleteLook(look.id); onChanged(); }} title="Delete this look">✕</button>
+          </div>
         </div>
       ))}
       {note && <p className={note.startsWith('✓') ? 'status-ok' : 'status-bad'}>{note}</p>}

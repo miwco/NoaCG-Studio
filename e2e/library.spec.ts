@@ -167,6 +167,47 @@ test('a Home card shows the real graphic, parked at its settled on-air state', a
   await expect(renamed.locator('.gfx-thumb iframe').contentFrame().locator('#f0')).not.toBeEmpty();
 });
 
+test('phone width: every row action is reachable, the text stays two lines, the nav scrolls', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await createProject(page, 'Hairline');
+  await saveAs(page, 'Presenter lower third with a very long broadcast name');
+  await page.getByTestId('open-home').click();
+  await page.getByTestId('home-nav-graphics').click();
+
+  const row = page.locator('.pk-graphic').first();
+  await expect(row).toBeVisible();
+
+  // Every action button sits inside the viewport with a touch-sized box — the review found
+  // Move and Delete rendered past the 390px edge with no way to scroll to them.
+  const buttons = row.locator('.pk-actions button');
+  const count = await buttons.count();
+  expect(count).toBeGreaterThanOrEqual(6);
+  for (let i = 0; i < count; i++) {
+    const box = await buttons.nth(i).boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(box!.height).toBeGreaterThanOrEqual(36);
+  }
+
+  // Name and metadata are single ellipsized lines with the action strip below them,
+  // not a seven-line stack sharing one row.
+  const nameBox = (await row.locator('.pk-info strong').boundingBox())!;
+  const metaBox = (await row.locator('.pk-info .muted').boundingBox())!;
+  const openBox = (await row.getByTestId('open-graphic').boundingBox())!;
+  expect(nameBox.height).toBeLessThanOrEqual(24);
+  expect(metaBox.height).toBeLessThanOrEqual(24);
+  expect(openBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height - 1);
+
+  // No page-level horizontal overflow.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+
+  // The section nav is one horizontally scrollable chip row, not a ragged half-screen grid.
+  const nav = page.locator('.home-nav');
+  expect((await nav.boundingBox())!.height).toBeLessThanOrEqual(80);
+  expect(await nav.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+});
+
 test('video and graphics stay separate but connected: #/video, back to graphics, never trapped', async ({ page }) => {
   await createProject(page, 'Hairline');
   await page.evaluate(() => {

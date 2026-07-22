@@ -731,6 +731,10 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   font-size: 13px;
 }
 .pk-graphic:first-of-type { border-top: none; }
+/* .pk-info (name + metadata) and .pk-actions (the button cluster) are grouping wrappers for the
+   phone layout below. On wider viewports they dissolve (display: contents), so every child sits
+   on the row's own flex line exactly as before the wrappers existed. */
+.pk-info, .pk-actions { display: contents; }
 .pk-swatches { display: inline-flex; gap: 3px; }
 .pk-swatches i {
   width: 14px;
@@ -3189,10 +3193,58 @@ code.inline { font-family: ui-monospace, monospace; background: var(--bg); paddi
 .control-entry.active .control-entry-label { color: var(--amber); }
 
 @media (max-width: 900px) {
-  .home-body { grid-template-columns: 1fr; }
+  /* Rows, not columns — and the nav row is content-sized: without it, grid's default
+     align-content stretch inflates both auto rows, blowing the nav up to half the screen. */
+  .home-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .home-nav { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
   .control-page-body { grid-template-columns: 1fr; grid-template-rows: minmax(240px, 40vh) 1fr; }
   .control-page-side { border-left: none; border-top: 1px solid var(--border); }
+}
+
+/* Phone width: the graphic rows stack — thumb + text on the first line, the full action strip
+   wrapping under it — and the section nav becomes one horizontally scrollable chip row. The
+   desktop row (display: contents wrappers above) is untouched past 480px. */
+@media (max-width: 480px) {
+  .home-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .home-nav button {
+    flex: none;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .home-nav button.active { border-color: rgba(246, 166, 35, 0.55); }
+  .home-content { padding: 14px 12px 40px; }
+
+  .pk-graphic { flex-wrap: wrap; row-gap: 8px; padding: 10px 4px; }
+  .pk-graphic > .spacer { display: none; }
+  .pk-graphic .pk-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .pk-graphic .pk-info strong,
+  .pk-graphic .pk-info .muted {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pk-graphic .pk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  /* Touch targets: roomy enough for a thumb, and the move select gets the whole line. */
+  .pk-graphic .pk-actions button { min-height: 40px; min-width: 44px; }
+  .pk-graphic .pk-actions select { flex: 1 1 100%; min-height: 40px; }
 }
 
 /* ══ Wizard entry: Continue working + the separated video strip ═══════════════════════════ */
