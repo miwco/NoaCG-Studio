@@ -58,12 +58,10 @@ Layers of documentation, top to bottom:
 | `THEME_DEFAULTS_REVIEW.md` | The family-token audit behind the applied 2026-07-21 defaults. Open remnant: the `labelColor` / `displayTracking` re-modelling questions. |
 | `HYPERFRAMES_QUALITY.md` | Video-engine bench measurements + the corpus. Note its own header: measurements are dated records, not promises. |
 | `BROADCAST_DESIGN_SYSTEM_RESEARCH.md` | The skills evaluation + reference-library architecture. Shipped on `SELECTION_MODE='legacy'` with the 14-card pool; contrast selection measured and rejected. |
+| `noacg-master-goals.md` | The five-phase template-library / state-machine / control-layer master plan. **All five phases complete** (2026-07-19 → 2026-07-21). §1.4's acceptance criteria remain the model's standing tests. |
 
 ## Untracked companions (primary checkout only)
 
-- `docs/noacg-master-goals.md` — the five-phase template-library / state-machine /
-  control-layer master plan. **All five phases are complete** (GOALS.md 2026-07-19 →
-  2026-07-21), so it is historical; several docs and source comments reference it.
 - `live_format_graphics_needs.xlsx` (repo root) — the 60-format source data behind
   `PACK_TAXONOMY.md` and the type frequencies.
 
