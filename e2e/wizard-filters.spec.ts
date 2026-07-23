@@ -58,9 +58,37 @@ test('style, logo, and line filters narrow the lower-thirds grid; clear restores
 test('an impossible combination shows the empty state with its own clear', async ({ page }) => {
   await toTemplateStep(page, 'Lower thirds');
   const n = await lowerThirdCounts(page);
-  // NoaCG designs carry no logo slot, so this combination matches nothing.
-  await page.locator('.wz-filter', { hasText: 'NoaCG' }).click();
-  await page.locator('.wz-filter', { hasText: 'Logo slot' }).click();
+
+  // WHICH combination is impossible is derived from the live catalog, never named here. It
+  // used to be "NoaCG + a logo slot", and filling that cell (lt53, lt54) turned a spec about
+  // the EMPTY STATE into a spec about one gap in the matrix — it failed for the best possible
+  // reason. What this test actually guards is that a zero-result filter shows its own clear
+  // affordance, so it asks the catalog for a triple that matches nothing.
+  const empty = await page.evaluate(async () => {
+    const { variantsFor } = await import('/src/templates/catalog.ts');
+    const vs = variantsFor('lower-third') as { styleTag: string; logo: string; maxLines: number }[];
+    const LABELS: Record<string, string> = {
+      minimal: 'Minimal', editorial: 'Editorial', cinematic: 'Cinematic',
+      sport: 'Sport', glass: 'Glass', noacg: 'NoaCG',
+    };
+    for (const style of Object.keys(LABELS)) {
+      for (const logo of [true, false]) {
+        for (const manyLines of [true, false]) {
+          if (!logo && !manyLines) continue;   // a style chip alone always matches something
+          const hit = vs.some(
+            (v) => v.styleTag === style && (!logo || v.logo !== 'none') && (!manyLines || v.maxLines >= 3),
+          );
+          if (!hit && vs.some((v) => v.styleTag === style)) return { style: LABELS[style], logo, manyLines };
+        }
+      }
+    }
+    return null;
+  });
+  test.skip(!empty, 'every offered filter combination now matches a design — nothing to show an empty state for');
+
+  await page.locator('.wz-filter', { hasText: empty!.style }).click();
+  if (empty!.logo) await page.locator('.wz-filter', { hasText: 'Logo slot' }).click();
+  if (empty!.manyLines) await page.locator('.wz-filter', { hasText: '3+ lines' }).click();
   await expect(page.locator('.wz-variant')).toHaveCount(0);
   await page.locator('.wz-filter-empty button', { hasText: 'Clear filters' }).click();
   await expect(page.locator('.wz-variant')).toHaveCount(n.total);

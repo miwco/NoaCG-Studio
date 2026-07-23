@@ -75,6 +75,8 @@ const CATEGORY_KEYWORDS: { test: RegExp; category: TemplateCategory; label: stri
 const STYLE_KEYWORDS: { test: RegExp; tag: StyleTag }[] = [
   { test: /glass|translucent|frosted|blur/, tag: 'glass' },
   { test: /sport|esport|athletic|dynamic|energetic/, tag: 'sport' },
+  { test: /cinematic|documentary|film|movie|title card|letterbox/, tag: 'cinematic' },
+  { test: /editorial|magazine|newsroom|newspaper|masthead|byline/, tag: 'editorial' },
   { test: /minimal|clean|quiet|restrained|elegant/, tag: 'minimal' },
 ];
 

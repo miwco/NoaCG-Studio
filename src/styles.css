@@ -1188,6 +1188,8 @@ kbd {
 .wz-variant-cap { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
 .wz-style-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
 .wz-style-tag[data-style='minimal'] { color: #e8c547; }
+.wz-style-tag[data-style='editorial'] { color: #d1462f; }
+.wz-style-tag[data-style='cinematic'] { color: #e0a458; }
 .wz-style-tag[data-style='sport'] { color: #c8f31d; }
 .wz-style-tag[data-style='glass'] { color: #7dd3fc; }
 .wz-style-tag[data-style='noacg'] { color: var(--amber); }
