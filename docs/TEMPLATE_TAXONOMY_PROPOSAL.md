@@ -414,20 +414,26 @@ measured footprint and the declaration disappears.)
 
 ## 9. Facet G - visual style
 
-Audit verdict [FACT]: the codebase has exactly one style system - the four families - with
-palettes, fonts and shape tokens hanging off it. The brief's 22 adjectives would be a second,
-unenforced vocabulary drifting beside it.
+Audit verdict [FACT, at proposal time]: the codebase has exactly one style system - then four
+families - with palettes, fonts and shape tokens hanging off it. The brief's 22 adjectives
+would be a second, unenforced vocabulary drifting beside it.
 
 **[PROPOSAL]**
-- The **filter** stays the four families, presented with fuller labels:
-  `minimal` "Minimal & editorial" · `sport` "Sport & energetic" · `glass` "Elegant & cinematic"
-  · `noacg` "Bold & on-air" (display names reviewable; ids frozen).
+- The **filter** is the style-family axis itself, whatever its arity, presented with fuller
+  labels; ids frozen, display names reviewable.
+  **Superseded in fact 2026-07-23**: `editorial` and `cinematic` shipped as real families
+  (36 core lower thirds, main), so the axis is now SIX - and the design held without
+  amendment, which is the point of filtering on the axis rather than on a fixed list. The
+  live labels are `STYLE_FAMILY_LABELS` in `src/model/taxonomy.ts`; two of the original four
+  were re-worded there ("Minimal & clean", "Elegant & glass") because the new families took
+  the words the old labels had borrowed.
 - The brief's adjectives become **style aliases** for search, mapped many-to-one:
   corporate/editorial/broadcast-news/flat/light → `minimal`; esports/gaming/energetic/bold →
   `sport`; luxury/cinematic/glass/futuristic/tech → `glass`; playful/youthful/retro? → `noacg`.
   (Alias table in §14; `retro` maps nowhere honestly - it's dropped rather than lied about.)
-- A fifth family remains what `PACK_TAXONOMY.md` says it is: ~12 designed variants of real
-  work, never a config knob. The taxonomy needs nothing new to absorb one.
+- A further family remains what `PACK_TAXONOMY.md` says it is: ~12 designed variants of real
+  work, never a config knob. The taxonomy needs nothing new to absorb one - borne out when
+  `editorial` and `cinematic` landed and cost this document one label list, no model change.
 - Palette light/dark is **not** a style facet (palettes are swappable per project in the Style
   step - filtering templates by a thing the next step freely changes would mislead).
 
