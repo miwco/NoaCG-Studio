@@ -30,7 +30,7 @@ import { ANIMATION_MARK_OPEN } from '../templates/lowerThirds/animPresets';
 import { convertToDataRegion } from '../templates/shared/standard';
 import { specSections } from './spec/specPrompt';
 import { applySpecLocks, applySpecOutPreset, narrowedSpecTool } from './spec/specDesign';
-import { ensureSpecFonts } from './spec/specValidate';
+import { demoteSpecFields, ensureSpecFonts } from './spec/specValidate';
 
 // ── Structured output: the model must return the template via this tool ─────
 
@@ -662,8 +662,9 @@ async function groundedResult(
   run.diversity(assembled.diversity);
   options?.onProgress?.('Testing it…');
   // No repair loop here: a grounded assembly failing its own bench is a platform bug
-  // worth surfacing, not something a model round-trip should paper over.
-  let validation = await validateWith(template, options, run);
+  // worth surfacing, not something a model round-trip should paper over. A user field a
+  // FIXED-CONTRACT category cannot carry demotes to an honest warning (no loop to fight it).
+  let validation = demoteSpecFields(await validateWith(template, options, run));
   let path: AiPath = 'grounded';
   if (spec.flourish && validation.ok) {
     const polished = await polishStage(template, spec, options, run);

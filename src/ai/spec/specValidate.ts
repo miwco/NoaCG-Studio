@@ -65,6 +65,20 @@ export function ensureSpecFonts(template: SpxTemplate, spec: GenerationSpec | nu
 }
 
 /**
+ * Demote spec-field errors to warnings. Used on GROUNDED assemblies (src/ai/claudeProvider
+ * groundedResult): a fixed-contract category (scoreboard cells, quiz rows) legitimately
+ * cannot carry an arbitrary extra field, there is no repair loop to fight it, and blocking
+ * Create over it would strand the user — the warning stays the honest report. The coder
+ * path keeps the error: its repair rounds CAN add the field.
+ */
+export function demoteSpecFields(v: ValidationResult): ValidationResult {
+  const demoted = v.errors.filter((e) => e.rule === 'spec-fields');
+  if (!demoted.length) return v;
+  const errors = v.errors.filter((e) => e.rule !== 'spec-fields');
+  return { ok: errors.length === 0, errors, warnings: [...v.warnings, ...demoted] };
+}
+
+/**
  * Wrap the injected validator (static + bench) with the spec's own checks. With no spec —
  * or an empty one — the inner validator passes through untouched, so the prompt-only flow
  * is byte-identical to before.

@@ -42,6 +42,16 @@ export function applySpecLocks(design: DesignSpec, user: GenerationSpec | null |
   if (user.fields.length) {
     out.lines = specLines(user, MAX_SPEC_LINES);
     out.extraFields = specExtraFields(user, MAX_SPEC_LINES);
+    // The chassis must CARRY the user's lines: a 2-line pick under a 3-line spec would
+    // silently drop a requested field. Re-pick within the category when it can't.
+    const pool = variantsFor(out.category);
+    const current = out.variantId ? variantById(out.variantId) : undefined;
+    if (pool.length && (!current || current.category !== out.category || current.maxLines < out.lines.length)) {
+      const fit =
+        pool.find((v) => v.maxLines >= out.lines.length) ??
+        pool.reduce((a, b) => (b.maxLines > a.maxLines ? b : a), pool[0]);
+      out.variantId = fit.id;
+    }
   }
 
   const motion = resolveSpecMotion(user.animation);
