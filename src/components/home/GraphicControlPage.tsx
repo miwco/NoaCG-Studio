@@ -5,7 +5,7 @@ import { graphicById, newEntry, updateGraphic, type ControlEntry, type GraphicDo
 import { fieldDescriptors, eventButtons, eventLegality, isEventLegal } from '../../control/controlModel';
 import { renderControlPanelHtml } from '../../control/controlPanelHtml';
 import { composeDocument } from '../../preview/composeDocument';
-import { settleGraphicOnLoad } from '../../preview/settleGraphic';
+import { settleGraphic, settleGraphicOnLoad, type SettleWindow } from '../../preview/settleGraphic';
 import { openGraphicById, useSaveUi } from '../../store/saveActions';
 import { setFieldDefault } from '../../blocks/edit';
 import { FieldRow } from '../fields/FieldControl';
@@ -71,7 +71,38 @@ export default function GraphicControlPage({ id }: { id: string }) {
     [doc],
   );
   const buttons = useMemo(() => (doc ? eventButtons(doc.template.js) : []), [doc]);
-  const srcdoc = useMemo(() => (doc ? composeDocument(doc.template) : ''), [doc]);
+  // Keyed on the TEMPLATE, not the whole record: an entry edit rewrites `doc` on every
+  // keystroke, and recomposing the document there only to hand React an identical string is
+  // work done to be thrown away.
+  const template = doc?.template ?? null;
+  const srcdoc = useMemo(() => (template ? composeDocument(template) : ''), [template]);
+
+  /** The active entry's values over the graphic's own defaults — the merge `update()` performs
+   *  live, and the same data the settled preview and Play both use. */
+  const activeData = useMemo(() => {
+    const entry = doc ? doc.entries.find((e) => e.id === doc.activeEntryId) ?? null : null;
+    const merged: Record<string, string> = {};
+    for (const d of descriptors) merged[d.key] = String(entry?.values[d.key] ?? d.defaultValue ?? '');
+    return JSON.stringify(merged);
+  }, [doc, descriptors]);
+
+  // RE-SETTLE ON ENTRY SWITCH, without rebuilding the document. Selecting an entry must show
+  // ITS data at rest — an operator picks the next row and looks at what they are about to air —
+  // and this preview used to get there by KEYING the iframe on the active entry, so every
+  // switch tore the graphic down and re-composed it: GSAP re-parsed, fonts re-fetched, the
+  // whole document rebuilt to change a few strings, on the one gesture stepping a rundown is
+  // made of. `settleGraphic` drives the LIVE window through the same recipe the load path uses.
+  // The dependency is the entry ID alone, deliberately: typing into the entry editor must NOT
+  // reach the graphic, because this surface is the one that AIRS — pushing a half-typed name is
+  // what the explicit ⟳ Update button exists to prevent.
+  const activeEntryId = doc?.activeEntryId ?? null;
+  const settleDataRef = useRef(activeData);
+  useEffect(() => {
+    settleDataRef.current = activeData;
+  }, [activeData]);
+  useEffect(() => {
+    settleGraphic(iframeRef.current?.contentWindow as SettleWindow | null, settleDataRef.current);
+  }, [activeEntryId]);
 
   // WHERE THE GRAPHIC IS, and which presses the machine would actually accept. Every other
   // operator surface (the editor's Rehearse panel, the event strip, the hosted page) polls the
@@ -130,14 +161,6 @@ export default function GraphicControlPage({ id }: { id: string }) {
   };
 
   const win = () => iframeRef.current?.contentWindow as unknown as GraphicWindow | null;
-
-  /** An entry's values over the graphic's own defaults — the merge `update()` performs live,
-   *  and the same data the settled preview and Play both use. */
-  const entryData = (entry: ControlEntry | null) => {
-    const merged: Record<string, string> = {};
-    for (const d of descriptors) merged[d.key] = String(entry?.values[d.key] ?? d.defaultValue ?? '');
-    return JSON.stringify(merged);
-  };
 
   const sendUpdate = (values: Record<string, string>) => {
     // The graphic's own defaults underlie the entry, exactly as update() merges live.
@@ -258,16 +281,16 @@ export default function GraphicControlPage({ id }: { id: string }) {
         <section className="control-page-preview">
           {/* Parked at the settled on-air state on load — a graphic is hidden until play(), so
               an unsettled preview is an empty black rectangle where the operator expects to see
-              what they are about to air. Re-settles when the active entry changes (keyed), so
-              selecting an entry shows ITS data without a take. */}
+              what they are about to air. Selecting an entry re-settles this SAME document (the
+              effect above); the key is the GRAPHIC, so only opening a different one rebuilds. */}
           <div className="control-page-stage" ref={stageRef}>
             <iframe
-              key={active?.id ?? 'defaults'}
+              key={doc.id}
               ref={iframeRef}
               title="Graphic preview"
               srcDoc={srcdoc}
               sandbox="allow-scripts allow-same-origin"
-              onLoad={() => settleGraphicOnLoad(iframeRef.current, entryData(active))}
+              onLoad={() => settleGraphicOnLoad(iframeRef.current, activeData)}
               style={{
                 width: doc.template.resolution.width,
                 height: doc.template.resolution.height,

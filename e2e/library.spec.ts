@@ -147,6 +147,47 @@ test('a saved graphic\'s control panel: entries create, play with the active ent
   await expect(page.getByTestId('home-page')).toBeVisible();
 });
 
+test('switching entries re-settles the SAME preview document instead of reloading it', async ({ page }) => {
+  // An operator steps a rundown by switching entries, and the preview used to be KEYED on the
+  // active entry — so every switch tore the document down and rebuilt it: GSAP re-parsed, fonts
+  // re-fetched, the graphic re-composed, for a change of a few strings. The entry's data must
+  // still land without a take; only the reload goes away.
+  await createProject(page, 'Hairline');
+  await saveAs(page, 'Rundown graphic');
+  await page.getByTestId('open-home').click();
+  await page.getByTestId('home-nav-controls').click();
+  await page.locator('.pk-graphic', { hasText: 'Rundown graphic' }).locator('button', { hasText: 'Open control panel' }).click();
+  await expect(page.getByTestId('graphic-control-page')).toBeVisible();
+
+  await page.getByTestId('add-entry').click();
+  await page.getByTestId('entry-field-f0').fill('Michael Smith');
+  await page.getByTestId('add-entry').click();
+  await page.getByTestId('entry-field-f0').fill('Anna Andersson');
+  await expect(page.locator('.control-entry')).toHaveCount(2);
+
+  // Typing does not reach the preview (that is ⟳ Update's job) — SELECTING an entry does.
+  const frame = page.locator('.control-page-preview iframe');
+  await page.locator('.control-entry').nth(0).getByTestId('select-entry').click();
+  await expect(frame.contentFrame().locator('#f0')).toHaveText('Michael Smith');
+
+  // Mark THIS document. A reload mints a new window, so the mark is how the spec can tell a
+  // re-settle from a rebuild — the DOM text alone looks identical either way.
+  await frame.contentFrame().locator('body').evaluate(() => {
+    (window as unknown as { __probe?: string }).__probe = 'alive';
+  });
+
+  await page.locator('.control-entry').nth(1).getByTestId('select-entry').click();
+
+  // The switch still shows the selected entry's data at rest, with no take.
+  await expect(frame.contentFrame().locator('#f0')).toHaveText('Anna Andersson');
+
+  // …and it is the same document that was carrying the previous entry.
+  const probe = await frame.contentFrame().locator('body').evaluate(
+    () => (window as unknown as { __probe?: string }).__probe ?? null,
+  );
+  expect(probe).toBe('alive');
+});
+
 test('the control panel reports the state and greys an event the machine would drop', async ({ page }) => {
   // Parity with the editor's Rehearse panel, the event strip and the hosted page: all three
   // poll the runtime's pointers and grey an illegal event. This surface shipped with neither,
