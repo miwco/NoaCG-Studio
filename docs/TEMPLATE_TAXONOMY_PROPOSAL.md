@@ -1,6 +1,14 @@
 # Template taxonomy & discovery - proposal
 
-**Status: PROPOSAL - not implemented, not binding.** This document is the reviewable deliverable
+**Status: ADOPTED & IMPLEMENTED** (all six §18 recommended decisions accepted; §17 stages 1-5
+shipped on this branch - facet registries in `src/model/taxonomy.ts`, declared meta in
+`src/templates/meta.ts`, derivation in `src/templates/templateMeta.ts`, the browse engine in
+`src/templates/search.ts`, the wizard's Browse step in
+`src/components/wizard/steps/BrowseStep.tsx`, factory assertions live. Still open from stage
+6: the pack "kit" surface, the community/nightly publish contract, zero-result telemetry, and
+the §18 open questions.) The sections below are kept as the design record.
+
+**Original status: PROPOSAL - not implemented, not binding.** This document is the reviewable deliverable
 for the "Start from template" faceted-discovery redesign. Nothing here renames existing
 categories, changes code, or alters the catalog until the proposal is approved. Source of truth
 for the domain: `live_format_graphics_needs.xlsx` (repo root, untracked - 60 formats, sheet
