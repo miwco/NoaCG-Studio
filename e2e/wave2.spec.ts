@@ -13,7 +13,7 @@ function frame(page: Page): FrameLocator {
 }
 
 test('starting soon: holds on screen and the countdown ticks', async ({ page }) => {
-  await createFrom(page, 'Starting soon', 'Quiet Hold');
+  await createFrom(page, 'Holding screens', 'Quiet Hold');
   const clock = frame(page).locator('.starting-soon-clock');
   await expect(clock).toHaveText('5:00'); // idle paint shows the full duration
   await page.getByRole('button', { name: '▶ Play' }).click();

@@ -772,7 +772,7 @@ test('v2: scoreboards create as data blocks — the score pop keeps working arou
 // both a loop and lifecycle calls.
 
 test('v2 read-only glyphs: a looping track shows a repeat tail, and lifecycle calls get their own row', async ({ page }) => {
-  await createProject(page, { category: 'Starting soon' });
+  await createProject(page, { category: 'Holding screens' });
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
 
   // The ambient breath is an endless yoyo — the tail says so, and carries no diamonds.

@@ -72,8 +72,17 @@ resolve, extras exist, formats covered exactly once) - edit packs.ts and the doc
   its FROZEN interpreter - machine-bearing data must never land under one that predates the
   engine. Check `hasMachineRuntime(js)` first and re-emit the whole region when false (the
   `hides` precedent); validateTemplate treats a mismatch as an export-blocking error.
-- **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS + `{prefix}-done` at zero;
-  DOM-ready-safe.
+- **shared/clock.ts** - countdown engine: hidden minutes field -> M:SS (H:MM:SS past an hour) +
+  `{prefix}-done` at zero; DOM-ready-safe, and null-safe about both the clock element and the
+  duration field (a design with no clock simply has nothing to paint). The count is anchored to a
+  DEADLINE timestamp and recomputed every tick, not decremented: a holding screen can sit on air
+  for an hour and `setInterval` drifts (throttled tabs, coalesced timers), so a late tick has to be
+  self-correcting or the clock and the wall disagree at 0:00. `Date.now()` is virtualized by the
+  render runtime, so a rendered countdown stays a pure function of the frame.
+  An optional THIRD field id opts a design into a wall-clock START TIME ("19:30"): filled in it
+  wins over the duration, empty it is ignored. That is the difference between "count five minutes
+  from whenever the operator hit play" and "count to when the show actually starts" - only the
+  second survives a re-take.
 - **shared/textFit.ts** - the FIT-TO-SLOT runtime for placed text lines (the imported-design
   contract): `fitPlacedText()` condenses a `data-fit="shrink"` line to its wrapper's max-width
   by reducing font-size (never by distorting the chosen typeface), floored at 55%. Design-owned
@@ -121,13 +130,43 @@ with its own `ticker-rotate` preset rather than the endless marquee.
   ids adjacent + `SLIDE_FAMILY`/`isSlidePreset` so pickers group them: the wizard renders ONE
   Slide card with a direction picker, the Inspector one optgroup), then line-reveal, mask-wipe,
   pop-spring, snap-stinger, blur-in, fade, flip-3d.
-- **infoCards/** - card01…card05 (prefix 'info-card', `dataRegion: true`). The standard contract's
+- **infoCards/** - card01…card18 (prefix 'info-card', `dataRegion: true`). The standard contract's
   other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
   them, steps and all (a » press per body line becomes a middle step with its `reveals`).
-- **endCredits/** - cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
-  credits-pages / credits-crawl) + **creditsMotion.ts**; data-driven: a hidden #f0 textarea holds
-  "Role | Name" lines, template JS parses and rebuilds #credits-track, ends with logo + year
-  (.credits-end). DATA BLOCKS via convertToDataRegion.
+  Two jobs in one category: card01…card09 are INFORMATION cards (a heading with lines under it),
+  card10…card18 are SET-PIECE cards whose layout carries a convention older than television -
+  a reading, a lyric (now + next), a quotation, a translation, an order of service, and the
+  ceremony cards.
+  **The grid trap:** `cardLineMasks` wraps every line in a `.info-card-mask` div, so on a design
+  that lays the box out as a grid or flex container the ITEMS are the masks, not the `#fN` spans.
+  Placement rules target the masks (`.info-card-mask:nth-child(N)`), type rules target the spans -
+  see card17.
+  **The rail trap:** `.info-card-accent` is absolutely positioned at the root's left edge and the
+  box is painted AFTER it, so a design whose box has a BACKGROUND must reserve the strip
+  (`margin-left: var(--accent-weight)`) or the panel covers the rail completely (card16, card18).
+  A panel-less design (card01) needs only padding.
+- **endCredits/** - cr01…cr12 (prefix 'credits') + creditsPresets.ts (credits-roll /
+  credits-loop / credits-board / credits-pages / credits-crawl) + **creditsMotion.ts**;
+  data-driven: a hidden #f0 textarea holds "Role | Name" lines, template JS parses and rebuilds
+  #credits-track, ends with logo + year (.credits-end). DATA BLOCKS via convertToDataRegion.
+  **The category is LISTS, not just credits** - the same data model at a different speed is a
+  credit roll, a name wall, a donor board, a sponsor acknowledgement, a graduation roll or a
+  schedule. Choosing a design is choosing that speed, which is what the index groups by.
+  **Three line kinds, one rule each** (parseCredits): `Role | Name` is a credit; a pipe-less line
+  that OPENS a section is that section's heading; any other pipe-less line is a plain `entry`
+  (a name on a wall, a thank-you, an untimed note). The heading rule is POSITIONAL on purpose -
+  a wall is one heading followed by names, a roll's sections already open with theirs, so both
+  read correctly from the same text with nothing to mark up. **A row builder must answer all
+  three kinds**; a design that only handles 'heading' and 'credit' renders `undefined` for a
+  bare name.
+  `credits-board` is the one format with NO motion: the list fades up and holds. It exists
+  because rolling a schedule or a wall past the audience means the line they need is the one
+  that just left, and it is the reason a board design lays `.credits-page` out in normal flow
+  where a paged design stacks them absolutely.
+  `credits-loop` is the seamless repeat, for the long tail after a show. `creditsLoop()` wraps
+  the track's content in one `.credits-loop-run`, appends as many `.credits-loop-clone` copies as
+  the viewport needs, and travels exactly one run's height - a bare `repeat: -1` would snap the
+  list back to the top, which everyone watching a wall of names is watching closely enough to see.
 - **tickers/** - tk01…tk06 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip) +
   **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee = items rendered
   twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via convertToDataRegion.
@@ -159,11 +198,23 @@ math; it just calls it: `tl.add(tickerMarquee('#ticker-track'))`. Consequences, 
 
 Adding a measured motion to another category = add a builder to its runtime + have the preset
 `tl.add()` it. Do NOT inline measured math in a region: it makes the template unconvertible.
-- **startingSoon/** - ss01…ss03 (prefix 'starting-soon', hold-loop preset: entrance + calm
-  .starting-soon-pulse breathing + clock via shared/clock.ts, minutes in f2). DATA BLOCKS via
+- **startingSoon/** - ss01…ss13, the HOLDING SCREEN set (prefix 'starting-soon'; hold-loop preset:
+  entrance + calm .starting-soon-pulse breathing + clock via shared/clock.ts). DATA BLOCKS via
   convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
   track (gap 6) and startClock/stopClock ride the step calls (§3b); the clock runtime stays
   outside the region.
+  **The category is every screen shown while the show is NOT happening** - before it starts,
+  between its parts, when it breaks, after it ends. A design declares three things and the
+  assembler does the rest: `lineCount` (how many #fN spans its markup carries, default 2),
+  `clock` (`minutes` | `start-time` | `none`), and any `extraFields`. The clock fields land AFTER
+  the lines, so a 2-line minutes design is f0/f1/f2 exactly as before and every existing variant
+  emits byte-identically.
+  **`clock: 'none'` is a design decision, not a gap.** A technical pause cannot promise a time
+  and a sign-off card is not waiting for anything, so those screens emit no clock fields, no
+  clock element and no clock runtime, and ship on the `hold-still` preset (the hold loop with the
+  countdown calls removed). Swapping a clock preset onto one after creation degrades to "no
+  countdown" rather than throwing: the interpreter resolves a step's `calls` by NAME and treats a
+  missing function as a no-op.
 - **gameTimers/** - gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
   convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
   styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`

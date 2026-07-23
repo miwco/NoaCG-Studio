@@ -63,6 +63,31 @@ ${MARK_CLOSE}`,
   },
 
   {
+    id: 'credits-loop' as AnimPresetId,
+    name: 'Repeating reel',
+    description: 'The roll, looping seamlessly — production credits or a sponsor wall that plays all event.',
+    autoEase: { easeIn: 'power2.out', easeOut: 'power2.in' },
+    emit: (cfg) => `${MARK_OPEN}
+// Preset: Repeating reel — the same linear travel as the roll, but the list is cloned so
+// it comes back around with no seam and no jump. It runs until stop(), which is what a
+// hold-screen credit reel or a sponsor wall wants.
+${knobs(cfg)}
+
+// buildInTimeline(): fade in, then loop the track forever.
+function buildInTimeline() {
+  var tl = gsap.timeline();
+  tl.set('.credits', { opacity: 1 });          // reveal the (CSS-hidden) graphic
+  tl.fromTo('.credits-box', { opacity: 0 }, { opacity: 1, duration: 0.6 / animSpeed, ease: easeIn });
+  // The loop's distance is MEASURED from the rendered rows — see creditsLoop() above.
+  tl.add(creditsLoop('#credits-track'));
+  return tl;
+}
+
+${outTimeline(0.5)}
+${MARK_CLOSE}`,
+  },
+
+  {
     id: 'credits-pages' as AnimPresetId,
     name: 'One-pager swap',
     description: 'Each section appears as a full page, holds long enough to read, then swaps to the next.',
@@ -79,6 +104,35 @@ function buildInTimeline() {
   tl.set('.credits-box', { opacity: 1 });      // undo a previous stop()'s box fade — replays start visible
   // One segment PER PAGE, each holding as long as its own row count needs. See creditsPages().
   tl.add(creditsPages('#credits-track'));
+  return tl;
+}
+
+${outTimeline(0.5)}
+${MARK_CLOSE}`,
+  },
+
+  {
+    id: 'credits-board' as AnimPresetId,
+    name: 'Static board',
+    description: 'No travel at all — the whole list fades up and holds, for a schedule, a wall or a sponsor board.',
+    autoEase: { easeIn: 'power2.out', easeOut: 'power2.in' },
+    emit: (cfg) => `${MARK_OPEN}
+// Preset: Static board — the list is not a sequence, it is a BOARD. Everything is on screen
+// at once and stays there until stop(). Rolling a six-line schedule past the audience would
+// mean the line they need is the one that just left; a board is always readable.
+//
+// This is the one credits format with no measured motion: nothing travels, so nothing has to
+// be measured, and the entrance is ordinary keyframeable choreography.
+${knobs(cfg)}
+
+// buildInTimeline(): raise the board into place and leave it there.
+function buildInTimeline() {
+  var tl = gsap.timeline();
+  tl.set('.credits', { opacity: 1 });          // reveal the (CSS-hidden) graphic
+  tl.fromTo('.credits-box',
+    { opacity: 0, y: 18 },                     // start slightly low and invisible
+    { opacity: 1, y: 0, duration: 0.7 / animSpeed, ease: easeIn }
+  );
   return tl;
 }
 

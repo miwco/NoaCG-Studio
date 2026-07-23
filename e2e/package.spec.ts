@@ -112,7 +112,7 @@ test('info card: creates, binds, and plays', async ({ page }) => {
 });
 
 test('end credits: text field drives the parsed roll', async ({ page }) => {
-  await toVariantStep(page, 'End credits', 'Classic Roll');
+  await toVariantStep(page, 'Credits & lists', 'Classic Roll');
   await create(page);
   const track = frame(page).locator('#credits-track');
   await expect(track.locator('.credits-row').first()).toBeAttached();

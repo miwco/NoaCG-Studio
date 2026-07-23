@@ -40,6 +40,50 @@ function creditsRoll(target) {
   );
 }
 
+// creditsLoop(): the roll that never ends — a repeating production-credits reel for a
+// holding screen, a sponsor wall, a donor list that plays all through an event.
+//
+// A seamless vertical loop needs the content to exist TWICE: travel exactly one copy's
+// height and the second copy has arrived precisely where the first began, so the seam is
+// not visible and there is no jump to hide. That is why this measures and clones rather
+// than just repeating a tween — a bare repeat would snap the list back to the top.
+//
+// The clone is rebuilt on every play(): rebuildCredits() replaces the track's children
+// first, so there is never a stale or doubled copy to clean up.
+function creditsLoop(target) {
+  var track = document.querySelector(target);
+  var box = document.querySelector('.credits-box');
+  if (!track || !box) return null;
+
+  // Wrap the real content in one "run", so a whole run can be cloned as a unit.
+  var run = track.querySelector('.credits-loop-run');
+  if (!run) {
+    run = document.createElement('div');
+    run.className = 'credits-loop-run';
+    while (track.firstChild) run.appendChild(track.firstChild);
+    track.appendChild(run);
+  }
+  var distance = run.offsetHeight;                  // exactly one run — the loop's travel
+  if (distance <= 0) return null;
+
+  // Enough copies that the viewport is always covered: a short list needs more than one.
+  var copies = Math.max(1, Math.ceil(box.clientHeight / distance));
+  var existing = track.querySelectorAll('.credits-loop-clone');
+  for (var i = 0; i < existing.length; i++) track.removeChild(existing[i]);
+  for (var c = 0; c < copies; c++) {
+    var clone = run.cloneNode(true);
+    clone.className = 'credits-loop-clone';
+    clone.setAttribute('aria-hidden', 'true');      // a repeat of the same names, not new ones
+    track.appendChild(clone);
+  }
+
+  var pixelsPerSecond = 90 * motionSpeed();         // reading speed — raise for a faster reel
+  return gsap.fromTo(track,
+    { y: 0 },
+    { y: -distance, duration: distance / pixelsPerSecond, ease: 'none', repeat: -1 }
+  );
+}
+
 // creditsCrawl(): a single-line horizontal crawl. Same idea as the roll, along x — the
 // travel is the track's own width, so it always finishes on the end block.
 // Flip the direction by swapping startX/endX.

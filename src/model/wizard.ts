@@ -46,9 +46,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 13, available: true,  description: 'Names, titles, and straps over the action.', group: 'essentials' },
   { id: 'ticker',        name: 'Tickers',                 plannedCount: 6,  available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
   { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
-  { id: 'info-card',     name: 'Info cards',              plannedCount: 5,  available: true,  description: 'Full / half screen cards — info and quotes.', group: 'essentials' },
-  { id: 'starting-soon', name: 'Starting soon',           plannedCount: 3,  available: true , description: 'Pre-show holding loops with a timer.', group: 'essentials' },
-  { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.', group: 'essentials' },
+  { id: 'info-card',     name: 'Info cards',              plannedCount: 18, available: true,  description: 'Full / half screen cards — info, readings, quotes and ceremony.', group: 'essentials' },
+  { id: 'starting-soon', name: 'Holding screens',         plannedCount: 13, available: true , description: 'Starting soon, breaks, technical pauses and sign-offs.', group: 'essentials' },
+  { id: 'end-credits',   name: 'Credits & lists',         plannedCount: 12, available: true , description: 'Credit rolls, name walls, sponsor boards and schedules.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 2,  available: true , description: 'A persistent corner logo (image placeholder).', group: 'essentials' },
   // Specials — for particular formats and moments.
   { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
@@ -140,6 +140,8 @@ export type AnimPresetId =
   | 'flip-3d'
   // End-credits motion formats (templates/endCredits/creditsPresets.ts):
   | 'credits-roll'
+  | 'credits-loop'
+  | 'credits-board'
   | 'credits-pages'
   | 'credits-crawl'
   // Ticker motion formats (templates/tickers/tickerPresets.ts):
@@ -148,6 +150,7 @@ export type AnimPresetId =
   | 'ticker-rotate'
   // Countdown-clock formats (templates/startingSoon + templates/gameTimers):
   | 'hold-loop'
+  | 'hold-still'
   | 'timer-run'
   | 'timer-line-reveal'
   // Versus-card formats (templates/versus/vsPresets.ts):

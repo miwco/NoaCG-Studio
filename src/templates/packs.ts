@@ -48,7 +48,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Scorebug, clock, lineup strap and full-time card — the live sports kit.',
     family: 'sport',
     types: ['scoreboard', 'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'title-card', 'holding-screen'],
-    extras: ['vs01', 'cr03'],
+    extras: ['vs01', 'cr03', 'ss11', 'cr12'],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
   },
   {
@@ -57,7 +57,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Match score, caster straps, schedule and countdown for tournament nights.',
     family: 'sport',
     types: ['scoreboard', 'lower-third', 'countdown', 'agenda', 'social-bug', 'sponsor-bug', 'holding-screen', 'title-card'],
-    extras: ['vs02'],
+    extras: ['vs02', 'ss13', 'cr12'],
     formats: ['Esports tournament'],
   },
   {
@@ -66,6 +66,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Starting-soon, straps, topic cards and handles — the streamer starter kit.',
     family: 'noacg',
     types: ['holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll'],
+    extras: ['ss06', 'ss08', 'ss09', 'ss12'],
     formats: [
       'Gaming livestream',
       'Just Chatting / personality stream',
@@ -85,6 +86,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Anchor straps, the wire ticker, headline and topic cards for news programs.',
     family: 'minimal',
     types: ['lower-third', 'ticker', 'topic-card', 'title-card', 'agenda', 'sponsor-bug'],
+    extras: ['ss08', 'card12'],
     formats: [
       'News / current affairs livestream',
       'Weather broadcast / climate update',
@@ -100,6 +102,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Result bars, candidate straps and the count ticker for civic broadcasts.',
     family: 'minimal',
     types: ['poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown'],
+    extras: ['card12', 'cr05'],
     formats: [
       'Election night / results program',
       'Debate / political discussion',
@@ -112,6 +115,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Guest straps, topic and question cards, polls — panels, podcasts and Q&As.',
     family: 'glass',
     types: ['lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown'],
+    extras: ['card12', 'ss06', 'ss12'],
     formats: [
       'Talk show / panel discussion',
       'Podcast livestream / videocast',
@@ -128,6 +132,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Agendas, speaker straps, session titles and polls for webinars and keynotes.',
     family: 'minimal',
     types: ['agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen'],
+    extras: ['ss13', 'cr05', 'cr07', 'cr09'],
     formats: [
       'Webinar / expert presentation',
       'Conference / seminar stream',
@@ -147,6 +152,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Quiz board, timers, lesson cards and a score table for teaching streams.',
     family: 'noacg',
     types: ['quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard'],
+    extras: ['cr10', 'card18', 'ss13'],
     formats: [
       'Education / lecture livestream',
       'Student production / school TV',
@@ -159,7 +165,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Service titles, scripture cards, program schedule and a quiet countdown.',
     family: 'minimal',
     types: ['title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda'],
-    extras: ['cr01'],
+    extras: ['cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card10', 'card11', 'card14', 'card15', 'card17'],
     formats: [
       'Religious service / church livestream',
       'Graduation / ceremony stream',
@@ -173,7 +179,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Artist straps, setlist cards, intermission screens for performances and galas.',
     family: 'glass',
     types: ['title-card', 'lower-third', 'holding-screen', 'countdown', 'social-bug', 'agenda', 'ticker'],
-    extras: ['cr02'],
+    extras: ['cr02', 'cr09', 'cr12', 'ss07', 'ss11', 'card16'],
     formats: [
       'Music performance / concert livestream',
       'Award show / gala',
@@ -189,6 +195,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Product cards, deal timers and the offer ticker for live commerce.',
     family: 'noacg',
     types: ['topic-card', 'countdown', 'lower-third', 'ticker', 'title-card', 'sponsor-bug'],
+    extras: ['ss06', 'ss12', 'cr12'],
     formats: [
       'Live commerce / shopping stream',
       'Cooking show / food livestream',
@@ -203,6 +210,7 @@ export const PACKS: TemplatePack[] = [
     description: 'Interval timers, session titles and calm holding screens for movement and rest.',
     family: 'minimal',
     types: ['countdown', 'holding-screen', 'topic-card', 'lower-third', 'social-bug'],
+    extras: ['ss08', 'ss09', 'card12'],
     formats: [
       'Fitness / workout class',
       'Meditation / ambient livestream',

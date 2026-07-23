@@ -136,6 +136,18 @@ export const cr02: TemplateVariant = defineCreditsVariant(
   overflow-wrap: break-word;       /* very long unbroken names wrap instead of overflowing */
 }
 
+/* A plain line inside a section — a name with no role, so no column to align against:
+   it centers on the same axis the two-column gutter forms. */
+.credits-entry {
+  padding: calc(5px * var(--scale)) 0;  /* the list rhythm, tighter than a credit row */
+  text-align: center;              /* centered on the roll's own axis */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* sized with the names beside it */
+  font-weight: 600;                /* strong but not shouty — matches .credits-name */
+  line-height: 1.3;                /* shares the roll's baseline rhythm */
+  color: var(--text-color);        /* primary text color */
+  overflow-wrap: break-word;       /* very long unbroken names wrap instead of overflowing */
+}
+
 /* The end block — dot, logo, year stacked on the center axis; the roll parks on this. */
 .credits-end {
   display: flex;                   /* a simple vertical stack */
@@ -184,6 +196,11 @@ function renderCreditRow(entry) {
   if (entry.type === 'heading') {
     // Section heading: centered across both columns, led by the accent dot (lt10's motif).
     return '<div class="credits-heading"><span class="credits-dot"></span>' + entry.text + '</div>';
+  }
+  if (entry.type === 'entry') {
+    // A plain line inside a section: a name with no role. It sits centered across both
+    // columns — there is no role to put opposite it, and a half-empty grid row reads broken.
+    return '<div class="credits-entry">' + entry.text + '</div>';
   }
   // Credit: a two-column grid row — dimmed role right-aligned, semibold name left-aligned.
   return '<div class="credits-row">' +

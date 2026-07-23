@@ -45,7 +45,11 @@ export interface CreditsDesign {
   css: string;
   /**
    * JS defining renderCreditRow(entry) and renderEndBlock(yearHtml, logoSrc) — the
-   * variant's row markup. entry = { type: 'heading'|'credit', role, name, text }.
+   * variant's row markup. entry is one of
+   *   { type: 'credit',  role, name }   a "Role | Name" line
+   *   { type: 'heading', text }         the line that opens a section
+   *   { type: 'entry',   text }         any other pipe-less line (a name on a wall)
+   * A builder must answer all three; see parseCredits in the runtime below.
    */
   rowBuilderJs: string;
   /**
@@ -68,8 +72,14 @@ function creditsRuntimeJs(name: string, animationBlock: string): string {
 
 ${setFieldValueJs}
 
-// parseCredits(text): each line "Role | Name" becomes a credit row; a line without "|"
-// becomes a section heading; a blank line starts a new section.
+// parseCredits(text): three kinds of line, one rule each.
+//   "Role | Name"  -> a credit row.
+//   a line with no "|" that OPENS a section -> that section's heading.
+//   any other line with no "|" -> a plain entry: a name on a wall, a thank-you, a line of
+//                                 a schedule the design lays out itself.
+// A blank line starts the next section. (The heading rule is positional on purpose: a wall
+// of names is one heading followed by names, and a roll's sections already open with theirs,
+// so both read correctly from the same text with nothing to mark up.)
 function parseCredits(text) {
   var sections = [];
   var current = [];
@@ -82,8 +92,10 @@ function parseCredits(text) {
     var parts = line.split('|');
     if (parts.length >= 2) {
       current.push({ type: 'credit', role: parts[0].trim(), name: parts.slice(1).join('|').trim() });
+    } else if (current.length === 0) {
+      current.push({ type: 'heading', text: line });   // the line that opens a section names it
     } else {
-      current.push({ type: 'heading', text: line });
+      current.push({ type: 'entry', text: line });     // a plain line inside a section
     }
   });
   if (current.length) sections.push(current);
@@ -106,6 +118,40 @@ function rebuildCredits() {
   });
   html += renderEndBlock(year, logo);
   track.innerHTML = html;
+  fitBoardToFrame();               // a board re-fits itself to the frame after every rebuild
+}
+
+// fitBoardToFrame(): the price a BOARD pays for showing everything at once.
+//
+// A roll or a crawl can carry any amount of content because it travels past a fixed window.
+// A board cannot: every line is on screen, so a long enough list grows past the frame and the
+// last rows simply fall off the bottom, silently. That is the worst possible failure — the
+// operator sees a full-looking board and never learns that three names are missing.
+//
+// So a board shrinks to fit instead. Every dimension in these designs is authored as
+// calc(Npx * var(--scale)), which means ONE custom property scales the whole thing — no
+// transform, so it can never fight the entrance the preset tweens onto the same element.
+// Two passes, because shrinking narrows the box too and text can re-wrap.
+//
+// Only designs that mark themselves .credits-board opt in; a roll must never be shrunk.
+function fitBoardToFrame() {
+  var root = document.querySelector('.credits');
+  var box = document.querySelector('.credits-box');
+  if (!root || !box || !box.classList.contains('credits-board')) return;
+
+  root.style.removeProperty('--scale');          // always measure at the authored size
+  var base = parseFloat(getComputedStyle(root).getPropertyValue('--scale')) || 1;
+  var maxHeight = document.documentElement.clientHeight * 0.92;   // inside the safe area
+  var maxWidth = document.documentElement.clientWidth * 0.92;
+
+  for (var pass = 0; pass < 2; pass++) {
+    var height = box.scrollHeight;
+    var width = box.scrollWidth;
+    if (height <= maxHeight && width <= maxWidth) return;         // already fits
+    var ratio = Math.min(maxHeight / height, maxWidth / width);
+    var current = parseFloat(root.style.getPropertyValue('--scale')) || base;
+    root.style.setProperty('--scale', (current * ratio).toFixed(3));
+  }
 }
 
 // update(data): SPX sends field values as JSON; write them into the hidden sources,
@@ -146,6 +192,9 @@ if (document.readyState === 'loading') {
 } else {
   rebuildCredits();               // DOM already parsed (e.g. an inline preview build)
 }
+// A DOM-ready measurement measures the FALLBACK typeface; re-fit once the real one swaps in,
+// or a board sized against Arial overflows the moment its own face arrives.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBoardToFrame);
 
 ${animationBlock}
 `;

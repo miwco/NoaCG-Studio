@@ -67,8 +67,8 @@ test('an impossible combination shows the empty state with its own clear', async
 });
 
 test('facets that cannot narrow a category are not offered', async ({ page }) => {
-  // Starting soon: no logo-capable design, so the logo chip must not appear.
-  await toTemplateStep(page, 'Starting soon');
+  // Holding screens: no logo-capable design, so the logo chip must not appear.
+  await toTemplateStep(page, 'Holding screens');
   await expect(page.locator('.wz-variant').first()).toBeVisible();
   await expect(page.locator('.wz-filter', { hasText: 'Logo slot' })).toBeHidden();
 });
