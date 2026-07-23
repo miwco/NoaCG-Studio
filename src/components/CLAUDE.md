@@ -472,9 +472,12 @@ e2e/layout.spec.ts.
   (async probe, cached) - the model stays { path, data }. The header's **"✚ Template
   graphic…"** opens InsertTemplateDialog - the catalog browser in INSERT mode
   (blocks/templateInsert.ts): a picked variant's graphic joins the current project (namespaced,
-  fields renumbered, :root scoped onto the inserted root, In/Out merged - one undo step) with a
-  placement choice (from the start / as a new next step); templates needing their own runtime
-  are greyed with the reason. Pinned by e2e/assets.spec.ts, e2e/asset-workflow.spec.ts +
+  fields renumbered, :root scoped onto the inserted root, its whole step run merged - one undo
+  step) with two choices: PLACEMENT (from the start / as a new next step) and "Its lines"
+  (reveal together / step by step), the second building the donor with its line-by-line reveal
+  so every step of it joins the host's default path. Both are code-derived from one donor build
+  per card: templates needing their own runtime are greyed with the reason, and the lines choice
+  stands down for a category whose designs have no stepped build at all. Pinned by e2e/assets.spec.ts, e2e/asset-workflow.spec.ts +
   e2e/template-insert.spec.ts.
 - **AIPromptPanel**; **ExportPanel** (validation inline; remembers the last-picked target via
   model/prefs.ts). Below the zip targets it mounts **render/RenderPanel** — the Video & image

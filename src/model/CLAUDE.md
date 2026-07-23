@@ -9,7 +9,12 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
 - **structure.ts** - detectPrefix/countLines + getTemplateParts, the TemplatePart registry: THE
   shared element-identity contract. DOM-derived `{selector, kind, label, channel}`, single-token
   selectors only. Timeline labels, canvas selection, and step assignment must all name elements
-  through it.
+  through it. A masked text line is recognised under ITS OWN graphic's prefix: the host's, or an
+  INSERTED graphic's namespaced one (a `data-gfx` root carrying its own `-box` -
+  blocks/templateInsert.ts). Such parts carry `inserted: true`, which is how they can be full
+  registry parts (selectable, animatable, named by their field titles) while `countLines` - "how
+  many lines does THIS design have", what the preset emitters size choreography from - keeps
+  counting the host's only.
 - **wizard.ts** - categories, variants, WizardOptions, palettes. A variant declares its
   CAPABILITIES - `maxLines` (1-5 line capacity), `logo: 'none' | 'optional' | 'built-in'`,
   `animationPresets` - which drive the wizard's Fields/Animation options AND the Template

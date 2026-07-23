@@ -20,7 +20,9 @@ applied to the element) and **GSAP** (tween injected into `play()/stop()`).
 Field/definition editing helpers: nextFieldId, addFieldToDefinition, setFieldDefault, … plus
 `addCatalogLine` - the Data panel's add-field on a STANDARD-CONTRACT catalog template.
 Code-derived gate (never category): the `{p}-mask` + `{p}-name|-title|-extra` line idiom; the
-new line is CLONED from the last one's exact markup (id/class/text swapped), classed by the
+new line is CLONED from the last one's exact markup (id/class/text swapped) - the last of the
+HOST's lines, since an inserted graphic's lines carry their own namespaced prefix and are not
+this design's - classed by the
 assembler's lineClassFor ladder with a fallback to the last line's class when the design
 ships no rule for the canonical one. Fixed contracts (scoreboard cells, quiz rows) and
 data-driven categories (hidden textarea sources) fail the gate and keep the definition-only
@@ -50,7 +52,14 @@ without retinting the host), the reset/canvas CSS and donor runtime scaffold are
 and the donor MACHINE is dropped - one document, one runtime, one timeline/state system.
 The inserted root is tagged `data-gfx` (a normal registry part, step-assignable like any
 element); donor In/Out keyframes merge into the host's entrance/exit ('start') or into a
-new named default-path step revealing the root ('new-step'), speed-normalized. `insertBlocker`
+new named default-path step revealing the root ('new-step'), speed-normalized. The donor's
+MIDDLE steps are kept, not flattened: each becomes its own host default-path step
+(machine-aware `addStep(data, at)`), inserted CONTIGUOUSLY after wherever the run starts,
+with `reveals`/`hides` carried through the same namespace rewrite as every other selector.
+Contiguity is the point - a donor's second beat usually finishes a move its first began, so
+host presses are never interleaved into the middle of it. `buildDonor(variant, steps)` is the
+one donor build (`opts.steps` = the design's line-by-line reveal, the dialog's "Its lines"
+choice); a design with no stepped build simply has no middle steps to carry. `insertBlocker`
 is the honest gate: donor step `calls`/`dynamics`, or functions beyond the standard scaffold
 in the donor JS, refuse the insert with the reason - code-derived, never a category list.
 
@@ -274,7 +283,8 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   its activation; hiding at Out clears it), driven by the timeline block's RIGHT edge.
   duplicateStep (copies keyframes, NOT reveals or hides; never lands after Out), renameStep,
   deleteStep (layers it revealed return to "appears with ▶ Play" with the channel's default
-  motion), addStep (an empty content step just before Out).
+  motion), addStep (an empty content step just before Out - or at an explicit index, clamped
+  between the entrance and Out, which is how an inserted graphic's step run lands contiguously).
 - **filterTrack.ts** - the composed FILTER lens (docs/PRESET_MODEL_REVIEW.md gap 8). `filter` is
   ONE CSS property holding a LIST of functions, so the data keeps ONE `filter` track of composed
   strings (`blur(8px) brightness(1.6)`) - plain CSS can't keyframe its parts apart either. This

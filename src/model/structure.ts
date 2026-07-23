@@ -44,6 +44,28 @@ export interface TemplatePart {
   /** How the element can be revealed: 'mask' = slide within its overflow-hidden line mask
    *  (only true text lines qualify); 'rise' = generic fade+rise for everything else. */
   channel: 'mask' | 'rise';
+  /** True when the part belongs to an INSERTED graphic — a `data-gfx` root carrying its own
+   *  structure contract (blocks/templateInsert.ts). It is a full part like any other; the
+   *  flag exists so questions about THIS graphic's own shape (how many lines the design has)
+   *  don't count a guest's. */
+  inserted?: boolean;
+}
+
+/**
+ * The structure-contract prefixes of INSERTED graphics: a `data-gfx` root carrying its own
+ * `-box` element. templateInsert namespaces a donor's classes (`info-card` -> `info-card-2`),
+ * so the guest keeps the same house contract under a different spine — and its masked text
+ * lines are real, addressable lines, exactly like the host's. Without this the host prefix was
+ * the only one recognised and every inserted line was invisible to the canvas and the timeline.
+ */
+function insertedPrefixes(doc: Document): Array<{ root: Element; prefix: string }> {
+  const found: Array<{ root: Element; prefix: string }> = [];
+  for (const root of Array.from(doc.querySelectorAll('[data-gfx]'))) {
+    const box = root.querySelector('[class*="-box"]');
+    const boxClass = box ? Array.from(box.classList).find((c) => c.endsWith('-box')) : undefined;
+    if (boxClass) found.push({ root, prefix: boxClass.slice(0, -'-box'.length) });
+  }
+  return found;
 }
 
 /**
@@ -95,14 +117,20 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
     }
   }
 
-  // Field elements, in document order: masked text lines and image slots.
+  // Field elements, in document order: masked text lines and image slots. A line is masked
+  // under ITS OWN graphic's prefix — the host's, or an inserted guest's namespaced one.
+  const guests = insertedPrefixes(doc);
   for (const el of Array.from(doc.querySelectorAll('[id]'))) {
     const id = el.id;
     if (!/^f\d+$/.test(id) || !unique(`#${id}`)) continue;
+    const guest = guests.find((g) => g.root.contains(el));
+    const flag = guest ? { inserted: true } : {};
+    // Its own graphic's mask: the guest's namespaced one, or the host's.
+    const maskedBy = guest?.prefix ?? prefix;
     if (el.tagName === 'IMG') {
-      parts.push({ selector: `#${id}`, kind: 'image', label: fieldTitle(id) ?? 'Image', channel: 'rise' });
-    } else if (prefix && el.parentElement?.classList.contains(`${prefix}-mask`)) {
-      parts.push({ selector: `#${id}`, kind: 'line', label: fieldTitle(id) ?? `#${id}`, channel: 'mask' });
+      parts.push({ selector: `#${id}`, kind: 'image', label: fieldTitle(id) ?? 'Image', channel: 'rise', ...flag });
+    } else if (maskedBy && el.parentElement?.classList.contains(`${maskedBy}-mask`)) {
+      parts.push({ selector: `#${id}`, kind: 'line', label: fieldTitle(id) ?? `#${id}`, channel: 'mask', ...flag });
     }
     // Unmasked fN elements (hidden data sources, free-standing value fields) are not
     // registry parts — they are either not visual or not reveal-capable yet.
@@ -137,8 +165,10 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
   return parts;
 }
 
-/** Visible text lines: the mask-slide-capable `line` parts (steps and line presets rely on
- *  the mask structure, so ONLY these count — logo slots and data holders never do). */
+/** Visible text lines OF THIS GRAPHIC: the mask-slide-capable `line` parts (steps and line
+ *  presets rely on the mask structure, so ONLY these count — logo slots and data holders never
+ *  do). An inserted guest's lines are excluded: this answers "how many lines does the design
+ *  have", which is what the preset emitters size their choreography from. */
 export function countLines(html: string): number {
-  return getTemplateParts(html).filter((p) => p.kind === 'line').length;
+  return getTemplateParts(html).filter((p) => p.kind === 'line' && !p.inserted).length;
 }

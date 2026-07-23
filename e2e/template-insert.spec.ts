@@ -17,6 +17,7 @@ const state = (page: Page) =>
   page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
     const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const { getTemplateParts, countLines } = await import('/src/model/structure.ts');
     const t = useTemplateStore.getState().template;
     const data = parseAnimData(t.js);
     return {
@@ -26,6 +27,10 @@ const state = (page: Page) =>
       steps: data?.steps.map((s) => ({ name: s.name, reveals: s.reveals ?? [], layers: Object.keys(s.layers) })) ?? null,
       spxSteps: t.settings.steps,
       selected: useTemplateStore.getState().selectedPart,
+      lines: getTemplateParts(t.html, t.fields)
+        .filter((p) => p.kind === 'line')
+        .map((p) => ({ selector: p.selector, label: p.label, inserted: p.inserted === true })),
+      countLines: countLines(t.html),
     };
   });
 
@@ -111,6 +116,108 @@ test('insert as a NEW NEXT STEP — a named step reveals the graphic, retargetab
   await expect
     .poll(async () => (await state(page)).steps!.every((s) => !s.reveals.includes(gfxSel)))
     .toBe(true);
+});
+
+test('a STEPPED donor keeps its middle steps — the run joins the host path after the placement', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  const before = await state(page);
+  expect(before.steps!.length).toBe(2); // Enter + Out — the host has no presses of its own
+
+  await openInsertDialog(page);
+  await page.locator('.insert-tpl-cats').getByRole('tab', { name: 'Info cards' }).click();
+  await page.getByTestId('insert-tpl-steps').selectOption('stepped');
+  await awaitPreviewRebuild(page, () => page.getByTestId('insert-tpl-card-card01').click());
+
+  const after = await state(page);
+  // The card's own line-by-line reveal survived as REAL steps of this project's path —
+  // contiguous, right after the entrance the graphic arrived with.
+  expect(after.steps!.length).toBe(before.steps!.length + 2);
+  const middles = after.steps!.slice(1, -1);
+  expect(middles.map((s) => s.name)).toEqual(['Hairline Card 2', 'Hairline Card 3']);
+  // Each step still reveals the donor's line, through the SAME renumbering the fields got.
+  const newFields = after.fields.slice(before.fields.length).map((f) => f.field);
+  expect(middles[0].reveals).toEqual([`#${newFields[1]}`]);
+  expect(middles[1].reveals).toEqual([`#${newFields[2]}`]);
+  // The SPX Continue contract follows the path it actually has.
+  expect(after.spxSteps).toBe('3');
+
+  // Those steps are the timeline's, like any other: the presses exist on the strip.
+  await expect(page.getByTestId('timeline-v2').getByText('Hairline Card 2')).toBeVisible();
+
+  // And behaviorally, on air: the guest's last line is parked out of its mask until its own
+  // press arrives — the merged data drives the host's runtime exactly like a native step.
+  const lastLine = page.frameLocator('iframe.preview-frame').locator(`#${newFields[2]}`);
+  const slid = () =>
+    lastLine.evaluate((el) => {
+      const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+      return m.m42 > el.getBoundingClientRect().height / 2;
+    });
+  await expect.poll(slid).toBe(true);
+  await page.getByRole('button', { name: '▶ Play' }).click();
+  await page.waitForTimeout(1100);
+  await expect.poll(slid).toBe(true);
+  await page.getByRole('button', { name: '» Next' }).click(); // press 1: the guest's line 1
+  await page.getByRole('button', { name: '» Next' }).click(); // press 2: this line
+  await expect.poll(slid).toBe(false);
+
+  const validation = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { validateTemplate } = await import('/src/validation/validateTemplate.ts');
+    return validateTemplate(useTemplateStore.getState().template).errors;
+  });
+  expect(validation).toEqual([]);
+
+  // Still ONE undo step, steps and all.
+  await page.keyboard.press('Control+z');
+  await expect.poll(async () => (await state(page)).steps!.length).toBe(before.steps!.length);
+});
+
+test('an inserted graphic\'s own text lines are selectable parts, without inflating the host design', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  const before = await state(page);
+
+  await openInsertDialog(page);
+  await page.locator('.insert-tpl-cats').getByRole('tab', { name: 'Info cards' }).click();
+  await awaitPreviewRebuild(page, () => page.getByTestId('insert-tpl-card-card01').click());
+
+  const after = await state(page);
+  // The guest's masked lines joined the registry — named by their (marked) field titles,
+  // and flagged as the guest's.
+  const guests = after.lines.filter((l) => l.inserted);
+  expect(guests.length).toBeGreaterThan(0);
+  expect(guests[0].label).toContain('(Hairline Card)');
+  expect(after.lines.filter((l) => !l.inserted).map((l) => l.selector)).toEqual(
+    before.lines.map((l) => l.selector),
+  );
+  // …but "how many lines does THIS design have" is unchanged: a guest is not the host's shape.
+  expect(after.countLines).toBe(before.countLines);
+
+  // Every consumer of the registry sees them: a timeline row whose label is a selection
+  // handle, naming the guest's field exactly as the canvas chip would.
+  const guestSel = guests[0].selector;
+  const row = page.locator(`.tlv2-labels .timeline-label[data-part="${guestSel}"]`);
+  await expect(row).toContainText('(Hairline Card)');
+  await row.click();
+  await expect.poll(async () => (await state(page)).selected).toBe(guestSel);
+});
+
+test('after an insertion the Data panel still adds a REAL line to the HOST design', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  await openInsertDialog(page);
+  await page.locator('.insert-tpl-cats').getByRole('tab', { name: 'Info cards' }).click();
+  await awaitPreviewRebuild(page, () => page.getByTestId('insert-tpl-card-card01').click());
+  const after = await state(page);
+
+  // The guest's lines carry their own prefix; the add belongs to the host, and must not
+  // silently fall back to the definition-only path (a field no element answers).
+  await page.getByTestId('dock-tab-data').click();
+  await page.getByPlaceholder(/Label the operator sees/).fill('Sponsor');
+  await awaitPreviewRebuild(page, () => page.getByRole('button', { name: '+ Add' }).click());
+  const added = await state(page);
+  const newField = added.fields[added.fields.length - 1].field;
+  expect(added.html).toMatch(new RegExp(`<span id="${newField}" class="lower-third-[a-z]+">Sponsor</span>`));
+  expect(added.countLines).toBe(after.countLines + 1);
+  await expect(page.frameLocator('iframe.preview-frame').locator(`#${newField}`)).toHaveText('Sponsor');
 });
 
 test('the canvas context menu opens the same insert flow', async ({ page }) => {

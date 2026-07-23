@@ -18,8 +18,12 @@
 //
 // What survives: the donor's visual subtree (tagged data-gfx with a unique id, so it is a
 // selectable, animatable registry part), its data fields (renumbered, still driven by the
-// shared update()), its fonts, and its In/Out choreography (remapped and merged into the
-// host's entrance/exit — or into a brand-new step when the graphic arrives as one).
+// shared update()), its fonts, and its WHOLE step run — In/Out remapped and merged into the
+// host's entrance/exit (or into a brand-new step when the graphic arrives as one), and every
+// MIDDLE step of the donor added as its own step on the host's default path, contiguously
+// after wherever the run starts. A donor's second beat often finishes a move its first beat
+// began, so the steps stay adjacent: host presses are never interleaved into the middle of
+// the donor's choreography.
 //
 // NOT insertable, honestly refused: templates whose motion or content depends on
 // design-owned runtime code outside the marked region (clocks, measured tickers/credits,
@@ -118,6 +122,20 @@ function stripResetCss(css: string): string {
   );
 }
 
+/**
+ * The host's name for one of the donor's middle steps. Every step name in a project is the
+ * operator's word for a press, so an inserted run says WHOSE press it is: a donor step the
+ * author actually named keeps that name behind the graphic's ("Scores - Table in"), while a
+ * default "Step 2" becomes the graphic's own ordinal ("Scores 2" — its second beat, counted
+ * from its In), since carrying the donor's numbering into a path that already has its own
+ * would name two different presses the same thing.
+ */
+function middleStepName(variantName: string, donorName: string, index: number): string {
+  return /^Step \d+$/.test(donorName.trim())
+    ? `${variantName} ${index + 2}`
+    : `${variantName} - ${donorName.trim()}`;
+}
+
 /** Merge one layers map into a step (selectors are namespaced, so keys cannot collide). */
 function mergeLayers(step: AnimStep, layers: Record<string, AnimLayerTracks>) {
   for (const [selector, tracks] of Object.entries(layers)) step.layers[selector] = tracks;
@@ -134,22 +152,30 @@ function scaleTimes(layers: Record<string, AnimLayerTracks>, factor: number) {
   }
 }
 
+/** Build the donor the merge lifts from — the same `create()` the wizard's Create button
+ *  calls, with the one option that changes its STEP RUN (line-by-line reveal). */
+export function buildDonor(variant: TemplateVariant, steps = false): SpxTemplate {
+  return variant.create({ animation: { steps } });
+}
+
 /**
  * Insert `variant`'s graphic into `current`. `placement` decides participation:
  * 'start' merges the donor's In/Out into the host's entrance and exit; 'new-step' adds a
  * named step to the default path that reveals the graphic (its Out still joins the exit).
+ * `steps` builds the donor with its line-by-line reveal, and every step of that run joins
+ * the host's default path after the placement point.
  */
 export function insertTemplateGraphic(
   current: SpxTemplate,
   variant: TemplateVariant,
-  opts: { placement: InsertPlacement },
+  opts: { placement: InsertPlacement; steps?: boolean },
 ): InsertResult {
   const curData = parseAnimData(current.js);
   if (!curData) {
     return { error: 'this project has no editable animation data block — open a data-block project (every catalog template is one)' };
   }
 
-  const donor = variant.create();
+  const donor = buildDonor(variant, opts.steps ?? false);
   const donorData = parseAnimData(donor.js);
   const blocked = insertBlocker(donor, donorData);
   if (blocked) return { error: blocked };
@@ -193,42 +219,76 @@ export function insertTemplateGraphic(
   }));
   const fields = [...current.fields, ...newFields];
 
-  // ── Animation: remap the donor's In/Out choreography into the host's data ──
+  // ── Animation: remap the donor's whole step run into the host's data ───────
   const speedFactor = (curData.speed || 1) / (donorData!.speed || 1);
-  const donorIn = clone(donorData!.steps[0]);
-  const donorOut = clone(donorData!.steps[donorData!.steps.length - 1]);
+  const donorSteps = donorData!.steps;
+  const lastDonor = donorSteps.length - 1;
+  const donorIn = clone(donorSteps[0]);
+  const donorOut = clone(donorSteps[lastDonor]);
+  const donorMiddles = donorSteps.slice(1, lastDonor).map(clone);
   const rewriteKeys = <T,>(map: Record<string, T>): Record<string, T> =>
     Object.fromEntries(Object.entries(map).map(([sel, v]) => [rewrite(sel), v]));
-  const inLayers = rewriteKeys(donorIn.layers);
-  const outLayers = rewriteKeys(donorOut.layers);
-  scaleTimes(inLayers, speedFactor);
-  scaleTimes(outLayers, speedFactor);
+  /** A donor step's layers, namespaced and re-timed onto the host's speed base. */
+  const prepLayers = (layers: Record<string, AnimLayerTracks>) => {
+    const out = rewriteKeys(layers);
+    scaleTimes(out, speedFactor);
+    return out;
+  };
+  const scaled = (seconds: number) => +(seconds * speedFactor).toFixed(3);
+  const inLayers = prepLayers(donorIn.layers);
+  const outLayers = prepLayers(donorOut.layers);
 
   let data = clone(curData);
+  // Where the donor's step run starts — the placement choice, in one index.
+  let runAt: number;
   if (opts.placement === 'new-step') {
     const added = addStep(data);
     if (!added) return { error: 'could not add a step to this timeline' };
     data = added;
-    const idx = data.steps.length - 2; // the fresh step sits just before Out
-    data = renameStep(data, idx, variant.name) ?? data;
-    const step = data.steps[idx];
-    step.duration = +(donorIn.duration * speedFactor).toFixed(3);
+    runAt = data.steps.length - 2; // the fresh step sits just before Out
+    data = renameStep(data, runAt, variant.name) ?? data;
+    const step = data.steps[runAt];
+    step.duration = scaled(donorIn.duration);
     if (donorIn.ease) step.ease = donorIn.ease;
     mergeLayers(step, inLayers);
     (step.reveals ??= []).push(`#${gfxId}`);
   } else {
+    runAt = 0;
     const entrance = data.steps[0];
-    entrance.duration = Math.max(entrance.duration, +(donorIn.duration * speedFactor).toFixed(3));
+    entrance.duration = Math.max(entrance.duration, scaled(donorIn.duration));
     mergeLayers(entrance, inLayers);
   }
-  const exit = data.steps[data.steps.length - 1];
-  exit.duration = Math.max(exit.duration, +(donorOut.duration * speedFactor).toFixed(3));
-  mergeLayers(exit, outLayers);
-  // Ambient loops (a breathing pulse) are pure data — carry the entrance step's along.
+  // Ambient loops (a breathing pulse) are pure data — carry the In step's along.
   if (donorIn.loops) {
-    const entranceStep = opts.placement === 'new-step' ? data.steps[data.steps.length - 2] : data.steps[0];
-    entranceStep.loops = { ...entranceStep.loops, ...rewriteKeys(donorIn.loops) };
+    const step = data.steps[runAt];
+    step.loops = { ...step.loops, ...rewriteKeys(donorIn.loops) };
   }
+
+  // The donor's MIDDLE steps become the host's next steps, in order, right after the run's
+  // start: each is a press on the default path, so a multi-step graphic keeps its reveals
+  // instead of collapsing into its entrance.
+  for (const [i, mid] of donorMiddles.entries()) {
+    const at = runAt + 1 + i;
+    const added = addStep(data, at);
+    if (!added) return { error: 'could not add the steps this graphic needs to this timeline' };
+    data = added;
+    data = renameStep(data, at, middleStepName(variant.name, mid.name, i)) ?? data;
+    const step = data.steps[at];
+    step.duration = scaled(mid.duration);
+    if (mid.ease) step.ease = mid.ease;
+    mergeLayers(step, prepLayers(mid.layers));
+    if (mid.loops) step.loops = { ...step.loops, ...rewriteKeys(mid.loops) };
+    // `reveals`/`hides` are selectors like every other — they ride through the same
+    // namespace rewrite, so the donor's press-by-press reveal order survives intact.
+    const reveals = (mid.reveals ?? []).map(rewrite);
+    if (reveals.length > 0) step.reveals = [...(step.reveals ?? []), ...reveals];
+    const hides = (mid.hides ?? []).map(rewrite);
+    if (hides.length > 0) step.hides = [...(step.hides ?? []), ...hides];
+  }
+
+  const exit = data.steps[data.steps.length - 1];
+  exit.duration = Math.max(exit.duration, scaled(donorOut.duration));
+  mergeLayers(exit, outLayers);
 
   const js = writeAnimData(current.js, data);
   if (!js) return { error: 'could not write the merged animation data' };
