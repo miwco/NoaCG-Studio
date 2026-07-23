@@ -45,13 +45,13 @@ export const CATEGORIES: CategoryInfo[] = [
   // Essentials — the graphics almost every live show needs.
   { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 13, available: true,  description: 'Names, titles, and straps over the action.', group: 'essentials' },
   { id: 'ticker',        name: 'Tickers',                 plannedCount: 6,  available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
-  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
+  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 20, available: true , description: 'Scorebugs, match boards, status cards and event cards.', group: 'essentials' },
   { id: 'info-card',     name: 'Info cards',              plannedCount: 5,  available: true,  description: 'Full / half screen cards — info and quotes.', group: 'essentials' },
   { id: 'starting-soon', name: 'Starting soon',           plannedCount: 3,  available: true , description: 'Pre-show holding loops with a timer.', group: 'essentials' },
   { id: 'end-credits',   name: 'End credits',             plannedCount: 4,  available: true , description: 'Rolling and card-based credit sequences.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Corner bug',              plannedCount: 2,  available: true , description: 'A persistent corner logo (image placeholder).', group: 'essentials' },
   // Specials — for particular formats and moments.
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 29, available: true , description: 'Stats, polls, tables, lineups, schedules, fixtures.', group: 'specials' },
   { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
   { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
   { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
