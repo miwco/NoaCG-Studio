@@ -9,20 +9,13 @@
 // runs in the browser, where process.env does not exist.
 
 import { RENDER_CONFIG, type RenderTier } from '../../src/render/limits.js';
+import { envInt } from './env.js';
 import type { JobStore } from './jobStore.js';
 
 export interface GlobalCaps {
   max: number;
   anonymousMax: number;
   retryAfterSec: number;
-}
-
-function envInt(name: string, fallback: number): number {
-  const raw = (process.env[name] ?? '').trim();
-  if (!raw) return fallback;
-  const n = Number(raw);
-  // A malformed override must not silently uncap the fleet.
-  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback;
 }
 
 /** The caps for this deployment: the shared defaults, with optional env overrides so the

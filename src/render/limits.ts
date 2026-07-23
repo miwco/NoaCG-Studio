@@ -109,6 +109,20 @@ export const RENDER_CONFIG = {
     /** Retry-After (seconds) sent with a 503 busy. */
     retryAfterSec: 60,
   },
+  /** Burst gate on POST /api/render/start (api/_lib/rateLimit.ts) — the cheap layer in
+   *  FRONT of the fleet ceiling. Admission stops a flood from RUNNING renders, but every
+   *  request it refuses has already read a body of up to manifestMaxBytes and queried the
+   *  ledger four times; this refuses before either. Per-deployment overrides, like
+   *  globalConcurrency's, are read in the api module. */
+  startRateLimit: {
+    windowSec: 60,
+    /** Starts per window per client IP. Deliberately far above legitimate use (a signed-in
+     *  user may only start 10 renders an HOUR) because the key is an IP address, and this
+     *  product's users sit behind shared ones: a university lab or a station gallery is one
+     *  NAT address, so the gate has to clear a whole room pressing Render at once. It is a
+     *  flood gate, not a quota — the quotas are RENDER_LIMITS. 0 disables it. */
+    maxRequests: 60,
+  },
   /** Default warning threshold for short holds. */
   minHoldMs: 500,
   sandbox: {

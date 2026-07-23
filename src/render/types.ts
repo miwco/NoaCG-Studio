@@ -74,6 +74,7 @@ export interface RenderApiError {
       | 'format_requires_signin'
       | 'limit_exceeded'
       | 'quota'
+      | 'rate_limited'
       | 'concurrent'
       | 'busy'
       | 'duplicate'

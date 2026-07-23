@@ -48,9 +48,10 @@ measure, buildManifest, config) may use anything the app uses.
 - **limits.ts** - RENDER_LIMITS tiers (anonymous/free/paid) + RENDER_CONFIG: every
   configurable number lives here; UI checks are UX, api/ re-validates authoritatively.
   `resolveTier()` is the single seam a future paid tier changes. Every tier number is
-  PER PRINCIPAL; the fleet-wide ceiling that bounds a traffic spike is
-  `RENDER_CONFIG.globalConcurrency`, enforced (with env overrides) in
-  api/_lib/admission.ts - docs/RENDER.md.
+  PER PRINCIPAL and is only checked once a request is parsed; the flood guards in front of
+  them are `RENDER_CONFIG.startRateLimit` (the burst gate, api/_lib/rateLimit.ts) and
+  `RENDER_CONFIG.globalConcurrency` (the fleet ceiling, api/_lib/admission.ts), both with
+  env overrides read in the api module - docs/RENDER.md.
 - **runtimeScript.ts** - RENDER_RUNTIME_JS: the virtual clock (Date/performance/timers/rAF
   virtualized, network stubbed) + `__noacgRender` { prepare, setSchedule, seek, vNow,
   getErrors }. The graphic executes its REAL cue lifecycle (update -> play -> next -> stop)

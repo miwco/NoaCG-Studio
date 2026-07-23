@@ -87,6 +87,22 @@ test('a failed job shows the server message and recovers', async ({ page }) => {
   await expect(page.getByTestId('render-start')).toBeVisible();
 });
 
+test('a rate-limited start surfaces inline and stays retryable', async ({ page }) => {
+  // The burst gate (api/_lib/rateLimit.ts) answers 429 rate_limited + Retry-After before
+  // the handler reads the manifest at all.
+  await page.route('**/api/render/start', (route) =>
+    route.fulfill({
+      status: 429,
+      headers: { 'retry-after': '30' },
+      json: { error: { code: 'rate_limited', message: 'Too many render requests from this network — wait a moment and try again.' } },
+    }));
+  await createHairline(page);
+  await openRenderPanel(page);
+  await page.getByTestId('render-start').click();
+  await expect(page.getByTestId('render-error')).toContainText('Too many render requests');
+  await expect(page.getByTestId('render-start')).toBeEnabled();
+});
+
 test('a busy fleet is refused with the sign-in nudge, and stays retryable', async ({ page }) => {
   // The fleet ceiling (api/_lib/admission.ts) answers 503 busy + Retry-After when the
   // deployment is at capacity — a different shape from the per-principal 429 below.

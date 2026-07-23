@@ -11,11 +11,27 @@ import { verifyUser } from '../_lib/auth.js';
 import { getJobStore, type JobRecord } from '../_lib/jobStore.js';
 import { getExecutor } from '../_lib/executor.js';
 import { admitGlobally } from '../_lib/admission.js';
+import { checkStartRateLimit } from '../_lib/rateLimit.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {
     const guard = methodGuard(req, 'POST');
     if (guard) return guard;
+
+    // The burst gate goes FIRST — ahead of the body read, deliberately. Everything below
+    // this line costs real work on behalf of the caller: up to a 4 MB body, a manifest
+    // parse, an auth round trip, four ledger queries. A hammering client should reach
+    // none of it.
+    const flooding = checkStartRateLimit(req);
+    if (flooding) {
+      return apiError(
+        'rate_limited',
+        'Too many render requests from this network — wait a moment and try again.',
+        429,
+        {},
+        { 'retry-after': String(flooding.retryAfterSec) },
+      );
+    }
 
     let manifest: RenderManifest;
     try {

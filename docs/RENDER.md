@@ -98,11 +98,11 @@ resized (layout math depends on the authored resolution).
 
 ## Service (api/render/*)
 
-`start` validates the manifest against the caller's tier, enforces quotas
-(duplicate-submit first — it answers the already-running job id — then concurrency,
-then hourly/daily windows), stores sha256 hashes of two per-job secrets (the browser's
-status/cancel token; the worker's completion secret), passes the fleet ceiling below,
-and launches the executor.
+`start` passes the burst gate below, validates the manifest against the caller's tier,
+enforces quotas (duplicate-submit first — it answers the already-running job id — then
+concurrency, then hourly/daily windows), stores sha256 hashes of two per-job secrets (the
+browser's status/cancel token; the worker's completion secret), passes the fleet ceiling
+below, and launches the executor.
 Sandbox launches run under `waitUntil` AFTER the 202 — no request waits on VM
 provisioning. `status` reconciles executor progress into the job, finalizes completion,
 and fails lost jobs past their deadline. `cancel` stops the executor. `complete` is the
@@ -126,6 +126,74 @@ lives in process memory (dev/self-host).
 
 Client checks are UX; the server re-validates everything. Introducing a paid tier =
 changing `resolveTier()` to read an entitlements source; nothing else moves.
+
+### Flood protection: three layers, three different jobs
+
+The tier table is the per-visitor **entitlement**, and it is checked only after a request
+has been fully parsed. Three separate guards sit in front of it, and they are not
+substitutes for each other:
+
+| layer | where | stops |
+|---|---|---|
+| WAF rate-limit rule | Vercel edge, before any function runs | a flood, at zero cost |
+| burst gate | `api/_lib/rateLimit.ts`, first line of `start` | one hammering client, before the body read |
+| fleet ceiling | `api/_lib/admission.ts`, after the ledger insert | too many renders RUNNING at once |
+
+### The burst gate (api/_lib/rateLimit.ts)
+
+Refuses **429 `rate_limited`** with `Retry-After` before `start` reads a body of up to
+4 MB, verifies auth, or touches the ledger — everything below that line is real work done
+on the caller's behalf.
+
+| | default | env override |
+|---|---|---|
+| window | 60 s | `RENDER_START_RATE_WINDOW_SEC` |
+| starts per window per client IP | 60 (0 disables) | `RENDER_START_RATE_MAX` |
+
+The limit is deliberately far above legitimate use — a signed-in user may only start 10
+renders an *hour*. It is keyed on the salted IP hash, and this product's users sit behind
+shared addresses: a university lab or a station gallery is one NAT IP, so the gate has to
+clear a whole room pressing Render at once. It is a flood gate, not a quota.
+
+Counting is **in process, therefore per instance** — no Redis, no extra round trip,
+nothing to configure when self-hosting. Fluid Compute reuses instances, so a hammering
+client keeps meeting the same counter, but N instances mean an effective ceiling up to N×.
+That is the accepted shape: this layer exists to make abuse *cheap to refuse*, the
+globally-exact limit is the WAF rule, and the guarantee that actually bounds spend is the
+fleet ceiling. The window is a sliding one approximated by two fixed windows (the previous
+window's count decays as the current fills), which costs O(1) memory per client and
+denies the 2×-across-the-boundary burst a plain fixed window would allow.
+
+### The WAF rate-limit rule (Vercel, not in this repo)
+
+The only layer that refuses a flood *before a function is invoked* — Vercel does not bill
+for requests blocked by a WAF rule. It lives in project config, so it covers the hosted
+deployment only; the two in-repo layers are what a self-hosted install gets. Staged as a
+draft by `rules add`, and **published by a human** — a bad condition on this route is an
+outage:
+
+```bash
+npx vercel link
+npx vercel firewall rules add "Rate limit render starts" \
+  --condition '{"type":"path","op":"eq","value":"/api/render/start"}' \
+  --condition '{"type":"method","op":"eq","value":"POST"}' \
+  --action rate_limit \
+  --rate-limit-window 60 \
+  --rate-limit-requests 120 \
+  --rate-limit-keys ip \
+  --rate-limit-action log \
+  --yes
+```
+
+Note `--rate-limit-action log`: land it in log mode, read
+`https://vercel.com/<team>/<project>/firewall/traffic?filter=<ruleId>` for a day to
+confirm only abuse is matching, and only then edit it to `deny`. Scope it to
+`/api/render/start` and POST — never the whole `/api` prefix, which would also throttle
+the 2.5 s status poll every running job makes. Two caveats worth knowing before tightening:
+WAF counters are **per region**, so N regions can collectively pass ~N× the configured
+number; and the same NAT reasoning above applies, which is why 120/min sits above the
+in-repo gate rather than under it (the edge rule is the coarse net, the gate is the
+precise one).
 
 ### The fleet ceiling (api/_lib/admission.ts)
 
