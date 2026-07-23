@@ -113,6 +113,25 @@ test('insert as a NEW NEXT STEP — a named step reveals the graphic, retargetab
     .toBe(true);
 });
 
+test('the canvas context menu opens the same insert flow', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  const canvas = page.getByTestId('canvas-layer');
+  await canvas.click({ button: 'right', position: { x: 200, y: 120 } });
+  const menu = page.getByTestId('canvas-context-menu');
+  await expect(menu).toBeVisible();
+  await page.getByTestId('canvas-ctx-insert-template').click();
+  await expect(menu).toBeHidden();
+  await expect(page.getByTestId('insert-tpl-dialog')).toBeVisible();
+  // Insert from here works end to end.
+  await awaitPreviewRebuild(page, () => page.getByTestId('insert-tpl-card-lt02').click());
+  await expect.poll(async () => (await state(page)).selected).toMatch(/^#gfx-/);
+  // A plain left click closes an open menu without picking anything.
+  await canvas.click({ button: 'right', position: { x: 200, y: 120 } });
+  await expect(page.getByTestId('canvas-context-menu')).toBeVisible();
+  await canvas.click({ position: { x: 400, y: 300 } });
+  await expect(page.getByTestId('canvas-context-menu')).toBeHidden();
+});
+
 test('templates that need their own runtime are greyed with the reason, not hidden', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await openInsertDialog(page);

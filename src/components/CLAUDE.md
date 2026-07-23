@@ -164,7 +164,10 @@ in src/blocks/CLAUDE.md.
   the same transform the Inspector and states graph use), which is how a freshly dropped asset
   becomes the graphic's next step in one click; moves between existing steps stay the
   blocks/stepAssign.ts patch. The chip swallows its own pointer events so the gesture layer
-  under it never fires.
+  under it never fires. The canvas also owns a CONTEXT MENU (right-click; the right button
+  never starts a gesture): one action for now - "Add template graphic…", opening the same
+  InsertTemplateDialog the Assets panel's button does (its open flag is the shared
+  useInsertTemplateUi store; the dialog itself mounts once in AppShell).
 - **TEXT TOOLS** (the stage toolbar's ↖ / T / boxed-T switch, PreviewFrame; placed-design
   templates only - the designBoxInfo gate, code-derived): store `canvasTool` arms them
   ('select' | 'text' | 'area-text'; T is the keyboard shortcut, Escape disarms). The T tool
@@ -341,10 +344,12 @@ in src/blocks/CLAUDE.md.
   ■ Out / an early exit via animEdit setLayerHide) - the same transforms the canvas chip and
   the timeline block edges write, shown for the default path only. Below them it names which
   steps move the layer and holds the preset
-  picker (preset + In/Out/Both + easing dropdown + per-direction duration + Apply -
-  blocks/presetApply.ts); Apply is a CLEAN SWAP of the targeted direction's motion (it never
-  blends with the previous preset), re-parks the preview at the playhead, and a target line
-  under it names WHICH step each direction will actually edit. On an imported
+  picker (preset + In/Out/Both + easing dropdown + per-direction duration + per-direction
+  DELAY - a hold before the motion: the apply shifts the written keyframes later within the
+  step and the layer holds its first pose through the wait, no keyframe knowledge needed +
+  Apply - blocks/presetApply.ts); Apply is a CLEAN SWAP of the targeted direction's motion
+  (it never blends with the previous preset), re-parks the preview at the playhead, and a
+  target line under it names WHICH step each direction will actually edit. On an imported
   design (the placed-design shape, code-derived) Animations is the DEFAULT tab - the artwork
   brought its look, so per-layer motion is what the Inspector is for there; a manual tab
   choice afterwards sticks. Legacy templates get a

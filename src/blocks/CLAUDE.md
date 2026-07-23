@@ -311,9 +311,12 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   Applying a preset is a CLEAN SWAP (ratified): the targeted layer's tracks in that direction's
   step are cleared first, then the donor's are written - switching presets never leaves the
   previous preset's (or a hand-keyed) track behind. The Inspector passes an easing (resolved to
-  a GSAP pair, stamped onto the written keyframes so it never disturbs a shared step) and an
+  a GSAP pair, stamped onto the written keyframes so it never disturbs a shared step), an
   optional per-direction duration (sets the target step's length and scales the donor keyframes
-  to fit). 'in' is layer-relative (it targets the step where THAT layer becomes active), 'out'
+  to fit), and an optional per-direction DELAY - a hold before the motion: the written keyframes
+  shift later within the step (the interpreter applies a track's first keyframe at the step
+  start, so the layer holds its starting pose through the wait), the step grows by the hold,
+  and step-level calls/dynamics shift with it. 'in' is layer-relative (it targets the step where THAT layer becomes active), 'out'
   always targets the final step, 'both' writes both - independently editable after. Scope 'all'
   = the whole graphic adopting the donor's full choreography and the chosen/donor step duration
   and ease - skipping press-revealed layers, whose entrance belongs to their » press; it also

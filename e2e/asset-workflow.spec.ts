@@ -170,6 +170,41 @@ test('the Inspector names the preset targets and writes an early exit (Disappear
     .toBe(true);
 });
 
+test('a preset Delay shifts the written keyframes and grows the step — no keyframe editing needed', async ({ page }) => {
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  await importAsset(page, 'badge.png', 'image/png', TINY_PNG);
+  await dropOnCanvas(page, 'images/badge.png');
+  await expect.poll(async () => (await animState(page)).selected).toBe('#img-badge');
+
+  await page.locator('.inspector-tabs').getByRole('button', { name: 'Animations' }).click();
+  const entranceBefore = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    return parseAnimData(useTemplateStore.getState().template.js)!.steps[0].duration;
+  });
+
+  await page.getByTestId('inspector-preset-select').selectOption({ label: 'Fade' });
+  await page.getByTestId('inspector-preset-dur-in').fill('0.4');
+  await page.getByTestId('inspector-preset-delay-in').fill('0.5');
+  await page.getByTestId('inspector-preset-apply').click();
+
+  const after = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { parseAnimData } = await import('/src/blocks/animData.ts');
+    const data = parseAnimData(useTemplateStore.getState().template.js)!;
+    const tracks = data.steps[0].layers['#img-badge'];
+    const times = Object.values(tracks).flat().map((k) => k.time);
+    return { min: Math.min(...times), max: Math.max(...times), duration: data.steps[0].duration };
+  });
+  // Every written keyframe sits AT or AFTER the delay (the layer holds its first pose
+  // until then — a donor may stagger its own start later still), the motion fits inside
+  // the chosen 0.4s + 0.5s hold, and the step length honours choice plus hold.
+  expect(entranceBefore).toBeGreaterThan(0);
+  expect(after.min).toBeGreaterThanOrEqual(0.5);
+  expect(after.max).toBeLessThanOrEqual(0.901);
+  expect(after.duration).toBeCloseTo(0.9, 3);
+});
+
 test('video assets: capped import, VIDEO badge, and a muted looping <video> on drop', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await page.getByTestId('dock-tab-assets').click();

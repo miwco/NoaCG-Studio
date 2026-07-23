@@ -11,6 +11,7 @@ import { setKeyframe } from '../blocks/animEdit';
 import { activationStep } from '../blocks/animEval';
 import { changePartPress } from '../blocks/stepAssign';
 import { createStepFromLayer } from '../blocks/layerTimeline';
+import { useInsertTemplateUi } from './InsertTemplateDialog';
 import { addPlacedLine, designBoxInfo, lineFit, lineFontSize, placedLines, placeLine, placementCss, setLineFit, setLineFontSize, setSlotSize, slotSize, type LinePlacement } from '../blocks/designLayout';
 import { insertImageElement, insertVideoElement } from '../blocks/assetOps';
 import { insertLottieElement } from '../blocks/lottieInsert';
@@ -282,6 +283,18 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
    *  outlines. */
   const [selRect, setSelRect] = useState<CanvasRect | null>(null);
   const [extraRects, setExtraRects] = useState<CanvasRect[]>([]);
+  // The canvas CONTEXT MENU (right-click): screen px within the overlay. One action for
+  // now — "Add template graphic…" — the same insert flow the Assets panel's button opens.
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const openInsertTemplate = useInsertTemplateUi((s) => s.openDialog);
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCtxMenu(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ctxMenu]);
   /** The innermost part under the pointer — the "what would a click select" preview. */
   const [hoverPart, setHoverPart] = useState<{ selector: string; label: string; rect: CanvasRect } | null>(null);
 
@@ -895,6 +908,10 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (editing) return; // the editor overlay handles its own events
+    // A pressed context menu closes on the next press anywhere else (its items swallow
+    // their own events); the right button never starts a gesture — it belongs to the menu.
+    setCtxMenu(null);
+    if (e.button === 2) return;
     promotedRef.current = null;
     const p = clientToDoc(e);
     // An armed TEXT TOOL claims the pointer outright — selection, drags, and the lasso all
@@ -1741,6 +1758,14 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
       data-testid="canvas-layer"
       onDragOver={onAssetDragOver}
       onDrop={onAssetDrop}
+      onContextMenu={(e) => {
+        e.preventDefault(); // the canvas offers its own menu, not the browser's
+        const rect = e.currentTarget.getBoundingClientRect();
+        setCtxMenu({
+          x: Math.min(e.clientX - rect.left, Math.max(0, width - 200)),
+          y: Math.min(e.clientY - rect.top, Math.max(0, height - 40)),
+        });
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -1861,6 +1886,29 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
             style={{ left: r.left * scale, top: r.top * scale, width: r.width * scale, height: r.height * scale }}
           />
         ))}
+
+      {/* The context menu (right-click): swallows its own pointer input so the gesture
+          layer never sees the click that picks an item. */}
+      {ctxMenu && (
+        <div
+          className="canvas-context-menu"
+          data-testid="canvas-context-menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <button
+            onClick={() => {
+              setCtxMenu(null);
+              openInsertTemplate();
+            }}
+            title="Insert a graphic from the template catalog into this project — it joins the canvas, timeline, and states without replacing anything"
+            data-testid="canvas-ctx-insert-template"
+          >
+            ✚ Add template graphic…
+          </button>
+        </div>
+      )}
 
       {/* The area-text tool's rectangle — released, it becomes a wrapping text box. */}
       {areaDraft?.active && (

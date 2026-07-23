@@ -155,6 +155,11 @@ export default function Inspector() {
   // are independent, with an optional link so "both" can be set from one field.
   const [durIn, setDurIn] = useState<string>('');
   const [durOut, setDurOut] = useState<string>('');
+  // Delay before the motion starts, in effective seconds; '' = none. The apply shifts the
+  // written keyframes later within the step (the layer holds its starting pose through the
+  // wait) — no keyframe knowledge needed to stagger an entrance or exit.
+  const [delIn, setDelIn] = useState<string>('');
+  const [delOut, setDelOut] = useState<string>('');
   const [linkDur, setLinkDur] = useState(true);
   const [presetMsg, setPresetMsg] = useState<string>('');
 
@@ -814,6 +819,42 @@ export default function Inspector() {
                     <span>Link</span>
                   </label>
                 )}
+                {showIn && (
+                  <label
+                    className="inspector-preset-field"
+                    title="Wait this long before the entrance motion starts — the element holds its starting pose through the delay"
+                  >
+                    <span>Delay&nbsp;in</span>
+                    <input
+                      className="inspector-preset-dur"
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={delIn}
+                      placeholder="0"
+                      onChange={(e) => setDelIn(e.target.value)}
+                      data-testid="inspector-preset-delay-in"
+                    />
+                  </label>
+                )}
+                {showOut && (
+                  <label
+                    className="inspector-preset-field"
+                    title="Wait this long into the exit before this motion starts"
+                  >
+                    <span>Delay&nbsp;out</span>
+                    <input
+                      className="inspector-preset-dur"
+                      type="number"
+                      min={0}
+                      step={0.05}
+                      value={delOut}
+                      placeholder="0"
+                      onChange={(e) => setDelOut(e.target.value)}
+                      data-testid="inspector-preset-delay-out"
+                    />
+                  </label>
+                )}
               </div>
               <button
                 className="inspector-preset-apply"
@@ -826,6 +867,8 @@ export default function Inspector() {
                   const durations = {
                     inDuration: showIn && durIn.trim() ? Number(durIn) : undefined,
                     outDuration: showOut && durOut.trim() ? Number(durOut) : undefined,
+                    inDelay: showIn && delIn.trim() ? Number(delIn) : undefined,
+                    outDelay: showOut && delOut.trim() ? Number(delOut) : undefined,
                   };
                   const next = donor && applyPresetData(native, donor, presetPhase, presetScope, durations);
                   if (!next) {

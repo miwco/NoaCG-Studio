@@ -5,6 +5,7 @@
 // thin picker over it. One applyTemplate = the whole insertion is one undo step.
 
 import { useMemo, useState } from 'react';
+import { create } from 'zustand';
 import { useTemplateStore } from '../store/templateStore';
 import { CATEGORIES, type TemplateVariant } from '../model/wizard';
 import { variantsFor } from '../templates/catalog';
@@ -13,7 +14,17 @@ import { insertBlocker, insertTemplateGraphic, type InsertPlacement } from '../b
 import MiniPreview from './wizard/MiniPreview';
 import { useModalGate } from './spaceKey';
 
-export default function InsertTemplateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** The dialog's open flag, shared so every entry point (the Assets panel's button, the
+ *  canvas context menu) drives the ONE instance mounted in AppShell. */
+export const useInsertTemplateUi = create<{ open: boolean; openDialog: () => void; close: () => void }>((set) => ({
+  open: false,
+  openDialog: () => set({ open: true }),
+  close: () => set({ open: false }),
+}));
+
+export default function InsertTemplateDialog() {
+  const open = useInsertTemplateUi((s) => s.open);
+  const onClose = useInsertTemplateUi((s) => s.close);
   useModalGate(open);
   const template = useTemplateStore((s) => s.template);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
