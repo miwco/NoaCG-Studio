@@ -282,7 +282,7 @@ findings properly rather than sprinkling eslint-disable comments.
   `Co-Authored-By` trailer or any agent co-author.** Don't commit `dist/` in feature work.
 - **`main` is only ever touched when the user asks for it, in that message - from ANY checkout.**
   Nothing lands on your own initiative: no commit made while sitting on `main`, no `git merge` into
-  main, no `git push origin main`, no `safe-merge`. Being in the primary checkout on `main` is not
+  main, no `git push origin main`. Being in the primary checkout on `main` is not
   permission to land - the user decides when work lands, *after* they know the change is safe.
   Commit verified work to the feature branch, report what you did and verified, and STOP.
 - **The one exception is `/safe-merge`.** Invoking it IS the ask: run that flow to completion for
