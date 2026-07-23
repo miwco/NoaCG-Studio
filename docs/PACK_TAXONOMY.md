@@ -29,7 +29,7 @@ ready for it either way.
 
 | Pack | Family | Types (curated order) | Extras |
 |---|---|---|---|
-| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen | vs01, cr03 |
+| Match Day | sport | scorebug, match-board, match-status, match-event, lineup, stat-compare, standings, fixtures, countdown, lower-third, ticker, sponsor-bug, holding-screen | vs01, cr03 |
 | Esports | sport | scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card | vs02 |
 | Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll | — |
 | Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug | — |
@@ -42,9 +42,36 @@ ready for it either way.
 | Shopping | noacg | topic-card, countdown, lower-third, ticker, title-card, sponsor-bug | — |
 | Wellness | minimal | countdown, holding-screen, topic-card, lower-third, social-bug | — |
 
+## The nine DISCIPLINE packs (docs/SPORTS_PACK.md)
+
+| Pack | Family | Shape it is cut for |
+|---|---|---|
+| Football | sport | count-up clock, subs and cards, the table, the weekend results |
+| Ice Hockey | sport | period clock counting down, penalties, the period breakdown |
+| Basketball | sport | quarter clock, the quarter-by-quarter board, team stats |
+| Handball | glass | half clock, two-minute suspensions, the group table |
+| Racket Sports | glass | set-by-set scoring (the stacked match board), the head-to-head |
+| Motorsport | sport | the timing tower as a table, championship standings, session results |
+| Athletics | glass | start lists, heat results, the medal table |
+| Combat Sports | glass | round clock, the fight card, the tale of the tape, the decision |
+| Club & School Sports | minimal | full club names, no crests needed, nothing that costs bitrate |
+
+**A discipline pack declares NO reference formats, and that is the taxonomy point.** The sheet
+counts FORMATS, and it has one row for "Sports broadcast / match coverage" and one for "Local
+sports / amateur sports" — both owned by Match Day. A tennis kit is not a new format; it is the
+same format cut for a sport that keeps score in sets and counts its clock the other way.
+Claiming a format twice is an error `validatePacks` catches, and inventing rows the sheet does
+not have would make its count meaningless. So the exactly-once mapping below is unchanged by
+all nine.
+
+This is also the first time the taxonomy has had two AXES: a pack can refine a format's kit
+without owning the format. If more disciplines follow (cricket, rugby, cycling), they go here
+the same way — config only, no new template work, because the type × family matrix is full.
+
 **Extras** are catalog variants outside the type registry that belong in the kit: the versus
-card (vs01/vs02) for match-up reveals, end credits (cr01–cr03) where a program rolls them.
-They ship without a state machine beyond the derived one, which is correct for what they are.
+card (vs01/vs02) for match-up reveals — also the sports pack's upcoming-match hero — and end
+credits (cr01–cr03) where a program rolls them. They ship without a state machine beyond the
+derived one, which is correct for what they are.
 
 Family picks, briefly: sport carries both competitive packs; noacg (the house on-air look) goes
 to the streamer-native packs where its amber control-room voice reads natively; glass suits the

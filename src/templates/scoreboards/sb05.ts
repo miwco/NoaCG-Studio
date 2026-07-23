@@ -124,6 +124,8 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 
 ${clipOneLineCss('.scoreboard-team', 240)}
 
+${clipOneLineCss('.scoreboard-score', 130)}
+
 /* The score — the loudest figure on the strip, in the accent, tabular so it never jitters. */
 .scoreboard-score {
   font-size: calc(34px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
@@ -167,6 +169,8 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
   color: var(--text-color);        /* primary white — the clock is read constantly */
   font-variant-numeric: tabular-nums;  /* the whole point: digits never shift width */
 }
+
+${clipOneLineCss('.scoreboard-clock', 150)}
 
 /* ── Match state (the machine's groups add these to the root) ── */
 

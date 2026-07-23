@@ -159,6 +159,21 @@ math; it just calls it: `tl.add(tickerMarquee('#ticker-track'))`. Consequences, 
 
 Adding a measured motion to another category = add a builder to its runtime + have the preset
 `tl.add()` it. Do NOT inline measured math in a region: it makes the template unconvertible.
+
+### The canonical REPEATING-DATA system (dataRuntimes.ts + sportsRuntimes.ts)
+
+A graphic whose content is a LIST the operator types - a running order, a poll's options, a
+starting eleven, a league table, a results column - keeps that list in ONE hidden textarea
+field, one item per line, with `|` between an item's parts, and a `rebuildInfographic()` the
+assembler calls after every update(). **Nothing about the list is ever expressed as more
+fields**: a template does not grow `f7`…`f26` because a squad has twenty players. The SPX
+definition stays small (so a control page shows one multi-line editor, and adding a substitute
+is typing a line), the motion is MEASURED from the rendered rows, and the rebuild is per TYPE
+rather than per design. `dataRuntimes.ts` holds the agenda and poll shapes;
+**sportsRuntimes.ts** holds the sports pack's four (roster · standings · comparison ·
+fixtures). All of them escape operator text before it reaches innerHTML and SKIP a malformed
+line rather than rendering an empty row, and all render into `#infographic-rows` with one direct
+child per item - exactly what `rows-cascade` measures.
 - **startingSoon/** - ss01…ss03 (prefix 'starting-soon', hold-loop preset: entrance + calm
   .starting-soon-pulse breathing + clock via shared/clock.ts, minutes in f2). DATA BLOCKS via
   convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
@@ -172,14 +187,34 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   via `GameTimerDesign.runtimeExtraJs` (outside the region, following the clock's globals)
   and `GameTimerDesign.autoEase` (a design's hand-tuned default ease pair, used only when
   the wizard easing is 'auto' - an explicit pick still wins).
-- **scoreboards/** - sb01…sb02 (prefix 'scoreboard', data blocks via convertToDataRegion;
-  fixed 4-field contract f0-f3 as scoreboard-masks so the standard presets drive them;
+- **scoreboards/** - sb01…sb20 (prefix 'scoreboard', data blocks via convertToDataRegion;
+  the fixed 4-field contract f0-f3 as scoreboard-masks so the standard presets drive them;
   update() pops a score's mask when it changes on air - speed via motionSpeed()).
+  **A design may OWN its fields instead** (`SbDesign.fields`), plus `.popFields` (which fields
+  pop), `.lineCount` (how many masks the presets choreograph) and `.runtimeExtraJs`
+  (design-owned JS outside the marked region) - all optional, and a design declaring none emits
+  byte-identically to before they existed. That is what lets the SPORTS PACK's bigger boards
+  (docs/SPORTS_PACK.md) share this assembler: a match board adds a clock, a period, crests and
+  club colours, and a match-event card is not a two-team graphic at all, but all of them are
+  still scoreboards. Field contracts + the fragments that carry machinery live in
+  **scorebugShared.ts**; the team-colour lift and the period-breakdown rebuild in
+  **boardRuntimes.ts**. `clipOneLineCss()` documents a real trap: the assembler's own
+  `.scoreboard-mask > span { text-wrap: balance }` resolves to `text-wrap-mode: wrap` and
+  OUTRANKS a plain `white-space: nowrap`, so a long club name wraps and grows a fixed strip
+  mid-match while looking as though the nowrap was never written.
+- **shared/matchClock.ts** - the SPORTS CLOCK, design-owned JS outside the marked region (the
+  shared/clock.ts rule: playout, not motion). Counts UP or DOWN per the design's
+  `data-count`, stops itself at zero when counting down, resets to the element's own
+  `data-start` (never zero-by-assumption), and re-seeds from the clock FIELD when an operator
+  types a correction - a live clock drifts from the stadium's, and one that cannot be corrected
+  stops being trusted. `markInPlay`/`markBreak`/`markFinal`/`markLive` are the state markers the
+  machine's groups call; `markInPlay` clears only the interval, because a group must never reach
+  into another group's state.
 - **cornerBug/** - bug01…bug02 (prefix 'corner-bug', standard assembler, `dataRegion: true`,
   logo slot + placeholder mark; bug02 = house live clock via StandardDesign.runtimeExtraJs -
   design-owned JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the
   data conversion untouched).
-- **infographics/** - ig01…ig06 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+- **infographics/** - ig01…ig29 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
   igPresets (count-up / bars-grow / ring-fill / rows-cascade) + **igMotion.ts**. DATA BLOCKS via
   convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
   operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the

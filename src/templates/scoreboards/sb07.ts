@@ -127,6 +127,8 @@ ${colourHoldersHtml('f6', 'f7', '#fecc02', '#c60c30')}
 
 ${clipOneLineCss('.scoreboard-team', 230)}
 
+${clipOneLineCss('.scoreboard-score', 130)}
+
 /* The score — the pill's anchor, tabular so a change never nudges the colon off centre. */
 .scoreboard-score {
   font-size: calc(34px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
@@ -176,6 +178,8 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
   color: var(--text-color);        /* primary white — the clock is read constantly */
   font-variant-numeric: tabular-nums;  /* the whole point: digits never shift width */
 }
+
+${clipOneLineCss('.scoreboard-clock', 150)}
 
 /* ── Match state (the machine's groups add these to the root) ── */
 
