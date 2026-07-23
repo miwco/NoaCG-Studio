@@ -192,6 +192,13 @@ export interface TypeMachine {
     /** Author the arrow INTO the exit, so `next` alone takes the graphic off air. Default
      *  false = exact parity with a graphic that has no machine at all. */
     exitOnNext?: boolean;
+    /**
+     * Arrows that belong to the GRAPHIC rather than to any one branch state — a self-dismiss
+     * timer from the entrance to the exit, say. Declaring them here rather than smuggling them
+     * into some branch's `edges` array keeps a branch's list meaning "the ways in and out of
+     * THIS state", which is what makes the declarations readable.
+     */
+    edges?: TypeEdge[];
     branches?: TypeBranch[];
   };
   parallel?: TypeGroup[];
@@ -351,7 +358,9 @@ export function compileMachine(
   const spec = type.machine;
   const branches = spec.main?.branches ?? [];
   const parallel = spec.parallel ?? [];
-  const wantsMain = !!spec.main?.pathEvents?.length || !!spec.main?.exitOnNext || branches.length > 0;
+  const mainEdges = spec.main?.edges ?? [];
+  const wantsMain =
+    !!spec.main?.pathEvents?.length || !!spec.main?.exitOnNext || branches.length > 0 || mainEdges.length > 0;
   if (!wantsMain && parallel.length === 0) return null;
 
   const derived = deriveMachine(data);
@@ -383,6 +392,9 @@ export function compileMachine(
       main.transitions.push({ from, to, trigger: 'operator', event: 'next' });
     }
   }
+
+  // The graphic's own arrows first, so they sort ahead of the branches that follow them.
+  for (const edge of mainEdges) main.transitions.push(toTransition(edge, path));
 
   for (const branch of branches) {
     const state: AnimState = { id: branch.id };

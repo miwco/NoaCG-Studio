@@ -129,14 +129,25 @@ were. Roughly by how many formats ask:
 - **Data charts / maps** (weather, election maps, finance charts, heatmaps) — a real data-viz
   surface, out of scope for the current model; revisit with external data feeds (master goals
   §1.5).
-- **Chat / alert overlays** (chat highlight, follower alerts) — show-chat territory
-  (src/community/showchat) more than template territory; the bridge is a product decision.
+- **Chat / alert overlays** — ~~show-chat territory more than template territory~~ **SHIPPED**
+  as the `chat-highlight` type (src/templates/audience). The product decision it was waiting on
+  turned out to be a false choice: the graphic never needed a chat integration, because the
+  operator types the comment, the handle and the SOURCE (plain text, never a platform logo) into
+  ordinary fields. It self-dismisses on a real timer and can be held on air. Follower/donation
+  ALERTS are still open — they are event-driven, which is the feed problem below.
 - **Frames** (webcam frame, split-screen, reaction frame) — static surrounds, no data fields;
   arguably a new category rather than a type.
 - **QR code** (7 formats: CTAs, donations, listings) — a small, high-value type candidate; an
   image field renders one today but a dedicated type could generate it from a URL field.
 - **Reveal moments** (winner reveal, nominee cards, before/after) — the quiz board's reveal
-  machinery generalizes; a "reveal card" type is the natural next stateful type.
+  machinery generalizes; a "reveal card" type is the natural next stateful type. Two instances
+  of it have since shipped — the `qa-card`'s answer and the `live-poll`'s winner call — so what
+  is left here is the GENERIC card, not the mechanism.
+- **Audience questions and votes** — **SHIPPED** as the audience pack: `viewer-question`,
+  `qa-card`, `chat-highlight`, `question-queue`, `community-request`, `live-poll`, and the two-
+  and three-answer boards beside the existing four-answer one. They joined the `creator`,
+  `election`, `talk-show`, `corporate`, `classroom` and `church` packs, which is pure config —
+  the matrix was already full for them the moment their designs landed.
 - **Lineups / brackets / leaderboards / stats panels** (sports & esports depth) — the agenda's
   rows and the scoreboard cover the basics; the full versions are their own types.
 - **Lyrics / captions / surtitles** — timed-text playout is a different runtime problem; out

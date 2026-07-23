@@ -12,8 +12,17 @@ import { lowerThirdType } from './lowerThird';
 import { socialBugType, sponsorBugType } from './bugs';
 import { titleCardType, topicCardType } from './cards';
 import { agendaType, pollType } from './dataBoards';
+import { livePollType } from './livePoll';
+import {
+  chatHighlightType,
+  communityRequestType,
+  qaCardType,
+  questionQueueType,
+  viewerQuestionType,
+} from './audience';
 import { countdownType, holdingScreenType } from './clocks';
 import { quizBoardType } from './quizBoard';
+import { threeAnswerBoardType, twoAnswerBoardType } from './answerBoard';
 import { scoreboardType } from './scoreboard';
 import { tickerType } from './ticker';
 
@@ -34,6 +43,17 @@ export const TYPES: GraphicType[] = [
   tickerType,         //  8/60
   scoreboardType,     //  5/60 — but the type that proves parallel groups
   quizBoardType,      // the flagship
+  threeAnswerBoardType, // the same arc at three rows…
+  twoAnswerBoardType,   // …and at two: the pick is data, so the machine never changed
+  livePollType,       // the vote WHILE it happens — the type that closes itself on a timer
+  // The AUDIENCE family (types/audience.ts): what the people watching sent in. Two of the five
+  // carry no machine at all, which is the "persist a machine only when the derived one is
+  // wrong" rule showing its work.
+  viewerQuestionType,
+  qaCardType,
+  chatHighlightType,
+  questionQueueType,
+  communityRequestType,
 ];
 
 export function typeById(id: string): GraphicType | undefined {

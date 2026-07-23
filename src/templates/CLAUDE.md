@@ -37,7 +37,10 @@ resolve, extras exist, formats covered exactly once) - edit packs.ts and the doc
   (docs/TIMELINE_V2_PLAN.md §3c): its Continue reveal is a lifecycle CALL, not a reveal group,
   so it inserts a middle step `{ calls: [revealAnswer] }` before Out - which makes SPX's
   `steps: '2'` DERIVED (three steps -> one press) instead of a hard-coded value the timeline's
-  steps re-sync would overwrite with '1' on the first edit, killing the reveal.
+  steps re-sync would overwrite with '1' on the first edit, killing the reveal. The LIVE VOTE
+  board (poll/) uses the same seam for the same reason: its result step carries the measured bar
+  growth, which the keyframe model deliberately cannot express, and the AUDIENCE category's Q&A
+  card uses it for an ordinary `reveals` step the legacy region simply has no shape for.
   INFO CARDS flipped last (`dataRegion: true`) - they are the standard contract's other line-based
   family, so they convert exactly like lower thirds, steps and all. Nothing blocked them but the
   spec suite they hosted, which now runs against a SAVED legacy template instead (e2e/timeline.spec.ts).
@@ -94,8 +97,17 @@ promotes an existing variant keeps that variant's id and its slot in the browse 
 
 **THE RULE:** *persist a machine only when the derived one is wrong.* `deriveMachine` already
 gives every template a correct one-group linear machine, so a type with no branches, parallel
-groups or event overrides compiles to NO `machine` key and emits byte-identical output. Seven
-of the twelve types are in that class.
+groups or event overrides compiles to NO `machine` key and emits byte-identical output. Nine
+of the twenty types are in that class - including two of the five AUDIENCE types
+(`viewer-question`, `community-request`), which is the rule showing its work at the point where
+modelling for its own sake would be most tempting: they are different GRAPHICS from each other
+(different fields, different meaning, different control page) with genuinely the same two beats
+on air. `e2e/audience-pack.spec.ts` pins exactly which two, so a later edit that quietly adds a
+machine has to say why.
+
+`TypeMachine.main.edges` is for arrows that belong to the GRAPHIC rather than to any one branch
+state - the chat highlight's self-dismiss timer from the entrance to the exit. Declaring them
+there keeps a branch's `edges` meaning "the ways in and out of THIS state".
 
 Fields are declared with LOGICAL keys and a `role` (`line` first, `logo` last - both enforced
 with a throw, because the order is what keeps the compiled `fN` ids in step with the assembler
@@ -221,13 +233,48 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   (spxStarter cssForSubfolder; zip import strips the hop back). Contract + diagnosis:
   docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts + e2e/import-prepare.spec.ts +
   e2e/import-stretch.spec.ts.
-- **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown).
+- **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
+  ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
+  highlight, question queue, community/prayer request), 20 designs in five per-form files
+  (`viewerQuestion.ts`, `qaCard.ts`, …), four style families each. A form declares its FIELDS and
+  the runtime it needs; everything else - the attribution rules, the long-message clamp, the
+  style contract, the export path - is written once. Deliberate deviations from the
+  one-file-per-design convention, both documented in the files: the four designs of a form live
+  together (they are one object in four skins, and side by side a drift between them is
+  reviewable), and the blocks they share come from **familyCss.ts** (panel / kicker / byline per
+  family). DATA BLOCKS via convertToDataRegion; the Q&A card's answer is a real middle step with
+  `reveals` (keyframes, not a call - so a SNAP to the answered state shows the answer).
+  Two rules the category exists to hold: **the platform is TEXT, never a logo** (one operator
+  field, so the same card serves YouTube, Zoom, a church app or slips of paper handed up from the
+  room), and **a missing name or source renders cleanly** - `audienceRuntime.ts`'s
+  `audienceAttribution()` marks the root and the CSS swaps in an `.audience-anon` element whose
+  WORD lives in the markup, so it can be translated. The queue's live row is an INDEX in runtime
+  data, never a state per question.
+- **poll/** - the LIVE VOTE board (prefix 'poll'): the poll while it is happening, as against the
+  `poll` graphic TYPE in the infographic category (ig02/ig11/ig12/ig13), which is the finished
+  result chart. pl01…pl04 + pollPresets ('poll-open') + **pollMotion.ts**. Data-driven like
+  tickers: a hidden #f1 textarea holds "Label | count" lines and the runtime renders the rows, so
+  the bar widths AND the row count are the operator's content - measured motion, in
+  `pollBarsGrow`. The result is a real middle step carrying that builder; the VOTE NOW badge
+  leaving and the figures arriving are ordinary keyframes, so a snap straight to the result shows
+  the result. Only the winner CALL is a lifecycle call (which row wins depends on the counts, so
+  it has no fixed target - the quiz reveal's posture). A tie calls nobody and says so.
+- **quiz/** - qz01…qz12 (prefix 'quiz'; f0 question, f1…fn options, hidden correct-answer and
+  selected-answer dropdowns after them).
   DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
   middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;
   update() clears the reveal). Each answer ROW carries `quiz-option` (the shared look) AND
-  `quiz-option-N` (its own animation identity) - the entrance staggers the four, and a stagger
-  lives in the keyframe model as per-row start times, which one class matching four elements
+  `quiz-option-N` (its own animation identity) - the entrance staggers them, and a stagger
+  lives in the keyframe model as per-row start times, which one class matching several elements
   cannot carry. The numbered rows are registry parts, labelled by their field ("Answer B").
+  **The ROW COUNT is a parameter** (`QuizContent.answers.length` - 2, 3 or 4): a true/false
+  board, a three-way and the classic four-answer board are the same graphic with a different
+  number of rows, so the letter alphabet, the two hidden field ids and the preset's row list all
+  derive from it, and n = 4 derives exactly the strings the four-answer board always emitted
+  (byte identity, pinned by the catalog baseline). `assertRowsMatchAnswers` throws when a design
+  draws the wrong number of rows - the one thing the assembler cannot derive from the design, and
+  silent in every other check. All three boards share ONE machine (types/answerBoard.ts): because
+  the pick is DATA, halving the rows changes no state at all.
 
 ## The :root style contract
 

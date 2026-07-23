@@ -21,6 +21,10 @@ export type TemplateType =
   | 'starting-soon'
   | 'infographic'
   | 'quiz'
+  /** A live vote board — the poll while it is happening (templates/poll). */
+  | 'poll'
+  /** An audience message on screen — question, Q&A, chat, queue, request (templates/audience). */
+  | 'audience'
   /** A design the user made elsewhere (a flat image) with text fields placed on top. */
   | 'imported-design'
   | 'blank';

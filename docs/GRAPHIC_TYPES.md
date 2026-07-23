@@ -243,7 +243,7 @@ value, so sport's intentional accent halos never trip it.
 
 ---
 
-## 6. The twelve types
+## 6. The registered types
 
 Counts are how many of the 60 reference formats in `live_format_graphics_needs.xlsx` ask for
 that graphic. Every type now ships in all four style families; the design named here is the
@@ -264,13 +264,39 @@ family a cell is in.
 | Ticker | 8 | tk07 House Rotator | timer cycle + pause/resume/skip |
 | Scoreboard | 5 | sb03 House Score | parallel `flag` / `clock` / `result` |
 | Quiz board | — | qz02 House Quiz | branches `selected` / `locked` |
+| Three-answer board | — | qz10 House Triple | the quiz board's machine, unchanged |
+| Two-answer board | — | qz06 House Split | the quiz board's machine, unchanged |
+| Live vote | — | pl01 House Vote | timer voting window + branches `closed` / `called` |
+| Viewer question | — | aq01 House Question | – |
+| Q&A card | — | qa01 House Q&A | `answer` on the walk |
+| Chat highlight | — | ch01 House Comment | timer self-dismiss + pose `held` |
+| Question queue | — | qq01 House Queue | branches `forward` / `back` |
+| Community request | — | rq01 House Request | – |
 
-The last three earn their place by what they prove rather than by frequency: parallel groups,
-timer-driven motion, and the far end of the model.
+The last three of the original twelve earn their place by what they prove rather than by
+frequency: parallel groups, timer-driven motion, and the far end of the model.
+
+The AUDIENCE PACK's eight types (everything from "Three-answer board" down) are the audience-
+interaction set — the graphics a talk show, livestream, podcast, webinar, church, conference,
+quiz show or election programme uses to put what the audience sent on screen. Three things in
+that block are worth reading as claims rather than as entries:
+
+- **Two, three and four answers are one machine.** The row count changes the fields and nothing
+  else, because the pick is DATA (`types/answerBoard.ts` holds the shared arc). If a smaller
+  board had needed a smaller machine, "parameterize with data, not states" would have been a
+  slogan rather than a rule.
+- **Two of the five audience types persist no machine at all.** A viewer question and a prayer
+  request come on and go off; the derived machine is already right, so nothing is written down.
+  They are still distinct TYPES — different fields, different meaning, different control page.
+- **Both timer types close a real loop.** The live vote's voting window and the chat highlight's
+  dwell are `gsap.delayedCall` transitions armed when the entrance settles, so the bench's
+  timeScale and the render pipeline's virtual clock drive them, and a settled or scrubbed graphic
+  never arms one. Their KNOWN LIMIT is stated in the type files: the delay is authored on the
+  arrow, not a per-play operator field, and both graphics carry a manual button beside it.
 
 ### The matrix is full — and how it filled
 
-All 48 cells (12 types × noacg / glass / sport / minimal) are filled. The route there is worth
+All 80 cells (20 types × noacg / glass / sport / minimal) are filled. The route there is worth
 recording, because it was not the one the first pass predicted:
 
 - **The promotion well ran dry fast.** 24 cells looked promotable on parts alone; 8 actually were

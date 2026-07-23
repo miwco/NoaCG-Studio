@@ -39,6 +39,8 @@ export type TemplateCategory =
   | 'corner-bug'
   | 'versus'
   | 'quiz'
+  | 'poll'
+  | 'audience'
   | 'imported-design';
 
 export const CATEGORIES: CategoryInfo[] = [
@@ -54,7 +56,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
   { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
   { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
-  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
+  { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 12, available: true , description: 'Game-show questions with two, three or four answers.', group: 'specials' },
+  { id: 'poll',          name: 'Live votes',              plannedCount: 4,  available: true , description: 'Audience polls and votes — open, close, result, winner.', group: 'specials' },
+  { id: 'audience',      name: 'Audience & questions',    plannedCount: 20, available: true , description: 'Viewer questions, Q&A, chat highlights, queues, requests.', group: 'specials' },
   // Not browsable — reached only by importing artwork (see CategoryInfo.group).
   { id: 'imported-design', name: 'Imported design',       plannedCount: 1,  available: true , description: 'Your own artwork with text fields on top.', group: 'imported' },
 ];
@@ -153,6 +157,11 @@ export type AnimPresetId =
   // Versus-card formats (templates/versus/vsPresets.ts):
   | 'vs-slam'
   | 'vs-glide'
+  // Live-vote motion format (templates/poll/pollPresets.ts):
+  | 'poll-open'
+  // Audience-graphic motion formats (templates/audience/audiencePresets.ts):
+  | 'audience-rise'
+  | 'audience-slide'
   // Infographic motion formats (templates/infographics/igPresets.ts):
   | 'count-up'
   | 'bars-grow'

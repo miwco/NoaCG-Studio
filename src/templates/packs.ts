@@ -65,7 +65,10 @@ export const PACKS: TemplatePack[] = [
     name: 'Creator',
     description: 'Starting-soon, straps, topic cards and handles — the streamer starter kit.',
     family: 'noacg',
-    types: ['holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll'],
+    types: ['holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll',
+      // A stream's audience IS the show: the chat strap and the live vote are as core here
+      // as the strap is, and the question card is what a Just Chatting segment runs on.
+      'chat-highlight', 'live-poll', 'viewer-question'],
     formats: [
       'Gaming livestream',
       'Just Chatting / personality stream',
@@ -99,7 +102,10 @@ export const PACKS: TemplatePack[] = [
     name: 'Election',
     description: 'Result bars, candidate straps and the count ticker for civic broadcasts.',
     family: 'minimal',
-    types: ['poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown'],
+    types: ['poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown',
+      // The live vote carries the count as it comes in and calls a leader; the static poll
+      // board above it is the finished result.
+      'live-poll'],
     formats: [
       'Election night / results program',
       'Debate / political discussion',
@@ -111,7 +117,9 @@ export const PACKS: TemplatePack[] = [
     name: 'Talk Show',
     description: 'Guest straps, topic and question cards, polls — panels, podcasts and Q&As.',
     family: 'glass',
-    types: ['lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown'],
+    types: ['lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown',
+      // The whole audience-interaction set: a live Q&A is this pack's own format.
+      'viewer-question', 'qa-card', 'chat-highlight', 'question-queue', 'live-poll'],
     formats: [
       'Talk show / panel discussion',
       'Podcast livestream / videocast',
@@ -127,7 +135,9 @@ export const PACKS: TemplatePack[] = [
     name: 'Corporate Events',
     description: 'Agendas, speaker straps, session titles and polls for webinars and keynotes.',
     family: 'minimal',
-    types: ['agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen'],
+    types: ['agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen',
+      // Webinar and conference Q&A: the moderator's queue and the answered card.
+      'question-queue', 'qa-card', 'viewer-question', 'live-poll'],
     formats: [
       'Webinar / expert presentation',
       'Conference / seminar stream',
@@ -146,7 +156,9 @@ export const PACKS: TemplatePack[] = [
     name: 'Classroom',
     description: 'Quiz board, timers, lesson cards and a score table for teaching streams.',
     family: 'noacg',
-    types: ['quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard'],
+    types: ['quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard',
+      // Two- and three-answer boards for true/false and three-way rounds, plus the class vote.
+      'answer-board-2', 'answer-board-3', 'live-poll', 'viewer-question'],
     formats: [
       'Education / lecture livestream',
       'Student production / school TV',
@@ -158,7 +170,9 @@ export const PACKS: TemplatePack[] = [
     name: 'Church & Ceremony',
     description: 'Service titles, scripture cards, program schedule and a quiet countdown.',
     family: 'minimal',
-    types: ['title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda'],
+    types: ['title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda',
+      // The request card and the question card — a service reads both from the congregation.
+      'community-request', 'viewer-question', 'question-queue'],
     extras: ['cr01'],
     formats: [
       'Religious service / church livestream',

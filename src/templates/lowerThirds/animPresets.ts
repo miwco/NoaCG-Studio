@@ -40,6 +40,15 @@ export interface PresetConfig {
    *  Only the infographic count-up preset asks: its designs may or may not carry one, and a
    *  preset must not write motion for an element that isn't there (a phantom timeline layer). */
   hasBars?: boolean;
+  /**
+   * Which of a category's OPTIONAL parts this design actually draws, as bare class tokens
+   * ('audience-kicker', 'audience-by', …). Same job as `hasBars`, generalized: the audience
+   * category is one contract worn five ways — a question card has a kicker and an attribution
+   * line, a queue has neither — and a preset must not write motion for an element that is not
+   * there. Filled from the HTML by both the assembler and `emitPresetRegion`, so a preset
+   * re-applied after creation sees exactly what the create-time emit saw.
+   */
+  parts?: string[];
   /** Multi-step mode: in-timeline shows line 1; each next() reveals one more line. */
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */

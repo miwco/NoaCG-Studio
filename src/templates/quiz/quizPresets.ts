@@ -14,6 +14,22 @@ import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
 const MARK_OPEN = '/* == ANIMATION (generated — the Animation panel rewrites this block) == */';
 const MARK_CLOSE = '/* == END ANIMATION == */';
 
+/**
+ * How many answer rows this board has. The quiz assembler sets `lineCount` to the question plus
+ * one per answer, so the row count is one less — which is how the same preset staggers two rows
+ * on a true/false board and four on the classic one. At four this emits exactly the list the
+ * preset always hard-coded.
+ */
+function optionRows(cfg: PresetConfig): string {
+  const count = Math.max(1, cfg.lineCount - 1);
+  return Array.from({ length: count }, (_, i) => `'.quiz-option-${i + 1}'`).join(', ');
+}
+
+/** "two" / "three" / "four" — so the generated comment counts the rows it actually animates. */
+function rowWord(cfg: PresetConfig): string {
+  return { 1: 'one', 2: 'two', 3: 'three', 4: 'four' }[Math.max(1, cfg.lineCount - 1)] ?? 'all';
+}
+
 function knobs(cfg: PresetConfig): string {
   return `var animSpeed = ${cfg.speed};  // 1 = normal · 0.75 = slower · 1.5 = faster
 var easeIn = '${cfg.easeIn}';   // entrance ease — arrives fast, settles smooth
@@ -24,7 +40,7 @@ export const QUIZ_PRESETS: AnimPreset[] = [
   {
     id: 'quiz-reveal' as AnimPresetId,
     name: 'Quiz reveal',
-    description: 'Box rises in, the question wipes up, the four answers stagger in — Continue reveals the correct one.',
+    description: 'Box rises in, the question wipes up, the answers stagger in — Continue reveals the correct one.',
     autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
     emit: (cfg) => `${MARK_OPEN}
 // Preset: Quiz reveal — panel in, question mask-up, answers stagger in one by one.
@@ -41,10 +57,10 @@ function buildInTimeline() {
   tl.fromTo('#f0',                             // the question slides up from behind its mask
     { yPercent: 110 },
     { yPercent: 0, duration: 0.55 / animSpeed, ease: easeIn }, '-=0.25');
-  // The four answers walk in one after another. They are named row by row (not by the shared
+  // The ${rowWord(cfg)} answers walk in one after another. They are named row by row (not by the shared
   // .quiz-option class) so each keeps its own start time — that is what a stagger IS, and it
   // keeps every row independently editable on the timeline.
-  tl.fromTo(['.quiz-option-1', '.quiz-option-2', '.quiz-option-3', '.quiz-option-4'],
+  tl.fromTo([${optionRows(cfg)}],
     { x: -24, opacity: 0 },
     { x: 0, opacity: 1, duration: 0.45 / animSpeed, ease: easeIn, stagger: 0.1 / animSpeed },
     '-=0.2');

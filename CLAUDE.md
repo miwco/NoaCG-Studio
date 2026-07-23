@@ -144,7 +144,10 @@ src/
                'graphic', supabase migration 0009); shows.ts (the RUNDOWN unit -
                docs/CONTROL_LAYER.md); structure.ts (element identity) + fieldModel.ts (the
                FieldDescriptor contract)
-  templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract;
+  templates/ * the wizard catalog: shared assemblers + 13 categories (audience/ = viewer
+               questions, Q&A cards, chat highlights, question queues, community requests;
+               poll/ = the live VOTE board, as against the infographic `poll` type's finished
+               result chart); :root style contract;
                types/ = the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md) - what a graphic IS,
                independent of its look; compiles into catalog variants, replacing by id
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state
@@ -236,8 +239,12 @@ findings properly rather than sprinkling eslint-disable comments.
   `createBlankTemplate(...)`, run `validateTemplate`, and load `composeDocument(tpl)` into a hidden
   iframe to call `update()/play()/stop()`; store state via `useTemplateStore.getState()`.
 - **Template catalog sweep:** `node scripts/l3-sweep.mjs <shots-dir> <category>` (dev server must
-  be running; `lower-third` | `info-card` | `end-credits` | `ticker`) - validates every variant ×
-  preset × easing. Run it for the affected category after template changes.
+  be running; any `TemplateCategory` id - `lower-third`, `info-card`, `end-credits`, `ticker`,
+  `quiz`, `poll`, `audience`, …) - validates every variant × preset × easing. Run it for the
+  affected category after template changes. A category whose contract differs from the standard
+  one gets its own branch in the script rather than a waiver: the audience sweep checks the
+  MESSAGE wraps and clamps (its `#f0` is a kicker, not the text), and the quiz sweep reads the
+  correct-answer field off the template instead of assuming a four-answer layout.
 
 **Gotchas:**
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
