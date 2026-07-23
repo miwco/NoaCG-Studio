@@ -31,6 +31,15 @@ import { extOf, fileToDataUrl, uniqueAssetPath } from '../../../../assets/assetU
 import type { AssetFile } from '../../../../model/types';
 import type { FieldKind } from '../../../../model/fieldModel';
 import FontPicker from '../../FontPicker';
+import { pickerHex } from '../StyleStep';
+
+/** The four :root colours, in the Style step's order and words. */
+const COLOR_KEYS: { key: 'accent' | 'text' | 'textDim' | 'panel'; label: string }[] = [
+  { key: 'accent', label: 'Accent' },
+  { key: 'text', label: 'Text' },
+  { key: 'textDim', label: 'Text dim' },
+  { key: 'panel', label: 'Panel' },
+];
 
 interface Props {
   spec: GenerationSpec;
@@ -279,16 +288,30 @@ function LookSection({
       </div>
       {colors && (
         <div className="row wrap" style={{ marginTop: 6, gap: 10 }}>
-          {(['accent', 'text', 'textDim', 'panel'] as const).map((key) => (
-            <label key={key} className="mc-color">
-              {key === 'accent' ? 'Accent' : key === 'text' ? 'Text' : key === 'textDim' ? 'Dim text' : 'Panel'}
-              <input
-                value={colors[key]}
-                onChange={(e) => setColor(key, e.target.value)}
-                disabled={disabled}
-                aria-label={`${key} colour`}
-              />
-            </label>
+          {COLOR_KEYS.map(({ key, label }) => (
+            <div key={key} className="mc-color">
+              <label style={{ margin: 0 }}>{label}</label>
+              {/* The Style step's exact idiom: a native swatch beside the written value, so
+                  rgba() stays typeable (panels need alpha) and the colour is still visible. */}
+              <div className="row">
+                <input
+                  type="color"
+                  style={{ width: 44, padding: 2 }}
+                  value={pickerHex(colors[key])}
+                  onChange={(e) => setColor(key, e.target.value)}
+                  disabled={disabled}
+                  aria-label={`${label} colour swatch`}
+                />
+                <input
+                  className="grow"
+                  value={colors[key]}
+                  onChange={(e) => setColor(key, e.target.value)}
+                  disabled={disabled}
+                  placeholder="#hex or rgba(…)"
+                  aria-label={`${label} colour value`}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -358,7 +381,7 @@ function FontUpload({
   };
   return (
     <div className="row wrap" style={{ alignItems: 'center', gap: 6, marginTop: 6 }}>
-      <span style={{ minWidth: 110 }}>{label}</span>
+      <span className="mc-font-slot">{label}</span>
       {choice?.customFont ? (
         <span className="wz-fid">
           {choice.customFont.family}
