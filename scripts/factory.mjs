@@ -64,7 +64,7 @@ const PROBE = `(async (onlyIds) => {
   const { hasMachineRuntime } = await import('/src/templates/shared/animRuntime.ts');
   const { validateTemplate } = await import('/src/validation/validateTemplate.ts');
 
-  const FAMILIES = ['minimal', 'sport', 'glass', 'noacg'];
+  const FAMILIES = ['minimal', 'editorial', 'cinematic', 'sport', 'glass', 'noacg'];
 
   // ── The matrix ─────────────────────────────────────────────────────────────────────────
   // Read off the live TYPES array. 12 types x 4 families; a cell is filled when some design
@@ -366,7 +366,7 @@ const { cells, candidates, packs, packProblems, literalDrift } = probe;
 
 // ── The matrix report ────────────────────────────────────────────────────────────────────
 
-const FAMILIES = ['minimal', 'sport', 'glass', 'noacg'];
+const FAMILIES = ['minimal', 'editorial', 'cinematic', 'sport', 'glass', 'noacg'];
 const filled = cells.filter((c) => c.designId);
 const empty = cells.filter((c) => !c.designId);
 

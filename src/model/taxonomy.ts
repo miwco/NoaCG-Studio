@@ -314,12 +314,16 @@ export const COVERAGE_PLACEMENTS: Record<CoverageClass, PlacementId[]> = {
 
 // ── Facet G: visual style ───────────────────────────────────────────────────
 
-/** User-facing labels for the four style families — the filter IS the families
- *  (proposal §9); the brief's adjectives are search aliases below. */
+/** User-facing labels for the style families — the filter IS the families
+ *  (proposal §9); the brief's adjectives are search aliases below. Editorial and
+ *  cinematic became real families (their own FAMILY_TOKENS row, palettes, and lower-third
+ *  designs), so they leave minimal's and glass's labels and take chips of their own. */
 export const STYLE_FAMILY_LABELS: Record<StyleTag, string> = {
-  minimal: 'Minimal & editorial',
+  minimal: 'Minimal & clean',
+  editorial: 'Editorial & print',
+  cinematic: 'Cinematic & documentary',
   sport: 'Sport & energetic',
-  glass: 'Elegant & cinematic',
+  glass: 'Elegant & glass',
   noacg: 'Bold & on-air',
 };
 
@@ -501,10 +505,15 @@ export const ALIASES: Record<string, AliasTargets> = {
   'twitch': { families: ['creator'] },
   'streamer': { families: ['creator'] },
   'obs': { families: ['creator'] },
-  // style adjectives → the four families (proposal §9)
-  'corporate': { styles: ['minimal'] },
-  'editorial': { styles: ['minimal'] },
-  'broadcast news': { styles: ['minimal'] },
+  // style adjectives → the style families (proposal §9). Editorial and cinematic are now
+  // real families, so their adjectives point at them; the neighbouring looks still fan out
+  // to the family that best carries them.
+  'corporate': { styles: ['minimal', 'editorial'] },
+  'editorial': { styles: ['editorial'] },
+  'magazine': { styles: ['editorial'] },
+  'newsroom': { styles: ['editorial', 'minimal'] },
+  'masthead': { styles: ['editorial'] },
+  'broadcast news': { styles: ['editorial', 'minimal'] },
   'flat': { styles: ['minimal'] },
   'light': { styles: ['minimal'] },
   'esports look': { styles: ['sport'] },
@@ -512,7 +521,10 @@ export const ALIASES: Record<string, AliasTargets> = {
   'bold': { styles: ['sport', 'noacg'] },
   'luxury': { styles: ['glass'] },
   'elegant': { styles: ['glass'] },
-  'cinematic': { styles: ['glass'] },
+  'cinematic': { styles: ['cinematic'] },
+  'documentary': { styles: ['cinematic'] },
+  'film': { styles: ['cinematic'] },
+  'title card': { styles: ['cinematic'] },
   'futuristic': { styles: ['glass'] },
   'tech': { styles: ['glass'] },
   'glass': { styles: ['glass'] },

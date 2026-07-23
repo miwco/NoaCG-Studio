@@ -41,7 +41,7 @@ test('category, style, and capability facets AND together; clear-all restores th
   await expect(cards).toHaveCount(n.lowerThirds);
 
   // Style: the glass family keeps exactly the glass designs.
-  await page.locator('.wz-filter', { hasText: 'Elegant & cinematic' }).click();
+  await page.locator('.wz-filter', { hasText: 'Elegant & glass' }).click();
   await expect(cards).toHaveCount(n.ltGlass);
 
   // Capabilities live under More filters and are STRICT (has logo upload = has it).
@@ -83,11 +83,12 @@ test('search reaches templates through aliases and field semantics', async ({ pa
 
 test('an impossible combination shows the honest empty state with its escape hatches', async ({ page }) => {
   await toBrowseStep(page);
-  // Bold & on-air lower thirds carry no logo slot, so this combination matches nothing.
+  // A lower third is a name-and-title strap; it structurally never carries a repeating list
+  // field (that belongs to tickers, credits and agendas). This pairing therefore matches
+  // nothing AND stays empty however the catalog grows — unlike the old "Bold & on-air + logo
+  // slot", which a new noacg design (lt53 House Board, lt54 House Ident) filled exactly.
   await page.locator('.wz-browse-tiles .wz-cat', { hasText: 'Lower thirds' }).click();
-  await page.locator('.wz-filter', { hasText: 'Bold & on-air' }).click();
-  await page.locator('.wz-browse-more summary').click();
-  await page.locator('.wz-browse-more .wz-filter', { hasText: 'Logo upload' }).click();
+  await page.getByRole('button', { name: '↻ Repeating' }).click();
   await expect(page.locator('.wz-variant')).toHaveCount(0);
   await expect(page.locator('.wz-browse-empty')).toBeVisible();
   // The escape hatches: drop the most limiting filter, or hand the brief to Create with AI.
@@ -151,10 +152,10 @@ test('the brand toggle ranks the package siblings first without filtering anythi
   await page.locator('.wz-browse-tiles .wz-cat', { hasText: 'Lower thirds' }).click();
   const n = await catalogCounts(page);
   const firstStyle = () => page.locator('.wz-variant .wz-style-tag').first().textContent();
-  expect(await firstStyle()).not.toBe('Elegant & cinematic');
+  expect(await firstStyle()).not.toBe('Elegant & glass');
 
   await page.locator('.wz-match input[type="checkbox"]').check();
-  expect(await firstStyle()).toBe('Elegant & cinematic');
+  expect(await firstStyle()).toBe('Elegant & glass');
   // Ranking, never filtering: the result count is untouched.
   await expect(page.locator('.wz-variant')).toHaveCount(n.lowerThirds);
 });
