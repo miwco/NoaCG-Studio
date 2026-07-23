@@ -658,7 +658,7 @@ would leak into the new graphic's fields.
 ## Auth UI (auth/)
 
 useAuthState hook + authUi store + SignInDialog + SignInPrompt + AuthStatus avatar menu
-(-> Homebase / Settings / Sign out). The gating pattern: read `useAuthState().needsSignIn` (true
+(-> Home / Settings / Sign out). The gating pattern: read `useAuthState().needsSignIn` (true
 only when a backend is configured AND the visitor is signed out) and render `SignInPrompt` /
 call `useAuthUi().openSignIn(reason)` - never block the app. Signup is OPEN (migration `0006`
 made the Before-User-Created hook permissive; restore the 0002 function body to re-close it to
