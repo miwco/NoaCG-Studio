@@ -15,6 +15,7 @@ import { agendaType, pollType } from './dataBoards';
 import { countdownType, holdingScreenType } from './clocks';
 import { quizBoardType } from './quizBoard';
 import { scoreboardType } from './scoreboard';
+import { matchBoardType, matchEventType, matchStatusType, scorebugType } from './sportsBugs';
 import { tickerType } from './ticker';
 
 /** Every registered type, in the reference data's frequency order (the count is how many of
@@ -34,6 +35,14 @@ export const TYPES: GraphicType[] = [
   tickerType,         //  8/60
   scoreboardType,     //  5/60 — but the type that proves parallel groups
   quizBoardType,      // the flagship
+  // ── The SPORTS pack (docs/SPORTS_PACK.md). Eight types covering what a live sports
+  // broadcast actually puts on air, from a district-league phone stream to a stadium show.
+  // They earn their place by coverage rather than by the reference sheet's frequency: the
+  // sheet counts FORMATS, and "sports broadcast" is one row that hides a dozen graphics.
+  scorebugType,       // the strip that stays on air
+  matchBoardType,     // the full scoreboard, with the period breakdown
+  matchStatusType,    // where the match stands — and the final score
+  matchEventType,     // substitutions, bookings, penalties, goals (the pack's timer)
 ];
 
 export function typeById(id: string): GraphicType | undefined {
