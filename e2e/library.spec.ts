@@ -148,7 +148,7 @@ test('a saved graphic\'s control panel: entries create, play with the active ent
 });
 
 test('the control panel reports the state and greys an event the machine would drop', async ({ page }) => {
-  // Parity with the editor's Control panel, the event strip and the hosted page: all three
+  // Parity with the editor's Rehearse panel, the event strip and the hosted page: all three
   // poll the runtime's pointers and grey an illegal event. This surface shipped with neither,
   // so a live operator had no on-air indication and every button looked pressable.
   await createProject(page, { category: 'quiz' });

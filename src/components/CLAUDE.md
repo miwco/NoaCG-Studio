@@ -489,12 +489,13 @@ Home, both routed (src/app/router.ts) so browser Back/Forward walk between surfa
   and the iframe is the template's OWN resolution scaled into it, so a non-16:9 graphic keeps
   its shape.
 - **home/GraphicControlPage** - `#/control/<graphicId>`: the saved graphic's operator
-  panel - live preview iframe + transport + machine event buttons (GREYED by controlModel
-  `isEventLegal` against a 500ms poll of the preview's own `noacgMachineState`, exactly as the
-  editor's Control panel, the event strip and the hosted page do — this surface shipped without
+  panel, and the surface that AIRS (the editor's Rehearse tab is the preview-only twin) -
+  live graphic + transport + machine event buttons (GREYED by controlModel
+  `isEventLegal` against a 500ms poll of the graphic's own `noacgMachineState`, exactly as the
+  editor's Rehearse panel, the event strip and the hosted page do — this surface shipped without
   it, so every button looked pressable whether or not the graphic would drop the press) + a
-  STATE CHIP naming where the preview is (the fact the greying is judged against; its title
-  says "preview", because this page rehearses and does not drive a playout) + ENTRIES (named data
+  STATE CHIP naming the graphic's current state (the fact the greying is judged against, so a
+  button is never greyed without the surface saying why) + ENTRIES (named data
   rows: add/duplicate/rename/delete/select-active, ▶ Play with an entry, ★ make an entry
   the template's default data via setFieldDefault) + the downloadable controlpanel.html
   with entries baked in (control/controlPanelHtml.ts opts.entries renders an entry

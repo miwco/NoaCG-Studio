@@ -74,7 +74,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
   const srcdoc = useMemo(() => (doc ? composeDocument(doc.template) : ''), [doc]);
 
   // WHERE THE GRAPHIC IS, and which presses the machine would actually accept. Every other
-  // operator surface (the editor's Control panel, the event strip, the hosted page) polls the
+  // operator surface (the editor's Rehearse panel, the event strip, the hosted page) polls the
   // runtime's own pointers and greys an event with no arrow out of the current state; this
   // page shipped without either, so a live operator saw no on-air indication at all and every
   // button looked pressable whether or not the graphic would drop it. Same rule, same poll.
@@ -329,13 +329,13 @@ export default function GraphicControlPage({ id }: { id: string }) {
               );
             })}
             {/* WHERE THE GRAPHIC IS — the fact the event buttons are greyed against, so the
-                surface never greys a button without saying why. It reports the PREVIEW beside
-                it (this page rehearses; it does not drive a playout), and the title says so
-                rather than letting an operator read it as an on-air tally. */}
+                surface never greys a button without saying why. This page is the ON-AIR
+                control surface (the editor's Rehearse tab is the preview-only one), so the
+                chip names the graphic's state plainly rather than hedging it as a preview. */}
             {stateLabel && (
               <span
                 className="control-state-chip"
-                title="The state the preview is in — what the event buttons are greyed against"
+                title="The graphic's current state — what the event buttons are greyed against"
                 data-testid="control-state"
               >
                 ◇ {stateLabel}
