@@ -21,6 +21,8 @@ import { IG_PRESETS } from '../templates/infographics/igPresets';
 import { VS_PRESETS } from '../templates/versus/vsPresets';
 import { QUIZ_PRESETS } from '../templates/quiz/quizPresets';
 import { DESIGN_PRESETS } from '../templates/importedDesign/designPresets';
+import { FRAME_PRESETS } from '../templates/frames/framePresets';
+import { TRANSITION_PRESETS } from '../templates/transitions/transitionPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
 import { countLines, detectPrefix } from '../model/structure';
@@ -46,6 +48,10 @@ export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
   if (type === 'infographic') return IG_PRESETS;
   if (type === 'fullscreen') return VS_PRESETS;
   if (type === 'quiz') return QUIZ_PRESETS;
+  // A frame is chrome around a picture and a transition covers the whole frame: neither is
+  // driven by the box/line choreography the standard bank writes, so each has its own.
+  if (type === 'frame') return FRAME_PRESETS;
+  if (type === 'transition') return TRANSITION_PRESETS;
   // An imported design is one picture: only the whole-unit presets suit it. The line presets
   // would stagger #fN out of masks the artwork was drawn around (templates/importedDesign).
   if (type === 'imported-design') return DESIGN_PRESETS;
@@ -58,6 +64,7 @@ export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
 export const ALL_PRESETS = [
   ...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS,
   ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...VS_PRESETS, ...QUIZ_PRESETS, ...DESIGN_PRESETS,
+  ...FRAME_PRESETS, ...TRANSITION_PRESETS,
 ];
 
 /** Look up a preset across every category's library. */

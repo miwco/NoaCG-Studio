@@ -243,7 +243,22 @@ value, so sport's intentional accent halos never trip it.
 
 ---
 
-## 6. The twelve types
+## 6. The types
+
+The twelve below were the founding set, chosen by measured frequency. Eight more shipped with
+the gap-list round (docs/PACK_TAXONOMY.md): **call-to-action, product-card, offer-card,
+listing-card, goal-meter, milestone-track, qr-card** and **transition**. They are not in the
+frequency table because the sheet does not name them as formats — they are what the sheet's
+formats kept ASKING for, which is the gap list's whole job. All eight follow the founding rule:
+only `transition` declares a machine.
+
+`transition` is worth singling out as the one type whose entire content is its LIFECYCLE — its
+entrance covers the frame, and a `timer` arrow from the entrance waypoint straight to the exit
+clears it again. That arrow is what `TypeMachine.main.edges` exists for: a branch's edges always
+have the branch at one end, and modelling a self-clear as a branch would have meant inventing an
+off-path state that duplicates the exit.
+
+### The founding twelve
 
 Counts are how many of the 60 reference formats in `live_format_graphics_needs.xlsx` ask for
 that graphic. Every type now ships in all four style families; the design named here is the
@@ -268,9 +283,13 @@ family a cell is in.
 The last three earn their place by what they prove rather than by frequency: parallel groups,
 timer-driven motion, and the far end of the model.
 
-### The matrix is full — and how it filled
+### The matrix is full for the founding twelve — and how it filled
 
-All 48 cells (12 types × noacg / glass / sport / minimal) are filled. The route there is worth
+All 48 cells (12 types × noacg / glass / sport / minimal) are filled. The eight later types add
+19 more filled cells and 13 empty ones; an empty cell is work not yet done and the factory
+deliberately does not fail on one (`scripts/factory.mjs`) — the six gates exist so that leaving
+a cell empty costs nothing while shipping a wrong design costs a lot. Only a pack pointing at an
+unfilled family is an error, and `validatePacks` says so. The route to the first 48 is worth
 recording, because it was not the one the first pass predicted:
 
 - **The promotion well ran dry fast.** 24 cells looked promotable on parts alone; 8 actually were

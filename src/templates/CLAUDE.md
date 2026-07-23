@@ -97,6 +97,15 @@ gives every template a correct one-group linear machine, so a type with no branc
 groups or event overrides compiles to NO `machine` key and emits byte-identical output. Seven
 of the twelve types are in that class.
 
+**A type declares ONE field list, which is a real limit worth knowing before reaching for one.**
+A family whose field COUNT varies across its designs cannot be a single type: the factory's
+fields gate compares each design's emitted count against the declaration, and rightly. Three
+families in the catalog are in that class and stay hand-written variants - camera frames (2-4
+fields), the sponsor strips (4 vs 6 slots) and the location cards (one has a picture slot). That
+is a legitimate state, not debt to pay off in a hurry: `card04`, `vs01` and `ig01`-`ig07` have
+always lived there. Optional type fields would fix it and are a change to this contract, not to
+a design (docs/PACK_TAXONOMY.md, "Known limitations").
+
 Fields are declared with LOGICAL keys and a `role` (`line` first, `logo` last - both enforced
 with a throw, because the order is what keeps the compiled `fN` ids in step with the assembler
 that emits them). The main group's default path is DERIVED, never declared: its length must
@@ -108,11 +117,18 @@ nothing.
 **The trap to know:** a timer never arms on a timeline that never ends (the arming call is
 scheduled at the timeline's end). A `repeat: -1` loop or a measured `dynamics` builder makes
 that unreachable, so `validateMachine` errors on it. This is why the ticker type is a rotator
-with its own `ticker-rotate` preset rather than the endless marquee.
+with its own `ticker-rotate` preset rather than the endless marquee - and, from the other side,
+why the TRANSITION type's self-clear is legal: its cover is a short finite entrance.
+
+`TypeMachine.main.edges` is the one arrow shape branches cannot express - an arrow BETWEEN two
+waypoints of the default path, since a branch's edges always have the branch at one end. The
+transition type is its only user (`{ waypoint: 0 } → { waypoint: -1 }`, trigger `timer`);
+modelling that as a branch would have meant inventing an off-path "cleared" state duplicating
+the exit, i.e. a second way to be off air.
 
 ## Categories
 
-- **lowerThirds/** - lt01…lt13 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
+- **lowerThirds/** - lt01…lt21 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
   first category to create as NOACG_ANIM data blocks) + animPresets.ts (the shared marked-region
   GSAP preset bank, prefix-parameterized - it animates any category's `.{prefix}-box` structure;
   on a data category the preset's emit is converted at create, and blocks/presetApply.ts derives
@@ -121,9 +137,16 @@ with its own `ticker-rotate` preset rather than the endless marquee.
   ids adjacent + `SLIDE_FAMILY`/`isSlidePreset` so pickers group them: the wizard renders ONE
   Slide card with a direction picker, the Inspector one optgroup), then line-reveal, mask-wipe,
   pop-spring, snap-stinger, blur-in, fade, flip-3d.
-- **infoCards/** - card01…card05 (prefix 'info-card', `dataRegion: true`). The standard contract's
+- **infoCards/** - card01…card21 (prefix 'info-card', `dataRegion: true`). The standard contract's
   other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
-  them, steps and all (a » press per body line becomes a middle step with its `reveals`).
+  them, steps and all (a » press per body line becomes a middle step with its `reveals`). It is
+  also where the COMMERCE cards live (product / offer / listing / QR / location / sponsor
+  strips), which is why `shared/standard.ts` exports **`maskLine`/`maskLines`** beside
+  `lineMasksFor`: the generic name/title/extra ladder gives every line past the second the same
+  class, and a card whose lines are a product name, a price and a struck-through was-price needs
+  to name each one for what it is. Values that could vary by shop, currency or format are FIELDS
+  and vanish with `:empty` when blank (the savings chip, the promo code, the deadline, the status
+  line, the unit mark) - no state, nothing for a replay to leak.
 - **endCredits/** - cr01…cr04 (prefix 'credits') + creditsPresets.ts (credits-roll /
   credits-pages / credits-crawl) + **creditsMotion.ts**; data-driven: a hidden #f0 textarea holds
   "Role | Name" lines, template JS parses and rebuilds #credits-track, ends with logo + year
@@ -179,8 +202,17 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   logo slot + placeholder mark; bug02 = house live clock via StandardDesign.runtimeExtraJs -
   design-owned JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the
   data conversion untouched).
-- **infographics/** - ig01…ig06 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
-  igPresets (count-up / bars-grow / ring-fill / rows-cascade) + **igMotion.ts**. DATA BLOCKS via
+- **infographics/** - ig01…ig17 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+  igPresets (count-up / bars-grow / ring-fill / rows-cascade / **goal-ring** / **milestone-run**)
+  + **igMotion.ts** + **dataRuntimes.ts** (the rebuilds several designs of a type share:
+  schedule rows, bar rows, the GOAL meter in its two drawn shapes, the MILESTONE track).
+  `goal-ring` is its own preset and `infographicGoalRing` its own builder for a reason: on a
+  poll ring the middle figure IS the percent, so one number drives both; on a goal meter the
+  figure is money and the ring is raised/goal, and feeding the raised total to `ring-fill`
+  would clamp it and draw a full ring at 3 % raised. The milestone track spaces its nodes
+  EVENLY and interpolates the line BETWEEN them rather than plotting current/max - a rail
+  drawn "1 → 2 → 3 → 4" has to have its line mean a position on that rail, and even spacing is
+  what keeps four labels readable when a stretch goal is ten times the first. DATA BLOCKS via
   convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
   operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the
   cascade runs one row per line they wrote - so none of it is a number a keyframe can hold, and it
@@ -221,6 +253,25 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   (spxStarter cssForSubfolder; zip import strips the hop back). Contract + diagnosis:
   docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts + e2e/import-prepare.spec.ts +
   e2e/import-stretch.spec.ts.
+- **frames/** - fr01…fr04 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
+  DESIGN owns its fields, because a frame's field count follows its camera count - 2 lines for
+  one camera, 4 for a two-up) + framePresets.ts (frame-draw / frame-fade / frame-slide). The one
+  category that is not a panel of words: it is chrome around a HOLE, so `.frame-window`
+  interiors stay transparent, the stage is `pointer-events: none`, and every design states its
+  window rectangles in 1080p design px in its own header (that geometry IS the contract with the
+  switcher). A split design repeats `.frame-window` / `.frame-plate` so ONE preset drives one
+  camera or four - the trade is that a repeated class is not a unique selector, so an individual
+  window is not a registry part (root, stage and every text line are).
+- **transitions/** - tr01…tr04 (prefix 'transition', type 'transition', self-assembled) +
+  transitionPresets.ts (transition-slam / -wipe / -sweep). **THE ENTRANCE COVERS THE FRAME AND
+  HOLDS THERE** - that hold is the cut point, so every preset's entrance ends at full cover and
+  every exit takes the cover off the OTHER side (a transition that faded up and down in place
+  would expose the cut). The panels are authored AT their covering position in CSS, so a
+  thumbnail or a baseline still captures the cover moment. What clears it is the transition
+  TYPE's machine (types/transitions.ts): a `timer` arrow from the entrance waypoint straight to
+  the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
+  motion the timeline cannot see, the control page cannot pause and the render clock cannot
+  drive.
 - **quiz/** - qz01 (prefix 'quiz'; f0 question, f1-f4 options, hidden f5 correct-answer dropdown).
   DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
   middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;

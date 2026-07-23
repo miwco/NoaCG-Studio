@@ -39,6 +39,8 @@ export type TemplateCategory =
   | 'corner-bug'
   | 'versus'
   | 'quiz'
+  | 'frame'
+  | 'transition'
   | 'imported-design';
 
 export const CATEGORIES: CategoryInfo[] = [
@@ -55,6 +57,8 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
   { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
   { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 1,  available: true , description: 'Game-show questions with answer options.', group: 'specials' },
+  { id: 'frame',         name: 'Camera frames',           plannedCount: 4,  available: true , description: 'Surrounds for webcams, interviews, split screens and screen shares.', group: 'specials' },
+  { id: 'transition',    name: 'Transitions',             plannedCount: 4,  available: true , description: 'Full-frame stingers and wipes that cover a cut, then clear.', group: 'specials' },
   // Not browsable — reached only by importing artwork (see CategoryInfo.group).
   { id: 'imported-design', name: 'Imported design',       plannedCount: 1,  available: true , description: 'Your own artwork with text fields on top.', group: 'imported' },
 ];
@@ -158,6 +162,20 @@ export type AnimPresetId =
   | 'bars-grow'
   | 'ring-fill'
   | 'rows-cascade'
+  // The goal/milestone motions: a ring drawn to raised/goal (its angle and the counted
+  // figure are different values, which is why it is not 'ring-fill'), and a progress line
+  // that pops each milestone it passes.
+  | 'goal-ring'
+  | 'milestone-run'
+  // Camera-frame motion (templates/frames/framePresets.ts): the window edge, then the plate.
+  | 'frame-draw'
+  | 'frame-fade'
+  | 'frame-slide'
+  // Transition motion (templates/transitions/transitionPresets.ts): the entrance COVERS the
+  // frame and holds there — the exit is what clears it again.
+  | 'transition-slam'
+  | 'transition-wipe'
+  | 'transition-sweep'
   // Quiz format (templates/quiz/quizPresets.ts) — Continue plays the Reveal step, which
   // calls revealAnswer() to light up the correct row:
   | 'quiz-reveal'

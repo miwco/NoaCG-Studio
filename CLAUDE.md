@@ -144,7 +144,9 @@ src/
                'graphic', supabase migration 0009); shows.ts (the RUNDOWN unit -
                docs/CONTROL_LAYER.md); structure.ts (element identity) + fieldModel.ts (the
                FieldDescriptor contract)
-  templates/ * the wizard catalog: shared assemblers + 11 categories; :root style contract;
+  templates/ * the wizard catalog: shared assemblers + 13 categories (frames = chrome around a
+               camera HOLE; transitions = a full-frame cover that clears itself on a timer);
+               :root style contract;
                types/ = the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md) - what a graphic IS,
                independent of its look; compiles into catalog variants, replacing by id
   store/ *     templateStore.ts (zustand) - applyTemplate/undo choke point + editor UI state

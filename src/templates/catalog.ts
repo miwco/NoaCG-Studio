@@ -13,6 +13,8 @@ import { CORNER_BUGS } from './cornerBug';
 import { INFOGRAPHICS } from './infographics';
 import { VERSUS } from './versus';
 import { QUIZ } from './quiz';
+import { FRAMES } from './frames';
+import { TRANSITIONS } from './transitions';
 import { IMPORTED_DESIGNS } from './importedDesign/shared';
 import { mergeCatalog, typeVariants } from './types/registry';
 
@@ -36,6 +38,8 @@ export const HAND_WRITTEN: Partial<Record<TemplateCategory, TemplateVariant[]>> 
   'infographic': INFOGRAPHICS,
   'versus': VERSUS,
   'quiz': QUIZ,
+  'frame': FRAMES,
+  'transition': TRANSITIONS,
   // Not browsable in the category grid — the Import Graphic entry is its only way in.
   'imported-design': IMPORTED_DESIGNS,
 };

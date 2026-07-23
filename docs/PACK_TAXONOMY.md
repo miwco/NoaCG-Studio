@@ -122,30 +122,101 @@ Format names verbatim from the sheet. Notes only where the assignment was a judg
 ## What the sheet asks for that no type covers (the gap list)
 
 Recorded so the next type is chosen by evidence, not vibes — the same way the first twelve
-were. Roughly by how many formats ask:
+were. Roughly by how many formats ask.
 
-- **Goal / progress bar** (donation total, inventory, challenge progress) — the poll type's
-  bars are close; a dedicated single-bar goal type would serve ~8 formats.
+### Closed
+
+Eight of the gaps below now ship, as eight types and two new categories (25 designs). Each
+kept the rule the first twelve were built on — *persist a machine only when the derived one is
+wrong* — so only the transition declares one.
+
+- **Goal / progress bar** → the **goal-meter** type (`ig14` House Goal, `ig15` Frost Goal).
+  Two numbers and everything else derived: the share, the grouped figures, the caption. The
+  bar and the ring are one type because they differ only in where the derived share is drawn.
+  A second measured builder (`infographicGoalRing`) and its `goal-ring` preset exist because a
+  goal ring's angle and its counted figure are DIFFERENT numbers — reusing the poll board's
+  `ring-fill` would draw a full ring at 3 % raised. `ig05` Rising Total stays a hand-written
+  variant: it predates the type and has no unit field.
+- **Milestones / tiers** → the **milestone-track** type (`ig16`, `ig17`), the goal meter's
+  sibling question ("which tiers have we passed"). Nodes are spaced EVENLY and the line is
+  interpolated between them, never plotted at current/max — see `infographics/dataRuntimes.ts`.
+- **Frames** → a new **`frame` category** (`fr01`–`fr04`: webcam, two-up interview, split
+  screen, screen-share + presenter inset). Chrome around a HOLE rather than a box holding its
+  own content, so the interiors stay transparent and every design states its window rectangles
+  in design pixels in its own header. It is a category and **not** a type: a frame's field
+  count follows its camera count (2, 3 or 4 lines), and `GraphicType` declares one field list —
+  see "Known limitations" below.
+- **Replay wipes / stingers** → a new **`transition` category** (`tr01`–`tr04`) and the
+  **transition** type, the first graphic whose whole content is its LIFECYCLE. Its entrance
+  COVERS the frame and holds there (that hold is the cut point); a `timer` arrow from the
+  entrance waypoint straight to the exit clears it, with `next` as the manual version. Nothing
+  in it uses `setTimeout` — a timer inside a template is motion the timeline cannot see, the
+  control page cannot pause and the render clock cannot drive.
+- **QR code** → the **qr-card** type (`card16`, `card17`). Honest field model, NOT generation:
+  NoaCG bundles no encoder and generated templates take no runtime dependency, so the code is
+  an SPX image field the operator points at their own PNG, and the address beside it is real
+  text (which is also what makes the card work for a viewer who cannot scan). The white tile
+  and its padding are a scannability requirement, not styling. A bundled encoder remains a real
+  option and is recorded as open below.
+- **CTAs** (follow / donate / register / buy) → the **call-to-action** type (`lt19`–`lt21`).
+  The verb is a FIELD, which is what stops this being four near-identical designs.
+- **Commerce cards** → the **product-card** (`card10`, `card11`), **offer-card** (`card12`,
+  `card13`) and **listing-card** (`card14`, `card15`) types. The listing card is one graphic
+  for the auction lot, the property walk-through and the stock counter, because the only thing
+  that differs is the value's LABEL — so the label is a field.
+- **Sponsor / logo strips** → `card20` House Sponsors and `card21` Clean Partners
+  (hand-written; see below for why they are not a type). Neither ROTATES, deliberately: the
+  ticker type is the one that cycles and it earns it with a real machine, a timer armed at the
+  end of a finite entrance, and a pause/resume an operator can reach. A CSS keyframe loop
+  swapping slot opacity would be none of those.
+- **Location / travel cards** → `card18` Frost Location and `card19` Volt Location
+  (hand-written). The pin is a DRAWN MARKER: there is no map surface, no tiles and no
+  projection anywhere in the product, so nothing here plots a coordinate — the picture is an
+  image field the operator chooses and the coordinates are text they type.
+
+### Still open
+
 - **Data charts / maps** (weather, election maps, finance charts, heatmaps) — a real data-viz
   surface, out of scope for the current model; revisit with external data feeds (master goals
-  §1.5).
+  §1.5). The location cards above deliberately do NOT approach this.
 - **Chat / alert overlays** (chat highlight, follower alerts) — show-chat territory
   (src/community/showchat) more than template territory; the bridge is a product decision.
-- **Frames** (webcam frame, split-screen, reaction frame) — static surrounds, no data fields;
-  arguably a new category rather than a type.
-- **QR code** (7 formats: CTAs, donations, listings) — a small, high-value type candidate; an
-  image field renders one today but a dedicated type could generate it from a URL field.
 - **Reveal moments** (winner reveal, nominee cards, before/after) — the quiz board's reveal
   machinery generalizes; a "reveal card" type is the natural next stateful type.
 - **Lineups / brackets / leaderboards / stats panels** (sports & esports depth) — the agenda's
   rows and the scoreboard cover the basics; the full versions are their own types.
 - **Lyrics / captions / surtitles** — timed-text playout is a different runtime problem; out
   of scope until external feeds exist.
-- **Replay wipes / stingers** — full-frame transition moments; the versus card's territory,
-  worth a dedicated "stinger" type if demand shows.
+- **A bundled QR encoder** — the qr-card type covers the FORMAT with an image field. Generating
+  the code from a URL field would need an encoder inlined into every export (non-negotiable 3
+  forbids a CDN call at playout), which is a real, self-contained piece of work and a real size
+  cost. Worth doing when the field model proves the demand.
 
 None of these block a pack: every format's CORE need is covered by the shipped types, which is
 what the mapping above records.
+
+## Known limitations this round surfaced
+
+- **A graphic type declares ONE field list, so a family whose field COUNT varies cannot be one
+  type.** Three families in this pack are affected and stay hand-written variants (which the
+  catalog has always allowed — `card04`, `vs01`, `ig01`–`ig07` are all in that class):
+  - **camera frames** — 2 fields for a single camera, 3 for a screen share, 4 for a two-up;
+  - **sponsor strips** — `card20` carries 4 slots, `card21` carries 6;
+  - **location cards** — `card18` has a picture slot, `card19` has no room for one.
+  Fixing it properly means letting a type declare OPTIONAL fields (and teaching the factory's
+  fields gate to compare against a range), which is a change to the type contract and belongs
+  in its own round rather than being bent around here.
+- **An individual camera window is not a registry part.** A split design carries several
+  `.frame-window` elements under one class so a single preset drives one camera or four, and
+  `model/structure.ts` requires single-match selectors for identity. The root, the stage and
+  every text line ARE parts, which is what the timeline and canvas need; addressing one window
+  of four would need numbered selectors the way the quiz's answer rows have them.
+- **The runtime bench measures little of a self-clearing graphic.** Its layout checks run at
+  the settled state, and a transition has cleared itself by then (the bench accelerates GSAP
+  20×, and the timer with it), so a transition passes the entrance, exit, replay and binding
+  checks but its covered pose is measured only by the catalog render baseline. The entrance
+  check itself was moved to poll BEFORE the settle wait so it asks the question while the
+  entrance is playing — otherwise every self-clearing graphic reads as "never appeared".
 
 ## Keeping this true
 

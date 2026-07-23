@@ -21,6 +21,10 @@ export type TemplateType =
   | 'starting-soon'
   | 'infographic'
   | 'quiz'
+  /** Chrome AROUND the picture — a webcam surround, a two-up interview, a split screen. */
+  | 'frame'
+  /** A full-frame moment that covers the picture so a cut can happen underneath. */
+  | 'transition'
   /** A design the user made elsewhere (a flat image) with text fields placed on top. */
   | 'imported-design'
   | 'blank';

@@ -192,6 +192,20 @@ export interface TypeMachine {
     /** Author the arrow INTO the exit, so `next` alone takes the graphic off air. Default
      *  false = exact parity with a graphic that has no machine at all. */
     exitOnNext?: boolean;
+    /**
+     * Extra arrows BETWEEN waypoints of the default path — the one thing `branches` cannot
+     * express, because a branch's edges always have the branch at one end.
+     *
+     * The case that needed it is the transition type: a stinger covers the frame, holds, and
+     * clears ITSELF after a beat, which is a `timer` arrow from waypoint 0 straight to the
+     * exit. Modelling that as a branch would have meant inventing an off-path "cleared" state
+     * that duplicates the exit — a second way to be off air, which the schema's "reset is two
+     * operations, never conflated" instinct is exactly against.
+     *
+     * Endpoints are the ordinary WaypointRef/id pair, so `{ waypoint: 0 } → { waypoint: -1 }`
+     * reads as "from the entrance to the exit" whatever the step count resolves to.
+     */
+    edges?: TypeEdge[];
     branches?: TypeBranch[];
   };
   parallel?: TypeGroup[];
@@ -350,8 +364,13 @@ export function compileMachine(
 ): AnimData['machine'] | null {
   const spec = type.machine;
   const branches = spec.main?.branches ?? [];
+  const pathEdges = spec.main?.edges ?? [];
   const parallel = spec.parallel ?? [];
-  const wantsMain = !!spec.main?.pathEvents?.length || !!spec.main?.exitOnNext || branches.length > 0;
+  const wantsMain =
+    !!spec.main?.pathEvents?.length ||
+    !!spec.main?.exitOnNext ||
+    branches.length > 0 ||
+    pathEdges.length > 0;
   if (!wantsMain && parallel.length === 0) return null;
 
   const derived = deriveMachine(data);
@@ -383,6 +402,10 @@ export function compileMachine(
       main.transitions.push({ from, to, trigger: 'operator', event: 'next' });
     }
   }
+
+  // Arrows between waypoints (see TypeMachine.main.edges) — added before the branches so a
+  // path edge is never shadowed by a branch that happens to name the same pair.
+  for (const edge of pathEdges) main.transitions.push(toTransition(edge, path));
 
   for (const branch of branches) {
     const state: AnimState = { id: branch.id };

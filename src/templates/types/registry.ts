@@ -11,11 +11,14 @@ import { variantsFromType, type GraphicType } from './graphicType';
 import { lowerThirdType } from './lowerThird';
 import { socialBugType, sponsorBugType } from './bugs';
 import { titleCardType, topicCardType } from './cards';
+import { listingCardType, offerCardType, productCardType, qrCardType } from './commerce';
+import { callToActionType, goalMeterType, milestoneTrackType } from './goals';
 import { agendaType, pollType } from './dataBoards';
 import { countdownType, holdingScreenType } from './clocks';
 import { quizBoardType } from './quizBoard';
 import { scoreboardType } from './scoreboard';
 import { tickerType } from './ticker';
+import { transitionType } from './transitions';
 
 /** Every registered type, in the reference data's frequency order (the count is how many of
  *  the 60 reference formats ask for that graphic). The last three earn their place by what
@@ -34,6 +37,20 @@ export const TYPES: GraphicType[] = [
   tickerType,         //  8/60
   scoreboardType,     //  5/60 — but the type that proves parallel groups
   quizBoardType,      // the flagship
+  // Not in the reference data's frequency list — it earns its place the way the last three
+  // above do, by what it proves: a graphic whose whole content is its lifecycle. A stinger
+  // covers the frame, holds for the cut, and clears ITSELF on a timer.
+  transitionType,
+  // The gap-list types (docs/PACK_TAXONOMY.md, "what the sheet asks for that no type covers").
+  // Each is one field contract several looks share, which is the other half of what a type is
+  // for — none of them needs a machine, and none of them declares one.
+  callToActionType,   // the ask: follow · donate · register · buy, as one graphic
+  productCardType,    // live commerce: the thing, its price, what it was
+  offerCardType,      // the discount announced on its own
+  listingCardType,    // an auction lot / property / resource and its live value
+  goalMeterType,      // the gap list's most-asked-for: two numbers, everything else derived
+  milestoneTrackType, // the tier rail — a different question from the goal meter
+  qrCardType,         // a scannable code the operator supplies, beside the address in words
 ];
 
 export function typeById(id: string): GraphicType | undefined {
