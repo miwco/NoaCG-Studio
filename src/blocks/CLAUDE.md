@@ -20,7 +20,9 @@ applied to the element) and **GSAP** (tween injected into `play()/stop()`).
 Field/definition editing helpers: nextFieldId, addFieldToDefinition, setFieldDefault, … plus
 `addCatalogLine` - the Data panel's add-field on a STANDARD-CONTRACT catalog template.
 Code-derived gate (never category): the `{p}-mask` + `{p}-name|-title|-extra` line idiom; the
-new line is CLONED from the last one's exact markup (id/class/text swapped), classed by the
+new line is CLONED from the last one's exact markup (id/class/text swapped) - the last of the
+HOST's lines, since an inserted graphic's lines carry their own namespaced prefix and are not
+this design's - classed by the
 assembler's lineClassFor ladder with a fallback to the last line's class when the design
 ships no rule for the canonical one. Fixed contracts (scoreboard cells, quiz rows) and
 data-driven categories (hidden textarea sources) fail the gate and keep the definition-only
@@ -32,8 +34,34 @@ no-op this exists to end.
 `moveAsset(template, from, to)` - move/rename an asset path with an exact-string rewrite of
 every reference across html/css/js (the verbatim-path convention inlineAssetRefs relies on),
 plus `insertImageElement` - the drag-to-canvas drop: a commented, absolutely positioned
-`<img id="img-*" data-gfx>` + CSS rule at the drop point. Callers apply through ONE
-applyTemplate so a move (or a drop) is one undo step.
+`<img id="img-*" data-gfx>` + CSS rule at the drop point - and `insertVideoElement`, its
+video twin: a muted, looping, `playsinline` `<video id="vid-*" data-gfx>` (autoplay needs
+muted in every playout browser; .webm keeps alpha). Video assets are size-capped at import
+(assetUtils MAX_VIDEO_ASSET_BYTES - they ride the saved template as data URLs). Callers
+apply through ONE applyTemplate so a move (or a drop) is one undo step.
+
+## templateInsert.ts - "Add template graphic" (insert, never replace)
+
+`insertTemplateGraphic(current, variant, { placement })` - the pure merge behind
+components/InsertTemplateDialog.tsx: lift `variant.create()`'s visual subtree into the
+current project. Everything a naive splice would collide on is NAMESPACED: the donor class
+prefix gains a unique suffix (`lower-third-2`), donor fields renumber onto the host's next
+free `fN` (titles marked with the variant name), the donor `:root` block is RE-SCOPED onto
+the inserted root (`#gfx-*` - custom-property inheritance keeps its palette/typeface
+without retinting the host), the reset/canvas CSS and donor runtime scaffold are dropped,
+and the donor MACHINE is dropped - one document, one runtime, one timeline/state system.
+The inserted root is tagged `data-gfx` (a normal registry part, step-assignable like any
+element); donor In/Out keyframes merge into the host's entrance/exit ('start') or into a
+new named default-path step revealing the root ('new-step'), speed-normalized. The donor's
+MIDDLE steps are kept, not flattened: each becomes its own host default-path step
+(machine-aware `addStep(data, at)`), inserted CONTIGUOUSLY after wherever the run starts,
+with `reveals`/`hides` carried through the same namespace rewrite as every other selector.
+Contiguity is the point - a donor's second beat usually finishes a move its first began, so
+host presses are never interleaved into the middle of it. `buildDonor(variant, steps)` is the
+one donor build (`opts.steps` = the design's line-by-line reveal, the dialog's "Its lines"
+choice); a design with no stepped build simply has no middle steps to carry. `insertBlocker`
+is the honest gate: donor step `calls`/`dynamics`, or functions beyond the standard scaffold
+in the donor JS, refuse the insert with the reason - code-derived, never a category list.
 
 ## lottieInsert.ts - Lottie placement
 
@@ -190,6 +218,17 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   and `isAnimStepShape(_, false)` refuses them on an inline timeline. The target lives in
   templateStore, never here: the Inspector resolves values against the same projection, and a
   component-local target would have it editing the entrance while the timeline showed a branch.
+  **`scrubPhase(target, pathPhase)`** is the same idea for the PREVIEW: the scrub protocol
+  addresses the walk's phases ('in' / 'out' / 'step-N') and a branch is on none of them, so a
+  branch answers `state:<groupId>:<stateId>` (read back by `parseStatePhase`, resolved by
+  PlayoutSimulator through the runtime's own `noacgEnterTimeline`). One rule for every caller -
+  the timeline, the Inspector and the canvas - because each of them computes a phase from a
+  step INDEX, and on a one-step projection every one of them would otherwise have called the
+  branch's only step 'in' and jumped the preview to the graphic's entrance.
+  **Every surface that keyframes at the playhead must read AND write through the lens.** The
+  canvas is the easy one to forget: it took its data straight from `parseAnimData`, so with a
+  branch on screen a canvas drag wrote x/y into the default path's step while the strip showed
+  the branch.
 - **animMachine.ts** - the machine's editor-side seam (animData owns the literal, this owns the
   GRAPH questions). `deriveMachine` builds the implicit ONE-GROUP linear machine for data with
   no `machine` key - states named after the steps, a synthesized pose-only `off`, a `next` arrow
@@ -210,8 +249,15 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   `allOperatorEvents`, `machineControls` (THE one button-list merge every control surface
   renders - declared `machine.controls` entries dressed over the authored events; an
   undeclared `next` is skipped because the lifecycle button already fires it),
-  `timerTransition`, and `validateMachine` (semantic errors/warnings for validateTemplate;
-  the SHAPE gate stays in animData's `isAnimData`).
+  `timerTransition`, `validateMachine` (semantic errors/warnings for validateTemplate;
+  the SHAPE gate stays in animData's `isAnimData`), and **`stateProblems`** - the subset of
+  those findings that belong to ONE state (unreachable; a timer on a timeline that never
+  ends), returned STRUCTURALLY `{groupId, stateId, severity, message}` so the node editor can
+  mark the box it is about. validateMachine folds them back into its own lists, so the rule is
+  written once: a finding cannot appear on the graph and not in the export report, or vice
+  versa. Split out because a branch state can carry a whole hand-built timeline and still
+  never be entered, and leaving that to the Export panel meant the surface that let you build
+  it said nothing.
   THE POSITIONAL BINDING, the one thing to hold onto: `defaultPath[i]`'s timeline IS `steps[i]`.
   No stored indices to go stale - and it is why every timeline surface keeps working under a
   machine. Its consequence: step-structural edits (`addStep`, `deleteStep`, `duplicateStep`,
@@ -237,7 +283,8 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   its activation; hiding at Out clears it), driven by the timeline block's RIGHT edge.
   duplicateStep (copies keyframes, NOT reveals or hides; never lands after Out), renameStep,
   deleteStep (layers it revealed return to "appears with ▶ Play" with the channel's default
-  motion), addStep (an empty content step just before Out).
+  motion), addStep (an empty content step just before Out - or at an explicit index, clamped
+  between the entrance and Out, which is how an inserted graphic's step run lands contiguously).
 - **filterTrack.ts** - the composed FILTER lens (docs/PRESET_MODEL_REVIEW.md gap 8). `filter` is
   ONE CSS property holding a LIST of functions, so the data keeps ONE `filter` track of composed
   strings (`blur(8px) brightness(1.6)`) - plain CSS can't keyframe its parts apart either. This
@@ -292,9 +339,12 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   Applying a preset is a CLEAN SWAP (ratified): the targeted layer's tracks in that direction's
   step are cleared first, then the donor's are written - switching presets never leaves the
   previous preset's (or a hand-keyed) track behind. The Inspector passes an easing (resolved to
-  a GSAP pair, stamped onto the written keyframes so it never disturbs a shared step) and an
+  a GSAP pair, stamped onto the written keyframes so it never disturbs a shared step), an
   optional per-direction duration (sets the target step's length and scales the donor keyframes
-  to fit). 'in' is layer-relative (it targets the step where THAT layer becomes active), 'out'
+  to fit), and an optional per-direction DELAY - a hold before the motion: the written keyframes
+  shift later within the step (the interpreter applies a track's first keyframe at the step
+  start, so the layer holds its starting pose through the wait), the step grows by the hold,
+  and step-level calls/dynamics shift with it. 'in' is layer-relative (it targets the step where THAT layer becomes active), 'out'
   always targets the final step, 'both' writes both - independently editable after. Scope 'all'
   = the whole graphic adopting the donor's full choreography and the chosen/donor step duration
   and ease - skipping press-revealed layers, whose entrance belongs to their » press; it also

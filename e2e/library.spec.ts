@@ -147,6 +147,37 @@ test('a saved graphic\'s control panel: entries create, play with the active ent
   await expect(page.getByTestId('home-page')).toBeVisible();
 });
 
+test('the control panel reports the state and greys an event the machine would drop', async ({ page }) => {
+  // Parity with the editor's Rehearse panel, the event strip and the hosted page: all three
+  // poll the runtime's pointers and grey an illegal event. This surface shipped with neither,
+  // so a live operator had no on-air indication and every button looked pressable.
+  await createProject(page, { category: 'quiz' });
+  await saveAs(page, 'Quiz board');
+  await page.getByTestId('open-home').click();
+  await page.getByTestId('home-nav-controls').click();
+  await page.locator('.pk-graphic', { hasText: 'Quiz board' }).locator('button', { hasText: 'Open control panel' }).click();
+  await expect(page.getByTestId('graphic-control-page')).toBeVisible();
+
+  // The chip names where the preview is, and it is what the greying is judged against.
+  await expect(page.getByTestId('control-state')).toContainText('enter');
+  await expect(page.getByTestId('control-event-lock')).toBeDisabled(); // no arrow out of Enter
+  await expect(page.getByTestId('control-event-select')).toBeEnabled();
+
+  await page.getByTestId('control-event-select').click();
+  await expect(page.getByTestId('control-state')).toContainText('selected');
+  await expect(page.getByTestId('control-event-lock')).toBeEnabled(); // legal from Selected
+  await expect(page.getByTestId('control-event-judge')).toBeDisabled();
+
+  // An entry's ✕ is ARMED, like Home's graphic delete — one stray click cost the whole row.
+  await page.getByTestId('add-entry').click();
+  await expect(page.locator('.control-entry')).toHaveCount(1);
+  await page.getByTestId('delete-entry').click();
+  await expect(page.getByTestId('delete-entry')).toHaveText('Delete?');
+  await expect(page.locator('.control-entry')).toHaveCount(1); // still there
+  await page.getByTestId('delete-entry').click();
+  await expect(page.locator('.control-entry')).toHaveCount(0);
+});
+
 test('the control panel shows the graphic at rest before any take, and says how to get Home', async ({ page }) => {
   await createProject(page, 'Hairline');
   await saveAs(page, 'Settled at rest');
@@ -231,6 +262,53 @@ test('a Home card shows the real graphic, parked at its settled on-air state', a
   const renamed = page.locator('.pk-graphic', { hasText: 'Anchor lower third' });
   await expect(renamed.getByTestId('graphic-thumb')).toBeVisible();
   await expect(renamed.locator('.gfx-thumb iframe').contentFrame().locator('#f0')).not.toBeEmpty();
+});
+
+test('a Home card frames on the GRAPHIC, at both card sizes, without cropping it', async ({ page }) => {
+  // A lower third is a band across a fraction of a 1920×1080 frame: scaled whole-canvas into a
+  // 144px card it is an unreadable smear. The card measures the graphic's own box and zooms onto
+  // that (preview/frameGraphic.ts). Nothing else in the suite can tell the two apart — a card
+  // that quietly went back to the whole-canvas view keeps every other assertion green.
+  await createProject(page, 'Hairline');
+  await saveAs(page, 'Presenter lower third');
+  await page.getByTestId('open-home').click();
+
+  const row = page.locator('.pk-graphic', { hasText: 'Presenter lower third' });
+  const card = row.getByTestId('graphic-thumb');
+  await expect(card).toBeVisible();
+  // The graphic's own root, found the way the framing code finds it — never a class name, which
+  // would tie this to one category's markup.
+  const graphic = row.locator('.gfx-thumb iframe').contentFrame().locator('body > div').first();
+
+  /** What the graphic occupies of the card, and how far it spills past its edges. */
+  const framing = async () => {
+    const box = (await card.boundingBox())!;
+    const g = (await graphic.boundingBox())!;
+    return {
+      cardW: box.width,
+      fill: g.width / box.width,
+      spill: Math.max(box.x - g.x, g.x + g.width - (box.x + box.width)),
+      centred: Math.abs(g.x + g.width / 2 - (box.x + box.width / 2)),
+    };
+  };
+
+  // Settling and measuring happen after load, so poll rather than race them.
+  await expect.poll(async () => (await framing()).fill, { timeout: 5000 }).toBeGreaterThan(0.6);
+  const wide = await framing();
+  // Zoomed, but never past the card: a framing that cropped the design would read as a
+  // different graphic. A small tolerance for the glow/shadow that sits outside the box.
+  expect(wide.spill).toBeLessThan(4);
+  expect(wide.centred).toBeLessThan(4);
+
+  // The compact card (phone) shrinks the box and the framing follows — the same graphic, smaller,
+  // still framed rather than cropped or left as a speck.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId('home-nav-graphics').click();
+  await expect(card).toBeVisible();
+  await expect.poll(async () => (await framing()).cardW).toBeLessThan(wide.cardW);
+  const narrow = await framing();
+  expect(narrow.fill).toBeGreaterThan(0.6);
+  expect(narrow.spill).toBeLessThan(4);
 });
 
 test('phone width: every row action is reachable, the text stays two lines, the nav scrolls', async ({ page }) => {

@@ -2,6 +2,7 @@
 // Blocks return readable, well-commented code so users learn from the result.
 
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
+import { detectPrefix } from '../model/structure';
 import { lineClassFor } from '../templates/shared/standard';
 import type { SpxField, SpxTemplate, TemplateLayer } from '../model/types';
 
@@ -78,7 +79,14 @@ export function addCatalogLine(
   // it lands in whichever layout the file already speaks.
   const lineRe =
     /([ \t]*)<div class="([a-z0-9-]+)-mask">\s*<span id="f\d+" class="(\2-(?:name|title|extra))">[^<]*<\/span>\s*<\/div>/g;
-  const matches = [...template.html.matchAll(lineRe)];
+  // A project can hold an INSERTED graphic (blocks/templateInsert.ts), whose lines carry its
+  // own namespaced prefix — this add belongs to the HOST design, so only the host's lines are
+  // candidates. Without the filter an insertion silently downgraded every later add-field to
+  // the definition-only path: a field no element answers, the exact on-air no-op this exists
+  // to end.
+  const host = detectPrefix(template.html);
+  const found = [...template.html.matchAll(lineRe)];
+  const matches = host ? found.filter((m) => m[2] === host) : found;
   if (matches.length === 0) return null;
   const last = matches[matches.length - 1];
   const prefix = last[2];

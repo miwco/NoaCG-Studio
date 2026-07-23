@@ -545,17 +545,24 @@ export function deleteStep(
   return next;
 }
 
-/** Add an empty content step just before Out — an authoring target for the next reveal
- *  or keyframes (a press that still does nothing when the show airs is the user's call). */
-export function addStep(data: AnimData): AnimData | null {
+/**
+ * Add an empty content step — an authoring target for the next reveal or keyframes (a press
+ * that still does nothing when the show airs is the user's call). It lands just before Out
+ * unless `at` names another slot, clamped between the entrance and Out: the entrance and the
+ * exit are the walk's ends, never insertion points. A run of steps arriving together (a
+ * template insertion carrying the donor's middle steps) inserts at consecutive indices, which
+ * is what keeps a motion that spans two donor steps adjacent in the host's path.
+ */
+export function addStep(data: AnimData, at?: number): AnimData | null {
   const next = clone(data);
+  const index = Math.min(Math.max(at ?? next.steps.length - 1, 1), next.steps.length - 1);
   const step: AnimStep = {
-    name: `Step ${next.steps.length}`,
+    name: `Step ${index + 1}`,
     duration: 0.45,
     ease: next.steps[0].ease,
     layers: {},
   };
-  insertStepAt(next, next.steps.length - 1, step);
+  insertStepAt(next, index, step);
   renumberSteps(next);
   syncWaypointNames(next);
   return next;
