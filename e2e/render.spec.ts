@@ -87,6 +87,22 @@ test('a failed job shows the server message and recovers', async ({ page }) => {
   await expect(page.getByTestId('render-start')).toBeVisible();
 });
 
+test('a busy fleet is refused with the sign-in nudge, and stays retryable', async ({ page }) => {
+  // The fleet ceiling (api/_lib/admission.ts) answers 503 busy + Retry-After when the
+  // deployment is at capacity — a different shape from the per-principal 429 below.
+  await page.route('**/api/render/start', (route) =>
+    route.fulfill({
+      status: 503,
+      headers: { 'retry-after': '60' },
+      json: { error: { code: 'busy', message: 'The render service is busy — sign in to render now, or try again in a minute.' } },
+    }));
+  await createHairline(page);
+  await openRenderPanel(page);
+  await page.getByTestId('render-start').click();
+  await expect(page.getByTestId('render-error')).toContainText('render service is busy');
+  await expect(page.getByTestId('render-start')).toBeEnabled();
+});
+
 test('quota rejection surfaces the server message inline', async ({ page }) => {
   await page.route('**/api/render/start', (route) =>
     route.fulfill({ status: 429, json: { error: { code: 'quota', message: 'Hourly render limit reached (2/h). Try again later.' } } }));

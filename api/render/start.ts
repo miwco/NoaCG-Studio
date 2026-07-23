@@ -10,6 +10,7 @@ import { apiError, bearerToken, ipHash, json, methodGuard, newSecret, readJson, 
 import { verifyUser } from '../_lib/auth.js';
 import { getJobStore, type JobRecord } from '../_lib/jobStore.js';
 import { getExecutor } from '../_lib/executor.js';
+import { admitGlobally } from '../_lib/admission.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {
@@ -133,6 +134,15 @@ export default {
       updatedAt: now,
     };
     await store.create(job);
+
+    // Fleet admission, deliberately AFTER the insert: a stampede has to see itself (the
+    // reasoning is in admission.ts). A refused job never launched, so its row goes away
+    // rather than eating a slot in the caller's hourly/daily window.
+    const busy = await admitGlobally(store, tier);
+    if (busy) {
+      await store.delete(job.id);
+      return apiError('busy', busy.message, 503, {}, { 'retry-after': String(busy.retryAfterSec) });
+    }
 
     const executor = await getExecutor();
     const launch = async () => {

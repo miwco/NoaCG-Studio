@@ -47,7 +47,10 @@ measure, buildManifest, config) may use anything the app uses.
   frame grid. Imported templates without builder globals only render with outMode 'none'.
 - **limits.ts** - RENDER_LIMITS tiers (anonymous/free/paid) + RENDER_CONFIG: every
   configurable number lives here; UI checks are UX, api/ re-validates authoritatively.
-  `resolveTier()` is the single seam a future paid tier changes.
+  `resolveTier()` is the single seam a future paid tier changes. Every tier number is
+  PER PRINCIPAL; the fleet-wide ceiling that bounds a traffic spike is
+  `RENDER_CONFIG.globalConcurrency`, enforced (with env overrides) in
+  api/_lib/admission.ts - docs/RENDER.md.
 - **runtimeScript.ts** - RENDER_RUNTIME_JS: the virtual clock (Date/performance/timers/rAF
   virtualized, network stubbed) + `__noacgRender` { prepare, setSchedule, seek, vNow,
   getErrors }. The graphic executes its REAL cue lifecycle (update -> play -> next -> stop)

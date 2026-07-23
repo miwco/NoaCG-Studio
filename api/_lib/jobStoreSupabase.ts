@@ -167,6 +167,20 @@ export class SupabaseJobStore implements JobStore {
     return count ?? 0;
   }
 
+  async countActiveGlobal(): Promise<number> {
+    const { count, error } = await (await sb())
+      .from(TABLE)
+      .select('id', { count: 'exact', head: true })
+      .not('status', 'in', `(${TERMINAL_STATES.join(',')})`);
+    if (error) throw new Error('render jobs count failed: ' + error.message);
+    return count ?? 0;
+  }
+
+  async delete(id: string): Promise<void> {
+    const { error } = await (await sb()).from(TABLE).delete().eq('id', id);
+    if (error) throw new Error('render jobs delete failed: ' + error.message);
+  }
+
   async findActiveDuplicate(principal: string, manifestHash: string): Promise<JobRecord | null> {
     const f = principalFilter(principal);
     const { data, error } = await (await sb())

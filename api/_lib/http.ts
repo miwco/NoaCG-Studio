@@ -17,8 +17,9 @@ export function apiError(
   message: string,
   status: number,
   extra: Partial<RenderApiError['error']> = {},
+  headers: Record<string, string> = {},
 ): Response {
-  return json({ error: { code, message, ...extra } } satisfies RenderApiError, status);
+  return json({ error: { code, message, ...extra } } satisfies RenderApiError, status, headers);
 }
 
 export function methodGuard(req: Request, method: string): Response | null {

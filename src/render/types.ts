@@ -75,6 +75,7 @@ export interface RenderApiError {
       | 'limit_exceeded'
       | 'quota'
       | 'concurrent'
+      | 'busy'
       | 'duplicate'
       | 'unauthorized'
       | 'not_found'

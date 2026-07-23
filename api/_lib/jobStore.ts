@@ -62,6 +62,12 @@ export interface JobStore {
   countRecent(principal: string, sinceMs: number): Promise<number>;
   /** Non-terminal jobs for a principal (concurrency cap). */
   countActive(principal: string): Promise<number>;
+  /** Non-terminal jobs across every principal (the fleet ceiling — api/_lib/admission.ts). */
+  countActiveGlobal(): Promise<number>;
+  /** Drop a row outright. Only for a job refused at admission BEFORE it ever launched:
+   *  such a job must not occupy the hourly/daily window, which counts rows by createdAt
+   *  regardless of state. Never call it on a job the executor has seen. */
+  delete(id: string): Promise<void>;
   /** A non-terminal job with the same manifest hash (duplicate-click guard). */
   findActiveDuplicate(principal: string, manifestHash: string): Promise<JobRecord | null>;
   /** Non-terminal jobs past their deadline + terminal jobs past their output TTL. */
@@ -107,6 +113,16 @@ class MemoryJobStore implements JobStore {
     let n = 0;
     for (const j of this.jobs.values()) if (j.principal === principal && !isTerminal(j.state)) n++;
     return n;
+  }
+
+  async countActiveGlobal(): Promise<number> {
+    let n = 0;
+    for (const j of this.jobs.values()) if (!isTerminal(j.state)) n++;
+    return n;
+  }
+
+  async delete(id: string): Promise<void> {
+    this.jobs.delete(id);
   }
 
   async findActiveDuplicate(principal: string, manifestHash: string): Promise<JobRecord | null> {

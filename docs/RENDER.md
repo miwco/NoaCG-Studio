@@ -101,7 +101,8 @@ resized (layout math depends on the authored resolution).
 `start` validates the manifest against the caller's tier, enforces quotas
 (duplicate-submit first — it answers the already-running job id — then concurrency,
 then hourly/daily windows), stores sha256 hashes of two per-job secrets (the browser's
-status/cancel token; the worker's completion secret), and launches the executor.
+status/cancel token; the worker's completion secret), passes the fleet ceiling below,
+and launches the executor.
 Sandbox launches run under `waitUntil` AFTER the 202 — no request waits on VM
 provisioning. `status` reconciles executor progress into the job, finalizes completion,
 and fails lost jobs past their deadline. `cancel` stops the executor. `complete` is the
@@ -125,6 +126,36 @@ lives in process memory (dev/self-host).
 
 Client checks are UX; the server re-validates everything. Introducing a paid tier =
 changing `resolveTier()` to read an entitlements source; nothing else moves.
+
+### The fleet ceiling (api/_lib/admission.ts)
+
+Every number in the table above is **per principal**. None of them bounds a traffic
+spike: 300 visitors each starting one legal render satisfy every tier cap and produce 300
+simultaneous 4-vCPU microVMs. The anonymous principal is a salted IP hash, so a
+rotating-IP flood clears the per-principal caps too. So the deployment gets its own
+ceiling, on top of the tier quotas:
+
+| | default | env override |
+|---|---|---|
+| simultaneous jobs, all principals | 12 | `RENDER_MAX_CONCURRENT` |
+| ceiling above which ANONYMOUS starts are refused | 8 | `RENDER_ANONYMOUS_MAX_CONCURRENT` |
+| `Retry-After` on the refusal | 60 s | `RENDER_BUSY_RETRY_AFTER_SEC` |
+
+Defaults live with every other render number (`RENDER_CONFIG.globalConcurrency`); the env
+reads live in `admission.ts` because limits.ts is pure and also runs in the browser.
+The anonymous ceiling is the graceful-degradation step: a spike squeezes anonymous
+visitors first, so signed-in users keep rendering. Setting `RENDER_MAX_CONCURRENT=0`
+closes the render service without a deploy. A refusal is **503 `busy`** with `Retry-After`;
+the Export UI shows the server message inline and leaves the button armed.
+
+Admission runs **after** the job row is inserted, and the row is deleted again on refusal.
+That ordering is load-bearing: counting before the insert lets a stampede of simultaneous
+requests all read the same pre-spike count and all pass — exactly the case the ceiling
+exists for. Inserting first makes concurrent requests visible to each other, at the price
+of possible over-rejection right at the boundary (the safe direction for a cost guard).
+Deleting keeps a refusal from consuming the caller's hourly/daily window, which counts
+rows by `created_at` regardless of state. Stuck rows can't wedge the ceiling: `deadlineAt`
+plus the cleanup cron sweep non-terminal jobs.
 
 ## Security posture
 

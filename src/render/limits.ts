@@ -92,6 +92,23 @@ export const RENDER_CONFIG = {
   progressWriteIntervalMs: 1000,
   /** Grace past the sandbox deadline before a silent job counts as lost. */
   abandonedSlackMs: 5 * 60_000,
+  /** Fleet-wide admission control — the cost ceiling no per-principal quota can express.
+   *  The tier caps above bound ONE visitor; nothing in them bounds a traffic spike, and
+   *  the anonymous principal is an IP hash, so a rotating-IP flood passes every one of
+   *  them. Each admitted job is a 4-vCPU microVM billed by the minute, so the fleet needs
+   *  its own ceiling. Enforced in api/_lib/admission.ts, which also reads the per-deployment
+   *  env overrides — this module is PURE and runs in the browser, so it holds the defaults
+   *  only. */
+  globalConcurrency: {
+    /** Hard ceiling on simultaneously running jobs across every principal. */
+    max: 12,
+    /** Anonymous starts are refused once total running jobs reach this, keeping the top
+     *  slots for signed-in users: a spike degrades to "signed-in still works" rather than
+     *  "nobody renders". Must be <= max. */
+    anonymousMax: 8,
+    /** Retry-After (seconds) sent with a 503 busy. */
+    retryAfterSec: 60,
+  },
   /** Default warning threshold for short holds. */
   minHoldMs: 500,
   sandbox: {
