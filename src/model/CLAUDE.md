@@ -15,6 +15,14 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   registry parts (selectable, animatable, named by their field titles) while `countLines` - "how
   many lines does THIS design have", what the preset emitters size choreography from - keeps
   counting the host's only.
+- **taxonomy.ts** - the DISCOVERY facet registries (docs/TEMPLATE_TAXONOMY_PROPOSAL.md): stable
+  kebab-case ids + display labels for programme families/formats (each format carries the
+  VERBATIM workbook `sheetName` packs.ts uses), the 26 graphic categories (controlled
+  subtypes, coverage class, `relevance: 'all'`), structures, field semantics, capabilities,
+  placements, the per-preset motion intensity/style table (total over AnimPresetId — a new
+  preset without a row is a type error), style-family labels, and the search alias table
+  (aliases resolve to SETS of facet values). Pure data; derivation lives in
+  src/templates/templateMeta.ts, the browse engine in src/templates/search.ts.
 - **wizard.ts** - categories, variants, WizardOptions, palettes. A variant declares its
   CAPABILITIES - `maxLines` (1-5 line capacity), `logo: 'none' | 'optional' | 'built-in'`,
   `animationPresets` - which drive the wizard's Fields/Animation options AND the Template
@@ -37,6 +45,12 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
   context), and motion feel (it lives in the NOACG_ANIM block, not in CSS).
 - **brand.ts** - ProjectBrand save/load (localStorage 'spx-gfx-brand'), captured on every wizard
   Create.
+- **generationSpec.ts** - the AI "More control" panel's user-authored GenerationSpec (category
+  id union, SpecFieldDef on FieldKind, fonts as CustomFont choices, animation intent incl. the
+  intensity->speed x easing map) + the cross-session draft ('spx-gfx-ai-spec-draft'). Lives HERE
+  (not src/ai) because SavedProject and GraphicDoc persist it as `aiSpec` (additive optional);
+  the category REGISTRY that interprets it is src/ai/spec/categories.ts. Version-1 migrate-on-read
+  via normalizeSpec; an unknown version degrades to "no spec", never a crash.
 - **library.ts** - the GRAPHICS LIBRARY (docs/SAVED_CONTENT_MODEL.md): every durably saved
   graphic is ONE `GraphicDoc` with a STABLE uuid ('spx-gfx-graphics', sync kind 'graphic',
   supabase migration 0009) - template + baseline + `packageId` (null = standalone) + the
