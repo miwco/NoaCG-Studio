@@ -216,6 +216,123 @@ test('harness on: three grounded alternatives, zero coder calls, the pick is rem
   expect((prefs as { shown: Record<string, number> }).shown['variantId:lt03']).toBe(1);
 });
 
+// The three directions differ in real design decisions, so the picker has to SHOW them.
+const THREE_ALTS = [
+  { ...GROUNDED_SPEC, variantId: 'lt01', name: 'Grounded One', density: 'airy' },
+  { ...GROUNDED_SPEC, variantId: 'lt02', name: 'Grounded Two', density: 'compact' },
+  { ...GROUNDED_SPEC, variantId: 'lt03', name: 'Grounded Three', density: 'standard' },
+];
+
+test('harness on: the directions are live previews that name their design decisions', async ({ page }) => {
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    if (requestedTool(route) === 'emit_design_alternatives')
+      return route.fulfill(toolUse('emit_design_alternatives', { alternatives: THREE_ALTS }));
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  // Each card renders the REAL graphic — the whole point of the alternatives call.
+  await expect(page.locator('[data-alt] .wz-mini iframe')).toHaveCount(3);
+  // …and says what makes it different from the other two.
+  await expect(page.locator('[data-alt="1"]')).toContainText('airy');
+  await expect(page.locator('[data-alt="2"]')).toContainText('compact');
+});
+
+test('harness on: refining a direction keeps the others, and the pick still trains preferences', async ({ page }) => {
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives')
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    // A grounded refine goes back through the DESIGN stage (spec-level), not the coder.
+    if (tool === 'emit_design_spec')
+      return route.fulfill(toolUse(tool, { ...GROUNDED_SPEC, variantId: 'lt02', name: 'Grounded Two Warmer' }));
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+
+  await page.locator('[data-alt="2"]').click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Grounded Two');
+  await page.getByPlaceholder(/Refine it/).fill('warmer colours');
+  await page.getByRole('button', { name: 'Refine', exact: true }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Grounded Two Warmer', GENERATED);
+
+  // The other two directions were NOT thrown away by the refinement.
+  await expect(page.locator('[data-alt]')).toHaveCount(3);
+  await expect(page.locator('[data-alt="1"]')).toContainText('Grounded One');
+  await expect(page.locator('[data-alt="3"]')).toContainText('Grounded Three');
+
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded Two Warmer');
+  // Refining used to CLEAR the staged pick, so a user who improved a direction before
+  // creating it trained the preference data with nothing at all.
+  const prefs = await page.evaluate(() => JSON.parse(localStorage.getItem('spx-gfx-ai-preferences') ?? '{}'));
+  expect((prefs as { selections: number }).selections).toBe(1);
+  expect((prefs as { chosen: Record<string, number> }).chosen['variantId:lt02']).toBe(1);
+  expect((prefs as { shown: Record<string, number> }).shown['variantId:lt01']).toBe(1);
+});
+
+test('harness on: a refinement can be undone back to the design that was proposed', async ({ page }) => {
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives')
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    if (tool === 'emit_design_spec')
+      return route.fulfill(toolUse(tool, { ...GROUNDED_SPEC, variantId: 'lt02', name: 'Grounded Two Warmer' }));
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  await page.locator('[data-alt="2"]').click();
+  await expect(page.getByTestId('ai-revert')).toHaveCount(0); // nothing to undo yet
+
+  await page.getByPlaceholder(/Refine it/).fill('warmer colours');
+  await page.getByRole('button', { name: 'Refine', exact: true }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Grounded Two Warmer', GENERATED);
+  await page.getByTestId('ai-revert').click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Grounded Two');
+  await expect(page.getByTestId('ai-revert')).toHaveCount(0);
+});
+
+test('a failing result offers one press that sends the findings back', async ({ page }) => {
+  // The coder's own repair rounds are exhausted (MAX_REPAIR_ROUNDS = 2), so the result is
+  // surfaced still failing — that is the moment the user is left holding raw findings.
+  let templateCalls = 0;
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    if (requestedTool(route) !== 'emit_template') return route.fulfill(toolResponse(route, VALID_TEMPLATE));
+    templateCalls += 1;
+    return route.fulfill(toolUse('emit_template', templateCalls <= 3 ? INVALID_TEMPLATE : VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A slate the coder cannot get right');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('.wz-step .status-bad')).toContainText('check(s) failing', GENERATED);
+  await page.getByTestId('ai-fix').click();
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.getByTestId('ai-fix')).toHaveCount(0);
+});
+
+test('an example brief never silently replaces a brief you wrote', async ({ page }) => {
+  await openAiStep(page);
+  const box = page.locator('.wz-step textarea');
+  // Nothing to lose: one click fills the box.
+  await page.getByRole('button', { name: 'Election results' }).click();
+  await expect(box).toHaveValue(/Election results panel/);
+
+  // Now the brief is the user's own — the same click has to ask first.
+  await box.fill('my own carefully written brief');
+  await page.getByRole('button', { name: 'Weather now' }).click();
+  await expect(box).toHaveValue('my own carefully written brief');
+  await page.getByRole('button', { name: 'Replace your brief?' }).click();
+  await expect(box).toHaveValue(/weather now/i);
+});
+
 test('describe-it: a flourish runs the polish pass and lands as a marked override block', async ({ page }) => {
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
     const tool = requestedTool(route);

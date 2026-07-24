@@ -24,6 +24,7 @@ import type { AssetFile, Resolution, SpxTemplate } from '../../../model/types';
 import type { Palette } from '../../../model/wizard';
 import { validateTemplate, type ValidationResult } from '../../../validation/validateTemplate';
 import { benchTemplateRuntime, mergeResults } from '../../../validation/runtimeBench';
+import MiniPreview from '../MiniPreview';
 import MoreControlPanel from './ai/MoreControlPanel';
 
 interface Props {
@@ -54,6 +55,28 @@ function routeLabel(path: AiPath | null): string | null {
     default:
       return null;
   }
+}
+
+/** The same route, as one glyph for a picker card. */
+const routeMark = (path: AiPath | undefined): string => (path === 'custom' ? '✦' : '▤');
+
+/**
+ * The design decisions behind one direction, in the user's words. The whole point of the
+ * three alternatives is that they differ in REAL decisions (composition, density, weight,
+ * shape) — a card that showed only a name would hide exactly what the choice is about.
+ *
+ * Returned as separate terms, not one joined string: a term must wrap as a WHOLE. Joined,
+ * a narrow card broke "center-aligned" across two lines at its own hyphen.
+ */
+function designWords(alt: AiTemplateChange): string[] {
+  const spec = alt.spec;
+  if (!spec) return [];
+  return [
+    spec.density,
+    spec.typography?.headingWeight,
+    spec.alignment ? `${spec.alignment}-aligned` : null,
+    spec.shape?.panel && spec.shape.panel !== 'none' ? `${spec.shape.panel} panel` : null,
+  ].filter((w): w is string => Boolean(w));
 }
 
 /**
@@ -94,10 +117,18 @@ export default function AiStep({
   // (passed back on refine so "warmer colours" re-assembles instead of editing code).
   const [lastPath, setLastPath] = useState<AiPath | null>(null);
   const [lastSpec, setLastSpec] = useState<DesignSpec | null>(null);
-  // Harness mode: the three alternatives + which one is picked (the pick is staged as
-  // preference data and committed when the project is actually created).
-  const [alternatives, setAlternatives] = useState<AiTemplateChange[] | null>(null);
+  // Harness mode: the generated directions (one, or the harness's three) + which one is
+  // picked (the pick is staged as preference data and committed when the project is actually
+  // created). The list SURVIVES a refinement — refining replaces only the picked entry, so
+  // the other directions stay one click away instead of being lost to a wording change.
+  const [alternatives, setAlternatives] = useState<AiTemplateChange[]>([]);
+  // Each direction as it was FIRST generated: the restore point behind "↺ Undo refinements",
+  // and the population a preference pick was actually chosen FROM.
+  const [originals, setOriginals] = useState<AiTemplateChange[]>([]);
   const [selected, setSelected] = useState(0);
+  // An example brief is armed before it replaces a brief the user already wrote (the
+  // two-step pattern used for every other destructive click in the app).
+  const [armedExample, setArmedExample] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   // The brainstorm chat (optional): sharpen the idea, then use its BRIEF as the prompt.
   const [chatOpen, setChatOpen] = useState(false);
@@ -171,12 +202,36 @@ export default function AiStep({
     return v;
   };
 
+  /**
+   * Stage the current pick for preference learning.
+   *
+   * The CHOSEN facets are the direction as it stands NOW — a refinement is part of what the
+   * user settled on, and clearing the stage on every refine meant the most engaged users
+   * (pick a direction, improve it, create it) trained the model with nothing at all. The
+   * SHOWN population stays the ORIGINALS, because that is the choice they actually faced.
+   * A single result is not a choice, so it stages nothing: counting it would score every
+   * facet as picked 100% of the times it was shown.
+   */
+  const stagePick = (chosen: AiTemplateChange, shown: AiTemplateChange[]) => {
+    if (shown.length < 2) {
+      clearStagedSelection();
+      return;
+    }
+    stageSelection(
+      facetsOf(chosen.spec, chosen.path),
+      shown.map((alt) => facetsOf(alt.spec, alt.path)),
+    );
+  };
+
+  /** A whole-result run (convert / raw generate): one direction, replacing whatever stood. */
   const run = async (fn: (options: GenerateOptions) => Promise<AiTemplateChange>, label: string) => {
     setBusy(label);
     setError(null);
     try {
       const change = await fn({ validate, onProgress: (stage) => setBusy(stage) });
-      setAlternatives(null);
+      setAlternatives([change]);
+      setOriginals([change]);
+      setSelected(0);
       clearStagedSelection();
       showChange(change);
     } catch (e) {
@@ -186,14 +241,11 @@ export default function AiStep({
     }
   };
 
-  /** Show alternative `i` in the preview + stage the pick as preference data. */
-  const selectAlternative = (list: AiTemplateChange[], i: number) => {
+  /** Show direction `i` in the preview + stage the pick as preference data. */
+  const selectAlternative = (i: number) => {
     setSelected(i);
-    showChange(list[i]);
-    stageSelection(
-      facetsOf(list[i].spec, list[i].path),
-      list.map((alt) => facetsOf(alt.spec, alt.path)),
-    );
+    showChange(alternatives[i]);
+    stagePick(alternatives[i], originals);
   };
 
   // Exact brand colours from the setup win over the project-brand toggle; the setup's
@@ -237,14 +289,45 @@ export default function AiStep({
           validate,
           onProgress: (stage) => setBusy(stage),
         });
-        setAlternatives(list.length > 1 ? list : null);
+        if (!list.length) return;
+        setAlternatives(list);
+        setOriginals(list);
         // Start on the first option that passes; the pick is the user's to change.
         const first = Math.max(0, list.findIndex((alt) => alt.validation?.ok ?? false));
-        if (list.length > 1) selectAlternative(list, first);
-        else if (list.length === 1) {
-          clearStagedSelection();
-          showChange(list[0]);
-        }
+        setSelected(first);
+        showChange(list[first]);
+        stagePick(list[first], list);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(null);
+      }
+    })();
+  };
+
+  /**
+   * One refinement turn on the PICKED direction. It replaces that entry in place — the other
+   * directions keep their own designs and stay pickable — and re-stages the pick, so
+   * improving a direction before creating it still trains the preference data.
+   *
+   * `useSpec` chooses the level: a wording refinement of a still-house-shaped result refines
+   * at SPEC level (it re-assembles deterministically, src/ai/CLAUDE.md), while a fix works on
+   * the emitted CODE, because that is what the findings are about.
+   */
+  const applyRefinement = (instruction: string, useSpec: boolean, label: string) => {
+    if (!result) return;
+    void (async () => {
+      setBusy(label);
+      setError(null);
+      try {
+        const change = await getAiProvider().modify(instruction, result, {
+          validate,
+          onProgress: (stage) => setBusy(stage),
+          ...(useSpec && lastSpec ? { spec: lastSpec } : {}),
+        });
+        setAlternatives(alternatives.map((alt, i) => (i === selected ? change : alt)));
+        showChange(change);
+        stagePick(change, originals);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -254,14 +337,40 @@ export default function AiStep({
   };
 
   const refineNow = () => {
-    if (!result) return;
-    const p = refine;
+    const p = refine.trim();
+    if (!p) return;
     setRefine('');
-    void run(
-      (options) => getAiProvider().modify(p, result, { ...options, spec: lastSpec ?? undefined }),
-      'Refining…',
+    applyRefinement(p, true, 'Refining…');
+  };
+
+  /**
+   * User-pressed repair on a failing result: the exact validator findings go back as the
+   * instruction. This is NOT an automatic repair loop on grounded assemblies — one of those
+   * failing its own bench is a platform bug worth surfacing (src/ai/CLAUDE.md) — it is a
+   * button, so the user decides whether to spend a call rather than reading raw findings
+   * they have no way to act on.
+   */
+  const fixNow = () => {
+    if (!validation || validation.ok) return;
+    const findings = validation.errors.map((e) => `- ${e.message}`).join('\n');
+    applyRefinement(
+      `The template fails these checks. Fix every one of them and change nothing else about ` +
+        `the design:\n${findings}`,
+      false,
+      'Fixing the findings…',
     );
   };
+
+  /** Undo every refinement of the picked direction, back to what the AI first proposed. */
+  const revertNow = () => {
+    const original = originals[selected];
+    if (!original) return;
+    setAlternatives(alternatives.map((alt, i) => (i === selected ? original : alt)));
+    showChange(original);
+    stagePick(original, originals);
+  };
+
+  const refined = Boolean(originals[selected]) && alternatives[selected] !== originals[selected];
 
   return (
     <div>
@@ -351,17 +460,29 @@ export default function AiStep({
         <>
           {/* Example briefs: show the range (most have no starting template) + teach the shape. */}
           <div className="row wrap" style={{ marginTop: 12, marginBottom: 6, gap: 6 }}>
-            {EXAMPLE_PROMPTS.map((ex) => (
-              <button
-                key={ex.label}
-                className="wz-example"
-                title={ex.prompt}
-                onClick={() => setPrompt(ex.prompt)}
-                disabled={!!busy}
-              >
-                {ex.label}
-              </button>
-            ))}
+            {EXAMPLE_PROMPTS.map((ex) => {
+              // A brief the user wrote themselves is real work; replacing it takes two clicks.
+              const dirty = Boolean(prompt.trim()) && !EXAMPLE_PROMPTS.some((e) => e.prompt === prompt);
+              const armed = armedExample === ex.label;
+              return (
+                <button
+                  key={ex.label}
+                  className={`wz-example ${armed ? 'armed' : ''}`}
+                  title={ex.prompt}
+                  onClick={() => {
+                    if (dirty && !armed) {
+                      setArmedExample(ex.label);
+                      return;
+                    }
+                    setPrompt(ex.prompt);
+                    setArmedExample(null);
+                  }}
+                  disabled={!!busy}
+                >
+                  {armed ? 'Replace your brief?' : ex.label}
+                </button>
+              );
+            })}
           </div>
 
           <textarea
@@ -372,7 +493,10 @@ export default function AiStep({
                 : 'e.g. "An election results lower third for channel A7: candidate name, party, and a\nvote percentage that counts up. Dark, serious, uses our logo as a small badge on the left."'
             }
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              setArmedExample(null); // typing is the clearest "no, keep mine"
+            }}
             disabled={!!busy}
           />
 
@@ -505,17 +629,46 @@ export default function AiStep({
           {busy && <p className="hint" style={{ marginTop: 10 }}>⏳ {busy}</p>}
           {error && <p className="status-bad" style={{ marginTop: 10 }}>✗ {error}</p>}
 
-          {alternatives && !busy && (
-            <div className="row wrap" style={{ marginTop: 10, gap: 6 }}>
+          {alternatives.length > 1 && !busy && (
+            // The three directions as they actually LOOK. They differ in real decisions —
+            // chassis, composition, typography, density, motion — and a list of names showed
+            // none of it, so the choice was made blind on the one thing that matters.
+            <div className="wz-alt-grid" data-testid="ai-alternatives">
               {alternatives.map((alt, i) => (
                 <button
                   key={i}
-                  className={i === selected ? 'primary' : undefined}
+                  className={`wz-variant wz-alt ${i === selected ? 'selected' : ''}`}
                   data-alt={i + 1}
-                  title={alt.template.name}
-                  onClick={() => selectAlternative(alternatives, i)}
+                  aria-pressed={i === selected}
+                  title={alt.summary ?? alt.template.name}
+                  onClick={() => selectAlternative(i)}
                 >
-                  {alt.validation?.ok ? '✓' : '✗'} Option {i + 1} — {alt.template.name}
+                  <MiniPreview template={alt.template} />
+                  <div className="wz-variant-cap">
+                    <span className="wz-alt-name">
+                      <span className="wz-alt-route mono" aria-hidden="true">{routeMark(alt.path)}</span>
+                      {/* The name needs its own box to ellipsize: a bare text node inside a
+                          flex container is an anonymous item, which text-overflow cannot
+                          reach — so a long name was cut mid-letter with no "…". */}
+                      <span className="wz-alt-title">{alt.template.name}</span>
+                    </span>
+                    {/* Deliberately NOT .status-ok/.status-bad: those name the verdict on the
+                        CURRENT result, and a step showing three cards plus a verdict must not
+                        have four elements answering to the same words. */}
+                    <span
+                      className={`wz-alt-mark ${alt.validation?.ok ? 'ok' : 'bad'}`}
+                      title={alt.validation?.ok ? 'Passes every check' : 'Some checks are failing'}
+                    >
+                      {alt.validation?.ok ? '✓' : '✗'}
+                    </span>
+                  </div>
+                  {designWords(alt).length > 0 && (
+                    <span className="wz-alt-words">
+                      {designWords(alt).map((word) => (
+                        <span key={word} className="wz-alt-word">{word}</span>
+                      ))}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -558,11 +711,21 @@ export default function AiStep({
                   : `✗ ${validation?.errors.length} check(s) failing — refine or regenerate.`}
               </p>
               {validation && !validation.ok && (
-                <ul className="hint" style={{ margin: '4px 0 0 16px' }}>
-                  {validation.errors.map((e, i) => (
-                    <li key={i}>{e.message}</li>
-                  ))}
-                </ul>
+                <>
+                  <ul className="hint" style={{ margin: '4px 0 0 16px' }}>
+                    {validation.errors.map((e, i) => (
+                      <li key={i}>{e.message}</li>
+                    ))}
+                  </ul>
+                  {/* The findings are the app's words, not the user's job to translate —
+                      one press sends them back as the instruction. */}
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <button className="primary" data-testid="ai-fix" onClick={fixNow}>
+                      ⟳ Fix these
+                    </button>
+                    <span className="hint">Sends the failing checks back to the AI to repair.</span>
+                  </div>
+                </>
               )}
               {validation?.ok && validation.warnings.length > 0 && (
                 // Honest fine print on a passing result — e.g. a custom build whose motion
@@ -583,6 +746,14 @@ export default function AiStep({
                 />
                 <button disabled={!refine.trim()} onClick={refineNow}>Refine</button>
               </div>
+              {refined && (
+                // A refinement is a bet: it may be worse than what the AI first proposed, and
+                // regenerating would return three DIFFERENT designs rather than this one.
+                <div className="row" style={{ marginTop: 8 }}>
+                  <button data-testid="ai-revert" onClick={revertNow}>↺ Undo refinements</button>
+                  <span className="hint">Back to this direction as it was first designed.</span>
+                </div>
+              )}
             </div>
           )}
         </>
