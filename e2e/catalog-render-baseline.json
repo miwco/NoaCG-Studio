@@ -761,9 +761,9 @@
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-rule[1]": "4189bebd610ef9e3",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-logo-slot[1]": "b2c5d7a3b7856ef1",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-year[1]": "0e6e55f3480e7574",
-      "body>div.credits[1]>div[1]": "931a670cd9f9a032",
-      "body>div.credits[1]>div[2]": "931a670cd9f9a032",
-      "body>div.credits[1]>div[3]": "931a670cd9f9a032",
+      "body>div.credits[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
+      "body>div.credits[1]>div.noacg-data-source[2]": "931a670cd9f9a032",
+      "body>div.credits[1]>div.noacg-data-source[3]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -798,9 +798,9 @@
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-dot[1]": "fce9c719c5882210",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-logo-slot[1]": "e5ade88691023e29",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-year[1]": "d0e086aedd9140b5",
-      "body>div.credits[1]>div[1]": "c41646ce27b0f36d",
-      "body>div.credits[1]>div[2]": "c41646ce27b0f36d",
-      "body>div.credits[1]>div[3]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[2]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[3]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -832,9 +832,9 @@
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-logo[1]": "d1f6d663cd966c82",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-logo[1]>div.credits-logo-slot[1]": "09e3e9669e44e4a4",
       "body>div.credits[1]>div.credits-box[1]>div[1]>div.credits-end[1]>div.credits-year[1]": "d1ef61521dec8537",
-      "body>div.credits[1]>div[1]": "a09c79f61a84b019",
-      "body>div.credits[1]>div[2]": "a09c79f61a84b019",
-      "body>div.credits[1]>div[3]": "a09c79f61a84b019",
+      "body>div.credits[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
+      "body>div.credits[1]>div.noacg-data-source[2]": "a09c79f61a84b019",
+      "body>div.credits[1]>div.noacg-data-source[3]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -872,9 +872,9 @@
       "body>div.credits[1]>div.credits-box[1]>div[1]>span.credits-end[1]": "9fa320619588d3b4",
       "body>div.credits[1]>div.credits-box[1]>div[1]>span.credits-end[1]>span.credits-logo-slot[1]": "86212b0a1a76d9bf",
       "body>div.credits[1]>div.credits-box[1]>div[1]>span.credits-end[1]>span.credits-year[1]": "ccb794c46cd295ba",
-      "body>div.credits[1]>div[1]": "c41646ce27b0f36d",
-      "body>div.credits[1]>div[2]": "c41646ce27b0f36d",
-      "body>div.credits[1]>div[3]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[2]": "c41646ce27b0f36d",
+      "body>div.credits[1]>div.noacg-data-source[3]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -887,7 +887,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span[1]": "30adb606ffb4d398",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-accent[1]": "de5ca02ec9fd0748",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-clock[1]": "90c3d49ce1cff9e4",
-      "body>div.game-timer[1]>div[1]": "931a670cd9f9a032",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -899,7 +899,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]": "b2d83ee0e0495fe4",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span.game-timer-label[1]": "618dc989c4c01818",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-clock[1]": "9c9a715a5210fe42",
-      "body>div.game-timer[1]>div[1]": "025f66a7e3046cca",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "025f66a7e3046cca",
       "body>script[1]": "025f66a7e3046cca",
       "body>script[2]": "025f66a7e3046cca"
     },
@@ -921,7 +921,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-badge[1]>div.game-timer-clock[1]": "05fa7035b24d0663",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]": "ad70a524624c18a0",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span[1]": "1ca398891ad613b7",
-      "body>div.game-timer[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -945,7 +945,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-plate[1]": "7037179b17ea1c72",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-plate[1]>div.game-timer-mask[1]": "f342890a96564a1e",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-plate[1]>div.game-timer-mask[1]>span[1]": "08de8ac6139a20fb",
-      "body>div.game-timer[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -958,7 +958,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]": "a2f27b3865b05104",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span.game-timer-label[1]": "b800dbfdef79c13c",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-clock[1]": "b18669070f6ee475",
-      "body>div.game-timer[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -971,7 +971,7 @@
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-mask[1]>span.game-timer-label[1]": "61b02d3482858721",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-pill[1]": "fbcf6fdd8565c354",
       "body>div.game-timer[1]>div.game-timer-box[1]>div.game-timer-pill[1]>span.game-timer-clock[1]": "2248bb2958664c88",
-      "body>div.game-timer[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.game-timer[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -1011,7 +1011,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-head[1]>span.infographic-bar-value[1]": "367f8e789b1404d9",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]": "b0dc74a4d82f56ad",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]": "1120955ca59da9a5",
-      "body>div.infographic[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -1042,7 +1042,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[5]>span.infographic-pos[1]": "b13b3e542501876f",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[5]>span.infographic-code[1]": "b05b983d82bec039",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[5]>span.infographic-gap[1]": "672486bef5d72065",
-      "body>div.infographic[1]>div[1]": "a09c79f61a84b019",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -1078,7 +1078,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-footer[1]": "f57b82915d02956d",
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-footer[1]>span.infographic-sub[1]": "97c9f0e10837f24b",
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-footer[1]>span.infographic-goal[1]": "267ea32cec4d64a2",
-      "body>div.infographic[1]>div[1]": "931a670cd9f9a032",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -1102,7 +1102,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-time[1]": "d6dd7be0ff674b37",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-dot[1]": "5e989fe173ba7565",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-show[1]": "1ef2fddee8aed61d",
-      "body>div.infographic[1]>div[1]": "931a670cd9f9a032",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -1143,9 +1143,9 @@
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-rows[1]>div.infographic-row[3]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]>div.infographic-bar-cap[1]>span.infographic-bar-num[1]": "aeedb95ac14c7aa0",
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-rows[1]>div.infographic-row[3]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]>div.infographic-bar-cap[1]>span.infographic-bar-sign[1]": "96b8f343a0329439",
       "body>div.infographic[1]>div.infographic-box[1]>div.infographic-base[1]": "83e0d19038b60b03",
-      "body>div.infographic[1]>div[1]": "025f66a7e3046cca",
-      "body>div.infographic[1]>div[2]": "025f66a7e3046cca",
-      "body>div.infographic[1]>div[3]": "025f66a7e3046cca",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "025f66a7e3046cca",
+      "body>div.infographic[1]>div.noacg-data-source[2]": "025f66a7e3046cca",
+      "body>div.infographic[1]>div.noacg-data-source[3]": "025f66a7e3046cca",
       "body>script[1]": "025f66a7e3046cca",
       "body>script[2]": "025f66a7e3046cca"
     },
@@ -1169,7 +1169,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-time[1]": "9c71520627abb419",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-dot[1]": "e62dd4713544001b",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-show[1]": "2f73d4c64fcbd448",
-      "body>div.infographic[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -1193,7 +1193,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-time[1]": "92016b352a179c0a",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-dot[1]": "e7b9d5f89c8455c7",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-show[1]": "190d720fe6660640",
-      "body>div.infographic[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -1217,7 +1217,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-time[1]": "04422b9e0cdd7c2c",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-dot[1]": "f8fa4542eba942ca",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>span.infographic-show[1]": "70cef3ff0a8b7587",
-      "body>div.infographic[1]>div[1]": "a09c79f61a84b019",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -1246,7 +1246,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-head[1]>span.infographic-bar-value[1]": "8af9bf1e039a1419",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]": "4cd496170327b34a",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]": "fc4326c36d855a37",
-      "body>div.infographic[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -1269,7 +1269,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[2]>div.infographic-bar-head[1]>span.infographic-bar-value[1]": "854460630f4b4e8f",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[2]>div.infographic-bar-track[1]": "b84f95fa88c6fef0",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[2]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]": "90b6a1c0cf95a025",
-      "body>div.infographic[1]>div[1]": "a09c79f61a84b019",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -1299,7 +1299,7 @@
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-head[1]>span.infographic-bar-value[1]": "f3bf9bb9a1a2b576",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]": "660388b35eff54ae",
       "body>div.infographic[1]>div.infographic-box[1]>div[1]>div.infographic-row[3]>div.infographic-bar-track[1]>div.infographic-bar-fill[1]": "f7518eb5a8e9531c",
-      "body>div.infographic[1]>div[1]": "931a670cd9f9a032",
+      "body>div.infographic[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -1851,7 +1851,7 @@
       "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-text[1]>div.lower-third-clock[1]": "62ad7b48064129c3",
       "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-text[1]>div.lower-third-mask[1]": "f36ef28b1dbc1c41",
       "body>div.lower-third[1]>div.lower-third-box[1]>div.lower-third-text[1]>div.lower-third-mask[1]>span.lower-third-extra[1]": "102498e2e708dc1f",
-      "body>div.lower-third[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.lower-third[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -2662,8 +2662,8 @@
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]": "28933233ef258246",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-letter[1]": "0bf30c4f7700195d",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-text[1]": "62fb931b138ed42d",
-      "body>div.quiz[1]>div[1]": "025f66a7e3046cca",
-      "body>div.quiz[1]>div[2]": "025f66a7e3046cca",
+      "body>div.quiz[1]>div.noacg-data-source[1]": "025f66a7e3046cca",
+      "body>div.quiz[1]>div.noacg-data-source[2]": "025f66a7e3046cca",
       "body>script[1]": "025f66a7e3046cca",
       "body>script[2]": "025f66a7e3046cca"
     },
@@ -2688,8 +2688,8 @@
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]": "67c44e7fcdea186b",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-letter[1]": "453488b6ee3a7a20",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-text[1]": "be926dd23a91c84b",
-      "body>div.quiz[1]>div[1]": "c41646ce27b0f36d",
-      "body>div.quiz[1]>div[2]": "c41646ce27b0f36d",
+      "body>div.quiz[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
+      "body>div.quiz[1]>div.noacg-data-source[2]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -2713,8 +2713,8 @@
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]": "7c184dc09cbeef3d",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-letter[1]": "fd17875eb0473b27",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-text[1]": "4996667d99004fc7",
-      "body>div.quiz[1]>div[1]": "82d7438e5a12ea26",
-      "body>div.quiz[1]>div[2]": "82d7438e5a12ea26",
+      "body>div.quiz[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
+      "body>div.quiz[1]>div.noacg-data-source[2]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -2739,8 +2739,8 @@
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]": "55f36c961e290c38",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-letter[1]": "995d224f88143aa4",
       "body>div.quiz[1]>div.quiz-box[1]>div.quiz-options[1]>div.quiz-option.quiz-option-4[1]>span.quiz-text[1]": "f6c3f8c0243f32ac",
-      "body>div.quiz[1]>div[1]": "931a670cd9f9a032",
-      "body>div.quiz[1]>div[2]": "931a670cd9f9a032",
+      "body>div.quiz[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
+      "body>div.quiz[1]>div.noacg-data-source[2]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -2841,7 +2841,7 @@
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-mask[2]>span.starting-soon-show[1]": "3d921d5179f9f5c6",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-rule.starting-soon-pulse[1]": "30eb9e4cef9a6e1e",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-clock[1]": "0d8a78ae2ea854d7",
-      "body>div.starting-soon[1]>div[1]": "931a670cd9f9a032",
+      "body>div.starting-soon[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -2857,7 +2857,7 @@
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-slab[1]": "9e022ef38ee3650f",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-slab[1]>div.starting-soon-edge.starting-soon-pulse[1]": "a28ea6dfa6540dd6",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-slab[1]>div.starting-soon-clock[1]": "6f03a049ca88df95",
-      "body>div.starting-soon[1]>div[1]": "025f66a7e3046cca",
+      "body>div.starting-soon[1]>div.noacg-data-source[1]": "025f66a7e3046cca",
       "body>script[1]": "025f66a7e3046cca",
       "body>script[2]": "025f66a7e3046cca"
     },
@@ -2872,7 +2872,7 @@
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-mask[2]>span.starting-soon-show[1]": "9a09b28408e23548",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-pill.starting-soon-pulse[1]": "4bea6157a9f7e324",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-pill.starting-soon-pulse[1]>span.starting-soon-clock[1]": "991867fbd03f7208",
-      "body>div.starting-soon[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.starting-soon[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -2887,7 +2887,7 @@
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-mask[2]>span.starting-soon-show[1]": "c0785af9d01f2008",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-chip.starting-soon-pulse[1]": "807eb486c752e063",
       "body>div.starting-soon[1]>div.starting-soon-box[1]>div.starting-soon-chip.starting-soon-pulse[1]>span.starting-soon-clock[1]": "d4b91ef63449dbda",
-      "body>div.starting-soon[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.starting-soon[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -2916,7 +2916,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[7]": "5e5ab8dadacd650b",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[8]": "a4b019b21f1eef44",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[8]": "bbfc73432d507509",
-      "body>div.ticker[1]>div[1]": "931a670cd9f9a032",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -2945,7 +2945,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[7]": "ad640873502333ca",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[8]": "ce4501a999b095b0",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[8]": "dc5fe1cd7f6a3c06",
-      "body>div.ticker[1]>div[1]": "a09c79f61a84b019",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -2962,7 +2962,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>div.ticker-item[2]": "7467a7b8dd3d4afe",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>div.ticker-item[3]": "7467a7b8dd3d4afe",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>div.ticker-item[4]": "7467a7b8dd3d4afe",
-      "body>div.ticker[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -3023,7 +3023,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[8]>span.tk-change.tk-down[1]": "9b28c51c896e2374",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[8]>span.tk-change.tk-down[1]>span.tk-arrow[1]": "dd2cf9a996c9afa3",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[8]": "df0c80ea74976b15",
-      "body>div.ticker[1]>div[1]": "931a670cd9f9a032",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
@@ -3053,7 +3053,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[8]": "db874e1f5bd4b6fe",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[8]": "46a96c5b378fc4aa",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-clock[1]": "3ff54c9753e4c5df",
-      "body>div.ticker[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -3091,7 +3091,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[12]": "0cc02f81a0fbebe9",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[12]>span.ticker-down[1]": "ec3b20b6bd6022aa",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-clock[1]": "f9a9a56a0f0fb725",
-      "body>div.ticker[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -3107,7 +3107,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[1]": "82e4111de4627364",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-sep[1]": "89ae7034668c6fd9",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-clock[1]": "3ff54c9753e4c5df",
-      "body>div.ticker[1]>div[1]": "c41646ce27b0f36d",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "c41646ce27b0f36d",
       "body>script[1]": "c41646ce27b0f36d",
       "body>script[2]": "c41646ce27b0f36d"
     },
@@ -3121,7 +3121,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]": "8027671ddcc05313",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]": "8027671ddcc05313",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[1]": "3ded7cc218bd6ad5",
-      "body>div.ticker[1]>div[1]": "82d7438e5a12ea26",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "82d7438e5a12ea26",
       "body>script[1]": "82d7438e5a12ea26",
       "body>script[2]": "82d7438e5a12ea26"
     },
@@ -3135,7 +3135,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]": "d1794e1a95aac95a",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]": "85ebd64d84b19ca6",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[1]": "05c6b2cb24839c8c",
-      "body>div.ticker[1]>div[1]": "a09c79f61a84b019",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "a09c79f61a84b019",
       "body>script[1]": "a09c79f61a84b019",
       "body>script[2]": "a09c79f61a84b019"
     },
@@ -3150,7 +3150,7 @@
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]": "b5181bb991fdd50e",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]": "b5181bb991fdd50e",
       "body>div.ticker[1]>div.ticker-box[1]>div.ticker-viewport[1]>div[1]>span.ticker-item[1]": "f670912c1566eaf4",
-      "body>div.ticker[1]>div[1]": "931a670cd9f9a032",
+      "body>div.ticker[1]>div.noacg-data-source[1]": "931a670cd9f9a032",
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },

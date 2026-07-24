@@ -12,6 +12,7 @@
 // value an operator sets and a rundown can drive, and it is never drawn.
 
 import { paletteById, type TemplateVariant } from '../../../model/wizard';
+import { dataSourceCss } from '../../shared/base';
 import { defineVariant } from '../shared';
 import { TABULAR_FIGURES, hasLine, slot, zoneClockJs } from './shared';
 
@@ -67,7 +68,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
     </div>
     <!-- ${offsetField}: the city's UTC offset in hours (+9 Tokyo · 0 London · -5 New York).
          Input only — the runtime reads it, nothing draws it. Decimals work: 5.5 for Kolkata. -->
-    <div id="${offsetField}" style="display: none">9</div>`,
+    <div id="${offsetField}" class="noacg-data-source">9</div>`,
 
       extraFields: [
         {
@@ -158,7 +159,9 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   line-height: 1.3;                 /* room if it wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
   margin-top: calc(4px * var(--scale));  /* tied to the figure above it */
-}`,
+}
+
+${dataSourceCss}`,
       hasAccent: true,
     };
   },
