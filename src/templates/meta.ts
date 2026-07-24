@@ -226,6 +226,18 @@ export const VARIANT_META: Record<string, DeclaredTemplateMeta> = {
   // info-card split (§4): card04 turned out to be a QUOTE card (Quote + Name + Role) — the
   // quote category's first catalog content, found by the factory's schema-length assertion.
   card04: { category: 'quote', subtype: 'quote', structures: ['multi-line', 'name-role'], positionalSemantics: ['description', 'name', 'role'] },
+  // The gap-list pack's four TYPELESS cards (docs/PACK_TAXONOMY.md, "known limitations"): a
+  // family whose field COUNT varies cannot be one graphic type, so these stayed hand-written —
+  // and a hand-written info-card falls to the category default, which files a venue marker and
+  // a partner board as 'explainer'. Declared here so they browse as what they are.
+  // card46/47 are LOCATION cards: the pin is a drawn marker over an operator-supplied picture,
+  // never a plotted coordinate, which is why 'map-pin' and not 'map'.
+  card46: { category: 'map', subtype: 'map-pin', structures: ['image-text', 'multi-line'], positionalSemantics: ['location', 'location', 'description', 'image'] },
+  card47: { category: 'map', subtype: 'map-pin', structures: ['multi-line'], positionalSemantics: ['location', 'location', 'description'] },
+  // card48/49 are SPONSOR boards — a strip of four slots and a 3 x 2 grid of six. Neither
+  // rotates (the ticker type is the one that cycles, and it earns it with a real machine).
+  card48: { category: 'sponsor', subtype: 'logo-strip', structures: ['strip', 'logo-text'], positionalSemantics: ['headline', 'logo', 'logo', 'logo', 'logo'] },
+  card49: { category: 'sponsor', subtype: 'panel', structures: ['grid', 'logo-text'], positionalSemantics: ['headline', 'description', 'logo', 'logo', 'logo', 'logo', 'logo', 'logo'] },
 
   // ── The SPECIALIST lower thirds (templates/lowerThirds/specialist, ls01…ls32) ──
   //
