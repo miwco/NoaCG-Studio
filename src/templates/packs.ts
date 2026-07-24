@@ -47,7 +47,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Match Day',
     description: 'Scorebug, clock, lineup strap and full-time card — the live sports kit.',
     family: 'sport',
-    types: ['scoreboard', 'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'title-card', 'holding-screen'],
+    types: [
+      'scoreboard', 'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'title-card', 'holding-screen',
+      'now-next', 'notice-card',
+      // The identity marks a match feed leaves up: the fixture ident, the live/replay status,
+      // the sponsor bar, and the venue chip for pitchside cameras.
+      'event-bug', 'live-bug', 'sponsor-strip', 'status-chip',
+    ],
     extras: ['vs01', 'cr03'],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
   },
@@ -56,7 +62,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Esports',
     description: 'Match score, caster straps, schedule and countdown for tournament nights.',
     family: 'sport',
-    types: ['scoreboard', 'lower-third', 'countdown', 'agenda', 'social-bug', 'sponsor-bug', 'holding-screen', 'title-card'],
+    types: [
+      'scoreboard', 'lower-third', 'countdown', 'agenda', 'social-bug', 'sponsor-bug', 'holding-screen', 'title-card',
+      'now-next',
+      // Tournament nights run long: a station ident, the live/replay status, and a sponsor
+      // rotation that cycles the tournament's partners without an operator touching it.
+      'station-bug', 'live-bug', 'sponsor-rotator',
+    ],
     extras: ['vs02'],
     formats: ['Esports tournament'],
   },
@@ -65,7 +77,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Creator',
     description: 'Starting-soon, straps, topic cards and handles — the streamer starter kit.',
     family: 'noacg',
-    types: ['holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll'],
+    types: [
+      'holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll',
+      'now-next', 'process-steps',
+      // A creator's own identity: the channel ident, a live/standby mark for stream breaks,
+      // and the logo-only bug for the hours where nothing else should be on screen.
+      'station-bug', 'live-bug', 'logo-bug',
+    ],
     formats: [
       'Gaming livestream',
       'Just Chatting / personality stream',
@@ -84,7 +102,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Newsroom',
     description: 'Anchor straps, the wire ticker, headline and topic cards for news programs.',
     family: 'minimal',
-    types: ['lower-third', 'ticker', 'topic-card', 'title-card', 'agenda', 'sponsor-bug'],
+    types: [
+      'lower-third', 'ticker', 'topic-card', 'title-card', 'agenda', 'sponsor-bug',
+      'headline-card', 'key-facts', 'notice-card',
+      // The newsroom's own furniture: the channel ident that never leaves, the live/replay
+      // status a news desk is obliged to be honest about, and the location chip for reporters.
+      'station-bug', 'live-bug', 'status-chip',
+    ],
     formats: [
       'News / current affairs livestream',
       'Weather broadcast / climate update',
@@ -99,7 +123,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Election',
     description: 'Result bars, candidate straps and the count ticker for civic broadcasts.',
     family: 'minimal',
-    types: ['poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown'],
+    types: [
+      'poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown',
+      'headline-card', 'key-facts',
+      // Results night runs from many places at once: a location chip per feed, and a status
+      // mark that says plainly whether a shot is live or a replay.
+      'status-chip', 'live-bug',
+    ],
     formats: [
       'Election night / results program',
       'Debate / political discussion',
@@ -111,7 +141,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Talk Show',
     description: 'Guest straps, topic and question cards, polls — panels, podcasts and Q&As.',
     family: 'glass',
-    types: ['lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown'],
+    types: [
+      'lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown',
+      'key-facts', 'recap-card',
+      // A show ident for the corner, and a sponsor rotation for the partners a podcast or
+      // panel show reads out between segments.
+      'station-bug', 'sponsor-rotator',
+    ],
     formats: [
       'Talk show / panel discussion',
       'Podcast livestream / videocast',
@@ -127,7 +163,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Corporate Events',
     description: 'Agendas, speaker straps, session titles and polls for webinars and keynotes.',
     family: 'minimal',
-    types: ['agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen'],
+    types: [
+      'agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen',
+      'now-next', 'process-steps', 'recap-card', 'key-facts',
+      // A conference stream identifies the event and its sponsors more than anything else:
+      // the session ident in the corner, and the partner strip along the bottom.
+      'event-bug', 'sponsor-strip',
+    ],
     formats: [
       'Webinar / expert presentation',
       'Conference / seminar stream',
@@ -146,7 +188,12 @@ export const PACKS: TemplatePack[] = [
     name: 'Classroom',
     description: 'Quiz board, timers, lesson cards and a score table for teaching streams.',
     family: 'noacg',
-    types: ['quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard'],
+    types: [
+      'quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard',
+      'process-steps', 'key-facts', 'recap-card',
+      // A school or university stream keeps its institution's mark up, and nothing else.
+      'logo-bug',
+    ],
     formats: [
       'Education / lecture livestream',
       'Student production / school TV',
@@ -158,7 +205,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Church & Ceremony',
     description: 'Service titles, scripture cards, program schedule and a quiet countdown.',
     family: 'minimal',
-    types: ['title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda'],
+    types: [
+      'title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda',
+      'statement-card',
+      // The congregation's or family's own mark, and the ident for the service, ceremony or
+      // memorial being streamed — both quiet enough to leave up for an hour.
+      'logo-bug', 'event-bug',
+    ],
     extras: ['cr01'],
     formats: [
       'Religious service / church livestream',
@@ -172,7 +225,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Stage & Music',
     description: 'Artist straps, setlist cards, intermission screens for performances and galas.',
     family: 'glass',
-    types: ['title-card', 'lower-third', 'holding-screen', 'countdown', 'social-bug', 'agenda', 'ticker'],
+    types: [
+      'title-card', 'lower-third', 'holding-screen', 'countdown', 'social-bug', 'agenda', 'ticker',
+      'now-next', 'statement-card', 'notice-card',
+      // A gala runs on two marks: which award is being given, and which festival or stage
+      // this is.
+      'award-bug', 'event-bug',
+    ],
     extras: ['cr02'],
     formats: [
       'Music performance / concert livestream',
@@ -188,7 +247,13 @@ export const PACKS: TemplatePack[] = [
     name: 'Shopping',
     description: 'Product cards, deal timers and the offer ticker for live commerce.',
     family: 'noacg',
-    types: ['topic-card', 'countdown', 'lower-third', 'ticker', 'title-card', 'sponsor-bug'],
+    types: [
+      'topic-card', 'countdown', 'lower-third', 'ticker', 'title-card', 'sponsor-bug',
+      'key-facts',
+      // Live commerce is brand-dense: a partner strip for the show's sponsors, and a rotation
+      // for the ones that cycle through a long selling block.
+      'sponsor-strip', 'sponsor-rotator',
+    ],
     formats: [
       'Live commerce / shopping stream',
       'Cooking show / food livestream',
@@ -202,7 +267,12 @@ export const PACKS: TemplatePack[] = [
     name: 'Wellness',
     description: 'Interval timers, session titles and calm holding screens for movement and rest.',
     family: 'minimal',
-    types: ['countdown', 'holding-screen', 'topic-card', 'lower-third', 'social-bug'],
+    types: [
+      'countdown', 'holding-screen', 'topic-card', 'lower-third', 'social-bug',
+      'process-steps',
+      // A class or an ambient stream keeps one quiet mark on screen and nothing more.
+      'logo-bug',
+    ],
     formats: [
       'Fitness / workout class',
       'Meditation / ambient livestream',
