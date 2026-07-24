@@ -16,6 +16,8 @@ import { countdownType, holdingScreenType } from './clocks';
 import { quizBoardType } from './quizBoard';
 import { scoreboardType } from './scoreboard';
 import { tickerType } from './ticker';
+import { alertLevelType } from './alertLevel';
+import { publicNoticeType } from './publicNotice';
 
 /** Every registered type, in the reference data's frequency order (the count is how many of
  *  the 60 reference formats ask for that graphic). The last three earn their place by what
@@ -34,6 +36,14 @@ export const TYPES: GraphicType[] = [
   tickerType,         //  8/60
   scoreboardType,     //  5/60 — but the type that proves parallel groups
   quizBoardType,      // the flagship
+  // The public-service pair. Neither is in the 60-format reference sheet's frequency
+  // ranking — that sheet counts show FORMATS, and an emergency broadcast is a moment inside
+  // one rather than a format of its own. They earn their place the way the last three above
+  // do, by what they prove: a parallel group whose states are the graphic's MEANING (the
+  // severity a viewer acts on) rather than its choreography, and one whose states are the
+  // LANGUAGE the message is currently in.
+  alertLevelType,
+  publicNoticeType,
 ];
 
 export function typeById(id: string): GraphicType | undefined {

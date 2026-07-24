@@ -6,6 +6,8 @@ import { LOWER_THIRDS } from './lowerThirds';
 import { INFO_CARDS } from './infoCards';
 import { END_CREDITS } from './endCredits';
 import { TICKERS } from './tickers';
+import { ALERTS } from './alerts';
+import { PUBLIC_INFO } from './publicInfo';
 import { STARTING_SOON } from './startingSoon';
 import { GAME_TIMERS } from './gameTimers';
 import { SCOREBOARDS } from './scoreboards';
@@ -29,6 +31,8 @@ export const HAND_WRITTEN: Partial<Record<TemplateCategory, TemplateVariant[]>> 
   'info-card': INFO_CARDS,
   'end-credits': END_CREDITS,
   'ticker': TICKERS,
+  'alert': ALERTS,
+  'public-info': PUBLIC_INFO,
   'starting-soon': STARTING_SOON,
   'game-timer': GAME_TIMERS,
   'scoreboard': SCOREBOARDS,

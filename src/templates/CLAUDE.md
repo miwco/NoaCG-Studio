@@ -110,6 +110,18 @@ scheduled at the timeline's end). A `repeat: -1` loop or a measured `dynamics` b
 that unreachable, so `validateMachine` errors on it. This is why the ticker type is a rotator
 with its own `ticker-rotate` preset rather than the endless marquee.
 
+**The second trap:** a state's entry timeline applies each track's FIRST keyframe as a hard
+`set` at time 0 (animRuntime `buildStepTimeline`), so a state can only CROSS-FADE when every
+route into it leaves the layers at the same starting pose. `alertLevelType` has four levels and
+three possible predecessors each, so its level change is a CUT plus an acknowledgement dip;
+`publicNoticeType` has two languages, exactly one predecessor per state, and a graph authored to
+keep it that way - so it fades honestly. Full reasoning in docs/PUBLIC_SERVICE_PACK.md §4.
+
+**The third trap:** a PARALLEL group resting at its initial state replays nothing (that is what
+"initial" means), so the resting pose must be established in CSS *and* in the entrance step or a
+replay keeps whatever was last on air. `alertLevelRestRefine` / `piLanguageRestRefine` are that,
+and a new parallel-group type needs its own - nothing mechanical will remind you.
+
 ## Categories
 
 - **lowerThirds/** - lt01…lt13 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
@@ -128,9 +140,28 @@ with its own `ticker-rotate` preset rather than the endless marquee.
   credits-pages / credits-crawl) + **creditsMotion.ts**; data-driven: a hidden #f0 textarea holds
   "Role | Name" lines, template JS parses and rebuilds #credits-track, ends with logo + year
   (.credits-end). DATA BLOCKS via convertToDataRegion.
-- **tickers/** - tk01…tk06 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip) +
-  **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee = items rendered
-  twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via convertToDataRegion.
+- **tickers/** - tk01…tk20 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
+  ticker-rotate) + **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee =
+  items rendered twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via
+  convertToDataRegion. f0 items + f1 label, plus an OPTIONAL f2 second cap (a topic, a source, a
+  fixed top story) emitted only when the variant declares a third suggested line - so every
+  two-line ticker emits byte-identically to before it existed. **A strip that neither travels
+  nor rotates does not belong here** (docs/PUBLIC_SERVICE_PACK.md §1): the static notices live
+  in alerts/ and publicInfo/.
+- **alerts/** - al01…al10 (prefix 'alert', `TemplateType 'alert'`), a STANDARD-CONTRACT category:
+  assembleStandard + the shared preset bank + line masks + steps, nothing category-specific in the
+  runtime. What it adds is the SEVERITY FLAG - four stacked `.alert-level-N` blocks
+  (ALERT_LEVELS: advisory/watch/warning/emergency, fixed semantic colours, every pair ≥5:1) that
+  the `alert-level` type's parallel group cross-cuts, plus `alertLevelRestRefine`, which writes
+  the resting pose into step 0 because a parallel group resting at its initial state replays
+  nothing. Six designs carry the machine; four (al07-al10) carry no flag and claim no states.
+  Numbered like the quiz's answer rows, so each level is a real registry part.
+- **publicInfo/** - pi01…pi09 (prefix 'public-info', `TemplateType 'public-info'`), the other
+  standard-contract addition: official notices, numbered instructions, source labels,
+  disclaimers, municipal/health panels and two-language panels. `piMask`/`piMasks` let a design
+  name its own line classes (the shared positional `-name`/`-title`/`-extra` means nothing for a
+  numbered instruction or a second language's body); PI_LANG_STACK_CSS + `piLanguageRestRefine`
+  carry the two-language block the `public-notice` type's machine alternates.
 
 ### The category MOTION RUNTIMES (tickerMotion.ts / creditsMotion.ts / igMotion.ts)
 

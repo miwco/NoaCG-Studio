@@ -1,5 +1,6 @@
 // Ticker scaffolding. Tickers are data-driven: a textarea field (f0) holds the items —
-// one per line — and f1 is the strip's label ("BREAKING", the show name…). The template's
+// one per line — f1 is the strip's label ("BREAKING", the show name…), and an OPTIONAL f2 is
+// a second cap a design can put a topic, a source or a channel name in. The template's
 // JS renders the items at runtime; the marquee preset needs them rendered TWICE for a
 // seamless loop, so rebuildTicker() handles that automatically.
 //
@@ -10,6 +11,7 @@
 //       <div class="ticker-viewport">   overflow hidden window
 //         <div id="ticker-track">       items injected by rebuildTicker()
 //       </div>
+//       [<div class="ticker-cap"><span id="f2">…</span></div>]     optional second cap
 //     </div>
 //     hidden #f0 source SPX writes into
 //   </div>
@@ -192,6 +194,13 @@ export function assembleTicker(meta: TickerMeta, design: TickerDesign, o: Resolv
     { field: 'f0', ftype: 'textarea', title: o.lines[0]?.title || 'Ticker items', value: itemsText },
     { field: 'f1', ftype: 'textfield', title: o.lines[1]?.title || 'Label', value: labelText },
   ];
+  // A THIRD line is optional and purely additive: a design that declares `maxLines: 3` gets a
+  // second cap it can put anything in — a topic, a source, a channel name — and places the
+  // `#f2` element itself. Every design that came before this declares two lines, so
+  // `o.lines[2]` is absent for them and the emitted definition is byte-identical.
+  if (o.lines[2]) {
+    fields.push({ field: 'f2', ftype: 'textfield', title: o.lines[2].title, value: o.lines[2].sample });
+  }
 
   const settings = baseSettings(meta, o, { steps: '1', playlayer: '3', webplayout: '3' });
 
@@ -229,7 +238,7 @@ ${o.animation.presetId === 'ticker-rotate' ? ROTATE_CSS : ''}`;
   const ease = resolveEasing(o.animation.easing, preset.autoEase);
   const cfg: PresetConfig = {
     prefix: 'ticker',
-    lineCount: 2,
+    lineCount: fields.length,
     hasAccent: false,
     steps: false,
     speed: o.animation.speed,
