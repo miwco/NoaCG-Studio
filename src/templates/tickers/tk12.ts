@@ -59,7 +59,7 @@ export const tk12: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, viewport filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(89px * var(--scale));   /* slimmer than a bottom strip — the top of frame is busy */
+  height: calc(73px * var(--scale));   /* slimmer than a bottom strip — the top of frame is busy */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the edge faces the picture */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -70,9 +70,9 @@ export const tk12: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(37px * var(--scale));  /* tighter than a bottom strip's — less height to fill */
+  padding: 0 calc(30px * var(--scale));  /* tighter than a bottom strip's — less height to fill */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(25px * var(--scale) * var(--type-scale)); /* small: an upper strip whispers */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: an upper strip whispers */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label block's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -92,20 +92,20 @@ export const tk12: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* items in a single row, width = content */
   align-items: center;             /* items and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(43px * var(--scale)); /* air between the label and the first item */
+  padding-left: calc(35px * var(--scale)); /* air between the label and the first item */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One item — a notch smaller than a bottom strip's, on purpose. */
 .ticker-item {
-  font-size: calc(29px * var(--scale) * var(--type-scale)); /* readable, deliberately unassertive */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* readable, deliberately unassertive */
   font-weight: 500;                /* weight, not size, keeps small text legible */
   color: var(--text-color);        /* primary text color */
 }
 
 /* The separator between items. */
 .ticker-sep {
-  margin: 0 calc(37px * var(--scale)); /* even air on both sides */
+  margin: 0 calc(30px * var(--scale)); /* even air on both sides */
   font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--text-dim);          /* dimmed so the items stay the focus */
 }`,

@@ -60,8 +60,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the accent edge, the mark and the text sit in a row */
   align-items: center;             /* everything centred on the slab's axis */
-  gap: calc(19px * var(--scale));  /* air between the mark and the text */
-  padding-right: calc(24px * var(--scale));  /* air before the slab's right edge */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
+  padding-right: calc(23px * var(--scale));  /* air before the slab's right edge */
   background: var(--panel-bg);     /* the solid slab */
   border-radius: var(--panel-radius);  /* sport is square-cornered */
   box-shadow: var(--panel-shadow); /* the family's hard offset shadow */
@@ -80,7 +80,7 @@ ${bugSlotCss({ width: 44, height: 44, mark: 'slab', radius: '0' })}
 
 /* The mark keeps its own air inside the slab (the accent edge has none of its own). */
 .corner-bug-media {
-  margin: calc(16px * var(--scale)) 0 calc(16px * var(--scale)) calc(19px * var(--scale));
+  margin: calc(15px * var(--scale)) 0 calc(15px * var(--scale)) calc(18px * var(--scale));
 }
 
 /* The placeholder block is quiet: it marks the slot, it is not a shape in the design. */
@@ -98,7 +98,7 @@ ${bugSlotCss({ width: 44, height: 44, mark: 'slab', radius: '0' })}
 
 /* The channel (f0) — heavy condensed caps, the sport voice at bug scale. */
 .corner-bug-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(30px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* condensed caps need no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */

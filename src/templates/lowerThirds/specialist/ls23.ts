@@ -72,7 +72,7 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
   background: var(--panel-bg);      /* the quiet panel behind the text */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
   width: fit-content;               /* the strap hugs its content */
-  max-width: calc(1067px * var(--scale));  /* a credential line runs long — but never past
+  max-width: calc(1000px * var(--scale));  /* a credential line runs long — but never past
                                              the category auto-fit cap (the frame safe area) */
 }
 
@@ -88,14 +88,14 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
    in the panel's own dark, which reads as a notch cut out of the band. */
 .lower-third-accent {
   flex: none;                       /* never squeezed */
-  width: calc(11px * var(--scale));  /* a notch, not a bar */
+  width: calc(10px * var(--scale));  /* a notch, not a bar */
   background: var(--panel-bg);      /* the panel colour, cut into the band */
   transform-origin: left center;    /* line-reveal draws it from this end */
 }
 
 .lower-third-kickerwrap {
-  padding: calc(9px * var(--scale)) calc(29px * var(--scale)) calc(11px * var(--scale)) calc(21px * var(--scale));
-  max-width: calc(480px * var(--scale));  /* the mark is one word; a sentence typed in here
+  padding: calc(9px * var(--scale)) calc(28px * var(--scale)) calc(10px * var(--scale)) calc(20px * var(--scale));
+  max-width: calc(450px * var(--scale));  /* the mark is one word; a sentence typed in here
                                              clips inside its own mask rather than stretching
                                              the band past the strap it belongs to */
   overflow: hidden;                 /* the clip is what makes the max-width real (bench) */
@@ -106,8 +106,8 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
    measures the layout box, which a paint-only clip would not shrink). */
 .lower-third-name {
   display: block;                   /* fills its band row */
-  max-width: calc(429px * var(--scale));  /* the wrap's inner width — the measured cap */
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* a mark, not a headline */
+  max-width: calc(403px * var(--scale));  /* the wrap's inner width — the measured cap */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a mark, not a headline */
   font-weight: 800;                 /* the heaviest weight on the graphic, on purpose */
   line-height: 1.15;                /* one tight band row */
   letter-spacing: 0.14em;           /* widely tracked — the editorial mark's own voice */
@@ -120,12 +120,12 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
 
 .lower-third-text {
   min-width: 0;                     /* let it shrink so long values wrap instead of overflowing */
-  padding: calc(21px * var(--scale)) calc(45px * var(--scale)) calc(24px * var(--scale)) calc(32px * var(--scale));
+  padding: calc(20px * var(--scale)) calc(43px * var(--scale)) calc(23px * var(--scale)) calc(30px * var(--scale));
 }
 
 /* The name (f1) — secondary to the kicker, which is the inversion this design is for. */
 .lower-third-title {
-  font-size: calc(45px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.12;                /* room for an honorific and a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -135,7 +135,7 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
 /* The credential (f2) — the reason this person's interpretation is worth airing, so it
    gets its own line rather than being folded into a subtitle. */
 .lower-third-extra {
-  font-size: calc(25px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.3;                 /* a credential wraps — give the rows air */
   color: var(--text-dim);           /* dimmed — never pure white twice */
@@ -150,7 +150,7 @@ ${slot(o, 3, 'lower-third-subject', '        ')}
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the label voice */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(12px * var(--scale));  /* its own beat below the credential */
+  margin-top: calc(11px * var(--scale));  /* its own beat below the credential */
 }`,
       hasAccent: true,
       tokens: { labelColor: 'var(--text-dim)' },

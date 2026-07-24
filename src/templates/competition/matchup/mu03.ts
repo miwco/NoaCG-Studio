@@ -58,7 +58,7 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 
 /* Each side is its own frosted panel. */
 .${P}-side {
-  padding: calc(37px * var(--scale)) calc(32px * var(--scale));
+  padding: calc(35px * var(--scale)) calc(30px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -85,7 +85,7 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 /* The event line — the glass label voice. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(27px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -94,7 +94,7 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 
 /* The competitor name. */
 .${P}-name {
-  font-size: calc(77px * var(--scale) * var(--type-scale));
+  font-size: calc(73px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.04;
   letter-spacing: var(--display-tracking);
@@ -103,7 +103,7 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 
 /* The note under the name. */
 .${P}-note {
-  font-size: calc(21px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -112,19 +112,19 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 
 /* The VS mark — a glass pill in the corridor. */
 .${P}-vs {
-  padding: calc(16px * var(--scale)) calc(27px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(25px * var(--scale));
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   color: var(--text-color);
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(38px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
 }
 
 /* The crest slot — a glass plate until a file lands in it. */
 .${P}-logo {
-  border-radius: calc(19px * var(--scale));
+  border-radius: calc(18px * var(--scale));
   background: rgba(255, 255, 255, 0.1);
   padding: calc(13px * var(--scale));
 }
@@ -134,7 +134,7 @@ export const mu03: TemplateVariant = defineMatchupVariant(
 
 /* The verdict chip — an accent pill under the winner's note. */
 .${P}-verdict {
-  padding: calc(7px * var(--scale)) calc(21px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(20px * var(--scale));
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);        /* the family's ink on an accent-filled pill */

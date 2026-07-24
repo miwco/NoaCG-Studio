@@ -61,7 +61,7 @@ export const cr05: TemplateVariant = defineCreditsVariant(
    whatever the operator types. No fixed HEIGHT: the board is as tall as the day is long. */
 .credits-box {
   width: calc(1080px * var(--scale));  /* the board's measure — wide enough for a real item title */
-  padding: calc(53px * var(--scale)) calc(69px * var(--scale));  /* generous board padding */
+  padding: calc(50px * var(--scale)) calc(65px * var(--scale));  /* generous board padding */
   text-align: left;                /* a running order is read down a left edge — the anchor
                                       zone's own text-align would centre it, which turns the
                                       item column into a ragged shape instead of a list */
@@ -74,15 +74,15 @@ export const cr05: TemplateVariant = defineCreditsVariant(
   display: block;                  /* normal flow: every section is visible at once */
 }
 .credits-page + .credits-page {
-  margin-top: calc(45px * var(--scale));  /* a clear break between sections of the day */
+  margin-top: calc(43px * var(--scale));  /* a clear break between sections of the day */
 }
 
 /* Section heading — "TODAY", "MORNING", a stage name: a tracked caps label with a rule. */
 .credits-heading {
   padding-bottom: calc(13px * var(--scale));  /* air between the label and its rule */
-  margin-bottom: calc(21px * var(--scale));   /* air between the rule and the first row */
+  margin-bottom: calc(20px * var(--scale));   /* air between the rule and the first row */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the section's one accent dose */
-  font-size: calc(29px * var(--scale) * var(--type-scale));  /* label scale — it titles, it does not compete */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* label scale — it titles, it does not compete */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -92,16 +92,16 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 /* One scheduled item: time on the left, item on the right, on one baseline. */
 .credits-row {
   display: grid;                   /* two columns, so every time lines up under the last */
-  grid-template-columns: calc(200px * var(--scale)) 1fr;  /* a fixed time column; the item takes the rest */
-  column-gap: calc(45px * var(--scale));  /* the gutter between the time and its item */
+  grid-template-columns: calc(188px * var(--scale)) 1fr;  /* a fixed time column; the item takes the rest */
+  column-gap: calc(43px * var(--scale));  /* the gutter between the time and its item */
   align-items: baseline;           /* time and item share a baseline, like a printed programme */
-  padding: calc(12px * var(--scale)) 0;  /* the list rhythm */
+  padding: calc(11px * var(--scale)) 0;  /* the list rhythm */
 }
 
 /* The time — right-aligned tabular figures, which is what makes the column an edge. */
 .credits-role {
   text-align: right;               /* every time ends on the same vertical line */
-  font-size: calc(37px * var(--scale) * var(--type-scale));  /* level with the item it belongs to */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* level with the item it belongs to */
   font-weight: 500;                /* medium: the time is data, the item is the message */
   line-height: 1.3;                /* shares the row's rhythm */
   font-variant-numeric: tabular-nums;  /* fixed-width digits — the column cannot wobble */
@@ -110,7 +110,7 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 
 /* The item — the message of the row. */
 .credits-name {
-  font-size: calc(37px * var(--scale) * var(--type-scale));  /* the running text of the board */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* the running text of the board */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.3;                /* comfortable for an item title that wraps */
   color: var(--text-color);        /* primary text color */
@@ -119,9 +119,9 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 
 /* A pipe-less line inside a section — a note between items ("Lunch, foyer"), no time. */
 .credits-entry {
-  padding: calc(12px * var(--scale)) 0;  /* the same list rhythm as a timed row */
-  padding-left: calc(245px * var(--scale));  /* aligned to the item column, not the time column */
-  font-size: calc(35px * var(--scale) * var(--type-scale));  /* a shade under a timed item */
+  padding: calc(11px * var(--scale)) 0;  /* the same list rhythm as a timed row */
+  padding-left: calc(230px * var(--scale));  /* aligned to the item column, not the time column */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* a shade under a timed item */
   font-weight: 400;                /* conversational — it is an aside, not a slot */
   line-height: 1.3;                /* shares the board's rhythm */
   color: var(--text-dim);          /* secondary text color */
@@ -131,22 +131,22 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 .credits-end {
   display: flex;                   /* logo and note on one row */
   align-items: center;             /* sharing one centerline */
-  gap: calc(24px * var(--scale));  /* air between the mark and the words */
-  margin-top: calc(48px * var(--scale));  /* clear of the last item */
-  padding-top: calc(27px * var(--scale));  /* air below the dividing keyline */
+  gap: calc(23px * var(--scale));  /* air between the mark and the words */
+  margin-top: calc(45px * var(--scale));  /* clear of the last item */
+  padding-top: calc(25px * var(--scale));  /* air below the dividing keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.14);  /* the minimal family's keyline value */
 }
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(45px * var(--scale));  /* a small mark — the schedule is the content */
+  height: calc(43px * var(--scale));  /* a small mark — the schedule is the content */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a quiet dashed slot, so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(8px * var(--scale)) calc(19px * var(--scale));  /* a small chip */
+  padding: calc(8px * var(--scale)) calc(18px * var(--scale));  /* a small chip */
   border: 1px dashed rgba(255, 255, 255, 0.28);  /* clearly a placeholder, not a design element */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   letter-spacing: 0.08em;          /* small caps breathe */
@@ -156,7 +156,7 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 
 /* The footer note — the year/copyright field, used here for "All times local". */
 .credits-year {
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* small print */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* small print */
   font-weight: 400;                /* conversational weight */
   color: var(--text-dim);          /* secondary text color */
 }`,

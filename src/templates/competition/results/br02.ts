@@ -53,8 +53,8 @@ ${bracketBodyCss()}
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(31px * var(--scale));
-  padding: calc(34px * var(--scale)) calc(40px * var(--scale)) calc(40px * var(--scale));
+  gap: calc(23px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(30px * var(--scale)) calc(30px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -72,7 +72,7 @@ ${bracketBodyCss()}
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(51px * var(--scale) * var(--type-scale));
+  font-size: calc(38px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -81,13 +81,13 @@ ${bracketBodyCss()}
 
 /* The champion chip — amber ink on the void, only rendered once there is a champion. */
 .${P}-champion {
-  padding: calc(8px * var(--scale)) calc(23px * var(--scale));
-  border-radius: calc(11px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--accent-glow);
   font-family: var(--font-label);
-  font-size: calc(23px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -105,14 +105,14 @@ ${bracketBodyCss()}
 
 /* One tie — a void tile with a quiet left edge. */
 .${P}-tie {
-  padding: calc(15px * var(--scale)) calc(22px * var(--scale));
-  border-radius: calc(11px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(16px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.55);
-  border-left: calc(5px * var(--scale)) solid rgba(255, 255, 255, 0.1);
+  border-left: calc(4px * var(--scale)) solid rgba(255, 255, 255, 0.1);
 }
 
 .${P}-tie-side {
-  font-size: calc(31px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   line-height: 1.5;
   color: var(--text-color);

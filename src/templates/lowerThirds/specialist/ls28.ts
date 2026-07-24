@@ -81,13 +81,13 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 /* The flag cell — filled in the reserved colour, so LIVE reads before anything else. */
 .lower-third-flag {
   flex: none;                       /* never squeezed by a long location */
-  max-width: calc(307px * var(--scale));  /* LIVE is four characters; anything longer clips
+  max-width: calc(288px * var(--scale));  /* LIVE is four characters; anything longer clips
                                              inside its own cell rather than taking the rail */
   overflow: hidden;                 /* the clip is what makes the max-width real (bench) */
   display: flex;                    /* the dot and the word on one row */
   align-items: center;              /* vertically centred */
-  gap: calc(12px * var(--scale));
-  padding: calc(15px * var(--scale)) calc(24px * var(--scale)) calc(16px * var(--scale)) calc(21px * var(--scale));
+  gap: calc(11px * var(--scale));
+  padding: calc(14px * var(--scale)) calc(23px * var(--scale)) calc(15px * var(--scale)) calc(20px * var(--scale));
   background: var(--accent);        /* THE live colour */
 }
 
@@ -97,8 +97,8 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
    makes the flag read as live rather than as a label. */
 .lower-third-accent {
   flex: none;                       /* never squeezed */
-  width: calc(15px * var(--scale)); /* a small dot… */
-  height: calc(15px * var(--scale));
+  width: calc(14px * var(--scale)); /* a small dot… */
+  height: calc(14px * var(--scale));
   border-radius: 50%;               /* …round */
   background: var(--accent-ink);    /* drawn in the flag's ink, so it reads ON the fill */
   animation: lower-third-live-pulse 2s ease-in-out infinite;  /* the only continuous motion here */
@@ -113,8 +113,8 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
    the location beside it (the runtime bench proves it). */
 .lower-third-name {
   display: block;                   /* so the width bound and the ellipsis apply */
-  max-width: calc(200px * var(--scale));  /* the flag's inner width — the measured cap */
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* a mark, not a headline */
+  max-width: calc(188px * var(--scale));  /* the flag's inner width — the measured cap */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* a mark, not a headline */
   font-weight: 800;                 /* the heaviest weight on the rail, on purpose */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: 0.12em;           /* widely tracked — the flag's own voice */
@@ -131,12 +131,12 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the flag */
   min-width: 0;                     /* let it shrink so long place names wrap */
-  padding: calc(12px * var(--scale)) calc(32px * var(--scale)) calc(13px * var(--scale)) calc(29px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(30px * var(--scale)) calc(13px * var(--scale)) calc(28px * var(--scale));
 }
 
 /* The location (f1) — the rail's headline. */
 .lower-third-title {
-  font-size: calc(37px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.12;                /* room if a long place name wraps */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -158,13 +158,13 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex: none;                       /* sized by the figure it holds */
   display: flex;                    /* centre the figure */
   align-items: center;              /* vertically */
-  padding: calc(12px * var(--scale)) calc(29px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(28px * var(--scale));
   border-left: 1px solid rgba(255, 255, 255, 0.14);  /* the cell divider */
 }
 
 /* The clock. Tabular figures so the minute turning never nudges the rail's width. */
 .lower-third-clock {
-  font-size: calc(35px * var(--scale) * var(--type-scale));  /* reads at a glance */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* reads at a glance */
   font-weight: 500;                 /* medium — a figure needs weight to hold */
   line-height: 1;                   /* one tight figure */
   letter-spacing: 0.02em;           /* a touch of air between figures */

@@ -62,7 +62,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
   display: flex;                   /* the three pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: flex-end;           /* all hug the right edge — this one parks bottom-right */
-  gap: calc(13px * var(--scale));   /* even air between the pieces */
+  gap: calc(11px * var(--scale));   /* even air between the pieces */
 }
 
 /* The kicker (f0) — a tiny tracked-caps label, quiet over bright footage. */
@@ -78,7 +78,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 
 /* The accent rule — short on purpose: a mark, not a line across the frame. */
 .corner-bug-accent {
-  width: calc(41px * var(--scale));   /* a short stroke */
+  width: calc(35px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
   background: var(--accent);          /* the one accent colour */
 }

@@ -62,7 +62,7 @@ ${heldResultCss()}
 /* THE PANEL: the head and the result share one frosted surface, so the press adds to a card
    that is already there rather than opening a second one. */
 .${P}-head {
-  padding: calc(46px * var(--scale)) calc(68px * var(--scale)) calc(40px * var(--scale));
+  padding: calc(38px * var(--scale)) calc(55px * var(--scale)) calc(33px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -72,7 +72,7 @@ ${heldResultCss()}
 
 .${P}-body {
   margin-top: 0;                   /* the result block continues the same panel */
-  padding: calc(34px * var(--scale)) calc(68px * var(--scale)) calc(46px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(55px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -94,7 +94,7 @@ ${heldResultCss()}
 /* The kicker. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(28px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -103,7 +103,7 @@ ${heldResultCss()}
 
 /* The champion. */
 .${P}-title {
-  font-size: calc(108px * var(--scale) * var(--type-scale));
+  font-size: calc(88px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.04;
   letter-spacing: var(--display-tracking);
@@ -117,7 +117,7 @@ ${heldResultCss()}
 
 /* The score line. */
 .${P}-subject {
-  font-size: calc(74px * var(--scale) * var(--type-scale));
+  font-size: calc(60px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -126,7 +126,7 @@ ${heldResultCss()}
 
 /* The beaten side. */
 .${P}-runner {
-  font-size: calc(28px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;

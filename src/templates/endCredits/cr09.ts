@@ -64,7 +64,7 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 /* The board — the house void panel, sized as a full acknowledgement card. */
 .credits-box {
   width: calc(1120px * var(--scale));  /* wide enough for a long company name at headline size */
-  padding: calc(69px * var(--scale)) calc(91px * var(--scale));  /* front-door air */
+  padding: calc(60px * var(--scale)) calc(80px * var(--scale));  /* front-door air */
   text-align: center;              /* an acknowledgement board is centered */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -76,14 +76,14 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 
 /* One tier. Tiers stack down the board in the order the operator typed them. */
 .credits-page + .credits-page {
-  margin-top: calc(49px * var(--scale));  /* a clear break between tiers */
+  margin-top: calc(43px * var(--scale));  /* a clear break between tiers */
 }
 
 /* The tier label — the house mono voice, in the accent color. */
 .credits-heading {
-  margin-bottom: calc(20px * var(--scale));  /* air before the tier's first name */
+  margin-bottom: calc(18px * var(--scale));  /* air before the tier's first name */
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* label scale — it names the tier */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* label scale — it names the tier */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
   text-transform: uppercase;       /* label voice, whatever the operator types */
@@ -92,8 +92,8 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 
 /* A sponsor name. This is the base size — the tier rules below step it up or down. */
 .credits-entry {
-  padding: calc(9px * var(--scale)) 0;  /* the board's reading rhythm */
-  font-size: calc(43px * var(--scale) * var(--type-scale));  /* the supporting tier's size */
+  padding: calc(8px * var(--scale)) 0;  /* the board's reading rhythm */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* the supporting tier's size */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.2;                /* a company's full name may wrap */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -106,27 +106,27 @@ export const cr09: TemplateVariant = defineCreditsVariant(
    :nth-child on the tier blocks is what makes the ladder automatic — the operator orders the
    tiers by typing them in order, and never has to touch the CSS to get the sizes right. */
 .credits-page:nth-child(1) .credits-entry {
-  font-size: calc(74px * var(--scale) * var(--type-scale));  /* headline tier — read from the back of the room */
-  padding: calc(11px * var(--scale)) 0;  /* a little more air around the biggest names */
+  font-size: calc(65px * var(--scale) * var(--type-scale));  /* headline tier — read from the back of the room */
+  padding: calc(10px * var(--scale)) 0;  /* a little more air around the biggest names */
 }
 .credits-page:nth-child(2) .credits-entry {
-  font-size: calc(54px * var(--scale) * var(--type-scale));  /* secondary tier — clearly a step down */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* secondary tier — clearly a step down */
 }
 
 /* A "Role | Name" line, if the operator writes one (a category sponsor, a naming right). */
 .credits-row {
-  padding: calc(9px * var(--scale)) 0;  /* the same rhythm as a plain name */
+  padding: calc(8px * var(--scale)) 0;  /* the same rhythm as a plain name */
 }
 .credits-role {
   font-family: var(--font-label);  /* mono, like every house label */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* a small label above the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a small label above the name */
   font-weight: 400;                /* light — it categorizes, it does not announce */
   letter-spacing: 0.1em;           /* small mono caps need air */
   text-transform: uppercase;       /* label voice */
   color: var(--text-dim);          /* secondary text color */
 }
 .credits-name {
-  font-size: calc(43px * var(--scale) * var(--type-scale));  /* level with a supporting-tier name */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* level with a supporting-tier name */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.2;                /* shares the board's rhythm */
   color: var(--text-color);        /* primary text color */
@@ -138,13 +138,13 @@ export const cr09: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* the pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered on the board */
-  gap: calc(23px * var(--scale));  /* even air between rule, mark and words */
-  margin-top: calc(60px * var(--scale));  /* clear of the last tier */
+  gap: calc(20px * var(--scale));  /* even air between rule, mark and words */
+  margin-top: calc(53px * var(--scale));  /* clear of the last tier */
 }
 
 /* The amber rule — the house accent, closing the board. */
 .credits-rule {
-  width: calc(114px * var(--scale));  /* a short stroke — a mark, not a divider */
+  width: calc(100px * var(--scale));  /* a short stroke — a mark, not a divider */
   height: var(--accent-weight);    /* the family's accent weight */
   background: var(--accent);       /* the one sharp dose of accent color */
   box-shadow: var(--accent-glow);  /* the house glow, on the accent element only */
@@ -152,14 +152,14 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(63px * var(--scale));  /* the broadcaster's mark, not a sponsor's */
+  height: calc(55px * var(--scale));  /* the broadcaster's mark, not a sponsor's */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a dashed slot so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(16px * var(--scale)) calc(31px * var(--scale));  /* a chip the size of a real mark */
+  padding: calc(14px * var(--scale)) calc(28px * var(--scale));  /* a chip the size of a real mark */
   border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);  /* clearly a placeholder */
   font-family: var(--font-label);  /* the house mono label face */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
@@ -171,7 +171,7 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 /* The closing line — the year/copyright field, used here for the thanks. */
 .credits-year {
   font-family: var(--font-label);  /* mono, like every piece of house small print */
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* small print scale */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* small print scale */
   letter-spacing: 0.06em;          /* a little air at small size */
   color: var(--text-dim);          /* secondary text color */
 }`,

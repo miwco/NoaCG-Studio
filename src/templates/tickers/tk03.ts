@@ -56,11 +56,11 @@ export const tk03: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label chip and item viewport sit side by side */
   align-items: center;             /* both center on the capsule's horizontal axis */
-  gap: calc(24px * var(--scale));  /* air between the label chip and the items */
-  width: calc(1227px * var(--scale));   /* fixed strip width - the items flip inside it */
-  height: calc(85px * var(--scale));   /* compact pill height */
+  gap: calc(23px * var(--scale));  /* air between the label chip and the items */
+  width: calc(1150px * var(--scale));   /* fixed strip width - the items flip inside it */
+  height: calc(80px * var(--scale));   /* compact pill height */
   box-sizing: border-box;          /* padding stays inside the fixed width and height */
-  padding: 0 calc(43px * var(--scale));  /* generous capsule end-caps for the text */
+  padding: 0 calc(40px * var(--scale));  /* generous capsule end-caps for the text */
   border-radius: var(--panel-radius);  /* the pill's authored panel radius */
   background: var(--panel-bg);     /* the palette's glass tint - retints via the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -85,7 +85,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
 .ticker-label {
   display: flex;                   /* the dot and the label text sit in a row */
   align-items: center;             /* dot and text share the capsule's center line */
-  gap: calc(12px * var(--scale));   /* small gap between the dot and the label */
+  gap: calc(11px * var(--scale));   /* small gap between the dot and the label */
   flex-shrink: 0;                  /* long items never squeeze the label */
   font-family: var(--font-label);  /* the family's label face */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
@@ -124,7 +124,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
   inset: 0;                        /* fill the viewport window */
   display: flex;                   /* flex layout for clean vertical centering */
   align-items: center;             /* text sits on the capsule's center line */
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* single-line item size - clearly bigger than the label */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* single-line item size - clearly bigger than the label */
   font-weight: 600;                /* semibold - present without shouting */
   line-height: 1.2;                /* a touch of leading for the single line */
   color: var(--text-color);        /* primary text color */

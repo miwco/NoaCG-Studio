@@ -52,12 +52,12 @@ ${lineMasks(o)}
 
 /* The text block — transparent: no panel, whitespace and a text shadow do the work. */
 .lower-third-box {
-  padding-left: calc(29px * var(--scale));  /* room for the hairline + a gap */
+  padding-left: calc(25px * var(--scale));  /* room for the hairline + a gap */
 }
 
 /* The handle — the line the viewer reads, kept legible over footage. */
 .lower-third-name {
-  font-size: calc(43px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -74,7 +74,7 @@ ${lineMasks(o)}
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a platform label, not a sentence */
   color: var(--text-dim);          /* dimmed — never pure white twice */
-  margin-top: calc(7px * var(--scale));  /* handle + platform read as one unit */
+  margin-top: calc(6px * var(--scale));  /* handle + platform read as one unit */
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);  /* readable over bright footage */
 }`,
     hasAccent: true,

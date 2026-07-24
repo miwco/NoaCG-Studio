@@ -73,7 +73,7 @@ ${slots.map((s) => bugSlotHtml(s, 'slab', '        ')).join('\n')}
   display: flex;                   /* centre the kicker inside the chip */
   align-items: center;             /* vertically… */
   justify-content: center;         /* …and horizontally */
-  padding: calc(13px * var(--scale)) calc(19px * var(--scale));  /* air around the words */
+  padding: calc(13px * var(--scale)) calc(18px * var(--scale));  /* air around the words */
   background: var(--accent);       /* the one accent moment */
 }
 
@@ -85,7 +85,7 @@ ${slots.map((s) => bugSlotHtml(s, 'slab', '        ')).join('\n')}
   letter-spacing: var(--label-tracking);  /* sport opens its labels up */
   text-transform: uppercase;       /* sport shouts in caps */
   color: var(--accent-ink);        /* dark-on-accent, the family's chip ink */
-  max-width: calc(128px * var(--scale));  /* a long kicker wraps rather than stretching the chip */
+  max-width: calc(120px * var(--scale));  /* a long kicker wraps rather than stretching the chip */
 }
 
 ${bugSlotCss({ width: 124, height: 46, mark: 'slab', radius: '0' })}
@@ -99,7 +99,7 @@ ${rotationStageCss(124, 46)}
 
 /* The stage keeps its own air inside the slab. */
 .corner-bug-stage {
-  margin: calc(16px * var(--scale)) calc(27px * var(--scale));  /* air around the mark */
+  margin: calc(15px * var(--scale)) calc(25px * var(--scale));  /* air around the mark */
 }`,
 
       hasAccent: true,

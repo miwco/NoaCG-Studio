@@ -54,10 +54,10 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-box {
   display: flex;                   /* stack the sections */
   flex-direction: column;          /* heading, steps, issuer */
-  gap: calc(24px * var(--scale));  /* the three sections are distinct */
+  gap: calc(23px * var(--scale));  /* the three sections are distinct */
   width: calc(1020px * var(--scale));  /* wide enough that no instruction wraps twice */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(45px * var(--scale)) calc(53px * var(--scale));
+  padding: calc(43px * var(--scale)) calc(50px * var(--scale));
   border-top: var(--accent-weight) solid var(--accent);  /* the official mark */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -67,7 +67,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 /* The heading — what this list is for. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(23px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(21px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -79,7 +79,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-steps {
   display: flex;                   /* stack the instructions */
   flex-direction: column;          /* one per row */
-  gap: calc(19px * var(--scale));  /* each instruction is its own act */
+  gap: calc(18px * var(--scale));  /* each instruction is its own act */
   counter-reset: instruction;      /* the automatic numbering starts here */
 }
 
@@ -91,7 +91,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-mask > .public-info-step {
   display: block;                  /* the row is a block, so the number column holds */
   position: relative;              /* the counter chip is positioned against this */
-  padding-left: calc(80px * var(--scale)); /* the hanging column the numbers live in */
+  padding-left: calc(75px * var(--scale)); /* the hanging column the numbers live in */
   counter-increment: instruction;  /* this row takes the next number */
 }
 .public-info-step::before {
@@ -99,15 +99,15 @@ ${piMasks(o, [[4, 'public-info-source']])}
   position: absolute;              /* held in the hanging column */
   left: 0;                         /* flush with the panel's text edge */
   top: 0;                          /* aligned with the first line of the instruction */
-  width: calc(56px * var(--scale));   /* the number chip's width */
-  height: calc(56px * var(--scale));  /* a square chip */
+  width: calc(53px * var(--scale));   /* the number chip's width */
+  height: calc(53px * var(--scale));  /* a square chip */
   display: flex;                   /* centre the digit */
   align-items: center;             /* vertical centring */
   justify-content: center;         /* horizontal centring */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: var(--accent);       /* the one solid accent surface per row */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(29px * var(--scale) * var(--type-scale)); /* the digit reads at a glance */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* the digit reads at a glance */
   font-weight: 800;                /* heavy: the number is a landmark, not a footnote */
   color: var(--accent-ink);        /* the family's ink on an accent-filled chip */
 }
@@ -115,7 +115,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 /* The instruction itself — short sentences, undimmed. This is the line that asks the viewer
    to act, so it is never secondary text. */
 .public-info-step {
-  font-size: calc(40px * var(--scale) * var(--type-scale)); /* large enough to act on at a glance */
+  font-size: calc(38px * var(--scale) * var(--type-scale)); /* large enough to act on at a glance */
   font-weight: 500;                /* a touch of presence without shouting */
   line-height: 1.28;               /* comfortable across a wrap */
   color: var(--text-color);        /* primary text color — never dimmed */
@@ -124,7 +124,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 /* The hairline above the attribution, drawn on the MASK rather than on the span — a span is
    inline-block, so a rule on it would only be as wide as the words. */
 .public-info-box > .public-info-mask:last-child {
-  padding-top: calc(21px * var(--scale)); /* room under the rule */
+  padding-top: calc(20px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.12); /* divides instruction from attribution */
 }
 

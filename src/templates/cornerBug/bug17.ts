@@ -64,7 +64,7 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* both centred on the strip's axis */
   gap: calc(13px * var(--scale));  /* air between the kicker and the marks */
-  padding: calc(19px * var(--scale)) calc(32px * var(--scale));  /* even air inside the panel */
+  padding: calc(18px * var(--scale)) calc(30px * var(--scale));  /* even air inside the panel */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -87,7 +87,7 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(40px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  gap: calc(38px * var(--scale));  /* generous air — partner marks must not read as one logo */
 }
 
 ${bugSlotCss({ width: 96, height: 40, mark: 'bars' })}`,

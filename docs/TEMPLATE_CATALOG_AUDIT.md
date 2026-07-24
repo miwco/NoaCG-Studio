@@ -252,38 +252,56 @@ every graphic is real, readable, editable code rather than a locked scene.
 
 **The type floor (§6 item 1) and its gate (§6 item 2).**
 
-Each design whose smallest type sat under its category floor was scaled proportionally: every
-scale-aware px literal in the file multiplied by `floor / smallest`, so internal ratios - and the
-comments citing them - stay true, and the graphic gains footprint at the same time. Literals at or
-above 999 px are left alone: those are anchored to the frame (a near-full-width strip, a 16:9
-camera window, the `999px` pill), and scaling them pushed graphics off screen. Four camera frames
-and seven strip designs are whole-geometry frame-anchored, so they took a type-only lift.
+Each design whose smallest type sat under its category floor was scaled proportionally - every
+scale-aware px literal multiplied by `floor / smallest` - so internal ratios, and the comments
+citing them, stay true. Two limits shape that lift, and both were learned the hard way:
+
+- **Literals at or above 999 px are left alone.** They are anchored to the 1920x1080 frame (a
+  near-full-width strip, a 16:9 camera window) or they are the `999px` pill idiom. Scaling them
+  pushed seven graphics off the frame, with the public-information disclaimer strip clipping its
+  own first words.
+- **A design may grow at most 1.25x.** A proportional lift is the right instinct and the wrong
+  arithmetic at the extremes: a scoreboard whose smallest label was 12 px needs 1.67x, which turned
+  a 620 px board into a 1044 px one - not more legible, just enormous, with team names colliding
+  the moment they got long. Past the cap the geometry stops and the remaining sub-floor labels are
+  clamped to the floor instead, compressing their ratio but keeping the design's capacity.
+
+Four camera frames are whole-geometry frame-anchored and took a type-only lift. Six designs already
+sitting at their runtime-bench limit (`al09`, `sb09`, `sb18`, `tk05`, `tk07`, `tk15`) took the label
+change only. One of them, `sb18`, needed a real layout fix: its accent bar was `flex-shrink: 0` with
+nowrap, so it starved the body column until the club name clipped - it now yields ground first and
+clips itself through the auto-fit pattern (§5 of the design language).
 
 Measured before -> after, at 1920x1080:
 
 | | before | after |
 |---|---|---|
-| variants with text under 20 px | 283 / 387 | 37 (all corner bugs, whose floor is 16) |
+| variants with text under 20 px | 283 / 387 | 36 (all corner bugs, whose floor is 16) |
 | variants with text under 16 px | 154 | 1 (the imported-design stub, exempt) |
-| individual text nodes under 20 px | 816 | 38 |
-| lowest type in the catalog | 8 px | 16 px |
+| individual text nodes under 20 px | 816 | 37 |
 
 Median smallest type by category: lower-third 17 -> 20, scoreboard 14 -> 20, esports-score 12 -> 20,
-results-board 12 -> 20, audience 13 -> 20, poll 13 -> 20, public-info 15 -> 20, infographic 18 -> 20.
+results-board 12 -> 20, audience 13 -> 20, poll 13 -> 20, public-info 15 -> 20, infographic 18 -> 20,
+end-credits 16 -> 23.
 
-Footprint moved as a side effect, without being targeted: esports-score 42 -> 72 % of frame width,
-results-board 35 -> 48 %, poll 28 -> 45 %, scoreboard 26 -> 34 %, lower-third 22 -> 25 %. §2's
-footprint minimums are therefore still **not** met for lower thirds - that remains a per-category
-design pass, because arithmetic scaling alone produces absurd headlines.
+Footprint moved as a side effect, without being targeted: esports-score 42 -> 53 % of frame width,
+results-board 35 -> 42 %, poll 28 -> 35 %, scoreboard 26 -> 31 %, lower-third 22 -> 24 %. §2's
+footprint minimums are therefore still **not** met - that remains a per-category design pass, and
+the capacity limit above is exactly why it cannot be reached by scaling.
 
 `scripts/type-floor.mjs` is the gate: it renders the catalog, fails on any text under its category
-floor, and groups violations by CSS rule so one fix clears many variants. It carries one known
-exception (`cr09`, whose board shrinks to fit with no lower bound of its own) and one exempt
-category (`imported-design`, where the type is the user's).
+floor, and groups violations by CSS rule so one fix clears many variants. It carries one exempt
+category (`imported-design`, where the type is the user's) and one known exception (`cr09`, whose
+board shrinks to fit with no lower bound of its own - the smaller lift means it no longer trips the
+floor, but the missing bound is still real).
 
-Verified with: the gate green, `npm run build` green, an overflow sweep showing no graphic escaping
-the 1920x1080 frame that did not already do so (tickers and credit crawls scroll past the edge by
-design), and a visual pass over the changed categories.
+Verified with: the type floor gate green over 386 variants; `npm run build` green; the runtime bench
+23/23 - the first, uncapped policy failed 10 of them, which is how the capacity limit was found;
+`audience-pack` 9/9; both catalog baselines re-recorded after auditing that all 287 moved variants
+trace to a file in the diff; an overflow sweep showing no graphic escaping the frame that did not
+already do so (tickers and credit crawls scroll past the edge by design); and a visual pass over the
+changed categories. The affected-spec sweep ended 511 passed / 2 failed, both green in isolation and
+in the disjoint-set pattern of concurrent-worktree contention rather than a code fault.
 
 Still open from §6: footprint minimums, backgrounds on full-coverage graphics, the streaming pack,
 the data layer, the animation vocabulary, and vertical.

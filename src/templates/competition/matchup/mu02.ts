@@ -73,7 +73,7 @@ ${matchupStructureCss()}
 /* The event line — mono, wide-tracked: the house label voice. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(27px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -82,7 +82,7 @@ ${matchupStructureCss()}
 
 /* The competitor name — flat house display type. */
 .${P}-name {
-  font-size: calc(88px * var(--scale) * var(--type-scale));
+  font-size: calc(83px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.02;
   letter-spacing: var(--display-tracking);
@@ -92,7 +92,7 @@ ${matchupStructureCss()}
 /* The note under the name — mono, dim. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(21px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -101,12 +101,12 @@ ${matchupStructureCss()}
 
 /* The VS mark — an amber-keylined void chip, not a filled slab. */
 .${P}-vs {
-  padding: calc(13px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(13px * var(--scale)) calc(23px * var(--scale));
   border-radius: calc(8px * var(--scale));  /* the house chip radius */
   background: rgba(10, 12, 16, 0.7);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--accent);
-  font-size: calc(45px * var(--scale) * var(--type-scale));
+  font-size: calc(43px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
 }
@@ -116,7 +116,7 @@ ${matchupStructureCss()}
   border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.6);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  padding: calc(16px * var(--scale));
+  padding: calc(15px * var(--scale));
 }
 .${P}-logo.has-image {
   background: transparent;
@@ -125,7 +125,7 @@ ${matchupStructureCss()}
 
 /* The verdict chip — amber ink on the void, the house's way of naming a winner. */
 .${P}-verdict {
-  padding: calc(7px * var(--scale)) calc(19px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   border-radius: calc(8px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
@@ -140,7 +140,7 @@ ${matchupStructureCss()}
 
 /* The winning column sits on an amber keyline — lifted, not recoloured. */
 .${P}-win {
-  padding: calc(24px * var(--scale)) calc(19px * var(--scale));
+  padding: calc(23px * var(--scale)) calc(18px * var(--scale));
   background: rgba(10, 12, 16, 0.55);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }

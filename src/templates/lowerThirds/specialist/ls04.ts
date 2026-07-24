@@ -66,8 +66,8 @@ ${personColumn(o, right, { column: 'lower-third-person lower-third-support', nam
   grid-auto-columns: auto;          /* each tracks its own name */
   align-items: end;                 /* both sit on the card's floor — the guest's extra
                                        height then reads as prominence, not as offset */
-  column-gap: calc(43px * var(--scale));
-  padding: calc(29px * var(--scale)) calc(46px * var(--scale)) calc(31px * var(--scale));
+  column-gap: calc(38px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(40px * var(--scale)) calc(28px * var(--scale));
   background: var(--panel-bg);      /* the family's translucent white */
   backdrop-filter: var(--panel-blur);  /* the frost itself */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -82,17 +82,17 @@ ${personColumn(o, right, { column: 'lower-third-person lower-third-support', nam
   min-width: 0;                     /* allow shrinking — long names wrap instead of overflowing */
 }
 .lower-third-lead {
-  max-width: calc(671px * var(--scale));  /* the guest gets the room */
+  max-width: calc(588px * var(--scale));  /* the guest gets the room */
 }
 .lower-third-support {
-  max-width: calc(457px * var(--scale));  /* the host gets less — deliberately */
-  padding-left: calc(43px * var(--scale));  /* set off from the guest… */
+  max-width: calc(400px * var(--scale));  /* the host gets less — deliberately */
+  padding-left: calc(38px * var(--scale));  /* set off from the guest… */
   border-left: 1px solid rgba(255, 255, 255, 0.16);  /* …by a whisper of an edge */
 }
 
 /* The guest's name — the graphic's one headline. */
 .lower-third-name {
-  font-size: calc(60px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                 /* room for a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -102,7 +102,7 @@ ${personColumn(o, right, { column: 'lower-third-person lower-third-support', nam
 /* The host's name — the same voice at roughly half, and dimmed. Two signals, not one:
    size alone reads as "further away", size plus dimming reads as "secondary". */
 .lower-third-extra {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* ≈ 0.57 of the guest */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* ≈ 0.57 of the guest */
   font-weight: 600;                 /* still a name — semibold keeps it from going limp */
   line-height: 1.2;                 /* a touch more air than the headline */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -118,9 +118,9 @@ ${personColumn(o, right, { column: 'lower-third-person lower-third-support', nam
   line-height: 1;                   /* the chip's height comes from its padding */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* GUEST / HOST, whatever the operator types */
-  padding: calc(7px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(14px * var(--scale));
   border-radius: calc(999px * var(--scale));  /* fully rounded — a pill, not a box */
-  margin-top: calc(14px * var(--scale));  /* clear of the name above it */
+  margin-top: calc(13px * var(--scale));  /* clear of the name above it */
 }
 .lower-third-title {
   background: var(--accent);        /* the graphic's single filled accent surface */

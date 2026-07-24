@@ -59,8 +59,8 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
   max-width: none;                 /* the strip sizes to its marks, not to the caption cap */
   display: flex;                   /* kicker, hairline and marks sit side by side */
   align-items: center;             /* everything centred on the bar's axis */
-  gap: calc(24px * var(--scale));  /* even air between the three pieces */
-  padding: calc(16px * var(--scale)) calc(32px * var(--scale));  /* even air inside the bar */
+  gap: calc(23px * var(--scale));  /* even air between the three pieces */
+  padding: calc(15px * var(--scale)) calc(30px * var(--scale));  /* even air inside the bar */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -82,7 +82,7 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
 /* The accent hairline — a short vertical stroke between the words and the marks. */
 .corner-bug-accent {
   width: var(--accent-weight);     /* the family's stroke weight */
-  height: calc(35px * var(--scale));  /* a short stroke, not a full-height edge */
+  height: calc(33px * var(--scale));  /* a short stroke, not a full-height edge */
   border-radius: 999px;            /* softened ends — glass never draws hard corners */
   background: var(--accent);       /* the one accent moment */
   flex: none;                      /* never squeezed by the row beside it */
@@ -92,10 +92,10 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(35px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  gap: calc(33px * var(--scale));  /* generous air — partner marks must not read as one logo */
 }
 
-${bugSlotCss({ width: 88, height: 38, mark: 'diamond', radius: 'calc(11px * var(--scale))' })}`,
+${bugSlotCss({ width: 88, height: 38, mark: 'diamond', radius: 'calc(10px * var(--scale))' })}`,
 
       hasAccent: true,
     };

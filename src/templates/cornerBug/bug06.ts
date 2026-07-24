@@ -59,8 +59,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centered on the lockup's axis */
-  gap: calc(19px * var(--scale));  /* air between the mark and the text */
-  padding: calc(19px * var(--scale)) calc(27px * var(--scale));  /* even air inside the tile */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
+  padding: calc(18px * var(--scale)) calc(25px * var(--scale));  /* even air inside the tile */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -68,14 +68,14 @@ ${bugLineMasks(o, '        ')}
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the family's keyline and lift */
 }
 
-${bugSlotCss({ width: 48, height: 48, mark: 'diamond', radius: 'calc(16px * var(--scale))' })}
+${bugSlotCss({ width: 48, height: 48, mark: 'diamond', radius: 'calc(15px * var(--scale))' })}
 
 /* The text column — the channel over the show, left-aligned beside the mark. */
 .corner-bug-text {
   position: relative;              /* the accent dot positions against this column */
   display: flex;                   /* the two lines stack… */
   flex-direction: column;          /* …top to bottom */
-  padding-left: calc(24px * var(--scale));  /* room for the dot before the channel */
+  padding-left: calc(23px * var(--scale));  /* room for the dot before the channel */
   text-align: left;                /* both lines hug the same edge (overrides the zone) */
 }
 
@@ -83,9 +83,9 @@ ${bugSlotCss({ width: 48, height: 48, mark: 'diamond', radius: 'calc(16px * var(
 .corner-bug-accent {
   position: absolute;              /* pinned to the text column's left edge */
   left: 0;                         /* at the start of the lines */
-  top: calc(12px * var(--scale));   /* aligned with the channel's cap height */
-  width: calc(12px * var(--scale)); /* a small dot… */
-  height: calc(12px * var(--scale));/* …round */
+  top: calc(11px * var(--scale));   /* aligned with the channel's cap height */
+  width: calc(11px * var(--scale)); /* a small dot… */
+  height: calc(11px * var(--scale));/* …round */
   border-radius: 50%;              /* the glass dot */
   background: var(--accent);       /* the one accent moment */
   will-change: transform;          /* hint the browser: presets may pop this */
@@ -93,7 +93,7 @@ ${bugSlotCss({ width: 48, height: 48, mark: 'diamond', radius: 'calc(16px * var(
 
 /* The channel (f0) — the name the viewer should recognise at a glance. */
 .corner-bug-name {
-  font-size: calc(28px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(26px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */

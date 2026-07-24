@@ -64,8 +64,8 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
   display: flex;                   /* the kicker and the stage stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* both centred on the panel's axis */
-  gap: calc(12px * var(--scale));   /* air between the kicker and the mark */
-  padding: calc(19px * var(--scale)) calc(29px * var(--scale));  /* even air inside the panel */
+  gap: calc(11px * var(--scale));   /* air between the kicker and the mark */
+  padding: calc(18px * var(--scale)) calc(28px * var(--scale));  /* even air inside the panel */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */

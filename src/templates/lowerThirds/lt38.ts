@@ -61,13 +61,13 @@ ${lineMasks(o, '      ')}
    an overflow-hidden mask that would clip a shadow of its own (DESIGN_LANGUAGE §3). */
 .lower-third-box {
   text-align: right;                /* lines are ragged-LEFT: they align to the frame edge */
-  padding-bottom: calc(19px * var(--scale));  /* air between the last line and the rule */
-  filter: drop-shadow(0 calc(3px * var(--scale)) calc(21px * var(--scale)) rgba(0, 0, 0, 0.75));
+  padding-bottom: calc(18px * var(--scale));  /* air between the last line and the rule */
+  filter: drop-shadow(0 calc(3px * var(--scale)) calc(20px * var(--scale)) rgba(0, 0, 0, 0.75));
 }
 
 /* The name — cinema setting: light weight, wide tracking. */
 .lower-third-name {
-  font-size: calc(53px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(50px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */

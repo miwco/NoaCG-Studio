@@ -57,7 +57,7 @@ ${bugLineMasks(o)}
   flex-direction: column;          /* top to bottom */
   align-items: center;             /* centred on the tile's axis */
   text-align: center;              /* wrapped rows centre too (overrides the zone alignment) */
-  padding: calc(23px * var(--scale)) calc(29px * var(--scale));  /* even air inside the tile */
+  padding: calc(20px * var(--scale)) calc(25px * var(--scale));  /* even air inside the tile */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -65,12 +65,12 @@ ${bugLineMasks(o)}
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the family's keyline and lift */
 }
 
-${bugSlotCss({ width: 66, height: 66, mark: 'diamond', radius: 'calc(17px * var(--scale))' })}
+${bugSlotCss({ width: 66, height: 66, mark: 'diamond', radius: 'calc(15px * var(--scale))' })}
 
 /* The event name (f0) — the line the viewer reads first. */
 .corner-bug-name {
-  margin-top: calc(15px * var(--scale));  /* air between the mark and the name */
-  font-size: calc(26px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  margin-top: calc(13px * var(--scale));  /* air between the mark and the name */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -80,7 +80,7 @@ ${bugSlotCss({ width: 66, height: 66, mark: 'diamond', radius: 'calc(17px * var(
 /* The detail (f1) — day, stage or venue, as a soft caps label in the accent colour. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(7px * var(--scale));  /* the lines read as one lockup */
+  margin-top: calc(6px * var(--scale));  /* the lines read as one lockup */
   font-size: calc(16px * var(--scale) * var(--type-scale));   /* clearly subordinate */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.3;                /* air if it wraps */

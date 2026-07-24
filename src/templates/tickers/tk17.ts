@@ -66,7 +66,7 @@ export const tk17: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full strip height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(109px * var(--scale));   /* the strip's fixed height */
+  height: calc(103px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -77,9 +77,9 @@ export const tk17: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(40px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(38px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* kicker scale */
+  font-size: calc(23px * var(--scale) * var(--type-scale)); /* kicker scale */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label block's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -100,7 +100,7 @@ export const tk17: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* items in a single row, width = content */
   align-items: center;             /* items and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(45px * var(--scale)); /* air between the label and the first item */
+  padding-left: calc(43px * var(--scale)); /* air between the label and the first item */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
@@ -108,8 +108,8 @@ export const tk17: TemplateVariant = defineTickerVariant(
 .ticker-item {
   display: inline-flex;            /* the two halves and their divider sit on one line */
   align-items: center;             /* the divider centres against the text */
-  gap: calc(24px * var(--scale));  /* air on both sides of the divider */
-  font-size: calc(31px * var(--scale) * var(--type-scale)); /* comfortable at travel speed */
+  gap: calc(23px * var(--scale));  /* air on both sides of the divider */
+  font-size: calc(29px * var(--scale) * var(--type-scale)); /* comfortable at travel speed */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color — in BOTH languages */
 }
@@ -119,14 +119,14 @@ export const tk17: TemplateVariant = defineTickerVariant(
 .ticker-divider {
   display: inline-block;           /* so it can be given a height */
   width: 1px;                      /* a hairline */
-  height: calc(32px * var(--scale)); /* short of the cap height — a divider, not a bar */
+  height: calc(30px * var(--scale)); /* short of the cap height — a divider, not a bar */
   background: rgba(255, 255, 255, 0.28); /* neutral */
 }
 
 /* The separator between ITEMS — distinct from the divider inside one, so a viewer can tell
    "next language" from "next item" at a glance. */
 .ticker-sep {
-  margin: 0 calc(40px * var(--scale)); /* even air on both sides */
+  margin: 0 calc(38px * var(--scale)); /* even air on both sides */
   font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--text-dim);          /* dimmed so the items stay the focus */
 }
@@ -136,9 +136,9 @@ export const tk17: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the text inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(35px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(33px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.16); /* the keyline that ends the crawl */
-  font-size: calc(21px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

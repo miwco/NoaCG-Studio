@@ -61,7 +61,7 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 
 /* The slab — flat, hard-edged and opaque. Contrast, not blur, carries this family. */
 .infographic-box {
-  min-width: calc(923px * var(--scale));  /* a board — two club names and a score per row */
+  min-width: calc(750px * var(--scale));  /* a board — two club names and a score per row */
   box-sizing: border-box;          /* padding stays inside the measured width */
   background: var(--panel-bg);     /* the near-black sport panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
@@ -73,13 +73,13 @@ export const ig27: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* heading and round in one row */
   align-items: baseline;           /* both on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(28px * var(--scale));  /* the round never crowds the heading */
-  padding: calc(18px * var(--scale)) calc(37px * var(--scale));  /* the bar's height */
+  gap: calc(23px * var(--scale));  /* the round never crowds the heading */
+  padding: calc(15px * var(--scale)) calc(30px * var(--scale));  /* the bar's height */
   background: var(--accent);       /* the one big accent surface */
 }
 .infographic-heading {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(31px * var(--scale) * var(--type-scale));  /* the bar IS the label */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* the bar IS the label */
   font-weight: 700;                /* solid: a sport label is never light */
   line-height: 1.15;               /* compact bar leading */
   letter-spacing: var(--label-tracking);  /* the family's wide label tracking */
@@ -105,15 +105,15 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 #infographic-rows {
   display: flex;                   /* a simple vertical stack */
   flex-direction: column;          /* one match row under another */
-  padding: calc(9px * var(--scale)) calc(37px * var(--scale)) calc(22px * var(--scale));
+  padding: calc(8px * var(--scale)) calc(30px * var(--scale)) calc(18px * var(--scale));
 }
 
 /* One match row: [kick-off] [HOME] [score block or v] [AWAY]. */
 .infographic-fixture-row {
   display: flex;                   /* every part of the match on one line */
   align-items: center;             /* the block and the names share a centre line */
-  gap: calc(22px * var(--scale));  /* clear air between the columns */
-  padding: calc(14px * var(--scale)) 0;  /* even vertical rhythm down the board */
+  gap: calc(18px * var(--scale));  /* clear air between the columns */
+  padding: calc(11px * var(--scale)) 0;  /* even vertical rhythm down the board */
 }
 .infographic-fixture-row + .infographic-fixture-row {
   border-top: 1px solid rgba(255, 255, 255, 0.09);  /* keyline hairline between matches */
@@ -122,7 +122,7 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 /* The kick-off — tracked caps, dim, in a shared column. */
 .infographic-fixture-when {
   flex-shrink: 0;                  /* a long club name never squeezes the time */
-  min-width: calc(148px * var(--scale));  /* one shared column width — the clubs align */
+  min-width: calc(120px * var(--scale));  /* one shared column width — the clubs align */
   font-family: var(--font-label);  /* the family's label face */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference scale */
   font-weight: 700;                /* solid at label size */
@@ -137,7 +137,7 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-side {
   flex: 1;                         /* the two clubs share the row's spare width evenly */
   min-width: 0;                    /* allow a long club name to shrink and wrap */
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.15;               /* tight — condensed caps need little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -151,10 +151,10 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 /* The middle — a filled accent block on a finished match, a dim "v" on an upcoming one. */
 .infographic-fixture-mid {
   flex-shrink: 0;                  /* the middle keeps its width whatever the names do */
-  min-width: calc(102px * var(--scale));  /* one shared column — the clubs align either side */
+  min-width: calc(83px * var(--scale));  /* one shared column — the clubs align either side */
   text-align: center;              /* centred between the two clubs */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
   font-weight: 700;                /* solid at label size */
   letter-spacing: var(--label-tracking);  /* the family's wide label tracking */
   text-transform: uppercase;       /* the marker reads as a label */
@@ -162,10 +162,10 @@ export const ig27: TemplateVariant = defineInfographicVariant(
 }
 /* A played match: the score becomes a filled accent block, the fastest thing on the board. */
 .infographic-fixture-played .infographic-fixture-mid {
-  padding: calc(6px * var(--scale)) calc(12px * var(--scale));  /* the block's own frame */
+  padding: calc(5px * var(--scale)) calc(10px * var(--scale));  /* the block's own frame */
   background: var(--accent);       /* the block itself */
   font-family: inherit;            /* the score is display type, not a label */
-  font-size: calc(31px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   letter-spacing: normal;          /* a score is not tracked */
   color: var(--accent-ink);        /* dark on accent — the family's contrast pairing */

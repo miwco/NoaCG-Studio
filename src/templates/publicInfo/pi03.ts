@@ -46,8 +46,8 @@ ${piMasks(o, [[0, 'public-info-source-main'], [1, 'public-info-source-note']])}
   display: flex;                   /* stack the two lines */
   flex-direction: column;          /* source, then qualifier */
   gap: calc(3px * var(--scale));   /* the qualifier belongs to the line above it */
-  max-width: calc(827px * var(--scale)); /* long attributions wrap rather than run off */
-  padding: calc(13px * var(--scale)) calc(19px * var(--scale));
+  max-width: calc(775px * var(--scale)); /* long attributions wrap rather than run off */
+  padding: calc(13px * var(--scale)) calc(18px * var(--scale));
   border-left: calc(3px * var(--scale)) solid var(--accent); /* a hairline mark on the reading edge */
   background: rgba(10, 12, 16, 0.62); /* a scrim, deliberately lighter than the pack's panels */
   text-align: left;                /* an attribution reads left to right, whatever the zone */
@@ -55,7 +55,7 @@ ${piMasks(o, [[0, 'public-info-source-main'], [1, 'public-info-source-note']])}
 
 /* The source — the fact that has to survive a re-encode and a small screen. */
 .public-info-source-main {
-  font-size: calc(25px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
   font-weight: 600;                /* weight, not size, is what keeps small text readable */
   line-height: 1.25;               /* comfortable across a wrap */
   color: var(--text-color);        /* primary text color */

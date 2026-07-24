@@ -47,10 +47,10 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 .public-info-box {
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* heading, advice, helpline, issuer */
-  gap: calc(19px * var(--scale));  /* unhurried spacing — this is not an alert */
-  width: calc(1093px * var(--scale));   /* a card, not a band */
+  gap: calc(18px * var(--scale));  /* unhurried spacing — this is not an alert */
+  width: calc(1025px * var(--scale));   /* a card, not a band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(40px * var(--scale)) calc(43px * var(--scale));
+  padding: calc(38px * var(--scale)) calc(40px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's corner radius */
   background: linear-gradient(var(--panel-bg), var(--panel-bg)), rgba(8, 14, 16, 0.82);
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
@@ -62,7 +62,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The heading — what kind of message this is. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(21px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -71,7 +71,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 
 /* The advice — plain prose, generously spaced. Someone worried reads more slowly. */
 .public-info-body {
-  font-size: calc(35px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
+  font-size: calc(33px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
   font-weight: 400;                /* regular — prose, not a headline */
   line-height: 1.38;               /* the most generous leading in the pack, on purpose */
   color: var(--text-color);        /* primary text color — never dimmed */
@@ -80,11 +80,11 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The helpline — the one line that might be read out loud. Its own band, full contrast,
    tabular figures so a phone number never shuffles as it wraps. */
 .public-info-helpline {
-  padding: calc(19px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(23px * var(--scale));
   border-left: var(--accent-weight) solid var(--accent); /* the accent marks the actionable line */
   border-radius: calc(5px * var(--scale)); /* barely rounded — a band, not a chip */
   background: rgba(255, 255, 255, 0.12); /* a lifted surface inside the glass */
-  font-size: calc(40px * var(--scale) * var(--type-scale)); /* the largest text after the advice */
+  font-size: calc(38px * var(--scale) * var(--type-scale)); /* the largest text after the advice */
   font-weight: 700;                /* a number to be read aloud needs weight */
   font-variant-numeric: tabular-nums;   /* even digits across the number */
   line-height: 1.24;               /* comfortable across a wrap */
@@ -94,7 +94,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The hairline above the attribution, drawn on the MASK — a span is inline-block, so a rule
    on it would only be as wide as the words. */
 .public-info-box > .public-info-mask:last-child {
-  padding-top: calc(19px * var(--scale)); /* room under the rule */
+  padding-top: calc(18px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.16); /* divides advice from attribution */
 }
 

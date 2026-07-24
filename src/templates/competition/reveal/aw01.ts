@@ -74,7 +74,7 @@ ${heldEnvelopeCss()}
 /* The kicker — mono, wide-tracked. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(25px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -83,7 +83,7 @@ ${heldEnvelopeCss()}
 
 /* The category. */
 .${P}-title {
-  font-size: calc(59px * var(--scale) * var(--type-scale));
+  font-size: calc(55px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   letter-spacing: var(--display-tracking);
@@ -97,12 +97,12 @@ ${heldEnvelopeCss()}
 
 /* The subject — the moment itself. */
 .${P}-subject {
-  font-size: calc(104px * var(--scale) * var(--type-scale));
+  font-size: calc(98px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.02;
   letter-spacing: var(--display-tracking);
   color: var(--accent);
-  text-shadow: 0 0 calc(53px * var(--scale)) color-mix(in srgb, var(--accent) 35%, transparent);
+  text-shadow: 0 0 calc(50px * var(--scale)) color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /* The note beneath it. */
@@ -118,11 +118,11 @@ ${heldEnvelopeCss()}
 /* ── The applause beat (its own state). ── */
 
 .${P}-celebrating .${P}-accent {
-  width: calc(853px * var(--scale));                      /* the rule opens out across the frame */
+  width: calc(800px * var(--scale));                      /* the rule opens out across the frame */
 }
 
 .${P}-celebrating .${P}-subject {
-  text-shadow: 0 0 calc(93px * var(--scale)) color-mix(in srgb, var(--accent) 55%, transparent);
+  text-shadow: 0 0 calc(88px * var(--scale)) color-mix(in srgb, var(--accent) 55%, transparent);
 }`,
   }),
 );

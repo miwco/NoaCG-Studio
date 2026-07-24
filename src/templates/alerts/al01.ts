@@ -63,7 +63,7 @@ ${alertLineMasks(o)}
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the band's full height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  min-height: calc(187px * var(--scale)); /* the band grows if the headline wraps */
+  min-height: calc(175px * var(--scale)); /* the band grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -77,14 +77,14 @@ ${ALERT_LEVEL_CSS}
   flex-direction: column;          /* headline, detail, source */
   justify-content: center;         /* centred against the flag's height */
   gap: calc(8px * var(--scale));   /* tight — the three lines are one statement */
-  padding: calc(27px * var(--scale)) calc(45px * var(--scale)); /* air inside the band */
+  padding: calc(25px * var(--scale)) calc(43px * var(--scale)); /* air inside the band */
   min-width: 0;                    /* let a long headline wrap instead of stretching the flex row */
   text-align: left;                /* an alert reads from the flag outward, always */
 }
 
 /* The headline — the sentence someone acts on. */
 .alert-name {
-  font-size: calc(53px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
+  font-size: calc(50px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.12;               /* wrapped headlines stay one block */
@@ -93,7 +93,7 @@ ${ALERT_LEVEL_CSS}
 
 /* The detail — what, where, and until when. */
 .alert-title {
-  font-size: calc(32px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
+  font-size: calc(30px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.25;               /* comfortable for a full sentence */
   color: var(--text-dim);          /* secondary text color */

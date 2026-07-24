@@ -41,8 +41,8 @@ ${bugLineMasks(o)}
 .corner-bug-box {
   display: flex;                   /* the two words sit side by side */
   align-items: center;             /* both on one baseline */
-  gap: calc(16px * var(--scale));  /* air around the divider dot */
-  padding: calc(11px * var(--scale)) calc(27px * var(--scale));  /* even air inside the pill */
+  gap: calc(15px * var(--scale));  /* air around the divider dot */
+  padding: calc(10px * var(--scale)) calc(25px * var(--scale));  /* even air inside the pill */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -52,7 +52,7 @@ ${bugLineMasks(o)}
 
 /* The location (f0) — the word the viewer reads first. */
 .corner-bug-name {
-  font-size: calc(23px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
+  font-size: calc(21px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -70,7 +70,7 @@ ${bugLineMasks(o)}
   content: '';                     /* pseudo-elements need content to render */
   width: calc(8px * var(--scale)); /* a small dot… */
   height: calc(8px * var(--scale));/* …round */
-  margin-right: calc(16px * var(--scale));  /* air between the dot and the status */
+  margin-right: calc(15px * var(--scale));  /* air between the dot and the status */
   border-radius: 50%;              /* the glass dot */
   background: var(--accent);       /* the one accent moment */
   flex: none;                      /* never squeezed by the word beside it */

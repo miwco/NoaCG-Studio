@@ -68,7 +68,8 @@ ${colourHolderHtml('f5', '#002868')}
 .scoreboard-box {
   display: flex;                   /* minute block, kind bar and body in one row */
   align-items: stretch;            /* every block is the full height of the strap */
-  min-width: calc(650px * var(--scale));  /* a strap, wide rather than tall */
+  min-width: calc(600px * var(--scale));  /* a strap, wide rather than tall — wide enough that
+                                             the event bar at label size does not squeeze the body */
   box-sizing: border-box;          /* padding stays inside the measured width */
   background: var(--panel-bg);     /* the near-black sport panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
@@ -81,16 +82,16 @@ ${colourHolderHtml('f5', '#002868')}
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
   flex-shrink: 0;                  /* the block keeps its width whatever the names do */
-  min-width: calc(108px * var(--scale));  /* room for "90+4'" without reflowing */
-  padding: 0 calc(18px * var(--scale));  /* the block's own side margins */
+  min-width: calc(86px * var(--scale));  /* room for "90+4'" without reflowing */
+  padding: 0 calc(14px * var(--scale));  /* the block's own side margins */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
 .scoreboard-minute {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* the stamp is read at a glance */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* the stamp is read at a glance */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* the figure fills its block */
   color: var(--text-color);        /* white on the club colour — the safest pairing here */
-  text-shadow: 0 calc(1px * var(--scale)) calc(4px * var(--scale)) rgba(0, 0, 0, 0.5);  /* legible on a light club colour too */
+  text-shadow: 0 calc(1px * var(--scale)) calc(3px * var(--scale)) rgba(0, 0, 0, 0.5);  /* legible on a light club colour too */
   font-variant-numeric: tabular-nums;  /* digits share one width across successive cards */
   white-space: nowrap;             /* "90+4'" stays on one line */
 }
@@ -100,8 +101,10 @@ ${colourHolderHtml('f5', '#002868')}
   display: flex;                   /* centers the event word… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
-  flex-shrink: 0;                  /* the bar keeps its width whatever the names do */
-  padding: 0 calc(20px * var(--scale));  /* the bar's own side margins */
+  flex-shrink: 1;                  /* a long event word gives ground before the body does */
+  min-width: 0;                    /* …which it can only do if it may shrink below its content */
+  max-width: calc(260px * var(--scale));  /* and never more than this share of the strap */
+  padding: 0 calc(16px * var(--scale));  /* the bar's own side margins */
   background: var(--accent);       /* the one accent surface */
 }
 .scoreboard-event {
@@ -120,14 +123,14 @@ ${colourHolderHtml('f5', '#002868')}
   display: flex;                   /* club and facts… */
   flex-direction: column;          /* …stacked as one column */
   justify-content: center;         /* centred in the strap's height */
-  gap: calc(5px * var(--scale));   /* the block reads as one unit */
+  gap: calc(4px * var(--scale));   /* the block reads as one unit */
   min-width: 0;                    /* lets a long name shrink, not overflow */
-  padding: calc(15px * var(--scale)) calc(28px * var(--scale));  /* the strap's height comes from here */
+  padding: calc(12px * var(--scale)) calc(22px * var(--scale));  /* the strap's height comes from here */
 }
 
 /* The club — heavy condensed caps, the sport family's voice. */
 .scoreboard-club {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* the body's anchor */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the body's anchor */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.05;               /* tight — condensed caps need almost no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -136,26 +139,28 @@ ${colourHolderHtml('f5', '#002868')}
 }
 .scoreboard-club-mask { display: block; }  /* the club owns its own row */
 
-${clipOneLineCss('.scoreboard-club', 320)}
+${clipOneLineCss('.scoreboard-club', 360)}
+
+${clipOneLineCss('.scoreboard-event', 228)}
 
 /* The two facts — marked rows, tight under the club. */
 .scoreboard-people {
   display: flex;                   /* the two rows… */
   flex-direction: column;          /* …stacked as one column */
-  gap: calc(4px * var(--scale));   /* the rows read as a pair */
+  gap: calc(3px * var(--scale));   /* the rows read as a pair */
 }
 .scoreboard-person {
   display: flex;                   /* mark and name in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(13px * var(--scale));  /* air between them */
+  gap: calc(10px * var(--scale));  /* air between them */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
 
 /* The role mark — a hard square, no radius: this family does not soften. */
 .scoreboard-rolemark {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(11px * var(--scale)); /* small — it marks the row, it does not label it */
-  height: calc(11px * var(--scale));  /* square, in keeping with the slab */
+  width: calc(9px * var(--scale)); /* small — it marks the row, it does not label it */
+  height: calc(9px * var(--scale));  /* square, in keeping with the slab */
   background: rgba(255, 255, 255, 0.35);  /* neutral on the first row */
 }
 .scoreboard-person-b .scoreboard-rolemark {
@@ -164,7 +169,7 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 
 /* The names — clearly subordinate to the club. */
 .scoreboard-name {
-  font-size: calc(23px * var(--scale) * var(--type-scale));  /* a step under the club */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a step under the club */
   font-weight: 600;                /* semibold — the club above carries the weight */
   line-height: 1.25;               /* comfortable at this size */
   letter-spacing: var(--label-tracking);  /* tracked, in keeping with the family */
@@ -174,7 +179,7 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 .scoreboard-person-b .scoreboard-name { color: var(--text-color); }  /* the emphasised row is white */
 .scoreboard-name-mask { min-width: 0; }  /* flex items refuse to shrink without this */
 
-${clipOneLineCss('.scoreboard-name', 320)}`,
+${clipOneLineCss('.scoreboard-name', 360)}`,
     hasAccent: true,
     fields: matchEventFields({
       event: 'PENALTY', minute: "34'", team: 'TAMPA BAY',

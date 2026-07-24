@@ -67,7 +67,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 /* The title over the two sides. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(35px * var(--scale) * var(--type-scale));
+  font-size: calc(33px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -76,7 +76,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 
 /* The side names. */
 .${P}-name {
-  font-size: calc(53px * var(--scale) * var(--type-scale));
+  font-size: calc(50px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;
   letter-spacing: var(--display-tracking);
@@ -94,7 +94,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 
 /* One row's figures. */
 .${P}-row-value {
-  font-size: calc(45px * var(--scale) * var(--type-scale));
+  font-size: calc(43px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--text-dim);

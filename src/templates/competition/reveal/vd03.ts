@@ -63,7 +63,7 @@ export const vd03: TemplateVariant = defineRevealVariant(
 /* The prompt. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(25px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -72,7 +72,7 @@ export const vd03: TemplateVariant = defineRevealVariant(
 
 /* The claim. */
 .${P}-title {
-  font-size: calc(65px * var(--scale) * var(--type-scale));
+  font-size: calc(53px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   letter-spacing: var(--display-tracking);
@@ -81,7 +81,7 @@ export const vd03: TemplateVariant = defineRevealVariant(
 
 /* The mark — set, not filled. */
 .${P}-mark {
-  font-size: calc(169px * var(--scale) * var(--type-scale));
+  font-size: calc(138px * var(--scale) * var(--type-scale));
   font-weight: 300;                /* a light stroke: this family never shouts */
   line-height: 0.95;
   color: var(--text-dim);
@@ -89,9 +89,9 @@ export const vd03: TemplateVariant = defineRevealVariant(
 
 /* The word, under its own hairline. */
 .${P}-word {
-  padding-bottom: calc(9px * var(--scale));
+  padding-bottom: calc(8px * var(--scale));
   border-bottom: calc(3px * var(--scale)) solid var(--text-dim);
-  font-size: calc(31px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.24em;
   color: var(--text-color);

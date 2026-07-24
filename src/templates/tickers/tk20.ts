@@ -79,7 +79,7 @@ export const tk20: TemplateVariant = defineTickerVariant(
 .ticker-deck {
   display: flex;                   /* label left, story filling the rest */
   align-items: stretch;            /* the label block spans the deck's height */
-  height: calc(111px * var(--scale));  /* the taller deck: it carries the biggest type */
+  height: calc(98px * var(--scale));  /* the taller deck: it carries the biggest type */
 }
 
 /* The label block — solid accent, dark mono ink, the house glow. */
@@ -87,11 +87,11 @@ export const tk20: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the story beside it */
-  padding: 0 calc(43px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(38px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
   box-shadow: var(--accent-glow);  /* the house glow around the accent block */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(29px * var(--scale) * var(--type-scale)); /* label scale */
+  font-size: calc(25px * var(--scale) * var(--type-scale)); /* label scale */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -105,8 +105,8 @@ export const tk20: TemplateVariant = defineTickerVariant(
   align-items: center;             /* vertical centering */
   flex-grow: 1;                    /* take the deck width the label leaves */
   min-width: 0;                    /* a long story ellipsizes rather than widening the deck */
-  padding: 0 calc(46px * var(--scale)); /* air on both sides */
-  font-size: calc(43px * var(--scale) * var(--type-scale)); /* the graphic's headline voice */
+  padding: 0 calc(40px * var(--scale)); /* air on both sides */
+  font-size: calc(38px * var(--scale) * var(--type-scale)); /* the graphic's headline voice */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   color: var(--text-color);        /* primary text color */
@@ -122,7 +122,7 @@ export const tk20: TemplateVariant = defineTickerVariant(
 
 /* The lower deck — the travelling wire, divided from the deck above by a keyline. */
 .ticker-viewport {
-  height: calc(80px * var(--scale)); /* slimmer: this row is scanned, not read */
+  height: calc(70px * var(--scale)); /* slimmer: this row is scanned, not read */
   overflow: hidden;                /* the marquee window — items vanish at the edges */
   display: flex;                   /* so the track can be vertically centered */
   align-items: center;             /* items sit on the deck's centerline */
@@ -134,20 +134,20 @@ export const tk20: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* items in a single row, width = content */
   align-items: center;             /* items and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(46px * var(--scale)); /* air before the first item */
+  padding-left: calc(40px * var(--scale)); /* air before the first item */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One wire item — deliberately quieter than the story above it. */
 .ticker-item {
-  font-size: calc(29px * var(--scale) * var(--type-scale)); /* subordinate to the top deck */
+  font-size: calc(25px * var(--scale) * var(--type-scale)); /* subordinate to the top deck */
   font-weight: 500;                /* weight, not size, keeps it legible */
   color: var(--text-dim);          /* secondary: the top deck is the headline */
 }
 
 /* The separator between wire items. */
 .ticker-sep {
-  margin: 0 calc(40px * var(--scale)); /* even air on both sides */
+  margin: 0 calc(35px * var(--scale)); /* even air on both sides */
   font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--accent);            /* accent dots chain the items together */
 }`,

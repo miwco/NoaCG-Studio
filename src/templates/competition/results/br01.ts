@@ -51,8 +51,8 @@ ${bracketBodyCss()}
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(26px * var(--scale));
-  padding: calc(31px * var(--scale)) calc(37px * var(--scale)) calc(37px * var(--scale));
+  gap: calc(23px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(33px * var(--scale)) calc(33px * var(--scale));
   background: var(--panel-bg);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow);
@@ -67,7 +67,7 @@ ${bracketBodyCss()}
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(46px * var(--scale) * var(--type-scale));
+  font-size: calc(40px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;
   letter-spacing: var(--display-tracking);
@@ -77,11 +77,11 @@ ${bracketBodyCss()}
 
 /* The champion banner — empty (and so invisible) until the crown event. */
 .${P}-champion {
-  padding: calc(7px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   font-family: var(--font-label);
-  font-size: calc(23px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -99,13 +99,13 @@ ${bracketBodyCss()}
 
 /* One tie: the two sides stacked, each on its own line. */
 .${P}-tie {
-  padding: calc(11px * var(--scale)) calc(17px * var(--scale));
+  padding: calc(10px * var(--scale)) calc(15px * var(--scale));
   background: rgba(0, 0, 0, 0.35);
-  border-left: calc(6px * var(--scale)) solid rgba(255, 255, 255, 0.12);
+  border-left: calc(5px * var(--scale)) solid rgba(255, 255, 255, 0.12);
 }
 
 .${P}-tie-side {
-  font-size: calc(27px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 600;
   line-height: 1.45;
   text-transform: uppercase;

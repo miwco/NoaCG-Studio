@@ -59,18 +59,18 @@ export const es04: TemplateVariant = defineEsportsVariant(
 .${P}-box {
   display: flex;                   /* head above body */
   flex-direction: column;          /* stacked */
-  gap: calc(17px * var(--scale));  /* air between the stage line and the scores */
-  padding-left: calc(31px * var(--scale));  /* room for the accent rule on the left */
-  min-width: calc(1216px * var(--scale));
-  text-shadow: 0 calc(3px * var(--scale)) calc(17px * var(--scale)) rgba(0, 0, 0, 0.5);  /* legibility over video, with no panel to sit on */
+  gap: calc(13px * var(--scale));  /* air between the stage line and the scores */
+  padding-left: calc(23px * var(--scale));  /* room for the accent rule on the left */
+  min-width: calc(950px * var(--scale));
+  text-shadow: 0 calc(3px * var(--scale)) calc(13px * var(--scale)) rgba(0, 0, 0, 0.5);  /* legibility over video, with no panel to sit on */
 }
 
 /* The accent — a hairline rule down the left, the only mark the design makes. */
 .${P}-accent {
   position: absolute;              /* pinned along the left of the block */
   left: 0;
-  top: calc(6px * var(--scale));   /* stops a hair short, top and bottom */
-  bottom: calc(6px * var(--scale));
+  top: calc(5px * var(--scale));   /* stops a hair short, top and bottom */
+  bottom: calc(5px * var(--scale));
   width: var(--accent-weight);     /* the family's hairline weight */
   background: var(--accent);
   transform-origin: left center;
@@ -79,7 +79,7 @@ export const es04: TemplateVariant = defineEsportsVariant(
 /* The stage line — small caps, wide-tracked, dim. */
 .${P}-stage {
   font-family: var(--font-label);
-  font-size: calc(23px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -99,7 +99,7 @@ export const es04: TemplateVariant = defineEsportsVariant(
 
 /* The team name — the minimal family's quiet display type. */
 .${P}-team {
-  font-size: calc(47px * var(--scale) * var(--type-scale));
+  font-size: calc(35px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   letter-spacing: var(--display-tracking);
@@ -108,11 +108,11 @@ export const es04: TemplateVariant = defineEsportsVariant(
 
 /* No chip plate — the figure stands on its own beside the name. */
 .${P}-chip {
-  min-width: calc(74px * var(--scale));
+  min-width: calc(55px * var(--scale));
 }
 
 .${P}-figure {
-  font-size: calc(51px * var(--scale) * var(--type-scale));
+  font-size: calc(38px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -121,13 +121,13 @@ export const es04: TemplateVariant = defineEsportsVariant(
 
 /* The logo slot — plateless and small: an empty one shows nothing at all. */
 .${P}-logo {
-  width: calc(51px * var(--scale));
-  height: calc(51px * var(--scale));
+  width: calc(38px * var(--scale));
+  height: calc(38px * var(--scale));
 }
 
 /* The divider between the two sides. */
 .${P}-divider {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(30px * var(--scale) * var(--type-scale));
   font-weight: 400;
   line-height: 1;
   color: var(--text-dim);

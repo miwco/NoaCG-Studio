@@ -64,9 +64,9 @@ export const tk15: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full strip height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(113px * var(--scale));   /* the tallest crawl in the set — bigger type needs room */
+  height: calc(96px * var(--scale));   /* the tallest crawl in the set — bigger type needs room */
   background: #0b0d11;             /* a fixed near-black floor, not the palette's translucent panel */
-  border-top: calc(6px * var(--scale)) solid var(--accent);  /* a heavier edge than a news strip's */
+  border-top: calc(5px * var(--scale)) solid var(--accent);  /* a heavier edge than a news strip's */
   will-change: opacity;            /* hint the browser: the preset fades this */
 }
 
@@ -75,9 +75,9 @@ export const tk15: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(38px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(32px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* read before the notices */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* read before the notices */
   font-weight: 700;                /* bold so the caps carry */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -98,13 +98,13 @@ export const tk15: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* notices in a single row, width = content */
   align-items: center;             /* notices and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(47px * var(--scale)); /* air between the label and the first notice */
+  padding-left: calc(40px * var(--scale)); /* air between the label and the first notice */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One notice — the largest crawl type in the pack, at full contrast. */
 .ticker-item {
-  font-size: calc(35px * var(--scale) * var(--type-scale)); /* sized for a bad screen across a room */
+  font-size: calc(30px * var(--scale) * var(--type-scale)); /* sized for a bad screen across a room */
   font-weight: 500;                /* a touch of presence without shouting */
   color: #ffffff;                  /* a fixed full-contrast ink, not a palette value */
 }
@@ -112,8 +112,8 @@ export const tk15: TemplateVariant = defineTickerVariant(
 /* The separator — a slash rather than a dot: at this size a dot reads as a full stop, and a
    notice that appears to end mid-sentence is worse than no separator at all. */
 .ticker-sep {
-  margin: 0 calc(40px * var(--scale)); /* even air on both sides */
-  font-size: calc(28px * var(--scale) * var(--type-scale)); /* scaled to the larger notices */
+  margin: 0 calc(34px * var(--scale)); /* even air on both sides */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* scaled to the larger notices */
   color: var(--accent);            /* the accent as punctuation, chaining the notices */
 }
 
@@ -122,7 +122,7 @@ export const tk15: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the text inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(33px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(28px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.22); /* the keyline that ends the crawl */
   font-size: calc(20px * var(--scale) * var(--type-scale)); /* small, but never small print */
   font-weight: 600;                /* small caps need weight to hold */

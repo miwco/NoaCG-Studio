@@ -46,10 +46,10 @@ ${piMasks(o, [[0, 'public-info-fine'], [1, 'public-info-ref']])}
   display: flex;                   /* disclaimer left, reference right */
   align-items: baseline;           /* the two texts share a baseline */
   justify-content: space-between;  /* the reference holds the far end */
-  gap: calc(46px * var(--scale));  /* the two never touch */
+  gap: calc(40px * var(--scale));  /* the two never touch */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(20px * var(--scale)) calc(40px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(35px * var(--scale));
   background: rgba(10, 12, 16, 0.88); /* opaque enough that the print never sits on video */
   text-align: left;                /* small print reads left to right, whatever the zone */
 }
@@ -66,7 +66,7 @@ ${piMasks(o, [[0, 'public-info-fine'], [1, 'public-info-ref']])}
 
 /* The disclaimer — the required words. At the legibility floor, not below it. */
 .public-info-fine {
-  font-size: calc(26px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
+  font-size: calc(23px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
   font-weight: 500;                /* weight, not size, is what keeps small text readable */
   line-height: 1.32;               /* comfortable across a wrap */
   color: var(--text-color);        /* full contrast — small AND dim is how print becomes decoration */

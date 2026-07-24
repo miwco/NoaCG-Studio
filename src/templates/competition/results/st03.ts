@@ -51,14 +51,14 @@ export const st03: TemplateVariant = defineResultsVariant(
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(27px * var(--scale));
-  padding: calc(40px * var(--scale)) calc(44px * var(--scale)) calc(44px * var(--scale));
+  gap: calc(20px * var(--scale));
+  padding: calc(30px * var(--scale)) calc(33px * var(--scale)) calc(33px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow), var(--panel-keyline);
-  min-width: calc(1088px * var(--scale));
+  min-width: calc(850px * var(--scale));
 }
 
 /* The accent — a soft rule under the heading. */
@@ -73,7 +73,7 @@ export const st03: TemplateVariant = defineResultsVariant(
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(54px * var(--scale) * var(--type-scale));
+  font-size: calc(40px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -82,7 +82,7 @@ export const st03: TemplateVariant = defineResultsVariant(
 
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(23px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -100,8 +100,8 @@ export const st03: TemplateVariant = defineResultsVariant(
 
 /* Each row is its own frosted tile. */
 .${P}-row {
-  padding: calc(17px * var(--scale)) calc(27px * var(--scale));
-  border-radius: calc(23px * var(--scale));
+  padding: calc(13px * var(--scale)) calc(20px * var(--scale));
+  border-radius: calc(18px * var(--scale));
   background: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
@@ -111,24 +111,24 @@ export const st03: TemplateVariant = defineResultsVariant(
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(57px * var(--scale));
-  height: calc(57px * var(--scale));
+  width: calc(43px * var(--scale));
+  height: calc(43px * var(--scale));
   border-radius: 999px;
   box-shadow: inset 0 0 0 calc(3px * var(--scale)) color-mix(in srgb, var(--accent) 70%, transparent);
-  font-size: calc(25px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   color: var(--accent);
 }
 
 .${P}-row-name {
-  font-size: calc(39px * var(--scale) * var(--type-scale));
+  font-size: calc(29px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   color: var(--text-color);
 }
 
 .${P}-cell {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-dim);
 }

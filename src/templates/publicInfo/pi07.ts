@@ -62,10 +62,10 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-box {
   display: flex;                   /* the columns block, then the attribution */
   flex-direction: column;          /* stacked */
-  gap: calc(27px * var(--scale));  /* air above the attribution */
+  gap: calc(25px * var(--scale));  /* air above the attribution */
   width: calc(1480px * var(--scale));  /* two columns of prose need the width */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(40px * var(--scale)) calc(48px * var(--scale));
+  padding: calc(38px * var(--scale)) calc(45px * var(--scale));
   border-top: var(--accent-weight) solid var(--accent);  /* the official mark */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -78,7 +78,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-cols {
   display: grid;                   /* two columns */
   grid-template-columns: 1fr 1fr;  /* equal — deliberately not auto */
-  gap: calc(53px * var(--scale));  /* the gutter the keyline sits in */
+  gap: calc(50px * var(--scale));  /* the gutter the keyline sits in */
 }
 
 /* One language column. */
@@ -92,14 +92,14 @@ ${piMasks(o, [[4, 'public-info-source']])}
 /* The divider — a neutral keyline in the gutter, drawn on the second column so it never
    appears when only one language has been filled in. */
 .public-info-col + .public-info-col {
-  padding-left: calc(53px * var(--scale)); /* the keyline's own breathing room */
+  padding-left: calc(50px * var(--scale)); /* the keyline's own breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.14); /* neutral: not the accent, not a hierarchy */
 }
 
 /* The headings — one per language. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(21px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -108,7 +108,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 
 /* The notices — identical treatment in both columns. */
 .public-info-body {
-  font-size: calc(35px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
+  font-size: calc(33px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
   font-weight: 400;                /* regular — prose, not a headline */
   line-height: 1.34;               /* generous: these lines will wrap */
   color: var(--text-color);        /* primary text color — in BOTH languages */
@@ -117,7 +117,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
 /* The hairline above the shared attribution, drawn on the MASK — a span is inline-block, so
    a rule on it would only be as wide as the words. */
 .public-info-box > .public-info-mask:last-child {
-  padding-top: calc(21px * var(--scale)); /* room under the rule */
+  padding-top: calc(20px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.12); /* divides notice from attribution */
 }
 

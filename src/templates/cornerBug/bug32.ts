@@ -61,7 +61,7 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centred on the lockup's axis */
-  gap: calc(20px * var(--scale));  /* air between the mark and the text */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
 }
 
 ${bugSlotCss({ width: 52, height: 52, mark: 'ring', radius: '50%' })}
@@ -71,7 +71,7 @@ ${bugSlotCss({ width: 52, height: 52, mark: 'ring', radius: '50%' })}
   display: block;                  /* overrides the shared rule: the ring stays under the logo */
 }
 .corner-bug-media.has-image .corner-bug-logo {
-  padding: calc(10px * var(--scale));  /* the logo sits inside the ring, never across it */
+  padding: calc(9px * var(--scale));  /* the logo sits inside the ring, never across it */
 }
 
 /* The text column — the award kicker over the category. */
@@ -95,8 +95,8 @@ ${bugSlotCss({ width: 52, height: 52, mark: 'ring', radius: '50%' })}
 /* The category (f1) — the line the viewer actually reads. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(6px * var(--scale));  /* the two lines read as one lockup */
-  font-size: calc(26px * var(--scale) * var(--type-scale));   /* the lockup's display line */
+  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* the lockup's display line */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */

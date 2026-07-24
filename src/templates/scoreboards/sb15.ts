@@ -69,12 +69,12 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
 /* The card — one frosted surface, centred content, generous air. */
 .scoreboard-box {
   position: relative;              /* anchors the accent bar */
-  min-width: calc(667px * var(--scale));  /* a card, not a strip */
+  min-width: calc(625px * var(--scale));  /* a card, not a strip */
   box-sizing: border-box;          /* padding stays inside the measured width */
   display: flex;                   /* status, competitors and note… */
   flex-direction: column;          /* …stacked as one column */
   align-items: center;             /* everything centred on the card's axis */
-  padding: calc(32px * var(--scale)) calc(40px * var(--scale)) calc(29px * var(--scale));
+  padding: calc(30px * var(--scale)) calc(38px * var(--scale)) calc(28px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's soft radius — a pane, not a slab */
   background: var(--panel-bg);     /* the frosted white wash */
   backdrop-filter: var(--panel-blur);  /* the family's real blur — this is the whole look */
@@ -99,15 +99,15 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
   display: flex;                   /* pip and status in one row */
   align-items: center;             /* both on the pill's centre line */
   gap: calc(13px * var(--scale));  /* air between them */
-  padding: calc(8px * var(--scale)) calc(21px * var(--scale));  /* the pill's own frame */
+  padding: calc(8px * var(--scale)) calc(20px * var(--scale));  /* the pill's own frame */
   border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
   background: rgba(255, 255, 255, 0.14);  /* a second, lighter layer of glass */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);  /* the glass keyline */
 }
 .scoreboard-pip {
   flex-shrink: 0;                  /* the pip keeps its size whatever the text does */
-  width: calc(12px * var(--scale)); /* small on purpose — a marker, not a badge */
-  height: calc(12px * var(--scale));  /* same as the width — a true circle */
+  width: calc(11px * var(--scale)); /* small on purpose — a marker, not a badge */
+  height: calc(11px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--accent);       /* the live signal wears the accent */
 }
@@ -125,12 +125,12 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
   display: flex;                   /* the two competitor rows… */
   flex-direction: column;          /* …stacked as one column */
   align-self: stretch;             /* the rows span the card's full width */
-  margin: calc(24px * var(--scale)) 0 calc(19px * var(--scale));  /* air above and below */
+  margin: calc(23px * var(--scale)) 0 calc(18px * var(--scale));  /* air above and below */
 }
 .scoreboard-side {
   display: flex;                   /* dot, name and score share one row */
   align-items: center;             /* on the row's centre line */
-  gap: calc(19px * var(--scale));  /* air inside the row */
+  gap: calc(18px * var(--scale));  /* air inside the row */
   padding: calc(13px * var(--scale)) 0;  /* the stack's vertical rhythm */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
@@ -141,8 +141,8 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
 /* The colour dot — small and soft, ringed in glass. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the dot keeps its size whatever the text does */
-  width: calc(15px * var(--scale));  /* small on purpose — a marker, not a badge */
-  height: calc(15px * var(--scale));  /* same as the width — a true circle */
+  width: calc(14px * var(--scale));  /* small on purpose — a marker, not a badge */
+  height: calc(14px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--team-a, var(--accent));  /* the competitor's colour, or the accent */
   box-shadow: 0 0 0 calc(3px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
@@ -151,7 +151,7 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
 
 /* The name — the glass family's rounded sans, taking the row's spare width. */
 .scoreboard-team {
-  font-size: calc(37px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 600;                /* semibold — present without shouting */
   line-height: 1.2;                /* comfortable for a mixed-case name */
   color: var(--text-color);        /* primary text on the frost */
@@ -166,9 +166,9 @@ ${clipOneLineCss('.scoreboard-team', 280)}
 /* The score — one figure per row, in a shared right-hand column. */
 .scoreboard-score {
   flex-shrink: 0;                  /* scores never squeeze — names give up width instead */
-  min-width: calc(69px * var(--scale));  /* a shared column, so both rows line up */
+  min-width: calc(65px * var(--scale));  /* a shared column, so both rows line up */
   text-align: right;               /* two-digit scores stay aligned with single ones */
-  font-size: calc(45px * var(--scale) * var(--type-scale));  /* the loudest figure in the row */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* the loudest figure in the row */
   font-weight: 800;                /* the heaviest thing on the card */
   line-height: 1;                  /* sits tight on the row */
   color: var(--accent);            /* the scores wear the accent */
@@ -177,7 +177,7 @@ ${clipOneLineCss('.scoreboard-team', 280)}
 
 /* The note — the event and the round, the quietest row on the card. */
 .scoreboard-note {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* reference type, not display */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference type, not display */
   font-weight: 500;                /* medium — contrast comes from the names above */
   line-height: 1.35;               /* relaxed leading in case it wraps */
   color: var(--text-dim);          /* dimmed — never full white twice on one card */

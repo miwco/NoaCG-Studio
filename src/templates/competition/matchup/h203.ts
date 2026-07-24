@@ -66,7 +66,7 @@ export const h203: TemplateVariant = defineMatchupVariant(
 /* The title. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(29px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -75,7 +75,7 @@ export const h203: TemplateVariant = defineMatchupVariant(
 
 /* The side names. */
 .${P}-name {
-  font-size: calc(52px * var(--scale) * var(--type-scale));
+  font-size: calc(43px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -84,19 +84,19 @@ export const h203: TemplateVariant = defineMatchupVariant(
 
 /* The crest slot — plateless; an empty one shows nothing at all. */
 .${P}-logo {
-  width: calc(111px * var(--scale));
-  height: calc(111px * var(--scale));
+  width: calc(90px * var(--scale));
+  height: calc(90px * var(--scale));
 }
 
 /* Each row is separated by a hairline rather than boxed. */
 .${P}-row {
-  padding-bottom: calc(15px * var(--scale));
+  padding-bottom: calc(13px * var(--scale));
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 /* The figures. */
 .${P}-row-value {
-  font-size: calc(43px * var(--scale) * var(--type-scale));
+  font-size: calc(35px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--text-color);
@@ -117,7 +117,7 @@ export const h203: TemplateVariant = defineMatchupVariant(
 
 /* The share bars — thin, and only as loud as the accent needs to be. */
 .${P}-row-track {
-  height: calc(5px * var(--scale));
+  height: calc(4px * var(--scale));
   background: rgba(255, 255, 255, 0.12);
 }
 .${P}-row-fill {

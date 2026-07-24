@@ -73,12 +73,12 @@ ${status}
 .corner-bug-text {
   display: flex;                   /* one line, centred in its half */
   align-items: center;             /* on the chip's axis */
-  padding: calc(12px * var(--scale)) calc(21px * var(--scale));  /* air inside the slab */
+  padding: calc(11px * var(--scale)) calc(20px * var(--scale));  /* air inside the slab */
 }
 
 /* The venue (f0) — heavy condensed caps, the sport voice at chip scale. */
 .corner-bug-name {
-  font-size: calc(24px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.1;                /* condensed caps need almost no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -92,7 +92,7 @@ ${status}
   display: flex;                   /* centre the status inside the block */
   align-items: center;             /* vertically… */
   justify-content: center;         /* …and horizontally */
-  padding: calc(12px * var(--scale)) calc(19px * var(--scale));  /* air around the status */
+  padding: calc(11px * var(--scale)) calc(18px * var(--scale));  /* air around the status */
   background: var(--accent);       /* the one accent moment */
 }
 

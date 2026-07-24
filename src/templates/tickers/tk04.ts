@@ -64,7 +64,7 @@ export const tk04: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, quote window filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(128px * var(--scale));   /* the strip's fixed height — slim and precise */
+  height: calc(80px * var(--scale));   /* the strip's fixed height — slim and precise */
   background: var(--panel-bg);     /* the palette panel — porcelain-light by default */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the presets fade this */
@@ -74,12 +74,12 @@ export const tk04: TemplateVariant = defineTickerVariant(
 .ticker-label {
   display: flex;                   /* label text and its divider sit in a row */
   align-items: center;             /* both center on the strip's axis */
-  gap: calc(48px * var(--scale));  /* air between the word and the divider */
+  gap: calc(30px * var(--scale));  /* air between the word and the divider */
   flex-shrink: 0;                  /* long quotes never squeeze the label */
-  padding-left: calc(60px * var(--scale));   /* generous left end-cap */
-  padding-right: calc(53px * var(--scale));  /* air between the divider and the quotes —
+  padding-left: calc(38px * var(--scale));   /* generous left end-cap */
+  padding-right: calc(33px * var(--scale));  /* air between the divider and the quotes —
                                                 travelling text never touches the hairline */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a tag, not a quote */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a tag, not a quote */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the strip label's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -90,8 +90,8 @@ export const tk04: TemplateVariant = defineTickerVariant(
 /* The divider after the label — a dim vertical hairline, not a second accent. */
 .ticker-label::after {
   content: '';                     /* pseudo-elements need content to render */
-  width: calc(4px * var(--scale));    /* family hairline weight */
-  height: calc(48px * var(--scale));  /* short — inset from the strip's edges */
+  width: calc(3px * var(--scale));    /* family hairline weight */
+  height: calc(30px * var(--scale));  /* short — inset from the strip's edges */
   background: var(--text-dim);     /* dimmed ink, so the accent hairline stays alone */
   opacity: 0.35;                   /* barely-there punctuation */
 }
@@ -117,7 +117,7 @@ ${flip
   inset: 0;                        /* fill the window */
   display: flex;                   /* name · value · change in one row */
   align-items: center;             /* the row sits on the strip's centerline */
-  gap: calc(28px * var(--scale));  /* distinct info gets distinct space — never touching */
+  gap: calc(18px * var(--scale));  /* distinct info gets distinct space — never touching */
   white-space: nowrap;             /* a quote is always one line */
   opacity: 0;                      /* hidden until the flip cycle reveals it */
   will-change: transform, opacity; /* the preset animates y + opacity every cycle */
@@ -134,23 +134,23 @@ ${flip
 .ticker-item {
   display: inline-flex;            /* the three parts sit in one row */
   align-items: baseline;           /* mixed sizes align on the type baseline */
-  gap: calc(28px * var(--scale));  /* distinct info gets distinct space — never touching */
+  gap: calc(18px * var(--scale));  /* distinct info gets distinct space — never touching */
   white-space: nowrap;             /* a quote is always one line */
 }
 
 /* The separator between quotes — a dim vertical hairline, echoing the label divider. */
 .ticker-sep {
   align-self: center;              /* the hairline centers between the baselines */
-  width: calc(4px * var(--scale));    /* family hairline weight */
-  height: calc(44px * var(--scale));  /* short — inset from the strip's edges */
-  margin: 0 calc(68px * var(--scale));  /* generous, even air around every quote */
+  width: calc(3px * var(--scale));    /* family hairline weight */
+  height: calc(28px * var(--scale));  /* short — inset from the strip's edges */
+  margin: 0 calc(43px * var(--scale));  /* generous, even air around every quote */
   background: var(--text-dim);     /* dimmed ink — punctuation, never a second accent */
   opacity: 0.3;                    /* quieter than the label divider */
 }`}
 
 /* The index name — dim tracking caps, subordinate to its number. */
 .tk-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* small caps scale, matches the label */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small caps scale, matches the label */
   font-weight: 600;                /* semibold so the dim ink stays crisp */
   letter-spacing: 0.14em;          /* tracking-wide caps — the family voice */
   text-transform: uppercase;       /* index names are always set in caps */
@@ -160,7 +160,7 @@ ${flip
 
 /* The value — the loudest element of a quote: bold, tabular, primary ink. */
 .tk-value {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* clearly above the name — instant hierarchy */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* clearly above the name — instant hierarchy */
   font-weight: 700;                /* bold — the number is what viewers scan for */
   font-variant-numeric: tabular-nums;  /* equal-width digits — columns never wobble */
   color: var(--text-color);        /* primary ink */
@@ -170,8 +170,8 @@ ${flip
 .tk-change {
   display: inline-flex;            /* arrow and number as one unit */
   align-items: baseline;           /* the small arrow sits on the number's baseline */
-  gap: calc(10px * var(--scale));   /* a sliver of air between arrow and number */
-  font-size: calc(33px * var(--scale) * var(--type-scale));  /* between name and value — clearly secondary */
+  gap: calc(6px * var(--scale));   /* a sliver of air between arrow and number */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* between name and value — clearly secondary */
   font-weight: 600;                /* firm enough to read at travel speed */
   font-variant-numeric: tabular-nums;  /* equal-width digits here too */
 }
@@ -189,7 +189,7 @@ ${flip
       // renderTickerItem(text): parse "NAME 12345 +0.4" — everything before the last two
       // words is the name (so "FTSE 100" survives), then the value, then the signed change.
       tokens: {
-        accentWeight: 'calc(4px * var(--scale))',
+        accentWeight: 'calc(3px * var(--scale))',
         labelTracking: '0.18em',
         labelColor: 'var(--accent)',
       },

@@ -53,7 +53,7 @@ ${alertLineMasks(o)}
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the rail's full height */
   width: calc(1640px * var(--scale));  /* near full-width, inside the safe areas */
-  min-height: calc(181px * var(--scale)); /* the rail grows if the headline wraps */
+  min-height: calc(170px * var(--scale)); /* the rail grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   border-radius: var(--panel-radius);  /* the family's radius — square */
   background: var(--panel-bg);     /* flat near-black slab */
@@ -67,12 +67,12 @@ ${ALERT_LEVEL_CSS}
    in comprehension. */
 .alert-flag {
   transform: skewX(-9deg);         /* the family's lean */
-  min-width: calc(371px * var(--scale) * var(--type-scale));  /* the skew eats horizontal room — give it back */
+  min-width: calc(348px * var(--scale) * var(--type-scale));  /* the skew eats horizontal room — give it back */
   margin-right: calc(13px * var(--scale)); /* the lean must not touch the headline */
 }
 .alert-flag > div {
   transform: skewX(9deg);          /* stand the word back up inside the leaning slab */
-  font-size: calc(37px * var(--scale) * var(--type-scale)); /* heavier voice than the other families */
+  font-size: calc(35px * var(--scale) * var(--type-scale)); /* heavier voice than the other families */
 }
 
 /* The text column — three lines, centred against the flag. */
@@ -81,14 +81,14 @@ ${ALERT_LEVEL_CSS}
   flex-direction: column;          /* headline, detail, source */
   justify-content: center;         /* centred against the flag's height */
   gap: calc(5px * var(--scale));   /* condensed type needs less air between rows */
-  padding: calc(24px * var(--scale)) calc(40px * var(--scale)); /* air inside the rail */
+  padding: calc(23px * var(--scale)) calc(38px * var(--scale)); /* air inside the rail */
   min-width: 0;                    /* let a long headline wrap instead of stretching the flex row */
   text-align: left;                /* an alert reads from the flag outward, always */
 }
 
 /* The headline — condensed heavy caps, the sport voice at its most direct. */
 .alert-name {
-  font-size: calc(53px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
+  font-size: calc(50px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
   font-weight: var(--display-weight);  /* the family's heavy heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.06;               /* condensed caps sit close */
@@ -98,7 +98,7 @@ ${ALERT_LEVEL_CSS}
 
 /* The detail — sentence case on purpose: the instruction has to be READ, not scanned. */
 .alert-title {
-  font-size: calc(29px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.28;               /* comfortable for a full sentence */
   color: var(--text-dim);          /* secondary text color */

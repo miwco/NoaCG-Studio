@@ -81,9 +81,9 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 /* The card — one frosted surface. Everything is drawn INSIDE it, never bolted on. */
 .scoreboard-box {
   position: relative;              /* anchors the accent bar */
-  min-width: calc(996px * var(--scale));  /* a card, not a strip */
+  min-width: calc(700px * var(--scale));  /* a card, not a strip */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(36px * var(--scale)) calc(47px * var(--scale)) calc(29px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(33px * var(--scale)) calc(20px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's soft radius — a pane, not a slab */
   background: var(--panel-bg);     /* the frosted white wash */
   backdrop-filter: var(--panel-blur);  /* the family's real blur — this is the whole look */
@@ -108,11 +108,11 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
   display: flex;                   /* the two ends of the row… */
   align-items: baseline;           /* …on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  padding-bottom: calc(21px * var(--scale));  /* air above the keyline */
+  padding-bottom: calc(15px * var(--scale));  /* air above the keyline */
   border-bottom: 1px solid rgba(255, 255, 255, 0.22);  /* the glass keyline */
 }
 .scoreboard-phase {
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid at label size */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -120,7 +120,7 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
   white-space: nowrap;             /* a long status stays on one line */
 }
 .scoreboard-clock {
-  font-size: calc(39px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 700;                /* matches the status label's weight */
   color: var(--text-color);        /* primary white — the clock is read constantly */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter */
@@ -130,15 +130,15 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 .scoreboard-main {
   display: flex;                   /* the two competitor rows… */
   flex-direction: column;          /* …stacked as one column */
-  padding: calc(11px * var(--scale)) 0;  /* the block's own breathing room */
+  padding: calc(8px * var(--scale)) 0;  /* the block's own breathing room */
 }
 
 /* One competitor row: colour dot, crest, name, current score. */
 .scoreboard-side {
   display: flex;                   /* everything in the row shares one line */
   align-items: center;             /* on the row's centre line */
-  gap: calc(24px * var(--scale));  /* air inside the row */
-  padding: calc(18px * var(--scale)) 0;  /* the stack's vertical rhythm */
+  gap: calc(18px * var(--scale));  /* air inside the row */
+  padding: calc(13px * var(--scale)) 0;  /* the stack's vertical rhythm */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
 /* A hairline between the two competitors, never above the first. */
@@ -149,8 +149,8 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 /* The colour dot — small and soft, the glass family's way of carrying a hard colour. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the dot keeps its size whatever the text does */
-  width: calc(20px * var(--scale));  /* small on purpose — a marker, not a badge */
-  height: calc(20px * var(--scale));  /* same as the width — a true circle */
+  width: calc(14px * var(--scale));  /* small on purpose — a marker, not a badge */
+  height: calc(14px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--team-a, var(--accent));  /* the competitor's colour, or the accent */
   box-shadow: 0 0 0 calc(3px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
@@ -163,8 +163,8 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 .scoreboard-crest {
   position: relative;              /* the placeholder ring is drawn against this */
   flex-shrink: 0;                  /* crests never squeeze — names give up width instead */
-  width: calc(68px * var(--scale));   /* a consistent slot whatever the crest's shape is */
-  height: calc(68px * var(--scale));  /* square, so round and shield crests both sit well */
+  width: calc(48px * var(--scale));   /* a consistent slot whatever the crest's shape is */
+  height: calc(48px * var(--scale));  /* square, so round and shield crests both sit well */
   display: flex;                   /* centers the image… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
@@ -178,7 +178,7 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 .scoreboard-crest::after {
   content: '';                     /* the placeholder mark */
   position: absolute;              /* centred over the empty slot */
-  inset: calc(7px * var(--scale)); /* inset from the slot's edge */
+  inset: calc(5px * var(--scale)); /* inset from the slot's edge */
   border-radius: 50%;              /* a ratio cap — stays round at any scale */
   border: calc(3px * var(--scale)) solid rgba(255, 255, 255, 0.28);  /* a neutral glass ring */
 }
@@ -186,7 +186,7 @@ ${colourHoldersHtml('f7', 'f8', '#dc143c', '#0057b7')}
 
 /* The name — the glass family's rounded sans, sentence case, taking the row's spare width. */
 .scoreboard-team {
-  font-size: calc(50px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 600;                /* semibold — present without shouting */
   line-height: 1.2;                /* comfortable for a mixed-case name */
   color: var(--text-color);        /* primary text on the frost */
@@ -201,9 +201,9 @@ ${clipOneLineCss('.scoreboard-team', 300)}
 /* The current score — the one figure per row, in a shared right-hand column. */
 .scoreboard-score {
   flex-shrink: 0;                  /* scores never squeeze — names give up width instead */
-  min-width: calc(82px * var(--scale));  /* a shared column, so both rows line up */
+  min-width: calc(58px * var(--scale));  /* a shared column, so both rows line up */
   text-align: right;               /* two-digit scores stay aligned with single ones */
-  font-size: calc(60px * var(--scale) * var(--type-scale));  /* the loudest figure in the row */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* the loudest figure in the row */
   font-weight: 800;                /* the heaviest thing on the card */
   line-height: 1;                  /* sits tight on the row */
   color: var(--accent);            /* the scores wear the accent */
@@ -214,16 +214,16 @@ ${clipOneLineCss('.scoreboard-team', 300)}
 .scoreboard-periods {
   display: flex;                   /* the set columns in one row */
   justify-content: flex-end;       /* aligned to the score column above them */
-  gap: calc(32px * var(--scale));  /* air between the columns */
-  padding-top: calc(21px * var(--scale));  /* air under the keyline */
+  gap: calc(23px * var(--scale));  /* air between the columns */
+  padding-top: calc(15px * var(--scale));  /* air under the keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.22);  /* the glass keyline */
 }
 .scoreboard-period {
   display: flex;                   /* label over the two figures… */
   flex-direction: column;          /* …as one column */
   align-items: center;             /* centred on the column's axis */
-  gap: calc(6px * var(--scale));   /* the three rows read as one unit */
-  min-width: calc(86px * var(--scale));  /* a shared column width — the sets align */
+  gap: calc(4px * var(--scale));   /* the three rows read as one unit */
+  min-width: calc(60px * var(--scale));  /* a shared column width — the sets align */
 }
 .scoreboard-period-label {
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
@@ -234,7 +234,7 @@ ${clipOneLineCss('.scoreboard-team', 300)}
   white-space: nowrap;             /* "SET 5" stays on one line */
 }
 .scoreboard-period-score {
-  font-size: calc(33px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
   font-weight: 700;                /* matches the family's semibold voice, a step up */
   line-height: 1.2;                /* even rhythm down the column */
   color: var(--text-color);        /* primary text — these are still scores */

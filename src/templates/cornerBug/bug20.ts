@@ -77,7 +77,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 
 /* The accent rule — short on purpose: a mark, not a line across the frame. */
 .corner-bug-accent {
-  width: calc(45px * var(--scale));   /* a short stroke */
+  width: calc(43px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
   background: var(--accent);          /* the one accent colour */
 }
@@ -86,7 +86,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(40px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  gap: calc(38px * var(--scale));  /* generous air — partner marks must not read as one logo */
 }
 
 ${bugSlotCss({ width: 92, height: 40, mark: 'keyline' })}

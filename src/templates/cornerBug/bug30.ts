@@ -60,8 +60,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centred on the tile's axis */
-  gap: calc(20px * var(--scale));  /* air between the mark and the text */
-  padding: calc(19px * var(--scale)) calc(29px * var(--scale));  /* even air inside the tile */
+  gap: calc(19px * var(--scale));  /* air between the mark and the text */
+  padding: calc(18px * var(--scale)) calc(28px * var(--scale));  /* even air inside the tile */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -92,8 +92,8 @@ ${bugSlotCss({ width: 54, height: 54, mark: 'ring', radius: '50%' })}
 /* The category (f1) — the line the viewer actually reads. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(7px * var(--scale));  /* the two lines read as one lockup */
-  font-size: calc(25px * var(--scale) * var(--type-scale));   /* the lockup's display line */
+  margin-top: calc(6px * var(--scale));  /* the two lines read as one lockup */
+  font-size: calc(24px * var(--scale) * var(--type-scale));   /* the lockup's display line */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */

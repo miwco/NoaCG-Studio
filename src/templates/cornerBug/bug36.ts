@@ -43,12 +43,12 @@ ${bugLineMasks(o)}
 .corner-bug-box {
   display: flex;                   /* the two words sit side by side */
   align-items: center;             /* both on one baseline */
-  gap: calc(16px * var(--scale));  /* air around the divider rule */
+  gap: calc(15px * var(--scale));  /* air around the divider rule */
 }
 
 /* The location (f0) — the word the viewer reads first. */
 .corner-bug-name {
-  font-size: calc(23px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
+  font-size: calc(21px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -65,9 +65,9 @@ ${bugLineMasks(o)}
 }
 .corner-bug-mask + .corner-bug-mask::before {
   content: '';                     /* pseudo-elements need content to render */
-  width: calc(24px * var(--scale));   /* a short stroke */
+  width: calc(23px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
-  margin-right: calc(16px * var(--scale));  /* air between the rule and the status */
+  margin-right: calc(15px * var(--scale));  /* air between the rule and the status */
   background: var(--accent);          /* the one accent colour */
   flex: none;                         /* never squeezed by the word beside it */
 }

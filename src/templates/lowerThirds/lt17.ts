@@ -53,13 +53,13 @@ ${lineMasks(o)}
 /* The strip — a solid dark bar, zero radius: a hard sport mark that persists on screen. */
 .lower-third-box {
   margin-left: var(--accent-weight);  /* starts where the accent slab ends */
-  padding: calc(17px * var(--scale)) calc(34px * var(--scale)) calc(17px * var(--scale)) calc(29px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(30px * var(--scale)) calc(15px * var(--scale)) calc(25px * var(--scale));
   background: var(--panel-bg);     /* the solid slab behind the text */
 }
 
 /* The handle — heavy condensed caps, the line the viewer reads. */
 .lower-third-name {
-  font-size: calc(43px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;               /* tight — big caps need little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -76,7 +76,7 @@ ${lineMasks(o)}
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a platform label, not a sentence */
   color: var(--text-dim);          /* dimmed — the accent slab is the one color dose */
-  margin-top: calc(6px * var(--scale));  /* handle + platform read as one unit */
+  margin-top: calc(5px * var(--scale));  /* handle + platform read as one unit */
 }`,
     hasAccent: true,
   }),
