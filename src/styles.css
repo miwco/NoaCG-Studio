@@ -692,6 +692,41 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   background: var(--bg-2);
 }
 .wz-example:hover { border-color: var(--accent); }
+/* Armed: this click would replace a brief the user wrote themselves. */
+.wz-example.armed { border-color: var(--accent); color: var(--accent); }
+
+/* The harness's three directions, as pictures. Reuses the picker card's chassis
+   (.wz-variant + .wz-mini) so an AI direction and a catalog design read as the same kind
+   of choice — see MiniPreview. */
+.wz-alt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.wz-alt { display: flex; flex-direction: column; }
+.wz-alt .wz-variant-cap { gap: 8px; padding-bottom: 2px; }
+.wz-alt-name { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; }
+/* The ellipsis lives on the name's own box — see the note in AiStep.tsx. */
+.wz-alt-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-alt-route { color: var(--text-dim); flex: none; }
+.wz-alt-mark { flex: none; font-size: 12px; }
+.wz-alt-mark.ok { color: var(--ok); }
+.wz-alt-mark.bad { color: var(--danger); }
+.wz-alt-words {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 1px 11px;
+  padding: 0 10px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: lowercase;
+}
+/* Each term wraps as a WHOLE (joined into one string, a narrow card broke "center-aligned"
+   across two lines at its own hyphen). The column gap does the separating: a "·" between
+   terms lands at the START of every wrapped line, reading as a stray bullet. */
+.wz-alt-word { white-space: nowrap; }
 .ai-chat {
   margin-top: 8px;
   border: 1px solid var(--border);
@@ -700,6 +735,42 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   max-height: 320px;
   overflow-y: auto;
 }
+/* The AI step's ONE transcript: talk turns and earlier generations in the order they
+   happened. Capped and scrolled so a long conversation never pushes the composer - the
+   thing you came to type into - off the bottom of the step. */
+.ai-thread {
+  margin-top: 12px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.ai-attached { color: var(--text-dim); font-style: normal; font-size: 11px; }
+/* An earlier generation, compact: its directions as thumbnails with the one you had picked
+   marked, and the way back to it. */
+.ai-past {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+}
+/* History reads as history: the thumbnails are deliberately smaller than the live picker
+   cards, so the thread never competes with the choice being made below it. */
+.ai-past-shots { display: flex; gap: 6px; max-width: 330px; }
+.ai-past-shot {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  opacity: 0.75;
+}
+.ai-past-shot.picked { border-color: var(--accent); opacity: 1; }
+.ai-past-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.ai-past-foot .hint { flex: 1; margin: 0; }
 .ai-msg { margin: 6px 0; font-size: 13px; display: flex; }
 .ai-msg span {
   padding: 6px 10px;

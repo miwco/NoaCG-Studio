@@ -484,6 +484,24 @@ function contextText(prompt: string, ctx?: GenerateContext): string {
           `never reproduce their layout or artwork literally.`,
       );
     }
+    if (ctx.conversation?.length) {
+      // The brief is the WHOLE conversation, not its last line. The caller bounds this.
+      parts.push(
+        `The brief above came out of this conversation (oldest first) — read it as part of the ` +
+          `request, and honour anything agreed in it that the brief does not repeat:\n` +
+          ctx.conversation.map((m) => `  ${m.role === 'user' ? 'User' : 'You'}: ${m.text}`).join('\n'),
+      );
+    }
+    if (ctx.seed) {
+      parts.push(
+        `THREE MORE LIKE THIS. The user picked this direction and wants more in its spirit — ` +
+          `its design spec:\n${JSON.stringify(ctx.seed, null, 2)}\n` +
+          `Keep what makes it work (its category, its typographic voice, its colour character) ` +
+          `and vary everything else that is genuinely a choice: composition, chassis, density, ` +
+          `shape language, motion. Do NOT return this design again, and do not return one design ` +
+          `three times — the user has already seen this one and asked for alternatives to it.`,
+      );
+    }
     const sections = specSections(ctx.spec);
     if (sections) parts.push(sections);
   }
@@ -507,14 +525,32 @@ function imageBlocks(ctx?: GenerateContext): ContentBlock[] {
 // ── The provider ──────────────────────────────────────────────────────────────
 
 /** The code-level modify content (shared by modifyAs and the spec-refine fallback). */
-function modifyContent(prompt: string, template: SpxTemplate): ContentBlock[] {
+function modifyContent(prompt: string, template: SpxTemplate, ctx?: GenerateContext): ContentBlock[] {
+  // Attachments come FIRST, exactly as they do on a fresh generation, so the vision blocks
+  // and the text that numbers them agree.
+  const attached = imageBlocks(ctx);
+  const conversation = ctx?.conversation?.length
+    ? `\n\nThe conversation this refinement belongs to (oldest first):\n` +
+      ctx.conversation.map((m) => `  ${m.role === 'user' ? 'User' : 'You'}: ${m.text}`).join('\n')
+    : '';
+  const images = ctx?.images?.length
+    ? `\n\nThe user's ${ctx.images.length} image(s) are attached above as pictures and bundled ` +
+      `with the template at these relative paths — reference them exactly:\n` +
+      ctx.images.map((a, i) => `  ${i + 1}. ${a.path}`).join('\n') +
+      `\nIf the request asks for one of them and the template does not use it yet, add it.`
+    : '';
+  const references = ctx?.references?.length
+    ? `\n\nThe last ${ctx.references.length} attachment(s) are STYLE REFERENCES: design guidance ` +
+      `only. Read the system behind them; never place them in the graphic.`
+    : '';
   return [
+    ...attached,
     {
       type: 'text',
       text: `Modify the template below. Change ONLY what the request needs — keep everything else
 (byte-identical where possible), including the user's own edits and comments.
 
-Request: ${prompt}
+Request: ${prompt}${conversation}${images}${references}
 
 === index.html ===
 ${template.html}
@@ -531,10 +567,14 @@ function modifyAs(
   kind: AiRunKind,
   prompt: string,
   template: SpxTemplate,
+  context?: GenerateContext,
   options?: GenerateOptions,
 ): Promise<AiTemplateChange> {
+  // The context reaches `toTemplate` as well as the prompt, so an image attached to a
+  // refinement is BUNDLED, not merely mentioned — a referenced-but-missing asset is the
+  // dangling-reference defect class that ships broken exports.
   return recorded(kind, (run) =>
-    generateValidated(modifyContent(prompt, template), undefined, template, options, run),
+    generateValidated(modifyContent(prompt, template, context), context, template, options, run),
   );
 }
 
@@ -548,10 +588,22 @@ async function specRefine(
   prompt: string,
   template: SpxTemplate,
   priorSpec: DesignSpec,
+  context: GenerateContext | undefined,
   options: GenerateOptions | undefined,
   run: AiRunRecorder,
 ): Promise<AiTemplateChange> {
   options?.onProgress?.('Designing…');
+  const conversation = context?.conversation?.length
+    ? `\n\nThe conversation this refinement belongs to (oldest first):\n` +
+      context.conversation.map((m) => `  ${m.role === 'user' ? 'User' : 'You'}: ${m.text}`).join('\n')
+    : '';
+  const attached = context?.images?.length
+    ? `\n\nThe user attached ${context.images.length} image(s) with this request (above), ` +
+      `available at:\n${context.images.map((a, i) => `  ${i + 1}. ${a.path}`).join('\n')}\n` +
+      `A catalog design can carry a mark in its LOGO SLOT (set useLogoSlot). If the request ` +
+      `needs the image somewhere a catalog design has no room for — a full-frame still, a ` +
+      `background, featured media — route to custom rather than dropping it.`
+    : '';
   try {
     const t0 = Date.now();
     const result = await callClaudeDetailed({
@@ -560,12 +612,13 @@ async function specRefine(
         {
           role: 'user',
           content: [
+            ...imageBlocks(context),
             {
               type: 'text',
               text: `The user is refining an existing design. Its current design spec:
 ${JSON.stringify(priorSpec, null, 2)}
 
-Refinement request: ${prompt}
+Refinement request: ${prompt}${conversation}${attached}
 
 Return the FULL updated spec — carry forward everything the request does not change
 (including the flourish). Route to custom ONLY if the request now needs a structure the
@@ -581,12 +634,12 @@ catalog cannot express.`,
     const spec = result.output as DesignSpec;
     if (!Array.isArray(spec.lines)) spec.lines = [];
     if (spec.fit === 'catalog') {
-      return groundedResult(spec, contextFrom(template), options, run);
+      return groundedResult(spec, contextFrom(template, context), options, run);
     }
   } catch {
     // The design stage failed — the code-level modify below still serves the request.
   }
-  return generateValidated(modifyContent(prompt, template), undefined, template, options, run);
+  return generateValidated(modifyContent(prompt, template, context), context, template, options, run);
 }
 
 // ── The grounded pipeline: assemble → adjust → optional polish (revert on any failure) ──
@@ -684,10 +737,19 @@ async function groundedResult(
 }
 
 /** Rebuild a GenerateContext from a template being refined (its images ride its assets). */
-function contextFrom(template: SpxTemplate): GenerateContext {
+function contextFrom(template: SpxTemplate, outer?: GenerateContext): GenerateContext {
+  const own = template.assets.filter((a) => a.path.startsWith('images/'));
+  // The template's own images PLUS whatever the turn attached, deduped by path: a
+  // re-assembly that dropped the new attachment would answer a request it was never told
+  // about, and one that dropped the template's own would lose the logo it already carries.
+  const attached = (outer?.images ?? []).filter((a) => !own.some((b) => b.path === a.path));
   return {
-    images: template.assets.filter((a) => a.path.startsWith('images/')),
-    palette: null,
+    images: [...own, ...attached],
+    references: outer?.references,
+    palette: outer?.palette ?? null,
+    customFont: outer?.customFont,
+    spec: outer?.spec,
+    conversation: outer?.conversation,
     resolution: template.resolution,
     fps: template.fps,
   };
@@ -834,14 +896,17 @@ export const claudeProvider: AIProvider = {
     }
   },
 
-  async modify(prompt, template, options) {
+  async modify(prompt, template, context, options) {
     // A grounded result refines at SPEC level while it is still house-shaped; anything
     // else (foreign imports, hand-edited code, custom builds) refines at code level.
+    // An image attached to this turn does NOT force the code level: the design stage sees
+    // it and routes to custom itself when the catalog has nowhere to put it (a logo slot
+    // takes a mark; a full-frame still does not).
     if (options?.spec && detectPrefix(template.html) && parseAnimData(template.js)) {
       const spec = options.spec;
-      return recorded('modify', (run) => specRefine(prompt, template, spec, options, run));
+      return recorded('modify', (run) => specRefine(prompt, template, spec, context, options, run));
     }
-    return modifyAs('modify', prompt, template, options);
+    return modifyAs('modify', prompt, template, context, options);
   },
 
   async explain(code) {
@@ -860,7 +925,7 @@ export const claudeProvider: AIProvider = {
     const problems = validation.ok
       ? 'No validator errors — review the template for runtime bugs (replay-safety, missing ids) and fix what you find.'
       : validation.errors.map((e) => `- ${e.rule}: ${e.message}`).join('\n');
-    return modifyAs('fix', `Fix these validation problems:\n${problems}`, template, options);
+    return modifyAs('fix', `Fix these validation problems:\n${problems}`, template, undefined, options);
   },
 
   async makeSpxReady(template, options) {
@@ -870,11 +935,12 @@ export const claudeProvider: AIProvider = {
         '(every fN has exactly one element), global update/play/stop/next functions, relative asset ' +
         'paths only, and the standard external references (css/template.css, js/gsap.min.js, js/template.js).',
       template,
+      undefined,
       options,
     );
   },
 
-  async convertImport(prompt, imported, _context, options) {
+  async convertImport(prompt, imported, context, options) {
     const request = prompt.trim() || 'Bring it fully up to the house standards.';
     return modifyAs(
       'convert',
@@ -884,6 +950,9 @@ export const claudeProvider: AIProvider = {
         `the marked ANIMATION region as the NOACG_ANIM data block with the standard ` +
         `interpreter, and relative asset paths only.\n\nRequest: ${request}`,
       imported,
+      // The imported template brings its OWN resolution and assets; the context contributes
+      // the conversation and anything attached to the request.
+      context && { ...context, resolution: imported.resolution, fps: imported.fps },
       options,
     );
   },

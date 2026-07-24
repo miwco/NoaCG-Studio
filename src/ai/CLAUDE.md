@@ -151,6 +151,31 @@ References-vs-assets: `GenerateContext.references` are vision-only style guidanc
 bundled, never placed); `images` appear in the graphic. Both ride `imageBlocks` in that
 order and `contextText` labels them.
 
+## The conversation is part of the brief
+
+`GenerateContext` carries two more typed inputs, both rendered by `contextText` (so EVERY
+path reads them, including raw) and mirrored into `modifyContent` and the spec-refine prompt:
+
+- **`conversation`** — the talk turns that led here, oldest first. A brief refined over three
+  turns IS all three; the brainstorm used to hand over one summary line and drop the rest,
+  and its system prompt said so ("the generator never sees this chat"). It no longer does.
+  **The caller bounds this** (the AI step sends the last 10 turns); the provider never
+  re-reads a session.
+- **`seed`** — "three more like this": the design spec of a direction the user picked. The
+  design stage keeps its category, typographic voice and colour character and varies what is
+  genuinely a choice. It is a starting point, never a template to return three tints of —
+  the same named failure the alternatives call exists to avoid.
+
+**`modify` takes a context** (`modify(prompt, template, context?, options?)` — the shape
+`convertImport` already had). That is what makes an image attached mid-conversation real:
+the context reaches `toTemplate`, so the asset is BUNDLED, not merely mentioned in a prompt.
+A referenced-but-missing asset is the dangling-reference defect class that ships broken
+exports. `contextFrom(template, outer)` merges the template's own images with the turn's
+attachments, deduped by path, so a spec-level re-assembly loses neither the logo it already
+had nor the picture just handed to it. An attachment does NOT force the code level: the
+design stage sees the image and routes to `custom` itself when the catalog has nowhere to
+put it (a logo slot takes a mark; a full-frame still does not).
+
 ## Other files
 
 - `anthropic.ts` - the one API client (BYO key or VITE_AI_PROXY_URL gateway); forced-tool

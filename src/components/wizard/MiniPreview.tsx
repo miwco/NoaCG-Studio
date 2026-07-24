@@ -7,29 +7,44 @@ import {
   type GraphicBox,
 } from '../../preview/frameGraphic';
 import type { TemplateVariant } from '../../model/wizard';
+import type { SpxTemplate } from '../../model/types';
 
 /**
- * A small settled-state render of a variant for the template picker cards.
+ * A small settled-state render for picker cards.
  * Loads the real template and jumps the entrance timeline to its end (no animation),
  * so every card shows the true on-air look without ten timelines running at once.
  *
  * FRAMED ON THE GRAPHIC, not on the canvas — the shared recipe in preview/frameGraphic.ts, so a
  * picker card, Home's library card and the big preview's "⌖ Zoom to graphic" (WizardPreview.tsx)
  * all agree about what a design looks like.
+ *
+ * Two sources, one render. A `variant` is BUILT here and only once the card scrolls into view,
+ * because Browse can put the whole catalog on one grid. A `template` is already built — the AI
+ * step's three alternatives — and is shown as-is. Sharing this component is what makes an AI
+ * alternative and a catalog design look like the same kind of choice.
  */
 
 interface MiniWindow extends Window {
   buildInTimeline?: () => { progress: (n: number) => void };
 }
 
-export default function MiniPreview({ variant }: { variant: TemplateVariant }) {
+type Props =
+  | { variant: TemplateVariant; template?: never }
+  | { template: SpxTemplate; variant?: never };
+
+export default function MiniPreview({ variant, template: built }: Props) {
   const ref = useRef<HTMLIFrameElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   // Mount the iframe only once the card scrolls into view (the GraphicThumb recipe): the
   // Browse step can show the whole catalog at once, and building + parsing GSAP for every
   // off-screen tile would make opening it a page-long stall.
-  const [visible, setVisible] = useState(false);
+  //
+  // A ready-made `template` skips that gate. There are only ever a few of them, they cost no
+  // build, and they sit below the fold of a scrolling step — waiting for an intersection
+  // there means the cards a user scrolls down TO ARE the reason they scrolled, shown empty.
+  const [visible, setVisible] = useState(Boolean(built));
   useEffect(() => {
+    if (built) return;
     const el = cardRef.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
@@ -40,8 +55,11 @@ export default function MiniPreview({ variant }: { variant: TemplateVariant }) {
     });
     io.observe(el);
     return () => io.disconnect();
-  }, []);
-  const template = useMemo(() => (visible ? variant.create() : null), [variant, visible]);
+  }, [built]);
+  const template = useMemo(
+    () => (visible ? (built ?? variant?.create() ?? null) : null),
+    [built, variant, visible],
+  );
   const doc = useMemo(() => (template ? composeDocument(template) : ''), [template]);
   const { width, height } = template?.resolution ?? { width: 1920, height: 1080 };
   const [box, setBox] = useState<GraphicBox | null>(null);
@@ -76,7 +94,7 @@ export default function MiniPreview({ variant }: { variant: TemplateVariant }) {
       {visible && (
         <iframe
           ref={ref}
-          title={`${variant.name} preview`}
+          title={`${built?.name ?? variant?.name ?? 'Design'} preview`}
           sandbox="allow-scripts allow-same-origin"
           srcDoc={doc}
           onLoad={() => setTimeout(settle, 40)}

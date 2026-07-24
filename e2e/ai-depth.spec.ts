@@ -38,15 +38,20 @@ test('brainstorm chat: replies render and the BRIEF line becomes the prompt', as
     }),
   );
   await openAiStep(page);
-  await page.getByRole('button', { name: /Brainstorm with AI/ }).click();
-  await page.getByPlaceholder('Talk it through…').fill('halftime of a local derby, we need something for substitutions');
-  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  // ONE composer, one transcript: the brief box is also what you talk into.
+  await page.locator('.wz-step textarea').fill('halftime of a local derby, we need something for substitutions');
+  await page.getByTestId('ai-talk').click();
 
-  // The reply shows WITHOUT the BRIEF line; the brief is offered separately.
+  // Both sides of the exchange are in the thread…
+  await expect(page.locator('.ai-msg.user')).toContainText('halftime of a local derby');
+  // …the reply shows WITHOUT the BRIEF line; the brief is offered separately.
   await expect(page.locator('.ai-msg.assistant')).toContainText('two-line lower third');
   await expect(page.locator('.ai-msg.assistant')).not.toContainText('BRIEF:');
   await expect(page.locator('.ai-brief')).toContainText('substitution lower third');
 
-  await page.getByRole('button', { name: 'Use as brief' }).click();
+  // The brief is what Generate acts on with an empty box; "Edit it" puts it back for editing.
+  await expect(page.locator('.wz-step textarea')).toHaveValue('');
+  await expect(page.getByRole('button', { name: '✦ Generate' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Edit it' }).click();
   await expect(page.locator('.wz-step textarea')).toHaveValue(/football substitution lower third/);
 });

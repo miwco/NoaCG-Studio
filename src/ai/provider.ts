@@ -7,6 +7,7 @@ import type { CustomFont } from '../model/fonts';
 import type { Palette } from '../model/wizard';
 import type { ValidationResult } from '../validation/validateTemplate';
 import type { DesignSpec } from './designSpec';
+import type { ChatMessage } from './brainstorm';
 import type { GenerationSpec } from '../model/generationSpec';
 
 /** Extra inputs for generation: uploaded images (logo / still), brand colors, canvas. */
@@ -23,6 +24,19 @@ export interface GenerateContext {
   customFont?: CustomFont;
   /** The user-authored structured setup (the "More control" panel), if any. */
   spec?: GenerationSpec | null;
+  /**
+   * The conversation that led here, oldest first: brainstorm turns and earlier refinement
+   * instructions. A brief refined over three turns IS all three, and copying one summary
+   * line out of a chat threw the rest away. BOUNDED BY THE CALLER — the provider trusts
+   * what it is handed and never re-reads a whole session.
+   */
+  conversation?: ChatMessage[];
+  /**
+   * "Three more like this": the design spec of a direction the user liked. The design stage
+   * keeps what makes it work and varies everything else — it is a starting point, never a
+   * template to return three tints of.
+   */
+  seed?: DesignSpec;
   resolution: Resolution;
   fps: number;
 }
@@ -78,8 +92,17 @@ export interface AIProvider {
    * the choice feeds aggregated preference data (src/ai/preferences.ts).
    */
   generateAlternatives(prompt: string, context?: GenerateContext, options?: GenerateOptions): Promise<AiTemplateChange[]>;
-  /** Modify the current template per a prompt. */
-  modify(prompt: string, template: SpxTemplate, options?: GenerateOptions): Promise<AiTemplateChange>;
+  /**
+   * Modify the current template per a prompt. The context is what makes a refinement part of
+   * a CONVERSATION rather than an isolated instruction: images attached mid-thread are
+   * bundled into the result, and the transcript travels with the request.
+   */
+  modify(
+    prompt: string,
+    template: SpxTemplate,
+    context?: GenerateContext,
+    options?: GenerateOptions,
+  ): Promise<AiTemplateChange>;
   /** Explain a piece of code (returns prose, no template change). */
   explain(code: string): Promise<string>;
   /** Attempt fixes for known validation problems. */

@@ -23,8 +23,9 @@ Rules:
 - Steer gently toward broadcast craft: one accent color, clear hierarchy, entrances
   0.5-0.9s, exits faster, linear only for continuous motion.
 - ALWAYS end your reply with a single line starting exactly "BRIEF: " — a one-paragraph,
-  generation-ready brief reflecting everything agreed so far. It must stand alone (the
-  generator never sees this chat).`;
+  generation-ready brief reflecting everything agreed so far. The generator DOES receive
+  this conversation alongside it, but write the brief to stand on its own anyway: it is
+  what the user reads to check you understood, and it is what they can edit.`;
 
 /** One brainstorm turn. Returns the reply text (BRIEF line stripped) + the brief. */
 export async function brainstorm(history: ChatMessage[]): Promise<{ reply: string; brief: string | null }> {
