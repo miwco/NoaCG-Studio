@@ -61,6 +61,9 @@ export const PACKS: TemplatePack[] = [
       // as a rail, and the three ways coverage names a player — by squad number, by the
       // stat line that justifies the cutaway, and by the club whose badge leads the card.
       'ls06', 'ls07', 'ls08', 'ls09', 'ls10',
+      // The other scores crawling under this one, and the card a rain delay or a
+      // postponement goes to — which an intermission screen is not: it says WHEN.
+      'tk13', 'al10',
       'vs01', 'cr03', 'ss11', 'cr12',
     ],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
@@ -84,6 +87,9 @@ export const PACKS: TemplatePack[] = [
       // An esports player is named tag-then-handle, not name-then-club, and the desk is
       // named by handle too — three straps a sports kit has no shape for.
       'ls11', 'ls12', 'ls13',
+      // The rest of the bracket's results crawling under the current game, and the notice a
+      // tournament day actually needs most: the pause nobody planned.
+      'tk13', 'al07',
       'vs02', 'ss13', 'cr12',
     ],
     formats: ['Esports tournament'],
@@ -108,6 +114,9 @@ export const PACKS: TemplatePack[] = [
       // creator ends on, and the identity card carries the sub/donation goal a subathon or
       // a telethon exists for.
       'ls03', 'ls31', 'ls32',
+      // A solo operator's two failure graphics: the fault that needs a reassurance line, and
+      // the standby card that says when they are back.
+      'al07', 'al10',
       'ss06', 'ss08', 'ss09', 'ss12',
     ],
     formats: [
@@ -134,6 +143,10 @@ export const PACKS: TemplatePack[] = [
       // The newsroom's own furniture: the channel ident that never leaves, the live/replay
       // status a news desk is obliged to be honest about, and the location chip for reporters.
       'station-bug', 'live-bug', 'status-chip',
+      // The public-service pair (docs/PUBLIC_SERVICE_PACK.md). This is the desk that runs
+      // them: the severity ladder is what an emergency broadcast IS, and the two-language
+      // notice retires the "multilingual cards are fields" stand-in the mapping recorded.
+      'alert-level', 'public-notice',
     ],
     extras: [
       // The news desk's specialist straps: the remote two-box interview, the kicker that
@@ -141,6 +154,13 @@ export const PACKS: TemplatePack[] = [
       // element, the correspondent's dateline, and — for a market show cutting between
       // exchanges — the strap that computes another city's time instead of stating it.
       'ls01', 'ls23', 'ls24', 'ls28', 'ls29', 'ls30',
+      // The crawls, one per job the `ticker` type's own design does not do: caps framing the
+      // travel, a strip along the TOP while the lower third is busy, market deltas, the
+      // opaque notice crawl, the breaking dot, a bilingual split, and the fixed top deck.
+      'tk11', 'tk12', 'tk14', 'tk15', 'tk16', 'tk17', 'tk20',
+      // The breaking banner (its kicker is a field, not a state), the numbered emergency
+      // instructions, and the source label a press conference is obliged to carry.
+      'al09', 'pi02', 'pi03',
       'ss08', 'card52',
     ],
     formats: [
@@ -166,12 +186,19 @@ export const PACKS: TemplatePack[] = [
       // The live vote carries the count as it comes in and calls a leader; the static poll
       // board above it is the finished result.
       'live-poll',
+      // A civic broadcast is frequently obliged to carry its notices in two languages, and
+      // the rotator is the honest way to do that in one strip's worth of screen.
+      'public-notice',
     ],
     extras: [
       // Civic coverage reads the party colour first: the result bar, the symmetric podium
       // strap a debate places twice, and the everyday affiliation strap. The analysis
       // kicker rides along because results night runs on interpretation.
       'ls20', 'ls21', 'ls22', 'ls23',
+      // The council's own paperwork put on screen: the notice crawl, the public and
+      // municipal notices (reference and deadline in their own chip), and the two-language
+      // panel a bilingual jurisdiction runs everything through.
+      'tk15', 'pi01', 'pi05', 'pi07',
       'card52', 'cr05',
     ],
     formats: [
@@ -230,6 +257,10 @@ export const PACKS: TemplatePack[] = [
       // field, the institution's mark on the card, the session strap that leads with the
       // talk for people joining mid-track, and the expert's field for medical and legal.
       'ls17', 'ls18', 'ls19', 'ls24',
+      // The two notices a webinar runs more than any graphic it was planned with, and the
+      // small print the medical and legal formats are obliged to carry: the disclaimer at
+      // the floor, and the health advisory with its helpline in a band of its own.
+      'al07', 'al08', 'pi04', 'pi06',
       'ss13', 'cr05', 'cr07', 'cr09',
     ],
     formats: [
@@ -291,6 +322,9 @@ export const PACKS: TemplatePack[] = [
       // that fades rather than snaps, a reading where the reference outranks the reader,
       // and the ceremony strap that names the part of the programme being delivered.
       'ls14', 'ls15', 'ls16',
+      // The side-by-side two-language panel, for a congregation that worships in two. The
+      // statement card above covers the same need as a STATEMENT; this is the notice form.
+      'pi07',
       'cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57',
     ],
     formats: [
@@ -317,6 +351,9 @@ export const PACKS: TemplatePack[] = [
       // artist-led for a performance, track-led for a set, the numbered item for a recital
       // programme — plus the guest-over-host pair a red carpet interviews arrivals with.
       'ls04', 'ls25', 'ls26', 'ls27',
+      // A delayed set is not an intermission: an intermission screen announces a planned
+      // break, the standby card admits an unplanned one and says when.
+      'al10',
       'cr02', 'cr09', 'cr12', 'ss07', 'ss11', 'card56',
     ],
     formats: [
@@ -343,7 +380,9 @@ export const PACKS: TemplatePack[] = [
     // No specialist strap here on purpose: the pack is drawn for interview duos, athletes,
     // clergy, academics, politicians and performers, and a selling host is named by an
     // ordinary lower third. The commerce cards (card38-card49) are this pack's own graphics.
-    extras: ['ss06', 'ss12', 'cr12'],
+    // The disclaimer strip is the exception the public-service pack supplied: price, shipping
+    // and affiliate small print is a legal obligation on a selling stream, not decoration.
+    extras: ['pi04', 'ss06', 'ss12', 'cr12'],
     formats: [
       'Live commerce / shopping stream',
       'Cooking show / food livestream',
@@ -364,8 +403,11 @@ export const PACKS: TemplatePack[] = [
       'logo-bug',
     ],
     // Same as Shopping: an instructor is named by an ordinary strap, and forcing a
-    // specialist one in would only make the kit harder to read.
-    extras: ['ss08', 'ss09', 'card52'],
+    // specialist one in would only make the kit harder to read. What this pack DID need is
+    // the health pair — the "consult a professional" disclaimer a fitness class carries, and
+    // the advisory whose helpline sits in its own high-contrast band, which is the one
+    // graphic a meditation or mental-health stream must be able to put up without designing.
+    extras: ['pi04', 'pi06', 'ss08', 'ss09', 'card52'],
     formats: [
       'Fitness / workout class',
       'Meditation / ambient livestream',

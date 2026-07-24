@@ -275,7 +275,11 @@ listed because the honest answer to "can it do X" is sometimes no.
     mechanism (reset, increment, painted chip size) and the digits are confirmed by eye in the
     shot script. No test can read them directly.
 
-11. **Packs are not extended.** `src/templates/packs.ts` maps the 60 reference formats onto 12
-    packs, and `validatePacks` requires each format to be claimed exactly once. Adding
-    `alert-level` or `public-notice` to the Newsroom pack is pure config, but it changes what
-    an existing pack ships, so it is left as a deliberate follow-up rather than folded in here.
+11. ~~**Packs are not extended.**~~ **DONE** - the follow-up landed (docs/PACK_TAXONOMY.md).
+    `alert-level` joined Newsroom and `public-notice` joined Newsroom and Election as TYPES;
+    the crawls, the four machine-less alerts and the seven public-information panels joined
+    eight kits as extras. No format's mapping moved, so `validatePacks` still claims each of
+    the 60 exactly once. Two constraints the wiring surfaced, worth keeping in view: a type
+    can only join a pack whose family it has a design for, and `public-notice` ships only
+    pi09 (minimal) and pi08 (noacg) - so a glass or sport pack cannot take it until the other
+    two cells are filled. `alert-level` has all four and is unconstrained.

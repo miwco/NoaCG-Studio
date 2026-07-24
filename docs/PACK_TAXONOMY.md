@@ -31,18 +31,18 @@ config are ready for it; only the surface is unbuilt.
 
 | Pack | Family | Types (curated order) | Extras |
 |---|---|---|---|
-| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | ls06, ls07, ls08, ls09, ls10, vs01, cr03, ss11, cr12 |
-| Esports | sport | esports-score, map-round, matchup, head-to-head, player-card, bracket, standings, winner-card, scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card, now-next, station-bug, live-bug, sponsor-rotator | ls11, ls12, ls13, vs02, ss13, cr12 |
-| Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll, now-next, process-steps, station-bug, live-bug, logo-bug, chat-highlight, live-poll, viewer-question | ls03, ls31, ls32, ss06, ss08, ss09, ss12 |
-| Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug, headline-card, key-facts, notice-card, station-bug, live-bug, status-chip | ls01, ls23, ls24, ls28, ls29, ls30, ss08, card52 |
-| Election | minimal | poll, lower-third, ticker, title-card, agenda, countdown, headline-card, key-facts, status-chip, live-bug, live-poll | ls20, ls21, ls22, ls23, card52, cr05 |
+| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | ls06, ls07, ls08, ls09, ls10, tk13, al10, vs01, cr03, ss11, cr12 |
+| Esports | sport | esports-score, map-round, matchup, head-to-head, player-card, bracket, standings, winner-card, scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card, now-next, station-bug, live-bug, sponsor-rotator | ls11, ls12, ls13, tk13, al07, vs02, ss13, cr12 |
+| Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll, now-next, process-steps, station-bug, live-bug, logo-bug, chat-highlight, live-poll, viewer-question | ls03, ls31, ls32, al07, al10, ss06, ss08, ss09, ss12 |
+| Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug, headline-card, key-facts, notice-card, station-bug, live-bug, status-chip, **alert-level**, **public-notice** | ls01, ls23, ls24, ls28, ls29, ls30, tk11, tk12, tk14, tk15, tk16, tk17, tk20, al09, pi02, pi03, ss08, card52 |
+| Election | minimal | poll, lower-third, ticker, title-card, agenda, countdown, headline-card, key-facts, status-chip, live-bug, live-poll, **public-notice** | ls20, ls21, ls22, ls23, tk15, pi01, pi05, pi07, card52, cr05 |
 | Talk Show | glass | lower-third, topic-card, poll, agenda, social-bug, sponsor-bug, countdown, key-facts, recap-card, station-bug, sponsor-rotator, viewer-question, qa-card, chat-highlight, question-queue, live-poll | ls02, ls04, ls05, ls24, ls25, card52, ss06, ss12 |
-| Corporate Events | minimal | agenda, lower-third, countdown, title-card, topic-card, poll, holding-screen, now-next, process-steps, recap-card, key-facts, event-bug, sponsor-strip, question-queue, qa-card, viewer-question, live-poll | ls17, ls18, ls19, ls24, ss13, cr05, cr07, cr09 |
+| Corporate Events | minimal | agenda, lower-third, countdown, title-card, topic-card, poll, holding-screen, now-next, process-steps, recap-card, key-facts, event-bug, sponsor-strip, question-queue, qa-card, viewer-question, live-poll | ls17, ls18, ls19, ls24, al07, al08, pi04, pi06, ss13, cr05, cr07, cr09 |
 | Classroom | noacg | quiz-board, countdown, lower-third, topic-card, agenda, scoreboard, process-steps, key-facts, recap-card, logo-bug, verdict-card, standings, answer-board-2, answer-board-3, live-poll, viewer-question | ls17, ls18, cr10, card58, ss13 |
-| Church & Ceremony | minimal | title-card, lower-third, topic-card, holding-screen, countdown, agenda, statement-card, logo-bug, event-bug, community-request, viewer-question, question-queue | ls14, ls15, ls16, cr01, cr05, cr10, cr11, ss07, ss10, card50, card51, card54, card55, card57 |
-| Stage & Music | glass | title-card, lower-third, holding-screen, countdown, social-bug, agenda, ticker, now-next, statement-card, notice-card, award-bug, event-bug | ls04, ls25, ls26, ls27, cr02, cr09, cr12, ss07, ss11, card56 |
-| Shopping | noacg | topic-card, countdown, lower-third, ticker, title-card, sponsor-bug, key-facts, sponsor-strip, sponsor-rotator | ss06, ss12, cr12 |
-| Wellness | minimal | countdown, holding-screen, topic-card, lower-third, social-bug, process-steps, logo-bug | ss08, ss09, card52 |
+| Church & Ceremony | minimal | title-card, lower-third, topic-card, holding-screen, countdown, agenda, statement-card, logo-bug, event-bug, community-request, viewer-question, question-queue | ls14, ls15, ls16, pi07, cr01, cr05, cr10, cr11, ss07, ss10, card50, card51, card54, card55, card57 |
+| Stage & Music | glass | title-card, lower-third, holding-screen, countdown, social-bug, agenda, ticker, now-next, statement-card, notice-card, award-bug, event-bug | ls04, ls25, ls26, ls27, al10, cr02, cr09, cr12, ss07, ss11, card56 |
+| Shopping | noacg | topic-card, countdown, lower-third, ticker, title-card, sponsor-bug, key-facts, sponsor-strip, sponsor-rotator | pi04, ss06, ss12, cr12 |
+| Wellness | minimal | countdown, holding-screen, topic-card, lower-third, social-bug, process-steps, logo-bug | pi04, pi06, ss08, ss09, card52 |
 
 The title/topic/information pack's seven types, the identity family's eight and the competition
 pack's twelve (docs/GRAPHIC_TYPES.md §6) all joined the kits that were standing in for them: the
@@ -77,9 +77,35 @@ between exchanges needs instead of a time somebody typed.
 
 A strap can serve more than one pack (extras are not exclusive the way FORMATS are - `card52`
 and `cr05` already were): ls24 "Expert Panel" is a newsroom explainer, a long-form panel credit
-and a medical/legal webinar's credit, so it is in all three. **Shopping and Wellness get none,
-deliberately** - a selling host and a fitness instructor are named by an ordinary lower third,
-and forcing a specialist strap in would only make those kits harder to read.
+and a medical/legal webinar's credit, so it is in all three. **Shopping and Wellness get no
+specialist strap, deliberately** - a selling host and a fitness instructor are named by an
+ordinary lower third, and forcing one in would only make those kits harder to read.
+
+The PUBLIC-SERVICE pack (docs/PUBLIC_SERVICE_PACK.md) joined next, and unlike the straps it
+brought TWO TYPES as well as extras - the follow-up that document's §11 deliberately left open,
+because adding a type changes what an existing pack ships:
+
+- **`alert-level` -> Newsroom only.** The four-level severity ladder is what an emergency
+  broadcast IS, and Newsroom owns "Emergency information stream", "Weather broadcast" and
+  "Security / surveillance-style public stream". Its designs fill all four families, so any
+  pack COULD take it; none of the others has a format that earns it.
+- **`public-notice` -> Newsroom and Election.** The two-language rotator, in the two registers
+  where carrying a notice in both languages is an obligation rather than a courtesy. Note the
+  hard limit: `public-notice` ships only a minimal (pi09) and a noacg (pi08) design, so a
+  glass or sport pack listing it would fail `validatePacks` on an empty matrix cell - which is
+  the check doing exactly its job.
+
+Three of the notes in the mapping below are now out of date in the right direction, and are
+corrected there: the emergency stream's multilingual cards ARE a type now, the market show has
+a real market ticker, and the council's bilingual notices have a graphic. Two kits that had no
+extras from the straps round got real ones here - Shopping takes the disclaimer strip (price
+and affiliate small print is a legal obligation on a selling stream) and Wellness takes it
+alongside the health advisory, whose helpline sits in its own high-contrast band.
+
+The four alerts with no machine (al07-al10) spread widest, because an unplanned fault is not a
+format: the technical notice and the standby card go to the productions that run longest with
+the fewest hands - Esports, Creator, Corporate - and the standby card also to Match Day (a rain
+delay) and Stage (a delayed set), where it says something a planned intermission screen cannot.
 
 Family picks, briefly: sport carries both competitive packs; noacg (the house on-air look) goes
 to the streamer-native packs where its amber control-room voice reads natively; glass suits the
@@ -108,7 +134,7 @@ Format names verbatim from the sheet. Notes only where the assignment was a judg
 | 13 | Music performance / concert livestream | Stage & Music | |
 | 14 | Award show / gala | Stage & Music | nominee/winner reveals are a gap (below) |
 | 15 | Election night / results program | Election | result bars = the poll type; maps/seat counts are a gap |
-| 16 | Weather broadcast / climate update | Newsroom | forecast panels/maps are a gap; the strap/ticker/card core is Newsroom's |
+| 16 | Weather broadcast / climate update | Newsroom | forecast panels/maps are a gap; the strap/ticker/card core is Newsroom's, and the warning itself is now the `alert-level` type (al05) |
 | 17 | Religious service / church livestream | Church & Ceremony | |
 | 18 | Fitness / workout class | Wellness | interval timer = countdown; round counters ride its fields |
 | 19 | Live Q&A / AMA | Talk Show | |
@@ -127,7 +153,7 @@ Format names verbatim from the sheet. Notes only where the assignment was a judg
 | 32 | Radio-style livestream with video | Talk Show | now-playing card = topic card |
 | 33 | Auction livestream | Shopping | lot/bid cards = topic card + countdown; live bid feed is a gap |
 | 34 | Real estate / property livestream | Shopping | |
-| 35 | Finance / market livestream | Newsroom | the market ticker IS the ticker type; charts/heatmaps are a gap |
+| 35 | Finance / market livestream | Newsroom | the market ticker IS the ticker type, and tk14 draws the delta with an arrow, a sign AND a colour rather than colour alone; charts/heatmaps are a gap |
 | 36 | Tech support / coding livestream | Creator | |
 | 37 | Art / design livestream | Creator | |
 | 38 | Craft / maker livestream | Creator | |
@@ -140,9 +166,9 @@ Format names verbatim from the sheet. Notes only where the assignment was a judg
 | 45 | Virtual event / metaverse event | Corporate Events | |
 | 46 | Medical / health livestream | Corporate Events | disclaimer/source labels ride lower-third + topic-card fields |
 | 47 | Legal / public information livestream | Corporate Events | |
-| 48 | Municipal council / public meeting | Election | agenda items, speaking timer, vote result = poll |
+| 48 | Municipal council / public meeting | Election | agenda items, speaking timer, vote result = poll; the notices themselves are pi01/pi05 and the bilingual obligation is pi07 + the `public-notice` rotator |
 | 49 | Press conference | Newsroom | |
-| 50 | Emergency information stream | Newsroom | alert banner register; multilingual cards are fields, not new types |
+| 50 | Emergency information stream | Newsroom | the alert banner IS a type now (`alert-level`, four real severity states), and the multilingual card became one too (`public-notice`) - this row's original "cards are fields, not new types" was right until the graphics earned otherwise |
 | 51 | Behind-the-scenes production stream | Corporate Events | schedule/labels register |
 | 52 | Red carpet / premiere stream | Stage & Music | |
 | 53 | Fashion show livestream | Stage & Music | |
