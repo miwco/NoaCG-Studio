@@ -144,10 +144,11 @@ src/
                'graphic', supabase migration 0009); shows.ts (the RUNDOWN unit -
                docs/CONTROL_LAYER.md); structure.ts (element identity) + fieldModel.ts (the
                FieldDescriptor contract)
-  templates/ * the wizard catalog: shared assemblers + 19 categories (11 core + frames = chrome
+  templates/ * the wizard catalog: shared assemblers + 21 categories (11 core + frames = chrome
                around a camera HOLE + transitions = a full-frame cover that clears itself on a
                timer + the COMPETITION PACK's four - docs/COMPETITION_PACK.md + poll = the live
-               VOTE board + audience = viewer questions, Q&A, chat highlights, queues, requests);
+               VOTE board + audience = viewer questions, Q&A, chat highlights, queues, requests
+               + the PUBLIC-SERVICE PACK's alerts + public info - docs/PUBLIC_SERVICE_PACK.md);
                :root style contract;
                types/ = the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md) - what a graphic IS,
                independent of its look; compiles into catalog variants, replacing by id

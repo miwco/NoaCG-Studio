@@ -103,7 +103,7 @@ const results = await page.evaluate(async (CATEGORY) => {
     }
     row.checks.allPresets = presetOk;
 
-    if (['lower-third', 'info-card'].includes(CATEGORY) && v.maxLines >= 2) {
+    if (['lower-third', 'info-card', 'alert', 'public-info'].includes(CATEGORY) && v.maxLines >= 2) {
       const t3 = v.create({ animation: { steps: true } });
       // A design may opt out of steps coherently (StandardDesign.disableSteps — e.g. a
       // versus card whose lines are simultaneous columns): settings stay '1' AND no
@@ -327,9 +327,18 @@ const results = await page.evaluate(async (CATEGORY) => {
           const track = d.getElementById('ticker-track');
           w.play();
           const before = w.getComputedStyle(track).transform;
-          await new Promise((r) => setTimeout(r, 500));
-          const after = w.getComputedStyle(track).transform;
-          return { before, after };
+          // POLL, never sleep a fixed span. The travel only starts once the strip's half-second
+          // fade-in has finished, so a single sample at 500 ms lands on the boundary — and under
+          // a loaded machine it lands before it, reporting a working marquee as dead. The set of
+          // "failing" tickers then changed every run, which is the signature of a racing check
+          // rather than a broken template.
+          let after = before, waited = 0;
+          while (after === before && waited < 4000) {
+            await new Promise((r) => setTimeout(r, 60));
+            waited += 60;
+            after = w.getComputedStyle(track).transform;
+          }
+          return { before, after, waitedMs: waited };
         });
         row.checks.marqueeMoves = !r6b.fatal && r6b.errs.length === 0 && r6b.before !== r6b.after;
         if (!row.checks.marqueeMoves) row.issues.push('marquee never moved: ' + JSON.stringify(r6b));
@@ -411,14 +420,32 @@ const results = await page.evaluate(async (CATEGORY) => {
       w.update(JSON.stringify({ f0: long, f1: 'Title' }));
       const longRect = el.getBoundingClientRect();
       const boxRect = box.getBoundingClientRect();
-      return { wrapped: longRect.height > shortH * 1.5, boxW: Math.round(boxRect.width) };
+      return {
+        wrapped: longRect.height > shortH * 1.5,
+        boxW: Math.round(boxRect.width),
+        // For a BAND the question is not "did it wrap" but "did it stay inside": a full-width
+        // strip has room for a long name without wrapping, and that is the design working.
+        contained: longRect.right <= boxRect.right + 1 && longRect.left >= boxRect.left - 1,
+      };
     });
     // The cap differs per category — read it from the generated CSS (max-width on the box).
     // Matches both the plain `806px` form and the scale-aware `min(calc(806px * var(--scale)), …)`
     // form; the sweep creates at default scale 1, where both mean the same width.
-    const cap = Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
-    row.checks.autoFit = !r4.fatal && !!r4.wrapped && r4.boxW <= cap + 2;
-    if (!row.checks.autoFit) row.issues.push('autofit: ' + JSON.stringify({ fatal: r4.fatal, wrapped: r4.wrapped, boxW: r4.boxW, cap }));
+    //
+    // A BAND design (an alert banner, a public-notice strip) opts out of the shared auto-fit
+    // cap with `max-width: none` and states its own width instead — a full-width band is the
+    // point of it. Its declared width is then the cap the check should hold it to; without
+    // this the sweep measures every band against a cap it deliberately does not obey.
+    const declaredWidth = Number((t4.css.match(/\n\s*width:\s*calc\((\d+)px \* var\(--scale\)\)/) || [])[1]);
+    const optsOutOfAutoFit = /max-width:\s*none/.test(t4.css);
+    const cap = optsOutOfAutoFit && declaredWidth
+      ? declaredWidth
+      : Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
+    // A hugging box must WRAP a long value; a band must CONTAIN it. Both must respect their
+    // own cap.
+    const fits = optsOutOfAutoFit ? (!!r4.contained || !!r4.wrapped) : !!r4.wrapped;
+    row.checks.autoFit = !r4.fatal && fits && r4.boxW <= cap + 2;
+    if (!row.checks.autoFit) row.issues.push('autofit: ' + JSON.stringify({ fatal: r4.fatal, wrapped: r4.wrapped, contained: r4.contained, boxW: r4.boxW, cap }));
     out.push(row);
   }
   return out;
