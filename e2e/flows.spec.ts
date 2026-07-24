@@ -127,7 +127,7 @@ test('import graphics: image lands in the logo slot', async ({ page }) => {
       'base64',
     ),
   });
-  await expect(page.locator('.wz-fid')).toHaveCount(1);
+  await expect(page.locator('.wz-file-chip')).toHaveCount(1);
   await page.getByRole('button', { name: /Design around these with a catalog template/ }).click();
   await expect(page.locator('.asset-card')).toHaveCount(1);
   await page.getByRole('button', { name: /Continue with 1 image/ }).click();

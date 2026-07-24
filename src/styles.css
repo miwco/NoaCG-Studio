@@ -748,6 +748,34 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   overflow-y: auto;
 }
 .ai-attached { color: var(--text-dim); font-style: normal; font-size: 11px; }
+
+/* Brand proposals: colours read out of the uploaded artwork + the saved looks. */
+.ai-brand {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-brand-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.ai-brand-row .hint { margin: 0; }
+/* Inputs in this strip size to their content — a full-width select for two saved looks
+   reads as the row's main event, which it is not. */
+.ai-brand-row select { width: auto; min-width: 150px; }
+.ai-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex: none;
+}
+.ai-swatch:hover { border-color: var(--text); }
+/* The picked accent is ringed rather than recoloured — the swatch IS the colour, so any
+   overlay on it would misreport what was chosen. */
+.ai-swatch.picked { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px var(--accent); }
 /* An earlier generation, compact: its directions as thumbnails with the one you had picked
    marked, and the way back to it. */
 .ai-past {
@@ -1268,7 +1296,21 @@ kbd {
 /* Step 3: field rows */
 .wz-line-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .wz-line-row input { flex: 1; }
+/* A FIELD ID badge — "f0". The fixed width is what keeps a column of them aligned. */
 .wz-fid { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); width: 24px; flex: none; }
+/* A FILE chip — an uploaded asset's name beside its remove button. It borrowed .wz-fid and
+   inherited that 24px, which crushed every filename onto two cramped lines. */
+.wz-file-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Step 4: style pickers */
 .wz-palettes { display: flex; flex-wrap: wrap; gap: 8px; }

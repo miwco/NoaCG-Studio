@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAiProvider } from '../../../ai';
 import { brainstorm, type ChatMessage } from '../../../ai/brainstorm';
 import { EXAMPLE_PROMPTS } from '../../../ai/examplePrompts';
@@ -19,7 +19,9 @@ import {
 import { useAuthState } from '../../auth/useAuthState';
 import SignInPrompt from '../../auth/SignInPrompt';
 import { fileToDataUrl, uniqueAssetPath } from '../../../assets/assetUtils';
+import { extractBrandColors, paletteFromAccent, type BrandColor } from '../../../assets/paletteExtract';
 import { importTemplateFile, isTemplateFile } from '../../../model/importTemplate';
+import { loadLooks } from '../../../model/packets';
 import type { AssetFile, Resolution, SpxTemplate } from '../../../model/types';
 import type { Palette } from '../../../model/wizard';
 import { validateTemplate, type ValidationResult } from '../../../validation/validateTemplate';
@@ -149,6 +151,27 @@ export default function AiStep({
   // An example brief is armed before it replaces a brief the user already wrote (the
   // two-step pattern used for every other destructive click in the app).
   const [armedExample, setArmedExample] = useState<string | null>(null);
+  // BRAND. Colours read out of the uploaded artwork (deterministic, no model call) and the
+  // looks already saved in this install — both PROPOSE, and land on `spec.brandColors`,
+  // which is the existing lock the assembler already honours over anything the AI picks.
+  const [extracted, setExtracted] = useState<BrandColor[]>([]);
+  const looks = useMemo(() => loadLooks(), []);
+  useEffect(() => {
+    // The FIRST image is the one a logo slot receives, so it is the one whose colours are
+    // being offered as the brand.
+    const first = images[0];
+    if (!first || typeof first.data !== 'string') {
+      setExtracted([]);
+      return;
+    }
+    let alive = true;
+    void extractBrandColors(first.data).then((colors) => {
+      if (alive) setExtracted(colors);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [images]);
   const fileInput = useRef<HTMLInputElement>(null);
   // THE THREAD: talk and generations in one transcript. The brainstorm used to be a separate
   // panel producing a string the user copied into the prompt box — two chat-shaped surfaces
@@ -303,6 +326,26 @@ export default function AiStep({
 
   /** The brief a Generate press acts on: what is typed, else what the talk arrived at. */
   const briefNow = (): string => prompt.trim() || latestBrief || '';
+
+  /** Take a colour as the brand accent; the rest of the system follows the house neutrals. */
+  const applyAccent = (hex: string) => setSpec({ ...spec, brandColors: paletteFromAccent(hex) });
+
+  /** Apply a saved look: its exact palette, and its font when it carries one. */
+  const applySavedLook = (id: string) => {
+    const look = looks.find((l) => l.id === id);
+    if (!look) return;
+    const p = look.brand.palette;
+    const font = look.brand.customFont
+      ? { customFont: look.brand.customFont }
+      : look.brand.fontId
+        ? { fontId: look.brand.fontId }
+        : null;
+    setSpec({
+      ...spec,
+      brandColors: { accent: p.accent, text: p.text, textDim: p.textDim, panel: p.panel },
+      ...(font ? { fonts: { ...spec.fonts, primary: { ...spec.fonts?.primary, ...font } } } : {}),
+    });
+  };
 
   const generate = (seed?: DesignSpec) => {
     const brief = briefNow();
@@ -498,7 +541,7 @@ export default function AiStep({
       {images.length > 0 && (
         <div className="row wrap" style={{ marginTop: 8, alignItems: 'center' }}>
           {images.map((img) => (
-            <span key={img.path} className="wz-fid" title={img.path}>
+            <span key={img.path} className="wz-file-chip" title={img.path}>
               {img.path.replace(/^images\//, '')}
               <button
                 style={{ marginLeft: 6, padding: '0 6px' }}
@@ -636,7 +679,59 @@ export default function AiStep({
             </p>
           )}
 
-          {brandPalette && (
+          {/* BRAND: colours read out of the uploaded artwork, and the looks already saved.
+              Both only PROPOSE — the machine cannot tell whether the red in a crest is the
+              identity or the shirt behind it, so the pick stays the user's. */}
+          {(extracted.length > 0 || looks.length > 0) && (
+            <div className="ai-brand" data-testid="ai-brand">
+              {extracted.length > 0 && (
+                <div className="ai-brand-row">
+                  <span className="hint">Colours in your image:</span>
+                  {extracted.map((c) => (
+                    <button
+                      key={c.hex}
+                      className={`ai-swatch ${spec.brandColors?.accent === c.hex ? 'picked' : ''}`}
+                      style={{ background: c.hex }}
+                      data-swatch={c.hex}
+                      aria-label={`Use ${c.hex} as the brand accent`}
+                      title={`${c.hex} — ${Math.round(c.share * 100)}% of the image`}
+                      onClick={() => applyAccent(c.hex)}
+                      disabled={!!busy}
+                    />
+                  ))}
+                </div>
+              )}
+              {looks.length > 0 && (
+                <div className="ai-brand-row">
+                  <span className="hint">Or a saved look:</span>
+                  <select
+                    aria-label="Saved brand look"
+                    value=""
+                    onChange={(e) => applySavedLook(e.target.value)}
+                    disabled={!!busy}
+                  >
+                    <option value="">Pick a look…</option>
+                    {looks.map((l) => (
+                      <option key={l.id} value={l.id}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {spec.brandColors && (
+                <div className="ai-brand-row">
+                  <span className="hint">
+                    Brand accent <code className="inline">{spec.brandColors.accent}</code> — the AI
+                    must use it exactly.
+                  </span>
+                  <button onClick={() => setSpec({ ...spec, brandColors: null })} disabled={!!busy}>
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {brandPalette && !spec.brandColors && (
             <p className="hint" style={{ marginTop: 6 }}>
               Using this project's brand colors (accent {brandPalette.accent}) — toggle "Match current
               project" below to let the AI pick its own.

@@ -486,6 +486,65 @@ test('an image attached to a refinement reaches the model and is bundled', async
   expect(assets).toContain('images/badge.png');
 });
 
+// A 4×4 PNG: half a strong teal, a quarter warm cream, a quarter near-black ink — a logo,
+// the paper it is printed on, and its outline. Both neutrals are deliberately TINTED
+// (cream s=0.73, ink s=0.17), so filtering on saturation alone would let them through:
+// only the lightness guard keeps paper and ink from being offered as the brand.
+const PNG_TEAL_ON_WHITE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAG0lEQVR4nGOQm9cFRwwonL+/PsERAys7GxwBAG88Fh1fl4uoAAAAAElFTkSuQmCC',
+  'base64',
+);
+
+test('brand: the colours in an uploaded logo are offered, and the pick locks the accent', async ({ page }) => {
+  let designText = '';
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives') {
+      designText = requestText(route);
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    }
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step input[type="file"]').setInputFiles({
+    name: 'crest.png',
+    mimeType: 'image/png',
+    buffer: PNG_TEAL_ON_WHITE,
+  });
+
+  // Extraction is deterministic arithmetic, not a model call — no request is made for it.
+  await expect(page.getByTestId('ai-brand')).toBeVisible();
+  const swatches = page.locator('.ai-swatch');
+  await expect(swatches).toHaveCount(1); // the cream and the ink are scored out
+  const hex = await swatches.first().getAttribute('data-swatch');
+  expect(hex?.toLowerCase()).toBe('#1e9e8a');
+
+  await swatches.first().click();
+  await expect(page.getByTestId('ai-brand')).toContainText('#1e9e8a');
+  // Re-running extraction gives the same answer — the same file may never yield a different
+  // brand from one press to the next.
+  await page.locator('.wz-step input[type="file"]').setInputFiles({
+    name: 'crest2.png',
+    mimeType: 'image/png',
+    buffer: PNG_TEAL_ON_WHITE,
+  });
+  await expect(page.locator('.ai-swatch').first()).toHaveAttribute('data-swatch', hex ?? '');
+
+  await page.locator('.wz-step textarea').fill('A lower third for our club');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  // The picked colour reaches the model as an exact instruction…
+  expect(designText).toContain('#1e9e8a');
+  // …and survives assembly, whatever the model asked for (applySpecLocks).
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded One');
+  const css = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.css;
+  });
+  expect(css).toContain('#1e9e8a');
+});
+
 test('describe-it: a flourish runs the polish pass and lands as a marked override block', async ({ page }) => {
   await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
     const tool = requestedTool(route);

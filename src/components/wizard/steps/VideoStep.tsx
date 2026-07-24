@@ -303,7 +303,7 @@ export default function VideoStep({ onCreate, onOpen }: Props) {
             />
             <button onClick={() => fileInput.current?.click()}>🖼 Add logo / images / video…</button>
             {assets.map((a) => (
-              <span key={a.path} className="wz-fid" title={a.path}>
+              <span key={a.path} className="wz-file-chip" title={a.path}>
                 {a.path.replace(/^(images|assets)\//, '')}
                 <button
                   style={{ marginLeft: 6, padding: '0 6px' }}

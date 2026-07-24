@@ -112,7 +112,7 @@ Caveat that must be honoured: `docs/BROADCAST_DESIGN_SYSTEM_RESEARCH.md` shipped
 `SELECTION_MODE='legacy'` — contrast selection was measured and *rejected*. Any port must be
 gated on `scripts/ai-compare.mjs` showing a win, per the harness's own decision rule.
 
-### F7 — No brand ingestion, and no access to saved brand looks (severity: medium)
+### F7 — No brand ingestion, and no access to saved brand looks (severity: medium) — CLOSED by Phase 4
 
 Brand today = one checkbox reusing the *current project's* palette and font
 (`CreationWizard.tsx:341,537`), plus exact colour pickers inside More control. What's missing:
@@ -296,17 +296,36 @@ project and not kept as a cross-session draft. See the open question below.
 *Cost note:* an `ai-compare` bank is roughly the $6–12 order per run recorded for the video
 benches. Do not start this phase without an explicit go-ahead.
 
-### Phase 4 — Brand-first *(mostly deterministic, no API spend)*
+### Phase 4 — Brand-first — **BUILT 2026-07-24**
 
-13. **Palette extraction from an uploaded logo/still** — deterministic quantisation in
-    `src/assets/`, offered as "use these colours" chips the user confirms. No model call.
-14. **Saved brand looks selectable in the AI step**, not just the current project's brand.
-15. **A structured brand block in the spec prompt** (colours, font, logo presence) rather than
-    only prose `referenceSystem`, so brand survives into assembly deterministically via the
-    existing `applySpecLocks` path.
+13. **Palette extraction from an uploaded logo/still.** ✅ `src/assets/paletteExtract.ts` —
+    sample at ≤96px, bucket on a coarse RGB grid while accumulating real channel values (so a
+    colour is its bucket's MEAN, not the grid corner), merge neighbouring buckets by weighted
+    mean, then score for how likely a colour is to BE the brand: saturation squared × a
+    lightness fit, with paper and ink scored out entirely. Pure arithmetic — no model call, no
+    network, and **no randomness**, because k-means with a random seed would answer
+    differently for the same file on every press.
+14. **Saved brand looks selectable in the AI step.** ✅ `loadLooks()` feeds a picker; a look
+    applies its exact palette and its font (uploaded or bundled).
+15. **A structured brand block in the prompt.** ✅ **Already satisfied, nothing built** —
+    `contextText` emits the exact `--accent/--text/--text-dim/--panel-bg` from `ctx.palette`
+    (which `specPalette` fills from `brandColors`), and `fontsSection` in `spec/specPrompt.ts`
+    already states the chosen families. This item was written from an incomplete read.
 
-*Acceptance:* offline `e2e` (extraction is deterministic); the stub provider proves the
-locks apply without tokens, as `ai-more-control.spec.ts` already does.
+Both proposals land on `spec.brandColors`, the lock `applySpecLocks` already honours over
+anything the model picks — so no new plumbing was needed to make brand win. Both only
+PROPOSE: the machine cannot tell whether the red in a crest is the identity or the shirt
+behind it, so the pick stays the user's.
+
+*Verified:* build green; ai + ai-depth + ai-more-control + flows + video-project = 45/45,
+with a new case driving a real 4×4 PNG (teal brand, tinted cream paper, tinted near-black
+ink) through upload → swatches → pick → generate → create, asserting the exact hex reaches
+the model AND survives into the created template's CSS. **Mutation-tested**: removing the
+paper/ink lightness guard turns 1 offered colour into 3 and fails the spec. **No API calls.**
+
+*Found by looking:* the uploaded-file chips were reusing `.wz-fid` — the **fixed 24px
+field-id badge** — so every filename was crushed onto two cramped lines in the AI step, the
+More-control panel and the video step alike. Filenames now have their own `.wz-file-chip`.
 
 ### Phase 5 — Generate a KIT, not a graphic *(the differentiator; SPENDS MONEY to evaluate)*
 

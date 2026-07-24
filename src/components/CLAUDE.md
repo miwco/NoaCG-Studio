@@ -752,6 +752,15 @@ the same locator either way. `conversation()` feeds the bounded transcript into
 `modify` now takes a context), and **✦ 3 more like this** re-runs the design stage seeded
 with the picked direction's spec.
 
+**Brand is PROPOSED, never applied.** The strip (`.ai-brand`) offers colours read out of the
+first uploaded image — `src/assets/paletteExtract.ts`, deterministic arithmetic, no model call
+— and the install's saved looks (`loadLooks()`). Both write `spec.brandColors`, the lock
+`applySpecLocks` already honours over anything the AI picks, so brand needed no new plumbing
+to win. The pick stays the user's on purpose: nothing can tell whether the red in a crest is
+the identity or the shirt behind it. A filename chip uses **`.wz-file-chip`**, never
+`.wz-fid` — that one is the fixed 24px FIELD-ID badge, and borrowing it crushed every
+filename onto two lines.
+
 Two ordering rules the transcript depends on: **archive the current result BEFORE recording
 the new request** (it is chronological — the standing result happened first), and **record
 the request even when the box was empty** and the brief came from the talk, or a generation

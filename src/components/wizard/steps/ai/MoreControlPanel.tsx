@@ -324,7 +324,7 @@ function LookSection({
       </p>
       <div className="row wrap" style={{ alignItems: 'center', gap: 6 }}>
         {references.map((r) => (
-          <span key={r.path} className="wz-fid" title={r.path}>
+          <span key={r.path} className="wz-file-chip" title={r.path}>
             {r.path.replace(/^images\//, '')}
             <button
               type="button"
@@ -383,7 +383,7 @@ function FontUpload({
     <div className="row wrap" style={{ alignItems: 'center', gap: 6, marginTop: 6 }}>
       <span className="mc-font-slot">{label}</span>
       {choice?.customFont ? (
-        <span className="wz-fid">
+        <span className="wz-file-chip">
           {choice.customFont.family}
           <button type="button" style={{ marginLeft: 6, padding: '0 6px' }} onClick={() => onChoice(undefined)} title="Remove font">✕</button>
         </span>
