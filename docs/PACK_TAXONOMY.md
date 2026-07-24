@@ -31,16 +31,16 @@ config are ready for it; only the surface is unbuilt.
 
 | Pack | Family | Types (curated order) | Extras |
 |---|---|---|---|
-| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | vs01, cr03, ss11, cr12 |
-| Esports | sport | esports-score, map-round, matchup, head-to-head, player-card, bracket, standings, winner-card, scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card, now-next, station-bug, live-bug, sponsor-rotator | vs02, ss13, cr12 |
-| Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll, now-next, process-steps, station-bug, live-bug, logo-bug, chat-highlight, live-poll, viewer-question | ss06, ss08, ss09, ss12 |
-| Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug, headline-card, key-facts, notice-card, station-bug, live-bug, status-chip | ss08, card52 |
-| Election | minimal | poll, lower-third, ticker, title-card, agenda, countdown, headline-card, key-facts, status-chip, live-bug, live-poll | card52, cr05 |
-| Talk Show | glass | lower-third, topic-card, poll, agenda, social-bug, sponsor-bug, countdown, key-facts, recap-card, station-bug, sponsor-rotator, viewer-question, qa-card, chat-highlight, question-queue, live-poll | card52, ss06, ss12 |
-| Corporate Events | minimal | agenda, lower-third, countdown, title-card, topic-card, poll, holding-screen, now-next, process-steps, recap-card, key-facts, event-bug, sponsor-strip, question-queue, qa-card, viewer-question, live-poll | ss13, cr05, cr07, cr09 |
-| Classroom | noacg | quiz-board, countdown, lower-third, topic-card, agenda, scoreboard, process-steps, key-facts, recap-card, logo-bug, verdict-card, standings, answer-board-2, answer-board-3, live-poll, viewer-question | cr10, card58, ss13 |
-| Church & Ceremony | minimal | title-card, lower-third, topic-card, holding-screen, countdown, agenda, statement-card, logo-bug, event-bug, community-request, viewer-question, question-queue | cr01, cr05, cr10, cr11, ss07, ss10, card50, card51, card54, card55, card57 |
-| Stage & Music | glass | title-card, lower-third, holding-screen, countdown, social-bug, agenda, ticker, now-next, statement-card, notice-card, award-bug, event-bug | cr02, cr09, cr12, ss07, ss11, card56 |
+| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | ls06, ls07, ls08, ls09, ls10, vs01, cr03, ss11, cr12 |
+| Esports | sport | esports-score, map-round, matchup, head-to-head, player-card, bracket, standings, winner-card, scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card, now-next, station-bug, live-bug, sponsor-rotator | ls11, ls12, ls13, vs02, ss13, cr12 |
+| Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll, now-next, process-steps, station-bug, live-bug, logo-bug, chat-highlight, live-poll, viewer-question | ls03, ls31, ls32, ss06, ss08, ss09, ss12 |
+| Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug, headline-card, key-facts, notice-card, station-bug, live-bug, status-chip | ls01, ls23, ls24, ls28, ls29, ls30, ss08, card52 |
+| Election | minimal | poll, lower-third, ticker, title-card, agenda, countdown, headline-card, key-facts, status-chip, live-bug, live-poll | ls20, ls21, ls22, ls23, card52, cr05 |
+| Talk Show | glass | lower-third, topic-card, poll, agenda, social-bug, sponsor-bug, countdown, key-facts, recap-card, station-bug, sponsor-rotator, viewer-question, qa-card, chat-highlight, question-queue, live-poll | ls02, ls04, ls05, ls24, ls25, card52, ss06, ss12 |
+| Corporate Events | minimal | agenda, lower-third, countdown, title-card, topic-card, poll, holding-screen, now-next, process-steps, recap-card, key-facts, event-bug, sponsor-strip, question-queue, qa-card, viewer-question, live-poll | ls17, ls18, ls19, ls24, ss13, cr05, cr07, cr09 |
+| Classroom | noacg | quiz-board, countdown, lower-third, topic-card, agenda, scoreboard, process-steps, key-facts, recap-card, logo-bug, verdict-card, standings, answer-board-2, answer-board-3, live-poll, viewer-question | ls17, ls18, cr10, card58, ss13 |
+| Church & Ceremony | minimal | title-card, lower-third, topic-card, holding-screen, countdown, agenda, statement-card, logo-bug, event-bug, community-request, viewer-question, question-queue | ls14, ls15, ls16, cr01, cr05, cr10, cr11, ss07, ss10, card50, card51, card54, card55, card57 |
+| Stage & Music | glass | title-card, lower-third, holding-screen, countdown, social-bug, agenda, ticker, now-next, statement-card, notice-card, award-bug, event-bug | ls04, ls25, ls26, ls27, cr02, cr09, cr12, ss07, ss11, card56 |
 | Shopping | noacg | topic-card, countdown, lower-third, ticker, title-card, sponsor-bug, key-facts, sponsor-strip, sponsor-rotator | ss06, ss12, cr12 |
 | Wellness | minimal | countdown, holding-screen, topic-card, lower-third, social-bug, process-steps, logo-bug | ss08, ss09, card52 |
 
@@ -61,6 +61,25 @@ the list formats (cr05-cr12 - schedule boards, looping reels, thank-you and dono
 sponsor boards and crawls, ceremony rolls), and the set-piece cards (card50-card58 - readings,
 lyrics, quotations, translations, orders of service, award, graduate, wedding and memorial).
 They ship without a state machine beyond the derived one, which is correct for what they are.
+
+The SPECIALIST lower thirds (ls01-ls32) join the same way, and they are the extras a kit is
+most likely to be opened for: a strap drawn for ONE production rather than for any show. The
+`lower-third` TYPE stays in every pack that had it - it is the general strap, and it is what a
+non-technical user should still land on first - so these sit beside it as the graphic that
+already knows the format's convention. The mapping is by production context, not by style
+family: the athlete and commentary straps to Match Day, tag-and-handle identities to Esports,
+the worship set to Church & Ceremony, the party-colour straps to Election, the billing straps
+to Stage & Music, the speaker credits to Corporate Events and Classroom, and the newsroom's
+analysis kicker, live flag, dateline and other-city clock to Newsroom. Two of them close a
+stand-in the mapping below records: ls25 "Now Playing" is the graphic the radio-with-video row
+had been borrowing a topic card for, and ls30 "World Clock" is what a market show cutting
+between exchanges needs instead of a time somebody typed.
+
+A strap can serve more than one pack (extras are not exclusive the way FORMATS are - `card52`
+and `cr05` already were): ls24 "Expert Panel" is a newsroom explainer, a long-form panel credit
+and a medical/legal webinar's credit, so it is in all three. **Shopping and Wellness get none,
+deliberately** - a selling host and a fitness instructor are named by an ordinary lower third,
+and forcing a specialist strap in would only make those kits harder to read.
 
 Family picks, briefly: sport carries both competitive packs; noacg (the house on-air look) goes
 to the streamer-native packs where its amber control-room voice reads natively; glass suits the

@@ -56,7 +56,13 @@ export const PACKS: TemplatePack[] = [
       // The competition pack's sports half (docs/COMPETITION_PACK.md).
       'roster', 'standings', 'winner-card',
     ],
-    extras: ['vs01', 'cr03', 'ss11', 'cr12'],
+    extras: [
+      // The specialist straps a match feed is drawn for: the commentary pair as a block and
+      // as a rail, and the three ways coverage names a player — by squad number, by the
+      // stat line that justifies the cutaway, and by the club whose badge leads the card.
+      'ls06', 'ls07', 'ls08', 'ls09', 'ls10',
+      'vs01', 'cr03', 'ss11', 'cr12',
+    ],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
   },
   {
@@ -74,7 +80,12 @@ export const PACKS: TemplatePack[] = [
       // (docs/COMPETITION_PACK.md).
       'esports-score', 'map-round', 'matchup', 'head-to-head', 'player-card', 'bracket', 'standings', 'winner-card',
     ],
-    extras: ['vs02', 'ss13', 'cr12'],
+    extras: [
+      // An esports player is named tag-then-handle, not name-then-club, and the desk is
+      // named by handle too — three straps a sports kit has no shape for.
+      'ls11', 'ls12', 'ls13',
+      'vs02', 'ss13', 'cr12',
+    ],
     formats: ['Esports tournament'],
   },
   {
@@ -92,7 +103,13 @@ export const PACKS: TemplatePack[] = [
       // as the strap is, and the question card is what a Just Chatting segment runs on.
       'chat-highlight', 'live-poll', 'viewer-question',
     ],
-    extras: ['ss06', 'ss08', 'ss09', 'ss12'],
+    extras: [
+      // A co-stream names two people in the house look, the handle row is the graphic a
+      // creator ends on, and the identity card carries the sub/donation goal a subathon or
+      // a telethon exists for.
+      'ls03', 'ls31', 'ls32',
+      'ss06', 'ss08', 'ss09', 'ss12',
+    ],
     formats: [
       'Gaming livestream',
       'Just Chatting / personality stream',
@@ -118,7 +135,14 @@ export const PACKS: TemplatePack[] = [
       // status a news desk is obliged to be honest about, and the location chip for reporters.
       'station-bug', 'live-bug', 'status-chip',
     ],
-    extras: ['ss08', 'card52'],
+    extras: [
+      // The news desk's specialist straps: the remote two-box interview, the kicker that
+      // marks comment as comment, the expert's field of expertise, the LIVE flag as its own
+      // element, the correspondent's dateline, and — for a market show cutting between
+      // exchanges — the strap that computes another city's time instead of stating it.
+      'ls01', 'ls23', 'ls24', 'ls28', 'ls29', 'ls30',
+      'ss08', 'card52',
+    ],
     formats: [
       'News / current affairs livestream',
       'Weather broadcast / climate update',
@@ -143,7 +167,13 @@ export const PACKS: TemplatePack[] = [
       // board above it is the finished result.
       'live-poll',
     ],
-    extras: ['card52', 'cr05'],
+    extras: [
+      // Civic coverage reads the party colour first: the result bar, the symmetric podium
+      // strap a debate places twice, and the everyday affiliation strap. The analysis
+      // kicker rides along because results night runs on interpretation.
+      'ls20', 'ls21', 'ls22', 'ls23',
+      'card52', 'cr05',
+    ],
     formats: [
       'Election night / results program',
       'Debate / political discussion',
@@ -164,7 +194,13 @@ export const PACKS: TemplatePack[] = [
       // The whole audience-interaction set: a live Q&A is this pack's own format.
       'viewer-question', 'qa-card', 'chat-highlight', 'question-queue', 'live-poll',
     ],
-    extras: ['card52', 'ss06', 'ss12'],
+    extras: [
+      // The panel's own straps: the two-card remote interview, the guest-over-host pair in
+      // both its compositions, the specialist's subject tag, and the now-playing strap a
+      // radio-with-video show needs (the topic card had been standing in for it).
+      'ls02', 'ls04', 'ls05', 'ls24', 'ls25',
+      'card52', 'ss06', 'ss12',
+    ],
     formats: [
       'Talk show / panel discussion',
       'Podcast livestream / videocast',
@@ -189,7 +225,13 @@ export const PACKS: TemplatePack[] = [
       // Webinar and conference Q&A: the moderator's queue and the answered card.
       'question-queue', 'qa-card', 'viewer-question', 'live-poll',
     ],
-    extras: ['ss13', 'cr05', 'cr07', 'cr09'],
+    extras: [
+      // The speaker credits a conference actually runs on: post-nominals as their own
+      // field, the institution's mark on the card, the session strap that leads with the
+      // talk for people joining mid-track, and the expert's field for medical and legal.
+      'ls17', 'ls18', 'ls19', 'ls24',
+      'ss13', 'cr05', 'cr07', 'cr09',
+    ],
     formats: [
       'Webinar / expert presentation',
       'Conference / seminar stream',
@@ -218,7 +260,12 @@ export const PACKS: TemplatePack[] = [
       // Two- and three-answer boards for true/false and three-way rounds, plus the class vote.
       'answer-board-2', 'answer-board-3', 'live-poll', 'viewer-question',
     ],
-    extras: ['cr10', 'card58', 'ss13'],
+    extras: [
+      // The lecturer's credit, and the school or department mark a student production is
+      // usually required to carry.
+      'ls17', 'ls18',
+      'cr10', 'card58', 'ss13',
+    ],
     formats: [
       'Education / lecture livestream',
       'Student production / school TV',
@@ -239,7 +286,13 @@ export const PACKS: TemplatePack[] = [
       // The request card and the question card — a service reads both from the congregation.
       'community-request', 'viewer-question', 'question-queue',
     ],
-    extras: ['cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57'],
+    extras: [
+      // The three worship straps, and the reason this pack needed its own: a sermon credit
+      // that fades rather than snaps, a reading where the reference outranks the reader,
+      // and the ceremony strap that names the part of the programme being delivered.
+      'ls14', 'ls15', 'ls16',
+      'cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57',
+    ],
     formats: [
       'Religious service / church livestream',
       'Graduation / ceremony stream',
@@ -259,7 +312,13 @@ export const PACKS: TemplatePack[] = [
       // this is.
       'award-bug', 'event-bug',
     ],
-    extras: ['cr02', 'cr09', 'cr12', 'ss07', 'ss11', 'card56'],
+    extras: [
+      // The billing straps, and getting them the right way round is this pack's whole job:
+      // artist-led for a performance, track-led for a set, the numbered item for a recital
+      // programme — plus the guest-over-host pair a red carpet interviews arrivals with.
+      'ls04', 'ls25', 'ls26', 'ls27',
+      'cr02', 'cr09', 'cr12', 'ss07', 'ss11', 'card56',
+    ],
     formats: [
       'Music performance / concert livestream',
       'Award show / gala',
@@ -281,6 +340,9 @@ export const PACKS: TemplatePack[] = [
       // for the ones that cycle through a long selling block.
       'sponsor-strip', 'sponsor-rotator',
     ],
+    // No specialist strap here on purpose: the pack is drawn for interview duos, athletes,
+    // clergy, academics, politicians and performers, and a selling host is named by an
+    // ordinary lower third. The commerce cards (card38-card49) are this pack's own graphics.
     extras: ['ss06', 'ss12', 'cr12'],
     formats: [
       'Live commerce / shopping stream',
@@ -301,6 +363,8 @@ export const PACKS: TemplatePack[] = [
       // A class or an ambient stream keeps one quiet mark on screen and nothing more.
       'logo-bug',
     ],
+    // Same as Shopping: an instructor is named by an ordinary strap, and forcing a
+    // specialist one in would only make the kit harder to read.
     extras: ['ss08', 'ss09', 'card52'],
     formats: [
       'Fitness / workout class',
