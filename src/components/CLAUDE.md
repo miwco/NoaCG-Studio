@@ -739,6 +739,25 @@ An **example brief is armed before it replaces a brief the user wrote** (two-ste
 other destructive click here): the chip reads "Replace your brief?" until confirmed, and
 typing disarms it. Pinned by e2e/ai.spec.ts.
 
+**ONE thread, ONE composer.** The step had two chat-shaped surfaces that could not see each
+other — a brainstorm panel producing a string the user copied into the prompt box, and a
+refine input inside the result card — and the generator read neither. Now `turns` is a single
+transcript (`.ai-thread`): talk turns plus `past` turns, which are earlier generations kept
+whole (their directions, their originals, which one was picked) with **↩ Bring back**;
+restoring archives whatever it displaces, so exploring a second idea never costs the first.
+The one textarea generates, talks (**🗨 Talk it through**) or refines — the primary button
+follows the state, and the "Refine it…" placeholder is retained so the composer answers to
+the same locator either way. `conversation()` feeds the bounded transcript into
+`GenerateContext` (src/ai/CLAUDE.md), **📎 Attach** adds images to the turn (bundled, because
+`modify` now takes a context), and **✦ 3 more like this** re-runs the design stage seeded
+with the picked direction's spec.
+
+Two ordering rules the transcript depends on: **archive the current result BEFORE recording
+the new request** (it is chronological — the standing result happened first), and **record
+the request even when the box was empty** and the brief came from the talk, or a generation
+leaves no trace of what it was asked to make. Both were wrong first and caught by looking at
+the rendered thread, not by reading the code.
+
 **Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + a
 GENERATION-ENGINE picker (the VIDEO_ENGINES cards: Remotion preselected, HyperFrames tagged
 Experimental) + duration/aspect/fps/transparency + asset upload -> an INSTANT create

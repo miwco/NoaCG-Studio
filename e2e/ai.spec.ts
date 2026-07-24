@@ -86,6 +86,31 @@ const GROUNDED_SPEC = {
   ],
 };
 
+/** A plain text answer — what the brainstorm turn (no forced tool) gets back. */
+function textReply(text: string) {
+  return {
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ content: [{ type: 'text', text }], stop_reason: 'end_turn' }),
+  };
+}
+
+/** A 1×1 PNG, enough to travel the whole attach path (data URL → vision block → asset). */
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** The whole text of a request, for asserting what the model was actually told. */
+function requestText(route: Route): string {
+  const body = route.request().postDataJSON() as {
+    messages: { content: { type: string; text?: string }[] }[];
+  };
+  return body.messages
+    .map((m) => (Array.isArray(m.content) ? m.content.map((c) => c.text ?? '').join(' ') : ''))
+    .join(' ');
+}
+
 function toolUse(name: string, input: unknown) {
   return {
     status: 200,
@@ -331,6 +356,134 @@ test('an example brief never silently replaces a brief you wrote', async ({ page
   await expect(box).toHaveValue('my own carefully written brief');
   await page.getByRole('button', { name: 'Replace your brief?' }).click();
   await expect(box).toHaveValue(/weather now/i);
+});
+
+test('the conversation is one thread, and it travels with the brief', async ({ page }) => {
+  let designText = '';
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (!tool)
+      return route.fulfill(
+        textReply('A substitutions strap wants the player names side by side.\nBRIEF: A football substitution strap with both player names.'),
+      );
+    if (tool === 'emit_design_alternatives') {
+      designText = requestText(route);
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    }
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('halftime of a local derby, something for substitutions');
+  await page.getByTestId('ai-talk').click();
+  // Both sides of the exchange land in the ONE transcript.
+  await expect(page.getByTestId('ai-thread')).toContainText('halftime of a local derby');
+  await expect(page.getByTestId('ai-thread')).toContainText('side by side');
+  // The box is empty, but the talk arrived at a brief — Generate acts on it.
+  await expect(page.locator('.wz-step textarea')).toHaveValue('');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  // The generator was told the whole conversation, not just a copied summary line.
+  expect(designText).toContain('halftime of a local derby');
+  expect(designText).toContain('side by side');
+});
+
+test('an earlier generation stays in the thread and can be brought back', async ({ page }) => {
+  let round = 0;
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives') {
+      round += 1;
+      const suffix = round === 1 ? 'One' : 'Two';
+      return route.fulfill(
+        toolUse(tool, {
+          alternatives: THREE_ALTS.map((a, i) => ({ ...a, name: `Round ${suffix} ${i + 1}` })),
+        }),
+      );
+    }
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Round One 1', GENERATED);
+
+  await page.locator('.wz-step textarea').fill('Actually try something bolder');
+  await page.getByRole('button', { name: '↻ Start over' }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Round Two 1', GENERATED);
+  // The first round was not thrown away — it is in the thread, with its three thumbnails.
+  await expect(page.getByTestId('ai-past')).toHaveCount(1);
+  await expect(page.getByTestId('ai-past').locator('.wz-mini iframe')).toHaveCount(3);
+
+  await page.getByRole('button', { name: '↩ Bring back' }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('Round One 1');
+  // …and the round it displaced took its place in the thread.
+  await expect(page.getByTestId('ai-past')).toHaveCount(1);
+  await expect(page.getByTestId('ai-past')).toContainText('Round Two 1');
+});
+
+test('"3 more like this" seeds the design stage with the picked direction', async ({ page }) => {
+  const designTexts: string[] = [];
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives') {
+      designTexts.push(requestText(route));
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    }
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  await page.locator('[data-alt="2"]').click();
+  await page.getByTestId('ai-more-like').click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+  expect(designTexts).toHaveLength(2);
+  // The second call carries the picked direction's own spec as the thing to vary FROM.
+  expect(designTexts[1]).toContain('THREE MORE LIKE THIS');
+  expect(designTexts[1]).toContain('lt02');
+  expect(designTexts[0]).not.toContain('THREE MORE LIKE THIS');
+});
+
+test('an image attached to a refinement reaches the model and is bundled', async ({ page }) => {
+  let refineText = '';
+  await page.route('https://api.anthropic.com/v1/messages', (route: Route) => {
+    const tool = requestedTool(route);
+    if (tool === 'emit_design_alternatives')
+      return route.fulfill(toolUse(tool, { alternatives: THREE_ALTS }));
+    if (tool === 'emit_design_spec') {
+      refineText = requestText(route);
+      return route.fulfill(toolUse(tool, { ...GROUNDED_SPEC, variantId: 'lt02', name: 'With The Badge' }));
+    }
+    return route.fulfill(toolUse('emit_template', VALID_TEMPLATE));
+  });
+  await openAiStep(page);
+  await page.locator('.wz-step textarea').fill('A clean news lower third');
+  await page.getByRole('button', { name: '✦ Generate' }).click();
+  await expect(page.locator('[data-alt]')).toHaveCount(3, GENERATED);
+
+  // Attach mid-thread — the same drop zone input the composer's 📎 opens.
+  await page.locator('.wz-step input[type="file"]').setInputFiles({
+    name: 'badge.png',
+    mimeType: 'image/png',
+    buffer: PNG_1X1,
+  });
+  await page.locator('.wz-step textarea').fill('put this badge on the left');
+  await page.getByRole('button', { name: 'Refine', exact: true }).click();
+  await expect(page.locator('.change-preview strong')).toHaveText('With The Badge', GENERATED);
+  // The refinement named the attachment by its bundled path, not merely "an image".
+  expect(refineText).toContain('images/badge.png');
+  expect(refineText).toContain('put this badge on the left');
+
+  await page.getByRole('button', { name: 'Create project' }).click();
+  // The apply is async — read the store only once the created project is actually up, or
+  // the read lands on the boot template and the assertion says nothing about this test.
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('With The Badge');
+  const assets = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.assets.map((a: { path: string }) => a.path);
+  });
+  expect(assets).toContain('images/badge.png');
 });
 
 test('describe-it: a flourish runs the polish pass and lands as a marked override block', async ({ page }) => {

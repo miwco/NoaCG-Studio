@@ -735,6 +735,42 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
   max-height: 320px;
   overflow-y: auto;
 }
+/* The AI step's ONE transcript: talk turns and earlier generations in the order they
+   happened. Capped and scrolled so a long conversation never pushes the composer - the
+   thing you came to type into - off the bottom of the step. */
+.ai-thread {
+  margin-top: 12px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.ai-attached { color: var(--text-dim); font-style: normal; font-size: 11px; }
+/* An earlier generation, compact: its directions as thumbnails with the one you had picked
+   marked, and the way back to it. */
+.ai-past {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+}
+/* History reads as history: the thumbnails are deliberately smaller than the live picker
+   cards, so the thread never competes with the choice being made below it. */
+.ai-past-shots { display: flex; gap: 6px; max-width: 330px; }
+.ai-past-shot {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  opacity: 0.75;
+}
+.ai-past-shot.picked { border-color: var(--accent); opacity: 1; }
+.ai-past-foot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.ai-past-foot .hint { flex: 1; margin: 0; }
 .ai-msg { margin: 6px 0; font-size: 13px; display: flex; }
 .ai-msg span {
   padding: 6px 10px;

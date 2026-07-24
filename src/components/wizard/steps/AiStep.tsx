@@ -61,6 +61,27 @@ function routeLabel(path: AiPath | null): string | null {
 const routeMark = (path: AiPath | undefined): string => (path === 'custom' ? '✦' : '▤');
 
 /**
+ * ONE transcript for the whole step: what the user said, what the AI said back, and every
+ * set of directions it produced. `past` turns are earlier generations — they stay restorable,
+ * so exploring a second idea never costs you the first one.
+ */
+type TalkTurn = { kind: 'you'; text: string; attached: number } | { kind: 'ai'; text: string };
+type PastTurn = {
+  kind: 'past';
+  changes: AiTemplateChange[];
+  originals: AiTemplateChange[];
+  selected: number;
+};
+type Turn = TalkTurn | PastTurn;
+
+/**
+ * How many talk turns travel with a request. The whole conversation is the brief, but an
+ * unbounded transcript would grow the design-stage prompt without bound — and the last
+ * exchanges are where the decisions actually live.
+ */
+const CONVERSATION_TURNS = 10;
+
+/**
  * The design decisions behind one direction, in the user's words. The whole point of the
  * three alternatives is that they differ in REAL decisions (composition, density, weight,
  * shape) — a card that showed only a name would hide exactly what the choice is about.
@@ -98,7 +119,6 @@ export default function AiStep({
   const [settings, setSettings] = useState(loadAiSettings);
   const [showSettings, setShowSettings] = useState(!aiConfigured());
   const [prompt, setPrompt] = useState('');
-  const [refine, setRefine] = useState('');
   const [images, setImages] = useState<AssetFile[]>([]);
   // The structured setup ("More control"): persisted as a cross-session draft so closing
   // the wizard never loses it; an empty spec injects nothing anywhere.
@@ -130,29 +150,44 @@ export default function AiStep({
   // two-step pattern used for every other destructive click in the app).
   const [armedExample, setArmedExample] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  // The brainstorm chat (optional): sharpen the idea, then use its BRIEF as the prompt.
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState('');
+  // THE THREAD: talk and generations in one transcript. The brainstorm used to be a separate
+  // panel producing a string the user copied into the prompt box — two chat-shaped surfaces
+  // that could not see each other, neither of which the generator ever read.
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
   const [latestBrief, setLatestBrief] = useState<string | null>(null);
 
+  /** What the model is told the conversation was: the talk turns, bounded, oldest first. */
+  const conversation = (): ChatMessage[] =>
+    turns
+      .filter((t): t is TalkTurn => t.kind === 'you' || t.kind === 'ai')
+      .slice(-CONVERSATION_TURNS)
+      .map((t) => ({ role: t.kind === 'you' ? 'user' : 'assistant', text: t.text }));
+
+  const say = (turn: Turn) => setTurns((prev) => [...prev, turn]);
+
+  /** Move the current result into the transcript before a new one takes its place. */
+  const archiveCurrent = () => {
+    if (!alternatives.length) return;
+    say({ kind: 'past', changes: alternatives, originals, selected });
+  };
+
   const sendChat = async () => {
-    const text = chatInput.trim();
-    if (!text || chatBusy) return;
-    const history: ChatMessage[] = [...chat, { role: 'user', text }];
-    setChat(history);
-    setChatInput('');
+    const text = prompt.trim();
+    if (!text || chatBusy || busy) return;
+    const history: ChatMessage[] = [...conversation(), { role: 'user', text }];
+    say({ kind: 'you', text, attached: 0 });
+    setPrompt('');
     setChatBusy(true);
     setError(null);
     try {
       const { reply, brief } = await brainstorm(history);
-      setChat([...history, { role: 'assistant', text: reply }]);
+      say({ kind: 'ai', text: reply });
       if (brief) setLatestBrief(brief);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      setChat(history.slice(0, -1)); // the failed turn goes back into the input
-      setChatInput(text);
+      setTurns((prev) => prev.slice(0, -1)); // the failed turn goes back into the box
+      setPrompt(text);
     } finally {
       setChatBusy(false);
     }
@@ -253,39 +288,57 @@ export default function AiStep({
   const specPalette: Palette | null = spec.brandColors
     ? { id: 'ai-user-brand', name: 'Brand colors', styleTags: ['noacg'], ...spec.brandColors }
     : null;
-  const context: GenerateContext = {
+  /** `seed` = "three more like this": the direction whose spirit the new ones should keep. */
+  const contextFor = (seed?: DesignSpec): GenerateContext => ({
     images,
     references: references.length ? references : undefined,
     palette: specPalette ?? brandPalette,
     customFont: spec.fonts?.primary?.customFont,
     spec: activeSpec,
+    conversation: turns.length ? conversation() : undefined,
+    ...(seed ? { seed } : {}),
     resolution,
     fps,
-  };
+  });
 
-  const generate = () => {
+  /** The brief a Generate press acts on: what is typed, else what the talk arrived at. */
+  const briefNow = (): string => prompt.trim() || latestBrief || '';
+
+  const generate = (seed?: DesignSpec) => {
+    const brief = briefNow();
+    // ARCHIVE FIRST, then record the request. The transcript is chronological: the result
+    // standing now happened BEFORE the thing that replaces it, and appending the new turn
+    // first put the request above the result it superseded.
+    archiveCurrent();
+    // Say what was asked for even when the box was empty and the brief came out of the
+    // talk — otherwise a generation leaves no trace of what it was asked to make.
+    const asked = prompt.trim() || (seed ? 'More directions like the one I picked.' : brief);
+    if (asked) say({ kind: 'you', text: asked, attached: images.length });
+    setPrompt('');
+    setArmedExample(null);
+    const context = contextFor(seed);
     // Conversion always runs the validated conversion flow; plain generation branches on
     // the harness switch: OFF = the default one-shot (statically validated, no repair
     // loop), ON = three harness alternatives with the live bench injected.
     if (imported) {
       void run(
-        (options) => getAiProvider().convertImport(prompt, imported.template, context, options),
+        (options) => getAiProvider().convertImport(brief, imported.template, context, options),
         'Converting your template…',
       );
       return;
     }
     if (!settings.useHarness) {
       void run(
-        (options) => getAiProvider().generateRaw(prompt, context, { onProgress: options.onProgress }),
+        (options) => getAiProvider().generateRaw(brief, context, { onProgress: options.onProgress }),
         'Generating…',
       );
       return;
     }
     void (async () => {
-      setBusy('Designing three directions…');
+      setBusy(seed ? 'Designing three more in that spirit…' : 'Designing three directions…');
       setError(null);
       try {
-        const list = await getAiProvider().generateAlternatives(prompt, context, {
+        const list = await getAiProvider().generateAlternatives(brief, context, {
           validate,
           onProgress: (stage) => setBusy(stage),
         });
@@ -305,6 +358,19 @@ export default function AiStep({
     })();
   };
 
+  /** Bring an earlier generation back as the current result; the displaced one is kept. */
+  const restore = (index: number) => {
+    const turn = turns[index];
+    if (turn?.kind !== 'past' || busy) return;
+    archiveCurrent();
+    setTurns((prev) => prev.filter((_, i) => i !== index));
+    setAlternatives(turn.changes);
+    setOriginals(turn.originals);
+    setSelected(turn.selected);
+    showChange(turn.changes[turn.selected]);
+    stagePick(turn.changes[turn.selected], turn.originals);
+  };
+
   /**
    * One refinement turn on the PICKED direction. It replaces that entry in place — the other
    * directions keep their own designs and stay pickable — and re-stages the pick, so
@@ -320,7 +386,7 @@ export default function AiStep({
       setBusy(label);
       setError(null);
       try {
-        const change = await getAiProvider().modify(instruction, result, {
+        const change = await getAiProvider().modify(instruction, result, contextFor(), {
           validate,
           onProgress: (stage) => setBusy(stage),
           ...(useSpec && lastSpec ? { spec: lastSpec } : {}),
@@ -337,9 +403,11 @@ export default function AiStep({
   };
 
   const refineNow = () => {
-    const p = refine.trim();
+    const p = prompt.trim();
     if (!p) return;
-    setRefine('');
+    say({ kind: 'you', text: p, attached: images.length });
+    setPrompt('');
+    setArmedExample(null);
     applyRefinement(p, true, 'Refining…');
   };
 
@@ -458,7 +526,61 @@ export default function AiStep({
         </div>
       ) : (
         <>
-          {/* Example briefs: show the range (most have no starting template) + teach the shape. */}
+          {/* THE THREAD: talk turns and earlier generations, oldest first. */}
+          {turns.length > 0 && (
+            <div className="ai-thread" data-testid="ai-thread">
+              {turns.map((turn, i) =>
+                turn.kind === 'past' ? (
+                  <div key={i} className="ai-past" data-testid="ai-past">
+                    <div className="ai-past-shots">
+                      {turn.changes.map((alt, k) => (
+                        <span
+                          key={k}
+                          className={`ai-past-shot ${k === turn.selected ? 'picked' : ''}`}
+                          title={alt.template.name}
+                        >
+                          <MiniPreview template={alt.template} />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="ai-past-foot">
+                      <span className="hint">
+                        {turn.changes.length > 1
+                          ? `${turn.changes.length} directions — you had "${turn.changes[turn.selected].template.name}" picked`
+                          : turn.changes[turn.selected].template.name}
+                      </span>
+                      <button onClick={() => restore(i)} disabled={!!busy}>
+                        ↩ Bring back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className={`ai-msg ${turn.kind === 'you' ? 'user' : 'assistant'}`}>
+                    <span>
+                      {turn.text}
+                      {turn.kind === 'you' && turn.attached > 0 && (
+                        <em className="ai-attached"> — with {turn.attached} image(s)</em>
+                      )}
+                    </span>
+                  </div>
+                ),
+              )}
+              {chatBusy && <p className="hint">⏳ Thinking…</p>}
+              {/* What a Generate press would act on, while that is still the next move. Once
+                  a result exists the brief has been consumed and the request is a turn in
+                  the thread above — repeating it here would just be a second copy. */}
+              {latestBrief && !chatBusy && !busy && !result && (
+                <div className="ai-brief">
+                  <span className="hint">Brief so far: {latestBrief}</span>
+                  <button onClick={() => setPrompt(latestBrief)}>Edit it</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Example briefs: show the range (most have no starting template) + teach the shape.
+              They belong to the empty state — once there is a thread they are noise. */}
+          {turns.length === 0 && (
           <div className="row wrap" style={{ marginTop: 12, marginBottom: 6, gap: 6 }}>
             {EXAMPLE_PROMPTS.map((ex) => {
               // A brief the user wrote themselves is real work; replacing it takes two clicks.
@@ -484,13 +606,19 @@ export default function AiStep({
               );
             })}
           </div>
+          )}
 
+          {/* ONE composer for the whole step. What it does depends on where you are: with no
+              result it describes the graphic, with one it refines it — and either way the
+              same box can be talked into instead of generated from. */}
           <textarea
-            rows={4}
+            rows={result ? 3 : 4}
             placeholder={
-              imported
-                ? 'e.g. "Keep the layout but bring it to our look: darker panel, our amber accent, calmer entrance."'
-                : 'e.g. "An election results lower third for channel A7: candidate name, party, and a\nvote percentage that counts up. Dark, serious, uses our logo as a small badge on the left."'
+              result
+                ? 'Refine it — e.g. "bigger name, move it bottom-left, calmer entrance"'
+                : imported
+                  ? 'e.g. "Keep the layout but bring it to our look: darker panel, our amber accent, calmer entrance."'
+                  : 'e.g. "An election results lower third for channel A7: candidate name, party, and a\nvote percentage that counts up. Dark, serious, uses our logo as a small badge on the left."'
             }
             value={prompt}
             onChange={(e) => {
@@ -500,47 +628,12 @@ export default function AiStep({
             disabled={!!busy}
           />
 
-          {/* Brainstorm chat: talk the idea through, then take the refined brief. */}
-          <div style={{ marginTop: 6 }}>
-            <button onClick={() => setChatOpen((o) => !o)} disabled={!aiConfigured(settings)}>
-              🗨 {chatOpen ? 'Hide brainstorm' : 'Brainstorm with AI…'}
-            </button>
-          </div>
-          {chatOpen && (
-            <div className="ai-chat">
-              {chat.length === 0 && (
-                <p className="hint">
-                  Not sure what you need yet? Describe the show or the moment ("halftime of a local
-                  derby, we need something for substitutions") and work it out together — every reply
-                  ends with a ready-to-use brief.
-                </p>
-              )}
-              {chat.map((m, i) => (
-                <div key={i} className={`ai-msg ${m.role}`}>
-                  <span>{m.text}</span>
-                </div>
-              ))}
-              {chatBusy && <p className="hint">⏳ Thinking…</p>}
-              {latestBrief && !chatBusy && (
-                <div className="ai-brief">
-                  <span className="hint">Current brief: {latestBrief}</span>
-                  <button className="primary" onClick={() => { setPrompt(latestBrief); setChatOpen(false); }}>
-                    Use as brief
-                  </button>
-                </div>
-              )}
-              <div className="row" style={{ marginTop: 6 }}>
-                <input
-                  className="grow"
-                  placeholder="Talk it through…"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void sendChat(); }}
-                  disabled={chatBusy}
-                />
-                <button disabled={chatBusy || !chatInput.trim()} onClick={() => void sendChat()}>Send</button>
-              </div>
-            </div>
+          {turns.length === 0 && (
+            <p className="hint" style={{ marginTop: 6 }}>
+              Not sure yet? Describe the show or the moment ("halftime of a local derby, we need
+              something for substitutions") and press <b>Talk it through</b> — the conversation
+              travels with the brief when you generate.
+            </p>
           )}
 
           {brandPalette && (
@@ -551,13 +644,56 @@ export default function AiStep({
           )}
 
           <div className="row wrap" style={{ marginTop: 10, alignItems: 'center' }}>
+            {/* With a result standing, the typed text is a REFINEMENT of it — that is the
+                primary move, and starting over is the deliberate one beside it. */}
+            {result && !imported ? (
+              <button
+                className="primary"
+                disabled={!!busy || !aiConfigured(settings) || !prompt.trim()}
+                onClick={refineNow}
+              >
+                Refine
+              </button>
+            ) : (
+              <button
+                className="primary"
+                disabled={!!busy || !aiConfigured(settings) || (!briefNow() && !imported)}
+                onClick={() => generate()}
+              >
+                {imported ? '⚡ Convert with AI' : '✦ Generate'}
+              </button>
+            )}
             <button
-              className="primary"
-              disabled={!!busy || !aiConfigured(settings) || (!prompt.trim() && !imported)}
-              onClick={() => generate()}
+              disabled={chatBusy || !!busy || !prompt.trim() || !aiConfigured(settings)}
+              onClick={() => void sendChat()}
+              data-testid="ai-talk"
+              title="Think it through with the AI first — the conversation travels with the brief when you generate."
             >
-              {imported ? '⚡ Convert with AI' : result ? '↻ Generate again' : '✦ Generate'}
+              🗨 Talk it through
             </button>
+            <button
+              disabled={!!busy}
+              onClick={() => fileInput.current?.click()}
+              data-testid="ai-attach"
+              title="Attach an image to this turn — it is bundled with the result, not just described."
+            >
+              📎 Attach
+            </button>
+            {result && !imported && (
+              <button disabled={!!busy || !aiConfigured(settings) || !briefNow()} onClick={() => generate()}>
+                ↻ Start over
+              </button>
+            )}
+            {result && !imported && alternatives[selected]?.spec && settings.useHarness && (
+              <button
+                disabled={!!busy || !aiConfigured(settings)}
+                data-testid="ai-more-like"
+                onClick={() => generate(alternatives[selected].spec)}
+                title="Three new directions in the spirit of the one you picked."
+              >
+                ✦ 3 more like this
+              </button>
+            )}
             {!imported && (
               <label
                 className="wz-match"
@@ -736,16 +872,6 @@ export default function AiStep({
                   ))}
                 </ul>
               )}
-              <div className="row" style={{ marginTop: 10 }}>
-                <input
-                  className="grow"
-                  placeholder='Refine it — e.g. "bigger name, move it bottom-left, calmer entrance"'
-                  value={refine}
-                  onChange={(e) => setRefine(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && refine.trim()) refineNow(); }}
-                />
-                <button disabled={!refine.trim()} onClick={refineNow}>Refine</button>
-              </div>
               {refined && (
                 // A refinement is a bet: it may be worse than what the AI first proposed, and
                 // regenerating would return three DIFFERENT designs rather than this one.

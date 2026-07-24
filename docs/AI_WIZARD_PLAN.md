@@ -238,21 +238,47 @@ suite (`styles.css` selects the shared-core set) ran 505/505. Screenshot pass at
   terms with a column gap fix it, and an explicit "·" between them lands at the START of a
   wrapped line, reading as a stray bullet.
 
-### Phase 2 — One conversation, with history *(no API spend to build; brainstorm already costs)*
+### Phase 2 — One conversation, with history — **BUILT 2026-07-24**
 
-6. **Merge brainstorm and refine into one thread.** One transcript in the AI step: turns are
-   either talk (brainstorm) or generations. A generation turn carries its result thumbnail,
-   its route badge, its validation verdict and a **Restore** action. Model the store on the
-   video shell's chat, which already solves this in-product.
-7. **The conversation is context.** Pass the transcript (bounded) into the design stage so a
-   brief refined over three turns generates from all of it, not from a copied string.
-8. **Attach images mid-thread** — a refine may add a reference or an asset.
-9. **"3 more like this"** — regenerate alternatives seeded from a chosen spec. Cheap to add
-   once alternatives survive a refine, and a much cleaner preference signal than an implicit
-   pick.
+6. **Merged brainstorm and refine into one thread.** ✅ One transcript (`.ai-thread`) and ONE
+   composer. The brainstorm was a separate panel producing a string the user copied into the
+   prompt box; the refine was a second input inside the result card. Now the same box
+   generates, talks (**🗨 Talk it through**) and refines — the primary action follows the
+   state (Generate with no result, Refine with one) — and every earlier generation stays in
+   the thread as a compact `ai-past` card with its directions and **↩ Bring back**.
+7. **The conversation is context.** ✅ `GenerateContext.conversation` (bounded to the last
+   `CONVERSATION_TURNS = 10` talk turns) renders into `contextText`, `modifyContent` and the
+   spec-refine prompt, so every path — including raw — reads the whole exchange. The
+   brainstorm system prompt no longer claims "the generator never sees this chat", because
+   it does.
+8. **Attach images mid-thread.** ✅ `AIProvider.modify` gained a `context`, so a refinement
+   carries attachments; they reach `toTemplate`, which means an attached image is **bundled**,
+   not merely described. `contextFrom` merges the template's own images with the turn's, so a
+   spec-level re-assembly loses neither.
+9. **"3 more like this".** ✅ `GenerateContext.seed` carries the picked direction's spec into
+   the design stage with instructions to keep its spirit and vary everything that is
+   genuinely a choice.
 
-*Acceptance:* `e2e/ai.spec.ts` covers thread persistence across steps, restore, and an
-image attached to turn 2 reaching the provider (stub asserts the context it received).
+*Verified:* `npm run build` green; `e2e/ai.spec.ts` + `ai-depth` + `ai-more-control` +
+`import-graphic` = 42/42, with four new cases (the thread carries both sides and the talk
+reaches the generator; an earlier generation is restorable and the displaced one takes its
+place; the seed reaches the design stage and only on the second call; an attached image
+reaches the model by bundled path and lands in the created project's assets). The two new
+context guards were **mutation-tested** — dropping `conversation` and `seed` from the context
+fails all three of the specs that claim them. Screenshot pass on the thread. **No API calls
+left the machine.**
+
+*Found by looking:*
+
+- The transcript was **out of order**: appending the new request before archiving the current
+  result put the request above the result it superseded. Archive first, then record.
+- Generating from a talk-derived brief with an empty box left **no trace in the thread** of
+  what was asked for. The brief is now recorded as the request turn.
+- With a result on screen the "Brief so far" strip is a **second copy** of a turn already in
+  the thread — it now shows only while generating is still the next move.
+
+*Deliberately not done:* the thread is **session-only** — it is not persisted with the
+project and not kept as a cross-session draft. See the open question below.
 
 ### Phase 3 — Taste parity with the video harness *(SPENDS REAL MONEY: `scripts/ai-compare.mjs`)*
 
@@ -323,8 +349,16 @@ the grounded assembly path is already category-agnostic.
 
 1. **Kit scope (Phase 5):** which graphics belong in a default kit — fixed list per genre, or
    AI-proposed from the brief and user-trimmed?
-2. **Conversation persistence (Phase 2):** does the thread survive into the created project
-   (like the video shell's chat) or end at create?
+2. **Conversation persistence (Phase 2) — OPEN, and currently answered the safe way.** The
+   thread is session-only: closing the wizard loses it, and creating a project does not carry
+   it. Three options, none free:
+   - *Leave it* (today). No persisted-format change, no migration, no staleness.
+   - *Cross-session draft* (localStorage, like the More-control spec draft). Survives closing
+     the wizard; a weeks-old conversation can then silently become context for a new brief.
+   - *Persist with the project* (like the video shell's chat). The most useful — a graphic
+     would carry the reasoning that produced it, and a later "make this warmer" could read it
+     — but `GraphicDoc`/`SavedProject` are versioned persisted formats, so it needs a version
+     bump and a migration in the same commit (root CLAUDE.md rule 6).
 3. **Phase 3 budget:** is a real-token `ai-compare` run authorised, and at what bank size?
 4. **Custom-brief machines:** should the AI ever propose states/events for an off-catalog
    brief, or does the operator model stay type-derived only?
