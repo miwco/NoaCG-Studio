@@ -56,11 +56,16 @@ const results = await page.evaluate(async (CATEGORY) => {
     const isInfographic = CATEGORY === 'infographic';
     const isQuiz = CATEGORY === 'quiz';
     const isVersus = CATEGORY === 'versus';
+    const isAudience = CATEGORY === 'audience';
     row.checks.masks = isCredits ? tpl.html.includes('credits-track')
       : isTicker ? tpl.html.includes('ticker-track')
       : clockPrefix ? tpl.html.includes(`${clockPrefix}-clock`)
       : isInfographic ? tpl.html.includes('infographic-box') // designs own their fields — no mask contract
       : isVersus ? (tpl.html.includes('versus-box') && tpl.html.includes('versus-mask') && tpl.html.includes('id="f0"'))
+      // An audience graphic's masked element is its MESSAGE, and the queue form has no mask at
+      // all — its content is rows the runtime renders. Both carry the box.
+      : isAudience ? (tpl.html.includes('audience-box')
+          && (tpl.html.includes('audience-question') || tpl.html.includes('id="audience-queue"')))
       : (/-mask/.test(tpl.html) && tpl.html.includes('id="f0"'));
 
     const rt = await runInFrame(tpl, async (w, d) => {
@@ -265,14 +270,27 @@ const results = await page.evaluate(async (CATEGORY) => {
     }
     if (isQuiz) {
       // Quiz: options bind, and next() reveals the correct answer highlight.
+      //
+      // The field layout is READ OFF THE TEMPLATE, never assumed: a board has two, three or
+      // four answers, so the correct-answer dropdown is f3, f4 or f5. Writing 'B' into a
+      // hard-coded f5 set nothing at all on the smaller boards and reported a reveal failure
+      // that was the sweep's, not the graphic's.
+      const answers = tpl.fields.filter((f) => /^Answer /.test(f.title));
+      const correct = tpl.fields.find((f) => f.title === 'Correct answer');
+      const payload = { f0: 'Which planet is red?' };
+      const NAMES = ['Venus', 'Mars', 'Pluto', 'Titan'];
+      answers.forEach((f, i) => { payload[f.field] = NAMES[i]; });
+      // Pick the SECOND answer as the right one — every board has at least two.
+      if (correct) payload[correct.field] = 'B';
+      const secondAnswer = answers[1]?.field;
       const r10 = await runInFrame(tpl, async (w, d) => {
-        w.update(JSON.stringify({ f0: 'Which planet is red?', f1: 'Venus', f2: 'Mars', f3: 'Pluto', f4: 'Titan', f5: 'B' }));
+        w.update(JSON.stringify(payload));
         w.play();
         await new Promise((r) => setTimeout(r, 900));
         w.next();
         await new Promise((r) => setTimeout(r, 500));
         return {
-          bound: d.getElementById('f2')?.textContent === 'Mars',
+          bound: d.getElementById(secondAnswer)?.textContent === 'Mars',
           revealed: !!d.querySelector('.quiz-correct'),
         };
       });
@@ -327,6 +345,59 @@ const results = await page.evaluate(async (CATEGORY) => {
       });
       row.checks.autoFit = !r5.fatal && r5.errs.length === 0 && r5.rows >= 2 && r5.hasEnd;
       if (!row.checks.autoFit) row.issues.push('credits-track: ' + JSON.stringify(r5));
+      out.push(row);
+      continue;
+    }
+    if (isAudience) {
+      // AUDIENCE graphics wrap in their MESSAGE, not in #f0 — that field is the kicker on a
+      // question card and the handle on a chat strap. And the message CLAMPS rather than
+      // wrapping forever: audience text is the one thing on a broadcast graphic whose length
+      // nobody in the production controls, so a 400-character question has to end in an
+      // ellipsis instead of growing the card off the frame.
+      const LONG = 'I have been watching since the very first series and I have always wondered how the '
+        + 'running order actually gets decided on the day, especially when a big story breaks late in '
+        + 'the afternoon and everything that was planned has to move around it at short notice.';
+      const messageField = (tpl.html.match(/class="audience-question" id="(f\d+)"/) || [])[1];
+      const queueField = tpl.html.includes('id="audience-queue"')
+        ? (tpl.html.match(/<div id="(f\d+)" style="display: none">/) || [])[1]
+        : null;
+      const r11 = await runInFrame(tpl, async (w, d) => {
+        w.play();
+        await new Promise((r) => setTimeout(r, 600));
+        const out = { boxW: 0, grew: true, clamped: true, rows: 0, live: 0, anon: false };
+        const box = d.querySelector('.audience-box');
+        if (messageField) {
+          const el = d.querySelector('.audience-question');
+          w.update(JSON.stringify({ [messageField]: 'Short?' }));
+          const shortH = el.getBoundingClientRect().height;
+          w.update(JSON.stringify({ [messageField]: LONG }));
+          const cs = w.getComputedStyle(el);
+          const lines = parseInt(cs.webkitLineClamp, 10) || 99;
+          out.grew = el.getBoundingClientRect().height > shortH;
+          out.clamped = el.getBoundingClientRect().height <= parseFloat(cs.lineHeight) * lines + 2;
+        }
+        if (queueField) {
+          w.update(JSON.stringify({ [queueField]: 'One? | A | X\nTwo? | | Y\nThree?' }));
+          out.rows = d.querySelectorAll('.audience-queue-row').length;
+          out.live = d.querySelectorAll('.audience-queue-live').length;
+        }
+        // A missing name has to render as the stand-in, on every form that carries a byline.
+        const asker = d.querySelector('.audience-asker');
+        if (asker) {
+          const field = asker.id;
+          w.update(JSON.stringify({ [field]: '' }));
+          out.anon = d.querySelector('.audience').classList.contains('audience-no-asker');
+        } else {
+          out.anon = true;                                  // this form has no byline to test
+        }
+        out.boxW = Math.round(box.getBoundingClientRect().width);
+        return out;
+      });
+      const capA = Number((tpl.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
+      row.checks.autoFit =
+        !r11.fatal && r11.errs.length === 0 && r11.grew && r11.clamped && r11.anon &&
+        r11.boxW <= capA + 2 && (!queueField || (r11.rows === 3 && r11.live === 1));
+      if (!row.checks.autoFit) row.issues.push('audience: ' + JSON.stringify({ ...r11, cap: capA }));
       out.push(row);
       continue;
     }

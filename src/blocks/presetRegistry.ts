@@ -20,7 +20,12 @@ import { GT_PRESETS } from '../templates/gameTimers/gtPresets';
 import { IG_PRESETS } from '../templates/infographics/igPresets';
 import { VS_PRESETS } from '../templates/versus/vsPresets';
 import { QUIZ_PRESETS } from '../templates/quiz/quizPresets';
+import { COMP_PRESETS } from '../templates/competition/compPresets';
+import { POLL_PRESETS } from '../templates/poll/pollPresets';
+import { AUDIENCE_PRESETS } from '../templates/audience/audiencePresets';
 import { DESIGN_PRESETS } from '../templates/importedDesign/designPresets';
+import { FRAME_PRESETS } from '../templates/frames/framePresets';
+import { TRANSITION_PRESETS } from '../templates/transitions/transitionPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
 import { countLines, detectPrefix } from '../model/structure';
@@ -46,6 +51,17 @@ export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
   if (type === 'infographic') return IG_PRESETS;
   if (type === 'fullscreen') return VS_PRESETS;
   if (type === 'quiz') return QUIZ_PRESETS;
+  // A frame is chrome around a picture and a transition covers the whole frame: neither is
+  // driven by the box/line choreography the standard bank writes, so each has its own.
+  if (type === 'frame') return FRAME_PRESETS;
+  if (type === 'transition') return TRANSITION_PRESETS;
+  // The competition pack's four categories share ONE prefix-parameterized bank, so a scorebug
+  // and an award reveal move by the same vocabulary (templates/competition/compPresets.ts).
+  if (type === 'esports-score' || type === 'matchup' || type === 'results-board' || type === 'reveal') {
+    return COMP_PRESETS;
+  }
+  if (type === 'poll') return POLL_PRESETS;
+  if (type === 'audience') return AUDIENCE_PRESETS;
   // An imported design is one picture: only the whole-unit presets suit it. The line presets
   // would stagger #fN out of masks the artwork was drawn around (templates/importedDesign).
   if (type === 'imported-design') return DESIGN_PRESETS;
@@ -58,6 +74,10 @@ export function presetsForType(type: SpxTemplate['type']): AnimPreset[] {
 export const ALL_PRESETS = [
   ...ANIM_PRESETS, ...CREDITS_PRESETS, ...TICKER_PRESETS,
   ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...VS_PRESETS, ...QUIZ_PRESETS, ...DESIGN_PRESETS,
+  ...FRAME_PRESETS, ...TRANSITION_PRESETS,
+  ...COMP_PRESETS,
+  ...SS_PRESETS, ...GT_PRESETS, ...IG_PRESETS, ...VS_PRESETS, ...QUIZ_PRESETS, ...POLL_PRESETS,
+  ...AUDIENCE_PRESETS, ...DESIGN_PRESETS,
 ];
 
 /** Look up a preset across every category's library. */
@@ -80,6 +100,20 @@ export type AnimPhase = 'in' | 'out' | 'both';
  * hand-written region. Steps are always OFF: a press's choreography belongs to the target's own
  * reveal steps, not to the donor's.
  */
+/**
+ * The `<prefix>-*` class tokens a template's HTML actually carries — `PresetConfig.parts`.
+ *
+ * Derived from the markup rather than from a category list, for the same reason `detectPrefix`
+ * is: the emitted code is the source of truth, so a preset asking "does this design have a
+ * kicker" gets its answer from the design, whether it came from the catalog, an import, or a
+ * user's own edit.
+ */
+function optionalParts(html: string, prefix: string): string[] {
+  const found = new Set<string>();
+  for (const [, token] of html.matchAll(new RegExp(`\\b(${prefix}-[a-z0-9-]+)\\b`, 'g'))) found.add(token);
+  return [...found].sort();
+}
+
 export function emitPresetRegion(
   template: SpxTemplate,
   presetId: AnimPresetId,
@@ -93,6 +127,9 @@ export function emitPresetRegion(
     lineCount: Math.max(1, countLines(template.html)),
     hasAccent: template.html.includes(`${prefix}-accent`),
     hasBars: template.html.includes(`${prefix}-bar-fill`),
+    // The optional parts this design actually draws — read off the HTML, the same way
+    // hasAccent and hasBars are, so a re-applied preset animates what is there and nothing else.
+    parts: optionalParts(template.html, prefix),
     steps: false,
     stepOutsideParts: [],
     speed: opts?.speed ?? 1,

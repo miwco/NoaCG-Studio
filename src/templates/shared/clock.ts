@@ -3,8 +3,10 @@
 // logic, not motion): the animation presets only call startClock() / stopClock().
 //
 // Contract with the design:
-//   - a hidden <div id="fN" style="display:none"> holds the duration in whole minutes
-//     (decimals allowed: "0.5" is thirty seconds) — SPX writes into it like any field
+//   - a hidden <div id="fN" class="noacg-data-source"> holds the duration in whole minutes
+//     (decimals allowed: "0.5" is thirty seconds) — SPX writes into it like any field.
+//     The hider is a CSS rule, never an inline style: the editor's entrance reset clears
+//     inline props (base.ts DATA_SOURCE_CLASS), which would un-hide an inline-hidden holder
 //   - OPTIONALLY a second hidden field holds a wall-clock START TIME ("19:30"). When the
 //     operator fills it in it WINS over the duration, which is what "counts down to the
 //     start of the show" actually means: the number on screen agrees with the clock on

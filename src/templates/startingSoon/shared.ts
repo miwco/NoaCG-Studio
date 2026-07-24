@@ -33,6 +33,7 @@ import {
 import {
   baseSettings,
   computeScale,
+  dataSourceCss,
   documentHtml,
   maxTextWidthCss,
   resetCanvasCss,
@@ -243,11 +244,11 @@ export function assembleStartingSoon(
         ? `
     <!-- Hidden countdown sources — SPX writes the fields here; the clock reads them.
          A start time (e.g. "19:30") wins; leave it empty to count the duration instead. -->
-    <div id="${minutesId}" style="display: none">${minutesValue}</div>
-    <div id="${startTimeId}" style="display: none">${startTimeValue}</div>`
+    <div id="${minutesId}" class="noacg-data-source">${minutesValue}</div>
+    <div id="${startTimeId}" class="noacg-data-source">${startTimeValue}</div>`
         : `
     <!-- Hidden countdown source — SPX writes field ${minutesId} (minutes) here; the clock reads it. -->
-    <div id="${minutesId}" style="display: none">${minutesValue}</div>`;
+    <div id="${minutesId}" class="noacg-data-source">${minutesValue}</div>`;
 
   const html = documentHtml({
     title: meta.name,
@@ -290,6 +291,8 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Design ── */
 ${design.css}
+
+${dataSourceCss}
 `;
 
   const preset = ssPresetById(o.animation.presetId);

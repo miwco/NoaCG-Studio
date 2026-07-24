@@ -55,14 +55,17 @@ async function inTemplate<T>(page: Page, variantId: string, probe: string): Prom
 
 test('the three families are browsable and every design in them is offered', async ({ page }) => {
   for (const [label, category] of [
-    ['Holding screens', 'starting-soon'],
-    ['Credits & lists', 'end-credits'],
-    ['Info cards', 'info-card'],
+    ['Holding & break screens', 'holding'],
+    ['Credits & thanks', 'credits'],
+    ['Information cards', 'info'],
   ] as const) {
     await toTemplateStep(page, label);
+    // Counted off the TAXONOMY, not the wizard category: browse tiles are graphic categories,
+    // and one wizard category can spread across several of them (an info-card that carries a
+    // type browses under Titles / Topics / Notices, not under Information cards).
     const expected = await page.evaluate(async (cat) => {
-      const { variantsFor } = await import('/src/templates/catalog.ts');
-      return variantsFor(cat).length;
+      const { allTemplateMeta } = await import('/src/templates/templateMeta.ts');
+      return allTemplateMeta().filter(({ meta }) => meta.category === cat).length;
     }, category);
     // Derived from the live catalog on purpose: the assertion is "every design is reachable",
     // which must keep holding as the catalog grows, not a number that rots on the next one.
@@ -71,15 +74,15 @@ test('the three families are browsable and every design in them is offered', asy
 });
 
 test('the holding set covers the whole show, not just the front door', async ({ page }) => {
-  await toTemplateStep(page, 'Holding screens');
-  // A category called "Starting soon" would hide these; the naming IS the discovery fix.
+  await toTemplateStep(page, 'Holding & break screens');
+  // A tile called "Starting soon" would hide these; the naming IS the discovery fix.
   for (const name of ['Countdown to Start', 'Short Break', 'Intermission', 'Please Stand By', 'Thanks for Watching']) {
     await expect(page.locator('.wz-variant', { hasText: name })).toBeVisible();
   }
 });
 
 test('a ceremony card creates from the wizard and lands in the editor', async ({ page }) => {
-  await toTemplateStep(page, 'Info cards');
+  await toTemplateStep(page, 'Information cards');
   await page.locator('.wz-variant', { hasText: 'In Memoriam' }).click();
   // Create only appears from the Fields step on, so step forward once first.
   await page.locator('.wz-next').click();
