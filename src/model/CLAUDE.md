@@ -7,7 +7,11 @@ Loaded alongside the root CLAUDE.md when working in this directory. Keep it accu
 - **spxDefinition.ts** - parse/serialize the `window.SPXGCTemplateDefinition` block inside the
   template HTML.
 - **structure.ts** - detectPrefix/countLines + getTemplateParts, the TemplatePart registry: THE
-  shared element-identity contract. DOM-derived `{selector, kind, label, channel}`, single-token
+  shared element-identity contract. Numbered sibling families are recognised the same way the
+  quiz's `.<prefix>-option-N` rows are: `.<prefix>-level-N` (the alert category's severity
+  blocks) each become their own part, labelled by the level word they carry, because the level
+  machine gives each one its own opacity track and one shared class matching four elements has
+  nowhere to put four different values. DOM-derived `{selector, kind, label, channel}`, single-token
   selectors only. Timeline labels, canvas selection, and step assignment must all name elements
   through it. A masked text line is recognised under ITS OWN graphic's prefix: the host's, or an
   INSERTED graphic's namespaced one (a `data-gfx` root carrying its own `-box` -

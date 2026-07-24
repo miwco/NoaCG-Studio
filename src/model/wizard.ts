@@ -35,6 +35,8 @@ export type TemplateCategory =
   | 'game-timer'
   | 'scoreboard'
   | 'ticker'
+  | 'alert'
+  | 'public-info'
   | 'infographic'
   | 'corner-bug'
   | 'versus'
@@ -54,7 +56,7 @@ export type TemplateCategory =
 export const CATEGORIES: CategoryInfo[] = [
   // Essentials — the graphics almost every live show needs.
   { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 86, available: true,  description: 'Names, titles, and straps over the action.', group: 'essentials' },
-  { id: 'ticker',        name: 'Tickers',                 plannedCount: 6,  available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
+  { id: 'ticker',        name: 'Tickers',                 plannedCount: 20, available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
   { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
   { id: 'info-card',     name: 'Info cards',              plannedCount: 18, available: true,  description: 'Full / half screen cards — info, readings, quotes and ceremony.', group: 'essentials' },
   // These two carry the TAXONOMY's wording on purpose: they hold exactly the designs their
@@ -77,6 +79,9 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'quiz',          name: 'Quiz graphics',           plannedCount: 12, available: true , description: 'Game-show questions with two, three or four answers.', group: 'specials' },
   { id: 'poll',          name: 'Live votes',              plannedCount: 4,  available: true , description: 'Audience polls and votes — open, close, result, winner.', group: 'specials' },
   { id: 'audience',      name: 'Audience & questions',    plannedCount: 20, available: true , description: 'Viewer questions, Q&A, chat highlights, queues, requests.', group: 'specials' },
+  // The public-service pack (docs/PUBLIC_SERVICE_PACK.md).
+  { id: 'alert',         name: 'Alerts & warnings',       plannedCount: 10, available: true , description: 'Breaking news, weather warnings, emergency and status notices.', group: 'specials' },
+  { id: 'public-info',   name: 'Public information',      plannedCount: 9,  available: true , description: 'Official notices, instructions, disclaimers — in one or two languages.', group: 'specials' },
   // Not browsable — reached only by importing artwork (see CategoryInfo.group).
   { id: 'imported-design', name: 'Imported design',       plannedCount: 1,  available: true , description: 'Your own artwork with text fields on top.', group: 'imported' },
 ];

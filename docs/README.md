@@ -26,6 +26,7 @@ Layers of documentation, top to bottom:
 | `GRAPHIC_TYPES.md` | The type registry: type vs design, the six promotion gates, the factory. |
 | `PACK_TAXONOMY.md` | The 60 reference formats → 12 packs mapping + the gap list (evidence for the next type). |
 | `COMPETITION_PACK.md` | The esports / competition / result / reveal pack: its 12 types, their state flows and events, and how the four categories share one assembler. |
+| `PUBLIC_SERVICE_PACK.md` | Tickers, alerts and public information: the capability matrix, what "a real ticker" and "a real alert state" mean, and the platform limits the pack ran into. |
 | `CONTROL_LAYER.md` | Operator surfaces: the one generator, the ControlMessage protocol, shows, hosted control (migration 0008), staging + event log. |
 | `SAVED_CONTENT_MODEL.md` | The library: GraphicDoc, packages-as-folders, hash routes, control entries, Save semantics. |
 | `DESIGN_LANGUAGE.md` | The taste bar: typography, color, motion doctrine, the §8 family tokens, generated-code style. |

@@ -160,10 +160,16 @@ export const GRAPHIC_CATEGORIES: GraphicCategory[] = [
   // (templates/types/identityBugs.ts): a mark with no caption at all, the conference /
   // festival / fixture ident, and the where-are-we chip are distinct graphics an operator
   // reaches for by name, and none of them is a sponsor, a station or an award.
-  { id: 'bug',         name: 'Bugs & corner logos',     subtypes: ['sponsor', 'station', 'live', 'logo-only', 'event', 'award', 'location', 'social-handle'], coverage: 'overlay', relevance: 'all' },
+  // 'source' joined with the public-service pack: an attribution chip ("Source: …", and when
+  // the figure was measured) is a persistent corner mark like the rest of this family, and it
+  // is none of the marks already listed — it credits the CONTENT, not the broadcaster.
+  { id: 'bug',         name: 'Bugs & corner logos',     subtypes: ['sponsor', 'station', 'live', 'logo-only', 'event', 'award', 'location', 'source', 'social-handle'], coverage: 'overlay', relevance: 'all' },
   { id: 'title',       name: 'Titles & openers',        subtypes: ['show-open', 'session-title', 'segment-title', 'event-title'], coverage: 'panel' },
   { id: 'topic',       name: 'Topic & chapter cards',   subtypes: ['topic', 'chapter', 'now-playing', 'coming-up'], coverage: 'panel' },
-  { id: 'info',        name: 'Information cards',       subtypes: ['explainer', 'spec', 'key-term', 'step', 'checklist', 'fact'], coverage: 'panel' },
+  // 'disclaimer' joined with the public-service pack: legal small print is information the
+  // broadcaster is REQUIRED to show, which is a different graphic from an explainer even
+  // though both are words on a panel.
+  { id: 'info',        name: 'Information cards',       subtypes: ['explainer', 'spec', 'key-term', 'step', 'checklist', 'fact', 'disclaimer'], coverage: 'panel' },
   { id: 'question',    name: 'Questions & chat',        subtypes: ['viewer-question', 'qa-card', 'chat-highlight', 'queue'], coverage: 'panel' },
   { id: 'quote',       name: 'Quotes & statements',     subtypes: ['quote', 'scripture', 'excerpt', 'headline', 'fact-check'], coverage: 'panel' },
   { id: 'scoreboard',  name: 'Scoreboards',             subtypes: ['match-score', 'simple-score', 'round-indicator'], coverage: 'overlay' },
@@ -199,6 +205,12 @@ export function graphicCategoryById(id: GraphicCategoryId): GraphicCategory {
 export const OLD_CATEGORY_FALLBACK: Record<TemplateCategory, GraphicCategoryId | null> = {
   'lower-third': 'lower-third',
   'ticker': 'ticker',
+  'alert': 'alert',
+  // The public-service pack's notices are DECLARED per variant (meta.ts) because they scatter:
+  // an official notice is an alert, a numbered instruction and a disclaimer are information
+  // cards, a bilingual panel is a translation, a source label is a bug. The fallback names the
+  // one a future undeclared design is most likely to be.
+  'public-info': 'info',
   'scoreboard': 'scoreboard',
   'info-card': 'info',
   'starting-soon': 'holding',
@@ -480,6 +492,21 @@ export const ALIASES: Record<string, AliasTargets> = {
   'headline bar': { categories: ['ticker'] },
   'breaking': { categories: ['alert', 'ticker'] },
   'breaking news': { categories: ['alert', 'ticker'] },
+  // public-service vocabulary (docs/PUBLIC_SERVICE_PACK.md)
+  'emergency': { categories: ['alert'], subtypes: ['emergency'] },
+  'warning': { categories: ['alert'], subtypes: ['warning'] },
+  'weather warning': { categories: ['alert'], subtypes: ['warning'] },
+  'evacuation': { categories: ['alert'], subtypes: ['emergency'] },
+  'service status': { categories: ['alert'], subtypes: ['status'] },
+  'public notice': { categories: ['alert', 'info'], subtypes: ['notice'] },
+  'advisory': { categories: ['alert', 'info'] },
+  'disclaimer': { categories: ['info'], subtypes: ['disclaimer'] },
+  'small print': { categories: ['info'], subtypes: ['disclaimer'] },
+  'instructions': { categories: ['info'], subtypes: ['step'] },
+  'source label': { categories: ['bug'], subtypes: ['source'] },
+  'attribution': { categories: ['bug'], subtypes: ['source'] },
+  'bilingual': { categories: ['caption'], subtypes: ['translation'] },
+  'translation': { categories: ['caption'], subtypes: ['translation'] },
   'agenda': { categories: ['list'] },
   'schedule': { categories: ['list'] },
   'running order': { categories: ['list'] },
