@@ -31,7 +31,7 @@ config are ready for it; only the surface is unbuilt.
 
 | Pack | Family | Types (curated order) | Extras |
 |---|---|---|---|
-| Match Day | sport | scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | ls06, ls07, ls08, ls09, ls10, tk13, al10, vs01, cr03, ss11, cr12 |
+| Match Day | sport | scorebug, match-board, match-status, match-event, fixtures, scoreboard, countdown, lower-third, ticker, sponsor-bug, title-card, holding-screen, now-next, notice-card, event-bug, live-bug, sponsor-strip, status-chip, roster, standings, winner-card | ls06, ls07, ls08, ls09, ls10, tk13, al10, vs01, cr03, ss11, cr12 |
 | Esports | sport | esports-score, map-round, matchup, head-to-head, player-card, bracket, standings, winner-card, scoreboard, lower-third, countdown, agenda, social-bug, sponsor-bug, holding-screen, title-card, now-next, station-bug, live-bug, sponsor-rotator | ls11, ls12, ls13, tk13, al07, vs02, ss13, cr12 |
 | Creator | noacg | holding-screen, lower-third, topic-card, social-bug, sponsor-bug, countdown, poll, now-next, process-steps, station-bug, live-bug, logo-bug, chat-highlight, live-poll, viewer-question | ls03, ls31, ls32, al07, al10, ss06, ss08, ss09, ss12 |
 | Newsroom | minimal | lower-third, ticker, topic-card, title-card, agenda, sponsor-bug, headline-card, key-facts, notice-card, station-bug, live-bug, status-chip, **alert-level**, **public-notice** | ls01, ls23, ls24, ls28, ls29, ls30, tk11, tk12, tk14, tk15, tk16, tk17, tk20, al09, pi02, pi03, ss08, card52 |
@@ -54,8 +54,35 @@ persistent marks it actually leaves on screen. No format's mapping moved — the
 the same 60 formats with graphics that fit them better. The audience pack's eight joined the same
 way, and the holding / credits / ceremony set ships as EXTRAS rather than types (see below).
 
+## The nine DISCIPLINE packs (docs/SPORTS_PACK.md)
+
+| Pack | Family | Shape it is cut for |
+|---|---|---|
+| Football | sport | count-up clock, subs and cards, the table, the weekend results |
+| Ice Hockey | sport | period clock counting down, penalties, the period breakdown |
+| Basketball | sport | quarter clock, the quarter-by-quarter board, team stats |
+| Handball | glass | half clock, two-minute suspensions, the group table |
+| Racket Sports | glass | set-by-set scoring (the stacked match board), the head-to-head |
+| Motorsport | sport | the timing tower as a table, championship standings, session results |
+| Athletics | glass | start lists, heat results, the medal table |
+| Combat Sports | glass | round clock, the fight card, the tale of the tape, the decision |
+| Club & School Sports | minimal | full club names, no crests needed, nothing that costs bitrate |
+
+**A discipline pack declares NO reference formats, and that is the taxonomy point.** The sheet
+counts FORMATS, and it has one row for "Sports broadcast / match coverage" and one for "Local
+sports / amateur sports" — both owned by Match Day. A tennis kit is not a new format; it is the
+same format cut for a sport that keeps score in sets and counts its clock the other way.
+Claiming a format twice is an error `validatePacks` catches, and inventing rows the sheet does
+not have would make its count meaningless. So the exactly-once mapping below is unchanged by
+all nine.
+
+This is also the first time the taxonomy has had two AXES: a pack can refine a format's kit
+without owning the format. If more disciplines follow (cricket, rugby, cycling), they go here
+the same way — config only, no new template work, because the type × family matrix is full.
+
 **Extras** are catalog variants outside the type registry that belong in the kit: the versus
-card (vs01/vs02) for match-up reveals, and the whole HOLDING / CREDITS / CEREMONY set: the
+card (vs01/vs02) for match-up reveals — also the sports pack's upcoming-match hero — and the
+whole HOLDING / CREDITS / CEREMONY set: the
 holding screens (ss05-ss13 - countdowns to a start time, breaks, technical pauses, sign-offs),
 the list formats (cr05-cr12 - schedule boards, looping reels, thank-you and donor walls,
 sponsor boards and crawls, ceremony rolls), and the set-piece cards (card50-card58 - readings,

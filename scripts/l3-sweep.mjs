@@ -57,6 +57,10 @@ const results = await page.evaluate(async (CATEGORY) => {
     const isQuiz = CATEGORY === 'quiz';
     const isVersus = CATEGORY === 'versus';
     const isAudience = CATEGORY === 'audience';
+    // The COMPETITION PACK's four categories share one assembler, and each one's category id
+    // IS its prefix (competition/*/shared.ts: type === prefix).
+    const compPrefix = ['esports-score', 'matchup', 'results-board', 'reveal'].includes(CATEGORY)
+      ? CATEGORY : null;
     row.checks.masks = isCredits ? tpl.html.includes('credits-track')
       : isTicker ? tpl.html.includes('ticker-track')
       : clockPrefix ? tpl.html.includes(`${clockPrefix}-clock`)
@@ -407,6 +411,51 @@ const results = await page.evaluate(async (CATEGORY) => {
         !r11.fatal && r11.errs.length === 0 && r11.grew && r11.clamped && r11.anon &&
         r11.boxW <= capA + 2 && (!queueField || (r11.rows === 3 && r11.live === 1));
       if (!row.checks.autoFit) row.issues.push('audience: ' + JSON.stringify({ ...r11, cap: capA }));
+      out.push(row);
+      continue;
+    }
+    if (compPrefix) {
+      // The competition contract is `.{prefix}-box` > `-head` + `-body` (the accent is a
+      // flourish a design may not have), and HALF THE PACK IS FULL-FRAME BY DESIGN — matchup
+      // and reveal are stages, not panels. The standard max-width check below is therefore
+      // meaningless here: a full-frame stage IS 1920 wide, so every design in the pack failed
+      // it against an 830px cap, and a real regression had nowhere to show.
+      //
+      // What actually holds for both shapes is that the graphic settles and stays INSIDE the
+      // 1920x1080 frame — with operator text long enough to push it out if it were going to.
+      const LONG = 'INTERNATIONAL ATHLETICS FEDERATION WORLD CHAMPIONSHIP SQUAD';
+      const r12 = await runInFrame(tpl, async (w, d) => {
+        const W = 1920, H = 1080, T = 2;
+        w.play();
+        await new Promise((r) => setTimeout(r, 900));
+        const box = d.querySelector(`.${compPrefix}-box`);
+        const root = d.querySelector(`.${compPrefix}`);
+        if (!box || !root) return { structure: false };
+        const inFrame = () => {
+          const b = box.getBoundingClientRect();
+          return b.left >= -T && b.top >= -T && b.right <= W + T && b.bottom <= H + T;
+        };
+        const structure = !!d.querySelector(`.${compPrefix}-head`) && !!d.querySelector(`.${compPrefix}-body`);
+        const settled = w.getComputedStyle(root).opacity === '1';
+        const withSamples = inFrame();
+        // Write into the VISIBLE text lines only: a hidden source div is a rows textarea whose
+        // content is parsed, not laid out, so a long string there tests nothing.
+        const ids = [...d.querySelectorAll('[id^="f"]')]
+          .filter((el) => /^f\d+$/.test(el.id) && el.tagName !== 'IMG' && w.getComputedStyle(el).display !== 'none')
+          .slice(0, 2).map((el) => el.id);
+        if (ids.length) {
+          w.update(JSON.stringify(Object.fromEntries(ids.map((id) => [id, LONG]))));
+          await new Promise((r) => setTimeout(r, 140)); // reflow after the rebind
+        }
+        const b = box.getBoundingClientRect();
+        return {
+          structure, settled, withSamples, withLongText: inFrame(), fields: ids.length,
+          boxW: Math.round(b.width), boxH: Math.round(b.height),
+        };
+      });
+      row.checks.autoFit = !r12.fatal && r12.errs.length === 0
+        && !!r12.structure && !!r12.settled && !!r12.withSamples && !!r12.withLongText;
+      if (!row.checks.autoFit) row.issues.push('competition: ' + JSON.stringify(r12));
       out.push(row);
       continue;
     }

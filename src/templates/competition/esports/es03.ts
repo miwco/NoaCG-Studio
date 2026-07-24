@@ -156,10 +156,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 /* ── Phase marks (the machine's states apply these; data never does). ── */
 
 .${P}-live .${P}-status {
-  /* A HARD dark ink, not var(--accent-ink): the glass family resolves that token to
-     var(--panel-bg), which in a glass palette is a translucent white — light type on a light
-     accent fill, which is unreadable. Anything sitting ON the accent here says so itself. */
-  color: #08101a;
+  color: var(--accent-ink);        /* the family's ink on an accent-filled chip */
   background: var(--accent);
   box-shadow: none;
 }

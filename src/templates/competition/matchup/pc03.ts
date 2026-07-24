@@ -99,10 +99,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
   padding: calc(5px * var(--scale)) calc(14px * var(--scale));
   border-radius: 999px;
   background: var(--accent);
-  /* A HARD dark ink, not var(--accent-ink): the glass family resolves that token to
-     var(--panel-bg), which in a glass palette is a translucent white — light type on a light
-     accent fill, which is unreadable. Anything sitting ON the accent here says so itself. */
-  color: #08101a;
+  color: var(--accent-ink);        /* the family's ink on an accent-filled pill */
   font-size: calc(14px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;

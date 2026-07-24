@@ -156,10 +156,7 @@ export const st03: TemplateVariant = defineResultsVariant(
 }
 .${P}-final .${P}-row:first-child .${P}-row-index {
   background: var(--accent);
-  /* A HARD dark ink, not var(--accent-ink): the glass family resolves that token to
-     var(--panel-bg), which in a glass palette is a translucent white — light type on a light
-     accent fill, which is unreadable. Anything sitting ON the accent here says so itself. */
-  color: #08101a;
+  color: var(--accent-ink);        /* the family's ink on an accent-filled chip */
 }
 .${P}-final .${P}-kicker::after {
   content: " · FINAL";

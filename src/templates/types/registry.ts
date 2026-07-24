@@ -38,6 +38,8 @@ import { awardRevealType, nomineeRevealType, verdictCardType, winnerCardType } f
 import { quizBoardType } from './quizBoard';
 import { threeAnswerBoardType, twoAnswerBoardType } from './answerBoard';
 import { scoreboardType } from './scoreboard';
+import { fixturesType } from './sportsBoards';
+import { matchBoardType, matchEventType, matchStatusType, scorebugType } from './sportsBugs';
 import { tickerType } from './ticker';
 import { IDENTITY_BUG_TYPES } from './identityBugs';
 import { transitionType } from './transitions';
@@ -127,6 +129,17 @@ export const TYPES: GraphicType[] = [
   // whose states are the LANGUAGE the message is currently in.
   alertLevelType,
   publicNoticeType,
+  // ── The SPORTS pack (docs/SPORTS_PACK.md). Five types covering what a live sports
+  // broadcast keeps on air, from a district-league phone stream to a stadium show. They
+  // earn their place by coverage rather than by the reference sheet's frequency: that sheet
+  // counts FORMATS, and "sports broadcast" is one row hiding a dozen graphics. The pack's
+  // lineup, standings and head-to-head boards were DROPPED rather than shipped - roster,
+  // standings and head-to-head above already are those graphics.
+  scorebugType,       // the strip that stays on air, with the match clock
+  matchBoardType,     // the full scoreboard, with the period breakdown
+  matchStatusType,    // where the match stands - and the final score
+  matchEventType,     // substitutions, bookings, penalties, goals (the pack's timer)
+  fixturesType,       // upcoming matches and results, on one board
 ];
 
 export function typeById(id: string): GraphicType | undefined {

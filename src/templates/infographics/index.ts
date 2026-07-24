@@ -1,5 +1,6 @@
-// The infographic catalog: two data callouts, family-consistent with the rest of the
-// package (docs/DESIGN_LANGUAGE.md §8) — a big stat count-up and a growing bar chart.
+// The infographic catalog: stat callouts, bar charts, agenda and poll boards, the title
+// pack's list boards, the goal and milestone rails, and the sports fixtures board.
+// Family-consistent with the rest of the package (docs/DESIGN_LANGUAGE.md §8).
 
 import type { TemplateVariant } from '../../model/wizard';
 import { ig01 } from './ig01';
@@ -27,6 +28,10 @@ import { ig22 } from './ig22';
 import { ig23 } from './ig23';
 import { ig24 } from './ig24';
 import { ig25 } from './ig25';
+import { ig26 } from './ig26';
+import { ig27 } from './ig27';
+import { ig28 } from './ig28';
+import { ig29 } from './ig29';
 
 export const INFOGRAPHICS: TemplateVariant[] = [
   ig01, // Big stat count-up
@@ -55,6 +60,11 @@ export const INFOGRAPHICS: TemplateVariant[] = [
   ig23, // Frost Goal — glass goal ring, share of the target (sibling lt08 / ig04)
   ig24, // House Milestones — noacg tier rail with reached nodes (sibling lt11 / ig22)
   ig25, // Volt Milestones — sport tier rail, leaning markers (sibling lt05 / ig03)
+  // ── The sports pack: fixtures and results, on one board (docs/SPORTS_PACK.md) ──
+  ig26, // House Fixtures — noacg void panel, amber score chips (sibling ig08)
+  ig27, // Volt Fixtures — sport slab, filled score blocks (sibling ig10)
+  ig28, // Frost Fixtures — glass card, tinted score pills (sibling ig09)
+  ig29, // Club Fixtures — minimal flat panel, the local results board (sibling ig06)
 ];
 
 export function infographicById(id: string): TemplateVariant | undefined {

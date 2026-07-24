@@ -32,8 +32,18 @@ export interface TemplatePack {
   /** Catalog variants OUTSIDE the type registry that belong in the kit (end credits, the
    *  versus card). Validated against the live catalog by the factory. */
   extras?: string[];
-  /** The reference formats this pack serves — VERBATIM row values from
-   *  live_format_graphics_needs.xlsx. Every format appears in exactly one pack. */
+  /**
+   * The reference formats this pack serves — VERBATIM row values from
+   * live_format_graphics_needs.xlsx. Every format appears in exactly one pack.
+   *
+   * A DISCIPLINE pack (the sports packs below) declares an EMPTY list on purpose. The
+   * reference sheet counts formats, and it has one row for "Sports broadcast / match coverage"
+   * and one for "Local sports / amateur sports" — both already owned by Match Day. A football
+   * kit and a tennis kit are not new formats; they are the same format cut for a sport whose
+   * clock counts the other way and whose score is kept in sets. Claiming a format twice would
+   * be a taxonomy error (`validatePacks` catches it), and inventing rows the sheet does not
+   * have would make the count meaningless.
+   */
   formats: string[];
 }
 
@@ -48,6 +58,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Scorebug, clock, line-up, standings and the full-time card — the live sports kit.',
     family: 'sport',
     types: [
+      // The sports pack's five types (docs/SPORTS_PACK.md), then the older generic scoreboard.
+      'scorebug', 'match-board', 'match-status', 'match-event', 'fixtures',
       'scoreboard', 'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'title-card', 'holding-screen',
       'now-next', 'notice-card',
       // The identity marks a match feed leaves up: the fixture ident, the live/replay status,
@@ -67,6 +79,122 @@ export const PACKS: TemplatePack[] = [
       'vs01', 'cr03', 'ss11', 'cr12',
     ],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
+  },
+  // ── The DISCIPLINE packs (docs/SPORTS_PACK.md) ──
+  // Each is the same eight sports types cut for one sport's habits — which clock direction the
+  // scorebug wants, whether the score is kept in periods or sets, whether a lineup is a squad
+  // or a start list — plus the supporting graphics that sport actually uses. They claim no
+  // reference formats: see `TemplatePack.formats`.
+  {
+    id: 'football',
+    name: 'Football',
+    description: 'Count-up clock, subs and cards, the league table and the weekend results.',
+    family: 'sport',
+    types: [
+      'scorebug', 'match-event', 'match-status', 
+      'fixtures', 'match-board',
+      'lower-third', 'sponsor-bug', 'countdown', 'holding-screen',
+    ],
+    extras: ['vs01'],
+    formats: [],
+  },
+  {
+    id: 'ice-hockey',
+    name: 'Ice Hockey',
+    description: 'Period clock counting down, penalties, the period breakdown and the standings.',
+    family: 'sport',
+    types: [
+      'scorebug', 'match-board', 'match-event', 'match-status',
+      'fixtures',
+      'lower-third', 'sponsor-bug', 'holding-screen',
+    ],
+    formats: [],
+  },
+  {
+    id: 'basketball',
+    name: 'Basketball',
+    description: 'Quarter clock, the quarter-by-quarter board, team stats and the conference table.',
+    family: 'sport',
+    types: [
+      'scorebug', 'match-board', 
+      'match-status', 'match-event', 'fixtures',
+      'lower-third', 'sponsor-bug', 'countdown',
+    ],
+    formats: [],
+  },
+  {
+    id: 'handball',
+    name: 'Handball',
+    description: 'Half clock, two-minute suspensions, the squad list and the group table.',
+    family: 'glass',
+    types: [
+      'scorebug', 'match-event', 'match-board', 'match-status',
+      'fixtures',
+      'lower-third', 'sponsor-bug', 'holding-screen',
+    ],
+    formats: [],
+  },
+  {
+    id: 'racket-sports',
+    name: 'Racket Sports',
+    description: 'Set-by-set scoring, the head-to-head, the draw and the order of play.',
+    family: 'glass',
+    types: [
+      'match-board', 'scorebug', 'match-status',
+      'fixtures', 
+      'lower-third', 'sponsor-bug', 'agenda',
+    ],
+    extras: ['vs02'],
+    formats: [],
+  },
+  {
+    id: 'motorsport',
+    name: 'Motorsport',
+    description: 'The timing tower as a table, the championship standings, session results and a countdown.',
+    family: 'sport',
+    types: [
+      'fixtures', 'match-status',
+      'countdown', 'scorebug',
+      'lower-third', 'sponsor-bug', 'ticker', 'holding-screen',
+    ],
+    formats: [],
+  },
+  {
+    id: 'athletics',
+    name: 'Athletics',
+    description: 'Start lists, heat results, the medal table and a field-event countdown.',
+    family: 'glass',
+    types: [
+      'fixtures', 'match-status',
+      'countdown', 'scorebug',
+      'lower-third', 'agenda', 'sponsor-bug',
+    ],
+    formats: [],
+  },
+  {
+    id: 'combat-sports',
+    name: 'Combat Sports',
+    description: 'Round clock, the fight card, the tale of the tape and the decision.',
+    family: 'glass',
+    types: [
+      'match-status', 'scorebug', 'match-event',
+      'fixtures', 'countdown', 
+      'lower-third', 'sponsor-bug', 'holding-screen',
+    ],
+    extras: ['vs02'],
+    formats: [],
+  },
+  {
+    id: 'club-sports',
+    name: 'Club & School Sports',
+    description: 'The amateur kit: full club names, no crests needed, and nothing that costs bitrate.',
+    family: 'minimal',
+    types: [
+      'scorebug', 'match-status', 'match-board', 
+      'fixtures', 'match-event',
+      'lower-third', 'holding-screen', 'countdown', 'sponsor-bug',
+    ],
+    formats: [],
   },
   {
     id: 'esports',

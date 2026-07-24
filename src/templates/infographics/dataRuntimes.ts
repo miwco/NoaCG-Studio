@@ -1,5 +1,24 @@
 // The data-driven infographic rebuild runtimes, shared across every design of a type.
 //
+// THIS IS THE CANONICAL REPEATING-DATA SYSTEM. A graphic whose content is a LIST the operator
+// types — a running order, a poll's options, a starting eleven, a league table, a results
+// column — keeps that list in ONE hidden textarea field, one item per line, with `|` between
+// the parts of an item. A rebuild function named `rebuildInfographic()` turns it into rows,
+// and the assembler calls that after every update(). Nothing about the list is ever expressed
+// as more fields: a template does not grow `f7`…`f26` because a squad has twenty players.
+//
+// Three consequences that are the whole reason it works this way:
+//   - the SPX definition stays small and stable, so the control page shows ONE multi-line
+//     editor instead of a wall of inputs, and adding a substitute is typing a line;
+//   - the MOTION is measured from the rendered rows (igMotion.ts), so a cascade runs for
+//     exactly as many rows as they wrote — a number no keyframe could hold;
+//   - the rebuild is per TYPE, not per design, so a house league table and a glass one differ
+//     only in CSS. Every runtime here renders into `#infographic-rows` with one direct child
+//     per item, which is precisely what the shared `rows-cascade` builder animates.
+//
+// This file holds the agenda and poll runtimes; `sportsRuntimes.ts` holds the sports pack's
+// four (team sheet, league table, stat comparison, fixtures/results) under the same rules.
+//
 // A schedule board (the agenda type) and a bar chart (the poll type) each render their rows
 // from a hidden textarea source the operator types into — and that rendering is identical for
 // every style a type ships in: only the CSS differs between a house schedule board and a glass

@@ -57,7 +57,7 @@ export const CATEGORIES: CategoryInfo[] = [
   // Essentials — the graphics almost every live show needs.
   { id: 'lower-third',   name: 'Lower thirds',            plannedCount: 86, available: true,  description: 'Names, titles, and straps over the action.', group: 'essentials' },
   { id: 'ticker',        name: 'Tickers',                 plannedCount: 20, available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
-  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
+  { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 20, available: true , description: 'Scorebugs, match boards, status and event cards.', group: 'essentials' },
   { id: 'info-card',     name: 'Info cards',              plannedCount: 18, available: true,  description: 'Full / half screen cards — info, readings, quotes and ceremony.', group: 'essentials' },
   // These two carry the TAXONOMY's wording on purpose: they hold exactly the designs their
   // browse tile does (ss01-13, cr01-12), so a user meeting the same set twice must read the
@@ -66,7 +66,7 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'end-credits',   name: 'Credits & thanks',        plannedCount: 12, available: true , description: 'Credit rolls, name walls, sponsor boards and schedules.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Bugs & corner logos',     plannedCount: 36, available: true , description: 'Persistent marks: logos, idents, live status, sponsors, chips.', group: 'essentials' },
   // Specials — for particular formats and moments.
-  { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
+  { id: 'infographic',   name: 'Infographics',            plannedCount: 29, available: true , description: 'Stats, polls, bars, schedules, goals, fixtures.', group: 'specials' },
   { id: 'game-timer',    name: 'Game show timer',         plannedCount: 4,  available: true , description: 'Countdowns and clocks for game formats.', group: 'specials' },
   { id: 'versus',        name: 'Versus cards',            plannedCount: 2,  available: true , description: 'Full-frame match-up cards — two sides meet.', group: 'specials' },
   { id: 'frame',         name: 'Camera frames',           plannedCount: 4,  available: true , description: 'Surrounds for webcams, interviews, split screens and screen shares.', group: 'specials' },

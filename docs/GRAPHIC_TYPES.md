@@ -426,6 +426,44 @@ recording, because it was not the one the first pass predicted:
 
 ---
 
+## 6b. The sports pack — eight more types
+
+`docs/SPORTS_PACK.md` documents them in full (including the capability matrix of every shared
+type they use or extend). What they add to the argument HERE:
+
+| Type | Designs | Machine |
+|---|---|---|
+| Scorebug | sb05–sb08 | parallel `clock` (3 states) / `play` / `result` |
+| Match board | sb09–sb12 | the same three groups |
+| Match status | sb13–sb16 | ONE `status` group, three mutually exclusive states |
+| Match event | sb17–sb20 | main path + a pose-only `held` branch + an auto-clear TIMER |
+| Lineup | ig26–ig29 | – (derived) |
+| Standings | ig30–ig33 | – (derived) |
+| Stat comparison | ig34–ig37 | – (derived) |
+| Fixtures & results | ig26–ig29 | – (derived) |
+
+Four of the eight persist no machine at all, which is the §2 rule working at scale: their
+content is a list and their motion is measured from it, so the derived linear machine is already
+correct.
+
+Three things they demonstrated that the earlier twelve did not:
+
+- **A parallel group can need a third state.** The clock's `armed` (at the period's starting
+  value, not running) is genuinely distinct from `stopped` (held mid-period). Without it,
+  starting the second half means reloading the graphic.
+- **Some state groups are mutually exclusive and belong in ONE group.** The status card's live /
+  interval / full time are not independent facts, unlike the boards' three groups — a card
+  cannot be at half time and finished at once. Choosing parallel-vs-single is a modelling
+  decision each type makes, not a house default.
+- **`TypeMachine.main.edges` was missing.** A main-group arrow that is neither a rename of a walk
+  arrow nor a branch's own had nowhere to live; the match event's auto-clear timer needed one.
+  Hiding it in some branch's `edges` array would have made the machine's shape depend on which
+  branch the author happened to write it under.
+
+The sports types also stress the **capabilities gate** hardest so far: 32 designs each declaring
+their own `animationPresets`, `defaultZone`, palette, font and `samples`, because a sport slab
+and a frosted pill genuinely do not enter the same way. All 32 pass it.
+
 ## 7. Adding a type
 
 1. Declare it in `src/templates/types/<id>.ts` — structure, fields, machine, controls,
