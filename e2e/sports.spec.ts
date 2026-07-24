@@ -48,15 +48,14 @@ const SCOREBOARD_IDS = [
   'sb13', 'sb14', 'sb15', 'sb16', 'sb17', 'sb18', 'sb19', 'sb20',
 ];
 const BOARD_IDS = [
-  'ig26', 'ig27', 'ig28', 'ig29', 'ig30', 'ig31', 'ig32', 'ig33',
-  'ig34', 'ig35', 'ig36', 'ig37', 'ig38', 'ig39', 'ig40', 'ig41',
+  'ig26', 'ig27', 'ig28', 'ig29',
 ];
 
-test('the sports pack ships eight types, thirty-two designs, and fills every family cell', async ({ page }) => {
+test('the sports pack ships five types, twenty designs, and fills every family cell', async ({ page }) => {
   await toApp(page);
   const report = await page.evaluate(`(async () => {
     const { TYPES } = await import('/src/templates/types/registry.ts');
-    const SPORTS = ['scorebug','match-board','match-status','match-event','lineup','standings','stat-compare','fixtures'];
+    const SPORTS = ['scorebug','match-board','match-status','match-event','fixtures'];
     const FAMILIES = ['noacg','sport','glass','minimal'];
     const rows = [];
     for (const type of TYPES) {
@@ -73,10 +72,10 @@ test('the sports pack ships eight types, thirty-two designs, and fills every fam
   })()`);
   const rows = report as Array<{ id: string; designs: number; missingFamilies: string[] }>;
   expect(rows.map((r) => r.id).sort()).toEqual(
-    ['fixtures', 'lineup', 'match-board', 'match-event', 'match-status', 'scorebug', 'standings', 'stat-compare'],
+    ['fixtures', 'match-board', 'match-event', 'match-status', 'scorebug'],
   );
   expect(rows.filter((r) => r.missingFamilies.length)).toEqual([]);
-  expect(rows.reduce((n, r) => n + r.designs, 0)).toBe(32);
+  expect(rows.reduce((n, r) => n + r.designs, 0)).toBe(20);
 });
 
 test('the match clock runs, holds where it is, and resets to the period start', async ({ page }) => {
@@ -361,15 +360,10 @@ test('the repeating boards rebuild from whatever is pasted into them', async ({ 
       const count = () => d.querySelectorAll('#infographic-rows > *').length;
       const initial = count();
 
-      // Three valid rows in this board's own shape. Each carries MARKUP inside a text part,
-      // because operator text reaches the DOM through innerHTML and has to arrive as text.
-      const valid = {
-        lineup: '7 | Ada <b>Hegerberg</b> | ST\\nCaroline Hansen | RW\\nGuro Reiten',
-        standings: 'Ars<b>e</b>nal | 1 | 2 | 3\\nChelsea | 4 | 5 | 6\\nSpurs | 7 | 8 | 9',
-        compare: 'Sh<b>o</b>ts | 14 | 9\\nCorners | 3 | 5\\nFouls | 0 | 0',
-        fixtures: 'SAT | A<b>C</b> Milan | 1-0 | B\\nSUN | C | D\\nMON | E | 2-2 | F',
-      };
-      const pick = id <= 'ig29' ? valid.lineup : (id <= 'ig33' ? valid.standings : (id <= 'ig37' ? valid.compare : valid.fixtures));
+      // Three valid rows, carrying MARKUP inside a text part: operator text reaches the DOM
+      // through innerHTML and has to arrive as text. The mixed shapes are deliberate — a row
+      // WITH a result and a row without both have to render from the one runtime.
+      const pick = 'SAT | A<b>C</b> Milan | 1-0 | B\\nSUN | C | D\\nMON | E | 2-2 | F';
       w.update(JSON.stringify({ f0: pick }));
       await sleep(80);
       const afterValid = count();
@@ -438,7 +432,7 @@ test('every sports graphic exports through every target', async ({ page }) => {
     return out;
   })()`);
   const rows = report as Array<{ id: string; failures: string[] }>;
-  expect(rows.length).toBe(32);
+  expect(rows.length).toBe(20);
   expect(rows.filter((r) => r.failures.length).map((r) => `${r.id}: ${r.failures.join(' | ')}`)).toEqual([]);
 });
 

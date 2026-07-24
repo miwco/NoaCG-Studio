@@ -214,7 +214,7 @@ child per item - exactly what `rows-cascade` measures.
   logo slot + placeholder mark; bug02 = house live clock via StandardDesign.runtimeExtraJs -
   design-owned JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the
   data conversion untouched).
-- **infographics/** - ig01…ig41 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+- **infographics/** - ig01…ig29 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
   igPresets (count-up / bars-grow / ring-fill / rows-cascade) + **igMotion.ts**. DATA BLOCKS via
   convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
   operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the

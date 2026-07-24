@@ -15,7 +15,7 @@ import { agendaType, pollType } from './dataBoards';
 import { countdownType, holdingScreenType } from './clocks';
 import { quizBoardType } from './quizBoard';
 import { scoreboardType } from './scoreboard';
-import { fixturesType, lineupType, standingsType, statCompareType } from './sportsBoards';
+import { fixturesType } from './sportsBoards';
 import { matchBoardType, matchEventType, matchStatusType, scorebugType } from './sportsBugs';
 import { tickerType } from './ticker';
 
@@ -44,9 +44,6 @@ export const TYPES: GraphicType[] = [
   matchBoardType,     // the full scoreboard, with the period breakdown
   matchStatusType,    // where the match stands — and the final score
   matchEventType,     // substitutions, bookings, penalties, goals (the pack's timer)
-  lineupType,         // the team sheet, squad, start list — repeating data
-  standingsType,      // league, championship, medal count — columns are data too
-  statCompareType,    // team and player stats, head to head
   fixturesType,       // upcoming matches and results, on one board
 ];
 

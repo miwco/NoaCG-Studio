@@ -22,41 +22,6 @@ function esc(value: string): string {
 }
 
 /** LINEUP / ROSTER — the squad source, a heading, and a formation or subtitle line. */
-export function lineupFields(rows: string, heading: string, sub: string): SpxField[] {
-  return [
-    { field: 'f0', ftype: 'textarea', title: 'Lineup', value: rows },
-    { field: 'f1', ftype: 'textfield', title: 'Heading', value: heading },
-    { field: 'f2', ftype: 'textfield', title: 'Formation / subtitle', value: sub },
-  ];
-}
-
-/**
- * STANDINGS / TABLE — the table source, a heading, and the COLUMN HEADINGS as data.
- *
- * The columns are a field rather than markup because their count is not fixed: a football
- * table has P/W/D/L/Pts, a championship has starts/wins/podiums/points, and a race
- * classification has one time column. One board covers all of them only if the heading strip
- * is typed alongside the rows.
- */
-export function standingsFields(rows: string, heading: string, columns: string): SpxField[] {
-  return [
-    { field: 'f0', ftype: 'textarea', title: 'Table', value: rows },
-    { field: 'f1', ftype: 'textfield', title: 'Heading', value: heading },
-    { field: 'f2', ftype: 'textfield', title: 'Columns', value: columns },
-  ];
-}
-
-/** STAT COMPARISON — the stat source, a heading, and the two sides' names. */
-export function compareFields(rows: string, heading: string, sideA: string, sideB: string): SpxField[] {
-  return [
-    { field: 'f0', ftype: 'textarea', title: 'Stats', value: rows },
-    { field: 'f1', ftype: 'textfield', title: 'Heading', value: heading },
-    { field: 'f2', ftype: 'textfield', title: 'Side A', value: sideA },
-    { field: 'f3', ftype: 'textfield', title: 'Side B', value: sideB },
-  ];
-}
-
-/** FIXTURES / RESULTS — the fixture source, a heading, and a competition or round note. */
 export function fixtureFields(rows: string, heading: string, note: string): SpxField[] {
   return [
     { field: 'f0', ftype: 'textarea', title: 'Fixtures', value: rows },
@@ -113,33 +78,3 @@ export function listBoardHtml(args: {
 }
 
 /** The hidden column-headings source the standings runtime renders its strip from. */
-export function columnsSourceHtml(value: string): string {
-  return `
-    <!-- Hidden column headings — SPX writes field f2 here; JS renders the strip above. -->
-    <div id="f2" style="display: none">${esc(value)}</div>`;
-}
-
-/** A stat-comparison board: the heading, the two side names, the keyline, and the rows. */
-export function compareBoardHtml(args: {
-  heading: string;
-  sideA: string;
-  sideB: string;
-  rows: string;
-  note: string;
-}): string {
-  return `    <!-- ${args.note} -->
-    <div class="infographic-box">
-      <!-- The header: the heading, with the two sides named either side of it. -->
-      <div class="infographic-header">
-        <div class="infographic-side infographic-side-a" id="f2">${esc(args.sideA)}</div>
-        <div class="infographic-heading" id="f1">${esc(args.heading)}</div>
-        <div class="infographic-side infographic-side-b" id="f3">${esc(args.sideB)}</div>
-      </div>
-      <!-- The rule — a keyline closing the header block. -->
-      <div class="infographic-rule"></div>
-      <!-- Stat rows — rendered by rebuildInfographic() from the hidden source below. -->
-      <div id="infographic-rows"></div>
-    </div>
-    <!-- Hidden stat source — SPX writes field f0 here. One "label | home | away" per line. -->
-    <div id="f0" style="display: none">${esc(args.rows)}</div>`;
-}

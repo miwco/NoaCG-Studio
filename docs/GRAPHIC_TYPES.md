@@ -321,7 +321,7 @@ type they use or extend). What they add to the argument HERE:
 | Lineup | ig26–ig29 | – (derived) |
 | Standings | ig30–ig33 | – (derived) |
 | Stat comparison | ig34–ig37 | – (derived) |
-| Fixtures & results | ig38–ig41 | – (derived) |
+| Fixtures & results | ig26–ig29 | – (derived) |
 
 Four of the eight persist no machine at all, which is the §2 rule working at scale: their
 content is a list and their motion is measured from it, so the derived linear machine is already

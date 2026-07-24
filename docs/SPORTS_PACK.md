@@ -1,8 +1,8 @@
 # The sports pack
 
-Thirty-two production graphics across eight graphic types, in all four style families, covering
-what a live sports broadcast actually puts on air — from a district-league phone stream to a
-stadium show.
+Twenty production graphics across five graphic types, in all four style families, covering what a
+live sports broadcast actually puts on air — from a district-league phone stream to a stadium
+show.
 
 Companion docs: **`GRAPHIC_TYPES.md`** (what a type declares and the six promotion gates),
 **`STATE_MACHINE_SCHEMA.md`** (the machine the stateful types carry),
@@ -19,13 +19,30 @@ Companion docs: **`GRAPHIC_TYPES.md`** (what a type declares and the six promoti
 | **Match board** | scoreboard | sb09 · sb10 · sb11 · sb12 | parallel `clock` / `play` / `result` |
 | **Match status** | scoreboard | sb13 · sb14 · sb15 · sb16 | one `status` group, three states |
 | **Match event** | scoreboard | sb17 · sb18 · sb19 · sb20 | main path + `held` branch + auto-clear timer |
-| **Lineup** | infographic | ig26 · ig27 · ig28 · ig29 | – (derived) |
-| **Standings** | infographic | ig30 · ig31 · ig32 · ig33 | – (derived) |
-| **Stat comparison** | infographic | ig34 · ig35 · ig36 · ig37 | – (derived) |
-| **Fixtures & results** | infographic | ig38 · ig39 · ig40 · ig41 | – (derived) |
+| **Fixtures & results** | infographic | ig26 · ig27 · ig28 · ig29 | – (derived) |
 
 The matrix is full: every type ships in every family, so any pack may pick any family and
 `resolvePack` never hits an empty cell.
+
+### Three types were dropped rather than shipped
+
+An earlier draft also declared `lineup`, `standings` and `stat-compare` (sixteen designs). While
+this pack was in flight, main shipped the **competition pack**, which already covers all three:
+
+| dropped | main already ships | main's carries |
+|---|---|---|
+| `lineup` | **`roster`** (rs01–rs03) | a spotlight the caster moves |
+| `standings` | **`standings`** (st01–st04) | a highlighted row and a final state |
+| `stat-compare` | **`head-to-head`** (h201–h203) | a side the operator can highlight |
+
+`standings` was a straight id collision; the other two would have been near-identical second
+types for the same graphic. Main's live on the `results-board` prefix with the `comp-*` presets,
+so "porting" this pack's designs onto them would have meant re-authoring every selector, field
+contract and preset — for looks main mostly already has. **One graphic, one type** is the premise
+the registry rests on, so they were dropped.
+
+Two genuine gaps remain in main's matrix and are worth a follow-up: `roster` and `head-to-head`
+have **no glass design** (rs01–rs03 and h201–h203 cover sport, noacg and minimal only).
 
 ### Coverage against the brief
 
@@ -36,13 +53,14 @@ The matrix is full: every type ships in every family, so any pack may pick any f
 | Score + clock | Scorebug and Match board — the clock is a field, the clock GROUP runs it |
 | Period / half / quarter / set | The `period` field, plus the Match board's repeating breakdown |
 | Team names, logos and colours | Names are fields on every board; two `color` fields on all eight two-team designs; two `filelist` crest slots on the Match board |
-| Local / amateur boards | The **minimal** column throughout — sb08, sb12, sb16, sb20, ig29, ig33, ig37, ig41 — plus the `club-sports` pack |
+| Local / amateur boards | The **minimal** column throughout — sb08, sb12, sb16, sb20, ig29 — plus the `club-sports` pack |
 | Match status | **Match status** (sb13–sb16), the `status` group |
 | Final scores | The same type's `final` state — a result is a status, not a separate graphic |
 | Substitutions and penalties | **Match event** (sb17–sb20) |
-| Player / team stats | **Stat comparison** (ig34–ig37) |
-| Lineups and rosters | **Lineup** (ig26–ig29) |
-| Standings and results | **Standings** (ig30–ig33) and **Fixtures & results** (ig38–ig41) |
+| Player / team stats | Main's **`head-to-head`** (h201–h203) — see the dropped-types note above |
+| Lineups and rosters | Main's **`roster`** (rs01–rs03) |
+| Standings | Main's **`standings`** (st01–st04) |
+| Results | **Fixtures & results** (ig26–ig29) |
 | Upcoming match | Fixtures with no score typed; a single row reads as a next-match board |
 | Match centre | Assembled as a RUNDOWN, not one graphic — see §6 |
 
@@ -55,7 +73,7 @@ contract grew an optional seam; "used unchanged" means the pack is a consumer on
 
 | Shared type / module | Status | What the pack uses | What it gained |
 |---|---|---|---|
-| `GraphicType` (`types/graphicType.ts`) | **extended** | structure · fields · machine · controls · capabilities · designs | `TypeMachine.main.edges` — main-group arrows that are neither a path rename nor a branch's own. The match-event auto-clear timer is the first user. |
+| `GraphicType` (`types/graphicType.ts`) | **extended** | structure · fields · machine · controls · capabilities · designs | `TypeMachine.main.edges` — main-group arrows that are neither a path rename nor a branch's own, for the match-event auto-clear timer. Main invented the identical seam independently for its transition type; on merge this pack took main's version. |
 | `TypeField` roles | used unchanged | `line` (visible), `data` (colours, crests, the repeating source), `hidden` (none) | – |
 | `TypeField.kind` | used unchanged | `text` · `lines` · `color` · `image` | – |
 | `TypeGroup` (parallel groups) | used unchanged | `clock` (3 states) · `play` · `result` · `status` | – |
@@ -67,18 +85,18 @@ contract grew an optional seam; "used unchanged" means the pack is a consumer on
 | `shared/clock.ts` (countdown engine) | used unchanged | not used — a match clock is a different instrument (see §3) | – |
 | **`shared/matchClock.ts`** | **new** | the sports clock: up or down, start/stop/reset, operator-correctable, state markers | – |
 | `infographics/dataRuntimes.ts` | used unchanged | the doctrine and the agenda/poll runtimes | a pointer to its sports sibling |
-| **`infographics/sportsRuntimes.ts`** | **new** | four repeating-data rebuilds: roster · standings · comparison · fixtures | – |
+| **`infographics/sportsRuntimes.ts`** | **new** | the fixtures/results repeating-data rebuild | – |
 | **`scoreboards/boardRuntimes.ts`** | **new** | team-colour lift onto `--team-a` / `--team-b`, the period breakdown rebuild | – |
 | `lowerThirds/animPresets.ts` | used unchanged | slide family · mask-wipe · line-reveal · snap-stinger · pop-spring · blur-in · fade · flip-3d | – |
 | `infographics/igPresets.ts` | used unchanged | `rows-cascade` · `bars-grow` | – |
 | `infographics/igMotion.ts` | used unchanged | `infographicRowsCascade` · `infographicBarsGrow` — both measured from the rendered rows | – |
 | `shared/base.ts` `setFieldValue` | used unchanged | text into text, image paths into `<img id="fN">`, `.has-image` on the parent | – |
 | `model/themeTokens.ts` | used unchanged | panel blur/radius/shadow/keyline, accent weight/glow/ink, label face/tracking/colour, display weight/tracking | – |
-| `model/wizard.ts` `CATEGORIES` | **updated** | discovery placement | scoreboard `plannedCount` 2 → 20, infographic 7 → 29, both descriptions rewritten |
-| `templates/packs.ts` | **extended** | pack config over the filled matrix | 9 discipline packs; Match Day widened to the 8 sports types; `formats: []` documented for discipline packs |
+| `model/wizard.ts` `CATEGORIES` | **updated** | discovery placement | scoreboard `plannedCount` 2 → 20, infographic bumped for the fixtures boards, both descriptions rewritten |
+| `templates/packs.ts` | **extended** | pack config over the filled matrix | 9 discipline packs; Match Day widened to the sports types; `formats: []` documented for discipline packs |
 | `export/registry.ts` (6 targets) | used unchanged | SPX · HTML overlay · h2r · CasparCG · OGraf · LiveOS | – |
 | `control/` (the control layer) | used unchanged | fields → inputs, machine events → buttons, structural guard → greying | – |
-| `validation/validateTemplate.ts` | used unchanged | the export gate, run on all 32 | – |
+| `validation/validateTemplate.ts` | used unchanged | the export gate, run on all 20 | – |
 | `blocks/animMachine.ts` | used unchanged | `deriveMachine` · `validateMachine` · `spxSteps` · `allOperatorEvents` | – |
 | `templates/shared/animRuntime.ts` | used unchanged | the NOACG_ANIM interpreter + the machine engine | – |
 | `model/library.ts` · `packets.ts` | used unchanged | save / load / packages — a sports graphic is an ordinary `GraphicDoc` | – |
@@ -124,9 +142,8 @@ what the operator types:
 - the clock's direction is a design choice, so the four family designs already cover both;
 - the period-by-period breakdown is ONE repeating field, `label | home | away` — which is
   identical for basketball's quarters, ice hockey's periods and tennis's sets;
-- a standings board's COLUMN HEADINGS are a field, so a football table (P/W/D/L/Pts), a
-  motorsport championship (starts/wins/podiums/points) and a race classification (one time
-  column) are the same board.
+- a fixtures row and a result row differ only by whether a score was typed, so one board serves
+  the weekend preview and the round-up.
 
 This is the state model's "parameterize with data, not states" rule applied one level up, to
 the catalog itself. Eight types cover eight sports because the sports differ in their data, not
@@ -134,14 +151,12 @@ in their machines.
 
 ### The amateur column is designed, not degraded
 
-sb08, sb12, sb16, sb20, ig29, ig33, ig37 and ig41 are the same TYPES as the stadium designs,
+sb08, sb12, sb16, sb20 and ig29 are the same TYPES as the stadium designs,
 with the same fields and the same machines — drawn for different conditions:
 
 - **full club names, not three-letter codes**, because a district league has no codes;
 - **no blur, no glow, no gradient**, because those cost quality at the bitrates a club stream
   actually goes out at, and the graphic is often re-encoded again by whoever screenshots it;
-- **shirt numbers and positions are optional** in the lineup runtime, and the minimal design
-  reserves no empty columns for them, so a sheet of bare names reads as finished;
 - **an empty crest is the normal state**, so the placeholder is a deliberate mark in the club's
   colour rather than a gap.
 
@@ -153,34 +168,31 @@ conditions.
 ## 4. The repeating-data contract
 
 Every list graphic in the pack uses the canonical system (`infographics/dataRuntimes.ts` holds
-the doctrine, `sportsRuntimes.ts` the pack's four shapes):
+the doctrine, `sportsRuntimes.ts` the pack’s own shape):
 
 | Board | Source shape | Optional parts |
 |---|---|---|
-| Lineup | `number \| name \| position` | the number and the position |
-| Standings | `name \| value \| value \| …` + a columns field | any column count |
-| Stat comparison | `label \| sideA \| sideB` | – |
 | Fixtures | `when \| home \| result \| away` | the result (its absence IS the fixture state) |
 | Match board periods | `label \| home \| away` | – |
 
-One hidden textarea, one item per line. A squad is not twenty-six fields and a league table is
-not a field per column, which is what keeps these editable live from a control page on a phone.
-Every runtime escapes operator text before it reaches `innerHTML`, and SKIPS a malformed line
-rather than rendering an empty row — a half-typed substitution must not reach air.
+One hidden textarea, one item per line. A weekend's fixtures are not a field per match, and a
+period breakdown is not a field per quarter — which is what keeps both editable live from a
+control page on a phone. Each runtime escapes operator text before it reaches `innerHTML`, and
+SKIPS a malformed line rather than rendering an empty row: a half-typed row must not reach air.
 
-Rows land in `#infographic-rows`, one direct child per item, which is exactly what the shared
-`rows-cascade` builder measures. No new motion code was needed for any of the sixteen boards.
+The fixtures rows land in `#infographic-rows`, one direct child per item, which is exactly what
+the shared `rows-cascade` builder measures — so no new motion code was needed.
 
 ---
 
 ## 5. What is tested
 
 `e2e/sports.spec.ts`, 13 tests. `e2e/graphic-types.spec.ts` already covers the shape bar for all
-eight types; this file covers what is specific to a live sports graphic.
+five types; this file covers what is specific to a live sports graphic.
 
 | Test | What it pins |
 |---|---|
-| eight types, thirty-two designs, every family cell | the matrix stays full, so packs never hit an empty cell |
+| five types, twenty designs, every family cell | the matrix stays full, so packs never hit an empty cell |
 | the clock runs, holds, resets | both directions; a held clock does not drift; reset returns to the PERIOD's start, not zero |
 | the operator can correct the clock on air | a typed value re-seeds the tick, and counting continues FROM it |
 | a counting-down period stops itself at zero | and restarting a spent clock is a no-op, not negative time |
@@ -191,7 +203,7 @@ eight types; this file covers what is specific to a live sports graphic.
 | long club names | the three fixed strips do not change height AT ALL under a 36-character name; nothing leaves the frame |
 | a missing crest | shows the placeholder, not a broken image, and set-then-cleared returns cleanly |
 | the repeating boards rebuild | valid rows render, markup is escaped to text, junk lines are skipped, an empty source empties the board |
-| export | all 32 designs through all 6 targets |
+| export | all 20 designs through all 6 targets |
 | machine pairing | every machine-bearing design ships a machine-aware interpreter and derived steps |
 
 Two real defects were found by writing these and fixed:
@@ -216,8 +228,8 @@ extraction; their html and css are byte-identical.
 ## 6. The match centre, and what is deliberately NOT here
 
 A match centre is not one graphic. On air it is a sequence — the versus card for the fixture,
-the match board for the state, the lineup, the stat comparison, the fixtures board for the rest
-of the round — and the product already has the unit for that: a **rundown** (`model/shows.ts`,
+the match board for the state, main's roster and head-to-head boards, the fixtures board for
+the rest of the round — and the product already has the unit for that: a **rundown** (`model/shows.ts`,
 `docs/CONTROL_LAYER.md`), which gives the set one aggregated control page.
 
 So the pack ships the PARTS and the packs that bundle them, rather than a single board that
@@ -235,9 +247,8 @@ Not attempted, and why:
 - **Sport-specific scoring logic.** No template computes a tennis tie-break, a handball
   suspension countdown or a cricket run rate. The operator types what is true. A graphic that
   guessed at competition rules would be wrong for most competitions, and silently.
-- **Automatic table sorting.** Standings rows keep the order they were pasted in, for the same
-  reason: tie-break rules differ by competition, and a board that re-sorted would be confidently
-  wrong.
+- **Automatic ordering.** Fixture rows keep the order they were pasted in, for the same reason:
+  a board that re-ordered on a guess would be confidently wrong.
 
 ---
 
@@ -247,8 +258,8 @@ Nine new packs in `templates/packs.ts`: `football`, `ice-hockey`, `basketball`, 
 `racket-sports`, `motorsport`, `athletics`, `combat-sports`, `club-sports`. Match Day was widened
 from the old generic scoreboard to all eight sports types.
 
-Each is the same eight types cut for one sport's habits — which clock direction, whether score is
-kept in periods or sets, whether a lineup is a squad or a start list — plus the supporting
+Each is the same five types cut for one sport's habits — which clock direction, whether score is
+kept in periods or sets, how its clock runs — plus the supporting
 graphics that sport uses, in a fitting default family (sport for the stadium codes, glass for the
 indoor and individual ones, minimal for club and school).
 

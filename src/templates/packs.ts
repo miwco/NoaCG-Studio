@@ -59,7 +59,7 @@ export const PACKS: TemplatePack[] = [
     family: 'sport',
     types: [
       'scorebug', 'match-board', 'match-status', 'match-event',
-      'lineup', 'stat-compare', 'standings', 'fixtures',
+      'fixtures',
       'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'holding-screen',
     ],
     extras: ['vs01', 'cr03'],
@@ -76,8 +76,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Count-up clock, subs and cards, the league table and the weekend results.',
     family: 'sport',
     types: [
-      'scorebug', 'match-event', 'match-status', 'lineup',
-      'stat-compare', 'standings', 'fixtures', 'match-board',
+      'scorebug', 'match-event', 'match-status', 
+      'fixtures', 'match-board',
       'lower-third', 'sponsor-bug', 'countdown', 'holding-screen',
     ],
     extras: ['vs01'],
@@ -90,7 +90,7 @@ export const PACKS: TemplatePack[] = [
     family: 'sport',
     types: [
       'scorebug', 'match-board', 'match-event', 'match-status',
-      'lineup', 'stat-compare', 'standings', 'fixtures',
+      'fixtures',
       'lower-third', 'sponsor-bug', 'holding-screen',
     ],
     formats: [],
@@ -101,8 +101,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Quarter clock, the quarter-by-quarter board, team stats and the conference table.',
     family: 'sport',
     types: [
-      'scorebug', 'match-board', 'stat-compare', 'lineup',
-      'match-status', 'match-event', 'standings', 'fixtures',
+      'scorebug', 'match-board', 
+      'match-status', 'match-event', 'fixtures',
       'lower-third', 'sponsor-bug', 'countdown',
     ],
     formats: [],
@@ -114,7 +114,7 @@ export const PACKS: TemplatePack[] = [
     family: 'glass',
     types: [
       'scorebug', 'match-event', 'match-board', 'match-status',
-      'lineup', 'stat-compare', 'standings', 'fixtures',
+      'fixtures',
       'lower-third', 'sponsor-bug', 'holding-screen',
     ],
     formats: [],
@@ -125,8 +125,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Set-by-set scoring, the head-to-head, the draw and the order of play.',
     family: 'glass',
     types: [
-      'match-board', 'scorebug', 'stat-compare', 'match-status',
-      'fixtures', 'standings', 'lineup',
+      'match-board', 'scorebug', 'match-status',
+      'fixtures', 
       'lower-third', 'sponsor-bug', 'agenda',
     ],
     extras: ['vs02'],
@@ -138,8 +138,8 @@ export const PACKS: TemplatePack[] = [
     description: 'The timing tower as a table, the championship standings, session results and a countdown.',
     family: 'sport',
     types: [
-      'standings', 'fixtures', 'stat-compare', 'match-status',
-      'lineup', 'countdown', 'scorebug',
+      'fixtures', 'match-status',
+      'countdown', 'scorebug',
       'lower-third', 'sponsor-bug', 'ticker', 'holding-screen',
     ],
     formats: [],
@@ -150,8 +150,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Start lists, heat results, the medal table and a field-event countdown.',
     family: 'glass',
     types: [
-      'lineup', 'standings', 'fixtures', 'match-status',
-      'stat-compare', 'countdown', 'scorebug',
+      'fixtures', 'match-status',
+      'countdown', 'scorebug',
       'lower-third', 'agenda', 'sponsor-bug',
     ],
     formats: [],
@@ -162,8 +162,8 @@ export const PACKS: TemplatePack[] = [
     description: 'Round clock, the fight card, the tale of the tape and the decision.',
     family: 'glass',
     types: [
-      'match-status', 'stat-compare', 'scorebug', 'match-event',
-      'fixtures', 'lineup', 'countdown', 'standings',
+      'match-status', 'scorebug', 'match-event',
+      'fixtures', 'countdown', 
       'lower-third', 'sponsor-bug', 'holding-screen',
     ],
     extras: ['vs02'],
@@ -175,8 +175,8 @@ export const PACKS: TemplatePack[] = [
     description: 'The amateur kit: full club names, no crests needed, and nothing that costs bitrate.',
     family: 'minimal',
     types: [
-      'scorebug', 'match-status', 'match-board', 'lineup',
-      'fixtures', 'standings', 'stat-compare', 'match-event',
+      'scorebug', 'match-status', 'match-board', 
+      'fixtures', 'match-event',
       'lower-third', 'holding-screen', 'countdown', 'sponsor-bug',
     ],
     formats: [],
