@@ -193,6 +193,27 @@ it is sized to be read once, at speed, by someone who did not choose to read it.
 urgency on top of that, and urgency is a format, not a style: it leads with a severity flag and
 is read in one glance.
 
+**…and why they still browse under existing tiles.** `alert` and `public-info` are
+`TemplateCategory` ids — the ASSEMBLER and routing identity, which is what the paragraph above
+is about. Discovery is a separate registry (docs/TEMPLATE_TAXONOMY_PROPOSAL.md), and neither
+category earns a tile of its own there:
+
+- The ten alerts browse under **Alerts & status**, which already exists and already holds
+  pack4's notice card. Subtypes: `warning` (al01–al05), `emergency` (al06), `status`
+  (al07/al08), `breaking` (al09), `notice` (al10).
+- The nine public-information panels SCATTER, and that is the point. pi01/pi05 are official
+  notices — the same graphic as the notice card, so the same tile (`alert`/notice). pi02 is a
+  numbered instruction (`info`/step) and pi04 is legal small print (`info`/disclaimer, a
+  subtype this pack added). pi06 is health advice (`info`/explainer). pi07/pi08/pi09 are
+  translations (`caption`/translation — the pack's designs are that category's first catalog
+  content). pi03 is an attribution chip (`bug`/source, also added here).
+
+A "Public information" tile would have split near-identical graphics across two tiles, which
+is the discovery failure the one taxonomy exists to prevent. The public-service AUDIENCE is
+already answered by the other facet: the `civic` programme family and its emergency-info,
+medical-info, legal-info and council-meeting formats rank this pack's designs first for
+exactly the producer who needs them.
+
 ---
 
 ## 5. Infrastructure limitations
