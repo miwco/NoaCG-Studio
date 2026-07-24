@@ -43,7 +43,7 @@ sweeps and every spec already speak.
 no branches, no parallel groups and no event overrides compiles to **no `machine` key**, and
 its template comes out byte-identical to what it emitted before.
 
-Fourteen of the nineteen shipped types are in that class. That is the design working, not a
+Nineteen of the twenty-seven shipped types are in that class. That is the design working, not a
 shortcut — and it is what makes promoting an existing variant safe.
 
 ---
@@ -243,7 +243,7 @@ value, so sport's intentional accent halos never trip it.
 
 ---
 
-## 6. The nineteen types
+## 6. The registered types
 
 Counts are how many of the 60 reference formats in `live_format_graphics_needs.xlsx` ask for
 that graphic. Every type now ships in all four style families; the design named here is the
@@ -291,10 +291,36 @@ card created single-step shows its last step on the first frame. The wizard's st
 tri-state (`null` = the design decides) to make room for it, matching `zone` and `logoEnabled`,
 and `scripts/factory.mjs` gates the drift the same way it gates motion and position.
 
+### The identity family (templates/types/identityBugs.ts)
+
+The persistent marks — everything that stays on screen while other graphics come and go. They
+came in as one pack rather than one at a time because they share a structure (the corner-bug
+contract), and splitting them by frequency would have shipped a station ident with no live bug
+to sit beside it. Eight types, four families each, so the matrix stays full.
+
+| Type | Flagship design | Machine |
+|---|---|---|
+| Station ident | bug05 House Ident | – |
+| Live status | bug09 House Live | branches `live` / `replay` / `standby` |
+| Logo mark | bug13 House Mark | – |
+| Sponsor strip | bug17 House Sponsor Strip | – |
+| Sponsor rotation | bug21 House Sponsor Rotation | timer cycle + hold/resume/skip |
+| Event ident | bug25 House Event Bug | – |
+| Award mark | bug29 House Award Bug | – |
+| Location chip | bug33 House Location Chip | – |
+
+Six of the eight declare no machine — the derived linear one already says "it arrives, it
+persists, stop() removes it". The two that do are the two where the state is the graphic's
+POINT: a live bug that could not actually switch between live, replay and standby would be
+claiming a status it does not track, and a sponsor rotation that did not advance by itself
+would be a sponsor bug with extra fields. Both were verified running, not just compiled — the
+status swap through `noacgDispatch`, the rotation through its own armed timer.
+
 ### The matrix is full — and how it filled
 
-All 76 cells (19 types × noacg / glass / sport / minimal) are filled. The route there is worth
-recording, because it was not the one the first pass predicted:
+All cells (× noacg / glass / sport / minimal) are filled: 48 of the original twelve types, 28 of
+the title/topic/information pack's seven, and 32 of the identity family's eight. The route there
+is worth recording, because it was not the one the first pass predicted:
 
 - **The promotion well ran dry fast.** 24 cells looked promotable on parts alone; 8 actually were
   on the first pass, and after promoting the single design that cleared all six gates on the
