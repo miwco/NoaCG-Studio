@@ -225,7 +225,7 @@ export const ig16: TemplateVariant = defineInfographicVariant(
 /* The milestone's name, the quietest line on the panel. */
 .infographic-node-label {
   font-family: var(--font-label);  /* the house label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail */
+  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail — held at the 16px broadcast-safe floor */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.25;               /* wrapped names stay readable */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

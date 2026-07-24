@@ -4,8 +4,9 @@
 //
 // WINDOW GEOMETRY, in 1920 × 1080 design pixels — put the camera source here:
 //   x 200 · y 96 · width 1520 · height 855  (a 16:9 window inside the safe area)
-// Everything else the frame draws sits OUTSIDE that rectangle except the corner brackets,
-// which overlap its edge by their own thickness. The interior is fully transparent.
+// Everything else the frame draws sits OUTSIDE that rectangle except the corner brackets
+// (which overlap its edge by their own thickness) and the nameplate, which overlays the
+// window's bottom-left corner the way a broadcast nameplate does. The interior is transparent.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineFrameVariant } from './shared';
@@ -103,12 +104,15 @@ export const fr01: TemplateVariant = defineFrameVariant(
   border-bottom-width: calc(4px * var(--scale));
 }
 
-/* The nameplate — docked so its top edge sits ON the window's bottom edge, which is what
-   makes it read as part of the frame instead of a lower third that happens to be near it. */
+/* The nameplate — docked INSIDE the window's bottom-left corner and anchored by its BOTTOM,
+   so it reads as part of the shot (the standard nameplate position) and, crucially, a long
+   wrapped name grows UPWARD over the corner instead of downward off the frame. Anchoring the
+   top here was a real bug: the 129px band below the window is too short for two wrapped rows,
+   and a 60-char name ran straight off the bottom edge. */
 .frame-plate {
-  position: absolute;              /* placed against the stage, in the same design px */
-  left: calc(200px * var(--scale));   /* aligned with the window's left edge */
-  top: calc(951px * var(--scale));    /* window y + window height — flush under it */
+  position: absolute;              /* placed against the .frame root, in the same design px */
+  left: calc(224px * var(--scale));   /* just inside the window's left edge */
+  bottom: calc(153px * var(--scale));  /* just up from the window's bottom edge (frame h − that ≈ window bottom) */
   display: flex;                   /* the amber bar and the panel sit side by side */
   will-change: transform, opacity; /* the plate settles in after the edge */
 }
