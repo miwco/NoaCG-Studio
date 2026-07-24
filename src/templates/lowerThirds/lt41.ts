@@ -89,7 +89,7 @@ ${
 .lower-third-crest {
   position: relative;              /* the badge positions against this well — see below */
   flex: none;                      /* fixed width; long names never squeeze the crest */
-  width: calc(96px * var(--scale));  /* square well at the slab's height */
+  width: calc(107px * var(--scale));  /* square well at the slab's height */
   background: color-mix(in srgb, var(--text-color) 8%, transparent);  /* a lift off the slab */
 }
 
@@ -103,7 +103,7 @@ ${
   inset: 0;                        /* covers the well… */
   width: 100%;                     /* …at its full width… */
   height: 100%;                    /* …and its full height */
-  padding: calc(12px * var(--scale));  /* breathing room: object-fit letterboxes INSIDE the padding */
+  padding: calc(13px * var(--scale));  /* breathing room: object-fit letterboxes INSIDE the padding */
   object-fit: contain;             /* show the whole crest, never distort or crop it */
 }
 
@@ -123,12 +123,12 @@ ${
   flex-direction: column;          /* top to bottom */
   justify-content: center;         /* centred against the crest */
   min-width: 0;                    /* lets a long unbroken name wrap instead of overflowing */
-  padding: calc(16px * var(--scale)) calc(38px * var(--scale)) calc(18px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(42px * var(--scale)) calc(20px * var(--scale)) calc(29px * var(--scale));
 }
 
 /* Player (f0) — the heaviest line on the slab. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.04;               /* big display text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -141,24 +141,24 @@ ${
    red on small tracked caps falls under the 4.5:1 a caption needs. The bar carries the
    colour; the type carries the contrast. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 600;                /* tracked caps need weight to stay crisp */
   line-height: 1.2;                /* a touch more air than the headline */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* matches the headline's voice */
   color: var(--label-color);       /* the family's label colour (full-strength text) */
-  margin-top: calc(6px * var(--scale));  /* player + club read as one unit */
+  margin-top: calc(7px * var(--scale));  /* player + club read as one unit */
 }
 
 /* Stat line (f2) — the smallest voice, dimmed so the numbers never outrank the name. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.25;               /* same rhythm as the club line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* keeps the stack uniform */
   color: var(--text-dim);          /* dimmed — the stat supports, it does not shout */
-  margin-top: calc(8px * var(--scale));  /* separated — the stat line is its own beat */
+  margin-top: calc(9px * var(--scale));  /* separated — the stat line is its own beat */
 }`,
       hasAccent: true,
     };

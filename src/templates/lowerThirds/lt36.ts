@@ -69,8 +69,8 @@ ${lineMasks(o, '        ')}
 .lower-third-box {
   display: flex;                    /* mark, hairline and words on one row */
   align-items: center;              /* …vertically centred against each other */
-  gap: calc(22px * var(--scale));   /* one even gap between all three pieces */
-  padding: calc(46px * var(--scale)) calc(170px * var(--scale)) calc(46px * var(--scale)) calc(32px * var(--scale));
+  gap: calc(29px * var(--scale));   /* one even gap between all three pieces */
+  padding: calc(61px * var(--scale)) calc(227px * var(--scale)) calc(61px * var(--scale)) calc(43px * var(--scale));
   background: radial-gradient(ellipse 88% 105% at 12% 50%,
               var(--panel-bg) 0%,
               color-mix(in srgb, var(--panel-bg) 55%, transparent) 48%,
@@ -79,8 +79,8 @@ ${lineMasks(o, '        ')}
 
 /* The mark (the ${logoField} image field) — a square that never distorts a wide wordmark. */
 .lower-third-logo {
-  width: calc(58px * var(--scale));   /* mark box width */
-  height: calc(58px * var(--scale));  /* mark box height — square by design */
+  width: calc(77px * var(--scale));   /* mark box width */
+  height: calc(77px * var(--scale));  /* mark box height — square by design */
   object-fit: contain;              /* show the whole logo, never crop it */
   flex: none;                       /* long names never squeeze the mark */
 }
@@ -102,7 +102,7 @@ ${lineMasks(o, '        ')}
 
 /* The name — cinema setting: light weight, wide tracking, generous line height. */
 .lower-third-name {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(56px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */
@@ -112,13 +112,13 @@ ${lineMasks(o, '        ')}
 /* The role — wide tracked caps, dimmed rather than accented. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 500;                 /* medium keeps tracked caps crisp at this size */
   line-height: 1.4;                 /* wide tracking needs matching leading */
   letter-spacing: var(--label-tracking);  /* 0.34em — the family's signature */
   text-transform: uppercase;        /* whatever the operator types reads as a caption */
   color: var(--label-color);        /* dimmed — colour belongs to the footage in this family */
-  margin-top: calc(10px * var(--scale));  /* clear air below the name */
+  margin-top: calc(13px * var(--scale));  /* clear air below the name */
 }`,
       hasAccent: true,
     };

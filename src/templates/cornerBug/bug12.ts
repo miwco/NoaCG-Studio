@@ -53,13 +53,13 @@ ${statusSourcesHtml(ids)}`,
 .corner-bug-box {
   display: flex;                   /* the lamp and the word sit side by side */
   align-items: center;             /* both centered on the lockup's axis */
-  gap: calc(9px * var(--scale));   /* air between the lamp and the word */
+  gap: calc(10px * var(--scale));   /* air between the lamp and the word */
 }
 
 /* The lamp — the one accent moment, breathing while the show is live. */
 .corner-bug-dot {
-  width: calc(10px * var(--scale));   /* a small dot… */
-  height: calc(10px * var(--scale));  /* …round */
+  width: calc(11px * var(--scale));   /* a small dot… */
+  height: calc(11px * var(--scale));  /* …round */
   border-radius: 50%;              /* the on-air lamp */
   background: var(--accent);       /* the one accent colour */
   flex: none;                      /* never squeezed by the word beside it */
@@ -75,7 +75,7 @@ ${statusSourcesHtml(ids)}`,
 
 /* The status word (f0) — a tiny tracked-caps label, quiet and legible over footage. */
 .corner-bug-name {
-  font-size: calc(14px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 600;                /* semibold keeps tracked caps crisp at bug scale */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

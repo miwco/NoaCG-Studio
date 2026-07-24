@@ -81,15 +81,15 @@ ${share}    </div>`,
   align-items: stretch;             /* every cell runs the bar's full height */
   background: var(--panel-bg);      /* the quiet panel behind the text */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  min-width: calc(620px * var(--scale));  /* a run of straps keeps ONE width, so the share
+  min-width: calc(775px * var(--scale));  /* a run of straps keeps ONE width, so the share
                                              column does not move between candidates */
 }
 
 /* The party colour block — the graphic's accent node, and its identity. */
 .lower-third-accent {
   flex: 0 0 auto;                   /* never squeezed by a long name */
-  min-width: calc(108px * var(--scale));  /* two- and four-letter short forms give one block */
-  max-width: calc(210px * var(--scale));  /* and a full party name pasted in by mistake clips
+  min-width: calc(135px * var(--scale));  /* two- and four-letter short forms give one block */
+  max-width: calc(263px * var(--scale));  /* and a full party name pasted in by mistake clips
                                              inside its own block rather than pushing the
                                              candidate and the share out of the bar */
   overflow: hidden;                 /* the clip is what makes the max-width real: without it a
@@ -98,7 +98,7 @@ ${share}    </div>`,
   display: flex;                    /* centre the short form inside the block */
   align-items: center;              /* …vertically */
   justify-content: center;          /* …horizontally */
-  padding: calc(14px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(20px * var(--scale));
   background: var(--accent);        /* THE party colour — set it in the Style panel */
 }
 
@@ -107,8 +107,8 @@ ${share}    </div>`,
    wider than it and colliding with the candidate (the runtime bench proves it). */
 .lower-third-party {
   display: block;                   /* so the width bound and the ellipsis apply */
-  max-width: calc(176px * var(--scale));  /* the block's inner width — the measured cap */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* big enough to read at a glance */
+  max-width: calc(220px * var(--scale));  /* the block's inner width — the measured cap */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* big enough to read at a glance */
   font-weight: 800;                 /* heavy — this is the thing viewers read first */
   line-height: 1;                   /* the block's height comes from its padding */
   letter-spacing: 0.04em;           /* a touch of air keeps three caps from fusing */
@@ -126,12 +126,12 @@ ${share}    </div>`,
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the colour block */
   min-width: 0;                     /* let it shrink so long names wrap instead of overflowing */
-  padding: calc(12px * var(--scale)) calc(26px * var(--scale)) calc(13px * var(--scale)) calc(22px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(33px * var(--scale)) calc(16px * var(--scale)) calc(28px * var(--scale));
 }
 
 /* The candidate (f1) — the bar's headline. */
 .lower-third-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.1;                 /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -140,13 +140,13 @@ ${share}    </div>`,
 
 /* The constituency (f2) — where the count is. */
 .lower-third-title {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* half the name — reference, not billing */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* half the name — reference, not billing */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.25;                /* room if a long constituency wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the civic register */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(4px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
 }
 
 /* The share cell — pinned right, its own rule, tabular figures. Right-aligning it is what
@@ -156,13 +156,13 @@ ${share}    </div>`,
   display: flex;                    /* centre the figure in the cell */
   align-items: center;              /* …vertically */
   justify-content: flex-end;        /* …against the right edge */
-  padding: calc(12px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(33px * var(--scale));
   border-left: 1px solid rgba(255, 255, 255, 0.14);  /* the cell divider */
 }
 
 /* The share (f3). */
 .lower-third-extra {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* the figure is the news */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* the figure is the news */
   font-weight: 700;                 /* bold — a result is stated, not mentioned */
   line-height: 1;                   /* single tight figure */
   ${TABULAR_FIGURES}

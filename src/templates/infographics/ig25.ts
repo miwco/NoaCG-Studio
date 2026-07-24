@@ -96,9 +96,9 @@ export const ig25: TemplateVariant = defineInfographicVariant(
    width is what makes the rail a rail: the marker columns divide THIS width evenly. */
 .infographic-box {
   position: relative;              /* the painted slab is placed against this box */
-  width: calc(900px * var(--scale));  /* the rail's run — four tiers read comfortably across it */
+  width: calc(1125px * var(--scale));  /* the rail's run — four tiers read comfortably across it */
   margin-left: var(--accent-weight);  /* starts where the accent edge ends */
-  padding: calc(20px * var(--scale)) calc(46px * var(--scale)) calc(22px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(58px * var(--scale)) calc(28px * var(--scale)) calc(38px * var(--scale));
 }
 .infographic-box::before {
   content: '';                     /* the slab surface itself */
@@ -115,18 +115,18 @@ export const ig25: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* the two blocks share one row */
   justify-content: space-between;  /* left block hugs left, count hugs right */
   align-items: baseline;           /* both sit on the same text baseline */
-  gap: calc(28px * var(--scale));  /* distinct information keeps distinct space */
+  gap: calc(35px * var(--scale));  /* distinct information keeps distinct space */
 }
 .infographic-head-left {
   display: flex;                   /* the label and the figure sit side by side */
   align-items: baseline;           /* on one baseline */
-  gap: calc(14px * var(--scale));  /* a clear seam between a word and a number */
+  gap: calc(18px * var(--scale));  /* a clear seam between a word and a number */
   min-width: 0;                    /* let a long label wrap rather than widen the slab */
 }
 
 /* The label — tracked caps in the accent colour. */
 .infographic-kicker {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps condensed caps legible over video */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* the sport register is always caps */
@@ -135,7 +135,7 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 
 /* The running figure — where we are right now, grouped by the rebuild. */
 .infographic-current {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* the row's one large voice */
+  font-size: calc(55px * var(--scale) * var(--type-scale));  /* the row's one large voice */
   font-weight: var(--display-weight);  /* the family's display weight — heavy condensed */
   line-height: 1;                  /* condensed figures sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -145,7 +145,7 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 
 /* The tier count — "2 / 4", the derived progress through the list. */
 .infographic-reached {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* clearly under the figure */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* clearly under the figure */
   font-weight: 700;                /* bold — still a headline of its own */
   letter-spacing: 0.04em;          /* condensed figures need air to be read one by one */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
@@ -156,12 +156,12 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 /* The rail — the lane, the line, and the marker columns share one stacking context. */
 .infographic-rail {
   position: relative;              /* the track is positioned against this block */
-  margin-top: calc(22px * var(--scale));  /* air between the heading row and the rail */
+  margin-top: calc(28px * var(--scale));  /* air between the heading row and the rail */
 }
 
 /* The lane — squared, not rounded: the sport family cuts its edges. */
 .infographic-milestone-track {
-  height: calc(10px * var(--scale));  /* a solid rail — this family has weight */
+  height: calc(13px * var(--scale));  /* a solid rail — this family has weight */
   background: rgba(255, 255, 255, 0.14);  /* the empty lane over the slab */
   overflow: hidden;                /* the running line is clipped to the lane */
 }
@@ -178,7 +178,7 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 /* The marker columns — EQUAL WIDTHS, so labels can never collide however close two targets are. */
 .infographic-nodes {
   display: flex;                   /* one column per milestone */
-  margin-top: calc(-15px * var(--scale));  /* pull the markers back up onto the rail */
+  margin-top: calc(-19px * var(--scale));  /* pull the markers back up onto the rail */
 }
 .infographic-node {
   flex: 1 1 0;                     /* every milestone gets exactly the same width */
@@ -192,9 +192,9 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 /* The marker — a leaning square on the rail, matching the slab's own angle. Unreached: an
    outline in keyline grey. */
 .infographic-node-dot {
-  width: calc(20px * var(--scale));   /* marker width… */
-  height: calc(20px * var(--scale));  /* …and height: a square */
-  border: calc(3px * var(--scale)) solid rgba(255, 255, 255, 0.32);  /* the unreached outline */
+  width: calc(25px * var(--scale));   /* marker width… */
+  height: calc(25px * var(--scale));  /* …and height: a square */
+  border: calc(4px * var(--scale)) solid rgba(255, 255, 255, 0.32);  /* the unreached outline */
   background: var(--panel-bg);     /* punch the rail out behind the marker */
   transform: skewX(-8deg);         /* the family's lean, at marker scale */
 }
@@ -215,24 +215,24 @@ export const ig25: TemplateVariant = defineInfographicVariant(
 
 /* The target figure under each marker. */
 .infographic-node-target {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* the marker's headline value */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* the marker's headline value */
   font-weight: 700;                /* bold — it is a number to hit */
   line-height: 1.15;               /* compact under the marker */
   letter-spacing: 0.02em;          /* condensed figures need a little air */
   font-variant-numeric: tabular-nums;  /* equal-width digits along the rail */
-  margin-top: calc(10px * var(--scale));  /* air between the marker and its figure */
+  margin-top: calc(13px * var(--scale));  /* air between the marker and its figure */
   color: var(--text-dim);          /* dimmed until the milestone is reached */
 }
 
 /* The milestone's name, the quietest line on the slab. */
 .infographic-node-label {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail — held at the 16px broadcast-safe floor */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail — held at the 16px broadcast-safe floor */
   font-weight: 700;                /* bold keeps condensed caps legible over video */
   line-height: 1.25;               /* wrapped names stay readable */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* the sport register is always caps */
   overflow-wrap: break-word;       /* a long name wraps inside its column */
-  margin-top: calc(4px * var(--scale));  /* figure and name read as one unit */
+  margin-top: calc(5px * var(--scale));  /* figure and name read as one unit */
   color: var(--text-dim);          /* dimmed until the milestone is reached */
 }`,
 

@@ -61,13 +61,13 @@ ${lineMasks(o, '      ')}
    an overflow-hidden mask that would clip a shadow of its own (DESIGN_LANGUAGE §3). */
 .lower-third-box {
   text-align: right;                /* lines are ragged-LEFT: they align to the frame edge */
-  padding-bottom: calc(14px * var(--scale));  /* air between the last line and the rule */
-  filter: drop-shadow(0 calc(2px * var(--scale)) calc(16px * var(--scale)) rgba(0, 0, 0, 0.75));
+  padding-bottom: calc(19px * var(--scale));  /* air between the last line and the rule */
+  filter: drop-shadow(0 calc(3px * var(--scale)) calc(21px * var(--scale)) rgba(0, 0, 0, 0.75));
 }
 
 /* The name — cinema setting: light weight, wide tracking. */
 .lower-third-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */
@@ -77,13 +77,13 @@ ${lineMasks(o, '      ')}
 /* The role — wide tracked caps, dimmed rather than accented. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 500;                 /* medium keeps tracked caps crisp at this size */
   line-height: 1.4;                 /* wide tracking needs matching leading */
   letter-spacing: var(--label-tracking);  /* 0.34em — the family's signature */
   text-transform: uppercase;        /* whatever the operator types reads as a caption */
   color: var(--label-color);        /* dimmed — colour belongs to the footage in this family */
-  margin-top: calc(10px * var(--scale));  /* clear air below the name */
+  margin-top: calc(13px * var(--scale));  /* clear air below the name */
 }`,
     hasAccent: true,
   }),

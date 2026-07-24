@@ -48,8 +48,8 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 .${P}-box {
   display: flex;                   /* the title and the chips share one row */
   align-items: center;             /* on the strip's center line */
-  gap: calc(20px * var(--scale));  /* air between the title and the chips */
-  padding: calc(12px * var(--scale)) calc(22px * var(--scale));
+  gap: calc(36px * var(--scale));  /* air between the title and the chips */
+  padding: calc(21px * var(--scale)) calc(39px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -60,9 +60,9 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 /* The accent — a soft vertical seam between the title and the chips. It sits in the FLOW
    (the strip is a row), so it lands between them whatever the title's length. */
 .${P}-accent {
-  width: calc(2px * var(--scale));
+  width: calc(3px * var(--scale));
   align-self: stretch;             /* full height of the strip's content */
-  margin: calc(4px * var(--scale)) 0;
+  margin: calc(7px * var(--scale)) 0;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 60%, transparent);
   transform-origin: center;
@@ -77,7 +77,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 /* The title — the glass label voice. */
 .${P}-title {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -87,7 +87,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 /* THE SHAPE CHANGE: the same rows, laid side by side as chips. */
 .${P}-body {
   flex-direction: row;             /* a row of games, not a ladder */
-  gap: calc(8px * var(--scale));
+  gap: calc(14px * var(--scale));
 }
 
 /* One game chip: number over map name, with the winner mark beneath. */
@@ -95,17 +95,17 @@ export const mr03: TemplateVariant = defineEsportsVariant(
   position: relative;
   flex-direction: column;          /* the chip stacks its three parts */
   align-items: center;             /* centered in the chip */
-  gap: calc(2px * var(--scale));
-  min-width: calc(96px * var(--scale));
-  padding: calc(7px * var(--scale)) calc(12px * var(--scale));
-  border-radius: calc(10px * var(--scale));
+  gap: calc(3px * var(--scale));
+  min-width: calc(171px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(21px * var(--scale));
+  border-radius: calc(18px * var(--scale));
   background: rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 /* The game number — the chip's kicker. */
 .${P}-row-index {
-  font-size: calc(11px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--text-dim);
@@ -115,7 +115,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 /* The map name. */
 .${P}-row-map {
   flex: 0 0 auto;                  /* inside a chip the name no longer takes the slack */
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(27px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -127,7 +127,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 .${P}-row-mark {
   min-width: 0;                    /* the chip centres it rather than right-aligning */
   text-align: center;
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -154,7 +154,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
 /* The cursor — the live game's chip is ringed in the accent. */
 .${P}-current {
   opacity: 1;
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--accent);
 }
 
 /* Decided — unplayed games fall back and the live ring goes neutral. */
@@ -162,7 +162,7 @@ export const mr03: TemplateVariant = defineEsportsVariant(
   opacity: 0.22;
 }
 .${P}-decided .${P}-current {
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--text-color);
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--text-color);
 }`,
   }),
 );

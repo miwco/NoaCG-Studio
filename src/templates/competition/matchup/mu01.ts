@@ -75,7 +75,7 @@ export const mu01: TemplateVariant = defineMatchupVariant(
 /* The event line — sport label voice, above the match-up. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(24px * var(--scale) * var(--type-scale));
+  font-size: calc(28px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -84,7 +84,7 @@ export const mu01: TemplateVariant = defineMatchupVariant(
 
 /* The competitor name — the loudest type on the card. */
 .${P}-name {
-  font-size: calc(72px * var(--scale) * var(--type-scale));
+  font-size: calc(85px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   letter-spacing: var(--display-tracking);
@@ -95,7 +95,7 @@ export const mu01: TemplateVariant = defineMatchupVariant(
 /* The seed / record note under the name. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -104,10 +104,10 @@ export const mu01: TemplateVariant = defineMatchupVariant(
 
 /* The VS slab in the corridor between the columns. */
 .${P}-vs {
-  padding: calc(8px * var(--scale)) calc(18px * var(--scale));
+  padding: calc(9px * var(--scale)) calc(21px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(45px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   letter-spacing: 0.04em;
@@ -123,11 +123,11 @@ export const mu01: TemplateVariant = defineMatchupVariant(
 
 /* The verdict mark — only ever rendered on the winning column. */
 .${P}-verdict {
-  padding: calc(4px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(5px * var(--scale)) calc(16px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   font-family: var(--font-label);
-  font-size: calc(17px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
 }

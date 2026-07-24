@@ -64,9 +64,9 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 
 /* The panel — flat and solid. No blur: a club stream's bitrate cannot afford one. */
 .infographic-box {
-  min-width: calc(560px * var(--scale));  /* a board — two full club names and a score per row */
+  min-width: calc(943px * var(--scale));  /* a board — two full club names and a score per row */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(20px * var(--scale)) calc(24px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(34px * var(--scale)) calc(40px * var(--scale)) calc(20px * var(--scale));
   background: var(--panel-bg);     /* the family's solid dark panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
   border-left: var(--accent-weight) solid var(--accent);  /* the family's one accent rule */
@@ -77,10 +77,10 @@ export const ig29: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* heading and division in one row */
   align-items: baseline;           /* both on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(16px * var(--scale));  /* the division never crowds the heading */
+  gap: calc(27px * var(--scale));  /* the division never crowds the heading */
 }
 .infographic-heading {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* small: this line is reference */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* small: this line is reference */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -90,7 +90,7 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 }
 .infographic-sub {
   flex-shrink: 0;                  /* the division keeps its width */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* level with the heading */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* level with the heading */
   font-weight: 500;                /* medium — quieter than the heading beside it */
   color: var(--text-dim);          /* dimmed — never full accent twice in one header */
   white-space: nowrap;             /* "Division One" stays on one line */
@@ -100,7 +100,7 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 /* The rule — the family's one divider. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin-top: calc(12px * var(--scale));  /* air between the header and the rule */
+  margin-top: calc(20px * var(--scale));  /* air between the header and the rule */
   background: rgba(255, 255, 255, 0.20);  /* the family's divider */
 }
 
@@ -114,8 +114,8 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-row {
   display: flex;                   /* every part of the match on one line */
   align-items: baseline;           /* the text sizes sit on one baseline */
-  gap: calc(12px * var(--scale));  /* clear air between the columns */
-  padding: calc(9px * var(--scale)) 0;  /* even vertical rhythm down the board */
+  gap: calc(20px * var(--scale));  /* clear air between the columns */
+  padding: calc(15px * var(--scale)) 0;  /* even vertical rhythm down the board */
 }
 .infographic-fixture-row + .infographic-fixture-row {
   border-top: 1px solid rgba(255, 255, 255, 0.10);  /* keyline hairline between matches */
@@ -124,8 +124,8 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 /* The kick-off — small, dim, in a shared column so the clubs line up. */
 .infographic-fixture-when {
   flex-shrink: 0;                  /* a long club name never squeezes the time */
-  min-width: calc(88px * var(--scale));  /* one shared column width — the clubs align */
-  font-size: calc(12px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
+  min-width: calc(148px * var(--scale));  /* one shared column width — the clubs align */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   font-weight: 600;                /* semibold keeps small caps legible */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* "sat" reads as "SAT", whatever is typed */
@@ -138,7 +138,7 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-side {
   flex: 1;                         /* the two clubs share the row's spare width evenly */
   min-width: 0;                    /* allow a long club name to shrink and wrap */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
   font-weight: 500;                /* medium — a results board is a list, not a headline */
   line-height: 1.3;                /* relaxed leading in case a long name wraps */
   color: var(--text-color);        /* primary text on the panel */
@@ -150,16 +150,16 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 /* The middle — the score in the accent, or a dim "v" on a match not yet played. */
 .infographic-fixture-mid {
   flex-shrink: 0;                  /* the middle keeps its width whatever the names do */
-  min-width: calc(58px * var(--scale));  /* one shared column — the clubs align either side */
+  min-width: calc(98px * var(--scale));  /* one shared column — the clubs align either side */
   text-align: center;              /* centred between the two clubs */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
   font-weight: 500;                /* medium — this is the unplayed state */
   color: var(--text-dim);          /* dimmed — nothing has happened yet */
 }
 /* A played match: the score takes the accent and the weight, with no chrome around it —
    this family marks with type, not with tiles. */
 .infographic-fixture-played .infographic-fixture-mid {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
   font-weight: 700;                /* bold — the score is the point of a results board */
   color: var(--accent);            /* the results wear the accent */
   font-variant-numeric: tabular-nums;  /* scores align down the column */

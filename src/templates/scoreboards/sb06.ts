@@ -80,7 +80,7 @@ ${colourHoldersHtml('f6', 'f7', '#fdb927', '#007a33')}
   left: 0;                         /* flush with the box's left side */
   top: 0;                          /* full height, top… */
   bottom: 0;                       /* …to bottom */
-  width: calc(18px * var(--scale));  /* a visible wedge, not a hairline */
+  width: calc(26px * var(--scale));  /* a visible wedge, not a hairline */
   background: var(--accent);       /* the one accent surface */
   clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);  /* the sport lean, cut into the wedge */
 }
@@ -90,11 +90,11 @@ ${colourHoldersHtml('f6', 'f7', '#fdb927', '#007a33')}
   position: relative;              /* the colour bar is placed against this */
   display: flex;                   /* bar, code and score in one row */
   align-items: center;             /* all three on the slab's center line */
-  gap: calc(16px * var(--scale));  /* air inside the block */
-  padding: calc(11px * var(--scale)) calc(22px * var(--scale));  /* the slab's height comes from here */
+  gap: calc(23px * var(--scale));  /* air inside the block */
+  padding: calc(16px * var(--scale)) calc(31px * var(--scale));  /* the slab's height comes from here */
   min-width: 0;                    /* lets a long code shrink rather than overflow */
 }
-.scoreboard-team-a { padding-left: calc(34px * var(--scale)); }  /* clear the leaning cap */
+.scoreboard-team-a { padding-left: calc(49px * var(--scale)); }  /* clear the leaning cap */
 .scoreboard-team-b {
   box-shadow: inset calc(1px * var(--scale)) 0 0 0 rgba(255, 255, 255, 0.10);  /* hairline seam between the sides */
 }
@@ -102,7 +102,7 @@ ${colourHoldersHtml('f6', 'f7', '#fdb927', '#007a33')}
 /* The club colour bar — a full-height stripe behind the code, the loudest club signal here. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* never gives up width */
-  width: calc(8px * var(--scale)); /* a bar, not a dot — visible at broadcast distance */
+  width: calc(11px * var(--scale)); /* a bar, not a dot — visible at broadcast distance */
   align-self: stretch;             /* full height of the team block */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
@@ -112,7 +112,7 @@ ${colourHoldersHtml('f6', 'f7', '#fdb927', '#007a33')}
 
 /* The team code — heavy condensed caps, the sport family's voice. */
 .scoreboard-team {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a three-letter code at glance size */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* a three-letter code at glance size */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.05;               /* tight — condensed caps need almost no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -129,7 +129,7 @@ ${clipOneLineCss('.scoreboard-score', 130)}
 
 /* The score — the biggest figure on the slab, tabular so a change never shifts the layout. */
 .scoreboard-score {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* the figure sits tight on the center line */
   color: var(--text-color);        /* white: on this design the ACCENT belongs to the clock */
@@ -143,15 +143,15 @@ ${clipOneLineCss('.scoreboard-score', 130)}
   align-items: center;             /* both centered on the tile's axis */
   justify-content: center;         /* vertically centered in the slab */
   gap: calc(1px * var(--scale));   /* the two rows read as one unit */
-  padding: calc(8px * var(--scale)) calc(24px * var(--scale));  /* snug frame around the two rows */
+  padding: calc(11px * var(--scale)) calc(34px * var(--scale));  /* snug frame around the two rows */
   background: rgba(255, 255, 255, 0.06);  /* one step off the slab, so the tile reads as separate */
-  border-bottom: calc(3px * var(--scale)) solid var(--accent);  /* the accent underline */
+  border-bottom: calc(4px * var(--scale)) solid var(--accent);  /* the accent underline */
 }
 
 /* The period label — the sport label face, tracked wide. */
 .scoreboard-phase {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid: a sport label is never light */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's wide label tracking */
@@ -163,7 +163,7 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
 
 /* The countdown — the tile's anchor, tabular so the last minute never jitters. */
 .scoreboard-clock {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* the loudest thing in the tile */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* the loudest thing in the tile */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.05;               /* tight under the period label */
   color: var(--text-color);        /* white while there is time left */

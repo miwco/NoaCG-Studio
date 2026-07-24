@@ -64,8 +64,8 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
 .lower-third-box {
   display: flex;                    /* label · divider · callers, in a row */
   align-items: baseline;            /* every piece shares one baseline */
-  gap: calc(16px * var(--scale));
-  padding: calc(12px * var(--scale)) calc(24px * var(--scale)) calc(14px * var(--scale));
+  gap: calc(21px * var(--scale));
+  padding: calc(16px * var(--scale)) calc(32px * var(--scale)) calc(19px * var(--scale));
   background: var(--panel-bg);      /* the minimal family's quiet panel */
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
@@ -73,7 +73,7 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
 
 /* The label (f0) — small, tracked, in the accent: it names the segment, not a person. */
 .lower-third-name {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* label size — deliberately the smallest thing here */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label size — deliberately the smallest thing here */
   font-weight: 700;                 /* bold — small tracked caps need the weight to hold */
   line-height: 1.2;                 /* single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -86,8 +86,8 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
    line-reveal preset has something real to draw. A vertical tick, not a rule. */
 .lower-third-accent {
   align-self: center;               /* centred against the row, not on the baseline */
-  width: calc(2px * var(--scale));  /* a tick */
-  height: calc(20px * var(--scale));  /* tall enough to read, short enough to stay quiet */
+  width: calc(3px * var(--scale));  /* a tick */
+  height: calc(27px * var(--scale));  /* tall enough to read, short enough to stay quiet */
   background: var(--accent);        /* the same one colour */
   opacity: 0.55;                    /* quieter than the label it follows */
   transform-origin: center;         /* the line-reveal preset scales it from the middle */
@@ -99,7 +99,7 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
   display: flex;                    /* the names sit in a row… */
   flex-wrap: wrap;                  /* …wrapping only when the rail genuinely runs out */
   align-items: baseline;            /* shared baseline with the label */
-  gap: calc(10px * var(--scale));   /* the drawn ampersand sits in this gap */
+  gap: calc(13px * var(--scale));   /* the drawn ampersand sits in this gap */
   min-width: 0;                     /* allow shrinking — long names wrap rather than overflow */
 }
 .lower-third-callers > .lower-third-mask {
@@ -113,7 +113,7 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
 
 /* Each caller — one weight, one size: on the call, neither voice outranks the other. */
 .lower-third-caller {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the rail's primary voice (1080p reference) */
+  font-size: calc(37px * var(--scale) * var(--type-scale));  /* the rail's primary voice (1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.15;                /* single tight name row */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -125,8 +125,8 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
 .lower-third-callers > .lower-third-mask + .lower-third-mask::before {
   content: "&";                     /* the join, owned by the design */
   align-self: baseline;             /* sits on the names' baseline */
-  margin-right: calc(10px * var(--scale));  /* balances the flex gap on the other side */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* smaller than the names it joins */
+  margin-right: calc(13px * var(--scale));  /* balances the flex gap on the other side */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* smaller than the names it joins */
   font-weight: 400;                 /* regular — a connector, not a word */
   color: var(--text-dim);           /* dimmed so the names lead */
 }`,

@@ -73,9 +73,9 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 /* The card — the house void, with the family's amber top edge. */
 .scoreboard-box {
   position: relative;              /* anchors the accent edge */
-  min-width: calc(560px * var(--scale));  /* a card, not a strap */
+  min-width: calc(659px * var(--scale));  /* a card, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(24px * var(--scale)) calc(34px * var(--scale)) calc(20px * var(--scale)) calc(40px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(40px * var(--scale)) calc(24px * var(--scale)) calc(47px * var(--scale));
   background: var(--panel-bg);     /* the house void — retints through the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -98,15 +98,15 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 .scoreboard-statusrow {
   display: flex;                   /* pip and status in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(12px * var(--scale));  /* air between them */
+  gap: calc(14px * var(--scale));  /* air between them */
 }
 
 /* The live pip — a small amber dot. The machine hides it at full time, which is the whole
    signal: a card with no pip is a result, a card with one is a match still in progress. */
 .scoreboard-pip {
   flex-shrink: 0;                  /* the pip keeps its size whatever the text does */
-  width: calc(10px * var(--scale));  /* small on purpose — a marker, not a badge */
-  height: calc(10px * var(--scale));  /* same as the width — a true circle */
+  width: calc(12px * var(--scale));  /* small on purpose — a marker, not a badge */
+  height: calc(12px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--accent);       /* the live signal wears the accent */
   box-shadow: var(--accent-glow);  /* the house glow, on the pip */
@@ -115,7 +115,7 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 /* The status line — the house mono accent label. */
 .scoreboard-status {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
@@ -127,13 +127,13 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 .scoreboard-main {
   display: flex;                   /* the three blocks in one row */
   align-items: center;             /* everything on the card's centre line */
-  gap: calc(22px * var(--scale));  /* air between the clubs and the scores */
-  padding: calc(20px * var(--scale)) 0 calc(16px * var(--scale));  /* the row's vertical rhythm */
+  gap: calc(26px * var(--scale));  /* air between the clubs and the scores */
+  padding: calc(24px * var(--scale)) 0 calc(19px * var(--scale));  /* the row's vertical rhythm */
 }
 .scoreboard-side {
   display: flex;                   /* colour chip and name side by side */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(14px * var(--scale));  /* air between them */
+  gap: calc(16px * var(--scale));  /* air between them */
   flex: 1;                         /* the two clubs share the spare width evenly */
   min-width: 0;                    /* lets a long club name shrink, not overflow */
 }
@@ -142,16 +142,16 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 /* The club colour chip — a slim vertical mark before each name. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the chip never gives up width */
-  width: calc(6px * var(--scale)); /* a slim mark, not a badge */
-  height: calc(30px * var(--scale));  /* about a cap height — it sits with the name */
-  border-radius: calc(3px * var(--scale));  /* softened ends, house chip family */
+  width: calc(7px * var(--scale)); /* a slim mark, not a badge */
+  height: calc(35px * var(--scale));  /* about a cap height — it sits with the name */
+  border-radius: calc(4px * var(--scale));  /* softened ends, house chip family */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
 .scoreboard-side-b .scoreboard-colour-chip { background: var(--team-b, var(--text-dim)); }
 
 /* The club name — house display type. */
 .scoreboard-team {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a step under the scores */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* a step under the scores */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -165,20 +165,20 @@ ${clipOneLineCss('.scoreboard-team', 240)}
 .scoreboard-scores {
   display: flex;                   /* the two figures and the dash in one row */
   align-items: center;             /* on one centre line */
-  gap: calc(14px * var(--scale));  /* air around the dash */
+  gap: calc(16px * var(--scale));  /* air around the dash */
   flex-shrink: 0;                  /* the scores never give up width */
 }
 .scoreboard-score {
-  min-width: calc(60px * var(--scale));  /* a shared column, so 1 and 11 both sit centred */
+  min-width: calc(71px * var(--scale));  /* a shared column, so 1 and 11 both sit centred */
   text-align: center;              /* the figure is centred in its own column */
-  font-size: calc(52px * var(--scale) * var(--type-scale));  /* the card's headline */
+  font-size: calc(61px * var(--scale) * var(--type-scale));  /* the card's headline */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1;                  /* the figure fills its column */
   color: var(--accent);            /* the scores wear the accent */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter as scores tick */
 }
 .scoreboard-dash {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* a step under the figures */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* a step under the figures */
   font-weight: var(--display-weight);  /* solid, not a hairline */
   line-height: 1;                  /* on the figures' centre line */
   color: var(--text-dim);          /* dim — the dash separates, it does not compete */
@@ -186,7 +186,7 @@ ${clipOneLineCss('.scoreboard-team', 240)}
 
 /* The note — venue, competition, round: the quietest row on the card. */
 .scoreboard-note {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* reference type, not display */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference type, not display */
   font-weight: 400;                /* regular — contrast comes from the names above */
   line-height: 1.35;               /* relaxed leading in case it wraps */
   color: var(--text-dim);          /* dimmed — never full white twice on one card */

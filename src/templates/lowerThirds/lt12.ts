@@ -59,10 +59,10 @@ ${chip}${mask(0)}
 /* The label chip (f1) — a solid accent surface with dark mono ink and the house glow. */
 .lower-third-title {
   display: inline-block;           /* a chip, not a full-width bar */
-  padding: calc(9px * var(--scale)) calc(26px * var(--scale));  /* compact plate around the label */
+  padding: calc(10px * var(--scale)) calc(29px * var(--scale));  /* compact plate around the label */
   background: var(--accent);       /* the one solid accent surface */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small — urgency comes from contrast, not size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — urgency comes from contrast, not size */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* BREAKING, whatever the operator types */
@@ -73,12 +73,12 @@ ${chip}${mask(0)}
 /* The headline panel (f0) — the house void with the 8px bar as its left border. */
 .lower-third-name {
   display: inline-block;           /* the panel hugs the headline text */
-  padding: calc(26px * var(--scale)) calc(60px * var(--scale)) calc(30px * var(--scale)) calc(32px * var(--scale));
+  padding: calc(29px * var(--scale)) calc(67px * var(--scale)) calc(33px * var(--scale)) calc(36px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's panel treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   border-left: var(--accent-weight) solid var(--accent);  /* the family's accent edge weight */
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size — one strong statement */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* headline size — one strong statement */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;               /* wrapped headlines stay compact */
   color: var(--text-color);        /* primary text color */

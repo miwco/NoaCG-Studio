@@ -45,8 +45,8 @@ ${lineMasks(o)}
 .lower-third-box {
   display: flex;                   /* lay the lines out as a column… */
   flex-direction: column;          /* …so \`order\` can visually reorder them */
-  gap: calc(10px * var(--scale));  /* breathing room between kicker and name */
-  padding: calc(20px * var(--scale)) calc(32px * var(--scale));  /* generous inner space */
+  gap: calc(12px * var(--scale));  /* breathing room between kicker and name */
+  padding: calc(24px * var(--scale)) calc(38px * var(--scale));  /* generous inner space */
   background: var(--panel-bg);     /* the near-white porcelain panel */
   border-radius: var(--panel-radius);  /* the card's authored panel radius */
   box-shadow: var(--panel-shadow);     /* the card's authored lift */
@@ -62,7 +62,7 @@ ${lineMasks(o)}
 
 /* The name (f0): the big line the graphic exists for. */
 .lower-third-name {
-  font-size: calc(52px * var(--scale) * var(--type-scale));  /* headline scale */
+  font-size: calc(61px * var(--scale) * var(--type-scale));  /* headline scale */
   font-weight: var(--display-weight);  /* the name's authored display weight */
   line-height: 1.1;                /* tight leading — big text needs less air */
   letter-spacing: var(--display-tracking);  /* big display type tightens slightly */
@@ -71,7 +71,7 @@ ${lineMasks(o)}
 
 /* The kicker (f1): a small, loud label chip in the accent color. */
 .lower-third-title {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small on purpose — a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small on purpose — a label, not a headline */
   font-weight: 700;                /* bold enough to read at this size */
   line-height: 1.2;                /* a touch of air inside its reveal mask */
   text-transform: uppercase;       /* all caps read as a category tag */
@@ -81,8 +81,8 @@ ${lineMasks(o)}
 
     hasAccent: false, // no accent shape — presets fall back to their box-only choreography
     tokens: {
-      panelRadius: 'calc(3px * var(--scale))',
-      panelShadow: '0 calc(14px * var(--scale)) calc(44px * var(--scale)) rgba(0, 0, 0, 0.18)',
+      panelRadius: 'calc(4px * var(--scale))',
+      panelShadow: '0 calc(16px * var(--scale)) calc(52px * var(--scale)) rgba(0, 0, 0, 0.18)',
       labelColor: 'var(--accent)',
       displayWeight: '800',
     },

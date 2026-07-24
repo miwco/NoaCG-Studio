@@ -48,7 +48,7 @@ ${lineMasks(o)}
   position: absolute;               /* pinned inside the positioned .lower-third root */
   top: 0;                           /* the topmost element of the composition */
   left: 0;                          /* at the block's left edge */
-  width: calc(48px * var(--scale));  /* a short mark, not a full-width rule */
+  width: calc(53px * var(--scale));  /* a short mark, not a full-width rule */
   height: var(--accent-weight);     /* the family's printed-rule weight */
   background: var(--accent);        /* the one accent surface in the design */
   will-change: transform;           /* hint the browser: presets draw this rule in */
@@ -59,7 +59,7 @@ ${lineMasks(o)}
   display: flex;                    /* so the lines can be ordered independently of the DOM */
   flex-direction: column;           /* one line per row, top to bottom */
   align-items: flex-start;          /* each row hugs its own text */
-  padding-top: calc(22px * var(--scale));  /* clears the rule above */
+  padding-top: calc(24px * var(--scale));  /* clears the rule above */
 }
 
 /* The publication (f2) — printed FIRST, though it is the last data field: a negative
@@ -67,13 +67,13 @@ ${lineMasks(o)}
 .lower-third-extra {
   order: -1;                        /* renders above the name and role */
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.3;                 /* a single tight kicker line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* whatever the operator types reads as a kicker */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-bottom: calc(10px * var(--scale));  /* air between the kicker and the name below it */
+  margin-bottom: calc(11px * var(--scale));  /* air between the kicker and the name below it */
 }
 
 /* The mask around the kicker needs the same order, since ordering applies to the flex ITEM
@@ -84,7 +84,7 @@ ${lineMasks(o)}
 
 /* The name — editorial weight: set, not shouted. */
 .lower-third-name {
-  font-size: calc(50px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(56px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -93,11 +93,11 @@ ${lineMasks(o)}
 
 /* The role — the quiet closing line. */
 .lower-third-title {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(7px * var(--scale));  /* name + role read as one unit */
 }`,
     hasAccent: true,
   }),

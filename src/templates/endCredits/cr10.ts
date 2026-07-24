@@ -61,8 +61,8 @@ export const cr10: TemplateVariant = defineCreditsVariant(
     </div>`,
     css: `/* The viewport — the window the roll travels through. Presets fade THIS on out. */
 .credits-box {
-  width: calc(1000px * var(--scale));  /* wide enough that an award line rarely wraps */
-  height: calc(840px * var(--scale));  /* the window height; the roll travels behind it */
+  width: calc(1333px * var(--scale));  /* wide enough that an award line rarely wraps */
+  height: calc(1120px * var(--scale));  /* the window height; the roll travels behind it */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* a name roll is a centered column */
 }
@@ -74,16 +74,16 @@ export const cr10: TemplateVariant = defineCreditsVariant(
 
 /* One degree group. Groups stack in normal flow as the roll passes through them. */
 .credits-page {
-  padding: calc(26px * var(--scale)) 0;  /* even air around each group */
+  padding: calc(35px * var(--scale)) 0;  /* even air around each group */
 }
 
 /* The degree heading — tracked caps over a short accent hairline. */
 .credits-heading {
   display: inline-block;           /* so the hairline is only as wide as the words */
-  padding-bottom: calc(10px * var(--scale));  /* air between the label and its rule */
-  margin-bottom: calc(28px * var(--scale));   /* clear air before the first name */
+  padding-bottom: calc(13px * var(--scale));  /* air between the label and its rule */
+  margin-bottom: calc(37px * var(--scale));   /* clear air before the first name */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the group's one accent dose */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* label scale — the names lead */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* label scale — the names lead */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -92,13 +92,13 @@ export const cr10: TemplateVariant = defineCreditsVariant(
 
 /* One graduate: the name, then the award beneath it. */
 .credits-row {
-  padding: calc(14px * var(--scale)) 0;  /* an unhurried rhythm — this is a ceremony */
+  padding: calc(19px * var(--scale)) 0;  /* an unhurried rhythm — this is a ceremony */
 }
 
 /* THE NAME. The credits parser calls the first half of a line the "role"; on this design it
    is the person, and it is set as the loudest thing in the frame. */
 .credits-role {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* the subject of the line */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* the subject of the line */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -108,8 +108,8 @@ export const cr10: TemplateVariant = defineCreditsVariant(
 
 /* THE AWARD. The second half of the line, set small: it is what is said about the person. */
 .credits-name {
-  margin-top: calc(5px * var(--scale));  /* name and award read as one unit */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* ~1.8:1 under the name */
+  margin-top: calc(7px * var(--scale));  /* name and award read as one unit */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* ~1.8:1 under the name */
   font-weight: 400;                /* conversational weight */
   line-height: 1.3;                /* an award with honours may wrap */
   color: var(--text-dim);          /* secondary text color */
@@ -119,8 +119,8 @@ export const cr10: TemplateVariant = defineCreditsVariant(
 /* A name with no award after it — read at the same size as a graduate's name, because it
    is the same thing: a person being named. */
 .credits-entry {
-  padding: calc(11px * var(--scale)) 0;  /* slightly tighter — there is no second row */
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* level with a graduate's name */
+  padding: calc(15px * var(--scale)) 0;  /* slightly tighter — there is no second row */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* level with a graduate's name */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.2;                /* comfortable for a run of names */
   letter-spacing: var(--display-tracking);  /* matches the named graduates above */
@@ -133,29 +133,29 @@ export const cr10: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* the pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered in the roll's column */
-  gap: calc(24px * var(--scale));  /* even air between rule, mark and words */
-  padding: calc(64px * var(--scale)) 0;  /* a long breath before the sign-off */
+  gap: calc(32px * var(--scale));  /* even air between rule, mark and words */
+  padding: calc(85px * var(--scale)) 0;  /* a long breath before the sign-off */
 }
 
 /* The hairline — the minimal family's accent, laid flat as the roll's final punctuation. */
 .credits-rule {
-  width: calc(84px * var(--scale));  /* a short stroke — a mark, not a divider */
+  width: calc(112px * var(--scale));  /* a short stroke — a mark, not a divider */
   height: var(--accent-weight);    /* the family's accent weight */
   background: var(--accent);       /* the one small dose of accent color */
 }
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(64px * var(--scale));  /* the institution's mark, at sign-off size */
+  height: calc(85px * var(--scale));  /* the institution's mark, at sign-off size */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a dashed slot so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(15px * var(--scale)) calc(28px * var(--scale));  /* a chip the size of a real mark */
+  padding: calc(20px * var(--scale)) calc(37px * var(--scale));  /* a chip the size of a real mark */
   border: 1px dashed rgba(255, 255, 255, 0.28);  /* clearly a placeholder */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest type in the roll */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type in the roll */
   letter-spacing: 0.08em;          /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -163,7 +163,7 @@ export const cr10: TemplateVariant = defineCreditsVariant(
 
 /* The class line — the year/copyright field, used here for "Class of 2026". */
 .credits-year {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* a dignified closing line */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* a dignified closing line */
   font-weight: 400;                /* conversational weight */
   letter-spacing: 0.04em;          /* a touch of air */
   color: var(--text-dim);          /* secondary text color */
@@ -202,7 +202,7 @@ function renderEndBlock(classHtml, logoSrc) {
          '</div>';
 }`,
     tokens: {
-      accentWeight: 'calc(2px * var(--scale))',
+      accentWeight: 'calc(3px * var(--scale))',
       labelTracking: '0.22em',
       displayWeight: '500',
     },

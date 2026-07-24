@@ -96,18 +96,18 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
    usually multi-colour artwork, and a coloured block behind it fights the logo. */
 .lower-third-markbox {
   position: relative;               /* the placeholder and the logo stack inside this box */
-  flex: 0 0 calc(112px * var(--scale));   /* fixed width; long names never squeeze the mark */
+  flex: 0 0 calc(149px * var(--scale));   /* fixed width; long names never squeeze the mark */
   display: flex;                    /* centre whatever is inside it */
   align-items: center;              /* …vertically */
   justify-content: center;          /* …horizontally */
-  padding: calc(16px * var(--scale));  /* breathing room around the artwork */
+  padding: calc(21px * var(--scale));  /* breathing room around the artwork */
 }
 
 /* The placeholder — a quiet rule where the mark will be, so an unset slot reads as
    "nothing here yet" rather than as a broken image. */
 .lower-third-markrule {
-  width: calc(52px * var(--scale));  /* about the width a wordmark would take */
-  height: calc(2px * var(--scale));  /* a hairline */
+  width: calc(69px * var(--scale));  /* about the width a wordmark would take */
+  height: calc(3px * var(--scale));  /* a hairline */
   background: var(--text-dim);      /* neutral — the accent belongs to the edge beside it */
   opacity: 0.5;                     /* a placeholder should read as absent, not as content */
 }
@@ -118,7 +118,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 /* The mark itself (the ${logoField} image field — hidden while empty). */
 .lower-third-logo {
   position: absolute;               /* covers the mark area */
-  inset: calc(16px * var(--scale)); /* inside the padding */
+  inset: calc(21px * var(--scale)); /* inside the padding */
   width: auto;                      /* sized by the box, not by the file */
   height: auto;                     /* …both ways */
   max-width: 100%;                  /* never wider than the area */
@@ -141,13 +141,13 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the mark */
   min-width: 0;                     /* let it shrink so long values wrap instead of overflowing */
-  max-width: calc(560px * var(--scale));  /* the wrap point for a long department name */
-  padding: calc(18px * var(--scale)) calc(32px * var(--scale)) calc(20px * var(--scale)) calc(26px * var(--scale));
+  max-width: calc(747px * var(--scale));  /* the wrap point for a long department name */
+  padding: calc(24px * var(--scale)) calc(43px * var(--scale)) calc(27px * var(--scale)) calc(35px * var(--scale));
 }
 
 /* The name — the card's headline. */
 .lower-third-name {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(45px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* room for an honorific and a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -156,22 +156,22 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The position — the middle voice. */
 .lower-third-title {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.3;                 /* room if the position wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(7px * var(--scale));  /* tied to the name above it */
 }
 
 /* The department — small caps in the accent: the institutional voice, as in ls17. */
 .lower-third-extra {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 600;                 /* semibold — small tracked caps need the weight */
   line-height: 1.3;                 /* room if a long department wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the institutional voice */
   color: var(--accent);             /* the card's one coloured line */
-  margin-top: calc(7px * var(--scale));  /* its own beat below the position */
+  margin-top: calc(9px * var(--scale));  /* its own beat below the position */
 }`,
       hasAccent: true,
     };

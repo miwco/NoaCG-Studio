@@ -83,14 +83,14 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 /* The board — the house void, sized as a panel with the family's amber top edge. */
 .scoreboard-box {
   position: relative;              /* anchors the accent edge */
-  min-width: calc(620px * var(--scale));  /* a board, not a strap — short club names keep air */
+  min-width: calc(1044px * var(--scale));  /* a board, not a strap — short club names keep air */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(22px * var(--scale)) calc(30px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(37px * var(--scale)) calc(51px * var(--scale)) calc(27px * var(--scale));
   background: var(--panel-bg);     /* the house void — retints through the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 /* The accent edge — the amber bar down the left, doubling as the flag marker. */
@@ -109,14 +109,14 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
   display: flex;                   /* the two ends of the row… */
   align-items: baseline;           /* …on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  padding-bottom: calc(12px * var(--scale));  /* air above the keyline */
+  padding-bottom: calc(20px * var(--scale));  /* air above the keyline */
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);  /* the house keyline */
 }
 
 /* The period — the house mono accent label. */
 .scoreboard-phase {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -127,7 +127,7 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 /* The match clock — mono, tabular, so a ticking second never moves the row. */
 .scoreboard-clock {
   font-family: var(--font-label);  /* mono: a clock is data, not display type */
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 500;                /* one mono voice with the period label */
   color: var(--text-color);        /* primary white — the clock is read constantly */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter */
@@ -137,15 +137,15 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 .scoreboard-main {
   display: flex;                   /* the three blocks in one row */
   align-items: center;             /* everything on the board's centre line */
-  gap: calc(24px * var(--scale));  /* air between the clubs and the scores */
-  padding: calc(20px * var(--scale)) 0;  /* the row's vertical rhythm */
+  gap: calc(40px * var(--scale));  /* air between the clubs and the scores */
+  padding: calc(34px * var(--scale)) 0;  /* the row's vertical rhythm */
 }
 
 /* One club block — the crest above nothing, beside the name. */
 .scoreboard-side {
   display: flex;                   /* crest and name side by side */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(16px * var(--scale));  /* air between the crest and the name */
+  gap: calc(27px * var(--scale));  /* air between the crest and the name */
   flex: 1;                         /* the two clubs share the spare width evenly */
   min-width: 0;                    /* lets a long club name shrink, not overflow */
 }
@@ -156,8 +156,8 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 .scoreboard-crest {
   position: relative;              /* the placeholder ring is drawn against this */
   flex-shrink: 0;                  /* crests never squeeze — names give up width instead */
-  width: calc(56px * var(--scale));   /* a consistent slot whatever the crest's own shape is */
-  height: calc(56px * var(--scale));  /* square, so round and shield crests both sit well */
+  width: calc(95px * var(--scale));   /* a consistent slot whatever the crest's own shape is */
+  height: calc(95px * var(--scale));  /* square, so round and shield crests both sit well */
   display: flex;                   /* centers the image… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
@@ -172,9 +172,9 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 .scoreboard-crest::after {
   content: '';                     /* the placeholder mark */
   position: absolute;              /* centred over the empty slot */
-  inset: calc(6px * var(--scale)); /* inset from the slot's edge */
+  inset: calc(11px * var(--scale)); /* inset from the slot's edge */
   border-radius: 50%;              /* a ratio cap — stays round at any scale */
-  border: calc(2px * var(--scale)) solid var(--team-a, var(--accent));  /* the club colour */
+  border: calc(3px * var(--scale)) solid var(--team-a, var(--accent));  /* the club colour */
   opacity: 0.55;                   /* clearly a placeholder, not a crest */
 }
 .scoreboard-side-b .scoreboard-crest::after {
@@ -185,7 +185,7 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 
 /* The club name — house display type. */
 .scoreboard-team {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a step under the scores */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* a step under the scores */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -199,20 +199,20 @@ ${clipOneLineCss('.scoreboard-team', 260)}
 .scoreboard-scores {
   display: flex;                   /* the two figures and the dash in one row */
   align-items: center;             /* on one centre line */
-  gap: calc(14px * var(--scale));  /* air around the dash */
+  gap: calc(23px * var(--scale));  /* air around the dash */
   flex-shrink: 0;                  /* the scores never give up width */
 }
 .scoreboard-score {
-  min-width: calc(66px * var(--scale));  /* a shared column, so 8 and 108 both sit centred */
+  min-width: calc(112px * var(--scale));  /* a shared column, so 8 and 108 both sit centred */
   text-align: center;              /* the figure is centred in its own column */
-  font-size: calc(54px * var(--scale) * var(--type-scale));  /* the board's headline */
+  font-size: calc(91px * var(--scale) * var(--type-scale));  /* the board's headline */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1;                  /* the figure fills its column */
   color: var(--accent);            /* the scores wear the accent */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter as scores tick */
 }
 .scoreboard-dash {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* a step under the figures */
+  font-size: calc(64px * var(--scale) * var(--type-scale));  /* a step under the figures */
   font-weight: var(--display-weight);  /* solid, not a hairline */
   line-height: 1;                  /* on the figures' centre line */
   color: var(--text-dim);          /* dim — the dash separates, it does not compete */
@@ -222,20 +222,20 @@ ${clipOneLineCss('.scoreboard-team', 260)}
 .scoreboard-periods {
   display: flex;                   /* the period columns in one row */
   justify-content: center;         /* centred under the score pair */
-  gap: calc(26px * var(--scale));  /* air between the columns */
-  padding-top: calc(14px * var(--scale));  /* air under the keyline */
+  gap: calc(44px * var(--scale));  /* air between the columns */
+  padding-top: calc(23px * var(--scale));  /* air under the keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.12);  /* the house keyline */
 }
 .scoreboard-period {
   display: flex;                   /* label over the two figures… */
   flex-direction: column;          /* …as one column */
   align-items: center;             /* centred on the column's axis */
-  gap: calc(3px * var(--scale));   /* the three rows read as one unit */
-  min-width: calc(52px * var(--scale));  /* a shared column width — the periods align */
+  gap: calc(5px * var(--scale));   /* the three rows read as one unit */
+  min-width: calc(87px * var(--scale));  /* a shared column width — the periods align */
 }
 .scoreboard-period-label {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -243,7 +243,7 @@ ${clipOneLineCss('.scoreboard-team', 260)}
   white-space: nowrap;             /* "SET 5" stays on one line */
 }
 .scoreboard-period-score {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* even rhythm down the column */
   color: var(--text-color);        /* primary text — these are still scores */

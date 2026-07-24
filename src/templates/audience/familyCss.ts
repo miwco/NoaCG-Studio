@@ -69,7 +69,7 @@ export function panelCss(family: StyleTag, pad: string): string {
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
 }
 
 /* The accent edge — the house amber bar, fused to the card's left side with the house glow. */
@@ -114,18 +114,18 @@ export function panelCss(family: StyleTag, pad: string): string {
 export function kickerCss(family: StyleTag): string {
   const chip =
     family === 'noacg'
-      ? `  padding: calc(4px * var(--scale)) calc(10px * var(--scale));
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+      ? `  padding: calc(6px * var(--scale)) calc(15px * var(--scale));
+  border-radius: calc(9px * var(--scale));  /* the house chip radius */
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);  /* a thin accent keyline */
 `
       : family === 'glass'
-        ? `  padding: calc(4px * var(--scale)) calc(12px * var(--scale));
+        ? `  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   border-radius: 999px;            /* a true pill — the glass family's soft shape */
   background: rgba(255, 255, 255, 0.08);  /* a faint second layer of glass */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);  /* a soft keyline */
 `
         : family === 'sport'
-          ? `  padding: calc(4px * var(--scale)) calc(12px * var(--scale));
+          ? `  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   background: var(--accent);       /* a small, loud accent dose — sport marks with fill */
 `
           : '';
@@ -134,12 +134,12 @@ export function kickerCss(family: StyleTag): string {
   return `/* The kicker — what kind of graphic this is, in the operator's own words (field f0). */
 .audience-kicker {
   display: inline-block;           /* the label hugs its own text */
-  margin-bottom: calc(12px * var(--scale));  /* air under the kicker */
+  margin-bottom: calc(18px * var(--scale));  /* air under the kicker */
 ${chip}  will-change: transform, opacity; /* it arrives with the card */
 }
 .audience-kicker > span {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* kicker scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast kicker is always caps */
@@ -172,12 +172,12 @@ export function bylineCss(family: StyleTag): string {
   display: flex;                   /* name, separator and source on one line… */
   align-items: baseline;           /* …sharing a baseline */
   flex-wrap: wrap;                 /* a long handle wraps rather than overflowing the card */
-  gap: calc(8px * var(--scale));   /* even air between the parts */
-  margin-top: calc(16px * var(--scale));  /* clear break from the text above */
+  gap: calc(12px * var(--scale));   /* even air between the parts */
+  margin-top: calc(25px * var(--scale));  /* clear break from the text above */
 }
 .audience-asker,
 .audience-anon {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* under the message, above the source */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* under the message, above the source */
   font-weight: 600;                /* the name is the second-loudest thing on the card */
   color: var(--text-color);        /* primary text */
   overflow-wrap: break-word;       /* break a very long unbroken handle */
@@ -195,7 +195,7 @@ export function bylineCss(family: StyleTag): string {
 
 /* The separator — a dot between the name and the source. It goes with the source. */
 .audience-sep {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small — it is punctuation */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* small — it is punctuation */
   color: var(--text-dim);          /* the quietest thing on the line */
 }
 .audience-sep::before { content: '\\00B7'; }   /* a middle dot, drawn by CSS so no field holds it */
@@ -205,7 +205,7 @@ export function bylineCss(family: StyleTag): string {
    tool it did not ship with, and would put someone else's trademark in the user's template. */
 .audience-source {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast source line is caps */

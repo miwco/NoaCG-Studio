@@ -60,18 +60,18 @@ ${heldEnvelopeCss()}
 
 /* The accent — a slab behind the announcement line. */
 .${P}-accent {
-  height: calc(6px * var(--scale));
+  height: calc(8px * var(--scale));
   background: var(--accent);
   transform-origin: center;
 }
 
 /* The teaser kicker. */
 .${P}-kicker {
-  padding: calc(4px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(5px * var(--scale)) calc(19px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -79,7 +79,7 @@ ${heldEnvelopeCss()}
 
 /* The announcement line. */
 .${P}-title {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(51px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   letter-spacing: var(--display-tracking);
@@ -94,7 +94,7 @@ ${heldEnvelopeCss()}
 
 /* The subject — the name that lands. */
 .${P}-subject {
-  font-size: calc(92px * var(--scale) * var(--type-scale));
+  font-size: calc(123px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   letter-spacing: var(--display-tracking);
@@ -105,7 +105,7 @@ ${heldEnvelopeCss()}
 /* The note. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -119,7 +119,7 @@ ${heldEnvelopeCss()}
 }
 
 .${P}-celebrating .${P}-accent {
-  width: calc(640px * var(--scale));
+  width: calc(853px * var(--scale));
 }`,
   }),
 );

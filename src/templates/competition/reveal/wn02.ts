@@ -64,7 +64,7 @@ ${heldResultCss()}
 
 /* The accent — an amber rule under the kicker, glowing. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: center;
@@ -73,7 +73,7 @@ ${heldResultCss()}
 /* The kicker — mono, wide-tracked. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(19px * var(--scale) * var(--type-scale));
+  font-size: calc(27px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -82,7 +82,7 @@ ${heldResultCss()}
 
 /* The champion — flat house display type. */
 .${P}-title {
-  font-size: calc(80px * var(--scale) * var(--type-scale));
+  font-size: calc(114px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.02;
   letter-spacing: var(--display-tracking);
@@ -96,7 +96,7 @@ ${heldResultCss()}
 
 /* The score line — amber, tabular. */
 .${P}-subject {
-  font-size: calc(52px * var(--scale) * var(--type-scale));
+  font-size: calc(74px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -106,7 +106,7 @@ ${heldResultCss()}
 /* The beaten side. */
 .${P}-runner {
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(26px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -116,7 +116,7 @@ ${heldResultCss()}
 /* The event note. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -127,11 +127,11 @@ ${heldResultCss()}
 
 .${P}-celebrating .${P}-title {
   color: var(--accent);
-  text-shadow: 0 0 calc(40px * var(--scale)) color-mix(in srgb, var(--accent) 45%, transparent);
+  text-shadow: 0 0 calc(57px * var(--scale)) color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .${P}-celebrating .${P}-accent {
-  width: calc(640px * var(--scale));
+  width: calc(914px * var(--scale));
 }`,
   }),
 );

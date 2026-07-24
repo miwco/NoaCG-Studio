@@ -48,24 +48,24 @@ export const mr01: TemplateVariant = defineEsportsVariant(
 .${P}-box {
   display: flex;                   /* head above the ladder */
   flex-direction: column;          /* stacked */
-  gap: calc(14px * var(--scale));  /* air under the title */
-  padding: calc(18px * var(--scale)) calc(24px * var(--scale)) calc(20px * var(--scale));
+  gap: calc(20px * var(--scale));  /* air under the title */
+  padding: calc(26px * var(--scale)) calc(34px * var(--scale)) calc(29px * var(--scale));
   background: var(--panel-bg);
   border-radius: var(--panel-radius);  /* sport: square */
   box-shadow: var(--panel-shadow);
-  min-width: calc(360px * var(--scale));
+  min-width: calc(514px * var(--scale));
 }
 
 /* The accent rule between the title and the ladder. */
 .${P}-accent {
-  height: calc(3px * var(--scale));
+  height: calc(4px * var(--scale));
   background: var(--accent);
   transform-origin: left center;   /* the rise/cascade presets draw it out from the left */
 }
 
 /* The series title. */
 .${P}-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(31px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   letter-spacing: var(--display-tracking);
   text-transform: uppercase;
@@ -75,15 +75,15 @@ export const mr01: TemplateVariant = defineEsportsVariant(
 /* One map row — a dark tile, with room on the left for the cursor block. */
 .${P}-row {
   position: relative;              /* anchors the cursor block */
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale)) calc(8px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(17px * var(--scale)) calc(11px * var(--scale)) calc(23px * var(--scale));
   background: rgba(0, 0, 0, 0.35);
 }
 
 /* The map number — dim, tabular, the ladder's spine. */
 .${P}-row-index {
-  min-width: calc(20px * var(--scale));  /* two-digit series still line up */
+  min-width: calc(29px * var(--scale));  /* two-digit series still line up */
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
@@ -91,7 +91,7 @@ export const mr01: TemplateVariant = defineEsportsVariant(
 
 /* The map name. */
 .${P}-row-map {
-  font-size: calc(19px * var(--scale) * var(--type-scale));
+  font-size: calc(27px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -100,9 +100,9 @@ export const mr01: TemplateVariant = defineEsportsVariant(
 
 /* The mark — the short name of the side that took the map. */
 .${P}-row-mark {
-  min-width: calc(52px * var(--scale));
+  min-width: calc(74px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -133,7 +133,7 @@ export const mr01: TemplateVariant = defineEsportsVariant(
   left: 0;
   top: 0;
   bottom: 0;
-  width: calc(5px * var(--scale));
+  width: calc(7px * var(--scale));
   background: var(--accent);
 }
 

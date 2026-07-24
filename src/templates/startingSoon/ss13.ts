@@ -75,8 +75,8 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 .starting-soon-box {
   display: flex;                   /* rail beside the text block */
   align-items: stretch;            /* the rail runs the full height of the text */
-  gap: calc(30px * var(--scale));  /* air between the rail and the words */
-  padding: calc(42px * var(--scale)) calc(56px * var(--scale));  /* front-door air */
+  gap: calc(33px * var(--scale));  /* air between the rail and the words */
+  padding: calc(47px * var(--scale)) calc(62px * var(--scale));  /* front-door air */
   text-align: left;                /* a schedule is read down a left edge, never centered */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -103,7 +103,7 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 /* The kicker (f0) — the house mono label. */
 .starting-soon-title {
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* label scale — announces, never competes */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — announces, never competes */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* single tight label line */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
@@ -113,8 +113,8 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 
 /* The item (f1) — the display headline: the thing people are waiting for. */
 .starting-soon-show {
-  margin-top: calc(16px * var(--scale));  /* kicker and item read as one unit */
-  font-size: calc(58px * var(--scale) * var(--type-scale));  /* headline scale for a session title */
+  margin-top: calc(18px * var(--scale));  /* kicker and item read as one unit */
+  font-size: calc(64px * var(--scale) * var(--type-scale));  /* headline scale for a session title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;               /* a session title often wraps to two rows */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -123,8 +123,8 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 
 /* The presenter / room (f2) — the secondary line under the title. */
 .starting-soon-note {
-  margin-top: calc(12px * var(--scale));  /* close enough to belong to the title above */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* ~2.2:1 under the headline */
+  margin-top: calc(13px * var(--scale));  /* close enough to belong to the title above */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* ~2.2:1 under the headline */
   font-weight: 400;                /* conversational weight */
   line-height: 1.3;                /* may wrap on a long name-and-room pair */
   color: var(--text-dim);          /* secondary text color */
@@ -134,14 +134,14 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 .starting-soon-wait {
   display: inline-flex;            /* label and time on one row */
   align-items: baseline;           /* they share a baseline */
-  gap: calc(16px * var(--scale));  /* a small, even gap between the two */
-  margin-top: calc(28px * var(--scale));  /* clear air — the number is its own beat */
+  gap: calc(18px * var(--scale));  /* a small, even gap between the two */
+  margin-top: calc(31px * var(--scale));  /* clear air — the number is its own beat */
 }
 
 /* "STARTS IN" — the mono label that gives the figure its meaning. */
 .starting-soon-label {
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
   color: var(--text-dim);          /* quieter than the accent kicker above it */
@@ -150,7 +150,7 @@ export const ss13: TemplateVariant = defineStartingSoonVariant(
 /* The countdown — mono tabular figures, sized as a strong caption rather than a headline. */
 .starting-soon-clock {
   font-family: var(--font-label);  /* the house mono face */
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* clearly a figure, clearly not the title */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* clearly a figure, clearly not the title */
   font-weight: 500;                /* medium — size carries the moment */
   line-height: 1;                  /* one tight row of digits */
   letter-spacing: 0.04em;          /* a touch of air between figures */

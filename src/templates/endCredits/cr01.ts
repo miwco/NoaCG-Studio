@@ -52,8 +52,8 @@ export const cr01: TemplateVariant = defineCreditsVariant(
     css: `/* The viewport — a tall centered column the track rolls through. Its height is what
    the roll preset measures, so all travel math keys off this box. */
 .credits-box {
-  width: calc(900px * var(--scale));   /* a comfortable reading column (~47% of 1920) */
-  height: calc(860px * var(--scale));  /* tall window — most of the frame, inside safe area */
+  width: calc(1286px * var(--scale));   /* a comfortable reading column (~47% of 1920) */
+  height: calc(1229px * var(--scale));  /* tall window — most of the frame, inside safe area */
   overflow: hidden;                    /* the mask: rows appear at the bottom, exit at the top */
 }
 
@@ -65,38 +65,38 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* One section per .credits-page (rebuildCredits() wraps each parsed section). */
 .credits-page {
-  margin-bottom: calc(56px * var(--scale));  /* clear air between sections — bigger than any row gap */
+  margin-bottom: calc(80px * var(--scale));  /* clear air between sections — bigger than any row gap */
 }
 
 /* Section heading — a quiet accent label, never louder than the names it introduces. */
 .credits-heading {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* kicker-sized (values are 1080p reference) */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* kicker-sized (values are 1080p reference) */
   font-weight: 600;                    /* semibold — presence without weight */
   text-transform: uppercase;           /* small caps read as structure, not content */
   letter-spacing: 0.2em;               /* wide tracking — small caps breathe */
   color: var(--accent);                /* the one small, sharp dose of accent color */
-  margin-top: calc(40px * var(--scale));     /* extra space above — a heading opens a chapter */
-  margin-bottom: calc(28px * var(--scale));  /* then settles before its first credit */
+  margin-top: calc(57px * var(--scale));     /* extra space above — a heading opens a chapter */
+  margin-bottom: calc(40px * var(--scale));  /* then settles before its first credit */
 }
 
 /* One credit — a centered stack: role above, name beneath. */
 .credits-row {
-  margin-bottom: calc(26px * var(--scale));  /* the beat between credits — steady reading rhythm */
+  margin-bottom: calc(37px * var(--scale));  /* the beat between credits — steady reading rhythm */
 }
 
 /* Role line — small, spaced caps, dimmed: the label, never the star. */
 .credits-role {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name below */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name below */
   font-weight: 400;                    /* regular weight — contrast comes from the name */
   text-transform: uppercase;           /* caps mark it as a label */
   letter-spacing: var(--label-tracking);  /* the role label's authored tracking */
   color: var(--label-color);           /* the family's label color */
-  margin-bottom: calc(6px * var(--scale));   /* tiny gap: role + name read as one unit */
+  margin-bottom: calc(9px * var(--scale));   /* tiny gap: role + name read as one unit */
 }
 
 /* Name line — the star of each stack; the only weighty element in the design. */
 .credits-name {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* ~1.7:1 over the role — clear hierarchy */
+  font-size: calc(49px * var(--scale) * var(--type-scale));  /* ~1.7:1 over the role — clear hierarchy */
   font-weight: var(--display-weight);  /* the names' authored display weight */
   line-height: 1.15;                   /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -106,8 +106,8 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 /* A plain line inside a section — a name with no role. Same voice as a name, its own
    rhythm: rows of these are a list, so they sit tighter than a role-above-name stack. */
 .credits-entry {
-  padding: calc(6px * var(--scale)) 0;  /* the list rhythm — tighter than a .credits-row */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
+  padding: calc(9px * var(--scale)) 0;  /* the list rhythm — tighter than a .credits-row */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
   font-weight: var(--display-weight);   /* the names' authored display weight */
   line-height: 1.2;                     /* comfortable for a long column of names */
   letter-spacing: var(--display-tracking);  /* matches the credited names above it */
@@ -117,23 +117,23 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 
 /* The end block — hairline, logo, year. The roll preset stops with this centered. */
 .credits-end {
-  padding-top: calc(48px * var(--scale));    /* a long breath before the sign-off */
-  padding-bottom: calc(12px * var(--scale)); /* small tail so the measurement isn't flush */
+  padding-top: calc(69px * var(--scale));    /* a long breath before the sign-off */
+  padding-bottom: calc(17px * var(--scale)); /* small tail so the measurement isn't flush */
 }
 
 /* The hairline — lt01's 3px accent motif, laid horizontal and kept short. */
 .credits-rule {
-  width: calc(72px * var(--scale));    /* short on purpose — a mark, not a divider */
+  width: calc(103px * var(--scale));    /* short on purpose — a mark, not a divider */
   height: var(--accent-weight);        /* the family's accent-rule weight */
   background: var(--accent);           /* same sharp accent dose as the headings */
-  margin: 0 auto calc(32px * var(--scale));  /* centered, with air before the logo */
+  margin: 0 auto calc(46px * var(--scale));  /* centered, with air before the logo */
 }
 
 /* Delivered logo — kept modest; the credits end quietly, not with a billboard. */
 .credits-logo {
-  max-width: calc(300px * var(--scale));   /* wide logos shrink to fit the column's core */
-  max-height: calc(110px * var(--scale));  /* tall logos cap here — proportions preserved */
-  margin-bottom: calc(24px * var(--scale)); /* air between the logo and the year line */
+  max-width: calc(429px * var(--scale));   /* wide logos shrink to fit the column's core */
+  max-height: calc(157px * var(--scale));  /* tall logos cap here — proportions preserved */
+  margin-bottom: calc(34px * var(--scale)); /* air between the logo and the year line */
 }
 
 /* Logo placeholder — an intentional, quietly framed box until a real logo is imported. */
@@ -141,20 +141,20 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   display: inline-flex;                /* shrinks to its frame; centers its label */
   align-items: center;                 /* label sits in the vertical middle */
   justify-content: center;             /* …and the horizontal middle */
-  width: calc(220px * var(--scale));   /* a believable logo footprint */
-  height: calc(96px * var(--scale));   /* roughly 2.3:1 — generic mark proportions */
+  width: calc(314px * var(--scale));   /* a believable logo footprint */
+  height: calc(137px * var(--scale));   /* roughly 2.3:1 — generic mark proportions */
   border: 1px dashed var(--text-dim);  /* dashed keyline says "drop your logo here" */
-  border-radius: calc(2px * var(--scale)); /* minimal family: 0-2px radius, nothing rounder */
-  font-size: calc(14px * var(--scale) * var(--type-scale)); /* small caps label inside the frame */
+  border-radius: calc(3px * var(--scale)); /* minimal family: 0-2px radius, nothing rounder */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small caps label inside the frame */
   letter-spacing: 0.18em;              /* the same airy tracking as the headings */
   text-transform: uppercase;           /* label, not content */
   color: var(--text-dim);              /* dimmed — the placeholder never competes */
-  margin-bottom: calc(24px * var(--scale)); /* same air as the real logo would get */
+  margin-bottom: calc(34px * var(--scale)); /* same air as the real logo would get */
 }
 
 /* Year / copyright — the very last line; quiet and dimmed. */
 .credits-year {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* matches the role lines — closes the loop */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* matches the role lines — closes the loop */
   font-weight: 400;                    /* regular — nothing shouts on the way out */
   letter-spacing: 0.04em;              /* a touch of air for the short closing line */
   color: var(--text-dim);              /* dimmed sign-off */

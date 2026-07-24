@@ -72,9 +72,9 @@ ${bugLineMasks(o, '        ')}
   position: relative;              /* the accent bar positions against this */
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centered on the lockup's axis */
-  gap: calc(14px * var(--scale));  /* air between the mark and the text */
-  padding: calc(14px * var(--scale)) calc(20px * var(--scale));  /* even air inside the panel */
-  padding-left: calc(20px * var(--scale) + var(--accent-weight));  /* clear the accent bar */
+  gap: calc(17px * var(--scale));  /* air between the mark and the text */
+  padding: calc(17px * var(--scale)) calc(25px * var(--scale));  /* even air inside the panel */
+  padding-left: calc(25px * var(--scale) + var(--accent-weight));  /* clear the accent bar */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -93,7 +93,7 @@ ${bugSlotCss({ width: 52, height: 36, mark: 'bars', radius: '0', align: 'left ce
 
 /* The channel (f0) — the name the viewer should recognise at a glance. */
 .corner-bug-name {
-  font-size: calc(22px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(27px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -104,9 +104,9 @@ ${bugSlotCss({ width: 52, height: 36, mark: 'bars', radius: '0', align: 'left ce
 /* The show (f1) — the mono house label voice, clearly subordinate. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(4px * var(--scale));  /* the two lines read as one lockup */
+  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(13px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.25;               /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the house label tracking */

@@ -36,7 +36,7 @@ const RAMP = {
   clean: { display: 68, kicker: 20, support: 27, caps: false, pad: { top: 8, right: 0, bottom: 8, left: 30 } },
   frost: { display: 58, kicker: 20, support: 26, caps: false, pad: { top: 46, right: 56, bottom: 42, left: 46 } },
   volt: { display: 78, kicker: 22, support: 24, caps: true, pad: { top: 40, right: 60, bottom: 34, left: 46 } },
-  house: { display: 60, kicker: 18, support: 26, caps: false, pad: { top: 36, right: 54, bottom: 36, left: 40 } },
+  house: { display: 60, kicker: 20, support: 26, caps: false, pad: { top: 36, right: 54, bottom: 36, left: 40 } },
 } as const;
 
 /** Build a title card in one of the pack's four looks. */

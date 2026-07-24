@@ -43,8 +43,8 @@ ${lineMasks(o)}
 .lower-third-accent {
   position: absolute;              /* pinned inside the positioned .lower-third root */
   left: 0;                         /* at the card's leading edge */
-  top: calc(20px * var(--scale));  /* inset so the edge clears the card's rounding… */
-  bottom: calc(20px * var(--scale));  /* …top and bottom */
+  top: calc(25px * var(--scale));  /* inset so the edge clears the card's rounding… */
+  bottom: calc(25px * var(--scale));  /* …top and bottom */
   width: var(--accent-weight);     /* the family's accent weight */
   border-radius: var(--accent-weight);  /* rounded ends — a soft edge, not a hard slab */
   background: linear-gradient(to bottom,
@@ -56,7 +56,7 @@ ${lineMasks(o)}
 /* The card — the family's frosted surface, with the roomier padding of an extended layout. */
 .lower-third-box {
   margin-left: var(--accent-weight);  /* the card begins where the accent edge ends — fused */
-  padding: calc(22px * var(--scale)) calc(48px * var(--scale)) calc(24px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(60px * var(--scale)) calc(30px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -66,7 +66,7 @@ ${lineMasks(o)}
 
 /* Name (f0) — the line the viewer reads first. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(55px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the glass families run heavier weights */
   line-height: 1.1;                /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -75,23 +75,23 @@ ${lineMasks(o)}
 
 /* Role (f1) — the quiet middle voice. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 500;                /* medium — quiet next to the name */
   line-height: 1.25;               /* a touch of air at small sizes */
   color: var(--text-dim);          /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Studio (f2) — the third VOICE: tracked caps in the family's label colour. */
 .lower-third-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 600;                /* small caps need weight to stay crisp */
   line-height: 1.3;                /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* whatever the operator types reads as a label */
   color: var(--label-color);       /* the family's label colour (the accent) */
-  margin-top: calc(13px * var(--scale));  /* separated — the third line is its own beat */
+  margin-top: calc(16px * var(--scale));  /* separated — the third line is its own beat */
 }`,
     hasAccent: true,
   }),

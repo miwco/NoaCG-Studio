@@ -61,7 +61,7 @@ ${heldEnvelopeCss()}
 
 /* The category sits on its own frosted plate. */
 .${P}-head {
-  padding: calc(22px * var(--scale)) calc(40px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(31px * var(--scale)) calc(57px * var(--scale)) calc(34px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -83,7 +83,7 @@ ${heldEnvelopeCss()}
 /* The kicker. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(17px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -92,7 +92,7 @@ ${heldEnvelopeCss()}
 
 /* The category. */
 .${P}-title {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(57px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   letter-spacing: var(--display-tracking);
@@ -106,7 +106,7 @@ ${heldEnvelopeCss()}
 
 /* The subject. */
 .${P}-subject {
-  font-size: calc(74px * var(--scale) * var(--type-scale));
+  font-size: calc(106px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.04;
   letter-spacing: var(--display-tracking);
@@ -115,7 +115,7 @@ ${heldEnvelopeCss()}
 
 /* The note. */
 .${P}-note {
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -125,7 +125,7 @@ ${heldEnvelopeCss()}
 /* ── The applause beat (its own state). ── */
 
 .${P}-celebrating .${P}-head {
-  box-shadow: var(--panel-shadow), inset 0 0 0 calc(2px * var(--scale)) var(--accent);
+  box-shadow: var(--panel-shadow), inset 0 0 0 calc(3px * var(--scale)) var(--accent);
 }
 
 .${P}-celebrating .${P}-subject {

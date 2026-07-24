@@ -50,7 +50,7 @@ export const qz04: TemplateVariant = defineQuizVariant(
     </div>`,
     css: `/* The card — restrained and near-black, the minimal family's quiet slab. */
 .quiz-box {
-  padding: calc(30px * var(--scale)) calc(40px * var(--scale));  /* generous card air */
+  padding: calc(33px * var(--scale)) calc(44px * var(--scale));  /* generous card air */
   background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */
   border-radius: var(--panel-radius);  /* the family's near-square radius */
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the authored edge and family lift */
@@ -58,7 +58,7 @@ export const qz04: TemplateVariant = defineQuizVariant(
 
 /* The question — confident display type, the loudest thing on the card. */
 .quiz-mask > span {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* headline scale for a multi-row card */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline scale for a multi-row card */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -68,7 +68,7 @@ export const qz04: TemplateVariant = defineQuizVariant(
 /* The keyline — a thin dim rule under the question. */
 .quiz-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin: calc(20px * var(--scale)) 0;  /* air above and below the rule */
+  margin: calc(22px * var(--scale)) 0;  /* air above and below the rule */
   background: rgba(255, 255, 255, 0.16);  /* dim, not accent — the color stays in the letters */
 }
 
@@ -83,8 +83,8 @@ export const qz04: TemplateVariant = defineQuizVariant(
   position: relative;              /* anchors the row's hairline (::before) */
   display: flex;                   /* letter + answer text side by side */
   align-items: center;             /* text centers on the letter's height */
-  gap: calc(18px * var(--scale));  /* air between the letter and the text */
-  height: calc(52px * var(--scale));  /* uniform row height */
+  gap: calc(20px * var(--scale));  /* air between the letter and the text */
+  height: calc(58px * var(--scale));  /* uniform row height */
 }
 
 /* Thin dim separators between rows (not below the last). */
@@ -101,21 +101,21 @@ export const qz04: TemplateVariant = defineQuizVariant(
 /* The letter — a small accent glyph in a thin keyline ring. */
 .quiz-letter {
   flex-shrink: 0;                  /* the ring never squeezes; text takes the rest */
-  width: calc(38px * var(--scale));   /* a small round-ish ring… */
-  height: calc(38px * var(--scale));  /* …a square ring */
+  width: calc(42px * var(--scale));   /* a small round-ish ring… */
+  height: calc(42px * var(--scale));  /* …a square ring */
   display: flex;                   /* centers the letter… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
   border-radius: calc(4px * var(--scale));  /* the family's near-square radius */
   box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);  /* a thin accent keyline ring */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the letter — a marker, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the letter — a marker, not a headline */
   font-weight: 700;                /* bold keeps the small glyph legible */
   color: var(--accent);            /* the letter wears the accent */
 }
 
 /* The answer text — clearly under the question. */
 .quiz-text {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* list scale — subordinate to the question */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* list scale — subordinate to the question */
   font-weight: 400;                /* regular — the minimal family is quiet */
   line-height: 1.2;                /* leading if a long answer wraps */
   color: var(--text-color);        /* primary text color */

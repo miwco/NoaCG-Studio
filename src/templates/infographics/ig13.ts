@@ -55,9 +55,9 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 
       css: `/* The panel — restrained and near-black: the minimal family's quiet slab (lt01's sibling). */
 .infographic-box {
-  width: calc(560px * var(--scale));  /* fixed chart width — the tracks need a stable length */
+  width: calc(589px * var(--scale));  /* fixed chart width — the tracks need a stable length */
   box-sizing: border-box;          /* padding stays inside the fixed width */
-  padding: calc(28px * var(--scale)) calc(34px * var(--scale));  /* generous inner air */
+  padding: calc(29px * var(--scale)) calc(36px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */
   border-radius: var(--panel-radius);  /* the family's near-square radius */
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the authored edge and family lift */
@@ -65,7 +65,7 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 
 /* Heading — the accent tracking-wide caps kicker, the panel's loudest color moment. */
 .infographic-heading {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -78,7 +78,7 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 /* The rule — a thin dim keyline under the heading. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin: calc(16px * var(--scale)) 0 calc(22px * var(--scale));  /* air above and below */
+  margin: calc(17px * var(--scale)) 0 calc(23px * var(--scale));  /* air above and below */
   background: rgba(255, 255, 255, 0.16);  /* dim, not accent — the color stays in the caps and fills */
 }
 
@@ -86,7 +86,7 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 #infographic-bars {
   display: flex;                   /* a simple vertical stack */
   flex-direction: column;          /* one bar row under another */
-  gap: calc(18px * var(--scale));  /* even rhythm between the rows */
+  gap: calc(19px * var(--scale));  /* even rhythm between the rows */
 }
 
 /* Head line of a row: label on the left, value figure on the right. */
@@ -94,14 +94,14 @@ export const ig13: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* label and value share one line */
   justify-content: space-between;  /* label hugs left, value hugs right */
   align-items: baseline;           /* both sit on the same baseline */
-  gap: calc(24px * var(--scale));  /* never let label and value touch */
+  gap: calc(25px * var(--scale));  /* never let label and value touch */
   margin-bottom: calc(8px * var(--scale));  /* small gap down to the track */
 }
 
 /* The bar's label — the primary reading line of each row. */
 .infographic-bar-label {
   min-width: 0;                    /* allow the label to shrink and wrap inside flex */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* clearly bigger than the heading kicker */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly bigger than the heading kicker */
   font-weight: 600;                /* semibold carries the row */
   line-height: 1.25;               /* a touch of leading in case a long label wraps */
   color: var(--text-color);        /* primary text color */
@@ -111,7 +111,7 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 /* The value figure — the number the bar visualizes. */
 .infographic-bar-value {
   flex-shrink: 0;                  /* long labels never squeeze the figure */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* same size as the label… */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* same size as the label… */
   font-weight: 700;                /* …contrast through weight, not more fonts */
   font-variant-numeric: tabular-nums;  /* equal-width digits — figures align across rows */
   color: var(--text-color);        /* primary text color */
@@ -119,7 +119,7 @@ export const ig13: TemplateVariant = defineInfographicVariant(
 
 /* The track — a slim rounded lane the fill grows inside. */
 .infographic-bar-track {
-  height: calc(10px * var(--scale));  /* a slim minimal lane */
+  height: calc(11px * var(--scale));  /* a slim minimal lane */
   border-radius: 999px;            /* full pill — a cap, not a size, so it is not scaled */
   background: rgba(255, 255, 255, 0.10);  /* a quiet lane on the near-black panel */
   overflow: hidden;                /* the growing fill is clipped to the lane */

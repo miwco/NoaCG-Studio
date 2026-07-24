@@ -83,7 +83,7 @@ export const ig23: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* a simple column: label over ring over caption */
   flex-direction: column;          /* stacked top to bottom */
   align-items: center;             /* a centred meter — everything shares one axis */
-  padding: calc(30px * var(--scale)) calc(44px * var(--scale));  /* generous inner air */
+  padding: calc(35px * var(--scale)) calc(52px * var(--scale));  /* generous inner air */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: var(--panel-bg);     /* the translucent white wash */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop blur — this IS the glass */
@@ -93,7 +93,7 @@ export const ig23: TemplateVariant = defineInfographicVariant(
 
 /* The label — quiet tracked caps naming what is counted. */
 .infographic-kicker {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -105,9 +105,9 @@ export const ig23: TemplateVariant = defineInfographicVariant(
 /* The ring block — the SVG and the readout share one square. */
 .infographic-ring {
   position: relative;              /* the readout is centred against this square */
-  width: calc(260px * var(--scale));   /* ring width… */
-  height: calc(260px * var(--scale));  /* …and height: a true circle */
-  margin-top: calc(18px * var(--scale));  /* air between the label and the ring */
+  width: calc(306px * var(--scale));   /* ring width… */
+  height: calc(306px * var(--scale));  /* …and height: a true circle */
+  margin-top: calc(21px * var(--scale));  /* air between the label and the ring */
 }
 .infographic-ring-svg {
   width: 100%;                     /* the SVG fills the square… */
@@ -144,13 +144,13 @@ export const ig23: TemplateVariant = defineInfographicVariant(
 .infographic-figure {
   display: flex;                   /* mark and figure sit side by side */
   align-items: baseline;           /* the small mark rests on the figure's baseline */
-  gap: calc(4px * var(--scale));   /* a thin seam between mark and figure */
-  max-width: calc(190px * var(--scale));  /* the ring's hole — a long total wraps inside it */
+  gap: calc(5px * var(--scale));   /* a thin seam between mark and figure */
+  max-width: calc(224px * var(--scale));  /* the ring's hole — a long total wraps inside it */
 }
 
 /* The unit mark — static and dimmed. Empty field = no mark at all (:empty). */
 .infographic-unit {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
   font-weight: 600;                /* semibold so a thin currency glyph stays visible */
   color: var(--text-dim);          /* dimmed — the total carries the weight */
 }
@@ -160,7 +160,7 @@ export const ig23: TemplateVariant = defineInfographicVariant(
 
 /* The total — the number in the middle; the goal-ring preset counts it from 0. */
 .infographic-value {
-  font-size: calc(56px * var(--scale) * var(--type-scale));  /* it must fit the ring's hole */
+  font-size: calc(66px * var(--scale) * var(--type-scale));  /* it must fit the ring's hole */
   font-weight: 700;                /* bold — the panel's single heavy element */
   line-height: 1.02;               /* no dead leading inside the hole */
   letter-spacing: -0.01em;         /* large glyphs tighten */
@@ -171,20 +171,20 @@ export const ig23: TemplateVariant = defineInfographicVariant(
 
 /* The share — the derived percent under the total, in the accent. */
 .infographic-percent {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly under the total */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* clearly under the total */
   font-weight: 700;                /* bold — it is a figure, not a caption */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
-  margin-top: calc(4px * var(--scale));  /* total and share read as one unit */
+  margin-top: calc(5px * var(--scale));  /* total and share read as one unit */
   color: var(--accent);            /* the accent's text moment */
 }
 
 /* The target caption — what the ring is running toward, written by the rebuild. */
 .infographic-goal-line {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* caption scale under the ring */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* caption scale under the ring */
   font-weight: 400;                /* regular — it is the quiet half of the meter */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   text-align: center;              /* the whole stack is centre-axis */
-  margin-top: calc(16px * var(--scale));  /* air between the ring and the caption */
+  margin-top: calc(19px * var(--scale));  /* air between the ring and the caption */
   color: var(--text-dim);          /* dimmed — never full white twice */
 }`,
 

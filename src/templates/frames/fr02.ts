@@ -70,28 +70,28 @@ export const fr02: TemplateVariant = defineFrameVariant(
       css: `/* The two camera windows — equal rectangles with a transparent seam between them.
    The edge is a keyline and a soft lift; the interior is never filled. */
 .frame-window {
-  top: calc(168px * var(--scale));     /* both windows share one baseline */
-  width: calc(852px * var(--scale));   /* window width — see this design's header */
-  height: calc(744px * var(--scale));  /* window height */
+  top: calc(210px * var(--scale));     /* both windows share one baseline */
+  width: calc(1065px * var(--scale));   /* window width — see this design's header */
+  height: calc(930px * var(--scale));  /* window height */
   border: 1px solid rgba(255, 255, 255, 0.28);  /* the glass family's keyline edge */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   box-shadow: var(--panel-shadow);     /* one soft lift, so the edge reads over any picture */
 }
 .frame-window-left {
-  left: calc(96px * var(--scale));     /* left window x */
+  left: calc(120px * var(--scale));     /* left window x */
 }
 .frame-window-right {
-  left: calc(972px * var(--scale));    /* right window x — 24px seam after the left one */
+  left: calc(1215px * var(--scale));    /* right window x — 24px seam after the left one */
 }
 
 /* The nameplate — a frosted pill sitting INSIDE its window's bottom-left corner, which is
    what keeps each name unmistakably attached to its own picture. */
 .frame-plate {
   position: absolute;              /* placed against its own window */
-  left: calc(24px * var(--scale));    /* inset from the window's left edge */
-  bottom: calc(24px * var(--scale));  /* …and up from its bottom edge */
-  max-width: calc(640px * var(--scale));  /* never reaches the window's other edge */
-  padding: calc(12px * var(--scale)) calc(22px * var(--scale)) calc(13px * var(--scale));
+  left: calc(30px * var(--scale));    /* inset from the window's left edge */
+  bottom: calc(30px * var(--scale));  /* …and up from its bottom edge */
+  max-width: calc(800px * var(--scale));  /* never reaches the window's other edge */
+  padding: calc(15px * var(--scale)) calc(28px * var(--scale)) calc(16px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: var(--panel-bg);     /* the translucent white wash */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop blur — this IS the glass */
@@ -102,7 +102,7 @@ export const fr02: TemplateVariant = defineFrameVariant(
 
 /* The name — the plate's display line. */
 .frame-name {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -113,8 +113,8 @@ export const fr02: TemplateVariant = defineFrameVariant(
 .frame-role {
   display: inline-flex;            /* the dot and the words share one row */
   align-items: center;             /* dot centred against the text */
-  gap: calc(8px * var(--scale));   /* a thin seam between the dot and the words */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* label scale */
+  gap: calc(10px * var(--scale));   /* a thin seam between the dot and the words */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -124,8 +124,8 @@ export const fr02: TemplateVariant = defineFrameVariant(
 .frame-role::before {
   content: '';                     /* the dot — decoration, so it never becomes text */
   flex: none;                      /* never squeezed by a long role */
-  width: calc(7px * var(--scale));  /* a small round marker… */
-  height: calc(7px * var(--scale));  /* …a true circle */
+  width: calc(9px * var(--scale));  /* a small round marker… */
+  height: calc(9px * var(--scale));  /* …a true circle */
   border-radius: 50%;              /* round it */
   background: var(--accent);       /* the accent's one moment on the plate */
 }`,

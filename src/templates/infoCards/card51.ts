@@ -47,7 +47,7 @@ ${cardLineMasks(o)}
     css: `/* The panel — the glass family's frosted card, wide and shallow: a lyric is a band of
    text across the bottom of the picture, never a block in the middle of it. */
 .info-card-box {
-  padding: calc(28px * var(--scale)) calc(52px * var(--scale));  /* comfortable band padding */
+  padding: calc(29px * var(--scale)) calc(55px * var(--scale));  /* comfortable band padding */
   text-align: center;              /* lyrics are centered — the line length changes every line */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -59,7 +59,7 @@ ${cardLineMasks(o)}
 /* THE LINE BEING SUNG. Bright, large, and set in a real singing size — this has to be
    readable from the back of a room, on a phone, and on a stream, all at once. */
 .info-card-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* the size people sing from */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* the size people sing from */
   font-weight: 600;                /* solid without shouting */
   line-height: 1.25;               /* a long line may wrap; keep the two rows readable */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -72,8 +72,8 @@ ${cardLineMasks(o)}
    of this row is to be read ahead of time, and small type cannot be read ahead of time. */
 .info-card-title {
   display: block;                  /* its own row under the current line */
-  margin-top: calc(12px * var(--scale));  /* close enough to read as the same verse */
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* only a step down — still singable */
+  margin-top: calc(13px * var(--scale));  /* close enough to read as the same verse */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* only a step down — still singable */
   font-weight: 500;                /* a shade lighter than the live line */
   line-height: 1.25;               /* shares the card's rhythm */
   letter-spacing: var(--display-tracking);  /* matches the line above */
@@ -85,8 +85,8 @@ ${cardLineMasks(o)}
 /* Any further line the operator adds — a section marker ("Chorus"), a translation credit. */
 .info-card-extra {
   display: block;                  /* its own row */
-  margin-top: calc(14px * var(--scale));  /* clear of the sung lines */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly not something to sing */
+  margin-top: calc(15px * var(--scale));  /* clear of the sung lines */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly not something to sing */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a marker, not as a lyric */

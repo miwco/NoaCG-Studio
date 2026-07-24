@@ -115,9 +115,9 @@ ${row(2)}
       css: `/* The board — one wide near-black results panel (lt01's quiet keyline language, sized
    for a chart). Fixed width like ig02: the bar tracks need a stable run to grow along. */
 .infographic-box {
-  width: calc(1000px * var(--scale));  /* fixed board width — the tracks keep a stable length */
+  width: calc(1176px * var(--scale));  /* fixed board width — the tracks keep a stable length */
   box-sizing: border-box;          /* padding stays inside the fixed width */
-  padding: calc(32px * var(--scale)) calc(44px * var(--scale)) calc(36px * var(--scale));  /* generous inner air */
+  padding: calc(38px * var(--scale)) calc(52px * var(--scale)) calc(42px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);     /* the near-black panel — retints via the :root contract */
   border: 1px solid rgba(255, 255, 255, 0.10);  /* faint keyline lifts the board off video */
   box-shadow: var(--panel-shadow);  /* the board's authored lift */
@@ -128,16 +128,16 @@ ${row(2)}
   display: flex;                   /* title hugs left, flag hugs right */
   justify-content: space-between;  /* pushed to the board's opposite edges */
   align-items: baseline;           /* both caps lines sit on one baseline */
-  gap: calc(32px * var(--scale));  /* title and flag never touch */
-  padding-bottom: calc(14px * var(--scale));  /* air between the caps and the rule */
-  margin-bottom: calc(24px * var(--scale));   /* air before the first candidate row */
+  gap: calc(38px * var(--scale));  /* title and flag never touch */
+  padding-bottom: calc(16px * var(--scale));  /* air between the caps and the rule */
+  margin-bottom: calc(28px * var(--scale));   /* air before the first candidate row */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the header's authored accent weight */
 }
 
 /* The title — heavy tracked caps, the board's masthead. */
 .infographic-title {
   min-width: 0;                    /* allow a long title to shrink and wrap inside flex */
-  font-size: calc(34px * var(--scale));  /* masthead size — the names still lead the rows */
+  font-size: calc(40px * var(--scale));  /* masthead size — the names still lead the rows */
   font-weight: var(--display-weight);  /* the masthead's authored display weight */
   line-height: 1.15;               /* tight — caps need little leading */
   letter-spacing: var(--display-tracking);  /* the masthead's authored display tracking */
@@ -150,7 +150,7 @@ ${row(2)}
 /* The flag — "LIVE COUNT" in the accent color, the header's second voice. */
 .infographic-flag {
   flex-shrink: 0;                  /* a long title never squeezes the flag */
-  font-size: calc(20px * var(--scale));  /* clearly subordinate to the title */
+  font-size: calc(24px * var(--scale));  /* clearly subordinate to the title */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the flag's authored label tracking */
@@ -163,25 +163,25 @@ ${row(2)}
 .infographic-rows {
   display: flex;                   /* a simple vertical stack */
   flex-direction: column;          /* one candidate under another */
-  gap: calc(24px * var(--scale));  /* even rhythm between the rows */
+  gap: calc(28px * var(--scale));  /* even rhythm between the rows */
 }
 
 /* One candidate row: [label column][bar track]. */
 .infographic-row {
   display: flex;                   /* labels and bar share one line */
   align-items: center;             /* the bar sits on the label block's middle */
-  gap: calc(26px * var(--scale));  /* labels and track never touch */
+  gap: calc(31px * var(--scale));  /* labels and track never touch */
 }
 
 /* The label column — a fixed width so all three tracks start on one clean left edge. */
 .infographic-labels {
-  width: calc(280px * var(--scale));  /* one shared column — the bars align vertically */
+  width: calc(329px * var(--scale));  /* one shared column — the bars align vertically */
   flex-shrink: 0;                  /* the bar never squeezes the labels */
 }
 
 /* The candidate name — the row's primary reading line. */
 .infographic-name {
-  font-size: calc(27px * var(--scale));  /* clearly the loudest text in the row */
+  font-size: calc(32px * var(--scale));  /* clearly the loudest text in the row */
   font-weight: 800;                /* heavy caps carry the name */
   line-height: 1.15;               /* tight — a wrapped long name stays compact */
   letter-spacing: 0.04em;          /* a touch of air between the caps */
@@ -193,8 +193,8 @@ ${row(2)}
 
 /* The party line — quiet caps under the name: smaller, lighter, dimmed. */
 .infographic-party {
-  margin-top: calc(4px * var(--scale));  /* name and party read as one unit */
-  font-size: calc(17px * var(--scale));  /* clearly subordinate to the name */
+  margin-top: calc(5px * var(--scale));  /* name and party read as one unit */
+  font-size: calc(20px * var(--scale));  /* clearly subordinate to the name */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.25;               /* a touch of leading in case a long party wraps */
   letter-spacing: 0.09em;          /* small caps need room to breathe */
@@ -208,8 +208,8 @@ ${row(2)}
 .infographic-bar-track {
   position: relative;              /* the fill's percent width is measured against this */
   flex: 1;                         /* the track takes all the row's remaining width */
-  height: calc(46px * var(--scale));  /* chunky newsroom bars — the design's signature */
-  margin-right: calc(70px * var(--scale));  /* the cap's reserved landing lane */
+  height: calc(54px * var(--scale));  /* chunky newsroom bars — the design's signature */
+  margin-right: calc(82px * var(--scale));  /* the cap's reserved landing lane */
   border-radius: calc(2px * var(--scale));  /* barely-there rounding (minimal style) */
   background: rgba(255, 255, 255, 0.08);    /* dim lane — the fills carry the color */
 }
@@ -242,7 +242,7 @@ ${row(2)}
   position: absolute;              /* anchored to the fill, not the lane */
   left: 100%;                      /* at the fill's tip... */
   top: 50%;                        /* ...on the bar's center line */
-  transform: translate(calc(12px * var(--scale)), -50%);  /* a thin seam past the tip */
+  transform: translate(calc(14px * var(--scale)), -50%);  /* a thin seam past the tip */
   display: flex;                   /* figure and % sign share one line */
   align-items: baseline;           /* the sign rests on the figure's baseline */
   white-space: nowrap;             /* "48%" never wraps mid-figure */
@@ -250,7 +250,7 @@ ${row(2)}
 
 /* The figure — bold tabular digits; infographicBarsGrow() counts this from 0. */
 .infographic-bar-num {
-  font-size: calc(30px * var(--scale));  /* louder than the name — the figure is the news */
+  font-size: calc(35px * var(--scale));  /* louder than the name — the figure is the news */
   font-weight: 800;                /* heaviest weight — the counted number leads */
   line-height: 1;                  /* hugs the bar's center line */
   font-variant-numeric: tabular-nums;  /* digits keep one width — no jitter while counting */
@@ -259,8 +259,8 @@ ${row(2)}
 
 /* The % sign — its own static element so the counter never rewrites it. */
 .infographic-bar-sign {
-  margin-left: calc(3px * var(--scale));  /* a hair of air after the digits */
-  font-size: calc(20px * var(--scale));  /* clearly subordinate to the figure */
+  margin-left: calc(4px * var(--scale));  /* a hair of air after the digits */
+  font-size: calc(24px * var(--scale));  /* clearly subordinate to the figure */
   font-weight: 700;                /* matches the figure's voice at its smaller size */
   line-height: 1;                  /* hugs its baseline */
   color: var(--text-color);        /* primary text color */
@@ -269,8 +269,8 @@ ${row(2)}
 /* The base strip — a slim accent line grounding the board (the source's tri-color strip,
    retold in the one-accent contract). */
 .infographic-base {
-  height: calc(4px * var(--scale));  /* slab-thin (minimal token: 2-4px) */
-  margin-top: calc(28px * var(--scale));  /* clear air after the last row */
+  height: calc(5px * var(--scale));  /* slab-thin (minimal token: 2-4px) */
+  margin-top: calc(33px * var(--scale));  /* clear air after the last row */
   background: var(--accent);       /* the accent closes the board like the rule opened it */
 }`,
 

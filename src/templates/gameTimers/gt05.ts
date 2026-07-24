@@ -61,7 +61,7 @@ export const gt05: TemplateVariant = defineGameTimerVariant(
 /* The panel — the house void: near-black, translucent, softly blurring the video. */
 .game-timer-box {
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(20px * var(--scale)) calc(44px * var(--scale)) calc(22px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(21px * var(--scale)) calc(46px * var(--scale)) calc(23px * var(--scale)) calc(32px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -71,7 +71,7 @@ export const gt05: TemplateVariant = defineGameTimerVariant(
 /* The label — the house voice: mono, caps, tracked wide, in the accent color. */
 .game-timer-label {
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* label scale — clearly subordinate to the clock */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — clearly subordinate to the clock */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.3;                /* a touch of air if the label wraps */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
@@ -81,8 +81,8 @@ export const gt05: TemplateVariant = defineGameTimerVariant(
 
 /* The clock — the confident display moment; tabular figures so digits never jiggle. */
 .game-timer-clock {
-  margin-top: calc(10px * var(--scale));  /* label + clock read as one unit */
-  font-size: calc(76px * var(--scale) * var(--type-scale));  /* the headline element of the design */
+  margin-top: calc(11px * var(--scale));  /* label + clock read as one unit */
+  font-size: calc(80px * var(--scale) * var(--type-scale));  /* the headline element of the design */
   font-weight: var(--display-weight);  /* full display weight */
   line-height: 1;                  /* the numerals sit tight under the label */
   letter-spacing: var(--display-tracking);  /* big display type tightens slightly */

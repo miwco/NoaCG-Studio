@@ -56,12 +56,12 @@ ${lineMasks(o)}
 
 /* The text block — no panel at all: the rule and the whitespace are the structure. */
 .lower-third-box {
-  padding-top: calc(20px * var(--scale));  /* clears the rule above the name */
+  padding-top: calc(21px * var(--scale));  /* clears the rule above the name */
 }
 
 /* The name — editorial weight: set, not shouted. */
 .lower-third-name {
-  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(57px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (600 — lighter than broadcast) */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -71,13 +71,13 @@ ${lineMasks(o)}
 /* The role — the masthead kicker: wide-tracked caps in the accent colour. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking — a masthead kicker breathes */
   text-transform: uppercase;        /* whatever the operator types reads as a kicker */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-top: calc(12px * var(--scale));  /* clear air below the name — this line is its own beat */
+  margin-top: calc(13px * var(--scale));  /* clear air below the name — this line is its own beat */
 }`,
     hasAccent: true,
   }),

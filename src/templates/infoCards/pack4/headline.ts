@@ -73,7 +73,7 @@ ${measureCss(P, o.resolution, r.measure)}
 
 ${accentCss(skin, P, pad)}
 
-${labelCss(`.${P}-kicker`, 19, 'The kicker (f0) — BREAKING, ANNOUNCEMENT, FULL TIME. One word of context.')}
+${labelCss(`.${P}-kicker`, 21, 'The kicker (f0) — BREAKING, ANNOUNCEMENT, FULL TIME. One word of context.')}
 
 /* The headline (f1) — set to be read at a glance from across a room. */
 .${P}-headline {
@@ -100,7 +100,7 @@ ${decl('margin-top', px(18), 'a real break between headline and story')}
 /* The source (f3) — the byline, the outlet, where to read more. The card's quietest line. */
 .${P}-source {
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(18), 'the smallest type on the card')}
+${decl('font-size', typeSize(20), 'the smallest type on the card')}
 ${decl('font-weight', '600', 'semibold keeps small type legible')}
 ${decl('line-height', '1.3', 'a source line that wraps stays tidy')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}

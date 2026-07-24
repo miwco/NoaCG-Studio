@@ -79,8 +79,8 @@ ${lineMasks(o, '        ')}
 .lower-third-box {
   display: flex;                   /* the three pieces sit side by side */
   align-items: center;             /* …vertically centred against each other */
-  gap: calc(22px * var(--scale));  /* one even gap between all three pieces */
-  padding: calc(20px * var(--scale)) calc(44px * var(--scale)) calc(20px * var(--scale)) calc(20px * var(--scale));
+  gap: calc(29px * var(--scale));  /* one even gap between all three pieces */
+  padding: calc(27px * var(--scale)) calc(59px * var(--scale)) calc(27px * var(--scale)) calc(27px * var(--scale));
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -94,13 +94,13 @@ ${
    still separates from the glass behind it. */
 .lower-third-well {
   flex: none;                      /* fixed size; long names never squeeze it */
-  width: calc(84px * var(--scale));   /* well width */
-  height: calc(84px * var(--scale));  /* …square */
+  width: calc(112px * var(--scale));   /* well width */
+  height: calc(112px * var(--scale));  /* …square */
   display: flex;                   /* centre the mark inside */
   align-items: center;             /* …vertically */
   justify-content: center;         /* …horizontally */
-  padding: calc(12px * var(--scale));  /* breathing room around the mark */
-  border-radius: calc(12px * var(--scale));  /* a softer square inside the card's own radius */
+  padding: calc(16px * var(--scale));  /* breathing room around the mark */
+  border-radius: calc(16px * var(--scale));  /* a softer square inside the card's own radius */
   background: color-mix(in srgb, var(--text-color) 10%, transparent);  /* the well's lift */
 }
 
@@ -117,7 +117,7 @@ ${
 .lower-third-accent {
   width: var(--accent-weight);     /* the family's accent weight */
   align-self: stretch;             /* as tall as the taller of well and text */
-  margin: calc(6px * var(--scale)) 0;  /* short of the card's full height — a soft divider */
+  margin: calc(8px * var(--scale)) 0;  /* short of the card's full height — a soft divider */
   border-radius: var(--accent-weight);  /* rounded ends — glass geometry, never a hard slab */
   background: linear-gradient(to bottom,
               var(--accent) 0%,
@@ -134,7 +134,7 @@ ${
 
 /* Name (f0) — the line the viewer reads first. */
 .lower-third-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the glass families run heavier weights */
   line-height: 1.1;                /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -143,18 +143,18 @@ ${
 
 /* Role (f1) — the second reading voice. */
 .lower-third-title {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 500;                /* medium — quiet next to the name */
   line-height: 1.25;               /* a touch of air at small sizes */
   color: var(--text-dim);          /* dimmed — never pure white twice */
-  margin-top: calc(4px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Organisation and handle (f2, f3) — both drop to the label voice, which is what keeps
    four lines from reading as a paragraph. */
 .lower-third-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 600;                /* small caps need weight to stay crisp */
   line-height: 1.35;               /* tight rows — the two labels are one band */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -164,7 +164,7 @@ ${
 
 /* The organisation row opens the label band. */
 .lower-third-text .lower-third-mask:nth-child(3) {
-  margin-top: calc(12px * var(--scale));  /* air below the role */
+  margin-top: calc(16px * var(--scale));  /* air below the role */
 }
 
 /* …and the last line (the handle) is the one that takes the accent, so the card ends on

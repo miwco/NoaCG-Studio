@@ -50,8 +50,8 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* one row: the kicker block and the text stack */
   align-items: stretch;            /* the kicker block spans the band's height */
-  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  min-height: calc(126px * var(--scale)); /* the band grows if the headline wraps */
+  width: calc(2240px * var(--scale));  /* near full-width, inside the safe areas */
+  min-height: calc(168px * var(--scale)); /* the band grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent); /* the strap's accent edge */
@@ -82,28 +82,28 @@ ${alertLineMasks(o)}
   align-self: stretch;             /* fill the band's height */
   display: flex;                   /* centre the word inside the block */
   align-items: center;             /* vertical centring */
-  padding: 0 calc(34px * var(--scale)); /* generous breathing room around a short word */
+  padding: 0 calc(45px * var(--scale)); /* generous breathing room around a short word */
   background: var(--accent);       /* the one solid accent surface */
 }
 /* The headline's cell. */
 .alert-lines > .alert-mask:nth-child(2) {
   grid-column: 2;                  /* the text column */
   grid-row: 1;                     /* the top row */
-  padding: calc(18px * var(--scale)) calc(34px * var(--scale)) 0;
+  padding: calc(24px * var(--scale)) calc(45px * var(--scale)) 0;
   min-width: 0;                    /* wrap rather than widen the band */
 }
 /* The attribution's cell. */
 .alert-lines > .alert-mask:nth-child(3) {
   grid-column: 2;                  /* the text column */
   grid-row: 2;                     /* under the headline */
-  padding: calc(4px * var(--scale)) calc(34px * var(--scale)) calc(18px * var(--scale));
+  padding: calc(5px * var(--scale)) calc(45px * var(--scale)) calc(24px * var(--scale));
   min-width: 0;                    /* wrap rather than widen the band */
 }
 
 /* The kicker word. */
 .alert-name {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(28px * var(--scale) * var(--type-scale)); /* read before the headline */
+  font-size: calc(37px * var(--scale) * var(--type-scale)); /* read before the headline */
   font-weight: 800;                /* heavy caps carry at a distance */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a stamp, whatever the operator types */
@@ -113,7 +113,7 @@ ${alertLineMasks(o)}
 
 /* The headline — the largest type the band will hold. */
 .alert-title {
-  font-size: calc(38px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
+  font-size: calc(51px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.12;               /* a wrapped headline stays one block */
@@ -123,7 +123,7 @@ ${alertLineMasks(o)}
 /* The attribution — where this is coming from. */
 .alert-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

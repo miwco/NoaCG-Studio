@@ -43,7 +43,7 @@ ${lineMasks(o)}
   background: var(--panel-bg);                     /* the panel color (retint via :root) */
   border: 1px solid rgba(255, 255, 255, 0.14);     /* hairline keyline lifts the panel off video */
   border-radius: var(--panel-radius);              /* the family's panel radius */
-  padding: calc(18px * var(--scale)) calc(28px * var(--scale));  /* generous breathing room */
+  padding: calc(19px * var(--scale)) calc(29px * var(--scale));  /* generous breathing room */
 }
 
 /* The accent moment: a slim vertical bar hugging the panel's left edge, full height. */
@@ -59,7 +59,7 @@ ${lineMasks(o)}
 
 /* Line 1 — the name: big and confident, pure white. */
 .lower-third-name {
-  font-size: calc(48px * var(--scale) * var(--type-scale));            /* headline scale */
+  font-size: calc(51px * var(--scale) * var(--type-scale));            /* headline scale */
   font-weight: var(--display-weight);              /* the family's display weight */
   line-height: 1.1;                                /* tight — big text needs less leading */
   letter-spacing: var(--display-tracking);         /* large display type tightens slightly */
@@ -68,7 +68,7 @@ ${lineMasks(o)}
 
 /* Line 2 — the title: half the size, dimmed, clearly secondary. */
 .lower-third-title {
-  font-size: calc(24px * var(--scale) * var(--type-scale));            /* ~2:1 ratio under the name */
+  font-size: calc(25px * var(--scale) * var(--type-scale));            /* ~2:1 ratio under the name */
   font-weight: 400;                                /* regular weight keeps it quiet */
   line-height: 1.3;                                /* comfortable for a smaller line */
   color: var(--text-dim);                          /* dimmed — never pure white twice */
@@ -76,7 +76,7 @@ ${lineMasks(o)}
 
 /* Line 3 (optional) — a small-caps kicker in the accent color. */
 .lower-third-extra {
-  font-size: calc(19px * var(--scale) * var(--type-scale));            /* smallest line in the stack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));            /* smallest line in the stack */
   font-weight: 600;                                /* semibold keeps small caps legible */
   line-height: 1.3;                                /* matches the title's rhythm */
   text-transform: uppercase;                       /* small-caps label treatment */

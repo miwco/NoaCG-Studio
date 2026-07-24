@@ -51,10 +51,10 @@ export const st04: TemplateVariant = defineResultsVariant(
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(14px * var(--scale));
-  padding: calc(4px * var(--scale)) 0 0;
-  min-width: calc(640px * var(--scale));
-  text-shadow: 0 calc(2px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.55);
+  gap: calc(24px * var(--scale));
+  padding: calc(7px * var(--scale)) 0 0;
+  min-width: calc(1138px * var(--scale));
+  text-shadow: 0 calc(3px * var(--scale)) calc(21px * var(--scale)) rgba(0, 0, 0, 0.55);
 }
 
 /* The accent — a hairline under the heading, the table's only rule. */
@@ -66,7 +66,7 @@ export const st04: TemplateVariant = defineResultsVariant(
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(30px * var(--scale) * var(--type-scale));
+  font-size: calc(53px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   letter-spacing: var(--display-tracking);
@@ -75,7 +75,7 @@ export const st04: TemplateVariant = defineResultsVariant(
 
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -84,7 +84,7 @@ export const st04: TemplateVariant = defineResultsVariant(
 
 /* The column headers. */
 .${P}-col {
-  font-size: calc(11px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -93,26 +93,26 @@ export const st04: TemplateVariant = defineResultsVariant(
 
 /* One row — a hairline rule beneath, nothing else. */
 .${P}-row {
-  padding: calc(8px * var(--scale)) 0;
+  padding: calc(14px * var(--scale)) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .${P}-row-index {
-  min-width: calc(24px * var(--scale));
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  min-width: calc(42px * var(--scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-dim);
 }
 
 .${P}-row-name {
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(39px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.14;
   color: var(--text-color);
 }
 
 .${P}-cell {
-  font-size: calc(19px * var(--scale) * var(--type-scale));
+  font-size: calc(33px * var(--scale) * var(--type-scale));
   font-weight: 500;
   color: var(--text-dim);
 }

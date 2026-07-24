@@ -93,27 +93,27 @@ ${categories}
   display: flex;                   /* centre the award word inside the chip */
   align-items: center;             /* vertically… */
   justify-content: center;         /* …and horizontally */
-  padding: calc(12px * var(--scale)) calc(16px * var(--scale));  /* air around the word */
+  padding: calc(14px * var(--scale)) calc(18px * var(--scale));  /* air around the word */
   background: var(--accent);       /* the one accent moment */
 }
 
 /* The award word (f0) — heavy tracked caps in the chip's dark ink. */
 .corner-bug-name {
-  font-size: calc(14px * var(--scale) * var(--type-scale));   /* small, but it shouts */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small, but it shouts */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.1;                /* condensed caps need almost no leading */
   letter-spacing: var(--label-tracking);  /* sport opens its labels up */
   text-transform: uppercase;       /* sport shouts in caps */
   color: var(--accent-ink);        /* dark-on-accent, the family's chip ink */
-  max-width: calc(120px * var(--scale));  /* a long word wraps rather than stretching the chip */
+  max-width: calc(137px * var(--scale));  /* a long word wraps rather than stretching the chip */
 }
 
 /* The body — the trophy mark and the category, side by side on the slab. */
 .corner-bug-body {
   display: flex;                   /* the mark and the category sit side by side */
   align-items: center;             /* both centred on the body's axis */
-  gap: calc(13px * var(--scale));  /* air between the mark and the words */
-  padding: calc(11px * var(--scale)) calc(18px * var(--scale));  /* air inside the slab */
+  gap: calc(15px * var(--scale));  /* air between the mark and the words */
+  padding: calc(13px * var(--scale)) calc(21px * var(--scale));  /* air inside the slab */
 }
 
 ${bugSlotCss({ width: 42, height: 42, mark: 'slab', radius: '0' })}
@@ -126,7 +126,7 @@ ${bugSlotCss({ width: 42, height: 42, mark: 'slab', radius: '0' })}
 /* The category (f1) — heavy condensed caps, the sport voice at bug scale. */
 .corner-bug-title,
 .corner-bug-extra {
-  font-size: calc(20px * var(--scale) * var(--type-scale));   /* the lockup's display line */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* the lockup's display line */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* condensed caps need no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */

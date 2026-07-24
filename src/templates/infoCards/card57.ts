@@ -54,9 +54,9 @@ ${cardLineMasks(o)}
 .info-card-box {
   display: grid;                   /* two columns: the chip, then everything else */
   grid-template-columns: auto 1fr; /* the chip takes its own width; the text takes the rest */
-  column-gap: calc(22px * var(--scale));  /* the gutter between the chip and the title */
+  column-gap: calc(24px * var(--scale));  /* the gutter between the chip and the title */
   align-items: start;              /* the chip aligns to the title's first row, not its middle */
-  padding: calc(22px * var(--scale)) calc(28px * var(--scale));  /* comfortable card padding */
+  padding: calc(24px * var(--scale)) calc(31px * var(--scale));  /* comfortable card padding */
   box-shadow: var(--panel-keyline); /* the minimal family's 1px keyline, no fill behind it */
 }
 
@@ -74,10 +74,10 @@ ${cardLineMasks(o)}
 /* THE REFERENCE. A small accent chip — the order number, where the printed page puts it. */
 .info-card-name {
   display: inline-block;           /* the chip hugs its own text inside the mask */
-  padding: calc(7px * var(--scale)) calc(14px * var(--scale));  /* a tight chip */
+  padding: calc(8px * var(--scale)) calc(16px * var(--scale));  /* a tight chip */
   background: var(--accent);       /* the one accent dose, used as a shape */
   border-radius: var(--panel-radius);  /* the family's panel radius */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
   font-weight: 700;                /* bold caps on a solid chip */
   line-height: 1.2;                /* one tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -87,12 +87,12 @@ ${cardLineMasks(o)}
      already stays on one row without asking for it. The cap is what stops an operator's long
      value (a whole first line pasted in) from pushing the title column off the card: past it
      the chip wraps, which is ugly but bounded. A nowrap rule here would not be bounded. */
-  max-width: calc(300px * var(--scale));  /* the chip's own wrap point */
+  max-width: calc(333px * var(--scale));  /* the chip's own wrap point */
 }
 
 /* THE ITEM. The title of whatever is happening — the card's main line. */
 .info-card-title {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* card heading size */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* card heading size */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* a hymn title often runs to two rows */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -103,8 +103,8 @@ ${cardLineMasks(o)}
 /* WHO IS LEADING IT. Under the title, in its own column — never under the chip. */
 .info-card-extra {
   display: block;                  /* its own row inside the mask */
-  margin-top: calc(9px * var(--scale));  /* title and leader read as one unit */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* ~1.8:1 under the item */
+  margin-top: calc(10px * var(--scale));  /* title and leader read as one unit */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ~1.8:1 under the item */
   font-weight: 400;                /* conversational weight */
   line-height: 1.35;               /* a name and a role may wrap */
   color: var(--text-dim);          /* secondary text color */

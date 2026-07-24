@@ -73,23 +73,23 @@ export const fr03: TemplateVariant = defineFrameVariant(
    these carry no radius and no keyline: the divider does all the separating. */
 .frame-window {
   top: 0;                              /* full bleed, top… */
-  height: calc(1080px * var(--scale));  /* …to bottom */
-  width: calc(954px * var(--scale));    /* half the frame, less the seam */
+  height: calc(1271px * var(--scale));  /* …to bottom */
+  width: calc(1122px * var(--scale));    /* half the frame, less the seam */
 }
 .frame-window-left {
   left: 0;                             /* hard to the left edge */
 }
 .frame-window-right {
-  left: calc(966px * var(--scale));    /* after the 12px seam */
+  left: calc(1136px * var(--scale));    /* after the 12px seam */
 }
 
 /* The divider — a leaning accent seam, wider than the gap so it covers both edges. */
 .frame-divider {
   position: absolute;              /* placed against the stage */
-  left: calc(946px * var(--scale));  /* centred on the seam between the windows */
-  top: calc(-40px * var(--scale));   /* over-length so the lean never shows a gap at the top… */
-  width: calc(28px * var(--scale));  /* the seam's drawn width */
-  height: calc(1160px * var(--scale));  /* …or the bottom */
+  left: calc(1113px * var(--scale));  /* centred on the seam between the windows */
+  top: calc(-47px * var(--scale));   /* over-length so the lean never shows a gap at the top… */
+  width: calc(33px * var(--scale));  /* the seam's drawn width */
+  height: calc(1365px * var(--scale));  /* …or the bottom */
   background: var(--accent);       /* the one accent surface */
   transform: skewX(-8deg);         /* the sport family's lean */
 }
@@ -97,9 +97,9 @@ export const fr03: TemplateVariant = defineFrameVariant(
 /* The name slabs — pinned across the bottom of their own window, leaning with the family. */
 .frame-plate {
   position: absolute;              /* placed against the stage, in design px */
-  bottom: calc(64px * var(--scale));  /* up from the frame's bottom edge, inside the safe area */
-  width: calc(680px * var(--scale));  /* a stable slab width whatever the name is */
-  padding: calc(14px * var(--scale)) calc(30px * var(--scale)) calc(16px * var(--scale));
+  bottom: calc(75px * var(--scale));  /* up from the frame's bottom edge, inside the safe area */
+  width: calc(800px * var(--scale));  /* a stable slab width whatever the name is */
+  padding: calc(16px * var(--scale)) calc(35px * var(--scale)) calc(19px * var(--scale));
   will-change: transform, opacity; /* the slabs arrive after the windows */
 }
 .frame-plate::before {
@@ -113,15 +113,15 @@ export const fr03: TemplateVariant = defineFrameVariant(
   box-shadow: var(--panel-shadow);  /* the family's lift */
 }
 .frame-plate-left {
-  left: calc(96px * var(--scale));    /* inside the left window's safe area */
+  left: calc(113px * var(--scale));    /* inside the left window's safe area */
 }
 .frame-plate-right {
-  left: calc(1062px * var(--scale));  /* the mirror position inside the right window */
+  left: calc(1249px * var(--scale));  /* the mirror position inside the right window */
 }
 
 /* The name — heavy condensed caps: the split screen's one loud voice per side. */
 .frame-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
+  font-size: calc(47px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight — heavy condensed */
   line-height: 1.02;               /* condensed caps sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -131,7 +131,7 @@ export const fr03: TemplateVariant = defineFrameVariant(
 
 /* The role — tracked caps under the name, in the family's label colour. */
 .frame-role {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps condensed caps legible over video */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

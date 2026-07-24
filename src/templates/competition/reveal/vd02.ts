@@ -60,7 +60,7 @@ ${revealStructureCss()}
 
 /* The accent — a rule under the question, neutral until the ruling. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--text-dim);
   transform-origin: center;
 }
@@ -68,7 +68,7 @@ ${revealStructureCss()}
 /* The prompt — mono, wide-tracked. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(26px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -77,7 +77,7 @@ ${revealStructureCss()}
 
 /* What is being ruled on. */
 .${P}-title {
-  font-size: calc(44px * var(--scale) * var(--type-scale));
+  font-size: calc(63px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   letter-spacing: var(--display-tracking);
@@ -86,7 +86,7 @@ ${revealStructureCss()}
 
 /* The mark. */
 .${P}-mark {
-  font-size: calc(140px * var(--scale) * var(--type-scale));
+  font-size: calc(200px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 0.9;
   color: var(--text-dim);
@@ -94,10 +94,10 @@ ${revealStructureCss()}
 
 /* The ruling's word — a void chip until the ruling colours it. */
 .${P}-word {
-  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(9px * var(--scale)) calc(26px * var(--scale));
+  border-radius: calc(9px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(31px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: 0.2em;
   color: var(--panel-bg);
@@ -107,7 +107,7 @@ ${revealStructureCss()}
 /* The note. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -118,7 +118,7 @@ ${revealStructureCss()}
 
 .${P}-correct .${P}-mark {
   color: var(--accent);
-  text-shadow: 0 0 calc(30px * var(--scale)) color-mix(in srgb, var(--accent) 55%, transparent);
+  text-shadow: 0 0 calc(43px * var(--scale)) color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .${P}-correct .${P}-word {
   background: var(--accent);
@@ -134,7 +134,7 @@ ${revealStructureCss()}
    wrong even in an amber house palette. */
 .${P}-incorrect .${P}-mark {
   color: #e63946;
-  text-shadow: 0 0 calc(30px * var(--scale)) rgba(230, 57, 70, 0.5);
+  text-shadow: 0 0 calc(43px * var(--scale)) rgba(230, 57, 70, 0.5);
 }
 .${P}-incorrect .${P}-word {
   background: #e63946;

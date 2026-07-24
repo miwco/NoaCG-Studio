@@ -55,12 +55,12 @@ ${lineMasks(o)}
 
 /* The text block — transparent; the rule and the whitespace do all the structural work. */
 .lower-third-box {
-  padding-left: calc(30px * var(--scale));  /* room for the rule plus a generous gap */
+  padding-left: calc(35px * var(--scale));  /* room for the rule plus a generous gap */
 }
 
 /* Name (f0) — the block's one heavy element. */
 .lower-third-name {
-  font-size: calc(50px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(59px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.06;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -69,23 +69,23 @@ ${lineMasks(o)}
 
 /* Role (f1) — the middle voice: regular weight, dimmed. */
 .lower-third-title {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(7px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Organisation (f2) — the third VOICE, not just a third line: tracked small caps. */
 .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking — small caps breathe */
   text-transform: uppercase;        /* whatever the operator types reads as a label */
   color: var(--label-color);        /* the family's label colour */
-  margin-top: calc(14px * var(--scale));  /* separated — the organisation is its own beat */
+  margin-top: calc(16px * var(--scale));  /* separated — the organisation is its own beat */
 }`,
     hasAccent: true,
   }),

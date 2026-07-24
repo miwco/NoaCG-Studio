@@ -56,11 +56,11 @@ export const tk03: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label chip and item viewport sit side by side */
   align-items: center;             /* both center on the capsule's horizontal axis */
-  gap: calc(18px * var(--scale));  /* air between the label chip and the items */
-  width: calc(920px * var(--scale));   /* fixed strip width - the items flip inside it */
-  height: calc(64px * var(--scale));   /* compact pill height */
+  gap: calc(24px * var(--scale));  /* air between the label chip and the items */
+  width: calc(1227px * var(--scale));   /* fixed strip width - the items flip inside it */
+  height: calc(85px * var(--scale));   /* compact pill height */
   box-sizing: border-box;          /* padding stays inside the fixed width and height */
-  padding: 0 calc(32px * var(--scale));  /* generous capsule end-caps for the text */
+  padding: 0 calc(43px * var(--scale));  /* generous capsule end-caps for the text */
   border-radius: var(--panel-radius);  /* the pill's authored panel radius */
   background: var(--panel-bg);     /* the palette's glass tint - retints via the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -75,7 +75,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
   content: '';                     /* pseudo-elements need content to render */
   position: absolute;              /* pinned over the capsule, out of the flex flow */
   inset: 0;                        /* cover the whole capsule */
-  border: calc(2px * var(--scale)) solid var(--accent);  /* the accent-tinted edge */
+  border: calc(3px * var(--scale)) solid var(--accent);  /* the accent-tinted edge */
   border-radius: inherit;          /* follow the pill's full rounding */
   opacity: 0.55;                   /* soften the ring without leaving the accent variable */
   pointer-events: none;            /* purely decorative overlay */
@@ -85,10 +85,10 @@ export const tk03: TemplateVariant = defineTickerVariant(
 .ticker-label {
   display: flex;                   /* the dot and the label text sit in a row */
   align-items: center;             /* dot and text share the capsule's center line */
-  gap: calc(9px * var(--scale));   /* small gap between the dot and the label */
+  gap: calc(12px * var(--scale));   /* small gap between the dot and the label */
   flex-shrink: 0;                  /* long items never squeeze the label */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
   font-weight: 700;                /* bold - the label reads as a badge */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* label is always set in caps */
@@ -98,8 +98,8 @@ export const tk03: TemplateVariant = defineTickerVariant(
 /* The dot: a small round accent marker in front of the label - the pill's "on air" light. */
 .ticker-label::before {
   content: '';                     /* pseudo-elements need content to render */
-  width: calc(10px * var(--scale));   /* small dot diameter */
-  height: calc(10px * var(--scale));  /* keep it perfectly round */
+  width: calc(13px * var(--scale));   /* small dot diameter */
+  height: calc(13px * var(--scale));  /* keep it perfectly round */
   border-radius: 999px;            /* full circle */
   background: var(--accent);       /* the dot is pure accent - retints with the palette */
 }
@@ -124,7 +124,7 @@ export const tk03: TemplateVariant = defineTickerVariant(
   inset: 0;                        /* fill the viewport window */
   display: flex;                   /* flex layout for clean vertical centering */
   align-items: center;             /* text sits on the capsule's center line */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* single-line item size - clearly bigger than the label */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* single-line item size - clearly bigger than the label */
   font-weight: 600;                /* semibold - present without shouting */
   line-height: 1.2;                /* a touch of leading for the single line */
   color: var(--text-color);        /* primary text color */

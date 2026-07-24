@@ -75,8 +75,8 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
   position: relative;              /* anchors the accent rule */
   display: flex;                   /* the two club rows and the footer… */
   flex-direction: column;          /* …stacked as one column */
-  padding-left: calc(18px * var(--scale));  /* clear the accent rule */
-  text-shadow: 0 calc(1px * var(--scale)) calc(3px * var(--scale)) rgba(0, 0, 0, 0.85);  /* legibility over any picture, with no panel */
+  padding-left: calc(28px * var(--scale));  /* clear the accent rule */
+  text-shadow: 0 calc(2px * var(--scale)) calc(5px * var(--scale)) rgba(0, 0, 0, 0.85);  /* legibility over any picture, with no panel */
 }
 
 /* The accent rule — a thin edge down the whole stack, and the machine's flag marker. */
@@ -93,16 +93,16 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 .scoreboard-team-block {
   display: flex;                   /* rule, name and score in one row */
   align-items: baseline;           /* the name and the score share a text baseline */
-  gap: calc(14px * var(--scale));  /* air inside the row */
-  padding: calc(5px * var(--scale)) 0;  /* the stack's vertical rhythm */
+  gap: calc(22px * var(--scale));  /* air inside the row */
+  padding: calc(8px * var(--scale)) 0;  /* the stack's vertical rhythm */
   min-width: 0;                    /* lets a long club name shrink and wrap, not overflow */
 }
 
 /* The club colour rule — a short mark before the name, the only club colour on the graphic. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(4px * var(--scale)); /* a hairline mark, in keeping with the family */
-  height: calc(20px * var(--scale));  /* about a cap height — it sits with the name */
+  width: calc(6px * var(--scale)); /* a hairline mark, in keeping with the family */
+  height: calc(31px * var(--scale));  /* about a cap height — it sits with the name */
   align-self: center;              /* centred against the row rather than the baseline */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
@@ -112,7 +112,7 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 
 /* The club name — FULL names in sentence case, because a district league has no codes. */
 .scoreboard-team {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 600;                /* semibold — present, not shouted */
   line-height: 1.2;                /* comfortable for a long mixed-case club name */
   color: var(--text-color);        /* primary text, straight over the picture */
@@ -121,7 +121,7 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 .scoreboard-team-mask {
   min-width: 0;                    /* flex items refuse to shrink without this */
   flex: 1;                         /* the name takes the row's spare width… */
-  max-width: calc(320px * var(--scale));  /* …up to the cap a corner stack allows */
+  max-width: calc(492px * var(--scale));  /* …up to the cap a corner stack allows */
 }
 
 ${clampTwoLinesCss('.scoreboard-team')}
@@ -129,9 +129,9 @@ ${clampTwoLinesCss('.scoreboard-team')}
 /* The score — the one figure that has to be readable from across a clubhouse. */
 .scoreboard-score {
   flex-shrink: 0;                  /* scores never squeeze — names give up width instead */
-  min-width: calc(34px * var(--scale));  /* a shared column, so both scores line up */
+  min-width: calc(52px * var(--scale));  /* a shared column, so both scores line up */
   text-align: right;               /* two-digit scores stay aligned with single ones */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* the loudest figure on the stack */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* the loudest figure on the stack */
   font-weight: 700;                /* bold — the score is the point */
   line-height: 1.1;                /* tight on the row */
   color: var(--accent);            /* the scores wear the accent */
@@ -142,15 +142,15 @@ ${clampTwoLinesCss('.scoreboard-team')}
 .scoreboard-clockblock {
   display: flex;                   /* period and clock in one row */
   align-items: baseline;           /* both on one text baseline */
-  gap: calc(12px * var(--scale));  /* air between the two */
-  margin-top: calc(6px * var(--scale));  /* separated from the club rows */
-  padding-top: calc(7px * var(--scale));  /* air under the keyline */
+  gap: calc(18px * var(--scale));  /* air between the two */
+  margin-top: calc(9px * var(--scale));  /* separated from the club rows */
+  padding-top: calc(11px * var(--scale));  /* air under the keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.20);  /* a true keyline — the family's one divider */
 }
 
 /* The period — a small tracked caps label. */
 .scoreboard-phase {
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* small: this row is reference, not headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small: this row is reference, not headline */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -161,7 +161,7 @@ ${clampTwoLinesCss('.scoreboard-team')}
 
 /* The clock — counts UP, the way an amateur referee's watch does. */
 .scoreboard-clock {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* a reference figure, not a display one */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* a reference figure, not a display one */
   font-weight: 600;                /* matches the period label */
   line-height: 1.2;                /* on the footer's baseline */
   color: var(--text-dim);          /* dimmed — the score is what matters on a club stream */

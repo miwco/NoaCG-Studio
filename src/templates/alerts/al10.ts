@@ -48,10 +48,10 @@ ${alertLineMasks(o, '      ')}
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* kicker, statement, time */
   align-items: center;             /* a centred card centres its own text */
-  gap: calc(14px * var(--scale));  /* generous air — this graphic is lived with, not scanned */
-  width: calc(860px * var(--scale));   /* a card, not a band */
+  gap: calc(16px * var(--scale));  /* generous air — this graphic is lived with, not scanned */
+  width: calc(956px * var(--scale));   /* a card, not a band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(44px * var(--scale)) calc(52px * var(--scale));
+  padding: calc(49px * var(--scale)) calc(58px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -66,7 +66,7 @@ ${alertLineMasks(o, '      ')}
 /* The status kicker — the house mono voice, tracked wide. */
 .alert-name {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale)); /* small: the kicker labels, it does not shout */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: the kicker labels, it does not shout */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -75,7 +75,7 @@ ${alertLineMasks(o, '      ')}
 
 /* The statement — what is happening, in one plain sentence. */
 .alert-title {
-  font-size: calc(40px * var(--scale) * var(--type-scale)); /* the card's headline */
+  font-size: calc(44px * var(--scale) * var(--type-scale)); /* the card's headline */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.14;               /* a wrapped statement stays one block */
@@ -84,7 +84,7 @@ ${alertLineMasks(o, '      ')}
 
 /* The time to come back — the only actionable fact on the card. */
 .alert-extra {
-  font-size: calc(22px * var(--scale) * var(--type-scale)); /* subordinate to the statement */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* subordinate to the statement */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.3;                /* comfortable across a wrap */
   color: var(--text-dim);          /* secondary text color */

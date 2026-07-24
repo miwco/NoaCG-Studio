@@ -69,11 +69,11 @@ ${institution}    </div>`,
 
       css: `/* The panel — quiet, restrained, wide enough for a real job title. */
 .lower-third-box {
-  padding: calc(20px * var(--scale)) calc(44px * var(--scale)) calc(22px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(24px * var(--scale)) calc(52px * var(--scale)) calc(26px * var(--scale)) calc(33px * var(--scale));
   background: var(--panel-bg);      /* the minimal family's quiet panel */
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  max-width: calc(760px * var(--scale));  /* academic job titles are long — give them the room */
+  max-width: calc(894px * var(--scale));  /* academic job titles are long — give them the room */
 }
 
 /* The name row: name and post-nominals on one baseline. */
@@ -81,7 +81,7 @@ ${institution}    </div>`,
   display: flex;                    /* name and qualifications in a row… */
   flex-wrap: wrap;                  /* …wrapping only when the pair genuinely doesn't fit */
   align-items: baseline;            /* the qualifications sit on the name's baseline */
-  gap: calc(10px * var(--scale));
+  gap: calc(12px * var(--scale));
   min-width: 0;                     /* allow shrinking */
 }
 .lower-third-namerow > .lower-third-mask {
@@ -91,7 +91,7 @@ ${institution}    </div>`,
 
 /* The name (f0) — the strap's headline. */
 .lower-third-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(45px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.1;                 /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -101,7 +101,7 @@ ${institution}    </div>`,
 /* The post-nominals (f1) — a trailing list, not a second name: smaller, dimmed, and
    preceded by a comma the DESIGN draws, so the field holds qualifications and nothing else. */
 .lower-third-postnom {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* half the name — a suffix */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* half the name — a suffix */
   font-weight: 500;                 /* medium keeps small caps crisp */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -109,27 +109,27 @@ ${institution}    </div>`,
 }
 .lower-third-postnom::before {
   content: ",";                     /* the separator is DRAWN, never typed into the field */
-  margin-right: calc(6px * var(--scale));  /* the comma hugs the name it follows */
-  margin-left: calc(-10px * var(--scale));  /* pulls back through the row gap, so the comma
+  margin-right: calc(7px * var(--scale));  /* the comma hugs the name it follows */
+  margin-left: calc(-12px * var(--scale));  /* pulls back through the row gap, so the comma
                                                sits against the name rather than floating */
 }
 
 /* The position (f1's neighbour, f2) — the working description. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.3;                 /* room for a long chair title to wrap */
   color: var(--text-dim);           /* dimmed — never the primary ink twice */
-  margin-top: calc(7px * var(--scale));  /* tied to the name row above it */
+  margin-top: calc(8px * var(--scale));  /* tied to the name row above it */
 }
 
 /* The rule above the institution — the graphic's accent node, and the device that sets
    the institution apart from the job title rather than letting it trail on. */
 .lower-third-accent {
-  width: calc(40px * var(--scale));  /* a short mark, not a rule across the panel */
+  width: calc(47px * var(--scale));  /* a short mark, not a rule across the panel */
   height: calc(2px * var(--scale));  /* a hairline */
   background: var(--accent);        /* the one accent surface */
-  margin: calc(13px * var(--scale)) 0 calc(11px * var(--scale));  /* air on both sides — the
+  margin: calc(15px * var(--scale)) 0 calc(13px * var(--scale));  /* air on both sides — the
                                              bottom margin holds even when the rule closes
                                              the strap with no institution under it */
   transform-origin: left center;    /* line-reveal draws it from this end */
@@ -137,7 +137,7 @@ ${institution}    </div>`,
 
 /* The institution (f3) — the authority line, in the accent and set in caps. */
 .lower-third-extra {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small, but the sharpest voice */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small, but the sharpest voice */
   font-weight: 600;                 /* semibold — small tracked caps need the weight */
   line-height: 1.25;                /* room if a long institution wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

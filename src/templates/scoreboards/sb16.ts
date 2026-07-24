@@ -67,9 +67,9 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 /* The card — flat and solid. No blur: this graphic is meant to survive being re-encoded. */
 .scoreboard-box {
   position: relative;              /* anchors the accent rule */
-  min-width: calc(480px * var(--scale));  /* a card, not a strap */
+  min-width: calc(640px * var(--scale));  /* a card, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(20px * var(--scale)) calc(26px * var(--scale)) calc(18px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(27px * var(--scale)) calc(35px * var(--scale)) calc(24px * var(--scale)) calc(40px * var(--scale));
   background: var(--panel-bg);     /* the family's solid dark panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
 }
@@ -88,19 +88,19 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 .scoreboard-statusrow {
   display: flex;                   /* pip and status in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(10px * var(--scale));  /* air between them */
-  padding-bottom: calc(10px * var(--scale));  /* air above the keyline */
+  gap: calc(13px * var(--scale));  /* air between them */
+  padding-bottom: calc(13px * var(--scale));  /* air above the keyline */
   border-bottom: 1px solid rgba(255, 255, 255, 0.20);  /* the family's one divider */
 }
 .scoreboard-pip {
   flex-shrink: 0;                  /* the pip keeps its size whatever the text does */
-  width: calc(9px * var(--scale)); /* small on purpose — a marker, not a badge */
-  height: calc(9px * var(--scale));  /* same as the width — a true circle */
+  width: calc(12px * var(--scale)); /* small on purpose — a marker, not a badge */
+  height: calc(12px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--accent);       /* the live signal wears the accent */
 }
 .scoreboard-status {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small: this row is reference */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small: this row is reference */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -112,28 +112,28 @@ ${colourHoldersHtml('f6', 'f7', '#d92b2b', '#1f4fd8')}
 .scoreboard-main {
   display: flex;                   /* the two club rows… */
   flex-direction: column;          /* …stacked as one column */
-  padding: calc(12px * var(--scale)) 0 calc(10px * var(--scale));  /* air above and below */
+  padding: calc(16px * var(--scale)) 0 calc(13px * var(--scale));  /* air above and below */
 }
 .scoreboard-side {
   display: flex;                   /* mark, name and score share one row */
   align-items: center;             /* on the row's centre line */
-  gap: calc(13px * var(--scale));  /* air inside the row */
-  padding: calc(7px * var(--scale)) 0;  /* the stack's vertical rhythm */
+  gap: calc(17px * var(--scale));  /* air inside the row */
+  padding: calc(9px * var(--scale)) 0;  /* the stack's vertical rhythm */
   min-width: 0;                    /* lets a long club name shrink and wrap, not overflow */
 }
 
 /* The club colour mark — a short vertical rule before the name. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(4px * var(--scale)); /* a hairline mark, in keeping with the family */
-  height: calc(26px * var(--scale));  /* about a cap height — it sits with the name */
+  width: calc(5px * var(--scale)); /* a hairline mark, in keeping with the family */
+  height: calc(35px * var(--scale));  /* about a cap height — it sits with the name */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
 .scoreboard-side-b .scoreboard-colour-chip { background: var(--team-b, var(--text-dim)); }
 
 /* The club name — FULL names in sentence case, allowed two lines. */
 .scoreboard-team {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the row's anchor */
+  font-size: calc(37px * var(--scale) * var(--type-scale));  /* the row's anchor */
   font-weight: 600;                /* semibold — present, not shouted */
   line-height: 1.22;               /* comfortable for a long mixed-case club name */
   color: var(--text-color);        /* primary text on the panel */
@@ -149,9 +149,9 @@ ${clampTwoLinesCss('.scoreboard-team')}
 /* The score — one figure per row, in a shared right-hand column. */
 .scoreboard-score {
   flex-shrink: 0;                  /* scores never squeeze — names give up width instead */
-  min-width: calc(44px * var(--scale));  /* a shared column, so both rows line up */
+  min-width: calc(59px * var(--scale));  /* a shared column, so both rows line up */
   text-align: right;               /* two-digit scores stay aligned with single ones */
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* the card's headline */
+  font-size: calc(48px * var(--scale) * var(--type-scale));  /* the card's headline */
   font-weight: 700;                /* bold — the score is the point */
   line-height: 1;                  /* sits tight on the row */
   color: var(--accent);            /* the scores wear the accent */
@@ -160,7 +160,7 @@ ${clampTwoLinesCss('.scoreboard-team')}
 
 /* The note — the competition and the ground, the quietest row on the card. */
 .scoreboard-note {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* reference type, not display */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* reference type, not display */
   font-weight: 400;                /* regular — contrast comes from the names above */
   line-height: 1.35;               /* relaxed leading in case it wraps */
   color: var(--text-dim);          /* dimmed — never full white twice on one card */

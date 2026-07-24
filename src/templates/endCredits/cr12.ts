@@ -59,8 +59,8 @@ export const cr12: TemplateVariant = defineCreditsVariant(
     css: `/* The strip — a full-width solid slab. Width is set here rather than left to fit-content
    because a crawl's viewport IS the frame: the travel distance is measured from it. */
 .credits-box {
-  width: calc(1680px * var(--scale));  /* the frame's action-safe width at 1080p */
-  height: calc(72px * var(--scale));   /* one strip row — sized to the caps inside it */
+  width: calc(2585px * var(--scale));  /* the frame's action-safe width at 1080p */
+  height: calc(111px * var(--scale));   /* one strip row — sized to the caps inside it */
   overflow: hidden;                /* the items outside the strip are not drawn */
   background: var(--panel-bg);     /* a solid ground, so text stays readable over any shot */
   border-top: var(--accent-weight) solid var(--accent);  /* the sport family's accent edge */
@@ -71,7 +71,7 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 #credits-track {
   display: inline-flex;            /* every item on one row, in document order */
   align-items: center;             /* all items share the strip's centerline */
-  gap: calc(20px * var(--scale));  /* the base rhythm between items */
+  gap: calc(31px * var(--scale));  /* the base rhythm between items */
   height: 100%;                    /* fill the strip so vertical centering is exact */
   white-space: nowrap;             /* the crawl is one unbroken line — never wraps */
   will-change: transform;          /* hint the browser: the crawl tweens this element's x */
@@ -81,16 +81,16 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 .credits-page {
   display: inline-flex;            /* sections do not break the single row */
   align-items: center;             /* shared centerline with everything else */
-  gap: calc(20px * var(--scale));  /* the same rhythm inside a section */
+  gap: calc(31px * var(--scale));  /* the same rhythm inside a section */
 }
 
 /* The group label — a leaning accent slab, lt05's motif shrunk to strip height. */
 .credits-heading {
   display: inline-block;           /* a chip, sized by its own text */
-  padding: calc(6px * var(--scale)) calc(20px * var(--scale));  /* tight chip, wide sides */
+  padding: calc(9px * var(--scale)) calc(31px * var(--scale));  /* tight chip, wide sides */
   background: var(--accent);       /* the sport family uses accent as a solid shape */
   transform: skewX(-8deg);         /* SKEW: the chip leans forward, sport shape language */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* label scale on the strip */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* label scale on the strip */
   font-weight: 700;                /* bold caps on a solid chip */
   line-height: 1.2;                /* one tight label row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -100,7 +100,7 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 
 /* A partner name — the strip's running text. */
 .credits-entry {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the strip's headline size */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* the strip's headline size */
   font-weight: var(--display-weight);  /* the family's display weight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;       /* condensed caps read fastest in motion */
@@ -111,17 +111,17 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 .credits-row {
   display: inline-flex;            /* stays on the crawl line */
   align-items: baseline;           /* the category sits on the name's baseline */
-  gap: calc(12px * var(--scale));  /* a small gap inside the pair */
+  gap: calc(18px * var(--scale));  /* a small gap inside the pair */
 }
 .credits-role {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* a small label before the name */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* a small label before the name */
   font-weight: 600;                /* semibold keeps small caps crisp in motion */
   letter-spacing: 0.12em;          /* small caps breathe */
   text-transform: uppercase;       /* label voice */
   color: var(--text-dim);          /* secondary text color */
 }
 .credits-name {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* level with a plain partner name */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* level with a plain partner name */
   font-weight: var(--display-weight);  /* the family's display weight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;       /* condensed caps, like every name on the strip */
@@ -131,8 +131,8 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 /* The bullet between items — a small accent square, the sport family's punctuation. */
 .credits-sep {
   display: inline-block;           /* a shape, not a glyph: it never depends on the typeface */
-  width: calc(7px * var(--scale)); /* small and definite */
-  height: calc(7px * var(--scale));
+  width: calc(11px * var(--scale)); /* small and definite */
+  height: calc(11px * var(--scale));
   background: var(--accent);       /* the one accent dose per gap */
   transform: rotate(45deg);        /* a diamond — sport punctuation, not a bullet point */
 }
@@ -141,22 +141,22 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 .credits-end {
   display: inline-flex;            /* stays on the crawl line */
   align-items: center;             /* shares the strip's centerline */
-  gap: calc(16px * var(--scale));  /* air between the mark and the words */
-  padding-left: calc(28px * var(--scale));  /* a clear break after the last partner */
+  gap: calc(25px * var(--scale));  /* air between the mark and the words */
+  padding-left: calc(43px * var(--scale));  /* a clear break after the last partner */
 }
 
 /* The logo, when one is picked. Capped by height to the strip's inner height. */
 .credits-logo {
-  height: calc(38px * var(--scale));  /* fits inside the 72px strip with air above and below */
+  height: calc(58px * var(--scale));  /* fits inside the 72px strip with air above and below */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a dashed slot so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(5px * var(--scale)) calc(14px * var(--scale));  /* a small chip inside the strip */
+  padding: calc(8px * var(--scale)) calc(22px * var(--scale));  /* a small chip inside the strip */
   border: 1px dashed rgba(255, 255, 255, 0.3);  /* clearly a placeholder */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* the smallest type on the strip */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the strip */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -164,7 +164,7 @@ export const cr12: TemplateVariant = defineCreditsVariant(
 
 /* The tail line — the year/copyright field, used here for the closing thanks. */
 .credits-year {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small print on the strip */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* small print on the strip */
   font-weight: 500;                /* medium so it holds up in motion */
   letter-spacing: 0.06em;          /* a little air at small size */
   color: var(--text-dim);          /* secondary text color */
@@ -203,7 +203,7 @@ function renderEndBlock(tailHtml, logoSrc) {
          '</span>';
 }`,
     tokens: {
-      accentWeight: 'calc(4px * var(--scale))',
+      accentWeight: 'calc(6px * var(--scale))',
       labelTracking: '0.14em',
     },
   }),

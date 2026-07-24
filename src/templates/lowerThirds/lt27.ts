@@ -53,12 +53,12 @@ ${lineMasks(o)}
 /* The text block — no panel; the rule and the ragged-left setting are the structure. */
 .lower-third-box {
   text-align: right;                /* lines are ragged-LEFT: they align to the column rule */
-  padding-right: calc(26px * var(--scale));  /* room for the rule plus a printed-margin gap */
+  padding-right: calc(29px * var(--scale));  /* room for the rule plus a printed-margin gap */
 }
 
 /* The name — editorial weight: set, not shouted. */
 .lower-third-name {
-  font-size: calc(52px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(58px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -68,13 +68,13 @@ ${lineMasks(o)}
 /* The role — the tracked caps line, in the accent colour. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* whatever the operator types reads as a kicker */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-top: calc(12px * var(--scale));  /* clear air below the name */
+  margin-top: calc(13px * var(--scale));  /* clear air below the name */
 }`,
     hasAccent: true,
   }),

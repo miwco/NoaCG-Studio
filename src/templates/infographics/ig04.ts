@@ -77,7 +77,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* a simple column: question over ring */
   flex-direction: column;          /* stacked top to bottom */
   align-items: center;             /* a centered poll — everything shares one axis */
-  padding: calc(36px * var(--scale)) calc(48px * var(--scale));  /* generous inner air */
+  padding: calc(40px * var(--scale)) calc(53px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);     /* the palette's glass tint — retints via the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -87,9 +87,9 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The question — the panel's headline, wrapping to balanced centered rows. */
 .infographic-question {
-  max-width: calc(480px * var(--scale));  /* wraps at a readable measure, like the bench look */
-  margin-bottom: calc(30px * var(--scale));  /* clear air between question and ring — never touching */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* headline size — the ring's figure still leads */
+  max-width: calc(533px * var(--scale));  /* wraps at a readable measure, like the bench look */
+  margin-bottom: calc(33px * var(--scale));  /* clear air between question and ring — never touching */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* headline size — the ring's figure still leads */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* a touch of leading for wrapped rows */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -102,8 +102,8 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 /* The ring block — the SVG donut with the readout anchored over its center. */
 .infographic-ring {
   position: relative;              /* anchor for the absolutely-centered readout */
-  width: calc(300px * var(--scale));   /* ring diameter — the hero of the design */
-  height: calc(300px * var(--scale));  /* square: the SVG circle fills it exactly */
+  width: calc(333px * var(--scale));   /* ring diameter — the hero of the design */
+  height: calc(333px * var(--scale));  /* square: the SVG circle fills it exactly */
 }
 
 /* The SVG canvas — fills the block; no baseline gap below it. */
@@ -148,7 +148,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The number — huge, heavy, the single loudest thing on the panel. */
 .infographic-value {
-  font-size: calc(76px * var(--scale) * var(--type-scale));  /* hero size, sized to sit inside the ring's hole */
+  font-size: calc(84px * var(--scale) * var(--type-scale));  /* hero size, sized to sit inside the ring's hole */
   font-weight: 800;                /* heaviest weight — contrast through weight, not more fonts */
   line-height: 1;                  /* no dead leading — the answer sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -158,7 +158,7 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The % sign — small and accent-colored, clearly subordinate to the number. */
 .infographic-pct {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* under half the number — clear hierarchy */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* under half the number — clear hierarchy */
   font-weight: 800;                /* matches the number's weight at its smaller size */
   line-height: 1;                  /* hugs its baseline */
   color: var(--accent);            /* echoes the ring — the same single accent */
@@ -166,9 +166,9 @@ export const ig04: TemplateVariant = defineInfographicVariant(
 
 /* The answer — quiet tracking-wide caps under the figure. */
 .infographic-answer {
-  margin-top: calc(8px * var(--scale));  /* small gap: figure + answer read as one unit */
+  margin-top: calc(9px * var(--scale));  /* small gap: figure + answer read as one unit */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small label size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact single-line label */
   letter-spacing: var(--label-tracking);  /* the answer's authored tracking */

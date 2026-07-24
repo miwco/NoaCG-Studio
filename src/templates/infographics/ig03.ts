@@ -61,9 +61,9 @@ export const ig03: TemplateVariant = defineInfographicVariant(
 .infographic-title {
   display: flex;                   /* dash and text share one line */
   align-items: center;             /* the dash sits on the caps' optical middle */
-  gap: calc(12px * var(--scale));  /* air between the dash and the text */
-  margin-bottom: calc(14px * var(--scale));  /* air before the first row */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small label size */
+  gap: calc(13px * var(--scale));  /* air between the dash and the text */
+  margin-bottom: calc(15px * var(--scale));  /* air before the first row */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the title label's authored tracking */
@@ -76,7 +76,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
 .infographic-title::before {
   content: '';                     /* pseudo-elements render only with content set */
   flex-shrink: 0;                  /* a long title never squeezes the dash */
-  width: calc(30px * var(--scale));  /* short on purpose — a mark, not a rule */
+  width: calc(32px * var(--scale));  /* short on purpose — a mark, not a rule */
   height: var(--accent-weight);    /* the title dash's authored accent weight */
   background: var(--accent);       /* the accent announces the tower */
   transform: skewX(-8deg);         /* SKEW: leans with the rows below */
@@ -88,7 +88,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* a simple vertical stack */
   flex-direction: column;          /* one timing row under another */
   gap: calc(4px * var(--scale));   /* hairline air — the tower reads as one unit */
-  min-width: calc(320px * var(--scale));  /* short codes still get a confident tower width */
+  min-width: calc(337px * var(--scale));  /* short codes still get a confident tower width */
 }
 
 /* One timing row: [position chip][code ....... gap]. The row itself carries no lean —
@@ -98,7 +98,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   z-index: 0;                      /* own stacking context — the negative slab layers stay inside this row */
   display: flex;                   /* chip, code and gap share one line */
   align-items: stretch;            /* the chip runs the full row height */
-  padding-right: calc(18px * var(--scale));  /* air between the gap figure and the slab edge */
+  padding-right: calc(19px * var(--scale));  /* air between the gap figure and the slab edge */
   will-change: transform, opacity; /* hint the browser: the cascade animates this row */
 }
 
@@ -120,8 +120,8 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* centers the number ... */
   align-items: center;             /* ... vertically ... */
   justify-content: center;         /* ... and horizontally on the chip */
-  width: calc(40px * var(--scale));  /* a chip, wide enough for two digits */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* small and heavy — a rank, not a headline */
+  width: calc(42px * var(--scale));  /* a chip, wide enough for two digits */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small and heavy — a rank, not a headline */
   font-weight: 800;                /* maximum punch at chip size */
   font-variant-numeric: tabular-nums;  /* ranks share one width down the tower */
   color: var(--accent-ink);        /* the family's ink on an accent-filled chip */
@@ -141,11 +141,11 @@ export const ig03: TemplateVariant = defineInfographicVariant(
    padding sets the row height (the chip stretches to match). */
 .infographic-code {
   align-self: center;              /* sit on the row's center line, not stretched */
-  margin-left: calc(16px * var(--scale));  /* air between the chip and the code */
+  margin-left: calc(17px * var(--scale));  /* air between the chip and the code */
   margin-right: auto;              /* push the gap figure to the right edge */
-  padding: calc(7px * var(--scale)) calc(28px * var(--scale)) calc(7px * var(--scale)) 0;
+  padding: calc(7px * var(--scale)) calc(29px * var(--scale)) calc(7px * var(--scale)) 0;
                                    /* vertical = row height; right = code and gap NEVER touch */
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly the loudest text in the row */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* clearly the loudest text in the row */
   font-weight: 700;                /* heavy caps carry the code */
   line-height: 1.15;               /* tight — condensed caps need little leading */
   letter-spacing: 0.04em;          /* a touch of air between the caps */
@@ -157,7 +157,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
 /* The gap figure — right-aligned and dimmed, so the chips stay the color moment. */
 .infographic-gap {
   align-self: center;              /* sit on the row's center line, not stretched */
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate to the code */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* clearly subordinate to the code */
   font-weight: 600;                /* semibold — legible without competing */
   font-variant-numeric: tabular-nums;  /* digits share one width — gaps align as they tick */
   color: var(--text-dim);          /* secondary figures dim - one accent dose per row */

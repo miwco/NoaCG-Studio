@@ -64,7 +64,7 @@ export const nm03: TemplateVariant = defineRevealVariant(
 /* The kicker. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(17px * var(--scale) * var(--type-scale));
+  font-size: calc(28px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -73,7 +73,7 @@ export const nm03: TemplateVariant = defineRevealVariant(
 
 /* The category. */
 .${P}-title {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(67px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   letter-spacing: var(--display-tracking);
@@ -82,20 +82,20 @@ export const nm03: TemplateVariant = defineRevealVariant(
 
 /* One nominee — a line in a list, ruled beneath. */
 .${P}-nominee {
-  padding: calc(10px * var(--scale)) calc(6px * var(--scale));
+  padding: calc(17px * var(--scale)) calc(11px * var(--scale));
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-  min-width: calc(420px * var(--scale));
+  min-width: calc(707px * var(--scale));
 }
 
 .${P}-nominee-name {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(57px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   color: var(--text-color);
 }
 
 .${P}-nominee-detail {
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;

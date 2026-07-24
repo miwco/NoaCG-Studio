@@ -50,9 +50,9 @@ ${lineMasks(o, '        ')}
 .lower-third-box {
   display: flex;                    /* words and hairline on one row */
   align-items: stretch;             /* the hairline runs the block's full height */
-  gap: calc(22px * var(--scale));   /* the gap between the rows and their rule */
+  gap: calc(34px * var(--scale));   /* the gap between the rows and their rule */
   text-align: right;                /* rows are ragged-LEFT: they align to the hairline */
-  padding: calc(42px * var(--scale)) calc(32px * var(--scale)) calc(44px * var(--scale)) calc(170px * var(--scale));
+  padding: calc(65px * var(--scale)) calc(49px * var(--scale)) calc(68px * var(--scale)) calc(262px * var(--scale));
   background: radial-gradient(ellipse 88% 105% at 88% 50%,
               var(--panel-bg) 0%,
               color-mix(in srgb, var(--panel-bg) 55%, transparent) 48%,
@@ -75,7 +75,7 @@ ${lineMasks(o, '        ')}
 
 /* Name (f0) — cinema setting: light weight, wide tracking. */
 .lower-third-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(62px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */
@@ -84,19 +84,19 @@ ${lineMasks(o, '        ')}
 
 /* Role (f1) — a reading line, quieter than the name. */
 .lower-third-title {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.35;                /* secondary text gets room to breathe */
   letter-spacing: 0.03em;           /* a hint of the family's openness */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(8px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Organisation and note (f2, f3) — both drop to the label voice; the note goes smaller
    still, which is what keeps four rows from reading as a wall. */
 .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the label size for this design */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* the label size for this design */
   font-weight: 500;                 /* medium keeps tracked caps crisp at this size */
   line-height: 1.45;                /* wide tracking needs matching leading */
   letter-spacing: var(--label-tracking);  /* 0.34em — the family's signature */
@@ -106,12 +106,12 @@ ${lineMasks(o, '        ')}
 
 /* The organisation row opens the credit band. */
 .lower-third-text .lower-third-mask:nth-child(3) {
-  margin-top: calc(14px * var(--scale));  /* separated from the role above */
+  margin-top: calc(22px * var(--scale));  /* separated from the role above */
 }
 
 /* The note row (f3) — the quietest thing on screen: smaller and dimmer than the band. */
 .lower-third-text .lower-third-mask:nth-child(4) .lower-third-extra {
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* the smallest voice in the pack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the pack */
   color: color-mix(in srgb, var(--text-dim) 75%, transparent);  /* one step below the band */
 }`,
     hasAccent: true,

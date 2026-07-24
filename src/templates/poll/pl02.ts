@@ -53,8 +53,8 @@ export const pl02: TemplateVariant = definePollVariant(
    own — the panel and the accent edge are painted on pseudo-layers below. */
 .poll-box {
   position: relative;              /* anchors the painted slab (::before) and edge (::after) */
-  padding: calc(24px * var(--scale)) calc(44px * var(--scale)) calc(22px * var(--scale)) calc(48px * var(--scale));
-  min-width: calc(470px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
+  padding: calc(37px * var(--scale)) calc(68px * var(--scale)) calc(34px * var(--scale)) calc(74px * var(--scale));
+  min-width: calc(723px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
 }
 
 /* The painted slab: the sport lean lives HERE, on a background layer no preset ever tweens. */
@@ -86,8 +86,8 @@ export const pl02: TemplateVariant = definePollVariant(
 .poll-cue {
   position: relative;              /* anchors the painted tab (::before) */
   display: inline-block;           /* the tab hugs its own text */
-  margin-bottom: calc(12px * var(--scale));  /* air under the tab */
-  padding: calc(5px * var(--scale)) calc(14px * var(--scale));
+  margin-bottom: calc(18px * var(--scale));  /* air under the tab */
+  padding: calc(8px * var(--scale)) calc(22px * var(--scale));
   will-change: transform, opacity; /* it pops in, and leaves when voting closes */
 }
 .poll-cue::before {
@@ -99,7 +99,7 @@ export const pl02: TemplateVariant = definePollVariant(
   transform: skewX(-8deg);         /* the family lean */
 }
 .poll-cue-text {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* kicker scale */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* kicker scale */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast cue is always caps */
@@ -108,7 +108,7 @@ export const pl02: TemplateVariant = definePollVariant(
 
 /* The question — condensed heavy caps, the loudest thing on the slab. */
 .poll-mask > span {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
+  font-size: calc(52px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -118,10 +118,10 @@ export const pl02: TemplateVariant = definePollVariant(
 
 /* The chart — one row per option, rendered at runtime. */
 #poll-rows {
-  margin-top: calc(20px * var(--scale));  /* clear break between question and bars */
+  margin-top: calc(31px * var(--scale));  /* clear break between question and bars */
   display: flex;                   /* a simple vertical stack… */
   flex-direction: column;          /* …one row per option */
-  gap: calc(14px * var(--scale));  /* even air between the rows */
+  gap: calc(22px * var(--scale));  /* even air between the rows */
 }
 
 /* One option row — its label and share above, its bar below. */
@@ -129,11 +129,11 @@ export const pl02: TemplateVariant = definePollVariant(
   display: flex;                   /* label on the left… */
   align-items: baseline;           /* …share on the right, on one baseline */
   justify-content: space-between;  /* the share sits at the far end of the measure */
-  gap: calc(16px * var(--scale));  /* a long label never runs into its figure */
-  margin-bottom: calc(6px * var(--scale));  /* air between the label row and its bar */
+  gap: calc(25px * var(--scale));  /* a long label never runs into its figure */
+  margin-bottom: calc(9px * var(--scale));  /* air between the label row and its bar */
 }
 .poll-row-label {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* list scale — under the question */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* list scale — under the question */
   font-weight: 700;                /* heavy enough to read at a glance */
   letter-spacing: 0.04em;          /* slight air between the caps */
   line-height: 1.2;                /* leading if a long option wraps */
@@ -143,7 +143,7 @@ export const pl02: TemplateVariant = definePollVariant(
 }
 .poll-row-value {
   flex-shrink: 0;                  /* the figure never wraps or squeezes */
-  font-size: calc(23px * var(--scale) * var(--type-scale));  /* the number is the row's headline */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* the number is the row's headline */
   font-weight: 700;                /* the number carries the row */
   font-variant-numeric: tabular-nums;  /* the figures line up as they count */
   color: var(--accent);            /* the share wears the accent */
@@ -151,7 +151,7 @@ export const pl02: TemplateVariant = definePollVariant(
 
 /* The bar track — a square-cut groove the fill grows along. */
 .poll-bar {
-  height: calc(14px * var(--scale));  /* a chunky, readable bar */
+  height: calc(22px * var(--scale));  /* a chunky, readable bar */
   background: color-mix(in srgb, var(--text-color) 10%, transparent);  /* faint on-palette groove */
   overflow: hidden;                /* the fill never escapes the groove */
 }
@@ -162,8 +162,8 @@ export const pl02: TemplateVariant = definePollVariant(
 
 /* The reporting line — quiet, under the bars. */
 .poll-foot {
-  margin-top: calc(18px * var(--scale));  /* air under the chart */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* the quietest text on the slab */
+  margin-top: calc(28px * var(--scale));  /* air under the chart */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest text on the slab */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast footnote is caps */
@@ -182,10 +182,10 @@ export const pl02: TemplateVariant = definePollVariant(
   color: var(--accent);            /* the winning option wears the accent */
 }
 .poll-winner .poll-row-value {
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* the winning figure grows */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* the winning figure grows */
 }
 .poll-winner .poll-bar {
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);  /* the winning groove is ringed */
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--accent);  /* the winning groove is ringed */
 }
 
 /* Tied — nobody leads, so nobody is marked. The board says so instead of picking a row. */

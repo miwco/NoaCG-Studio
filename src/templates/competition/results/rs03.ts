@@ -49,10 +49,10 @@ export const rs03: TemplateVariant = defineResultsVariant(
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(16px * var(--scale));
-  padding-left: calc(20px * var(--scale));
-  min-width: calc(430px * var(--scale));
-  text-shadow: 0 calc(2px * var(--scale)) calc(12px * var(--scale)) rgba(0, 0, 0, 0.55);
+  gap: calc(27px * var(--scale));
+  padding-left: calc(34px * var(--scale));
+  min-width: calc(724px * var(--scale));
+  text-shadow: 0 calc(3px * var(--scale)) calc(20px * var(--scale)) rgba(0, 0, 0, 0.55);
 }
 
 /* The accent — a hairline rule between the heading and the line-up. */
@@ -65,7 +65,7 @@ export const rs03: TemplateVariant = defineResultsVariant(
 /* The heading. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -73,7 +73,7 @@ export const rs03: TemplateVariant = defineResultsVariant(
 }
 
 .${P}-title {
-  font-size: calc(32px * var(--scale) * var(--type-scale));
+  font-size: calc(54px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   letter-spacing: var(--display-tracking);
@@ -82,25 +82,25 @@ export const rs03: TemplateVariant = defineResultsVariant(
 
 /* The crest slot — plateless; empty shows nothing at all. */
 .${P}-logo {
-  width: calc(52px * var(--scale));
-  height: calc(52px * var(--scale));
+  width: calc(87px * var(--scale));
+  height: calc(87px * var(--scale));
 }
 
 /* One player row — separated by a hairline instead of boxed. */
 .${P}-row {
-  padding: calc(7px * var(--scale)) 0;
+  padding: calc(12px * var(--scale)) 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .${P}-row-index {
-  min-width: calc(20px * var(--scale));
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  min-width: calc(34px * var(--scale));
+  font-size: calc(22px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-dim);
 }
 
 .${P}-row-name {
-  font-size: calc(23px * var(--scale) * var(--type-scale));
+  font-size: calc(39px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.14;
   color: var(--text-color);
@@ -108,7 +108,7 @@ export const rs03: TemplateVariant = defineResultsVariant(
 
 .${P}-row-note {
   flex-shrink: 0;
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;

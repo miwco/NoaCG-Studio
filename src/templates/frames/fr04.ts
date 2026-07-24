@@ -69,41 +69,41 @@ export const fr04: TemplateVariant = defineFrameVariant(
    no shadow. The interiors are never filled. */
 .frame-window {
   border: 1px solid rgba(255, 255, 255, 0.35);  /* the family's one keyline */
-  border-radius: calc(3px * var(--scale));      /* minimal corners: 0-3px, never a pill */
+  border-radius: calc(4px * var(--scale));      /* minimal corners: 0-3px, never a pill */
 }
 
 /* The content window — the shared screen. */
 .frame-window-content {
-  left: calc(96px * var(--scale));      /* content x — see this design's header */
-  top: calc(132px * var(--scale));      /* content y */
-  width: calc(1372px * var(--scale));   /* content width (16:9 with the height below) */
-  height: calc(772px * var(--scale));   /* content height */
+  left: calc(113px * var(--scale));      /* content x — see this design's header */
+  top: calc(155px * var(--scale));      /* content y */
+  width: calc(1614px * var(--scale));   /* content width (16:9 with the height below) */
+  height: calc(908px * var(--scale));   /* content height */
 }
 
 /* The presenter inset — the camera, small and beside the content rather than over it, so
    nothing the presenter is showing is ever covered by the presenter. */
 .frame-window-inset {
-  left: calc(1500px * var(--scale));    /* inset x */
-  top: calc(132px * var(--scale));      /* aligned with the content window's top edge */
-  width: calc(324px * var(--scale));    /* inset width (16:9 with the height below) */
-  height: calc(182px * var(--scale));   /* inset height */
+  left: calc(1765px * var(--scale));    /* inset x */
+  top: calc(155px * var(--scale));      /* aligned with the content window's top edge */
+  width: calc(381px * var(--scale));    /* inset width (16:9 with the height below) */
+  height: calc(214px * var(--scale));   /* inset height */
   border-color: var(--accent);          /* the accent's one moment: it marks the live camera */
 }
 
 /* The label strip — under the content window, aligned to its left edge. */
 .frame-plate {
   position: absolute;              /* placed against the stage, in design px */
-  left: calc(96px * var(--scale));    /* aligned with the content window's left edge */
-  top: calc(936px * var(--scale));    /* content y + content height + 32px of air */
-  max-width: calc(1372px * var(--scale));  /* never wider than the window it labels */
+  left: calc(113px * var(--scale));    /* aligned with the content window's left edge */
+  top: calc(1101px * var(--scale));    /* content y + content height + 32px of air */
+  max-width: calc(1614px * var(--scale));  /* never wider than the window it labels */
   will-change: transform, opacity; /* the strip settles in after the edges */
 }
 
 /* The accent rule above the label — the minimal family's one drawn accent. */
 .frame-plate-rule {
-  width: calc(72px * var(--scale));  /* a short rule, not a full-width edge */
+  width: calc(85px * var(--scale));  /* a short rule, not a full-width edge */
   height: var(--accent-weight);      /* the family's rule weight */
-  margin-bottom: calc(12px * var(--scale));  /* air between the rule and the topic */
+  margin-bottom: calc(14px * var(--scale));  /* air between the rule and the topic */
   background: var(--accent);         /* the one accent surface */
 }
 
@@ -113,7 +113,7 @@ export const fr04: TemplateVariant = defineFrameVariant(
 
 /* The topic — what is on the big window. The strip's one display line. */
 .frame-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* label-strip size (1080p reference) */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* label-strip size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -126,13 +126,13 @@ export const fr04: TemplateVariant = defineFrameVariant(
   display: flex;                   /* the two facts share one row */
   flex-wrap: wrap;                 /* a long pair wraps instead of running off the strip */
   align-items: baseline;           /* both sit on the same text baseline */
-  gap: calc(16px * var(--scale));  /* clear air between two kinds of information */
-  margin-top: calc(8px * var(--scale));  /* topic → footer: one clear break */
+  gap: calc(19px * var(--scale));  /* clear air between two kinds of information */
+  margin-top: calc(9px * var(--scale));  /* topic → footer: one clear break */
 }
 
 /* The presenter — tracked caps, the strip's label voice. */
 .frame-role {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.3;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -143,10 +143,10 @@ export const fr04: TemplateVariant = defineFrameVariant(
 
 /* The detail — the quietest voice on the strip; gone entirely when cleared (:empty). */
 .frame-detail {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the same size as the credit… */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the same size as the credit… */
   font-weight: 400;                /* …with contrast through weight, not more fonts */
   line-height: 1.3;                /* compact leading */
-  padding-left: calc(16px * var(--scale));  /* air after the divider */
+  padding-left: calc(19px * var(--scale));  /* air after the divider */
   border-left: 1px solid rgba(255, 255, 255, 0.3);  /* a hairline divider between the two facts */
   color: var(--text-dim);          /* dimmed — never full white twice */
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);  /* legibility over an unknown picture */

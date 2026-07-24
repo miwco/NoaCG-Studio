@@ -91,7 +91,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift + the 1px inner edge */
   overflow: hidden;                 /* the accent edge follows the rounded corner */
-  min-width: calc(230px * var(--scale));  /* several of these often sit in a column — one width */
+  min-width: calc(329px * var(--scale));  /* several of these often sit in a column — one width */
 }
 
 /* The accent edge — the graphic's accent node. */
@@ -104,7 +104,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 .lower-third-text {
   min-width: 0;                     /* let it shrink so long city names wrap */
-  padding: calc(14px * var(--scale)) calc(24px * var(--scale)) calc(16px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(20px * var(--scale)) calc(34px * var(--scale)) calc(23px * var(--scale)) calc(29px * var(--scale));
 }
 
 /* The city row: name and zone abbreviation on one baseline. */
@@ -112,7 +112,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   display: flex;                    /* city and zone in a row… */
   flex-wrap: wrap;                  /* …wrapping only if the city is genuinely long */
   align-items: baseline;            /* one shared baseline */
-  gap: calc(9px * var(--scale));
+  gap: calc(13px * var(--scale));
   min-width: 0;                     /* allow shrinking */
 }
 .lower-third-cityrow > .lower-third-mask {
@@ -122,7 +122,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The city (f0). */
 .lower-third-name {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the label above the figure */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* the label above the figure */
   font-weight: 700;                 /* bold — tracked caps at this size need the weight */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -132,7 +132,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The zone abbreviation (f1) — in the accent, so the pair reads as one place-and-zone label. */
 .lower-third-zone {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a suffix, not a line */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a suffix, not a line */
   font-weight: 700;                 /* bold — three small caps need the weight */
   line-height: 1.2;                 /* matches the city's rhythm */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -143,22 +143,22 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The computed time — the card's headline, and the reason it exists. */
 .lower-third-clock {
-  font-size: calc(52px * var(--scale) * var(--type-scale));  /* the figure is the content */
+  font-size: calc(74px * var(--scale) * var(--type-scale));  /* the figure is the content */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.02;                /* one tight figure */
   letter-spacing: 0.01em;           /* a hair of air between figures */
   ${TABULAR_FIGURES}
   color: var(--text-color);         /* primary text color */
-  margin-top: calc(4px * var(--scale));  /* tied to the city row above it */
+  margin-top: calc(6px * var(--scale));  /* tied to the city row above it */
 }
 
 /* The context (f2) — why this city is on screen. */
 .lower-third-extra {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 400;                 /* regular — reference, not billing */
   line-height: 1.3;                 /* room if it wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(4px * var(--scale));  /* tied to the figure above it */
+  margin-top: calc(6px * var(--scale));  /* tied to the figure above it */
 }
 
 ${dataSourceCss}`,

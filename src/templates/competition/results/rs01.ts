@@ -50,17 +50,17 @@ export const rs01: TemplateVariant = defineResultsVariant(
 .${P}-box {
   display: flex;                   /* head above the line-up */
   flex-direction: column;
-  gap: calc(18px * var(--scale));
-  padding: calc(22px * var(--scale)) calc(26px * var(--scale)) calc(24px * var(--scale));
+  gap: calc(26px * var(--scale));
+  padding: calc(31px * var(--scale)) calc(37px * var(--scale)) calc(34px * var(--scale));
   background: var(--panel-bg);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow);
-  min-width: calc(520px * var(--scale));
+  min-width: calc(743px * var(--scale));
 }
 
 /* The accent rule between the heading and the line-up. */
 .${P}-accent {
-  height: calc(3px * var(--scale));
+  height: calc(4px * var(--scale));
   background: var(--accent);
   transform-origin: left center;
 }
@@ -68,7 +68,7 @@ export const rs01: TemplateVariant = defineResultsVariant(
 /* The heading: the kicker above the team name. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(16px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -76,7 +76,7 @@ export const rs01: TemplateVariant = defineResultsVariant(
 }
 
 .${P}-title {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(54px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;
   letter-spacing: var(--display-tracking);
@@ -95,20 +95,20 @@ export const rs01: TemplateVariant = defineResultsVariant(
 /* One player row. */
 .${P}-row {
   position: relative;              /* anchors the spotlight block */
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale)) calc(8px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(17px * var(--scale)) calc(11px * var(--scale)) calc(20px * var(--scale));
   background: rgba(0, 0, 0, 0.32);
 }
 
 .${P}-row-index {
-  min-width: calc(22px * var(--scale));
+  min-width: calc(31px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 700;
   color: var(--accent);
 }
 
 .${P}-row-name {
-  font-size: calc(26px * var(--scale) * var(--type-scale));
+  font-size: calc(37px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   text-transform: uppercase;
@@ -119,7 +119,7 @@ export const rs01: TemplateVariant = defineResultsVariant(
 .${P}-row-note {
   flex-shrink: 0;
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -145,7 +145,7 @@ export const rs01: TemplateVariant = defineResultsVariant(
   left: 0;
   top: 0;
   bottom: 0;
-  width: calc(5px * var(--scale));
+  width: calc(7px * var(--scale));
   background: var(--accent);
 }
 

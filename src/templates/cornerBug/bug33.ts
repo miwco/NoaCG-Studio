@@ -44,8 +44,8 @@ ${bugLineMasks(o)}
 .corner-bug-box {
   display: flex;                   /* the two words sit side by side */
   align-items: center;             /* both on one baseline */
-  gap: calc(12px * var(--scale));  /* air around the divider dot */
-  padding: calc(8px * var(--scale)) calc(16px * var(--scale));  /* even air inside the chip */
+  gap: calc(16px * var(--scale));  /* air around the divider dot */
+  padding: calc(11px * var(--scale)) calc(21px * var(--scale));  /* even air inside the chip */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -55,7 +55,7 @@ ${bugLineMasks(o)}
 
 /* The location (f0) — display caps: the word the viewer reads first. */
 .corner-bug-name {
-  font-size: calc(17px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
+  font-size: calc(23px * var(--scale) * var(--type-scale));   /* compact — a chip, not a strap */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -72,9 +72,9 @@ ${bugLineMasks(o)}
 }
 .corner-bug-mask + .corner-bug-mask::before {
   content: '';                     /* pseudo-elements need content to render */
-  width: calc(5px * var(--scale)); /* a small dot… */
-  height: calc(5px * var(--scale));/* …round */
-  margin-right: calc(12px * var(--scale));  /* air between the dot and the status */
+  width: calc(7px * var(--scale)); /* a small dot… */
+  height: calc(7px * var(--scale));/* …round */
+  margin-right: calc(16px * var(--scale));  /* air between the dot and the status */
   border-radius: 50%;              /* the divider dot */
   background: var(--accent);       /* the one accent moment */
   box-shadow: var(--accent-glow);  /* the house glow, on the accent only */
@@ -85,7 +85,7 @@ ${bugLineMasks(o)}
 .corner-bug-title,
 .corner-bug-extra {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house label tracking */

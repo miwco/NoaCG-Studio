@@ -63,8 +63,8 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
   display: flex;                   /* the kicker and the row stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* both centred on the strip's axis */
-  gap: calc(10px * var(--scale));  /* air between the kicker and the marks */
-  padding: calc(14px * var(--scale)) calc(24px * var(--scale));  /* even air inside the panel */
+  gap: calc(13px * var(--scale));  /* air between the kicker and the marks */
+  padding: calc(19px * var(--scale)) calc(32px * var(--scale));  /* even air inside the panel */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -75,7 +75,7 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
 /* The kicker (f0) — the house mono label voice, small and tracked. */
 .corner-bug-name {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house label tracking */
@@ -87,7 +87,7 @@ ${slots.map((s) => bugSlotHtml(s, 'bars', '        ')).join('\n')}
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(30px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  gap: calc(40px * var(--scale));  /* generous air — partner marks must not read as one logo */
 }
 
 ${bugSlotCss({ width: 96, height: 40, mark: 'bars' })}`,

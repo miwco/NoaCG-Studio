@@ -48,7 +48,7 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
    its own — the family skew lives on the pseudo-layers below. */
 .game-timer-box {
   position: relative;              /* anchors the painted slab (::before) and edge (::after) */
-  padding: calc(18px * var(--scale)) calc(34px * var(--scale));  /* tight vertical, wide horizontal */
+  padding: calc(19px * var(--scale)) calc(36px * var(--scale));  /* tight vertical, wide horizontal */
 }
 
 /* The painted slab: the sport lean lives HERE, on a background layer no preset ever
@@ -80,7 +80,7 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
    stays the single accent dose while the clock runs. */
 .game-timer-label {
   color: var(--label-color);       /* the label's authored colour */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — clearly a label, not a headline */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* sport graphics shout, whatever the operator types */
@@ -88,8 +88,8 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
 
 /* The clock: the loudest thing on screen — big, heavy, dead straight. */
 .game-timer-clock {
-  margin-top: calc(10px * var(--scale));  /* small gap: chip + clock read as one unit */
-  font-size: calc(76px * var(--scale) * var(--type-scale));  /* headline scale — readable from the back row */
+  margin-top: calc(11px * var(--scale));  /* small gap: chip + clock read as one unit */
+  font-size: calc(80px * var(--scale) * var(--type-scale));  /* headline scale — readable from the back row */
   font-weight: 900;                /* maximum impact weight (sport hits hard) */
   line-height: 1.05;               /* tight — big digits need little leading */
   letter-spacing: 0.02em;          /* a touch of air between the heavy digits */

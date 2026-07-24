@@ -107,7 +107,7 @@ ${decl('background', 'var(--accent)', 'the accent-filled chip')}
 ${decl('color', 'var(--accent-ink)', 'dark ink on the accent fill — the family token')}
 ${decl('border-radius', 'var(--panel-radius)', "follows the family's corner treatment")}
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(18), 'small: the chip is a mark, not a headline')}
+${decl('font-size', typeSize(20), 'small: the chip is a mark, not a headline')}
 ${decl('font-weight', '700', 'bold keeps small caps legible on a filled chip')}
 ${decl('line-height', '1.2', 'one tight label line')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}
@@ -152,7 +152,7 @@ ${decl('margin-top', px(22), 'set clearly apart from the details above')}
 /* The contact line (f4) — where to get updates. The card's quietest voice. */
 .${P}-contact {
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(18), 'the smallest type on the card')}
+${decl('font-size', typeSize(20), 'the smallest type on the card')}
 ${decl('font-weight', '600', 'semibold keeps small type legible')}
 ${decl('line-height', '1.3', 'a long contact line wraps tidily')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}

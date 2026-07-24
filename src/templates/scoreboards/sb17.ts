@@ -71,9 +71,9 @@ ${colourHolderHtml('f5', '#ef0107')}
 /* The card — the house void, with the family's amber top edge. */
 .scoreboard-box {
   position: relative;              /* anchors the accent edge */
-  min-width: calc(440px * var(--scale));  /* a card, not a strap */
+  min-width: calc(518px * var(--scale));  /* a card, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(16px * var(--scale)) calc(28px * var(--scale)) calc(16px * var(--scale)) calc(34px * var(--scale));
+  padding: calc(19px * var(--scale)) calc(33px * var(--scale)) calc(19px * var(--scale)) calc(40px * var(--scale));
   background: var(--panel-bg);     /* the house void — retints through the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -97,11 +97,11 @@ ${colourHolderHtml('f5', '#ef0107')}
   display: flex;                   /* the two ends of the row… */
   align-items: baseline;           /* …on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(20px * var(--scale));  /* the minute never crowds a long event word */
+  gap: calc(24px * var(--scale));  /* the minute never crowds a long event word */
 }
 .scoreboard-event {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
@@ -110,7 +110,7 @@ ${colourHolderHtml('f5', '#ef0107')}
 }
 .scoreboard-minute {
   font-family: var(--font-label);  /* mono: the minute is data, not display type */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* level with the event word */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* level with the event word */
   font-weight: 500;                /* one mono voice across the header */
   line-height: 1.2;                /* on the header's baseline */
   color: var(--text-dim);          /* dimmed — the minute is a stamp, not the headline */
@@ -120,7 +120,7 @@ ${colourHolderHtml('f5', '#ef0107')}
 
 /* The club — the card's biggest line, in house display type. */
 .scoreboard-club {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the card's anchor */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* the card's anchor */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -128,7 +128,7 @@ ${colourHolderHtml('f5', '#ef0107')}
 }
 .scoreboard-club-mask {
   display: block;                  /* the club owns its own row */
-  margin-top: calc(6px * var(--scale));  /* air under the header row */
+  margin-top: calc(7px * var(--scale));  /* air under the header row */
 }
 
 ${clipOneLineCss('.scoreboard-club', 340)}
@@ -137,15 +137,15 @@ ${clipOneLineCss('.scoreboard-club', 340)}
 .scoreboard-people {
   display: flex;                   /* the two rows… */
   flex-direction: column;          /* …stacked as one column */
-  gap: calc(6px * var(--scale));   /* the rows read as a pair */
-  margin-top: calc(12px * var(--scale));  /* air above the keyline */
-  padding-top: calc(12px * var(--scale));  /* air under the keyline */
+  gap: calc(7px * var(--scale));   /* the rows read as a pair */
+  margin-top: calc(14px * var(--scale));  /* air above the keyline */
+  padding-top: calc(14px * var(--scale));  /* air under the keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.12);  /* the house keyline */
 }
 .scoreboard-person {
   display: flex;                   /* mark and name in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(12px * var(--scale));  /* air between them */
+  gap: calc(14px * var(--scale));  /* air between them */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
 
@@ -153,8 +153,8 @@ ${clipOneLineCss('.scoreboard-club', 340)}
    squares rather than arrows: an arrow is right for a substitution and wrong for a booking. */
 .scoreboard-rolemark {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(10px * var(--scale));  /* small — it marks the row, it does not label it */
-  height: calc(10px * var(--scale));  /* square, in keeping with the house chips */
+  width: calc(12px * var(--scale));  /* small — it marks the row, it does not label it */
+  height: calc(12px * var(--scale));  /* square, in keeping with the house chips */
   border-radius: calc(2px * var(--scale));  /* the house's small-chip radius */
   background: var(--team-a, var(--text-dim));  /* the club's own colour */
 }
@@ -165,7 +165,7 @@ ${clipOneLineCss('.scoreboard-club', 340)}
 
 /* The name — clearly subordinate to the club, still readable in a single frame. */
 .scoreboard-name {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* a step under the club */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a step under the club */
   font-weight: 500;                /* medium — the club above carries the weight */
   line-height: 1.25;               /* comfortable at this size */
   color: var(--text-color);        /* primary text — these are the people the card is about */

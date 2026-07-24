@@ -71,7 +71,7 @@ ${lineMasks(o, '        ')}
 .lower-third-box {
   display: flex;                    /* the three pieces sit side by side */
   align-items: center;              /* …vertically centred against each other */
-  gap: calc(24px * var(--scale));   /* one even gap between all three pieces */
+  gap: calc(28px * var(--scale));   /* one even gap between all three pieces */
 }
 
 /* The words. min-width: 0 lets this flex item shrink, so a long unbroken name wraps
@@ -92,15 +92,15 @@ ${lineMasks(o, '        ')}
 
 /* The mark (the ${logoField} image field) — sized to sit beside two lines of type. */
 .lower-third-logo {
-  width: calc(72px * var(--scale));   /* mark box width */
-  height: calc(56px * var(--scale));  /* shorter than it is wide: wordmarks are the common case */
+  width: calc(85px * var(--scale));   /* mark box width */
+  height: calc(66px * var(--scale));  /* shorter than it is wide: wordmarks are the common case */
   object-fit: contain;              /* show the whole logo, never crop it */
   flex: none;                       /* long names never squeeze the mark */
 }
 
 /* The name — editorial weight: set, not shouted. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.06;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -110,13 +110,13 @@ ${lineMasks(o, '        ')}
 /* The role — the tracked caps line, in the accent colour. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* whatever the operator types reads as a kicker */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-top: calc(10px * var(--scale));  /* clear air below the name */
+  margin-top: calc(12px * var(--scale));  /* clear air below the name */
 }`,
       hasAccent: true,
     };

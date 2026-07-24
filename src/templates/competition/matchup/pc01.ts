@@ -74,17 +74,17 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 
 /* The portrait — cropped square-cut, with a dim plate until a file lands in it. */
 .${P}-portrait {
-  margin-left: calc(20px * var(--scale));  /* clears the accent slab */
+  margin-left: calc(29px * var(--scale));  /* clears the accent slab */
   background: rgba(255, 255, 255, 0.05);
 }
 
 /* The tagline above the name. */
 .${P}-tagline {
-  padding: calc(4px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(17px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   font-family: var(--font-label);
-  font-size: calc(16px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -92,7 +92,7 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 
 /* The name — the loudest type on the card. */
 .${P}-name {
-  font-size: calc(76px * var(--scale) * var(--type-scale));
+  font-size: calc(109px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   letter-spacing: var(--display-tracking);
@@ -103,7 +103,7 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 /* The role / team line. */
 .${P}-role {
   font-family: var(--font-label);
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(31px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -117,7 +117,7 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 
 /* The stat block: figure over label, in a row of columns. */
 .${P}-stat-value {
-  font-size: calc(44px * var(--scale) * var(--type-scale));
+  font-size: calc(63px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -126,7 +126,7 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 
 .${P}-stat-label {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -136,7 +136,7 @@ export const pc01: TemplateVariant = defineMatchupVariant(
 /* ── The MVP flourish (its own state — the control page offers it as a button). ── */
 
 .${P}-mvp .${P}-tagline {
-  box-shadow: 0 0 calc(26px * var(--scale)) color-mix(in srgb, var(--accent) 65%, transparent);
+  box-shadow: 0 0 calc(37px * var(--scale)) color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 .${P}-mvp .${P}-name {

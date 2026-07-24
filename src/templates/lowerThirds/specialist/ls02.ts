@@ -68,7 +68,7 @@ ${personColumn(o, right, classes)}
   grid-auto-flow: column;           /* …as columns, in document order */
   grid-auto-columns: auto;          /* each card tracks its own text */
   align-items: start;               /* a wrapped name doesn't drag the other card down */
-  column-gap: calc(22px * var(--scale));  /* the gap IS the composition — real air, not a divider */
+  column-gap: calc(24px * var(--scale));  /* the gap IS the composition — real air, not a divider */
 }
 
 /* One person's card — the glass family's surface: blurred, softly cornered, lightly lifted. */
@@ -76,8 +76,8 @@ ${personColumn(o, right, classes)}
   display: flex;                    /* name over role */
   flex-direction: column;           /* top to bottom */
   min-width: 0;                     /* allow shrinking — long names wrap instead of overflowing */
-  max-width: calc(460px * var(--scale));  /* one long value wraps in its own card */
-  padding: calc(18px * var(--scale)) calc(26px * var(--scale)) calc(20px * var(--scale)) calc(24px * var(--scale));
+  max-width: calc(511px * var(--scale));  /* one long value wraps in its own card */
+  padding: calc(20px * var(--scale)) calc(29px * var(--scale)) calc(22px * var(--scale)) calc(27px * var(--scale));
   background: var(--panel-bg);      /* the family's translucent white */
   backdrop-filter: var(--panel-blur);  /* the frost itself */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -102,7 +102,7 @@ ${personColumn(o, right, classes)}
 
 /* The name — this card's primary voice. */
 .lower-third-name {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* headline size at card scale */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size at card scale */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;                /* room for a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -111,13 +111,13 @@ ${personColumn(o, right, classes)}
 
 /* The role — dimmed, never a second white. */
 .lower-third-title {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 500;                 /* medium keeps small caps crisp */
   line-height: 1.3;                 /* room if the role wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the label voice */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(6px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(7px * var(--scale));  /* tied to the name above it */
 }`,
       // No .lower-third-accent element: each card paints its own edge, and a single node
       // could only ever belong to one of the two. The presets fall back to fading the box,

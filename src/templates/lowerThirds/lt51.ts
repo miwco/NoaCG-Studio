@@ -59,7 +59,7 @@ ${lineMasks(o)}
 .lower-third-box {
   margin-top: var(--accent-weight);  /* starts where the accent bar ends — fused */
   text-align: center;               /* the symmetric composition this design is built on */
-  padding: calc(20px * var(--scale)) calc(56px * var(--scale)) calc(22px * var(--scale));
+  padding: calc(21px * var(--scale)) calc(59px * var(--scale)) calc(23px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -68,7 +68,7 @@ ${lineMasks(o)}
 
 /* The name — the strap's one heavy element. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.06;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -78,7 +78,7 @@ ${lineMasks(o)}
 /* The role — the house label voice: mono caps, tracked, in the accent colour. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -86,7 +86,7 @@ ${lineMasks(o)}
                                        without this the centred line sits left of centre */
   text-transform: uppercase;        /* whatever the operator types reads as a label */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-top: calc(10px * var(--scale));  /* clear air below the name */
+  margin-top: calc(11px * var(--scale));  /* clear air below the name */
 }`,
     hasAccent: true,
   }),

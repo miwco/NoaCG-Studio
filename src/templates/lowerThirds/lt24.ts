@@ -61,12 +61,12 @@ ${lineMasks(o, '        ')}
 
 /* The text block — transparent; whitespace and one rule carry the structure. */
 .lower-third-box {
-  padding-left: calc(30px * var(--scale));  /* room for the rule plus a generous gap */
+  padding-left: calc(38px * var(--scale));  /* room for the rule plus a generous gap */
 }
 
 /* Name (f0) — the block's one heavy element. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(58px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.06;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -75,18 +75,18 @@ ${lineMasks(o, '        ')}
 
 /* Role (f1) — the second reading voice. */
 .lower-third-title {
-  font-size: calc(23px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
 }
 
 /* The meta band (f2, f3, f4) — every line past the role shares one small tracked voice, so
    the block reads as two headlines over a band rather than as five competing lines. */
 .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   line-height: 1.35;                /* tight rows — the band is one unit */
   letter-spacing: var(--label-tracking);  /* the family's label tracking — small caps breathe */
@@ -97,8 +97,8 @@ ${lineMasks(o, '        ')}
 /* The rule above the band. It hangs on the FIRST meta row (the third line), so a graphic
    created with only two lines never draws a rule under nothing. */
 .lower-third-text .lower-third-mask:nth-child(3) {
-  margin-top: calc(16px * var(--scale));  /* air above the band */
-  padding-top: calc(14px * var(--scale));  /* …and inside it, above the first label */
+  margin-top: calc(20px * var(--scale));  /* air above the band */
+  padding-top: calc(18px * var(--scale));  /* …and inside it, above the first label */
   border-top: 1px solid color-mix(in srgb, var(--text-color) 22%, transparent);  /* the hairline divider */
 }
 

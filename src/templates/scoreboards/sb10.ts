@@ -80,7 +80,7 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
 /* The slab — flat, hard-edged and opaque. A sport board earns weight from contrast, not blur. */
 .scoreboard-box {
   position: relative;              /* anchors the accent cap */
-  min-width: calc(680px * var(--scale));  /* a full-frame board, not a strip */
+  min-width: calc(1145px * var(--scale));  /* a full-frame board, not a strip */
   box-sizing: border-box;          /* padding stays inside the measured width */
   background: var(--panel-bg);     /* the near-black sport panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
@@ -93,7 +93,7 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
   left: 0;                         /* full width, left… */
   right: 0;                        /* …to right */
   top: 0;                          /* along the top */
-  height: calc(6px * var(--scale));  /* a visible rule, not a hairline */
+  height: calc(11px * var(--scale));  /* a visible rule, not a hairline */
   background: var(--accent);       /* the one accent surface */
 }
 
@@ -102,12 +102,12 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
   display: flex;                   /* the two ends of the bar… */
   align-items: center;             /* …on one centre line */
   justify-content: space-between;  /* pushed to opposite ends */
-  padding: calc(16px * var(--scale)) calc(28px * var(--scale)) calc(10px * var(--scale));
+  padding: calc(27px * var(--scale)) calc(47px * var(--scale)) calc(17px * var(--scale));
   background: rgba(255, 255, 255, 0.05);  /* one step off the slab */
 }
 .scoreboard-phase {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid: a sport label is never light */
   letter-spacing: var(--label-tracking);  /* the family's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -115,7 +115,7 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
   white-space: nowrap;             /* "SECOND OVERTIME" stays on one line */
 }
 .scoreboard-clock {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the bar's anchor */
+  font-size: calc(47px * var(--scale) * var(--type-scale));  /* the bar's anchor */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   color: var(--text-color);        /* white while there is time left */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter */
@@ -132,10 +132,10 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
   position: relative;              /* the band is drawn against this */
   display: flex;                   /* crest and name side by side */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(18px * var(--scale));  /* air between the crest and the name */
+  gap: calc(31px * var(--scale));  /* air between the crest and the name */
   flex: 1;                         /* the two clubs share the spare width evenly */
   min-width: 0;                    /* lets a long club name shrink, not overflow */
-  padding: calc(22px * var(--scale)) calc(26px * var(--scale));  /* the row's height comes from here */
+  padding: calc(37px * var(--scale)) calc(44px * var(--scale));  /* the row's height comes from here */
   background: linear-gradient(90deg, color-mix(in srgb, var(--team-a, var(--accent)) 38%, transparent), transparent);
 }
 .scoreboard-side-b {
@@ -147,8 +147,8 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
 .scoreboard-crest {
   position: relative;              /* the placeholder mark is drawn against this */
   flex-shrink: 0;                  /* crests never squeeze — names give up width instead */
-  width: calc(72px * var(--scale));   /* a consistent slot whatever the crest's shape is */
-  height: calc(72px * var(--scale));  /* square, so round and shield crests both sit well */
+  width: calc(121px * var(--scale));   /* a consistent slot whatever the crest's shape is */
+  height: calc(121px * var(--scale));  /* square, so round and shield crests both sit well */
   display: flex;                   /* centers the image… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
@@ -163,8 +163,8 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
 .scoreboard-crest::after {
   content: '';                     /* the placeholder mark */
   position: absolute;              /* centred over the empty slot */
-  inset: calc(10px * var(--scale));  /* inset from the slot's edge */
-  border: calc(3px * var(--scale)) solid var(--team-a, var(--accent));  /* the club colour */
+  inset: calc(17px * var(--scale));  /* inset from the slot's edge */
+  border: calc(5px * var(--scale)) solid var(--team-a, var(--accent));  /* the club colour */
   opacity: 0.6;                    /* clearly a placeholder, not a crest */
 }
 .scoreboard-side-b .scoreboard-crest::after { border-color: var(--team-b, var(--text-dim)); }
@@ -172,7 +172,7 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
 
 /* The club name — heavy condensed caps, the sport family's voice. */
 .scoreboard-team {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* a step under the scores */
+  font-size: calc(64px * var(--scale) * var(--type-scale));  /* a step under the scores */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.05;               /* tight — condensed caps need almost no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -187,23 +187,23 @@ ${clipOneLineCss('.scoreboard-team', 300)}
 .scoreboard-scores {
   display: flex;                   /* the two figures and the divider in one row */
   align-items: center;             /* on one centre line */
-  gap: calc(12px * var(--scale));  /* air around the divider */
+  gap: calc(20px * var(--scale));  /* air around the divider */
   flex-shrink: 0;                  /* the plate never gives up width */
-  padding: 0 calc(30px * var(--scale));  /* the plate's own side margins */
+  padding: 0 calc(51px * var(--scale));  /* the plate's own side margins */
   background: rgba(0, 0, 0, 0.55); /* a hard dark plate under the figures */
-  box-shadow: inset 0 calc(-4px * var(--scale)) 0 0 var(--accent);  /* the accent underline */
+  box-shadow: inset 0 calc(-6px * var(--scale)) 0 0 var(--accent);  /* the accent underline */
 }
 .scoreboard-score {
-  min-width: calc(62px * var(--scale));  /* a shared column, so 4 and 104 both sit centred */
+  min-width: calc(104px * var(--scale));  /* a shared column, so 4 and 104 both sit centred */
   text-align: center;              /* the figure is centred in its own column */
-  font-size: calc(64px * var(--scale) * var(--type-scale));  /* the board's headline */
+  font-size: calc(107px * var(--scale) * var(--type-scale));  /* the board's headline */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* the figure fills its column */
   color: var(--text-color);        /* white on the plate — the accent is the underline */
   font-variant-numeric: tabular-nums;  /* digits share one width — no jitter as scores tick */
 }
 .scoreboard-dash {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* a step under the figures */
+  font-size: calc(67px * var(--scale) * var(--type-scale));  /* a step under the figures */
   font-weight: var(--display-weight);  /* solid, not a hairline */
   line-height: 1;                  /* on the figures' centre line */
   color: var(--accent);            /* the divider carries the accent */
@@ -213,23 +213,23 @@ ${clipOneLineCss('.scoreboard-team', 300)}
 .scoreboard-periods {
   display: flex;                   /* the period cells in one row */
   justify-content: center;         /* centred under the score plate */
-  gap: calc(2px * var(--scale));   /* the cells almost touch — a run of periods, not a list */
-  padding: calc(12px * var(--scale)) calc(26px * var(--scale)) calc(16px * var(--scale));
+  gap: calc(3px * var(--scale));   /* the cells almost touch — a run of periods, not a list */
+  padding: calc(20px * var(--scale)) calc(44px * var(--scale)) calc(27px * var(--scale));
   background: rgba(255, 255, 255, 0.05);  /* the same strip treatment as the status bar */
 }
 .scoreboard-period {
   display: flex;                   /* label over the two figures… */
   flex-direction: column;          /* …as one column */
   align-items: center;             /* centred on the cell's axis */
-  gap: calc(2px * var(--scale));   /* the three rows read as one unit */
-  min-width: calc(58px * var(--scale));  /* a shared cell width — the periods align */
-  padding: calc(7px * var(--scale)) calc(8px * var(--scale));  /* the cell's own frame */
+  gap: calc(3px * var(--scale));   /* the three rows read as one unit */
+  min-width: calc(98px * var(--scale));  /* a shared cell width — the periods align */
+  padding: calc(12px * var(--scale)) calc(14px * var(--scale));  /* the cell's own frame */
   background: rgba(0, 0, 0, 0.45); /* a hard dark cell */
-  border-top: calc(2px * var(--scale)) solid var(--accent);  /* the accent cap on every cell */
+  border-top: calc(3px * var(--scale)) solid var(--accent);  /* the accent cap on every cell */
 }
 .scoreboard-period-label {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   font-weight: 700;                /* solid at label size */
   letter-spacing: var(--label-tracking);  /* the family's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -237,7 +237,7 @@ ${clipOneLineCss('.scoreboard-team', 300)}
   white-space: nowrap;             /* "SET 5" stays on one line */
 }
 .scoreboard-period-score {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.15;               /* even rhythm down the cell */
   color: var(--text-color);        /* primary text — these are still scores */

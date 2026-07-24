@@ -69,7 +69,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift + the 1px inner edge */
   overflow: hidden;                 /* the accent edge follows the rounded corner */
-  max-width: calc(720px * var(--scale));  /* an affiliation line runs long */
+  max-width: calc(1029px * var(--scale));  /* an affiliation line runs long */
 }
 
 /* The accent edge — the graphic's accent node (lt15's motif). */
@@ -85,7 +85,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex-direction: column;           /* top to bottom */
   align-items: flex-start;          /* the tag hugs the left edge rather than stretching */
   min-width: 0;                     /* let it shrink so long values wrap instead of overflowing */
-  padding: calc(18px * var(--scale)) calc(34px * var(--scale)) calc(20px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(26px * var(--scale)) calc(49px * var(--scale)) calc(29px * var(--scale)) calc(37px * var(--scale));
 }
 
 /* The subject tag (f0) — OUTLINED, not filled: this is a description, not a warning. */
@@ -95,13 +95,13 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 }
 .lower-third-name {
   display: block;                   /* the tag's box is this element */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* tag type is small by definition */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* tag type is small by definition */
   font-weight: 700;                 /* bold — small tracked caps need the weight */
   line-height: 1;                   /* the tag's height comes from its padding */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* INFECTIOUS DISEASE, whatever the operator types */
-  padding: calc(5px * var(--scale)) calc(11px * var(--scale)) calc(6px * var(--scale));
-  border-radius: calc(999px * var(--scale));  /* a pill — the glass family's chip shape */
+  padding: calc(7px * var(--scale)) calc(16px * var(--scale)) calc(9px * var(--scale));
+  border-radius: calc(1427px * var(--scale));  /* a pill — the glass family's chip shape */
   color: var(--accent);             /* the tag carries the colour… */
   box-shadow: inset 0 0 0 1px currentColor;  /* …and outlines itself in it, so a repalette
                                                 takes the outline with the text */
@@ -110,21 +110,21 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The name (f1) — the card's headline. */
 .lower-third-title {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* room for an honorific and a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   color: var(--text-color);         /* primary text color */
-  margin-top: calc(10px * var(--scale));  /* a clear break below the tag */
+  margin-top: calc(14px * var(--scale));  /* a clear break below the tag */
 }
 
 /* The affiliation (f2) — what backs the expertise. */
 .lower-third-extra {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.3;                 /* an affiliation wraps — give the rows air */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(7px * var(--scale));  /* tied to the name above it */
 }`,
       hasAccent: true,
     };

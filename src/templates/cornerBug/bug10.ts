@@ -53,8 +53,8 @@ ${statusSourcesHtml(ids)}`,
 .corner-bug-box {
   display: flex;                   /* the dot and the word sit side by side */
   align-items: center;             /* both centered on the pill's axis */
-  gap: calc(10px * var(--scale));  /* air between the dot and the word */
-  padding: calc(9px * var(--scale)) calc(18px * var(--scale));  /* even air inside the pill */
+  gap: calc(11px * var(--scale));  /* air between the dot and the word */
+  padding: calc(10px * var(--scale)) calc(19px * var(--scale));  /* even air inside the pill */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -64,8 +64,8 @@ ${statusSourcesHtml(ids)}`,
 
 /* The dot — the accent moment, breathing while the show is live. */
 .corner-bug-dot {
-  width: calc(10px * var(--scale));   /* a small dot… */
-  height: calc(10px * var(--scale));  /* …round */
+  width: calc(11px * var(--scale));   /* a small dot… */
+  height: calc(11px * var(--scale));  /* …round */
   border-radius: 50%;              /* the on-air lamp */
   background: var(--accent);       /* the one accent colour */
   flex: none;                      /* never squeezed by the word beside it */
@@ -80,7 +80,7 @@ ${statusSourcesHtml(ids)}`,
 
 /* The status word (f0) — soft caps, sized to sit in the corner all show long. */
 .corner-bug-name {
-  font-size: calc(15px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

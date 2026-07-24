@@ -60,7 +60,7 @@ ${Array.from(
     </div>`,
     css: `/* The panel — the quiet keyline card, capped by one accent hairline. */
 .info-card-box {
-  padding: calc(30px * var(--scale)) calc(38px * var(--scale)) calc(32px * var(--scale));  /* generous inner air */
+  padding: calc(33px * var(--scale)) calc(42px * var(--scale)) calc(36px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);      /* the panel color (retints via the :root contract) */
   border: 1px solid rgba(255, 255, 255, 0.14);  /* hairline keyline lifts the panel off video */
   border-top: var(--accent-weight) solid var(--accent);  /* the family's accent weight, on top */
@@ -70,7 +70,7 @@ ${Array.from(
 
 /* The heading — the panel's one display line, set quietly. */
 .info-card-partners-head {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.2;                 /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -79,10 +79,10 @@ ${Array.from(
 
 /* The supporting line — dimmed, and gone entirely when cleared (:empty). */
 .info-card-detail {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* body scale under the heading */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* body scale under the heading */
   font-weight: 400;                 /* regular weight */
   line-height: 1.4;                 /* body text gets room to breathe */
-  margin-top: calc(8px * var(--scale));  /* heading → detail: one clear break */
+  margin-top: calc(9px * var(--scale));  /* heading → detail: one clear break */
   color: var(--text-dim);           /* dimmed — never full white twice */
 }
 .info-card-detail:empty {
@@ -92,16 +92,16 @@ ${Array.from(
 /* The partner grid — three across, two down, with even gutters. */
 .info-card-slots {
   display: grid;                    /* a real grid: rows stay aligned however tall a mark is */
-  grid-template-columns: repeat(3, calc(180px * var(--scale)));  /* three equal columns */
-  gap: calc(10px * var(--scale)) calc(14px * var(--scale));  /* the gutters between marks */
-  margin-top: calc(24px * var(--scale));  /* air between the words and the marks */
+  grid-template-columns: repeat(3, calc(200px * var(--scale)));  /* three equal columns */
+  gap: calc(11px * var(--scale)) calc(16px * var(--scale));  /* the gutters between marks */
+  margin-top: calc(27px * var(--scale));  /* air between the words and the marks */
 }
 
 /* One partner slot — equal cells so no mark dominates by accident. */
 .info-card-slot {
   position: relative;               /* the reserved mark is placed against this cell */
-  height: calc(76px * var(--scale));  /* the cell's booked height */
-  padding: calc(10px * var(--scale));  /* air so two neighbouring marks never touch */
+  height: calc(84px * var(--scale));  /* the cell's booked height */
+  padding: calc(11px * var(--scale));  /* air so two neighbouring marks never touch */
 }
 
 /* The reserved mark: a faint dashed box shown until an image arrives. setFieldValue()

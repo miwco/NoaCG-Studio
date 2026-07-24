@@ -76,21 +76,21 @@ ${playerStructureCss()}
 
 /* The portrait — a void frame with an amber keyline. */
 .${P}-portrait {
-  margin-left: calc(22px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  margin-left: calc(37px * var(--scale));
+  border-radius: calc(11px * var(--scale));
   background: rgba(10, 12, 16, 0.6);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /* The tagline — a mono chip in amber ink. */
 .${P}-tagline {
-  padding: calc(4px * var(--scale)) calc(12px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(20px * var(--scale));
+  border-radius: calc(11px * var(--scale));
   background: rgba(10, 12, 16, 0.7);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   color: var(--accent);
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -98,7 +98,7 @@ ${playerStructureCss()}
 
 /* The name — flat house display type. */
 .${P}-name {
-  font-size: calc(68px * var(--scale) * var(--type-scale));
+  font-size: calc(115px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.02;
   letter-spacing: var(--display-tracking);
@@ -108,7 +108,7 @@ ${playerStructureCss()}
 /* The role / team line — mono, dim. */
 .${P}-role {
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(31px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -117,7 +117,7 @@ ${playerStructureCss()}
 
 /* The stat block. */
 .${P}-stat-value {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(67px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -126,7 +126,7 @@ ${playerStructureCss()}
 
 .${P}-stat-label {
   font-family: var(--font-label);
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -142,7 +142,7 @@ ${playerStructureCss()}
 }
 
 .${P}-mvp .${P}-portrait {
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent), var(--accent-glow);
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--accent), var(--accent-glow);
 }`,
   }),
 );

@@ -69,7 +69,7 @@ ${cardLineMasks(o)}
      AFTER it in document order — so without this margin the panel's background covers the
      rail completely. Reserving exactly the rail's own width is what keeps it visible. */
   margin-left: var(--accent-weight);  /* the strip the rail occupies */
-  padding: calc(28px * var(--scale)) calc(44px * var(--scale));  /* comfortable name-card air */
+  padding: calc(33px * var(--scale)) calc(52px * var(--scale));  /* comfortable name-card air */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -79,7 +79,7 @@ ${cardLineMasks(o)}
 /* THE GRADUATE. The whole reason the card is on screen. */
 .info-card-name {
   display: block;                  /* its own row */
-  font-size: calc(56px * var(--scale) * var(--type-scale));  /* the card's one large line */
+  font-size: calc(66px * var(--scale) * var(--type-scale));  /* the card's one large line */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -90,8 +90,8 @@ ${cardLineMasks(o)}
 /* THE AWARD. What they are graduating with. */
 .info-card-title {
   display: block;                  /* its own row */
-  margin-top: calc(10px * var(--scale));  /* name and award read as one unit */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* ~2.1:1 under the name */
+  margin-top: calc(12px * var(--scale));  /* name and award read as one unit */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* ~2.1:1 under the name */
   font-weight: 400;                /* conversational weight */
   line-height: 1.3;                /* a full degree title may wrap */
   color: var(--text-dim);          /* secondary text color */
@@ -102,9 +102,9 @@ ${cardLineMasks(o)}
    making it bigger than the person's name. */
 .info-card-extra {
   display: block;                  /* its own row */
-  margin-top: calc(14px * var(--scale));  /* a clear break from the award above */
+  margin-top: calc(16px * var(--scale));  /* a clear break from the award above */
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.3;                /* comfortable if it wraps */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
@@ -113,7 +113,7 @@ ${cardLineMasks(o)}
 }`,
     hasAccent: true,
     tokens: {
-      accentWeight: 'calc(4px * var(--scale))',
+      accentWeight: 'calc(5px * var(--scale))',
       labelTracking: '0.2em',
     },
   }),

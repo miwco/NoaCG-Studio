@@ -74,24 +74,24 @@ ${duration}    </div>`,
   background: var(--panel-bg);      /* the minimal family's quiet panel */
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  min-width: calc(560px * var(--scale));  /* a run of items keeps ONE width, so the numeral
+  min-width: calc(659px * var(--scale));  /* a run of items keeps ONE width, so the numeral
                                              column doesn't move between cues */
-  max-width: calc(800px * var(--scale));  /* a long work title wraps rather than runs — and
+  max-width: calc(941px * var(--scale));  /* a long work title wraps rather than runs — and
                                              never past the category auto-fit cap */
 }
 
 /* The numeral cell — RIGHT-aligned, which is what keeps I, II and VIII on one edge. */
 .lower-third-numcell {
-  flex: 0 0 calc(84px * var(--scale));  /* a fixed column: the numeral never moves the title */
+  flex: 0 0 calc(99px * var(--scale));  /* a fixed column: the numeral never moves the title */
   display: flex;                    /* place the numeral in the cell */
   align-items: center;              /* vertically centred against the title block */
   justify-content: flex-end;        /* against the rule, so the sequence lines up */
-  padding: calc(14px * var(--scale)) calc(16px * var(--scale)) calc(15px * var(--scale)) calc(22px * var(--scale));
+  padding: calc(16px * var(--scale)) calc(19px * var(--scale)) calc(18px * var(--scale)) calc(26px * var(--scale));
 }
 
 /* The numeral (f0). */
 .lower-third-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a position marker, not a headline */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* a position marker, not a headline */
   font-weight: 600;                 /* semibold — it has to hold against the title */
   line-height: 1;                   /* one tight figure */
   letter-spacing: 0.04em;           /* roman numerals need air between the strokes */
@@ -106,7 +106,7 @@ ${duration}    </div>`,
 .lower-third-accent {
   flex: none;                       /* never squeezed */
   width: calc(2px * var(--scale));  /* a hairline */
-  margin: calc(14px * var(--scale)) 0;  /* inset from the row's edges — a rule, not a border */
+  margin: calc(16px * var(--scale)) 0;  /* inset from the row's edges — a rule, not a border */
   background: var(--accent);        /* the one accent surface */
   opacity: 0.45;                    /* quieter than the numeral it separates */
   transform-origin: center;         /* line-reveal scales it from the middle */
@@ -118,12 +118,12 @@ ${duration}    </div>`,
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the numeral */
   min-width: 0;                     /* let it shrink so long titles wrap instead of overflowing */
-  padding: calc(13px * var(--scale)) calc(24px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(28px * var(--scale)) calc(16px * var(--scale));
 }
 
 /* The title (f1) — the row's headline. */
 .lower-third-title {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.15;                /* a work title wraps — give the rows air */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -132,11 +132,11 @@ ${duration}    </div>`,
 
 /* The composer or performer (f2). */
 .lower-third-composer {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* clearly below the title */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the title */
   font-weight: 400;                 /* regular — hierarchy comes from the title's weight */
   line-height: 1.3;                 /* room if a long name wraps */
   color: var(--text-dim);           /* dimmed — never the primary ink twice */
-  margin-top: calc(3px * var(--scale));  /* tied to the title above it */
+  margin-top: calc(4px * var(--scale));  /* tied to the title above it */
 }
 
 /* The duration cell — closes the row, in tabular figures so the colons line up. */
@@ -144,13 +144,13 @@ ${duration}    </div>`,
   flex: 0 0 auto;                   /* sized by its figure */
   display: flex;                    /* place the figure in the cell */
   align-items: center;              /* vertically centred */
-  padding: calc(14px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(16px * var(--scale)) calc(28px * var(--scale));
   border-left: 1px solid rgba(255, 255, 255, 0.12);  /* the cell divider */
 }
 
 /* The duration (f3). */
 .lower-third-extra {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference, not billing */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* reference, not billing */
   font-weight: 500;                 /* medium — a figure needs a little weight to read */
   line-height: 1;                   /* one tight figure */
   ${TABULAR_FIGURES}

@@ -83,9 +83,9 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 
 /* The panel — the house void. A minimum width keeps the track a stable run behind short totals. */
 .infographic-box {
-  min-width: calc(660px * var(--scale));  /* the meter reads as a meter even at €12 raised */
+  min-width: calc(733px * var(--scale));  /* the meter reads as a meter even at €12 raised */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(24px * var(--scale)) calc(40px * var(--scale)) calc(24px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(27px * var(--scale)) calc(44px * var(--scale)) calc(27px * var(--scale)) calc(31px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -95,7 +95,7 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 /* The label — the house mono caps line naming what is counted. */
 .infographic-kicker {
   font-family: var(--font-label);  /* the house label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -108,22 +108,22 @@ export const ig22: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* figure and share share one row */
   justify-content: space-between;  /* the figure hugs left, the share hugs right */
   align-items: baseline;           /* both sit on the same text baseline */
-  gap: calc(32px * var(--scale));  /* distinct figures keep distinct space between them */
-  margin-top: calc(6px * var(--scale));  /* label and figure read as one unit */
+  gap: calc(36px * var(--scale));  /* distinct figures keep distinct space between them */
+  margin-top: calc(7px * var(--scale));  /* label and figure read as one unit */
 }
 
 /* The figure block — the unit mark rests on the total's baseline. */
 .infographic-figure {
   display: flex;                   /* mark and figure sit side by side */
   align-items: baseline;           /* the small mark rests on the figure's baseline */
-  gap: calc(8px * var(--scale));   /* a thin seam between mark and figure */
+  gap: calc(9px * var(--scale));   /* a thin seam between mark and figure */
   min-width: 0;                    /* let an enormous total wrap rather than widen the panel */
 }
 
 /* The unit mark — static and dimmed: a unit, not part of the counting number.
    Empty field = no mark at all (:empty), which is how a subscriber goal drops it. */
 .infographic-unit {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
   font-weight: 600;                /* semibold so a thin currency glyph stays visible */
   color: var(--text-dim);          /* dimmed — the total carries the weight */
 }
@@ -133,7 +133,7 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 
 /* The total — the panel's one enormous number; the count-up preset tweens it from 0. */
 .infographic-value {
-  font-size: calc(96px * var(--scale) * var(--type-scale));  /* the whole design IS this number (1080p reference) */
+  font-size: calc(107px * var(--scale) * var(--type-scale));  /* the whole design IS this number (1080p reference) */
   font-weight: 700;                /* bold — the panel's single heavy element */
   line-height: 1;                  /* no dead leading — the track sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -144,7 +144,7 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 
 /* The share — the derived percent, in the accent: the one number nobody typed. */
 .infographic-percent {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* large, but clearly under the total */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* large, but clearly under the total */
   font-weight: 700;                /* bold — it is a headline figure of its own */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* "100%" never wraps */
@@ -153,8 +153,8 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 
 /* The track — a lane the accent fill grows inside. */
 .infographic-track {
-  height: calc(12px * var(--scale));  /* thicker than the minimal meter: the house has weight */
-  margin-top: calc(20px * var(--scale));  /* air between the figure and the bar */
+  height: calc(13px * var(--scale));  /* thicker than the minimal meter: the house has weight */
+  margin-top: calc(22px * var(--scale));  /* air between the figure and the bar */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: rgba(255, 255, 255, 0.12);  /* the empty lane over the void panel */
   overflow: hidden;                /* the growing fill is clipped to the lane */
@@ -176,10 +176,10 @@ export const ig22: TemplateVariant = defineInfographicVariant(
 /* The target caption — what the meter is running toward, written by the rebuild. */
 .infographic-goal-line {
   font-family: var(--font-label);  /* the house label face — a target reads as data */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* caption scale under the track */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* caption scale under the track */
   font-weight: 400;                /* regular — it is the quiet half of the meter */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
-  margin-top: calc(12px * var(--scale));  /* small gap down from the track */
+  margin-top: calc(13px * var(--scale));  /* small gap down from the track */
   color: var(--text-dim);          /* dimmed — never full white twice */
 }`,
 

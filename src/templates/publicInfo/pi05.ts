@@ -47,10 +47,10 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 .public-info-box {
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* heading, notice, reference, issuer */
-  gap: calc(12px * var(--scale));  /* the four lines are one statement */
-  width: calc(760px * var(--scale));   /* a card, not a band */
+  gap: calc(16px * var(--scale));  /* the four lines are one statement */
+  width: calc(1013px * var(--scale));   /* a card, not a band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(30px * var(--scale)) calc(32px * var(--scale));
+  padding: calc(40px * var(--scale)) calc(43px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's corner radius */
   background: linear-gradient(var(--panel-bg), var(--panel-bg)), rgba(8, 12, 18, 0.82);
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
@@ -62,7 +62,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The heading — what KIND of notice this is. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(21px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -71,7 +71,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 
 /* The notice itself — prose, at a comfortable reading size. */
 .public-info-body {
-  font-size: calc(26px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
+  font-size: calc(35px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
   font-weight: 400;                /* regular — prose, not a headline */
   line-height: 1.34;               /* generous: this line will wrap */
   color: var(--text-color);        /* primary text color — never dimmed */
@@ -80,11 +80,11 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The reference chip — the case number and the date to act by, boxed so they cannot be
    mistaken for the end of the sentence above. */
 .public-info-ref {
-  padding: calc(9px * var(--scale)) calc(14px * var(--scale));
-  border-radius: calc(6px * var(--scale)); /* a chip, softer than the panel's own corners */
+  padding: calc(12px * var(--scale)) calc(19px * var(--scale));
+  border-radius: calc(8px * var(--scale)); /* a chip, softer than the panel's own corners */
   background: rgba(255, 255, 255, 0.10); /* a lifted surface inside the glass */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale)); /* readable enough to copy down */
+  font-size: calc(23px * var(--scale) * var(--type-scale)); /* readable enough to copy down */
   font-weight: 600;                /* weight, not size, keeps a reference legible */
   font-variant-numeric: tabular-nums;   /* even digits — this line is mostly numbers */
   color: var(--text-color);        /* full contrast: it is meant to be written down */
@@ -93,15 +93,15 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The hairline above the attribution, drawn on the MASK — a span is inline-block, so a rule
    on it would only be as wide as the words. */
 .public-info-box > .public-info-mask:last-child {
-  margin-top: calc(2px * var(--scale)); /* a beat of separation */
-  padding-top: calc(14px * var(--scale)); /* room under the rule */
+  margin-top: calc(3px * var(--scale)); /* a beat of separation */
+  padding-top: calc(19px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.16); /* divides notice from attribution */
 }
 
 /* The issuing office — who to take this up with. */
 .public-info-source {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

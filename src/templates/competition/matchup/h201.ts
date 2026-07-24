@@ -59,7 +59,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 
 /* The accent — a rule under the title, drawn across the head. */
 .${P}-accent {
-  height: calc(3px * var(--scale));
+  height: calc(4px * var(--scale));
   background: var(--accent);
   transform-origin: center;
 }
@@ -67,7 +67,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 /* The title over the two sides. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(26px * var(--scale) * var(--type-scale));
+  font-size: calc(35px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -76,7 +76,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 
 /* The side names. */
 .${P}-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(53px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;
   letter-spacing: var(--display-tracking);
@@ -94,7 +94,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 
 /* One row's figures. */
 .${P}-row-value {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(45px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--text-dim);
@@ -108,7 +108,7 @@ export const h201: TemplateVariant = defineMatchupVariant(
 /* The stat's label, between the two figures. */
 .${P}-row-label {
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;

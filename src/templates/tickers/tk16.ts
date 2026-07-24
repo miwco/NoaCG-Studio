@@ -62,8 +62,8 @@ export const tk16: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
-  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(84px * var(--scale));   /* the strip's fixed height */
+  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  height: calc(105px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -73,11 +73,11 @@ export const tk16: TemplateVariant = defineTickerVariant(
 .ticker-label {
   display: flex;                   /* the dot and the word sit on one line */
   align-items: center;             /* vertical centering */
-  gap: calc(14px * var(--scale));  /* air between the dot and the word */
+  gap: calc(18px * var(--scale));  /* air between the dot and the word */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(30px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(38px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(22px * var(--scale) * var(--type-scale)); /* read before the lines */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* read before the lines */
   font-weight: 800;                /* heavy caps carry at a distance */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -89,8 +89,8 @@ export const tk16: TemplateVariant = defineTickerVariant(
    breath is a looping opacity track in the animation data, not a CSS animation: the timeline
    has to be able to see it, slow it down, or take it off. */
 .ticker-dot {
-  width: calc(14px * var(--scale));   /* a dot, not a bullet */
-  height: calc(14px * var(--scale));  /* square, then rounded */
+  width: calc(18px * var(--scale));   /* a dot, not a bullet */
+  height: calc(18px * var(--scale));  /* square, then rounded */
   border-radius: 50%;              /* the dot */
   background: var(--accent-ink);   /* the label block's ink colour */
   will-change: opacity;            /* the breath animates exactly this */
@@ -109,21 +109,21 @@ export const tk16: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* lines in a single row, width = content */
   align-items: center;             /* lines and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(36px * var(--scale)); /* air between the label and the first line */
+  padding-left: calc(45px * var(--scale)); /* air between the label and the first line */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One line. */
 .ticker-item {
-  font-size: calc(26px * var(--scale) * var(--type-scale)); /* larger than a routine crawl's */
+  font-size: calc(33px * var(--scale) * var(--type-scale)); /* larger than a routine crawl's */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color */
 }
 
 /* The separator between lines. */
 .ticker-sep {
-  margin: 0 calc(32px * var(--scale)); /* even air on both sides */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
+  margin: 0 calc(40px * var(--scale)); /* even air on both sides */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--accent);            /* the accent as punctuation, chaining the lines */
 }`,
     rowBuilderJs: `// renderTickerItem(text): one line followed by a small accent dot separator.
@@ -132,7 +132,7 @@ function renderTickerItem(text) {
          '<span class="ticker-sep">\\u2022</span>';
 }`,
     doubleItems: true,
-    tokens: { accentWeight: 'calc(4px * var(--scale))', labelTracking: '0.12em' },
+    tokens: { accentWeight: 'calc(5px * var(--scale))', labelTracking: '0.12em' },
   }),
   // The live dot's breath, added to the entrance step as a LOOPING opacity track. It is a
   // refinement rather than something the preset emits because the dot belongs to this design

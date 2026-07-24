@@ -53,7 +53,7 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* cap over column */
   flex-direction: column;          /* the cap is a row of its own */
-  width: calc(700px * var(--scale));   /* a bulletin card, not a band */
+  width: calc(1000px * var(--scale));   /* a bulletin card, not a band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -68,26 +68,26 @@ ${ALERT_LEVEL_CSS}
   align-self: auto;                /* a row in the column, not a stretched side slab */
   width: 100%;                     /* the cap spans the card */
   min-width: 0;                    /* the column, not the word, sets the width here */
-  height: calc(62px * var(--scale));  /* fixed: the card must not jump on a level change */
+  height: calc(89px * var(--scale));  /* fixed: the card must not jump on a level change */
 }
 .alert-flag > div {
   justify-content: flex-start;     /* the level word reads from the card's left edge */
-  padding: 0 calc(26px * var(--scale)); /* aligned with the text column below */
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* the cap's voice */
+  padding: 0 calc(37px * var(--scale)); /* aligned with the text column below */
+  font-size: calc(34px * var(--scale) * var(--type-scale)); /* the cap's voice */
 }
 
 /* The text column under the cap. */
 .alert-lines {
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* warning, area/validity, source */
-  gap: calc(8px * var(--scale));   /* the three lines are one statement */
-  padding: calc(22px * var(--scale)) calc(26px * var(--scale)) calc(24px * var(--scale));
+  gap: calc(11px * var(--scale));   /* the three lines are one statement */
+  padding: calc(31px * var(--scale)) calc(37px * var(--scale)) calc(34px * var(--scale));
   text-align: left;                /* a warning reads left to right, whatever the zone */
 }
 
 /* The warning type — the two or three words that name the hazard. */
 .alert-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale)); /* the loudest text in the card */
+  font-size: calc(63px * var(--scale) * var(--type-scale)); /* the loudest text in the card */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.08;               /* a wrapped hazard name stays one block */
@@ -96,7 +96,7 @@ ${ALERT_LEVEL_CSS}
 
 /* The area and the validity window — the two facts a viewer needs after the hazard. */
 .alert-title {
-  font-size: calc(20px * var(--scale) * var(--type-scale)); /* clearly subordinate to the hazard */
+  font-size: calc(29px * var(--scale) * var(--type-scale)); /* clearly subordinate to the hazard */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.35;               /* comfortable across a wrap */
   color: var(--text-dim);          /* secondary text color */
@@ -105,15 +105,15 @@ ${ALERT_LEVEL_CSS}
 /* The hairline above the attribution, drawn on the MASK rather than on the span: a span is
    inline-block, so a rule on it would only be as wide as the words. */
 .alert-lines > .alert-mask:last-child {
-  margin-top: calc(6px * var(--scale)); /* a beat of separation */
-  padding-top: calc(12px * var(--scale)); /* room under the rule */
+  margin-top: calc(9px * var(--scale)); /* a beat of separation */
+  padding-top: calc(17px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.12); /* divides fact from attribution */
 }
 
 /* The issuing service — an unattributed warning is a rumour. */
 .alert-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale)); /* the quietest voice in the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the card */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

@@ -56,14 +56,14 @@ export const es03: TemplateVariant = defineEsportsVariant(
 .${P}-box {
   display: flex;                   /* head above body */
   flex-direction: column;          /* stacked */
-  gap: calc(12px * var(--scale));  /* generous air — the glass family breathes */
-  padding: calc(16px * var(--scale)) calc(30px * var(--scale)) calc(18px * var(--scale));
+  gap: calc(21px * var(--scale));  /* generous air — the glass family breathes */
+  padding: calc(29px * var(--scale)) calc(53px * var(--scale)) calc(32px * var(--scale));
   background: var(--panel-bg);     /* the translucent glass surface */
   backdrop-filter: var(--panel-blur);  /* blur whatever is behind it */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   border-radius: var(--panel-radius);  /* the family's soft corners */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift, plus the 1px inner edge */
-  min-width: calc(900px * var(--scale));
+  min-width: calc(1600px * var(--scale));
 }
 
 /* The accent — a soft rule between the head and the scores, not a slab down the edge. */
@@ -80,7 +80,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 /* The stage line — the glass label voice: accent-tinted, wide-tracked. */
 .${P}-stage {
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(27px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -89,9 +89,9 @@ export const es03: TemplateVariant = defineEsportsVariant(
 
 /* The phase chip — a glass tile with a hairline edge. */
 .${P}-status {
-  padding: calc(4px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(7px * var(--scale)) calc(21px * var(--scale));
   border-radius: 999px;            /* a pill, the family's chip shape */
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -103,7 +103,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 
 /* The team name — the glass family's lighter display type. */
 .${P}-team {
-  font-size: calc(30px * var(--scale) * var(--type-scale));
+  font-size: calc(53px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   letter-spacing: var(--display-tracking);
@@ -112,15 +112,15 @@ export const es03: TemplateVariant = defineEsportsVariant(
 
 /* The score chip — a rounded glass tile. */
 .${P}-chip {
-  min-width: calc(60px * var(--scale));
-  padding: calc(6px * var(--scale)) calc(16px * var(--scale));
-  border-radius: calc(12px * var(--scale));
+  min-width: calc(107px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(29px * var(--scale));
+  border-radius: calc(21px * var(--scale));
   background: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .${P}-figure {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(60px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--text-color);        /* white on glass; the accent stays in the pips */
@@ -129,7 +129,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 
 /* The logo slot — a glass plate until a file lands in it. */
 .${P}-logo {
-  border-radius: calc(10px * var(--scale));
+  border-radius: calc(18px * var(--scale));
   background: rgba(255, 255, 255, 0.1);
 }
 .${P}-logo.has-image {
@@ -138,7 +138,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 
 /* The series pips — a won map takes the accent. */
 .${P}-pip {
-  height: calc(5px * var(--scale));  /* a finer mark than the sport strip's */
+  height: calc(9px * var(--scale));  /* a finer mark than the sport strip's */
 }
 .${P}-pip-a,
 .${P}-pip-b {
@@ -146,7 +146,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
 }
 
 .${P}-series-label {
-  font-size: calc(11px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;

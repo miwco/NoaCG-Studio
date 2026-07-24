@@ -75,7 +75,7 @@ ${measureCss(P, o.resolution, r.measure)}
 
 ${accentCss(skin, P, pad)}
 
-${labelCss(`.${P}-label`, 18, 'The label (f0) — READING, STATEMENT, TRANSLATION. What kind of passage this is.')}
+${labelCss(`.${P}-label`, 20, 'The label (f0) — READING, STATEMENT, TRANSLATION. What kind of passage this is.')}
 
 /* The passage (f1) — the card's subject. Set as prose: a paragraph measure, paragraph leading,
    and sentence case in EVERY family, sport included. Uppercase would strip the diacritics that
@@ -105,7 +105,7 @@ ${decl('margin-top', px(22), 'a real break between the two languages')}
 /* The attribution (f3) — the source, the speaker, the verse. The card's smallest voice. */
 .${P}-attribution {
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(18), 'the smallest type on the card')}
+${decl('font-size', typeSize(20), 'the smallest type on the card')}
 ${decl('font-weight', '600', 'semibold keeps small type legible')}
 ${decl('line-height', '1.3', 'a long attribution wraps tidily')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}

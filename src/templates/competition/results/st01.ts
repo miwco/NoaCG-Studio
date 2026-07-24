@@ -51,24 +51,24 @@ export const st01: TemplateVariant = defineResultsVariant(
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(16px * var(--scale));
-  padding: calc(22px * var(--scale)) calc(26px * var(--scale)) calc(24px * var(--scale));
+  gap: calc(25px * var(--scale));
+  padding: calc(34px * var(--scale)) calc(40px * var(--scale)) calc(37px * var(--scale));
   background: var(--panel-bg);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow);
-  min-width: calc(720px * var(--scale));
+  min-width: calc(1108px * var(--scale));
 }
 
 /* The accent rule between the heading and the table. */
 .${P}-accent {
-  height: calc(3px * var(--scale));
+  height: calc(5px * var(--scale));
   background: var(--accent);
   transform-origin: left center;
 }
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(52px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;
   letter-spacing: var(--display-tracking);
@@ -78,7 +78,7 @@ export const st01: TemplateVariant = defineResultsVariant(
 
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -88,7 +88,7 @@ export const st01: TemplateVariant = defineResultsVariant(
 /* The column headers. */
 .${P}-col {
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -98,20 +98,20 @@ export const st01: TemplateVariant = defineResultsVariant(
 /* One table row. */
 .${P}-row {
   position: relative;
-  padding: calc(8px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(22px * var(--scale));
   background: rgba(0, 0, 0, 0.32);
 }
 
 .${P}-row-index {
-  min-width: calc(26px * var(--scale));
+  min-width: calc(40px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(16px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 700;
   color: var(--accent);
 }
 
 .${P}-row-name {
-  font-size: calc(24px * var(--scale) * var(--type-scale));
+  font-size: calc(37px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.1;
   text-transform: uppercase;
@@ -120,7 +120,7 @@ export const st01: TemplateVariant = defineResultsVariant(
 
 /* The value cells. */
 .${P}-cell {
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(34px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-dim);
 }
@@ -148,7 +148,7 @@ export const st01: TemplateVariant = defineResultsVariant(
   left: 0;
   top: 0;
   bottom: 0;
-  width: calc(5px * var(--scale));
+  width: calc(8px * var(--scale));
   background: var(--accent);
 }
 

@@ -68,12 +68,12 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
 .ticker-box {
   display: flex;                   /* label left, viewport filling, clock right */
   align-items: stretch;            /* the caps span the full strip height */
-  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(96px * var(--scale));   /* the strip's fixed height */
+  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  height: calc(120px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
-  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-top: calc(4px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
   will-change: opacity;            /* hint the browser: the preset fades this */
 }
 
@@ -82,11 +82,11 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(36px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(45px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
   box-shadow: var(--accent-glow);  /* the house glow around the accent block */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(22px * var(--scale) * var(--type-scale)); /* label scale */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* label scale */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -106,21 +106,21 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
   display: inline-flex;            /* items in a single row, width = content */
   align-items: center;             /* items and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(44px * var(--scale)); /* air between the label block and the first story */
+  padding-left: calc(55px * var(--scale)); /* air between the label block and the first story */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One story — comfortable reading size at travel speed. */
 .ticker-item {
-  font-size: calc(28px * var(--scale) * var(--type-scale)); /* the strip's main voice */
+  font-size: calc(35px * var(--scale) * var(--type-scale)); /* the strip's main voice */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color */
 }
 
 /* The dot between stories — the accent as punctuation, like the brand overlay. */
 .ticker-sep {
-  margin: 0 calc(36px * var(--scale)); /* even air on both sides of the dot */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
+  margin: 0 calc(45px * var(--scale)); /* even air on both sides of the dot */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--accent);            /* accent dots chain the stories together */
 }
 
@@ -129,9 +129,9 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
   display: flex;                   /* center the figures inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(36px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(45px * var(--scale));  /* mirrors the label block's breathing room */
   font-family: var(--font-label);  /* the family's label face — the clock shares the label voice */
-  font-size: calc(26px * var(--scale) * var(--type-scale)); /* quiet — present, not competing with stories */
+  font-size: calc(33px * var(--scale) * var(--type-scale)); /* quiet — present, not competing with stories */
   font-variant-numeric: tabular-nums;   /* every digit same width — no tick wobble */
   color: var(--text-color);        /* primary text color */
 }`,

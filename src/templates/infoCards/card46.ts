@@ -63,8 +63,8 @@ ${maskLines([
     </div>`,
     css: `/* The panel — the glass family's translucent recipe at card scale. */
 .info-card-box {
-  width: calc(400px * var(--scale));  /* a stable column width: the picture never resizes the card */
-  padding: calc(18px * var(--scale));  /* the picture sits inside the panel, not bled to its edge */
+  width: calc(444px * var(--scale));  /* a stable column width: the picture never resizes the card */
+  padding: calc(20px * var(--scale));  /* the picture sits inside the panel, not bled to its edge */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: var(--panel-bg);      /* the translucent white wash */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop blur — this IS the glass */
@@ -75,8 +75,8 @@ ${maskLines([
 /* The picture — a wide crop across the top of the panel. */
 .info-card-shot {
   position: relative;               /* the empty-slot mark is placed against this box */
-  height: calc(170px * var(--scale));  /* a fixed height keeps the card's shape between places */
-  border-radius: calc(12px * var(--scale));  /* softer than the panel, nested inside it */
+  height: calc(189px * var(--scale));  /* a fixed height keeps the card's shape between places */
+  border-radius: calc(13px * var(--scale));  /* softer than the panel, nested inside it */
   overflow: hidden;                 /* the picture is clipped to the rounded rectangle */
 }
 .info-card-shot::after {
@@ -100,8 +100,8 @@ ${maskLines([
 .info-card-place-row {
   display: flex;                    /* pin then name, in a row */
   align-items: center;              /* the marker centres against the name's cap height */
-  gap: calc(12px * var(--scale));   /* a thin seam between the marker and the words */
-  margin-top: calc(18px * var(--scale));  /* air between the picture and the place */
+  gap: calc(13px * var(--scale));   /* a thin seam between the marker and the words */
+  margin-top: calc(20px * var(--scale));  /* air between the picture and the place */
 }
 
 /* THE PIN — a drawn map marker: a ring with a tail, made of two CSS shapes. It is a symbol
@@ -109,8 +109,8 @@ ${maskLines([
 .info-card-pin {
   position: relative;               /* the tail is positioned against the head */
   flex: none;                       /* never squeezed by a long place name */
-  width: calc(26px * var(--scale));  /* the marker head's width… */
-  height: calc(26px * var(--scale));  /* …and height: a circle */
+  width: calc(29px * var(--scale));  /* the marker head's width… */
+  height: calc(29px * var(--scale));  /* …and height: a circle */
   border: calc(4px * var(--scale)) solid var(--accent);  /* the ring — the accent's moment here */
   border-radius: 50% 50% 50% 0;     /* three round corners and one point: the classic pin */
   transform: rotate(-45deg);        /* turn the square corner downward into the tail */
@@ -118,14 +118,14 @@ ${maskLines([
 .info-card-pin::after {
   content: '';                      /* the marker's centre dot */
   position: absolute;               /* inside the head… */
-  inset: calc(5px * var(--scale));  /* …with an even margin all round */
+  inset: calc(6px * var(--scale));  /* …with an even margin all round */
   border-radius: 50%;               /* a true circle */
   background: var(--accent);        /* the same accent, filled */
 }
 
 /* The place name — the card's display line. */
 .info-card-place {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                 /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -134,21 +134,21 @@ ${maskLines([
 
 /* The region — where the place is, dimmed. */
 .info-card-region {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* body scale under the place */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* body scale under the place */
   font-weight: 400;                 /* regular weight */
   line-height: 1.35;                /* body text gets room to breathe */
-  margin-top: calc(6px * var(--scale));  /* place → region: they read as one unit */
+  margin-top: calc(7px * var(--scale));  /* place → region: they read as one unit */
   color: var(--text-dim);           /* dimmed — never full white twice */
 }
 
 /* The detail line — the live fact (time, weather, distance), behind a thin rule so it
    reads as a separate kind of information from the address above it. */
 .info-card-detail {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 400;                 /* regular weight */
   line-height: 1.4;                 /* body text gets room to breathe */
-  padding-top: calc(12px * var(--scale));  /* air under the rule */
-  margin-top: calc(14px * var(--scale));  /* region → detail: the card's largest break */
+  padding-top: calc(13px * var(--scale));  /* air under the rule */
+  margin-top: calc(16px * var(--scale));  /* region → detail: the card's largest break */
   border-top: 1px solid rgba(255, 255, 255, 0.16);  /* a hairline divider — the family's one rule */
   color: var(--text-dim);           /* dimmed — the third voice on the card */
 }`,

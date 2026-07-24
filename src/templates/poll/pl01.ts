@@ -55,13 +55,13 @@ export const pl01: TemplateVariant = definePollVariant(
 /* The card — the house void panel; presets tween this element (y + opacity). */
 .poll-box {
   position: relative;              /* anchors the accent edge */
-  padding: calc(26px * var(--scale)) calc(40px * var(--scale)) calc(24px * var(--scale)) calc(44px * var(--scale));
+  padding: calc(40px * var(--scale)) calc(62px * var(--scale)) calc(37px * var(--scale)) calc(68px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
-  min-width: calc(460px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
+  min-width: calc(708px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
 }
 
 /* The accent edge — the house amber bar, fused to the card's left side with the house glow. */
@@ -78,15 +78,15 @@ export const pl01: TemplateVariant = definePollVariant(
 /* The vote badge — the house mono label in an accent-keyline chip. */
 .poll-cue {
   display: inline-block;           /* the chip hugs its own text */
-  margin-bottom: calc(12px * var(--scale));  /* air under the badge */
-  padding: calc(5px * var(--scale)) calc(11px * var(--scale));
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+  margin-bottom: calc(18px * var(--scale));  /* air under the badge */
+  padding: calc(8px * var(--scale)) calc(17px * var(--scale));
+  border-radius: calc(9px * var(--scale));  /* the house chip radius */
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);  /* a thin accent keyline */
   will-change: transform, opacity; /* it pops in, and leaves when voting closes */
 }
 .poll-cue-text {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* kicker scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast cue is always caps */
@@ -95,7 +95,7 @@ export const pl01: TemplateVariant = definePollVariant(
 
 /* The question — house display type, the loudest thing on the card. */
 .poll-mask > span {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
+  font-size: calc(49px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -104,10 +104,10 @@ export const pl01: TemplateVariant = definePollVariant(
 
 /* The chart — one row per option, rendered at runtime. */
 #poll-rows {
-  margin-top: calc(20px * var(--scale));  /* clear break between question and bars */
+  margin-top: calc(31px * var(--scale));  /* clear break between question and bars */
   display: flex;                   /* a simple vertical stack… */
   flex-direction: column;          /* …one row per option */
-  gap: calc(13px * var(--scale));  /* even air between the rows */
+  gap: calc(20px * var(--scale));  /* even air between the rows */
 }
 
 /* One option row — its label and share above, its bar below. */
@@ -115,11 +115,11 @@ export const pl01: TemplateVariant = definePollVariant(
   display: flex;                   /* label on the left… */
   align-items: baseline;           /* …share on the right, on one baseline */
   justify-content: space-between;  /* the share sits at the far end of the measure */
-  gap: calc(16px * var(--scale));  /* a long label never runs into its figure */
-  margin-bottom: calc(6px * var(--scale));  /* air between the label row and its bar */
+  gap: calc(25px * var(--scale));  /* a long label never runs into its figure */
+  margin-bottom: calc(9px * var(--scale));  /* air between the label row and its bar */
 }
 .poll-row-label {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* list scale — under the question */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* list scale — under the question */
   font-weight: 500;                /* readable at a glance */
   line-height: 1.2;                /* leading if a long option wraps */
   color: var(--text-color);        /* primary text on the void */
@@ -128,29 +128,29 @@ export const pl01: TemplateVariant = definePollVariant(
 .poll-row-value {
   flex-shrink: 0;                  /* the figure never wraps or squeezes */
   font-family: var(--font-label);  /* the house mono label face — figures line up */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the same size as its label */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* the same size as its label */
   font-weight: 700;                /* the number carries the row */
   color: var(--accent);            /* the share wears the accent */
 }
 
 /* The bar track — a faint on-palette groove the fill grows along. */
 .poll-bar {
-  height: calc(12px * var(--scale));  /* a chunky, readable bar */
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+  height: calc(18px * var(--scale));  /* a chunky, readable bar */
+  border-radius: calc(9px * var(--scale));  /* the house chip radius */
   background: color-mix(in srgb, var(--text-color) 9%, transparent);  /* faint on-palette groove */
   overflow: hidden;                /* the fill's square end never escapes the groove */
 }
 .poll-bar-fill {
   height: 100%;                    /* the fill is the full height of its groove */
-  border-radius: calc(6px * var(--scale));  /* matches the groove */
+  border-radius: calc(9px * var(--scale));  /* matches the groove */
   background: var(--accent);       /* the one accent surface */
 }
 
 /* The count line — quiet, under the bars. */
 .poll-foot {
-  margin-top: calc(18px * var(--scale));  /* air under the chart */
+  margin-top: calc(28px * var(--scale));  /* air under the chart */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast footnote is caps */
   color: var(--text-dim);          /* secondary text — it is a note, not a headline */
@@ -167,7 +167,7 @@ export const pl01: TemplateVariant = definePollVariant(
   font-weight: 700;                /* and steps up a weight */
 }
 .poll-winner .poll-row-value {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* the winning figure grows */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* the winning figure grows */
 }
 
 /* Tied — nobody leads, so nobody is marked. The board says so instead of picking a row. */

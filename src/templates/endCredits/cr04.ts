@@ -59,8 +59,8 @@ export const cr04: TemplateVariant = defineCreditsVariant(
     css: `/* The strip - the crawl's viewport. The accent top border is the design's one color
    moment on the chrome itself: lt02's short underline stretched across the frame. */
 .credits-box {
-  width: calc(1680px * var(--scale));            /* full-width strip, safe inside 1920 */
-  height: calc(84px * var(--scale));             /* slim ticker height */
+  width: calc(2100px * var(--scale));            /* full-width strip, safe inside 1920 */
+  height: calc(105px * var(--scale));             /* slim ticker height */
   overflow: hidden;                              /* the viewport - track slides through it */
   background: var(--panel-bg);                   /* subtle near-black panel, never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
@@ -72,7 +72,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
   align-items: center;                           /* center every item on the strip's axis */
   height: 100%;                                  /* fill the strip so centering works */
   white-space: nowrap;                           /* one line forever - never wrap the crawl */
-  gap: calc(36px * var(--scale));                /* air between crawl items */
+  gap: calc(45px * var(--scale));                /* air between crawl items */
   will-change: transform;                        /* hint the browser: the preset moves this */
 }
 
@@ -81,12 +81,12 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 .credits-page {
   display: inline-flex;                          /* stay on the crawl line */
   align-items: center;                           /* match the track's vertical centering */
-  gap: calc(36px * var(--scale));                /* same rhythm inside a section */
+  gap: calc(45px * var(--scale));                /* same rhythm inside a section */
 }
 
 /* Section heading - small caps in the accent color, the crawl's wayfinding marks. */
 .credits-heading {
-  font-size: calc(18px * var(--scale) * var(--type-scale));          /* label size */
+  font-size: calc(23px * var(--scale) * var(--type-scale));          /* label size */
   font-weight: 600;                              /* firm without shouting */
   letter-spacing: 0.14em;                        /* small caps breathe */
   text-transform: uppercase;                     /* reads as a section label */
@@ -96,7 +96,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 /* Thin rule after each heading - a vertical echo of the lt02 underline stroke. */
 .credits-rule {
   width: var(--accent-weight);                   /* the same authored accent weight */
-  height: calc(18px * var(--scale));             /* matches the heading's cap height */
+  height: calc(23px * var(--scale));             /* matches the heading's cap height */
   background: var(--accent);                     /* same accent as the strip's top border */
 }
 
@@ -104,12 +104,12 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 .credits-row {
   display: inline-flex;                          /* keep the pair on the line */
   align-items: baseline;                         /* role and name share a baseline */
-  gap: calc(8px * var(--scale));                 /* tight pair spacing */
+  gap: calc(10px * var(--scale));                 /* tight pair spacing */
 }
 
 /* Role - quiet uppercase label before the name. */
 .credits-role {
-  font-size: calc(16px * var(--scale) * var(--type-scale));          /* clearly subordinate to the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));          /* clearly subordinate to the name */
   font-weight: 400;                              /* light against the semibold name */
   letter-spacing: var(--label-tracking);         /* the role label's authored tracking */
   text-transform: uppercase;                     /* label voice, not a sentence */
@@ -118,21 +118,21 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 
 /* Name - the strong element of each pair. */
 .credits-name {
-  font-size: calc(22px * var(--scale) * var(--type-scale));          /* the crawl's headline size */
+  font-size: calc(28px * var(--scale) * var(--type-scale));          /* the crawl's headline size */
   font-weight: var(--display-weight);            /* the names' authored display weight */
   color: var(--text-color);                      /* primary text color */
 }
 
 /* A plain line inside a section - a name with no role, carried at the name's weight. */
 .credits-entry {
-  font-size: calc(22px * var(--scale) * var(--type-scale));          /* sized with the names */
+  font-size: calc(28px * var(--scale) * var(--type-scale));          /* sized with the names */
   font-weight: var(--display-weight);            /* the names' authored display weight */
   color: var(--text-color);                      /* primary text color */
 }
 
 /* Middle-dot divider emitted after each credit - punctuation between crawl items. */
 .credits-sep {
-  font-size: calc(22px * var(--scale) * var(--type-scale));          /* sized with the names it separates */
+  font-size: calc(28px * var(--scale) * var(--type-scale));          /* sized with the names it separates */
   color: var(--text-dim);                        /* quiet - a beat, not a feature */
 }
 
@@ -140,12 +140,12 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 .credits-end {
   display: inline-flex;                          /* stay on the crawl line */
   align-items: center;                           /* logo and year share the strip's axis */
-  gap: calc(14px * var(--scale));                /* space between logo and year */
+  gap: calc(18px * var(--scale));                /* space between logo and year */
 }
 
 /* Imported logo - height-locked to the strip; width follows the image's aspect. */
 .credits-logo {
-  height: calc(40px * var(--scale));             /* fits the slim strip with air above/below */
+  height: calc(50px * var(--scale));             /* fits the slim strip with air above/below */
   width: auto;                                   /* keep the logo's aspect ratio */
   display: block;                                /* no inline baseline gap under the image */
 }
@@ -153,22 +153,22 @@ export const cr04: TemplateVariant = defineCreditsVariant(
 /* Logo placeholder - an intentional outlined square marking where the logo will sit
    once one is imported (the import flow swaps it for a real image). */
 .credits-logo-slot {
-  width: calc(40px * var(--scale));              /* square slot, same footprint as the logo */
-  height: calc(40px * var(--scale));             /* matches .credits-logo height */
+  width: calc(50px * var(--scale));              /* square slot, same footprint as the logo */
+  height: calc(50px * var(--scale));             /* matches .credits-logo height */
   border: calc(1px * var(--scale)) solid var(--accent);  /* accent keyline - looks designed */
-  border-radius: calc(2px * var(--scale));       /* minimal family: 0–2px corners */
+  border-radius: calc(3px * var(--scale));       /* minimal family: 0–2px corners */
   opacity: 0.6;                                  /* clearly a placeholder, not content */
 }
 
 /* Year / copyright - the quiet sign-off. */
 .credits-year {
-  font-size: calc(18px * var(--scale) * var(--type-scale));          /* small closing line */
+  font-size: calc(23px * var(--scale) * var(--type-scale));          /* small closing line */
   font-weight: 400;                              /* no emphasis needed */
   color: var(--text-dim);                        /* dimmed - the show is over */
 }`,
 
     tokens: {
-      accentWeight: 'calc(2px * var(--scale))',
+      accentWeight: 'calc(3px * var(--scale))',
       labelTracking: '0.08em',
       displayWeight: '600',
     },

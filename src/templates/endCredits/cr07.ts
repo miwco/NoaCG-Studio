@@ -61,15 +61,15 @@ export const cr07: TemplateVariant = defineCreditsVariant(
     </div>`,
     css: `/* The board — a wide measure, because the names run in columns across it. */
 .credits-box {
-  width: calc(1320px * var(--scale));  /* wide: the wall is horizontal, unlike a roll */
-  padding: calc(44px * var(--scale)) calc(56px * var(--scale));  /* generous board padding */
+  width: calc(1760px * var(--scale));  /* wide: the wall is horizontal, unlike a roll */
+  padding: calc(59px * var(--scale)) calc(75px * var(--scale));  /* generous board padding */
   text-align: center;              /* the heading centers over its columns */
   will-change: transform, opacity; /* hint the browser: the board fades and lifts on entry */
 }
 
 /* One group of names. Groups stack down the board — they are not pages. */
 .credits-page + .credits-page {
-  margin-top: calc(40px * var(--scale));  /* a clear break between groups */
+  margin-top: calc(53px * var(--scale));  /* a clear break between groups */
 }
 
 /* Section heading — the tracked caps label with its accent rule beneath.
@@ -80,10 +80,10 @@ export const cr07: TemplateVariant = defineCreditsVariant(
   width: fit-content;              /* so the rule underneath is only as wide as the words */
   margin-left: auto;               /* centred over the columns… */
   margin-right: auto;              /* …on both sides */
-  padding-bottom: calc(10px * var(--scale));  /* air between the label and its rule */
-  margin-bottom: calc(26px * var(--scale));   /* clear air before the columns begin */
+  padding-bottom: calc(13px * var(--scale));  /* air between the label and its rule */
+  margin-bottom: calc(35px * var(--scale));   /* clear air before the columns begin */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the group's one accent dose */
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* label scale — it titles the wall */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* label scale — it titles the wall */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -94,7 +94,7 @@ export const cr07: TemplateVariant = defineCreditsVariant(
    which is what lets a wall hold thirty names on one readable screen. */
 .credits-page {
   columns: 3;                      /* the wall's columns — CSS balances their heights */
-  column-gap: calc(56px * var(--scale));  /* a clear gutter, so the columns read as separate */
+  column-gap: calc(75px * var(--scale));  /* a clear gutter, so the columns read as separate */
 }
 /* The heading must span the columns rather than sitting inside the first one. */
 .credits-page > .credits-heading {
@@ -103,8 +103,8 @@ export const cr07: TemplateVariant = defineCreditsVariant(
 
 .credits-entry {
   break-inside: avoid;             /* a name is never split across two columns */
-  padding: calc(7px * var(--scale)) 0;  /* the wall's reading rhythm */
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* comfortable at a distance, still fits three columns */
+  padding: calc(9px * var(--scale)) 0;  /* the wall's reading rhythm */
+  font-size: calc(36px * var(--scale) * var(--type-scale));  /* comfortable at a distance, still fits three columns */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* a long name may take two rows */
   color: var(--text-color);        /* primary text color */
@@ -114,17 +114,17 @@ export const cr07: TemplateVariant = defineCreditsVariant(
 /* A "Role | Name" line, if the operator writes one — the wall still handles it. */
 .credits-row {
   break-inside: avoid;             /* keep the pair together in one column */
-  padding: calc(7px * var(--scale)) 0;  /* the same rhythm as a plain name */
+  padding: calc(9px * var(--scale)) 0;  /* the same rhythm as a plain name */
 }
 .credits-role {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a small label above the name */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* a small label above the name */
   font-weight: 500;                /* medium keeps small caps crisp */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* role labels are set in caps */
   color: var(--text-dim);          /* secondary text color */
 }
 .credits-name {
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* level with the plain names */
+  font-size: calc(36px * var(--scale) * var(--type-scale));  /* level with the plain names */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* shares the wall's rhythm */
   color: var(--text-color);        /* primary text color */
@@ -136,24 +136,24 @@ export const cr07: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* mark and words on one row */
   align-items: center;             /* sharing one centerline */
   justify-content: center;         /* centered under the columns */
-  gap: calc(20px * var(--scale));  /* air between the mark and the words */
-  margin-top: calc(44px * var(--scale));  /* clear of the last column */
-  padding-top: calc(24px * var(--scale));  /* air below the dividing keyline */
+  gap: calc(27px * var(--scale));  /* air between the mark and the words */
+  margin-top: calc(59px * var(--scale));  /* clear of the last column */
+  padding-top: calc(32px * var(--scale));  /* air below the dividing keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.14);  /* the minimal family's keyline value */
 }
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(40px * var(--scale));  /* a modest mark — the names are the content */
+  height: calc(53px * var(--scale));  /* a modest mark — the names are the content */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a quiet dashed slot, so the space is visibly reserved. */
 .credits-logo-slot {
-  padding: calc(7px * var(--scale)) calc(16px * var(--scale));  /* a small chip */
+  padding: calc(9px * var(--scale)) calc(21px * var(--scale));  /* a small chip */
   border: 1px dashed rgba(255, 255, 255, 0.28);  /* clearly a placeholder */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   letter-spacing: 0.08em;          /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -161,7 +161,7 @@ export const cr07: TemplateVariant = defineCreditsVariant(
 
 /* The closing line — the year/copyright field, used here for a sentence of thanks. */
 .credits-year {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* small print, but readable */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* small print, but readable */
   font-weight: 400;                /* conversational weight */
   color: var(--text-dim);          /* secondary text color */
 }`,
@@ -195,7 +195,7 @@ function renderEndBlock(noteHtml, logoSrc) {
          '</div>';
 }`,
     tokens: {
-      accentWeight: 'calc(2px * var(--scale))',
+      accentWeight: 'calc(3px * var(--scale))',
       displayWeight: '500',
     },
   }),

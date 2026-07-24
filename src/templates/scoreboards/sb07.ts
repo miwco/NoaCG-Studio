@@ -70,8 +70,8 @@ ${colourHoldersHtml('f6', 'f7', '#fecc02', '#c60c30')}
   position: relative;              /* anchors the accent bar */
   display: flex;                   /* teams, colon and clock end in one row */
   align-items: center;             /* everything shares the pill's center line */
-  gap: calc(16px * var(--scale));  /* air between the blocks */
-  padding: calc(12px * var(--scale)) calc(26px * var(--scale)) calc(12px * var(--scale)) calc(30px * var(--scale));
+  gap: calc(25px * var(--scale));  /* air between the blocks */
+  padding: calc(18px * var(--scale)) calc(40px * var(--scale)) calc(18px * var(--scale)) calc(46px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's soft radius — a pane, not a slab */
   background: var(--panel-bg);     /* the frosted white wash */
   backdrop-filter: var(--panel-blur);  /* the family's real blur — this is the whole look */
@@ -95,7 +95,7 @@ ${colourHoldersHtml('f6', 'f7', '#fecc02', '#c60c30')}
 .scoreboard-team-block {
   display: flex;                   /* dot, name and score in one row */
   align-items: center;             /* all three on the pill's center line */
-  gap: calc(12px * var(--scale));  /* air inside the group */
+  gap: calc(18px * var(--scale));  /* air inside the group */
   min-width: 0;                    /* lets a long name shrink and clip, not overflow */
 }
 /* Group B mirrors, so both scores end up beside the colon. */
@@ -104,11 +104,11 @@ ${colourHoldersHtml('f6', 'f7', '#fecc02', '#c60c30')}
 /* The club colour dot — small and soft, the glass family's way of carrying a hard colour. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the dot keeps its size whatever the text does */
-  width: calc(12px * var(--scale));  /* small on purpose — a marker, not a badge */
-  height: calc(12px * var(--scale));  /* same as the width — a true circle */
+  width: calc(18px * var(--scale));  /* small on purpose — a marker, not a badge */
+  height: calc(18px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
-  box-shadow: 0 0 0 calc(2px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
+  box-shadow: 0 0 0 calc(3px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
 }
 .scoreboard-team-b .scoreboard-colour-chip {
   background: var(--team-b, var(--text-dim));  /* the away club's colour, or a quiet neutral */
@@ -116,7 +116,7 @@ ${colourHoldersHtml('f6', 'f7', '#fecc02', '#c60c30')}
 
 /* The team name — the glass family's rounded sans, sentence case: full names, not codes. */
 .scoreboard-team {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* readable, deliberately quiet */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* readable, deliberately quiet */
   font-weight: 600;                /* semibold: present without shouting */
   line-height: 1.15;               /* comfortable for a mixed-case name */
   color: var(--text-color);        /* primary text on the frost */
@@ -131,7 +131,7 @@ ${clipOneLineCss('.scoreboard-score', 130)}
 
 /* The score — the pill's anchor, tabular so a change never nudges the colon off centre. */
 .scoreboard-score {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
+  font-size: calc(52px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
   font-weight: 800;                /* the heaviest thing on the pill */
   line-height: 1;                  /* sits tight on the center line */
   color: var(--text-color);        /* white — the accent stays in the bar and the dots */
@@ -140,7 +140,7 @@ ${clipOneLineCss('.scoreboard-score', 130)}
 
 /* The colon — a soft accent divider between the two scores. */
 .scoreboard-colon {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* a step under the scores */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* a step under the scores */
   font-weight: 700;                /* solid, not a hairline */
   line-height: 1;                  /* on the center line with the figures */
   color: var(--accent);            /* the accent that ties the pill together */
@@ -152,15 +152,15 @@ ${clipOneLineCss('.scoreboard-score', 130)}
   display: flex;                   /* period and clock… */
   flex-direction: column;          /* …stacked as one column */
   align-items: center;             /* both centered on the block's axis */
-  gap: calc(2px * var(--scale));   /* the two rows read as one unit */
-  padding-left: calc(20px * var(--scale));  /* air after the hairline */
-  margin-left: calc(4px * var(--scale));    /* the hairline's own breathing room */
+  gap: calc(3px * var(--scale));   /* the two rows read as one unit */
+  padding-left: calc(31px * var(--scale));  /* air after the hairline */
+  margin-left: calc(6px * var(--scale));    /* the hairline's own breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.22);  /* the glass keyline, not a border */
 }
 
 /* The period label — a soft tracked caps label. */
 .scoreboard-phase {
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid at label size */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -172,7 +172,7 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
 
 /* The countdown — tabular, so the last minute of a half never shifts the pill's width. */
 .scoreboard-clock {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the block's anchor */
+  font-size: calc(37px * var(--scale) * var(--type-scale));  /* the block's anchor */
   font-weight: 700;                /* matches the period label's weight */
   line-height: 1.05;               /* tight under the label */
   color: var(--text-color);        /* primary white — the clock is read constantly */

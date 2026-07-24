@@ -63,9 +63,9 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 
 /* The card — one frosted surface holding the whole round-up. */
 .infographic-box {
-  min-width: calc(560px * var(--scale));  /* a board — two names and a score per row */
+  min-width: calc(862px * var(--scale));  /* a board — two names and a score per row */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(22px * var(--scale)) calc(26px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(34px * var(--scale)) calc(40px * var(--scale)) calc(18px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's soft radius — a pane, not a slab */
   background: var(--panel-bg);     /* the frosted white wash */
   backdrop-filter: var(--panel-blur);  /* the family's real blur — this is the whole look */
@@ -78,10 +78,10 @@ export const ig28: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* heading and round in one row */
   align-items: baseline;           /* both on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(16px * var(--scale));  /* the round never crowds the heading */
+  gap: calc(25px * var(--scale));  /* the round never crowds the heading */
 }
 .infographic-heading {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid at label size */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -91,7 +91,7 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 }
 .infographic-sub {
   flex-shrink: 0;                  /* the round keeps its width */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* clearly subordinate */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* clearly subordinate */
   font-weight: 600;                /* semibold — present without shouting */
   color: var(--text-dim);          /* dimmed — never full accent twice in one header */
   white-space: nowrap;             /* "Group 1" stays on one line */
@@ -101,7 +101,7 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 /* The rule — a glass keyline under the header. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin-top: calc(12px * var(--scale));  /* air between the header and the rule */
+  margin-top: calc(18px * var(--scale));  /* air between the header and the rule */
   background: rgba(255, 255, 255, 0.22);  /* the glass keyline */
 }
 
@@ -115,8 +115,8 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-row {
   display: flex;                   /* every part of the match on one line */
   align-items: center;             /* the pill and the names share a centre line */
-  gap: calc(14px * var(--scale));  /* clear air between the columns */
-  padding: calc(12px * var(--scale)) 0;  /* airy vertical rhythm — the family's register */
+  gap: calc(22px * var(--scale));  /* clear air between the columns */
+  padding: calc(18px * var(--scale)) 0;  /* airy vertical rhythm — the family's register */
 }
 .infographic-fixture-row + .infographic-fixture-row {
   border-top: 1px solid rgba(255, 255, 255, 0.14);  /* the glass keyline, dimmed */
@@ -125,8 +125,8 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 /* The kick-off — a small tracked label in a shared column. */
 .infographic-fixture-when {
   flex-shrink: 0;                  /* a long name never squeezes the time */
-  min-width: calc(92px * var(--scale));  /* one shared column width — the names align */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* reference scale */
+  min-width: calc(142px * var(--scale));  /* one shared column width — the names align */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference scale */
   font-weight: 700;                /* solid at label size */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* "thu" reads as "THU", whatever is typed */
@@ -139,7 +139,7 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-side {
   flex: 1;                         /* the two sides share the row's spare width evenly */
   min-width: 0;                    /* allow a long name to shrink and wrap */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
   font-weight: 600;                /* semibold — present without shouting */
   line-height: 1.25;               /* relaxed leading in case a long name wraps */
   color: var(--text-color);        /* primary text on the frost */
@@ -151,19 +151,19 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 /* The middle — an accent-tinted pill on a finished match, a quiet "v" on an upcoming one. */
 .infographic-fixture-mid {
   flex-shrink: 0;                  /* the middle keeps its width whatever the names do */
-  min-width: calc(70px * var(--scale));  /* one shared column — the names align either side */
+  min-width: calc(108px * var(--scale));  /* one shared column — the names align either side */
   text-align: center;              /* centred between the two sides */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
   font-weight: 600;                /* semibold — this is the unplayed state */
   color: var(--text-dim);          /* dimmed — nothing has happened yet */
 }
 /* A played match: the score becomes a soft pill, so results read among fixtures. */
 .infographic-fixture-played .infographic-fixture-mid {
-  padding: calc(4px * var(--scale)) calc(12px * var(--scale));  /* the pill's own frame */
-  border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));  /* the pill's own frame */
+  border-radius: calc(1537px * var(--scale));  /* a true pill at any scale */
   background: color-mix(in srgb, var(--accent) 26%, transparent);  /* the accent, softened */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.20);  /* the glass keyline */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
   font-weight: 800;                /* heavy at pill size so it reads through the softening */
   color: var(--text-color);        /* white inside the tinted pill */
   font-variant-numeric: tabular-nums;  /* scores align down the column */

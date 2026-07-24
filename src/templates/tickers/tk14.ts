@@ -64,8 +64,8 @@ export const tk14: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full strip height */
-  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(74px * var(--scale));   /* the strip's fixed height */
+  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  height: calc(93px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -76,9 +76,9 @@ export const tk14: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(28px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(35px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(18px * var(--scale) * var(--type-scale)); /* kicker scale */
+  font-size: calc(23px * var(--scale) * var(--type-scale)); /* kicker scale */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label block's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -98,7 +98,7 @@ export const tk14: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* instruments in a single row, width = content */
   align-items: center;             /* instruments share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(34px * var(--scale)); /* air between the label and the first instrument */
+  padding-left: calc(43px * var(--scale)); /* air between the label and the first instrument */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
@@ -106,9 +106,9 @@ export const tk14: TemplateVariant = defineTickerVariant(
 .ticker-item {
   display: inline-flex;            /* the three parts sit on one line */
   align-items: baseline;           /* symbol, level and delta share a baseline */
-  gap: calc(12px * var(--scale));  /* air between the three parts */
-  margin-right: calc(46px * var(--scale)); /* generous air between instruments */
-  font-size: calc(22px * var(--scale) * var(--type-scale)); /* the strip's main voice */
+  gap: calc(15px * var(--scale));  /* air between the three parts */
+  margin-right: calc(58px * var(--scale)); /* generous air between instruments */
+  font-size: calc(28px * var(--scale) * var(--type-scale)); /* the strip's main voice */
   font-variant-numeric: tabular-nums;   /* even digits across every instrument */
   color: var(--text-color);        /* primary text color */
 }
@@ -137,9 +137,9 @@ export const tk14: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the text inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(26px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(33px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.16); /* the keyline that ends the crawl */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a stamp */
@@ -172,6 +172,6 @@ function renderTickerItem(text) {
          '</span>';
 }`,
     doubleItems: true,
-    tokens: { accentWeight: 'calc(2px * var(--scale))', labelTracking: '0.12em' },
+    tokens: { accentWeight: 'calc(3px * var(--scale))', labelTracking: '0.12em' },
   }),
 );
