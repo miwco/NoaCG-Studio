@@ -1,6 +1,56 @@
 {
   "$comment": "Emitted-code fingerprints for every catalog variant at its own defaults. Re-record with UPDATE_CATALOG_BASELINE=1 and let the diff be the review. See e2e/catalog-baseline.spec.ts.",
   "variants": {
+    "al01": {
+      "html": "77050e3a425afe91",
+      "css": "394817b852e9490f",
+      "js": "f9986afa6b43b9c8"
+    },
+    "al02": {
+      "html": "8225b7f5d2687442",
+      "css": "880849f97212cc14",
+      "js": "1e29dbd867f4f1e2"
+    },
+    "al03": {
+      "html": "f20a8bb3ad77e757",
+      "css": "5add867115889206",
+      "js": "16fbd34788390e4f"
+    },
+    "al04": {
+      "html": "ad93120a4cf59471",
+      "css": "7854ccf8adfe36ac",
+      "js": "689286b574a25daa"
+    },
+    "al05": {
+      "html": "0b132455940310e4",
+      "css": "57fcaaca4c90fa25",
+      "js": "47a90f0c9a51131b"
+    },
+    "al06": {
+      "html": "8c3163e6a003dbe4",
+      "css": "5b04f2cd1945e8f6",
+      "js": "e95d03f38f8f4120"
+    },
+    "al07": {
+      "html": "f6512370f8c74682",
+      "css": "e7e9130e238c2d43",
+      "js": "dbbd400067090a60"
+    },
+    "al08": {
+      "html": "e6545e0e747ae4c4",
+      "css": "c678e44cd3f6d66d",
+      "js": "27875441ad3d3d7a"
+    },
+    "al09": {
+      "html": "53d80900f8898d6d",
+      "css": "388839553b4775fa",
+      "js": "1c70deef45463fe6"
+    },
+    "al10": {
+      "html": "e1d91c1ce1d82551",
+      "css": "5623c8f9c30017b8",
+      "js": "b2cacbbc0470d81a"
+    },
     "aq01": {
       "html": "d140de85d797e2f3",
       "css": "4b8aea5dd4e77d67",
@@ -1321,6 +1371,51 @@
       "css": "fdf9442562811e4b",
       "js": "94f5826dd2b3bd8e"
     },
+    "pi01": {
+      "html": "f75486ab8d6ed556",
+      "css": "5d85a230a61eade7",
+      "js": "6a7082a5e5c55e55"
+    },
+    "pi02": {
+      "html": "f6829cd04ecea1b4",
+      "css": "7a4a60555f30861e",
+      "js": "2cf8c09d24a395f4"
+    },
+    "pi03": {
+      "html": "1765cb0cc520fbd4",
+      "css": "206565db278f61f9",
+      "js": "240bc6ca3c100ded"
+    },
+    "pi04": {
+      "html": "009166b7b593fde4",
+      "css": "3904006bea421e99",
+      "js": "c29c066395fe2904"
+    },
+    "pi05": {
+      "html": "eaaf238383193814",
+      "css": "70cb5cfc3fc528e1",
+      "js": "ce9e0466ed141983"
+    },
+    "pi06": {
+      "html": "6b314af8f507397b",
+      "css": "aeb7e39a03650fb9",
+      "js": "83afd768afdf9003"
+    },
+    "pi07": {
+      "html": "f08ea14c91916285",
+      "css": "ea4bb415efc6ff39",
+      "js": "d2d88bd3695fdd1e"
+    },
+    "pi08": {
+      "html": "3fe38b5ff133267b",
+      "css": "b6230dc69c1c6584",
+      "js": "d86336cfa131823d"
+    },
+    "pi09": {
+      "html": "f47145a1d3cead9b",
+      "css": "d0394b9c001746a0",
+      "js": "a9cdffdad927857c"
+    },
     "pl01": {
       "html": "87a717cc90890496",
       "css": "3f92f4a4a60f4b24",
@@ -1630,6 +1725,56 @@
       "html": "ab7150ca1250c941",
       "css": "d2a8ded5430bfde4",
       "js": "c22d738103fe8bd7"
+    },
+    "tk11": {
+      "html": "c7d1f52258208dc4",
+      "css": "ff9f8d10a7b50137",
+      "js": "3e2f80eb00f2c0d3"
+    },
+    "tk12": {
+      "html": "599433efab06b176",
+      "css": "ec41da0db4082d74",
+      "js": "f6a74a7c0bea9ea5"
+    },
+    "tk13": {
+      "html": "1f7bb0beab8052fa",
+      "css": "694a615ad30c4057",
+      "js": "f9ff141ae284d3fc"
+    },
+    "tk14": {
+      "html": "1bdc6116b3e3bf27",
+      "css": "360b5c7f18fd9f2b",
+      "js": "b51983104126acb1"
+    },
+    "tk15": {
+      "html": "d0c2d72f86ef124e",
+      "css": "c9ae97d91fdfcf4f",
+      "js": "4eb48ff9aabacde5"
+    },
+    "tk16": {
+      "html": "6d728305f61c6073",
+      "css": "ebf3339635a07e85",
+      "js": "0b99b4caa613a320"
+    },
+    "tk17": {
+      "html": "89398e4f2043f9ba",
+      "css": "06b84e72a367cb8c",
+      "js": "756b6f60eead3422"
+    },
+    "tk18": {
+      "html": "0b3bd3bd421fd10b",
+      "css": "53fb52cb1fe9768b",
+      "js": "d1952ac8a39bfe0e"
+    },
+    "tk19": {
+      "html": "858f9fb97f98eb2d",
+      "css": "b18a1d57e75c9c9c",
+      "js": "d41ae99fb078d360"
+    },
+    "tk20": {
+      "html": "1c7f88dcff8f927c",
+      "css": "0815422d7ca7e8ec",
+      "js": "171bad78ea15ca97"
     },
     "tr01": {
       "html": "d21d377c49130b13",

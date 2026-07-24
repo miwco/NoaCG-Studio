@@ -165,9 +165,19 @@ test('facet values without catalog mass render no chip', async ({ page }) => {
   await page.locator('.wz-browse-more summary').click();
   // No preset ships intensity "none", so that chip must not exist (proposal §10).
   await expect(page.locator('.wz-filter', { hasText: 'Motion: none' })).toHaveCount(0);
-  // And only categories with content render tiles. Captions & lyrics is the standing gap:
-  // timed-text playout is a different runtime problem (docs/PACK_TAXONOMY.md, "still open"),
-  // so nothing declares that category and its tile must not render. Products used to be the
-  // example here until the commerce cards filled it — which is the drift this guards.
-  await expect(page.locator('.wz-browse-tiles .wz-cat', { hasText: 'Captions' })).toHaveCount(0);
+  // And only categories with content render tiles. This used to name the one category that
+  // was empty — Products, then Captions — and each naming rotted the moment a pack filled it
+  // (commerce cards, then the public-service pack's two-language notices). So assert the RULE
+  // instead of an example: the tiles are exactly the graphic categories the catalog has
+  // designs for, which stays true whether or not any category is currently empty.
+  const expected = await page.evaluate(async () => {
+    const { allTemplateMeta } = await import('/src/templates/templateMeta.ts');
+    const { GRAPHIC_CATEGORIES } = await import('/src/model/taxonomy.ts');
+    const filled = new Set(allTemplateMeta().map(({ meta }) => meta.category));
+    return GRAPHIC_CATEGORIES.filter((c) => filled.has(c.id)).map((c) => c.name).sort();
+  });
+  const rendered = (await page.locator('.wz-browse-tiles .wz-cat-head strong').allInnerTexts())
+    .map((t) => t.trim())
+    .sort();
+  expect(rendered).toEqual(expected);
 });

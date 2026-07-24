@@ -211,6 +211,26 @@ export const TYPE_META: Record<string, DeclaredTemplateMeta> = {
     category: 'transition', subtype: 'stinger', structures: ['full-panel'], coverage: 'full',
     semantics: { label: 'headline' },
   },
+  // ── The public-service pack (templates/alerts, templates/publicInfo) ────────
+  // Neither type gets a graphic category of its own. An alert IS the `alert` category — the
+  // same tile pack4's notice-card already browses under, which is the point: two designs of
+  // the same graphic must not land on two tiles. The two-language notice is a TRANSLATION,
+  // which is what the `caption` category's 'translation' subtype is for.
+  'alert-level': {
+    category: 'alert', subtype: 'warning', structures: ['strip', 'multi-line'],
+    semantics: { headline: 'headline', detail: 'description', source: 'source' },
+    // The four severity states are the graphic's point (types/alertLevel.ts).
+    extraCapabilities: ['alert-state', 'operator-states'],
+  },
+  'public-notice': {
+    category: 'caption', subtype: 'translation', structures: ['multi-line'], coverage: 'panel',
+    semantics: {
+      heading1: 'headline', notice1: 'description',
+      heading2: 'headline', notice2: 'description', source: 'source',
+    },
+    // The languages take turns on the graphic's own timer, and the operator can hold one.
+    extraCapabilities: ['operator-states'],
+  },
 };
 
 // ── Per-variant declarations (the ~30 unclaimed hand-written designs where the
@@ -294,6 +314,53 @@ export const VARIANT_META: Record<string, DeclaredTemplateMeta> = {
   // Creator — handles and stream identity.
   ls31: { category: 'lower-third', subtype: 'name-tag', structures: ['multi-line', 'single-line'], positionalSemantics: ['name', 'description', 'social-handle', 'social-handle', 'social-handle'] },
   ls32: { category: 'lower-third', subtype: 'name-tag', structures: ['name-role', 'multi-line'], positionalSemantics: ['social-handle', 'name', 'headline', 'amount'] },
+
+  // ── The PUBLIC-SERVICE pack's tickers (tk11…tk17, tk20) ────────────────────
+  //
+  // The ticker fallback calls every strip a 'news-ticker', which is right for the wire strips
+  // it was written for and wrong for these: a travelling crawl, an index board and a
+  // double-decker are three things an operator picks between by name. tk18/tk19 are compiled
+  // by the `ticker` TYPE and browse as 'rotator' from there.
+  tk11: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'topic', 'source'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  tk12: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'headline'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  tk13: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'headline', 'topic'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  tk14: { category: 'ticker', subtype: 'market-ticker', structures: ['strip'], positionalSemantics: ['items', 'headline', 'topic'], extraCapabilities: ['ticker', 'repeating', 'loop', 'live-data'] },
+  tk15: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'headline', 'source'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  tk16: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'headline'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  tk17: { category: 'ticker', subtype: 'crawl', structures: ['strip'], positionalSemantics: ['items', 'headline', 'source'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+  // The double-decker holds the current story STILL above the crawl, which is what makes it a
+  // news ticker rather than one more crawl.
+  tk20: { category: 'ticker', subtype: 'news-ticker', structures: ['strip', 'multi-line'], positionalSemantics: ['items', 'topic', 'headline'], extraCapabilities: ['ticker', 'repeating', 'loop'] },
+
+  // ── The PUBLIC-SERVICE pack's alerts (templates/alerts) ────────────────────
+  //
+  // al01/al02/al04 take the `alert-level` TYPE_META above unchanged. The three declared here
+  // are the ones whose SHAPE differs from the flat band: a contained corner panel, a
+  // met-office card, and the card that takes the whole frame.
+  al03: { category: 'alert', subtype: 'warning', structures: ['multi-line'], coverage: 'panel', semantics: { headline: 'headline', detail: 'description', source: 'source' }, extraCapabilities: ['alert-state', 'operator-states'] },
+  al05: { category: 'alert', subtype: 'warning', structures: ['multi-line'], coverage: 'panel', semantics: { headline: 'headline', detail: 'description', source: 'source' }, extraCapabilities: ['alert-state', 'operator-states'] },
+  al06: { category: 'alert', subtype: 'emergency', structures: ['full-panel', 'multi-line'], coverage: 'full', semantics: { headline: 'headline', detail: 'description', source: 'source' }, extraCapabilities: ['alert-state', 'operator-states'] },
+  // The four single-state notices. None carries a severity flag, so none claims 'alert-state':
+  // the capability facet has to mean the graphic really offers the ladder.
+  al07: { category: 'alert', subtype: 'status', structures: ['strip', 'multi-line'], positionalSemantics: ['description', 'description'] },
+  al08: { category: 'alert', subtype: 'status', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description'], extraCapabilities: ['clock'] },
+  al09: { category: 'alert', subtype: 'breaking', structures: ['strip', 'multi-line'], positionalSemantics: ['topic', 'headline', 'source'] },
+  al10: { category: 'alert', subtype: 'notice', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'time'] },
+
+  // ── The PUBLIC-SERVICE pack's public information (templates/publicInfo) ────
+  //
+  // These SCATTER, which is why every one of them is declared. An official notice is an alert
+  // in everything but tone; a numbered instruction and a page of small print are information
+  // cards; a bilingual panel is a translation; a source label is a corner bug. Filing all nine
+  // under one tile would have put pi01 on a different tile from pack4's notice-card, which is
+  // the same graphic. pi08/pi09 come from the `public-notice` TYPE_META above.
+  pi01: { category: 'alert', subtype: 'notice', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'organization'] },
+  pi02: { category: 'info', subtype: 'step', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'description', 'description', 'organization'], extraCapabilities: ['multi-step'] },
+  pi03: { category: 'bug', subtype: 'source', structures: ['corner-chip', 'single-line'], coverage: 'overlay', positionalSemantics: ['source', 'description'] },
+  pi04: { category: 'info', subtype: 'disclaimer', structures: ['strip'], coverage: 'strip', positionalSemantics: ['description', 'source'] },
+  pi05: { category: 'alert', subtype: 'notice', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'description', 'organization'] },
+  pi06: { category: 'info', subtype: 'explainer', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'description', 'organization'] },
+  pi07: { category: 'caption', subtype: 'translation', structures: ['multi-line'], coverage: 'panel', positionalSemantics: ['headline', 'description', 'headline', 'description', 'organization'] },
 };
 
 // ── Per-old-category fallback (single-valued, proposal §4) ──────────────────
@@ -307,6 +374,17 @@ export const CATEGORY_DEFAULT_META: Record<TemplateCategory, DeclaredTemplateMet
     category: 'ticker', subtype: 'news-ticker', structures: ['strip'],
     positionalSemantics: ['items', 'headline'],
     extraCapabilities: ['ticker', 'repeating', 'loop'],
+  },
+  'alert': {
+    category: 'alert', subtype: 'warning', structures: ['strip', 'multi-line'],
+    positionalSemantics: ['headline', 'description', 'source'],
+  },
+  // Single-valued, like every fallback — the nine shipped designs each declare what they
+  // really are in VARIANT_META above, and an information card is what an undeclared one is
+  // most likely to be.
+  'public-info': {
+    category: 'info', subtype: 'explainer', structures: ['multi-line'], coverage: 'panel',
+    positionalSemantics: ['headline', 'description', 'description', 'description', 'organization'],
   },
   'scoreboard': {
     category: 'scoreboard', subtype: 'match-score', structures: ['strip', 'logo-text'],

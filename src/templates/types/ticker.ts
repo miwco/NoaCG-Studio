@@ -20,6 +20,8 @@ import { tk07 } from '../tickers/tk07';
 import { tk08 } from '../tickers/tk08';
 import { tk09 } from '../tickers/tk09';
 import { tk10 } from '../tickers/tk10';
+import { tk18 } from '../tickers/tk18';
+import { tk19 } from '../tickers/tk19';
 import type { GraphicType } from './graphicType';
 
 const ITEMS_SAMPLE = [
@@ -192,6 +194,55 @@ export const tickerType: GraphicType = {
         label: 'NEWS',
       },
       create: (_type, options) => tk10.create(options),
+    },
+    {
+      // A SECOND noacg rotator, and a deliberate one. tk07 rotates a newsroom's stories;
+      // this one rotates public advisories, which is the same machine doing a different job —
+      // bigger type, no travel to catch a word in, and a strip sized so a wrapped notice is
+      // normal rather than an accident. Packs resolve a family to its FIRST design, so tk07
+      // stays the noacg cell and this is an explicit choice in the browse grid.
+      id: 'tk19',
+      name: 'Advisory Rotator',
+      description: 'Public advisories one at a time — timed, holdable, and read in full.',
+      styleTag: 'noacg',
+      palette: paletteById('noacg'),
+      fontId: 'space-grotesk',
+      samples: {
+        items: [
+          'Residents of the harbour district should stay indoors until further notice',
+          'The coast road is closed between the ferry terminal and the north pier',
+          'Emergency shelters are open at the sports hall and the community centre',
+          'Keep emergency lines free — call 116 117 for health advice',
+        ].join('\n'),
+        label: 'Advisory',
+      },
+      semantics:
+        'Its lines carry public advisories rather than a programme’s stories, but the graphic ' +
+        'is the same one: a strip that holds one item at a time on its own timer and answers ' +
+        'to pause / resume / next. The type is the behaviour; the copy is the design’s.',
+      create: (_type, options) => tk19.create(options),
+    },
+    {
+      id: 'tk18',
+      name: 'Status Rotator',
+      description: 'Service statuses one at a time — timed, pausable, and split into a name column.',
+      styleTag: 'minimal',
+      palette: paletteById('ivory'),
+      fontId: 'inter',
+      samples: {
+        items: [
+          'Northern line — delays of up to 20 minutes',
+          'Harbour ferry — running to timetable',
+          'Airport shuttle — suspended until 14:00',
+          'City buses — running to timetable',
+        ].join('\n'),
+        label: 'Service status',
+      },
+      semantics:
+        'A second minimal rotator beside tk10: same machine, but its items are "service — ' +
+        'status" pairs the runtime splits into a name column, which is a different graphic to ' +
+        'an operator even though it is the same type underneath.',
+      create: (_type, options) => tk18.create(options),
     },
   ],
 };

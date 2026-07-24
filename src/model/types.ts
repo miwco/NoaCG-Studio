@@ -13,6 +13,14 @@ export type TemplateType =
   | 'info-card'
   | 'end-credits'
   | 'ticker'
+  /** An urgent on-air notice — breaking news, a weather warning, an emergency instruction.
+   *  Distinct from an info card because urgency is the format: the graphic leads with a
+   *  severity flag and is read in one glance. */
+  | 'alert'
+  /** A public-information panel — official notices, disclaimers, source labels, municipal /
+   *  medical / legal information, and multilingual versions of the same. Calm where an alert
+   *  is urgent; the two share nothing but their audience. */
+  | 'public-info'
   | 'fullscreen'
   | 'bug'
   | 'countdown'
