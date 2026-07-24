@@ -103,6 +103,18 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   color: var(--text-color);            /* primary text color */
 }
 
+/* A plain line inside a section — a name with no role. Same voice as a name, its own
+   rhythm: rows of these are a list, so they sit tighter than a role-above-name stack. */
+.credits-entry {
+  padding: calc(6px * var(--scale)) 0;  /* the list rhythm — tighter than a .credits-row */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
+  font-weight: var(--display-weight);   /* the names' authored display weight */
+  line-height: 1.2;                     /* comfortable for a long column of names */
+  letter-spacing: var(--display-tracking);  /* matches the credited names above it */
+  color: var(--text-color);             /* primary text color */
+  overflow-wrap: break-word;            /* break very long unbroken names */
+}
+
 /* The end block — hairline, logo, year. The roll preset stops with this centered. */
 .credits-end {
   padding-top: calc(48px * var(--scale));    /* a long breath before the sign-off */
@@ -156,8 +168,12 @@ export const cr01: TemplateVariant = defineCreditsVariant(
 // renderCreditRow(entry): one heading line or one role-above-name stack.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // A line without "|" — a section heading in quiet accent caps.
+    // The line that opens a section — a heading in quiet accent caps.
     return '<div class="credits-heading">' + entry.text + '</div>';
+  }
+  if (entry.type === 'entry') {
+    // A plain line inside a section: a name with no role, a line of thanks.
+    return '<div class="credits-entry">' + entry.text + '</div>';
   }
   // "Role | Name" — the centered stack: role on top, name beneath.
   return '<div class="credits-row">' +

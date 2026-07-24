@@ -55,14 +55,29 @@ export const PACKS: TemplatePack[] = [
   {
     id: 'match-day',
     name: 'Match Day',
-    description: 'The full live sports kit: scorebug, match board, lineups, stats, table and results.',
+    description: 'Scorebug, clock, line-up, standings and the full-time card — the live sports kit.',
     family: 'sport',
     types: [
-      'scorebug', 'match-board', 'match-status', 'match-event',
-      'fixtures',
-      'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'holding-screen',
+      // The sports pack's five types (docs/SPORTS_PACK.md), then the older generic scoreboard.
+      'scorebug', 'match-board', 'match-status', 'match-event', 'fixtures',
+      'scoreboard', 'countdown', 'lower-third', 'ticker', 'sponsor-bug', 'title-card', 'holding-screen',
+      'now-next', 'notice-card',
+      // The identity marks a match feed leaves up: the fixture ident, the live/replay status,
+      // the sponsor bar, and the venue chip for pitchside cameras.
+      'event-bug', 'live-bug', 'sponsor-strip', 'status-chip',
+      // The competition pack's sports half (docs/COMPETITION_PACK.md).
+      'roster', 'standings', 'winner-card',
     ],
-    extras: ['vs01', 'cr03'],
+    extras: [
+      // The specialist straps a match feed is drawn for: the commentary pair as a block and
+      // as a rail, and the three ways coverage names a player — by squad number, by the
+      // stat line that justifies the cutaway, and by the club whose badge leads the card.
+      'ls06', 'ls07', 'ls08', 'ls09', 'ls10',
+      // The other scores crawling under this one, and the card a rain delay or a
+      // postponement goes to — which an intermission screen is not: it says WHEN.
+      'tk13', 'al10',
+      'vs01', 'cr03', 'ss11', 'cr12',
+    ],
     formats: ['Sports broadcast / match coverage', 'Local sports / amateur sports'],
   },
   // ── The DISCIPLINE packs (docs/SPORTS_PACK.md) ──
@@ -184,10 +199,27 @@ export const PACKS: TemplatePack[] = [
   {
     id: 'esports',
     name: 'Esports',
-    description: 'Match score, caster straps, schedule and countdown for tournament nights.',
+    description: 'Series score, maps, match-ups, brackets and the champion card for tournament nights.',
     family: 'sport',
-    types: ['scoreboard', 'lower-third', 'countdown', 'agenda', 'social-bug', 'sponsor-bug', 'holding-screen', 'title-card'],
-    extras: ['vs02'],
+    types: [
+      'scoreboard', 'lower-third', 'countdown', 'agenda', 'social-bug', 'sponsor-bug', 'holding-screen', 'title-card',
+      'now-next',
+      // Tournament nights run long: a station ident, the live/replay status, and a sponsor
+      // rotation that cycles the tournament's partners without an operator touching it.
+      'station-bug', 'live-bug', 'sponsor-rotator',
+      // The competition pack leads here: a tournament night is a series, not a single match
+      // (docs/COMPETITION_PACK.md).
+      'esports-score', 'map-round', 'matchup', 'head-to-head', 'player-card', 'bracket', 'standings', 'winner-card',
+    ],
+    extras: [
+      // An esports player is named tag-then-handle, not name-then-club, and the desk is
+      // named by handle too — three straps a sports kit has no shape for.
+      'ls11', 'ls12', 'ls13',
+      // The rest of the bracket's results crawling under the current game, and the notice a
+      // tournament day actually needs most: the pause nobody planned.
+      'tk13', 'al07',
+      'vs02', 'ss13', 'cr12',
+    ],
     formats: ['Esports tournament'],
   },
   {
@@ -195,7 +227,26 @@ export const PACKS: TemplatePack[] = [
     name: 'Creator',
     description: 'Starting-soon, straps, topic cards and handles — the streamer starter kit.',
     family: 'noacg',
-    types: ['holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll'],
+    types: [
+      'holding-screen', 'lower-third', 'topic-card', 'social-bug', 'sponsor-bug', 'countdown', 'poll',
+      'now-next', 'process-steps',
+      // A creator's own identity: the channel ident, a live/standby mark for stream breaks,
+      // and the logo-only bug for the hours where nothing else should be on screen.
+      'station-bug', 'live-bug', 'logo-bug',
+      // A stream's audience IS the show: the chat strap and the live vote are as core here
+      // as the strap is, and the question card is what a Just Chatting segment runs on.
+      'chat-highlight', 'live-poll', 'viewer-question',
+    ],
+    extras: [
+      // A co-stream names two people in the house look, the handle row is the graphic a
+      // creator ends on, and the identity card carries the sub/donation goal a subathon or
+      // a telethon exists for.
+      'ls03', 'ls31', 'ls32',
+      // A solo operator's two failure graphics: the fault that needs a reassurance line, and
+      // the standby card that says when they are back.
+      'al07', 'al10',
+      'ss06', 'ss08', 'ss09', 'ss12',
+    ],
     formats: [
       'Gaming livestream',
       'Just Chatting / personality stream',
@@ -214,7 +265,32 @@ export const PACKS: TemplatePack[] = [
     name: 'Newsroom',
     description: 'Anchor straps, the wire ticker, headline and topic cards for news programs.',
     family: 'minimal',
-    types: ['lower-third', 'ticker', 'topic-card', 'title-card', 'agenda', 'sponsor-bug'],
+    types: [
+      'lower-third', 'ticker', 'topic-card', 'title-card', 'agenda', 'sponsor-bug',
+      'headline-card', 'key-facts', 'notice-card',
+      // The newsroom's own furniture: the channel ident that never leaves, the live/replay
+      // status a news desk is obliged to be honest about, and the location chip for reporters.
+      'station-bug', 'live-bug', 'status-chip',
+      // The public-service pair (docs/PUBLIC_SERVICE_PACK.md). This is the desk that runs
+      // them: the severity ladder is what an emergency broadcast IS, and the two-language
+      // notice retires the "multilingual cards are fields" stand-in the mapping recorded.
+      'alert-level', 'public-notice',
+    ],
+    extras: [
+      // The news desk's specialist straps: the remote two-box interview, the kicker that
+      // marks comment as comment, the expert's field of expertise, the LIVE flag as its own
+      // element, the correspondent's dateline, and — for a market show cutting between
+      // exchanges — the strap that computes another city's time instead of stating it.
+      'ls01', 'ls23', 'ls24', 'ls28', 'ls29', 'ls30',
+      // The crawls, one per job the `ticker` type's own design does not do: caps framing the
+      // travel, a strip along the TOP while the lower third is busy, market deltas, the
+      // opaque notice crawl, the breaking dot, a bilingual split, and the fixed top deck.
+      'tk11', 'tk12', 'tk14', 'tk15', 'tk16', 'tk17', 'tk20',
+      // The breaking banner (its kicker is a field, not a state), the numbered emergency
+      // instructions, and the source label a press conference is obliged to carry.
+      'al09', 'pi02', 'pi03',
+      'ss08', 'card52',
+    ],
     formats: [
       'News / current affairs livestream',
       'Weather broadcast / climate update',
@@ -229,7 +305,30 @@ export const PACKS: TemplatePack[] = [
     name: 'Election',
     description: 'Result bars, candidate straps and the count ticker for civic broadcasts.',
     family: 'minimal',
-    types: ['poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown'],
+    types: [
+      'poll', 'lower-third', 'ticker', 'title-card', 'agenda', 'countdown',
+      'headline-card', 'key-facts',
+      // Results night runs from many places at once: a location chip per feed, and a status
+      // mark that says plainly whether a shot is live or a replay.
+      'status-chip', 'live-bug',
+      // The live vote carries the count as it comes in and calls a leader; the static poll
+      // board above it is the finished result.
+      'live-poll',
+      // A civic broadcast is frequently obliged to carry its notices in two languages, and
+      // the rotator is the honest way to do that in one strip's worth of screen.
+      'public-notice',
+    ],
+    extras: [
+      // Civic coverage reads the party colour first: the result bar, the symmetric podium
+      // strap a debate places twice, and the everyday affiliation strap. The analysis
+      // kicker rides along because results night runs on interpretation.
+      'ls20', 'ls21', 'ls22', 'ls23',
+      // The council's own paperwork put on screen: the notice crawl, the public and
+      // municipal notices (reference and deadline in their own chip), and the two-language
+      // panel a bilingual jurisdiction runs everything through.
+      'tk15', 'pi01', 'pi05', 'pi07',
+      'card52', 'cr05',
+    ],
     formats: [
       'Election night / results program',
       'Debate / political discussion',
@@ -241,7 +340,22 @@ export const PACKS: TemplatePack[] = [
     name: 'Talk Show',
     description: 'Guest straps, topic and question cards, polls — panels, podcasts and Q&As.',
     family: 'glass',
-    types: ['lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown'],
+    types: [
+      'lower-third', 'topic-card', 'poll', 'agenda', 'social-bug', 'sponsor-bug', 'countdown',
+      'key-facts', 'recap-card',
+      // A show ident for the corner, and a sponsor rotation for the partners a podcast or
+      // panel show reads out between segments.
+      'station-bug', 'sponsor-rotator',
+      // The whole audience-interaction set: a live Q&A is this pack's own format.
+      'viewer-question', 'qa-card', 'chat-highlight', 'question-queue', 'live-poll',
+    ],
+    extras: [
+      // The panel's own straps: the two-card remote interview, the guest-over-host pair in
+      // both its compositions, the specialist's subject tag, and the now-playing strap a
+      // radio-with-video show needs (the topic card had been standing in for it).
+      'ls02', 'ls04', 'ls05', 'ls24', 'ls25',
+      'card52', 'ss06', 'ss12',
+    ],
     formats: [
       'Talk show / panel discussion',
       'Podcast livestream / videocast',
@@ -257,7 +371,26 @@ export const PACKS: TemplatePack[] = [
     name: 'Corporate Events',
     description: 'Agendas, speaker straps, session titles and polls for webinars and keynotes.',
     family: 'minimal',
-    types: ['agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen'],
+    types: [
+      'agenda', 'lower-third', 'countdown', 'title-card', 'topic-card', 'poll', 'holding-screen',
+      'now-next', 'process-steps', 'recap-card', 'key-facts',
+      // A conference stream identifies the event and its sponsors more than anything else:
+      // the session ident in the corner, and the partner strip along the bottom.
+      'event-bug', 'sponsor-strip',
+      // Webinar and conference Q&A: the moderator's queue and the answered card.
+      'question-queue', 'qa-card', 'viewer-question', 'live-poll',
+    ],
+    extras: [
+      // The speaker credits a conference actually runs on: post-nominals as their own
+      // field, the institution's mark on the card, the session strap that leads with the
+      // talk for people joining mid-track, and the expert's field for medical and legal.
+      'ls17', 'ls18', 'ls19', 'ls24',
+      // The two notices a webinar runs more than any graphic it was planned with, and the
+      // small print the medical and legal formats are obliged to carry: the disclaimer at
+      // the floor, and the health advisory with its helpline in a band of its own.
+      'al07', 'al08', 'pi04', 'pi06',
+      'ss13', 'cr05', 'cr07', 'cr09',
+    ],
     formats: [
       'Webinar / expert presentation',
       'Conference / seminar stream',
@@ -274,9 +407,24 @@ export const PACKS: TemplatePack[] = [
   {
     id: 'classroom',
     name: 'Classroom',
-    description: 'Quiz board, timers, lesson cards and a score table for teaching streams.',
+    description: 'Quiz board, verdicts, timers, lesson cards and a score table for teaching streams.',
     family: 'noacg',
-    types: ['quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard'],
+    types: [
+      'quiz-board', 'countdown', 'lower-third', 'topic-card', 'agenda', 'scoreboard',
+      'process-steps', 'key-facts', 'recap-card',
+      // A school or university stream keeps its institution's mark up, and nothing else.
+      'logo-bug',
+      // A ruling on an answer is the quiz board's other half (docs/COMPETITION_PACK.md).
+      'verdict-card', 'standings',
+      // Two- and three-answer boards for true/false and three-way rounds, plus the class vote.
+      'answer-board-2', 'answer-board-3', 'live-poll', 'viewer-question',
+    ],
+    extras: [
+      // The lecturer's credit, and the school or department mark a student production is
+      // usually required to carry.
+      'ls17', 'ls18',
+      'cr10', 'card58', 'ss13',
+    ],
     formats: [
       'Education / lecture livestream',
       'Student production / school TV',
@@ -288,8 +436,25 @@ export const PACKS: TemplatePack[] = [
     name: 'Church & Ceremony',
     description: 'Service titles, scripture cards, program schedule and a quiet countdown.',
     family: 'minimal',
-    types: ['title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda'],
-    extras: ['cr01'],
+    types: [
+      'title-card', 'lower-third', 'topic-card', 'holding-screen', 'countdown', 'agenda',
+      'statement-card',
+      // The congregation's or family's own mark, and the ident for the service, ceremony or
+      // memorial being streamed — both quiet enough to leave up for an hour.
+      'logo-bug', 'event-bug',
+      // The request card and the question card — a service reads both from the congregation.
+      'community-request', 'viewer-question', 'question-queue',
+    ],
+    extras: [
+      // The three worship straps, and the reason this pack needed its own: a sermon credit
+      // that fades rather than snaps, a reading where the reference outranks the reader,
+      // and the ceremony strap that names the part of the programme being delivered.
+      'ls14', 'ls15', 'ls16',
+      // The side-by-side two-language panel, for a congregation that worships in two. The
+      // statement card above covers the same need as a STATEMENT; this is the notice form.
+      'pi07',
+      'cr01', 'cr05', 'cr10', 'cr11', 'ss07', 'ss10', 'card50', 'card51', 'card54', 'card55', 'card57',
+    ],
     formats: [
       'Religious service / church livestream',
       'Graduation / ceremony stream',
@@ -302,8 +467,23 @@ export const PACKS: TemplatePack[] = [
     name: 'Stage & Music',
     description: 'Artist straps, setlist cards, intermission screens for performances and galas.',
     family: 'glass',
-    types: ['title-card', 'lower-third', 'holding-screen', 'countdown', 'social-bug', 'agenda', 'ticker'],
-    extras: ['cr02'],
+    types: [
+      'title-card', 'lower-third', 'holding-screen', 'countdown', 'social-bug', 'agenda', 'ticker',
+      'now-next', 'statement-card', 'notice-card',
+      // A gala runs on two marks: which award is being given, and which festival or stage
+      // this is.
+      'award-bug', 'event-bug',
+    ],
+    extras: [
+      // The billing straps, and getting them the right way round is this pack's whole job:
+      // artist-led for a performance, track-led for a set, the numbered item for a recital
+      // programme — plus the guest-over-host pair a red carpet interviews arrivals with.
+      'ls04', 'ls25', 'ls26', 'ls27',
+      // A delayed set is not an intermission: an intermission screen announces a planned
+      // break, the standby card admits an unplanned one and says when.
+      'al10',
+      'cr02', 'cr09', 'cr12', 'ss07', 'ss11', 'card56',
+    ],
     formats: [
       'Music performance / concert livestream',
       'Award show / gala',
@@ -318,7 +498,19 @@ export const PACKS: TemplatePack[] = [
     name: 'Shopping',
     description: 'Product cards, deal timers and the offer ticker for live commerce.',
     family: 'noacg',
-    types: ['topic-card', 'countdown', 'lower-third', 'ticker', 'title-card', 'sponsor-bug'],
+    types: [
+      'topic-card', 'countdown', 'lower-third', 'ticker', 'title-card', 'sponsor-bug',
+      'key-facts',
+      // Live commerce is brand-dense: a partner strip for the show's sponsors, and a rotation
+      // for the ones that cycle through a long selling block.
+      'sponsor-strip', 'sponsor-rotator',
+    ],
+    // No specialist strap here on purpose: the pack is drawn for interview duos, athletes,
+    // clergy, academics, politicians and performers, and a selling host is named by an
+    // ordinary lower third. The commerce cards (card38-card49) are this pack's own graphics.
+    // The disclaimer strip is the exception the public-service pack supplied: price, shipping
+    // and affiliate small print is a legal obligation on a selling stream, not decoration.
+    extras: ['pi04', 'ss06', 'ss12', 'cr12'],
     formats: [
       'Live commerce / shopping stream',
       'Cooking show / food livestream',
@@ -332,7 +524,18 @@ export const PACKS: TemplatePack[] = [
     name: 'Wellness',
     description: 'Interval timers, session titles and calm holding screens for movement and rest.',
     family: 'minimal',
-    types: ['countdown', 'holding-screen', 'topic-card', 'lower-third', 'social-bug'],
+    types: [
+      'countdown', 'holding-screen', 'topic-card', 'lower-third', 'social-bug',
+      'process-steps',
+      // A class or an ambient stream keeps one quiet mark on screen and nothing more.
+      'logo-bug',
+    ],
+    // Same as Shopping: an instructor is named by an ordinary strap, and forcing a
+    // specialist one in would only make the kit harder to read. What this pack DID need is
+    // the health pair — the "consult a professional" disclaimer a fitness class carries, and
+    // the advisory whose helpline sits in its own high-contrast band, which is the one
+    // graphic a meditation or mental-health stream must be able to put up without designing.
+    extras: ['pi04', 'pi06', 'ss08', 'ss09', 'card52'],
     formats: [
       'Fitness / workout class',
       'Meditation / ambient livestream',

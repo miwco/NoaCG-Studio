@@ -103,6 +103,29 @@ a primary long-term differentiator, not a nice-to-have.
 **The catalog is complete: 31 designs across all 10 categories, every one family-consistent
 with its lower-third siblings (§8), swept per category, and covered by an E2E spec.**
 
+### The holding / credits / ceremony pack (26 designs)
+- [x] **Holding screens (ss05–ss13)** — the category widened from "starting soon" to *every
+      screen shown while the show is not happening*: countdown to a wall-clock start time,
+      break and BRB cards, a scheduled intermission, a between-items schedule hold, a
+      technical pause with **no clock by design**, and a sign-off. A design now declares its
+      `lineCount`, its `clock` (`minutes` | `start-time` | `none`) and its extra fields; the
+      countdown engine is deadline-anchored (drift-free across a stalled event loop) and
+      formats H:MM:SS past an hour
+- [x] **Credits & lists (cr05–cr12)** — the same repeating-data model at five speeds. New:
+      `credits-loop` (seamless repeating reel — the track is cloned so the seam is invisible)
+      and `credits-board` (no motion at all, for a schedule or a wall nobody should have to
+      chase, shrinking to fit rather than losing its last row). Formats: schedule board,
+      credit reel, thank-you wall, donor wall, sponsor board, sponsor crawl, graduation roll,
+      roll of remembrance. The parser gained a third line kind (`entry`) so a bare name on a
+      wall is a name, not a section heading
+- [x] **Set-piece cards (card50–card58)** — layouts carrying conventions older than
+      television: scripture, lyric (now + next), quotation, translation, order of service,
+      award (built for the Continue beat), graduate, wedding, in memoriam
+- [x] Verified: full build, per-category sweeps, the runtime bench over all 43 designs in the
+      three families, all six export targets, an exported package driven over `file://`, and
+      `e2e/holding-pack.spec.ts` (discovery, countdown accuracy, loop seam, board fit,
+      save/reopen). The render baseline for the 79 pre-existing variants did not move
+
 ### Images done right (user feedback after wave 2)
 - [x] **Broadcast field set** — the wizard/panels offer text, long text, number, and **Image**
       (SPX `filelist` listing `./images/`); dropdown/color/checkbox retired from generic UIs

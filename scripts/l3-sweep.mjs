@@ -56,11 +56,20 @@ const results = await page.evaluate(async (CATEGORY) => {
     const isInfographic = CATEGORY === 'infographic';
     const isQuiz = CATEGORY === 'quiz';
     const isVersus = CATEGORY === 'versus';
+    const isAudience = CATEGORY === 'audience';
+    // The COMPETITION PACK's four categories share one assembler, and each one's category id
+    // IS its prefix (competition/*/shared.ts: type === prefix).
+    const compPrefix = ['esports-score', 'matchup', 'results-board', 'reveal'].includes(CATEGORY)
+      ? CATEGORY : null;
     row.checks.masks = isCredits ? tpl.html.includes('credits-track')
       : isTicker ? tpl.html.includes('ticker-track')
       : clockPrefix ? tpl.html.includes(`${clockPrefix}-clock`)
       : isInfographic ? tpl.html.includes('infographic-box') // designs own their fields — no mask contract
       : isVersus ? (tpl.html.includes('versus-box') && tpl.html.includes('versus-mask') && tpl.html.includes('id="f0"'))
+      // An audience graphic's masked element is its MESSAGE, and the queue form has no mask at
+      // all — its content is rows the runtime renders. Both carry the box.
+      : isAudience ? (tpl.html.includes('audience-box')
+          && (tpl.html.includes('audience-question') || tpl.html.includes('id="audience-queue"')))
       : (/-mask/.test(tpl.html) && tpl.html.includes('id="f0"'));
 
     const rt = await runInFrame(tpl, async (w, d) => {
@@ -98,7 +107,7 @@ const results = await page.evaluate(async (CATEGORY) => {
     }
     row.checks.allPresets = presetOk;
 
-    if (['lower-third', 'info-card'].includes(CATEGORY) && v.maxLines >= 2) {
+    if (['lower-third', 'info-card', 'alert', 'public-info'].includes(CATEGORY) && v.maxLines >= 2) {
       const t3 = v.create({ animation: { steps: true } });
       // A design may opt out of steps coherently (StandardDesign.disableSteps — e.g. a
       // versus card whose lines are simultaneous columns): settings stay '1' AND no
@@ -265,14 +274,27 @@ const results = await page.evaluate(async (CATEGORY) => {
     }
     if (isQuiz) {
       // Quiz: options bind, and next() reveals the correct answer highlight.
+      //
+      // The field layout is READ OFF THE TEMPLATE, never assumed: a board has two, three or
+      // four answers, so the correct-answer dropdown is f3, f4 or f5. Writing 'B' into a
+      // hard-coded f5 set nothing at all on the smaller boards and reported a reveal failure
+      // that was the sweep's, not the graphic's.
+      const answers = tpl.fields.filter((f) => /^Answer /.test(f.title));
+      const correct = tpl.fields.find((f) => f.title === 'Correct answer');
+      const payload = { f0: 'Which planet is red?' };
+      const NAMES = ['Venus', 'Mars', 'Pluto', 'Titan'];
+      answers.forEach((f, i) => { payload[f.field] = NAMES[i]; });
+      // Pick the SECOND answer as the right one — every board has at least two.
+      if (correct) payload[correct.field] = 'B';
+      const secondAnswer = answers[1]?.field;
       const r10 = await runInFrame(tpl, async (w, d) => {
-        w.update(JSON.stringify({ f0: 'Which planet is red?', f1: 'Venus', f2: 'Mars', f3: 'Pluto', f4: 'Titan', f5: 'B' }));
+        w.update(JSON.stringify(payload));
         w.play();
         await new Promise((r) => setTimeout(r, 900));
         w.next();
         await new Promise((r) => setTimeout(r, 500));
         return {
-          bound: d.getElementById('f2')?.textContent === 'Mars',
+          bound: d.getElementById(secondAnswer)?.textContent === 'Mars',
           revealed: !!d.querySelector('.quiz-correct'),
         };
       });
@@ -309,9 +331,18 @@ const results = await page.evaluate(async (CATEGORY) => {
           const track = d.getElementById('ticker-track');
           w.play();
           const before = w.getComputedStyle(track).transform;
-          await new Promise((r) => setTimeout(r, 500));
-          const after = w.getComputedStyle(track).transform;
-          return { before, after };
+          // POLL, never sleep a fixed span. The travel only starts once the strip's half-second
+          // fade-in has finished, so a single sample at 500 ms lands on the boundary — and under
+          // a loaded machine it lands before it, reporting a working marquee as dead. The set of
+          // "failing" tickers then changed every run, which is the signature of a racing check
+          // rather than a broken template.
+          let after = before, waited = 0;
+          while (after === before && waited < 4000) {
+            await new Promise((r) => setTimeout(r, 60));
+            waited += 60;
+            after = w.getComputedStyle(track).transform;
+          }
+          return { before, after, waitedMs: waited };
         });
         row.checks.marqueeMoves = !r6b.fatal && r6b.errs.length === 0 && r6b.before !== r6b.after;
         if (!row.checks.marqueeMoves) row.issues.push('marquee never moved: ' + JSON.stringify(r6b));
@@ -330,6 +361,104 @@ const results = await page.evaluate(async (CATEGORY) => {
       out.push(row);
       continue;
     }
+    if (isAudience) {
+      // AUDIENCE graphics wrap in their MESSAGE, not in #f0 — that field is the kicker on a
+      // question card and the handle on a chat strap. And the message CLAMPS rather than
+      // wrapping forever: audience text is the one thing on a broadcast graphic whose length
+      // nobody in the production controls, so a 400-character question has to end in an
+      // ellipsis instead of growing the card off the frame.
+      const LONG = 'I have been watching since the very first series and I have always wondered how the '
+        + 'running order actually gets decided on the day, especially when a big story breaks late in '
+        + 'the afternoon and everything that was planned has to move around it at short notice.';
+      const messageField = (tpl.html.match(/class="audience-question" id="(f\d+)"/) || [])[1];
+      const queueField = tpl.html.includes('id="audience-queue"')
+        ? (tpl.html.match(/<div id="(f\d+)" style="display: none">/) || [])[1]
+        : null;
+      const r11 = await runInFrame(tpl, async (w, d) => {
+        w.play();
+        await new Promise((r) => setTimeout(r, 600));
+        const out = { boxW: 0, grew: true, clamped: true, rows: 0, live: 0, anon: false };
+        const box = d.querySelector('.audience-box');
+        if (messageField) {
+          const el = d.querySelector('.audience-question');
+          w.update(JSON.stringify({ [messageField]: 'Short?' }));
+          const shortH = el.getBoundingClientRect().height;
+          w.update(JSON.stringify({ [messageField]: LONG }));
+          const cs = w.getComputedStyle(el);
+          const lines = parseInt(cs.webkitLineClamp, 10) || 99;
+          out.grew = el.getBoundingClientRect().height > shortH;
+          out.clamped = el.getBoundingClientRect().height <= parseFloat(cs.lineHeight) * lines + 2;
+        }
+        if (queueField) {
+          w.update(JSON.stringify({ [queueField]: 'One? | A | X\nTwo? | | Y\nThree?' }));
+          out.rows = d.querySelectorAll('.audience-queue-row').length;
+          out.live = d.querySelectorAll('.audience-queue-live').length;
+        }
+        // A missing name has to render as the stand-in, on every form that carries a byline.
+        const asker = d.querySelector('.audience-asker');
+        if (asker) {
+          const field = asker.id;
+          w.update(JSON.stringify({ [field]: '' }));
+          out.anon = d.querySelector('.audience').classList.contains('audience-no-asker');
+        } else {
+          out.anon = true;                                  // this form has no byline to test
+        }
+        out.boxW = Math.round(box.getBoundingClientRect().width);
+        return out;
+      });
+      const capA = Number((tpl.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
+      row.checks.autoFit =
+        !r11.fatal && r11.errs.length === 0 && r11.grew && r11.clamped && r11.anon &&
+        r11.boxW <= capA + 2 && (!queueField || (r11.rows === 3 && r11.live === 1));
+      if (!row.checks.autoFit) row.issues.push('audience: ' + JSON.stringify({ ...r11, cap: capA }));
+      out.push(row);
+      continue;
+    }
+    if (compPrefix) {
+      // The competition contract is `.{prefix}-box` > `-head` + `-body` (the accent is a
+      // flourish a design may not have), and HALF THE PACK IS FULL-FRAME BY DESIGN — matchup
+      // and reveal are stages, not panels. The standard max-width check below is therefore
+      // meaningless here: a full-frame stage IS 1920 wide, so every design in the pack failed
+      // it against an 830px cap, and a real regression had nowhere to show.
+      //
+      // What actually holds for both shapes is that the graphic settles and stays INSIDE the
+      // 1920x1080 frame — with operator text long enough to push it out if it were going to.
+      const LONG = 'INTERNATIONAL ATHLETICS FEDERATION WORLD CHAMPIONSHIP SQUAD';
+      const r12 = await runInFrame(tpl, async (w, d) => {
+        const W = 1920, H = 1080, T = 2;
+        w.play();
+        await new Promise((r) => setTimeout(r, 900));
+        const box = d.querySelector(`.${compPrefix}-box`);
+        const root = d.querySelector(`.${compPrefix}`);
+        if (!box || !root) return { structure: false };
+        const inFrame = () => {
+          const b = box.getBoundingClientRect();
+          return b.left >= -T && b.top >= -T && b.right <= W + T && b.bottom <= H + T;
+        };
+        const structure = !!d.querySelector(`.${compPrefix}-head`) && !!d.querySelector(`.${compPrefix}-body`);
+        const settled = w.getComputedStyle(root).opacity === '1';
+        const withSamples = inFrame();
+        // Write into the VISIBLE text lines only: a hidden source div is a rows textarea whose
+        // content is parsed, not laid out, so a long string there tests nothing.
+        const ids = [...d.querySelectorAll('[id^="f"]')]
+          .filter((el) => /^f\d+$/.test(el.id) && el.tagName !== 'IMG' && w.getComputedStyle(el).display !== 'none')
+          .slice(0, 2).map((el) => el.id);
+        if (ids.length) {
+          w.update(JSON.stringify(Object.fromEntries(ids.map((id) => [id, LONG]))));
+          await new Promise((r) => setTimeout(r, 140)); // reflow after the rebind
+        }
+        const b = box.getBoundingClientRect();
+        return {
+          structure, settled, withSamples, withLongText: inFrame(), fields: ids.length,
+          boxW: Math.round(b.width), boxH: Math.round(b.height),
+        };
+      });
+      row.checks.autoFit = !r12.fatal && r12.errs.length === 0
+        && !!r12.structure && !!r12.settled && !!r12.withSamples && !!r12.withLongText;
+      if (!row.checks.autoFit) row.issues.push('competition: ' + JSON.stringify(r12));
+      out.push(row);
+      continue;
+    }
     const t4 = v.create({ lines: [{ title: 'Name', sample: 'X' }, { title: 'Title', sample: 'T' }] });
     const r4 = await runInFrame(t4, async (w, d) => {
       const long = 'Alexandrina Konstantinopolous-Vanderberg Featherstonehaugh III';
@@ -340,14 +469,32 @@ const results = await page.evaluate(async (CATEGORY) => {
       w.update(JSON.stringify({ f0: long, f1: 'Title' }));
       const longRect = el.getBoundingClientRect();
       const boxRect = box.getBoundingClientRect();
-      return { wrapped: longRect.height > shortH * 1.5, boxW: Math.round(boxRect.width) };
+      return {
+        wrapped: longRect.height > shortH * 1.5,
+        boxW: Math.round(boxRect.width),
+        // For a BAND the question is not "did it wrap" but "did it stay inside": a full-width
+        // strip has room for a long name without wrapping, and that is the design working.
+        contained: longRect.right <= boxRect.right + 1 && longRect.left >= boxRect.left - 1,
+      };
     });
     // The cap differs per category — read it from the generated CSS (max-width on the box).
     // Matches both the plain `806px` form and the scale-aware `min(calc(806px * var(--scale)), …)`
     // form; the sweep creates at default scale 1, where both mean the same width.
-    const cap = Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
-    row.checks.autoFit = !r4.fatal && !!r4.wrapped && r4.boxW <= cap + 2;
-    if (!row.checks.autoFit) row.issues.push('autofit: ' + JSON.stringify({ fatal: r4.fatal, wrapped: r4.wrapped, boxW: r4.boxW, cap }));
+    //
+    // A BAND design (an alert banner, a public-notice strip) opts out of the shared auto-fit
+    // cap with `max-width: none` and states its own width instead — a full-width band is the
+    // point of it. Its declared width is then the cap the check should hold it to; without
+    // this the sweep measures every band against a cap it deliberately does not obey.
+    const declaredWidth = Number((t4.css.match(/\n\s*width:\s*calc\((\d+)px \* var\(--scale\)\)/) || [])[1]);
+    const optsOutOfAutoFit = /max-width:\s*none/.test(t4.css);
+    const cap = optsOutOfAutoFit && declaredWidth
+      ? declaredWidth
+      : Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
+    // A hugging box must WRAP a long value; a band must CONTAIN it. Both must respect their
+    // own cap.
+    const fits = optsOutOfAutoFit ? (!!r4.contained || !!r4.wrapped) : !!r4.wrapped;
+    row.checks.autoFit = !r4.fatal && fits && r4.boxW <= cap + 2;
+    if (!row.checks.autoFit) row.issues.push('autofit: ' + JSON.stringify({ fatal: r4.fatal, wrapped: r4.wrapped, contained: r4.contained, boxW: r4.boxW, cap }));
     out.push(row);
   }
   return out;

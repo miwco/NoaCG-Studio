@@ -79,8 +79,8 @@ function insertedPrefixes(doc: Document): Array<{ root: Element; prefix: string 
  *   classes in hand-edited/AI HTML exclude that part rather than guessing);
  * - `line` means "mask-slide capable": an `fN` element whose PARENT carries the
  *   `<prefix>-mask` class;
- * - hidden data holders (`display: none` divs) are not parts; empty logo `<img>` slots ARE
- *   (the slot exists — a value shows it).
+ * - hidden data holders (`.noacg-data-source` divs SPX writes into) are not parts; empty logo
+ *   `<img>` slots ARE (the slot exists — a value shows it).
  */
 export function getTemplateParts(html: string, fields: SpxField[] = []): TemplatePart[] {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -151,6 +151,25 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
         selector: `.${prefix}-option-${n}`,
         kind: 'block',
         label: (field && fieldTitle(field.id)) ?? `Answer ${n}`,
+        channel: 'rise',
+      });
+    }
+  }
+
+  // SEVERITY LEVELS (the alert structure contract): sibling `.<prefix>-level-N` blocks, one
+  // per severity, stacked in the alert's flag. They are numbered for the same reason the quiz's
+  // answer rows are: the level machine gives each one its own opacity track, and one shared
+  // class matching four elements has nowhere to put four different values. Labelled by the
+  // level word the block itself carries, so every surface says "Warning", never
+  // ".alert-level-3".
+  if (prefix) {
+    for (let n = 1; unique(`.${prefix}-level-${n}`); n++) {
+      const block = unique(`.${prefix}-level-${n}`)!;
+      const word = (block.textContent ?? '').trim();
+      parts.push({
+        selector: `.${prefix}-level-${n}`,
+        kind: 'block',
+        label: word || `Level ${n}`,
         channel: 'rise',
       });
     }

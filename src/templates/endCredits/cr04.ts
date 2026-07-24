@@ -123,6 +123,13 @@ export const cr04: TemplateVariant = defineCreditsVariant(
   color: var(--text-color);                      /* primary text color */
 }
 
+/* A plain line inside a section - a name with no role, carried at the name's weight. */
+.credits-entry {
+  font-size: calc(22px * var(--scale) * var(--type-scale));          /* sized with the names */
+  font-weight: var(--display-weight);            /* the names' authored display weight */
+  color: var(--text-color);                      /* primary text color */
+}
+
 /* Middle-dot divider emitted after each credit - punctuation between crawl items. */
 .credits-sep {
   font-size: calc(22px * var(--scale) * var(--type-scale));          /* sized with the names it separates */
@@ -174,6 +181,11 @@ function renderCreditRow(entry) {
   if (entry.type === 'heading') {
     return '<span class="credits-heading">' + entry.text + '</span>' +
            '<span class="credits-rule"></span>';        // thin separator after the heading
+  }
+  if (entry.type === 'entry') {
+    // A plain line inside a section: a name with no role, carried at the name's weight.
+    return '<span class="credits-entry">' + entry.text + '</span>' +
+           '<span class="credits-sep">·</span>';        // divider between crawl items
   }
   return '<span class="credits-row">' +
            '<span class="credits-role">' + entry.role + '</span>' +

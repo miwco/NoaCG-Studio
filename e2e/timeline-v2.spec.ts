@@ -704,7 +704,7 @@ test('v2 property rows: a layer expands into per-property sub-rows with their ow
 });
 
 test('v2: corner bugs create as data blocks — the step timeline is their native surface', async ({ page }) => {
-  await createProject(page, { category: 'Corner bug', name: 'Glass Mark' });
+  await createProject(page, { category: 'Bugs & corner logos', name: 'Glass Mark' });
   // The step timeline outright — no classic strip, no convert chips.
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
   await expect(page.getByTestId('timeline-v2-convert')).toHaveCount(0);
@@ -772,7 +772,9 @@ test('v2: scoreboards create as data blocks — the score pop keeps working arou
 // both a loop and lifecycle calls.
 
 test('v2 read-only glyphs: a looping track shows a repeat tail, and lifecycle calls get their own row', async ({ page }) => {
-  await createProject(page, { category: 'Starting soon' });
+  // Named, not just the category: the holding tile now carries static boards too (hold-still),
+  // and this test is about the ENDLESS yoyo, so it has to pick a design that actually loops.
+  await createProject(page, { category: 'Holding', name: 'Quiet Hold' });
   await expect(page.getByTestId('timeline-v2')).toBeVisible();
 
   // The ambient breath is an endless yoyo — the tail says so, and carries no diamonds.

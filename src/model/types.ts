@@ -13,6 +13,14 @@ export type TemplateType =
   | 'info-card'
   | 'end-credits'
   | 'ticker'
+  /** An urgent on-air notice — breaking news, a weather warning, an emergency instruction.
+   *  Distinct from an info card because urgency is the format: the graphic leads with a
+   *  severity flag and is read in one glance. */
+  | 'alert'
+  /** A public-information panel — official notices, disclaimers, source labels, municipal /
+   *  medical / legal information, and multilingual versions of the same. Calm where an alert
+   *  is urgent; the two share nothing but their audience. */
+  | 'public-info'
   | 'fullscreen'
   | 'bug'
   | 'countdown'
@@ -21,6 +29,20 @@ export type TemplateType =
   | 'starting-soon'
   | 'infographic'
   | 'quiz'
+  /** Chrome AROUND the picture — a webcam surround, a two-up interview, a split screen. */
+  | 'frame'
+  /** A full-frame moment that covers the picture so a cut can happen underneath. */
+  | 'transition'
+  /** The competition pack (src/templates/competition — docs/COMPETITION_PACK.md): the
+   *  esports scorebug, the match-up / competitor card, the results board, and the reveal. */
+  | 'esports-score'
+  | 'matchup'
+  | 'results-board'
+  | 'reveal'
+  /** A live vote board — the poll while it is happening (templates/poll). */
+  | 'poll'
+  /** An audience message on screen — question, Q&A, chat, queue, request (templates/audience). */
+  | 'audience'
   /** A design the user made elsewhere (a flat image) with text fields placed on top. */
   | 'imported-design'
   | 'blank';

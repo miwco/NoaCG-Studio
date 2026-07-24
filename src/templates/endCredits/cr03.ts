@@ -140,6 +140,20 @@ export const cr03: TemplateVariant = defineCreditsVariant(
   text-wrap: balance;              /* wrapped lines get even lengths */
 }
 
+/* A plain line inside a section - a name with no role above it. Same shout as a name,
+   with the row's stacked padding removed: these come in runs. */
+.credits-entry {
+  padding: calc(6px * var(--scale)) 0;  /* the list rhythm - tighter than a two-line row */
+  font-size: calc(32px * var(--scale) * var(--type-scale));  /* sized exactly with .credits-name */
+  font-weight: var(--display-weight);  /* the family's display weight */
+  line-height: 1.15;               /* tight - big text needs little leading */
+  letter-spacing: var(--display-tracking);  /* the family's display tracking */
+  text-transform: uppercase;       /* names are shouted, not spoken */
+  color: var(--text-color);        /* primary text */
+  overflow-wrap: break-word;       /* break very long unbroken words */
+  text-wrap: balance;              /* wrapped lines get even lengths */
+}
+
 /* The final page: logo badge + year. Stacks exactly like a page - the preset treats it
    as the last swap and holds it until stop(). */
 .credits-end {
@@ -226,6 +240,10 @@ function renderCreditRow(entry) {
     rowsOnPage = 0;
   }
   rowsOnPage++;
+  if (entry.type === 'entry') {
+    // A plain line inside a section: a name with no role, set at the name's own weight.
+    return seam + '<div class="credits-entry">' + entry.text + '</div>';
+  }
   // "Role | Name" becomes a stacked pair: dim role on top, big condensed name below.
   return seam + '<div class="credits-row">' +
     '<div class="credits-role">' + entry.role + '</div>' +

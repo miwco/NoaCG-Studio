@@ -17,6 +17,9 @@ paragraph saying exactly that - and, if true, that the natural next step is `/sa
 `/handoff`, not more work here. A padded option list is a failure of this command. "Nothing more
 to be done in this session" is a fully valid, complete answer.
 
+This never waives the clickable pick (section 2b): an honest "nothing left" still ends in an
+AskUserQuestion offering the *close* options, not invented work.
+
 Do not downgrade real gaps to reach that answer either: uncommitted changes, a failing check, a
 bug found but not fixed, or a step the work implies (migration, env var, doc now wrong) mean the
 session is NOT done, and fixing that is option one.
@@ -93,21 +96,42 @@ label. At most one; zero is fine and usually right.
 Mark exactly one option as **recommended**, why in a few words. If only one honest option
 exists, list only that one - do not pad.
 
-When the honest options number 2-4, ALSO present them with the AskUserQuestion tool (recommended
-option first, labelled "(Recommended)"), so the user can pick with one click. Include a "Nothing
-- wrap up" style option only when wrapping up is genuinely reasonable at this point.
+### 2b. ALWAYS end with a clickable pick - no exceptions
+
+**Every single run of this command MUST finish with an AskUserQuestion call.** The user reads
+this on a phone and answers by pressing a button - never make them type. A run that ends in
+prose alone is a failed run, *including* the "nothing left to do" run.
+
+- Recommended option first, its label suffixed `(Recommended)`.
+- The tool takes **2-4 options**. If you wrote 5 numbered options, carry the top 4 - the
+  auto-added "Other" covers the rest.
+- Labels must match the numbered options above so "option 2" and the button agree.
+- Never skip the call because the answer feels obvious, because there is only one real option,
+  or because there is no work left. Those cases still get buttons - see section 3.
 
 ### 3. If the answer is "nothing"
 
-Skip section 2 entirely. 1-2 lines: session complete, the evidence (build/e2e/commit state),
-and whether `/safe-merge` (user-initiated) or `/handoff` is the natural close. No consolation
-backlog list.
+Skip the numbered list. 1-2 lines: session complete, the evidence (build/e2e/commit state),
+and the natural close. No consolation backlog list.
+
+**Then still call AskUserQuestion** - the close is a choice too. Build it from whichever of
+these are genuinely available, recommended one first:
+
+- **`/safe-merge`** - only when this session's branch is committed, verified, and actually
+  mergeable. Picking it is what makes it user-initiated; still never run it unasked.
+- **`/handoff`** - write the handoff note and close out.
+- **Stop here** - nothing further, leave the session as is.
+- **Start something new** - open the backlog (`docs/GOALS.md` / memory index) and plan fresh
+  work outside this session's line.
+
+Two of those is enough to satisfy the tool's minimum; `/handoff` plus **Stop here** is the
+honest floor when nothing else applies.
 
 ### 4. Then stop
 
-Present the options and END THE TURN. Do not start any option, "get a head start", or stage
-changes. The user approves with a number, a title, "do the recommended one", or the
-AskUserQuestion pick - only then begin, and do only the picked option.
+Present the options, make the AskUserQuestion call, and END THE TURN. Do not start any option,
+"get a head start", or stage changes. The user approves with the button (or a number, a title,
+"do the recommended one") - only then begin, and do only the picked option.
 
 ## Rules
 
