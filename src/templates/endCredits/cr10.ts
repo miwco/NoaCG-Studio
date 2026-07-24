@@ -61,7 +61,7 @@ export const cr10: TemplateVariant = defineCreditsVariant(
     </div>`,
     css: `/* The viewport — the window the roll travels through. Presets fade THIS on out. */
 .credits-box {
-  width: calc(1333px * var(--scale));  /* wide enough that an award line rarely wraps */
+  width: calc(1000px * var(--scale));  /* wide enough that an award line rarely wraps */
   height: calc(1120px * var(--scale));  /* the window height; the roll travels behind it */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* a name roll is a centered column */

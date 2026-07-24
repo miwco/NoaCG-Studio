@@ -56,7 +56,7 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the bar's full height */
-  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   min-height: calc(185px * var(--scale)); /* the bar grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */

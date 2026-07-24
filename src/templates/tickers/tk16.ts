@@ -62,7 +62,7 @@ export const tk16: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
-  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   height: calc(105px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */

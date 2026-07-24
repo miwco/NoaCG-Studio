@@ -61,7 +61,7 @@ export const cr07: TemplateVariant = defineCreditsVariant(
     </div>`,
     css: `/* The board — a wide measure, because the names run in columns across it. */
 .credits-box {
-  width: calc(1760px * var(--scale));  /* wide: the wall is horizontal, unlike a roll */
+  width: calc(1320px * var(--scale));  /* wide: the wall is horizontal, unlike a roll */
   padding: calc(59px * var(--scale)) calc(75px * var(--scale));  /* generous board padding */
   text-align: center;              /* the heading centers over its columns */
   will-change: transform, opacity; /* hint the browser: the board fades and lifts on entry */

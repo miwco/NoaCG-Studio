@@ -119,7 +119,7 @@ ${personColumn(o, right, { column: 'lower-third-person lower-third-support', nam
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* GUEST / HOST, whatever the operator types */
   padding: calc(7px * var(--scale)) calc(16px * var(--scale));
-  border-radius: calc(1427px * var(--scale));  /* fully rounded — a pill, not a box */
+  border-radius: calc(999px * var(--scale));  /* fully rounded — a pill, not a box */
   margin-top: calc(14px * var(--scale));  /* clear of the name above it */
 }
 .lower-third-title {

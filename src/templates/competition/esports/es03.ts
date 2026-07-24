@@ -63,7 +63,7 @@ export const es03: TemplateVariant = defineEsportsVariant(
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   border-radius: var(--panel-radius);  /* the family's soft corners */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift, plus the 1px inner edge */
-  min-width: calc(1600px * var(--scale));
+  min-width: calc(1440px * var(--scale));
 }
 
 /* The accent — a soft rule between the head and the scores, not a slab down the edge. */

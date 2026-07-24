@@ -59,7 +59,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
   display: flex;                   /* the language block, then the attribution */
   flex-direction: column;          /* stacked */
   gap: calc(24px * var(--scale));  /* air above the attribution */
-  width: calc(1493px * var(--scale));  /* one column of prose, comfortably wide */
+  width: calc(1120px * var(--scale));  /* one column of prose, comfortably wide */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   padding: calc(37px * var(--scale)) calc(45px * var(--scale));
   border-left: var(--accent-weight) solid var(--accent);  /* the official mark, on the reading edge */

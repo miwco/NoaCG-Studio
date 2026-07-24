@@ -59,7 +59,7 @@ export const cr04: TemplateVariant = defineCreditsVariant(
     css: `/* The strip - the crawl's viewport. The accent top border is the design's one color
    moment on the chrome itself: lt02's short underline stretched across the frame. */
 .credits-box {
-  width: calc(2100px * var(--scale));            /* full-width strip, safe inside 1920 */
+  width: calc(1680px * var(--scale));            /* full-width strip, safe inside 1920 */
   height: calc(105px * var(--scale));             /* slim ticker height */
   overflow: hidden;                              /* the viewport - track slides through it */
   background: var(--panel-bg);                   /* subtle near-black panel, never pure #000 */

@@ -60,7 +60,7 @@ export const cr05: TemplateVariant = defineCreditsVariant(
     css: `/* The board — a fixed measure so the time column and the item column stay aligned
    whatever the operator types. No fixed HEIGHT: the board is as tall as the day is long. */
 .credits-box {
-  width: calc(1440px * var(--scale));  /* the board's measure — wide enough for a real item title */
+  width: calc(1080px * var(--scale));  /* the board's measure — wide enough for a real item title */
   padding: calc(53px * var(--scale)) calc(69px * var(--scale));  /* generous board padding */
   text-align: left;                /* a running order is read down a left edge — the anchor
                                       zone's own text-align would centre it, which turns the

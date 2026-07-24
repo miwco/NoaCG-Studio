@@ -47,7 +47,7 @@ ${piMasks(o, [[0, 'public-info-fine'], [1, 'public-info-ref']])}
   align-items: baseline;           /* the two texts share a baseline */
   justify-content: space-between;  /* the reference holds the far end */
   gap: calc(46px * var(--scale));  /* the two never touch */
-  width: calc(2400px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   padding: calc(20px * var(--scale)) calc(40px * var(--scale));
   background: rgba(10, 12, 16, 0.88); /* opaque enough that the print never sits on video */

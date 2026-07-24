@@ -59,7 +59,7 @@ export const tk08: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label chip + viewport side by side */
   align-items: center;             /* both center on the strip's axis */
   gap: calc(26px * var(--scale));  /* air between the chip and the story */
-  width: calc(1412px * var(--scale));  /* a wide reading strip */
+  width: calc(1200px * var(--scale));  /* a wide reading strip */
   box-sizing: border-box;          /* padding stays inside the fixed width */
   padding: calc(19px * var(--scale)) calc(35px * var(--scale));  /* comfortable strip padding */
   border-radius: var(--panel-radius);  /* the family's panel radius */

@@ -58,7 +58,7 @@ export const st03: TemplateVariant = defineResultsVariant(
   -webkit-backdrop-filter: var(--panel-blur);
   border-radius: var(--panel-radius);
   box-shadow: var(--panel-shadow), var(--panel-keyline);
-  min-width: calc(1145px * var(--scale));
+  min-width: calc(1088px * var(--scale));
 }
 
 /* The accent — a soft rule under the heading. */

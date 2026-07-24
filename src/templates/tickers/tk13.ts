@@ -60,7 +60,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full rail height */
-  width: calc(2075px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1660px * var(--scale));  /* near full-width, inside the safe areas */
   height: calc(105px * var(--scale));   /* the rail's fixed height */
   background: var(--panel-bg);     /* flat near-black slab */
   border-radius: var(--panel-radius);  /* the family's radius — square */

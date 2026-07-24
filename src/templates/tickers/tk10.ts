@@ -58,7 +58,7 @@ export const tk10: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label, keyline and viewport in a row */
   align-items: center;             /* all three center on the strip's axis */
   gap: calc(26px * var(--scale));  /* even air between the pieces */
-  width: calc(1412px * var(--scale));  /* a wide reading strip */
+  width: calc(1200px * var(--scale));  /* a wide reading strip */
   box-sizing: border-box;          /* padding stays inside the fixed width */
   padding: calc(18px * var(--scale)) calc(35px * var(--scale));  /* comfortable strip padding */
   background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */

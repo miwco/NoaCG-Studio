@@ -73,7 +73,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
   display: flex;                   /* the language block, then the attribution */
   flex-direction: column;          /* stacked */
   gap: calc(24px * var(--scale));  /* air above the attribution */
-  width: calc(1573px * var(--scale));  /* one column of prose, comfortably wide */
+  width: calc(1180px * var(--scale));  /* one column of prose, comfortably wide */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   padding: calc(40px * var(--scale)) calc(48px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */

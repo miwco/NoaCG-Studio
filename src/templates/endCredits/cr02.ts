@@ -60,7 +60,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
    the same soft wide lift, the same rounded calm. overflow:hidden turns it into the
    window the track rolls through; the preset measures its clientHeight for the travel. */
 .credits-box {
-  width: calc(1375px * var(--scale));      /* the reading column: generous but not full-frame */
+  width: calc(1100px * var(--scale));      /* the reading column: generous but not full-frame */
   height: calc(900px * var(--scale));      /* the roll window — travel distance comes from this */
   overflow: hidden;                /* the track scrolls through, never past, this window */
   padding: 0 calc(70px * var(--scale));    /* side air only — rows may roll under top/bottom edges */

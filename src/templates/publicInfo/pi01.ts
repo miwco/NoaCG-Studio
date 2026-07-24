@@ -42,7 +42,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* heading, notice, issuer */
   gap: calc(13px * var(--scale));  /* the three lines are one statement */
-  width: calc(1440px * var(--scale));  /* a wide card — a notice is a paragraph, not a strap */
+  width: calc(1080px * var(--scale));  /* a wide card — a notice is a paragraph, not a strap */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   padding: calc(37px * var(--scale)) calc(45px * var(--scale));
   border-left: var(--accent-weight) solid var(--accent);  /* the official mark, on the reading edge */

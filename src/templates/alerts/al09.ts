@@ -50,7 +50,7 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* one row: the kicker block and the text stack */
   align-items: stretch;            /* the kicker block spans the band's height */
-  width: calc(2240px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   min-height: calc(168px * var(--scale)); /* the band grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* near-black — never pure #000 */

@@ -61,7 +61,7 @@ export const es04: TemplateVariant = defineEsportsVariant(
   flex-direction: column;          /* stacked */
   gap: calc(17px * var(--scale));  /* air between the stage line and the scores */
   padding-left: calc(31px * var(--scale));  /* room for the accent rule on the left */
-  min-width: calc(1280px * var(--scale));
+  min-width: calc(1216px * var(--scale));
   text-shadow: 0 calc(3px * var(--scale)) calc(17px * var(--scale)) rgba(0, 0, 0, 0.5);  /* legibility over video, with no panel to sit on */
 }
 

@@ -115,7 +115,7 @@ ${row(2)}
       css: `/* The board — one wide near-black results panel (lt01's quiet keyline language, sized
    for a chart). Fixed width like ig02: the bar tracks need a stable run to grow along. */
 .infographic-box {
-  width: calc(1176px * var(--scale));  /* fixed board width — the tracks keep a stable length */
+  width: calc(1000px * var(--scale));  /* fixed board width — the tracks keep a stable length */
   box-sizing: border-box;          /* padding stays inside the fixed width */
   padding: calc(38px * var(--scale)) calc(52px * var(--scale)) calc(42px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);     /* the near-black panel — retints via the :root contract */

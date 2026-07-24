@@ -160,7 +160,7 @@ export const ig28: TemplateVariant = defineInfographicVariant(
 /* A played match: the score becomes a soft pill, so results read among fixtures. */
 .infographic-fixture-played .infographic-fixture-mid {
   padding: calc(6px * var(--scale)) calc(18px * var(--scale));  /* the pill's own frame */
-  border-radius: calc(1537px * var(--scale));  /* a true pill at any scale */
+  border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
   background: color-mix(in srgb, var(--accent) 26%, transparent);  /* the accent, softened */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.20);  /* the glass keyline */
   font-size: calc(28px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */

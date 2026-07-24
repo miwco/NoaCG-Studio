@@ -59,7 +59,7 @@ export const cr12: TemplateVariant = defineCreditsVariant(
     css: `/* The strip — a full-width solid slab. Width is set here rather than left to fit-content
    because a crawl's viewport IS the frame: the travel distance is measured from it. */
 .credits-box {
-  width: calc(2585px * var(--scale));  /* the frame's action-safe width at 1080p */
+  width: calc(1680px * var(--scale));  /* the frame's action-safe width at 1080p */
   height: calc(111px * var(--scale));   /* one strip row — sized to the caps inside it */
   overflow: hidden;                /* the items outside the strip are not drawn */
   background: var(--panel-bg);     /* a solid ground, so text stays readable over any shot */

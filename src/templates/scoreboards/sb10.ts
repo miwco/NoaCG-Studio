@@ -80,7 +80,7 @@ ${colourHoldersHtml('f7', 'f8', '#0033a0', '#fcb514')}
 /* The slab — flat, hard-edged and opaque. A sport board earns weight from contrast, not blur. */
 .scoreboard-box {
   position: relative;              /* anchors the accent cap */
-  min-width: calc(1145px * var(--scale));  /* a full-frame board, not a strip */
+  min-width: calc(1088px * var(--scale));  /* a full-frame board, not a strip */
   box-sizing: border-box;          /* padding stays inside the measured width */
   background: var(--panel-bg);     /* the near-black sport panel */
   box-shadow: var(--panel-shadow); /* the family's lift */

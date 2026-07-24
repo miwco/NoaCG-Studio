@@ -54,7 +54,7 @@ ${maskLines([maskLine('lower-third', o, 2, 'lower-third-reason', '    ')])}`,
     css: `/* The pill — the glass family's translucent recipe, fully rounded. */
 .lower-third-box {
   padding: calc(13px * var(--scale)) calc(27px * var(--scale));  /* a pill hugs its contents */
-  border-radius: calc(1052px * var(--scale));  /* fully rounded — the glass family's pill shape */
+  border-radius: calc(999px * var(--scale));  /* fully rounded — the glass family's pill shape */
   background: var(--panel-bg);      /* the translucent white wash */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop blur — this IS the glass */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -73,7 +73,7 @@ ${maskLines([maskLine('lower-third', o, 2, 'lower-third-reason', '    ')])}`,
 .lower-third-action {
   padding: calc(4px * var(--scale)) calc(15px * var(--scale));  /* a compact badge */
   border: 1px solid var(--accent);  /* outlined, not filled */
-  border-radius: calc(1052px * var(--scale));  /* a pill inside a pill */
+  border-radius: calc(999px * var(--scale));  /* a pill inside a pill */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale, one step up */
   font-weight: 700;                 /* bold keeps small caps legible over video */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

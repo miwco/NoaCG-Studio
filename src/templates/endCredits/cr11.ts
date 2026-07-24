@@ -59,7 +59,7 @@ export const cr11: TemplateVariant = defineCreditsVariant(
     css: `/* The viewport — the window the roll travels through. No panel, no glass fill: over a
    still or a candle shot, a frosted slab would be an object between the viewer and the name. */
 .credits-box {
-  width: calc(1429px * var(--scale));  /* a comfortable measure for a name and its dates */
+  width: calc(1000px * var(--scale));  /* a comfortable measure for a name and its dates */
   height: calc(1229px * var(--scale));  /* the window height; the roll travels behind it */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* a roll of names is a centered column */

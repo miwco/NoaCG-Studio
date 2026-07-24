@@ -100,7 +100,7 @@ ${colourHoldersHtml('f6', 'f7', '#c084fc', '#7dd3fc')}
   align-items: center;             /* both on the pill's centre line */
   gap: calc(13px * var(--scale));  /* air between them */
   padding: calc(8px * var(--scale)) calc(21px * var(--scale));  /* the pill's own frame */
-  border-radius: calc(1332px * var(--scale));  /* a true pill at any scale */
+  border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
   background: rgba(255, 255, 255, 0.14);  /* a second, lighter layer of glass */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);  /* the glass keyline */
 }

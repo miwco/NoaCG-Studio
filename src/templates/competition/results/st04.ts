@@ -53,7 +53,7 @@ export const st04: TemplateVariant = defineResultsVariant(
   flex-direction: column;
   gap: calc(24px * var(--scale));
   padding: calc(7px * var(--scale)) 0 0;
-  min-width: calc(1138px * var(--scale));
+  min-width: calc(1024px * var(--scale));
   text-shadow: 0 calc(3px * var(--scale)) calc(21px * var(--scale)) rgba(0, 0, 0, 0.55);
 }
 

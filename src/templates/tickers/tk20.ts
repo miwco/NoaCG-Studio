@@ -67,7 +67,7 @@ export const tk20: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* the two decks */
   flex-direction: column;          /* top deck over lower deck */
-  width: calc(2400px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */

@@ -1,6 +1,7 @@
 # Template catalog audit - July 2026
 
-Status: findings only. Nothing in this document has been implemented.
+Status: **§6 item 1 (the type floor) and item 2 (the automated gate) are done** - see §7. Every
+other finding still stands as written.
 
 Scope: every variant in `src/templates` as of `main` @ `93208ea` (387 catalog entries, 386 with
 derived metadata; `imp01` is the import stub). Method: the whole catalog rendered through
@@ -246,6 +247,46 @@ Two things to keep doing, because they are already ahead of the field: the expor
 every graphic is real, readable, editable code rather than a locked scene.
 
 ---
+
+## 7. What has been fixed since this audit was written
+
+**The type floor (§6 item 1) and its gate (§6 item 2).**
+
+Each design whose smallest type sat under its category floor was scaled proportionally: every
+scale-aware px literal in the file multiplied by `floor / smallest`, so internal ratios - and the
+comments citing them - stay true, and the graphic gains footprint at the same time. Literals at or
+above 999 px are left alone: those are anchored to the frame (a near-full-width strip, a 16:9
+camera window, the `999px` pill), and scaling them pushed graphics off screen. Four camera frames
+and seven strip designs are whole-geometry frame-anchored, so they took a type-only lift.
+
+Measured before -> after, at 1920x1080:
+
+| | before | after |
+|---|---|---|
+| variants with text under 20 px | 283 / 387 | 37 (all corner bugs, whose floor is 16) |
+| variants with text under 16 px | 154 | 1 (the imported-design stub, exempt) |
+| individual text nodes under 20 px | 816 | 38 |
+| lowest type in the catalog | 8 px | 16 px |
+
+Median smallest type by category: lower-third 17 -> 20, scoreboard 14 -> 20, esports-score 12 -> 20,
+results-board 12 -> 20, audience 13 -> 20, poll 13 -> 20, public-info 15 -> 20, infographic 18 -> 20.
+
+Footprint moved as a side effect, without being targeted: esports-score 42 -> 72 % of frame width,
+results-board 35 -> 48 %, poll 28 -> 45 %, scoreboard 26 -> 34 %, lower-third 22 -> 25 %. §2's
+footprint minimums are therefore still **not** met for lower thirds - that remains a per-category
+design pass, because arithmetic scaling alone produces absurd headlines.
+
+`scripts/type-floor.mjs` is the gate: it renders the catalog, fails on any text under its category
+floor, and groups violations by CSS rule so one fix clears many variants. It carries one known
+exception (`cr09`, whose board shrinks to fit with no lower bound of its own) and one exempt
+category (`imported-design`, where the type is the user's).
+
+Verified with: the gate green, `npm run build` green, an overflow sweep showing no graphic escaping
+the 1920x1080 frame that did not already do so (tickers and credit crawls scroll past the edge by
+design), and a visual pass over the changed categories.
+
+Still open from §6: footprint minimums, backgrounds on full-coverage graphics, the streaming pack,
+the data layer, the animation vocabulary, and vertical.
 
 ## Sources
 

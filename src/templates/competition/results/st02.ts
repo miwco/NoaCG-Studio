@@ -61,7 +61,7 @@ ${boardStructureCss()}
   -webkit-backdrop-filter: var(--panel-blur);
   box-shadow: var(--panel-shadow);
   border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
-  min-width: calc(1179px * var(--scale));
+  min-width: calc(1120px * var(--scale));
 }
 
 /* The accent rule between the heading and the table. */

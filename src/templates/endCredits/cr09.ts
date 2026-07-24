@@ -63,7 +63,7 @@ export const cr09: TemplateVariant = defineCreditsVariant(
 
 /* The board — the house void panel, sized as a full acknowledgement card. */
 .credits-box {
-  width: calc(1600px * var(--scale));  /* wide enough for a long company name at headline size */
+  width: calc(1120px * var(--scale));  /* wide enough for a long company name at headline size */
   padding: calc(69px * var(--scale)) calc(91px * var(--scale));  /* front-door air */
   text-align: center;              /* an acknowledgement board is centered */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */

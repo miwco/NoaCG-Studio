@@ -68,7 +68,7 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
 .ticker-box {
   display: flex;                   /* label left, viewport filling, clock right */
   align-items: stretch;            /* the caps span the full strip height */
-  width: calc(2100px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   height: calc(120px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */

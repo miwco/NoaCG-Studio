@@ -62,7 +62,7 @@ export const es01: TemplateVariant = defineEsportsVariant(
   background: var(--panel-bg);     /* the near-black sport panel */
   border-radius: var(--panel-radius);  /* sport: square */
   box-shadow: var(--panel-shadow); /* the family's hard drop */
-  min-width: calc(1583px * var(--scale));  /* a match strip reads at a fixed measure — wide enough that two-word team names stay on one line */
+  min-width: calc(1504px * var(--scale));  /* a match strip reads at a fixed measure — wide enough that two-word team names stay on one line */
 }
 
 /* The accent block — fused to the left edge, and the surface the phase marks tint. */

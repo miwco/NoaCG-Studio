@@ -55,7 +55,7 @@ ${piMasks(o, [[4, 'public-info-source']])}
   display: flex;                   /* stack the sections */
   flex-direction: column;          /* heading, steps, issuer */
   gap: calc(24px * var(--scale));  /* the three sections are distinct */
-  width: calc(1360px * var(--scale));  /* wide enough that no instruction wraps twice */
+  width: calc(1020px * var(--scale));  /* wide enough that no instruction wraps twice */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   padding: calc(45px * var(--scale)) calc(53px * var(--scale));
   border-top: var(--accent-weight) solid var(--accent);  /* the official mark */

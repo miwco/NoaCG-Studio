@@ -58,7 +58,7 @@ export const tk12: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
-  width: calc(2585px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   height: calc(89px * var(--scale));   /* slimmer than a bottom strip — the top of frame is busy */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the edge faces the picture */

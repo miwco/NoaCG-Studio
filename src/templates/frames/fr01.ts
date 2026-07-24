@@ -64,44 +64,44 @@ export const fr01: TemplateVariant = defineFrameVariant(
 
       css: `/* The camera window — the rectangle the switcher fills. Interior stays transparent. */
 .frame-window {
-  left: calc(235px * var(--scale));    /* window x — see this design's header */
-  top: calc(113px * var(--scale));      /* window y */
-  width: calc(1788px * var(--scale));  /* window width (16:9 with the height below) */
-  height: calc(1006px * var(--scale));  /* window height */
+  left: calc(200px * var(--scale));    /* window x — see this design's header */
+  top: calc(96px * var(--scale));      /* window y */
+  width: calc(1520px * var(--scale));  /* window width (16:9 with the height below) */
+  height: calc(855px * var(--scale));  /* window height */
 }
 
 /* The corner brackets — two arms each, drawn with borders and overlapping the window edge
    by their own thickness so they read as a bracket ON the corner, not beside it. */
 .frame-corner {
   position: absolute;              /* each bracket pins to its own corner */
-  width: calc(75px * var(--scale));   /* the arm length… */
-  height: calc(75px * var(--scale));  /* …in both directions */
+  width: calc(64px * var(--scale));   /* the arm length… */
+  height: calc(64px * var(--scale));  /* …in both directions */
   border: 0 solid var(--accent);   /* the arms are switched on per corner below */
   box-shadow: var(--accent-glow);  /* the house glow, at bracket scale */
 }
 .frame-corner-tl {
-  left: calc(-5px * var(--scale));  /* overlap the window edge by the arm's own weight */
-  top: calc(-5px * var(--scale));
-  border-left-width: calc(5px * var(--scale));   /* the two arms that meet at top-left */
-  border-top-width: calc(5px * var(--scale));
+  left: calc(-4px * var(--scale));  /* overlap the window edge by the arm's own weight */
+  top: calc(-4px * var(--scale));
+  border-left-width: calc(4px * var(--scale));   /* the two arms that meet at top-left */
+  border-top-width: calc(4px * var(--scale));
 }
 .frame-corner-tr {
-  right: calc(-5px * var(--scale));
-  top: calc(-5px * var(--scale));
-  border-right-width: calc(5px * var(--scale));  /* top-right */
-  border-top-width: calc(5px * var(--scale));
+  right: calc(-4px * var(--scale));
+  top: calc(-4px * var(--scale));
+  border-right-width: calc(4px * var(--scale));  /* top-right */
+  border-top-width: calc(4px * var(--scale));
 }
 .frame-corner-bl {
-  left: calc(-5px * var(--scale));
-  bottom: calc(-5px * var(--scale));
-  border-left-width: calc(5px * var(--scale));   /* bottom-left */
-  border-bottom-width: calc(5px * var(--scale));
+  left: calc(-4px * var(--scale));
+  bottom: calc(-4px * var(--scale));
+  border-left-width: calc(4px * var(--scale));   /* bottom-left */
+  border-bottom-width: calc(4px * var(--scale));
 }
 .frame-corner-br {
-  right: calc(-5px * var(--scale));
-  bottom: calc(-5px * var(--scale));
-  border-right-width: calc(5px * var(--scale));  /* bottom-right */
-  border-bottom-width: calc(5px * var(--scale));
+  right: calc(-4px * var(--scale));
+  bottom: calc(-4px * var(--scale));
+  border-right-width: calc(4px * var(--scale));  /* bottom-right */
+  border-bottom-width: calc(4px * var(--scale));
 }
 
 /* The nameplate — docked INSIDE the window's bottom-left corner and anchored by its BOTTOM,
@@ -111,8 +111,8 @@ export const fr01: TemplateVariant = defineFrameVariant(
    and a 60-char name ran straight off the bottom edge. */
 .frame-plate {
   position: absolute;              /* placed against the .frame root, in the same design px */
-  left: calc(264px * var(--scale));   /* just inside the window's left edge */
-  bottom: calc(180px * var(--scale));  /* just up from the window's bottom edge (frame h − that ≈ window bottom) */
+  left: calc(224px * var(--scale));   /* just inside the window's left edge */
+  bottom: calc(153px * var(--scale));  /* just up from the window's bottom edge (frame h − that ≈ window bottom) */
   display: flex;                   /* the amber bar and the panel sit side by side */
   will-change: transform, opacity; /* the plate settles in after the edge */
 }
@@ -126,7 +126,7 @@ export const fr01: TemplateVariant = defineFrameVariant(
 
 /* The panel — the house void behind the two lines. */
 .frame-plate-body {
-  padding: calc(14px * var(--scale)) calc(35px * var(--scale)) calc(16px * var(--scale)) calc(21px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(30px * var(--scale)) calc(14px * var(--scale)) calc(18px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -135,7 +135,7 @@ export const fr01: TemplateVariant = defineFrameVariant(
 
 /* The name — the plate's display line. */
 .frame-name {
-  max-width: calc(659px * var(--scale));  /* a very long name wraps rather than running on */
+  max-width: calc(560px * var(--scale));  /* a very long name wraps rather than running on */
   font-size: calc(35px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
@@ -145,7 +145,7 @@ export const fr01: TemplateVariant = defineFrameVariant(
 
 /* The role — the house mono label under the name. */
 .frame-role {
-  max-width: calc(659px * var(--scale));  /* the same wrap cap as the name */
+  max-width: calc(560px * var(--scale));  /* the same wrap cap as the name */
   font-family: var(--font-label);  /* the house label face */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */

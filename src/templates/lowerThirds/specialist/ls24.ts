@@ -101,7 +101,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* INFECTIOUS DISEASE, whatever the operator types */
   padding: calc(7px * var(--scale)) calc(16px * var(--scale)) calc(9px * var(--scale));
-  border-radius: calc(1427px * var(--scale));  /* a pill — the glass family's chip shape */
+  border-radius: calc(999px * var(--scale));  /* a pill — the glass family's chip shape */
   color: var(--accent);             /* the tag carries the colour… */
   box-shadow: inset 0 0 0 1px currentColor;  /* …and outlines itself in it, so a repalette
                                                 takes the outline with the text */

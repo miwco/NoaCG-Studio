@@ -66,7 +66,7 @@ ${scoreStructureCss(MARKUP)}
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
   border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
-  min-width: calc(1636px * var(--scale));  /* the strip holds its measure as scores change */
+  min-width: calc(1472px * var(--scale));  /* the strip holds its measure as scores change */
 }
 
 /* The accent bar — amber, fused to the left edge, wearing the house glow. */

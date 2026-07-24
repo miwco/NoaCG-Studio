@@ -52,7 +52,7 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the rail's full height */
-  width: calc(2187px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1640px * var(--scale));  /* near full-width, inside the safe areas */
   min-height: calc(181px * var(--scale)); /* the rail grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   border-radius: var(--panel-radius);  /* the family's radius — square */

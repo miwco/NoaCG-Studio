@@ -143,7 +143,7 @@ ${maskLines([
    Empty field = no chip at all (:empty), so nothing has to be reset or hidden by code. */
 .info-card-chip {
   padding: calc(5px * var(--scale)) calc(15px * var(--scale));  /* a compact badge */
-  border-radius: calc(1249px * var(--scale));  /* a full pill — the glass family's chip shape */
+  border-radius: calc(999px * var(--scale));  /* a full pill — the glass family's chip shape */
   border: 1px solid var(--accent);  /* outlined, not filled: glass never shouts */
   font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                 /* bold keeps small caps legible over video */

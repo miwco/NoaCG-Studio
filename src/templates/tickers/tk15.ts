@@ -63,7 +63,7 @@ export const tk15: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full strip height */
-  width: calc(1976px * var(--scale));  /* near full-width, inside the safe areas */
+  width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
   height: calc(113px * var(--scale));   /* the tallest crawl in the set — bigger type needs room */
   background: #0b0d11;             /* a fixed near-black floor, not the palette's translucent panel */
   border-top: calc(6px * var(--scale)) solid var(--accent);  /* a heavier edge than a news strip's */

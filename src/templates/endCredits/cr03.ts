@@ -61,7 +61,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
     css: `/* The viewport: a fixed stage the pages swap inside. Presets fade THIS on out. */
 .credits-box {
   position: relative;              /* anchors the absolutely-stacked pages inside */
-  width: calc(1500px * var(--scale));   /* generous stage width - pages center within it */
+  width: calc(1200px * var(--scale));   /* generous stage width - pages center within it */
   height: calc(950px * var(--scale));   /* fixed stage - overlong sections paginate (see rowBuilderJs) */
   overflow: hidden;                /* pages never spill outside the stage */
 }
@@ -115,7 +115,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* One credit: role above name, read as a single unit. */
 .credits-row {
-  max-width: calc(1250px * var(--scale));  /* long names wrap instead of hitting the edges */
+  max-width: calc(1000px * var(--scale));  /* long names wrap instead of hitting the edges */
 }
 
 /* The role: small dim caps - the name is the star. */

@@ -99,7 +99,7 @@ ${colourHolderHtml('f5', '#ba0c2f')}
 .scoreboard-minute-chip {
   flex-shrink: 0;                  /* the chip keeps its size whatever the label does */
   padding: calc(6px * var(--scale)) calc(17px * var(--scale));  /* the chip's own frame */
-  border-radius: calc(1427px * var(--scale));  /* a true pill at any scale */
+  border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
   background: color-mix(in srgb, var(--team-a, var(--accent)) 70%, transparent);  /* the club colour, softened */
 }
 .scoreboard-minute {
