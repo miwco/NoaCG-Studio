@@ -48,8 +48,8 @@ const SCOREBOARD_IDS = [
   'sb13', 'sb14', 'sb15', 'sb16', 'sb17', 'sb18', 'sb19', 'sb20',
 ];
 const BOARD_IDS = [
-  'ig14', 'ig15', 'ig16', 'ig17', 'ig18', 'ig19', 'ig20', 'ig21',
-  'ig22', 'ig23', 'ig24', 'ig25', 'ig26', 'ig27', 'ig28', 'ig29',
+  'ig26', 'ig27', 'ig28', 'ig29', 'ig30', 'ig31', 'ig32', 'ig33',
+  'ig34', 'ig35', 'ig36', 'ig37', 'ig38', 'ig39', 'ig40', 'ig41',
 ];
 
 test('the sports pack ships eight types, thirty-two designs, and fills every family cell', async ({ page }) => {
@@ -369,7 +369,7 @@ test('the repeating boards rebuild from whatever is pasted into them', async ({ 
         compare: 'Sh<b>o</b>ts | 14 | 9\\nCorners | 3 | 5\\nFouls | 0 | 0',
         fixtures: 'SAT | A<b>C</b> Milan | 1-0 | B\\nSUN | C | D\\nMON | E | 2-2 | F',
       };
-      const pick = id <= 'ig17' ? valid.lineup : (id <= 'ig21' ? valid.standings : (id <= 'ig25' ? valid.compare : valid.fixtures));
+      const pick = id <= 'ig29' ? valid.lineup : (id <= 'ig33' ? valid.standings : (id <= 'ig37' ? valid.compare : valid.fixtures));
       w.update(JSON.stringify({ f0: pick }));
       await sleep(80);
       const afterValid = count();

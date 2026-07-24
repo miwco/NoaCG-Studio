@@ -16,22 +16,22 @@
 // control page, by someone holding a phone.
 
 import { paletteById } from '../../model/wizard';
-import { ig14 } from '../infographics/ig14';
-import { ig15 } from '../infographics/ig15';
-import { ig16 } from '../infographics/ig16';
-import { ig17 } from '../infographics/ig17';
-import { ig18 } from '../infographics/ig18';
-import { ig19 } from '../infographics/ig19';
-import { ig20 } from '../infographics/ig20';
-import { ig21 } from '../infographics/ig21';
-import { ig22 } from '../infographics/ig22';
-import { ig23 } from '../infographics/ig23';
-import { ig24 } from '../infographics/ig24';
-import { ig25 } from '../infographics/ig25';
 import { ig26 } from '../infographics/ig26';
 import { ig27 } from '../infographics/ig27';
 import { ig28 } from '../infographics/ig28';
 import { ig29 } from '../infographics/ig29';
+import { ig30 } from '../infographics/ig30';
+import { ig31 } from '../infographics/ig31';
+import { ig32 } from '../infographics/ig32';
+import { ig33 } from '../infographics/ig33';
+import { ig34 } from '../infographics/ig34';
+import { ig35 } from '../infographics/ig35';
+import { ig36 } from '../infographics/ig36';
+import { ig37 } from '../infographics/ig37';
+import { ig38 } from '../infographics/ig38';
+import { ig39 } from '../infographics/ig39';
+import { ig40 } from '../infographics/ig40';
+import { ig41 } from '../infographics/ig41';
 import type { GraphicType } from './graphicType';
 
 /** Every list board promises the same three parts: the panel, the rendered rows, and the
@@ -69,64 +69,64 @@ export const lineupType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig14',
+      id: 'ig26',
       name: 'House Lineup',
       description: 'The house team sheet: a mono heading, the formation, and one row per player.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       samples: {
-        players: ig14.suggestedLines[0].sample,
+        players: ig26.suggestedLines[0].sample,
         heading: 'STARTING XI',
         sub: '4-3-3',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig14.create(options),
+      create: (_type, options) => ig26.create(options),
     },
     {
-      id: 'ig15',
+      id: 'ig27',
       name: 'Volt Lineup',
       description: 'A sport slab team sheet: an accent heading bar and heavy rows with number blocks.',
       styleTag: 'sport',
       palette: paletteById('volt'),
       fontId: 'oswald',
       samples: {
-        players: ig15.suggestedLines[0].sample,
+        players: ig27.suggestedLines[0].sample,
         heading: 'STARTING FIVE',
         sub: 'GOLDEN STATE',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig15.create(options),
+      create: (_type, options) => ig27.create(options),
     },
     {
-      id: 'ig16',
+      id: 'ig28',
       name: 'Frost Lineup',
       description: 'A frosted start list: a soft heading, and airy rows with the number in a glass pill.',
       styleTag: 'glass',
       palette: paletteById('frost'),
       fontId: 'manrope',
       samples: {
-        players: ig16.suggestedLines[0].sample,
+        players: ig28.suggestedLines[0].sample,
         heading: 'START LIST',
         sub: "Women's 1500m final",
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig16.create(options),
+      create: (_type, options) => ig28.create(options),
     },
     {
-      id: 'ig17',
+      id: 'ig29',
       name: 'Club Lineup',
       description: 'The amateur team sheet: full names, a hairline stack, numbers and positions optional.',
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
       samples: {
-        players: ig17.suggestedLines[0].sample,
+        players: ig29.suggestedLines[0].sample,
         heading: 'TODAY’S SQUAD',
         sub: 'Ashton United',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig17.create(options),
+      create: (_type, options) => ig29.create(options),
     },
   ],
 };
@@ -168,64 +168,64 @@ export const standingsType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig18',
+      id: 'ig30',
       name: 'House Table',
       description: 'The house standings board: a ranked table whose columns are data, not markup.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       samples: {
-        rows: ig18.suggestedLines[0].sample,
+        rows: ig30.suggestedLines[0].sample,
         heading: 'PREMIER LEAGUE',
         columns: 'TEAM | P | W | D | L | PTS',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig18.create(options),
+      create: (_type, options) => ig30.create(options),
     },
     {
-      id: 'ig19',
+      id: 'ig31',
       name: 'Volt Table',
       description: 'A sport slab table: an accent heading bar, ranks in blocks, points in the accent.',
       styleTag: 'sport',
       palette: paletteById('volt'),
       fontId: 'oswald',
       samples: {
-        rows: ig19.suggestedLines[0].sample,
+        rows: ig31.suggestedLines[0].sample,
         heading: 'DRIVERS’ CHAMPIONSHIP',
         columns: 'DRIVER | R | WIN | POD | PTS',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig19.create(options),
+      create: (_type, options) => ig31.create(options),
     },
     {
-      id: 'ig20',
+      id: 'ig32',
       name: 'Frost Table',
       description: 'A frosted standings table: a soft heading, glass keylines, ranks in tinted pills.',
       styleTag: 'glass',
       palette: paletteById('frost'),
       fontId: 'manrope',
       samples: {
-        rows: ig20.suggestedLines[0].sample,
+        rows: ig32.suggestedLines[0].sample,
         heading: 'MAIN ROUND · GROUP 1',
         columns: 'NATION | P | W | L | PTS',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig20.create(options),
+      create: (_type, options) => ig32.create(options),
     },
     {
-      id: 'ig21',
+      id: 'ig33',
       name: 'Club Table',
       description: 'The amateur league table: full club names, a hairline grid, narrow value columns.',
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
       samples: {
-        rows: ig21.suggestedLines[0].sample,
+        rows: ig33.suggestedLines[0].sample,
         heading: 'NORTHERN LEAGUE DIVISION ONE',
         columns: 'CLUB | P | W | D | L | PTS',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig21.create(options),
+      create: (_type, options) => ig33.create(options),
     },
   ],
 };
@@ -270,60 +270,60 @@ export const statCompareType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig22',
+      id: 'ig34',
       name: 'House Head to Head',
       description: 'The house stat comparison: one row per stat, bars growing out from the centre.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       samples: {
-        stats: ig22.suggestedLines[0].sample,
+        stats: ig34.suggestedLines[0].sample,
         heading: 'MATCH STATS', sideA: 'HOME', sideB: 'AWAY',
       },
       animationPresets: ['bars-grow', 'rows-cascade'],
-      create: (_type, options) => ig22.create(options),
+      create: (_type, options) => ig34.create(options),
     },
     {
-      id: 'ig23',
+      id: 'ig35',
       name: 'Volt Head to Head',
       description: 'A sport slab stat board: an accent header bar and heavy centre-out comparison bars.',
       styleTag: 'sport',
       palette: paletteById('volt'),
       fontId: 'oswald',
       samples: {
-        stats: ig23.suggestedLines[0].sample,
+        stats: ig35.suggestedLines[0].sample,
         heading: 'TEAM STATS', sideA: 'LAKERS', sideB: 'CELTICS',
       },
       animationPresets: ['bars-grow', 'rows-cascade'],
-      create: (_type, options) => ig23.create(options),
+      create: (_type, options) => ig35.create(options),
     },
     {
-      id: 'ig24',
+      id: 'ig36',
       name: 'Frost Head to Head',
       description: 'A frosted comparison card: two named competitors over rounded centre-out bars.',
       styleTag: 'glass',
       palette: paletteById('frost'),
       fontId: 'manrope',
       samples: {
-        stats: ig24.suggestedLines[0].sample,
+        stats: ig36.suggestedLines[0].sample,
         heading: 'FIGHT STATS', sideA: 'Adesanya', sideB: 'Pereira',
       },
       animationPresets: ['bars-grow', 'rows-cascade'],
-      create: (_type, options) => ig24.create(options),
+      create: (_type, options) => ig36.create(options),
     },
     {
-      id: 'ig25',
+      id: 'ig37',
       name: 'Club Head to Head',
       description: 'The amateur stat board: big figures, thin bars, full club names, a flat panel.',
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
       samples: {
-        stats: ig25.suggestedLines[0].sample,
+        stats: ig37.suggestedLines[0].sample,
         heading: 'MATCH STATS', sideA: 'Ashton United', sideB: 'Marske Town',
       },
       animationPresets: ['bars-grow', 'rows-cascade'],
-      create: (_type, options) => ig25.create(options),
+      create: (_type, options) => ig37.create(options),
     },
   ],
 };
@@ -364,60 +364,60 @@ export const fixturesType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig26',
+      id: 'ig38',
       name: 'House Fixtures',
       description: 'The house fixtures and results board: one row per match, played or upcoming.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
       samples: {
-        matches: ig26.suggestedLines[0].sample,
+        matches: ig38.suggestedLines[0].sample,
         heading: 'THIS WEEKEND', note: 'Matchday 24',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig26.create(options),
+      create: (_type, options) => ig38.create(options),
     },
     {
-      id: 'ig27',
+      id: 'ig39',
       name: 'Volt Fixtures',
       description: 'A sport slab round-up: an accent heading bar, heavy caps, results in filled blocks.',
       styleTag: 'sport',
       palette: paletteById('volt'),
       fontId: 'oswald',
       samples: {
-        matches: ig27.suggestedLines[0].sample,
+        matches: ig39.suggestedLines[0].sample,
         heading: 'AROUND THE LEAGUE', note: 'WEEK 12',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig27.create(options),
+      create: (_type, options) => ig39.create(options),
     },
     {
-      id: 'ig28',
+      id: 'ig40',
       name: 'Frost Fixtures',
       description: 'A frosted fixtures board: soft rows with the score in an accent-tinted pill.',
       styleTag: 'glass',
       palette: paletteById('frost'),
       fontId: 'manrope',
       samples: {
-        matches: ig28.suggestedLines[0].sample,
+        matches: ig40.suggestedLines[0].sample,
         heading: 'MAIN ROUND', note: 'Group 1',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig28.create(options),
+      create: (_type, options) => ig40.create(options),
     },
     {
-      id: 'ig29',
+      id: 'ig41',
       name: 'Club Fixtures',
       description: 'The amateur results board: full club names on a flat panel, scores in accent.',
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
       samples: {
-        matches: ig29.suggestedLines[0].sample,
+        matches: ig41.suggestedLines[0].sample,
         heading: 'SATURDAY’S RESULTS', note: 'Division One',
       },
       animationPresets: ['rows-cascade'],
-      create: (_type, options) => ig29.create(options),
+      create: (_type, options) => ig41.create(options),
     },
   ],
 };

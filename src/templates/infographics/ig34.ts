@@ -1,5 +1,5 @@
-// ig22 "House Head to Head" — the NoaCG stat comparison, sibling of ig11 "House Poll" and
-// ig18 "House Table". Team stats, player stats, a head-to-head: one row per stat, with the two
+// ig34 "House Head to Head" — the NoaCG stat comparison, sibling of ig11 "House Poll" and
+// ig30 "House Table". Team stats, player stats, a head-to-head: one row per stat, with the two
 // sides' bars growing out from a centre line.
 //
 // The bars are each side's SHARE of the pair rather than its raw figure, which is what lets one
@@ -21,9 +21,9 @@ const ROWS = [
   'Fouls | 8 | 14',
 ].join('\n');
 
-export const ig22: TemplateVariant = defineInfographicVariant(
+export const ig34: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig22',
+    id: 'ig34',
     category: 'infographic',
     name: 'House Head to Head',
     styleTag: 'noacg',
@@ -44,7 +44,7 @@ export const ig22: TemplateVariant = defineInfographicVariant(
   {
     name: 'House Head to Head',
     description:
-      'The NoaCG stat comparison, sibling of ig11 House Poll and ig18 House Table: a void panel ' +
+      'The NoaCG stat comparison, sibling of ig11 House Poll and ig30 House Table: a void panel ' +
       'with the two sides named either side of a mono heading, then one row per stat — the two ' +
       'figures and the stat name above a pair of bars that grow out from the centre. Serves team ' +
       'stats, player stats and a head-to-head; type one "stat | home | away" line per row.',

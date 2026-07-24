@@ -1,5 +1,5 @@
-// ig24 "Frost Head to Head" — the glass stat comparison, sibling of ig02 "Glass Bars" and
-// ig20 "Frost Table". A frosted card with the two competitors named over rounded centre-out
+// ig36 "Frost Head to Head" — the glass stat comparison, sibling of ig02 "Glass Bars" and
+// ig32 "Frost Table". A frosted card with the two competitors named over rounded centre-out
 // bars.
 //
 // This is the pack's PLAYER stat cell as much as its team one: the two sides are as happily a
@@ -19,9 +19,9 @@ const ROWS = [
   'Knockdowns | 1 | 0',
 ].join('\n');
 
-export const ig24: TemplateVariant = defineInfographicVariant(
+export const ig36: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig24',
+    id: 'ig36',
     category: 'infographic',
     name: 'Frost Head to Head',
     styleTag: 'glass',
@@ -42,7 +42,7 @@ export const ig24: TemplateVariant = defineInfographicVariant(
   {
     name: 'Frost Head to Head',
     description:
-      'The glass stat comparison, sibling of ig02 Glass Bars and ig20 Frost Table: a frosted ' +
+      'The glass stat comparison, sibling of ig02 Glass Bars and ig32 Frost Table: a frosted ' +
       'card with the two competitors named either side of a soft heading, then rounded bars ' +
       'growing out from the centre with the figures above them. Serves player stats as readily ' +
       'as team stats — two boxers, two players, a rider against the field.',

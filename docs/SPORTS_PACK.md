@@ -19,10 +19,10 @@ Companion docs: **`GRAPHIC_TYPES.md`** (what a type declares and the six promoti
 | **Match board** | scoreboard | sb09 · sb10 · sb11 · sb12 | parallel `clock` / `play` / `result` |
 | **Match status** | scoreboard | sb13 · sb14 · sb15 · sb16 | one `status` group, three states |
 | **Match event** | scoreboard | sb17 · sb18 · sb19 · sb20 | main path + `held` branch + auto-clear timer |
-| **Lineup** | infographic | ig14 · ig15 · ig16 · ig17 | – (derived) |
-| **Standings** | infographic | ig18 · ig19 · ig20 · ig21 | – (derived) |
-| **Stat comparison** | infographic | ig22 · ig23 · ig24 · ig25 | – (derived) |
-| **Fixtures & results** | infographic | ig26 · ig27 · ig28 · ig29 | – (derived) |
+| **Lineup** | infographic | ig26 · ig27 · ig28 · ig29 | – (derived) |
+| **Standings** | infographic | ig30 · ig31 · ig32 · ig33 | – (derived) |
+| **Stat comparison** | infographic | ig34 · ig35 · ig36 · ig37 | – (derived) |
+| **Fixtures & results** | infographic | ig38 · ig39 · ig40 · ig41 | – (derived) |
 
 The matrix is full: every type ships in every family, so any pack may pick any family and
 `resolvePack` never hits an empty cell.
@@ -36,13 +36,13 @@ The matrix is full: every type ships in every family, so any pack may pick any f
 | Score + clock | Scorebug and Match board — the clock is a field, the clock GROUP runs it |
 | Period / half / quarter / set | The `period` field, plus the Match board's repeating breakdown |
 | Team names, logos and colours | Names are fields on every board; two `color` fields on all eight two-team designs; two `filelist` crest slots on the Match board |
-| Local / amateur boards | The **minimal** column throughout — sb08, sb12, sb16, sb20, ig17, ig21, ig25, ig29 — plus the `club-sports` pack |
+| Local / amateur boards | The **minimal** column throughout — sb08, sb12, sb16, sb20, ig29, ig33, ig37, ig41 — plus the `club-sports` pack |
 | Match status | **Match status** (sb13–sb16), the `status` group |
 | Final scores | The same type's `final` state — a result is a status, not a separate graphic |
 | Substitutions and penalties | **Match event** (sb17–sb20) |
-| Player / team stats | **Stat comparison** (ig22–ig25) |
-| Lineups and rosters | **Lineup** (ig14–ig17) |
-| Standings and results | **Standings** (ig18–ig21) and **Fixtures & results** (ig26–ig29) |
+| Player / team stats | **Stat comparison** (ig34–ig37) |
+| Lineups and rosters | **Lineup** (ig26–ig29) |
+| Standings and results | **Standings** (ig30–ig33) and **Fixtures & results** (ig38–ig41) |
 | Upcoming match | Fixtures with no score typed; a single row reads as a next-match board |
 | Match centre | Assembled as a RUNDOWN, not one graphic — see §6 |
 
@@ -134,7 +134,7 @@ in their machines.
 
 ### The amateur column is designed, not degraded
 
-sb08, sb12, sb16, sb20, ig17, ig21, ig25 and ig29 are the same TYPES as the stadium designs,
+sb08, sb12, sb16, sb20, ig29, ig33, ig37 and ig41 are the same TYPES as the stadium designs,
 with the same fields and the same machines — drawn for different conditions:
 
 - **full club names, not three-letter codes**, because a district league has no codes;

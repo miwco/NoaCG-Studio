@@ -1,8 +1,8 @@
-// ig19 "Volt Table" — the sport standings board, sibling of ig15 "Volt Lineup" and lt06
+// ig31 "Volt Table" — the sport standings board, sibling of ig27 "Volt Lineup" and lt06
 // "Split Bar". A hard slab table: the heading on a solid accent bar, ranks in filled blocks,
 // and the last column carrying the accent as the points figure.
 //
-// Same typed-columns contract as ig18, so this one covers a motorsport championship
+// Same typed-columns contract as ig30, so this one covers a motorsport championship
 // (starts/wins/podiums/points) and a race classification as readily as a league table.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
@@ -20,9 +20,9 @@ const ROWS = [
 ].join('\n');
 const COLUMNS = 'DRIVER | R | WIN | POD | PTS';
 
-export const ig19: TemplateVariant = defineInfographicVariant(
+export const ig31: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig19',
+    id: 'ig31',
     category: 'infographic',
     name: 'Volt Table',
     styleTag: 'sport',
@@ -42,7 +42,7 @@ export const ig19: TemplateVariant = defineInfographicVariant(
   {
     name: 'Volt Table',
     description:
-      'The sport standings board, sibling of ig15 Volt Lineup and lt06 Split Bar: a hard slab ' +
+      'The sport standings board, sibling of ig27 Volt Lineup and lt06 Split Bar: a hard slab ' +
       'with the heading on a solid accent bar, a dark column strip, ranks in filled blocks and ' +
       'the points column in the accent. The columns are typed, so it serves a motorsport ' +
       'championship and a race classification as readily as a league table.',

@@ -1,61 +1,65 @@
-// ig29 "Club Fixtures" — the minimal fixtures and results board, and the pack's amateur one.
-// Sibling of ig21 "Club Table" and ig17 "Club Lineup".
+// ig29 "Club Lineup" — the minimal team sheet, and the pack's amateur one. Sibling of ig06
+// "Schedule Board" and lt01 "Hairline".
 //
-// The board a district league posts on a Saturday evening: every result from the division on
-// one flat panel, full club names, no blur and no glow, so it survives being screenshotted and
-// pushed to a club's social feed by whoever ran the stream.
+// Built for the club that types its team sheet an hour before kick-off from a group chat, so
+// it assumes the least: no shirt numbers, no position codes, full names in sentence case. The
+// runtime treats both of those as optional, and this design is drawn so a sheet of bare names
+// still reads as a considered graphic rather than as a list with two empty columns.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { fontById, labelFontFaceCss } from '../../model/fonts';
 import { defineInfographicVariant } from './shared';
-import { fixtureRowsRuntimeJs } from './sportsRuntimes';
-import { fixtureFields, listBoardHtml } from './sportsFields';
+import { rosterRowsRuntimeJs } from './sportsRuntimes';
+import { lineupFields, listBoardHtml } from './sportsFields';
 
 const ROWS = [
-  'SAT 15:00 | Ashton United | 2-2 | Marske Town',
-  'SAT 15:00 | Guisborough | 1-0 | Thornaby',
-  'SAT 15:00 | Redcar Athletic | 3-1 | Billingham',
-  'TUE 19:45 | Shildon | Newton Aycliffe',
+  'Tom Braithwaite | GK',
+  'Dan Whitehead',
+  'Sam Okoye',
+  'Ryan Pearce',
+  'Jack Milburn',
+  'Callum Reid',
+  'Owen Fletcher',
 ].join('\n');
 
 export const ig29: TemplateVariant = defineInfographicVariant(
   {
     id: 'ig29',
     category: 'infographic',
-    name: 'Club Fixtures',
+    name: 'Club Lineup',
     styleTag: 'minimal',
-    description: 'The amateur results board: full club names on a flat panel, scores in accent.',
+    description: 'The amateur team sheet: full names, a hairline stack, numbers and positions optional.',
     maxLines: 3,
     suggestedLines: [
-      { title: 'Fixtures', sample: ROWS },
-      { title: 'Heading', sample: 'SATURDAY’S RESULTS' },
-      { title: 'Competition / round', sample: 'Division One' },
+      { title: 'Lineup', sample: ROWS },
+      { title: 'Heading', sample: 'TODAY’S SQUAD' },
+      { title: 'Formation / subtitle', sample: 'Ashton United' },
     ],
     logo: 'none',
     animationPresets: ['rows-cascade'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
-    defaultZone: 'mid-center',
+    defaultZone: 'mid-left',
   },
   {
-    name: 'Club Fixtures',
+    name: 'Club Lineup',
     description:
-      'The local and amateur fixtures and results board, sibling of ig21 Club Table and ig17 ' +
-      'Club Lineup: a flat panel with a small heading, the division beside it, and one row per ' +
-      'match with full club names and the score in the accent. No blur and no glow — it is ' +
-      'drawn to stay legible after someone screenshots it for a club feed.',
+      'The local and amateur team sheet, sibling of ig06 Schedule Board and lt01 Hairline: a ' +
+      'flat panel with a small heading over the club name, a keyline, and full player names in ' +
+      'sentence case. Shirt numbers and positions are optional and the layout does not reserve ' +
+      'empty columns for them — a sheet of bare names still reads as a finished graphic.',
     uicolor: '1',
   },
   (o) => {
     const rowsText = o.lines[0]?.sample || ROWS;
-    const headingText = o.lines[1]?.sample || 'SATURDAY’S RESULTS';
-    const noteText = o.lines[2]?.sample || 'Division One';
+    const headingText = o.lines[1]?.sample || 'TODAY’S SQUAD';
+    const subText = o.lines[2]?.sample || 'Ashton United';
 
     return {
       html: listBoardHtml({
-        note: 'Club Fixtures: flat panel — small heading, then one row per match.',
+        note: 'Club Lineup: flat panel — heading over the club name, then the player rows.',
         heading: headingText,
-        sub: noteText,
+        sub: subText,
         subField: 'f2',
         rows: rowsText,
       }),
@@ -64,111 +68,97 @@ export const ig29: TemplateVariant = defineInfographicVariant(
 
 /* The panel — flat and solid. No blur: a club stream's bitrate cannot afford one. */
 .infographic-box {
-  min-width: calc(560px * var(--scale));  /* a board — two full club names and a score per row */
+  min-width: calc(400px * var(--scale));  /* a team sheet column, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(20px * var(--scale)) calc(24px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(22px * var(--scale)) calc(26px * var(--scale)) calc(14px * var(--scale));
   background: var(--panel-bg);     /* the family's solid dark panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
   border-left: var(--accent-weight) solid var(--accent);  /* the family's one accent rule */
 }
 
-/* The header — a small tracked heading with the division beside it. */
+/* The header — a small tracked heading over the club name. */
 .infographic-header {
-  display: flex;                   /* heading and division in one row */
-  align-items: baseline;           /* both on one text baseline */
-  justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(16px * var(--scale));  /* the division never crowds the heading */
+  display: flex;                   /* heading and club name… */
+  flex-direction: column;          /* …stacked as one column */
+  gap: calc(3px * var(--scale));   /* the two read as one block */
 }
 .infographic-heading {
   font-size: calc(14px * var(--scale) * var(--type-scale));  /* small: this line is reference */
   font-weight: 600;                /* semibold keeps small caps legible */
-  line-height: 1.25;               /* compact label leading */
+  line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
   color: var(--label-color);       /* the family's label colour */
-  text-wrap: balance;              /* a long heading wraps into even rows */
 }
 .infographic-sub {
-  flex-shrink: 0;                  /* the division keeps its width */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* level with the heading */
-  font-weight: 500;                /* medium — quieter than the heading beside it */
-  color: var(--text-dim);          /* dimmed — never full accent twice in one header */
-  white-space: nowrap;             /* "Division One" stays on one line */
-  text-wrap: nowrap;               /* the longhand that beats the assembler's \`balance\` */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the header's anchor */
+  font-weight: 600;                /* semibold — present, not shouted */
+  line-height: 1.25;               /* comfortable for a long mixed-case club name */
+  color: var(--text-color);        /* primary text on the panel */
+  text-wrap: balance;              /* a long club name wraps into even rows */
 }
 
 /* The rule — the family's one divider. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin-top: calc(12px * var(--scale));  /* air between the header and the rule */
+  margin-top: calc(14px * var(--scale));  /* air between the header and the rule */
   background: rgba(255, 255, 255, 0.20);  /* the family's divider */
 }
 
-/* The board — match rows stacked. */
+/* The board — player rows stacked. */
 #infographic-rows {
   display: flex;                   /* a simple vertical stack */
-  flex-direction: column;          /* one match row under another */
+  flex-direction: column;          /* one player row under another */
 }
 
-/* One match row: [kick-off] [home] [score or v] [away]. */
-.infographic-fixture-row {
-  display: flex;                   /* every part of the match on one line */
+/* One row: [optional number] [name] [optional position]. Nothing reserves space for the
+   optional parts, so a sheet of bare names closes up rather than leaving gaps. */
+.infographic-roster-row {
+  display: flex;                   /* number, name and position share one line */
   align-items: baseline;           /* the text sizes sit on one baseline */
-  gap: calc(12px * var(--scale));  /* clear air between the columns */
-  padding: calc(9px * var(--scale)) 0;  /* even vertical rhythm down the board */
+  gap: calc(12px * var(--scale));  /* clear air between whatever parts are present */
+  padding: calc(7px * var(--scale)) 0;  /* even vertical rhythm down the sheet */
 }
-.infographic-fixture-row + .infographic-fixture-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.10);  /* keyline hairline between matches */
+.infographic-roster-row + .infographic-roster-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.10);  /* keyline hairline between players */
 }
 
-/* The kick-off — small, dim, in a shared column so the clubs line up. */
-.infographic-fixture-when {
-  flex-shrink: 0;                  /* a long club name never squeezes the time */
-  min-width: calc(88px * var(--scale));  /* one shared column width — the clubs align */
+/* The shirt number — accent, tabular, and only present when one was typed. */
+.infographic-num {
+  flex-shrink: 0;                  /* a long name never squeezes the number */
+  min-width: calc(26px * var(--scale));  /* narrow: most club sheets have no numbers at all */
+  font-size: calc(16px * var(--scale) * var(--type-scale));  /* reference scale, not display */
+  font-weight: 700;                /* bold — the number is a marker */
+  line-height: 1.2;                /* on the row's baseline */
+  color: var(--accent);            /* the numbers carry the accent */
+  font-variant-numeric: tabular-nums;  /* equal-width digits — numbers align down the column */
+}
+
+/* The player's name — full names in sentence case, the row's anchor. */
+.infographic-player {
+  flex: 1;                         /* the name takes the row's spare width */
+  min-width: 0;                    /* allow it to shrink and wrap inside flex */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
+  font-weight: 500;                /* medium — a club sheet is a list, not a headline */
+  line-height: 1.3;                /* relaxed leading in case a long name wraps */
+  color: var(--text-color);        /* primary text on the panel */
+  overflow-wrap: break-word;       /* break a very long unbroken name */
+}
+
+/* The position — dimmed, small, and only present when one was typed. */
+.infographic-role {
+  flex-shrink: 0;                  /* the position keeps its width */
   font-size: calc(12px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   font-weight: 600;                /* semibold keeps small caps legible */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
-  text-transform: uppercase;       /* "sat" reads as "SAT", whatever is typed */
-  color: var(--text-dim);          /* dimmed — the clubs carry the row */
-  font-variant-numeric: tabular-nums;  /* times align down the column */
-  white-space: nowrap;             /* "SAT 15:00" stays on one line */
-}
-
-/* The two clubs — full names in sentence case, facing the middle. */
-.infographic-fixture-side {
-  flex: 1;                         /* the two clubs share the row's spare width evenly */
-  min-width: 0;                    /* allow a long club name to shrink and wrap */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
-  font-weight: 500;                /* medium — a results board is a list, not a headline */
-  line-height: 1.3;                /* relaxed leading in case a long name wraps */
-  color: var(--text-color);        /* primary text on the panel */
-  overflow-wrap: break-word;       /* break a very long unbroken club name */
-}
-.infographic-fixture-home { text-align: right; }  /* the two clubs face the middle… */
-.infographic-fixture-away { text-align: left; }   /* …so the score sits between them */
-
-/* The middle — the score in the accent, or a dim "v" on a match not yet played. */
-.infographic-fixture-mid {
-  flex-shrink: 0;                  /* the middle keeps its width whatever the names do */
-  min-width: calc(58px * var(--scale));  /* one shared column — the clubs align either side */
-  text-align: center;              /* centred between the two clubs */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
-  font-weight: 500;                /* medium — this is the unplayed state */
-  color: var(--text-dim);          /* dimmed — nothing has happened yet */
-}
-/* A played match: the score takes the accent and the weight, with no chrome around it —
-   this family marks with type, not with tiles. */
-.infographic-fixture-played .infographic-fixture-mid {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
-  font-weight: 700;                /* bold — the score is the point of a results board */
-  color: var(--accent);            /* the results wear the accent */
-  font-variant-numeric: tabular-nums;  /* scores align down the column */
+  text-transform: uppercase;       /* position codes are caps, whatever is typed */
+  color: var(--text-dim);          /* dimmed — the position is reference, not headline */
+  white-space: nowrap;             /* "GK" stays on one line */
 }`,
-      fields: fixtureFields(rowsText, headingText, noteText),
+      fields: lineupFields(rowsText, headingText, subText),
 
-      // The shared fixtures rebuild — "when | home | result | away", or without the result
-      // for an upcoming match (sportsRuntimes.ts).
-      runtimeExtraJs: fixtureRowsRuntimeJs(),
+      // The shared team-sheet rebuild — one "number | name | position" per line.
+      runtimeExtraJs: rosterRowsRuntimeJs(),
     };
   },
 );

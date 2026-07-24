@@ -15,22 +15,22 @@ import { ig10 } from './ig10';
 import { ig11 } from './ig11';
 import { ig12 } from './ig12';
 import { ig13 } from './ig13';
-import { ig14 } from './ig14';
-import { ig15 } from './ig15';
-import { ig16 } from './ig16';
-import { ig17 } from './ig17';
-import { ig18 } from './ig18';
-import { ig19 } from './ig19';
-import { ig20 } from './ig20';
-import { ig21 } from './ig21';
-import { ig22 } from './ig22';
-import { ig23 } from './ig23';
-import { ig24 } from './ig24';
-import { ig25 } from './ig25';
 import { ig26 } from './ig26';
 import { ig27 } from './ig27';
 import { ig28 } from './ig28';
 import { ig29 } from './ig29';
+import { ig30 } from './ig30';
+import { ig31 } from './ig31';
+import { ig32 } from './ig32';
+import { ig33 } from './ig33';
+import { ig34 } from './ig34';
+import { ig35 } from './ig35';
+import { ig36 } from './ig36';
+import { ig37 } from './ig37';
+import { ig38 } from './ig38';
+import { ig39 } from './ig39';
+import { ig40 } from './ig40';
+import { ig41 } from './ig41';
 
 export const INFOGRAPHICS: TemplateVariant[] = [
   ig01, // Big stat count-up
@@ -47,25 +47,25 @@ export const INFOGRAPHICS: TemplateVariant[] = [
   ig12, // Volt Poll — sport bar chart (sibling lt06 / card02)
   ig13, // Clean Poll — minimal bar chart (sibling lt01 / ig06)
   // ── The sports pack: the team sheet in all four families ──
-  ig14, // House Lineup — noacg void panel, amber numbers (sibling ig08)
-  ig15, // Volt Lineup — sport slab, accent number blocks (sibling ig10)
-  ig16, // Frost Lineup — glass column, number pills (sibling ig09)
-  ig17, // Club Lineup — minimal flat panel, the local/amateur sheet (sibling ig06)
+  ig26, // House Lineup — noacg void panel, amber numbers (sibling ig08)
+  ig27, // Volt Lineup — sport slab, accent number blocks (sibling ig10)
+  ig28, // Frost Lineup — glass column, number pills (sibling ig09)
+  ig29, // Club Lineup — minimal flat panel, the local/amateur sheet (sibling ig06)
   // ── The sports pack: standings, with the columns as data ──
-  ig18, // House Table — noacg void panel, amber ranks (sibling ig14)
-  ig19, // Volt Table — sport slab, accent heading bar (sibling ig15)
-  ig20, // Frost Table — glass card, tinted rank pills (sibling ig16)
-  ig21, // Club Table — minimal flat panel, narrow columns (sibling ig17)
+  ig30, // House Table — noacg void panel, amber ranks (sibling ig26)
+  ig31, // Volt Table — sport slab, accent heading bar (sibling ig27)
+  ig32, // Frost Table — glass card, tinted rank pills (sibling ig28)
+  ig33, // Club Table — minimal flat panel, narrow columns (sibling ig29)
   // ── The sports pack: the stat comparison (team and player stats) ──
-  ig22, // House Head to Head — noacg void panel, centre-out bars (sibling ig11)
-  ig23, // Volt Head to Head — sport slab, heavy bars (sibling ig12)
-  ig24, // Frost Head to Head — glass card, rounded bars (sibling ig02)
-  ig25, // Club Head to Head — minimal flat panel, big figures (sibling ig13)
+  ig34, // House Head to Head — noacg void panel, centre-out bars (sibling ig11)
+  ig35, // Volt Head to Head — sport slab, heavy bars (sibling ig12)
+  ig36, // Frost Head to Head — glass card, rounded bars (sibling ig02)
+  ig37, // Club Head to Head — minimal flat panel, big figures (sibling ig13)
   // ── The sports pack: fixtures and results, on one board ──
-  ig26, // House Fixtures — noacg void panel, amber score chips (sibling ig18)
-  ig27, // Volt Fixtures — sport slab, filled score blocks (sibling ig19)
-  ig28, // Frost Fixtures — glass card, tinted score pills (sibling ig20)
-  ig29, // Club Fixtures — minimal flat panel, the local results board (sibling ig21)
+  ig38, // House Fixtures — noacg void panel, amber score chips (sibling ig30)
+  ig39, // Volt Fixtures — sport slab, filled score blocks (sibling ig31)
+  ig40, // Frost Fixtures — glass card, tinted score pills (sibling ig32)
+  ig41, // Club Fixtures — minimal flat panel, the local results board (sibling ig33)
 ];
 
 export function infographicById(id: string): TemplateVariant | undefined {

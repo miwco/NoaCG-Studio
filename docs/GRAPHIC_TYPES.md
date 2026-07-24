@@ -318,10 +318,10 @@ type they use or extend). What they add to the argument HERE:
 | Match board | sb09–sb12 | the same three groups |
 | Match status | sb13–sb16 | ONE `status` group, three mutually exclusive states |
 | Match event | sb17–sb20 | main path + a pose-only `held` branch + an auto-clear TIMER |
-| Lineup | ig14–ig17 | – (derived) |
-| Standings | ig18–ig21 | – (derived) |
-| Stat comparison | ig22–ig25 | – (derived) |
-| Fixtures & results | ig26–ig29 | – (derived) |
+| Lineup | ig26–ig29 | – (derived) |
+| Standings | ig30–ig33 | – (derived) |
+| Stat comparison | ig34–ig37 | – (derived) |
+| Fixtures & results | ig38–ig41 | – (derived) |
 
 Four of the eight persist no machine at all, which is the §2 rule working at scale: their
 content is a list and their motion is measured from it, so the derived linear machine is already

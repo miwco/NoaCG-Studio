@@ -1,4 +1,4 @@
-// ig18 "House Table" — the NoaCG standings board, sibling of ig14 "House Lineup" and lt11
+// ig30 "House Table" — the NoaCG standings board, sibling of ig26 "House Lineup" and lt11
 // "House Strap". A league table, a championship classification, a medal count or a race order:
 // a void panel with an amber-lit rank column, the competitor, and however many value columns
 // the operator typed.
@@ -24,9 +24,9 @@ const ROWS = [
 ].join('\n');
 const COLUMNS = 'TEAM | P | W | D | L | PTS';
 
-export const ig18: TemplateVariant = defineInfographicVariant(
+export const ig30: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig18',
+    id: 'ig30',
     category: 'infographic',
     name: 'House Table',
     styleTag: 'noacg',
@@ -46,7 +46,7 @@ export const ig18: TemplateVariant = defineInfographicVariant(
   {
     name: 'House Table',
     description:
-      'The NoaCG standings board, sibling of ig14 House Lineup and lt11 House Strap: a void ' +
+      'The NoaCG standings board, sibling of ig26 House Lineup and lt11 House Strap: a void ' +
       'panel with an amber top edge, a mono heading, a dim column strip, and ranked rows with ' +
       'the position in amber and the last column emphasised as the points figure. The columns ' +
       'are typed, so the same board serves a league table, a championship and a race order.',

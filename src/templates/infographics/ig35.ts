@@ -1,4 +1,4 @@
-// ig23 "Volt Head to Head" — the sport stat comparison, sibling of ig12 "Volt Poll" and ig19
+// ig35 "Volt Head to Head" — the sport stat comparison, sibling of ig12 "Volt Poll" and ig31
 // "Volt Table". A hard slab with the two sides on an accent bar and heavy centre-out bars.
 //
 // The bars are thicker here than in the other three cells and the figures sit inside the track
@@ -18,9 +18,9 @@ const ROWS = [
   'TURNOVERS | 9 | 15',
 ].join('\n');
 
-export const ig23: TemplateVariant = defineInfographicVariant(
+export const ig35: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig23',
+    id: 'ig35',
     category: 'infographic',
     name: 'Volt Head to Head',
     styleTag: 'sport',
@@ -41,7 +41,7 @@ export const ig23: TemplateVariant = defineInfographicVariant(
   {
     name: 'Volt Head to Head',
     description:
-      'The sport stat comparison, sibling of ig12 Volt Poll and ig19 Volt Table: a hard slab ' +
+      'The sport stat comparison, sibling of ig12 Volt Poll and ig31 Volt Table: a hard slab ' +
       'with the two sides named on a solid accent bar either side of the heading, then heavy ' +
       'centre-out bars with the figures set inside the track. Built for the full-frame stat ' +
       'break, where the bar is the graphic and the numbers confirm it.',

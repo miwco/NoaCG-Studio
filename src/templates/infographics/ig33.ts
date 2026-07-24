@@ -1,5 +1,5 @@
-// ig21 "Club Table" — the minimal standings board, and the pack's amateur one. Sibling of
-// ig17 "Club Lineup" and lt01 "Hairline".
+// ig33 "Club Table" — the minimal standings board, and the pack's amateur one. Sibling of
+// ig29 "Club Lineup" and lt01 "Hairline".
 //
 // A district-league table, a school sports-day standing, a university league. Flat panel, one
 // keyline, full club names in sentence case, and columns narrow enough that a five-column table
@@ -20,9 +20,9 @@ const ROWS = [
 ].join('\n');
 const COLUMNS = 'CLUB | P | W | D | L | PTS';
 
-export const ig21: TemplateVariant = defineInfographicVariant(
+export const ig33: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig21',
+    id: 'ig33',
     category: 'infographic',
     name: 'Club Table',
     styleTag: 'minimal',
@@ -42,7 +42,7 @@ export const ig21: TemplateVariant = defineInfographicVariant(
   {
     name: 'Club Table',
     description:
-      'The local and amateur league table, sibling of ig17 Club Lineup and lt01 Hairline: a ' +
+      'The local and amateur league table, sibling of ig29 Club Lineup and lt01 Hairline: a ' +
       'flat panel with a small tracked heading, a hairline grid, full club names in sentence ' +
       'case and narrow value columns, so a six-column table still fits a 1280-wide club stream ' +
       'without the names being trimmed.',

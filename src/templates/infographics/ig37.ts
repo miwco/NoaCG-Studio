@@ -1,5 +1,5 @@
-// ig25 "Club Head to Head" — the minimal stat comparison, and the pack's amateur one. Sibling
-// of ig13 "Clean Poll" and ig21 "Club Table".
+// ig37 "Club Head to Head" — the minimal stat comparison, and the pack's amateur one. Sibling
+// of ig13 "Clean Poll" and ig33 "Club Table".
 //
 // A club records its stats by hand on a clipboard, so this cell keeps the figures large and the
 // bars thin: the numbers are the fact, the bars are only there to say which way round they go.
@@ -18,9 +18,9 @@ const ROWS = [
   'Offsides | 2 | 4',
 ].join('\n');
 
-export const ig25: TemplateVariant = defineInfographicVariant(
+export const ig37: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig25',
+    id: 'ig37',
     category: 'infographic',
     name: 'Club Head to Head',
     styleTag: 'minimal',
@@ -41,7 +41,7 @@ export const ig25: TemplateVariant = defineInfographicVariant(
   {
     name: 'Club Head to Head',
     description:
-      'The local and amateur stat comparison, sibling of ig13 Clean Poll and ig21 Club Table: a ' +
+      'The local and amateur stat comparison, sibling of ig13 Clean Poll and ig33 Club Table: a ' +
       'flat panel with full club names either side of a small heading, big figures, and thin ' +
       'bars that only say which way round the numbers go. Drawn for stats recorded by hand on ' +
       'a clipboard, where the figure is the fact.',

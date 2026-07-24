@@ -1,4 +1,4 @@
-// ig20 "Frost Table" — the glass standings board, sibling of ig16 "Frost Lineup" and lt08
+// ig32 "Frost Table" — the glass standings board, sibling of ig28 "Frost Lineup" and lt08
 // "Frosted Card". A frosted table: a soft heading, a dimmed column strip, and rows separated
 // by glass keylines with the rank in an accent-tinted pill.
 
@@ -17,9 +17,9 @@ const ROWS = [
 ].join('\n');
 const COLUMNS = 'NATION | P | W | L | PTS';
 
-export const ig20: TemplateVariant = defineInfographicVariant(
+export const ig32: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig20',
+    id: 'ig32',
     category: 'infographic',
     name: 'Frost Table',
     styleTag: 'glass',
@@ -39,7 +39,7 @@ export const ig20: TemplateVariant = defineInfographicVariant(
   {
     name: 'Frost Table',
     description:
-      'The glass standings board, sibling of ig16 Frost Lineup and lt08 Frosted Card: a frosted ' +
+      'The glass standings board, sibling of ig28 Frost Lineup and lt08 Frosted Card: a frosted ' +
       'table with a soft tracked heading, a dimmed column strip, rows separated by glass ' +
       'keylines, and the rank in an accent-tinted pill. The columns are typed, so a group ' +
       'table, a medal count and a race classification are all the same board.',
