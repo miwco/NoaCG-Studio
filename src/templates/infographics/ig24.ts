@@ -1,5 +1,5 @@
-// ig16 "House Milestones" — the NoaCG milestone track, sibling of lt11 "House Strap" /
-// ig14 "House Goal". Where a goal meter answers "how far to the target", a milestone track
+// ig24 "House Milestones" — the NoaCG milestone track, sibling of lt11 "House Strap" /
+// ig22 "House Goal". Where a goal meter answers "how far to the target", a milestone track
 // answers "which tiers have we passed" — the sub-goal, follower-tier and challenge-stage
 // graphic a creator or telethon runs for hours.
 //
@@ -20,9 +20,9 @@ const MILESTONES_SAMPLE = [
   'Dream | 50000',
 ].join('\n');
 
-export const ig16: TemplateVariant = defineInfographicVariant(
+export const ig24: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig16',
+    id: 'ig24',
     category: 'infographic',
     name: 'House Milestones',
     styleTag: 'noacg',

@@ -1,4 +1,4 @@
-// card14 "Clean Listing" — the MINIMAL listing card, sibling of lt01 "Hairline" / lt03
+// card42 "Clean Listing" — the MINIMAL listing card, sibling of lt01 "Hairline" / lt03
 // "Side Tag" / ig05 "Rising Total". A quiet keyline panel holding one listed thing: a photo,
 // its title, the specification line under it, and a value block (a small caps label over one
 // large figure) held apart on the right.
@@ -12,9 +12,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card14: TemplateVariant = defineCardVariant(
+export const card42: TemplateVariant = defineCardVariant(
   {
-    id: 'card14',
+    id: 'card42',
     category: 'info-card',
     name: 'Clean Listing',
     styleTag: 'minimal',

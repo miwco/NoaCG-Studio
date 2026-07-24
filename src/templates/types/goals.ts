@@ -12,13 +12,13 @@
 // entrance.
 
 import { paletteById } from '../../model/wizard';
-import { ig14 } from '../infographics/ig14';
-import { ig15 } from '../infographics/ig15';
-import { ig16 } from '../infographics/ig16';
-import { ig17 } from '../infographics/ig17';
-import { lt19 } from '../lowerThirds/lt19';
-import { lt20 } from '../lowerThirds/lt20';
-import { lt21 } from '../lowerThirds/lt21';
+import { ig22 } from '../infographics/ig22';
+import { ig23 } from '../infographics/ig23';
+import { ig24 } from '../infographics/ig24';
+import { ig25 } from '../infographics/ig25';
+import { lt55 } from '../lowerThirds/lt55';
+import { lt56 } from '../lowerThirds/lt56';
+import { lt57 } from '../lowerThirds/lt57';
 import type { GraphicType } from './graphicType';
 
 /**
@@ -64,16 +64,16 @@ export const callToActionType: GraphicType = {
   },
   designs: [
     {
-      id: 'lt19',
+      id: 'lt55',
       name: 'House Call',
       description: 'The NoaCG call-to-action strap: an amber action chip beside the target it points at.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
-      create: (_type, options) => lt19.create(options),
+      create: (_type, options) => lt55.create(options),
     },
     {
-      id: 'lt20',
+      id: 'lt56',
       name: 'Frost Call',
       description: 'A frosted call-to-action pill: an outlined chip, the target, and a drawn arrow.',
       styleTag: 'glass',
@@ -87,10 +87,10 @@ export const callToActionType: GraphicType = {
       },
       animationPresets: ['pop-spring', 'blur-in', 'slide-up', 'fade', 'slide-left', 'flip-3d'],
       defaultZone: 'bottom-center',
-      create: (_type, options) => lt20.create(options),
+      create: (_type, options) => lt56.create(options),
     },
     {
-      id: 'lt21',
+      id: 'lt57',
       name: 'Volt Call',
       description: 'A leaning sport slab: the imperative in heavy caps over its target and reason.',
       styleTag: 'sport',
@@ -102,7 +102,7 @@ export const callToActionType: GraphicType = {
         detail: 'MEMBERS PRESALE OPENS 09:00 FRIDAY',
       },
       animationPresets: ['snap-stinger', 'mask-wipe', 'slide-left', 'fade', 'slide-up', 'flip-3d'],
-      create: (_type, options) => lt21.create(options),
+      create: (_type, options) => lt57.create(options),
     },
   ],
 };
@@ -154,16 +154,16 @@ export const goalMeterType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig14',
+      id: 'ig22',
       name: 'House Goal',
       description: 'The NoaCG goal meter: the running total over a progress bar toward its target.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
-      create: (_type, options) => ig14.create(options),
+      create: (_type, options) => ig22.create(options),
     },
     {
-      id: 'ig15',
+      id: 'ig23',
       name: 'Frost Goal',
       description: 'A goal ring: the accent draws to the share of the target while the total counts up.',
       styleTag: 'glass',
@@ -174,7 +174,7 @@ export const goalMeterType: GraphicType = {
       // the poll board's 'ring-fill'.
       animationPresets: ['goal-ring'],
       defaultZone: 'mid-right',
-      create: (_type, options) => ig15.create(options),
+      create: (_type, options) => ig23.create(options),
     },
   ],
   // ig05 "Rising Total" is the minimal member of this family and is NOT promoted here: it
@@ -225,16 +225,16 @@ export const milestoneTrackType: GraphicType = {
   },
   designs: [
     {
-      id: 'ig16',
+      id: 'ig24',
       name: 'House Milestones',
       description: 'The NoaCG tier rail: evenly spaced nodes on a void panel, the reached ones in amber.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
-      create: (_type, options) => ig16.create(options),
+      create: (_type, options) => ig24.create(options),
     },
     {
-      id: 'ig17',
+      id: 'ig25',
       name: 'Volt Milestones',
       description: 'A leaning sport slab carrying the same tier rail with hard-edged square markers.',
       styleTag: 'sport',
@@ -244,7 +244,7 @@ export const milestoneTrackType: GraphicType = {
         milestones: 'BRONZE | 1000\nSILVER | 2500\nGOLD | 5000\nLEGEND | 10000',
         current: '3120',
       },
-      create: (_type, options) => ig17.create(options),
+      create: (_type, options) => ig25.create(options),
     },
   ],
 };

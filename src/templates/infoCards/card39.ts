@@ -1,19 +1,19 @@
-// card11 "Frost Product" — the GLASS product card, sibling of lt08 "Frosted Card" and card03
+// card39 "Frost Product" — the GLASS product card, sibling of lt08 "Frosted Card" and card03
 // "Frosted Panel". Same translucent recipe grown to a commerce lockup, but stacked rather than
 // side-by-side: a wide product shot across the top of the panel, then the name, the price row,
 // and the benefit line beneath it. That vertical shape is what suits a portrait shopping
 // stream, where a horizontal card would run out of frame.
 //
-// Same three-value price row as card10 (price · struck-through was · optional savings chip),
+// Same three-value price row as card38 (price · struck-through was · optional savings chip),
 // because the price row is the type's contract and only its skin changes between families.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card11: TemplateVariant = defineCardVariant(
+export const card39: TemplateVariant = defineCardVariant(
   {
-    id: 'card11',
+    id: 'card39',
     category: 'info-card',
     name: 'Frost Product',
     styleTag: 'glass',

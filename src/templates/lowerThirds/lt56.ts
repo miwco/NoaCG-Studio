@@ -1,18 +1,18 @@
-// lt20 "Frost Call" — the GLASS call-to-action strap, sibling of lt08 "Frosted Card" /
+// lt56 "Frost Call" — the GLASS call-to-action strap, sibling of lt08 "Frosted Card" /
 // lt16 "Frost Handle". One frosted pill holding an outlined action chip, the target it points
 // at, and a small drawn arrow that says "go here". The reason line sits beneath the pill,
 // outside the glass, so the ask itself stays a single clean object.
 //
-// Same three-field CTA contract as lt19 "House Call" — action · target · reason — because the
+// Same three-field CTA contract as lt55 "House Call" — action · target · reason — because the
 // shape belongs to the type and only the skin belongs to the family.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineVariant } from './shared';
 
-export const lt20: TemplateVariant = defineVariant(
+export const lt56: TemplateVariant = defineVariant(
   {
-    id: 'lt20',
+    id: 'lt56',
     category: 'lower-third',
     name: 'Frost Call',
     styleTag: 'glass',

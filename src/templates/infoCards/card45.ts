@@ -1,10 +1,10 @@
-// card17 "Clean Scan" — the MINIMAL QR card, sibling of lt01 "Hairline" / card07 "Clean Title".
+// card45 "Clean Scan" — the MINIMAL QR card, sibling of lt01 "Hairline" / card07 "Clean Title".
 // The code stacked over the words rather than beside them: a white quiet-zone tile, a short
 // accent rule under it, then the headline, the written-out address, and one supporting line.
 // That portrait shape is the one that fits a corner of a talk or webinar frame without
 // reaching across the picture.
 //
-// Like card16 "House Scan", this design does NOT generate the code — see that file's header
+// Like card44 "House Scan", this design does NOT generate the code — see that file's header
 // for the reasoning. The code is an SPX image field the operator points at their own PNG, and
 // the address beside it is real text so the card still works for a viewer who cannot scan.
 // The white tile and its padding are a SCANNABILITY requirement, not a style choice.
@@ -13,9 +13,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card17: TemplateVariant = defineCardVariant(
+export const card45: TemplateVariant = defineCardVariant(
   {
-    id: 'card17',
+    id: 'card45',
     category: 'info-card',
     name: 'Clean Scan',
     styleTag: 'minimal',

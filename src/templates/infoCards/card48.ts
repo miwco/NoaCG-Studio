@@ -1,4 +1,4 @@
-// card20 "House Sponsors" — the NoaCG sponsor strip, sibling of lt11 "House Strap" and
+// card48 "House Sponsors" — the NoaCG sponsor strip, sibling of lt11 "House Strap" and
 // bug02 "House Clock". Where a sponsor BUG carries one mark in a corner for a whole segment,
 // a sponsor STRIP carries the whole partner row at once: a mono "presented by" label, then
 // four logo slots on the void panel, divided by thin keylines.
@@ -24,9 +24,9 @@ import { defineCardVariant } from './shared';
  *  any one mark becoming too small to recognise at broadcast distance. */
 const SLOTS = 4;
 
-export const card20: TemplateVariant = defineCardVariant(
+export const card48: TemplateVariant = defineCardVariant(
   {
-    id: 'card20',
+    id: 'card48',
     category: 'info-card',
     name: 'House Sponsors',
     styleTag: 'noacg',

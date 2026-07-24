@@ -128,7 +128,7 @@ the exit, i.e. a second way to be off air.
 
 ## Categories
 
-- **lowerThirds/** - lt01…lt21 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
+- **lowerThirds/** - lt01…lt57 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
   first category to create as NOACG_ANIM data blocks) + animPresets.ts (the shared marked-region
   GSAP preset bank, prefix-parameterized - it animates any category's `.{prefix}-box` structure;
   on a data category the preset's emit is converted at create, and blocks/presetApply.ts derives
@@ -137,7 +137,7 @@ the exit, i.e. a second way to be off air.
   ids adjacent + `SLIDE_FAMILY`/`isSlidePreset` so pickers group them: the wizard renders ONE
   Slide card with a direction picker, the Inspector one optgroup), then line-reveal, mask-wipe,
   pop-spring, snap-stinger, blur-in, fade, flip-3d.
-- **infoCards/** - card01…card21 (prefix 'info-card', `dataRegion: true`). The standard contract's
+- **infoCards/** - card01…card49 (prefix 'info-card', `dataRegion: true`). The standard contract's
   other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
   them, steps and all (a » press per body line becomes a middle step with its `reveals`). It is
   also where the COMMERCE cards live (product / offer / listing / QR / location / sponsor
@@ -202,7 +202,7 @@ Adding a measured motion to another category = add a builder to its runtime + ha
   logo slot + placeholder mark; bug02 = house live clock via StandardDesign.runtimeExtraJs -
   design-owned JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the
   data conversion untouched).
-- **infographics/** - ig01…ig17 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+- **infographics/** - ig01…ig25 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
   igPresets (count-up / bars-grow / ring-fill / rows-cascade / **goal-ring** / **milestone-run**)
   + **igMotion.ts** + **dataRuntimes.ts** (the rebuilds several designs of a type share:
   schedule rows, bar rows, the GOAL meter in its two drawn shapes, the MILESTONE track).

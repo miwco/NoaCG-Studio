@@ -1,4 +1,4 @@
-// ig14 "House Goal" — the NoaCG goal meter, sibling of lt11 "House Strap" / ig08 "House
+// ig22 "House Goal" — the NoaCG goal meter, sibling of lt11 "House Strap" / ig08 "House
 // Schedule". The house void panel carrying a fundraising or subscriber goal: a mono label, one
 // huge grouped figure behind its unit mark, a percent readout held on the right, a progress
 // track, and the target caption under it.
@@ -12,9 +12,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { goalRuntimeJs } from './dataRuntimes';
 import { defineInfographicVariant } from './shared';
 
-export const ig14: TemplateVariant = defineInfographicVariant(
+export const ig22: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig14',
+    id: 'ig22',
     category: 'infographic',
     name: 'House Goal',
     styleTag: 'noacg',

@@ -14,14 +14,14 @@
 // "parameterize with data, not states" rule applied to content.
 
 import { paletteById } from '../../model/wizard';
-import { card10 } from '../infoCards/card10';
-import { card11 } from '../infoCards/card11';
-import { card12 } from '../infoCards/card12';
-import { card13 } from '../infoCards/card13';
-import { card14 } from '../infoCards/card14';
-import { card15 } from '../infoCards/card15';
-import { card16 } from '../infoCards/card16';
-import { card17 } from '../infoCards/card17';
+import { card38 } from '../infoCards/card38';
+import { card39 } from '../infoCards/card39';
+import { card40 } from '../infoCards/card40';
+import { card41 } from '../infoCards/card41';
+import { card42 } from '../infoCards/card42';
+import { card43 } from '../infoCards/card43';
+import { card44 } from '../infoCards/card44';
+import { card45 } from '../infoCards/card45';
 import type { GraphicType } from './graphicType';
 
 /** PRODUCT CARD — the thing being sold, its price, and what it used to cost. The live-commerce
@@ -62,16 +62,16 @@ export const productCardType: GraphicType = {
   },
   designs: [
     {
-      id: 'card10',
+      id: 'card38',
       name: 'House Product',
       description: 'The NoaCG product card: a square shot beside the name, a large accent price, a benefit line.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
-      create: (_type, options) => card10.create(options),
+      create: (_type, options) => card38.create(options),
     },
     {
-      id: 'card11',
+      id: 'card39',
       name: 'Frost Product',
       description: 'A frosted product card: a wide shot over the name, its price, and one benefit line.',
       styleTag: 'glass',
@@ -88,7 +88,7 @@ export const productCardType: GraphicType = {
       },
       animationPresets: ['pop-spring', 'blur-in', 'slide-up', 'fade', 'slide-down', 'flip-3d'],
       defaultZone: 'mid-right',
-      create: (_type, options) => card11.create(options),
+      create: (_type, options) => card39.create(options),
     },
   ],
 };
@@ -127,16 +127,16 @@ export const offerCardType: GraphicType = {
   },
   designs: [
     {
-      id: 'card12',
+      id: 'card40',
       name: 'Volt Offer',
       description: 'A forward-leaning sport slab: a huge discount claim over its terms, code and deadline.',
       styleTag: 'sport',
       palette: paletteById('volt'),
       fontId: 'oswald',
-      create: (_type, options) => card12.create(options),
+      create: (_type, options) => card40.create(options),
     },
     {
-      id: 'card13',
+      id: 'card41',
       name: 'Clean Offer',
       description: 'A panel-free offer card: a large offer line over its terms, promo code, and deadline.',
       styleTag: 'minimal',
@@ -152,7 +152,7 @@ export const offerCardType: GraphicType = {
         ends: 'Until Sunday',
       },
       animationPresets: ['line-reveal', 'mask-wipe', 'slide-up', 'fade', 'slide-down', 'blur-in'],
-      create: (_type, options) => card13.create(options),
+      create: (_type, options) => card41.create(options),
     },
   ],
 };
@@ -193,16 +193,16 @@ export const listingCardType: GraphicType = {
   },
   designs: [
     {
-      id: 'card14',
+      id: 'card42',
       name: 'Clean Listing',
       description: 'A quiet keyline panel: a photo and title beside a labelled value block.',
       styleTag: 'minimal',
       palette: paletteById('ivory'),
       fontId: 'inter',
-      create: (_type, options) => card14.create(options),
+      create: (_type, options) => card42.create(options),
     },
     {
-      id: 'card15',
+      id: 'card43',
       name: 'House Lot',
       description: 'The NoaCG listing card: the lot photo and title beside a live value in amber.',
       styleTag: 'noacg',
@@ -217,7 +217,7 @@ export const listingCardType: GraphicType = {
         status: 'Bidding open',
       },
       animationPresets: ['slide-up', 'line-reveal', 'mask-wipe', 'fade', 'slide-down', 'blur-in'],
-      create: (_type, options) => card15.create(options),
+      create: (_type, options) => card43.create(options),
     },
   ],
 };
@@ -264,16 +264,16 @@ export const qrCardType: GraphicType = {
   },
   designs: [
     {
-      id: 'card16',
+      id: 'card44',
       name: 'House Scan',
       description: 'The NoaCG QR card: a white quiet-zone tile beside a headline and the address.',
       styleTag: 'noacg',
       palette: paletteById('noacg'),
       fontId: 'space-grotesk',
-      create: (_type, options) => card16.create(options),
+      create: (_type, options) => card44.create(options),
     },
     {
-      id: 'card17',
+      id: 'card45',
       name: 'Clean Scan',
       description: 'A stacked QR card: the code tile above a headline, the address, and one detail line.',
       styleTag: 'minimal',
@@ -287,7 +287,7 @@ export const qrCardType: GraphicType = {
       },
       animationPresets: ['line-reveal', 'slide-up', 'fade', 'mask-wipe', 'slide-down', 'blur-in'],
       defaultZone: 'mid-right',
-      create: (_type, options) => card17.create(options),
+      create: (_type, options) => card45.create(options),
     },
   ],
 };

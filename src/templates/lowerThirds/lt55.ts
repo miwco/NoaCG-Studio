@@ -1,4 +1,4 @@
-// lt19 "House Call" — the NoaCG call-to-action strap, sibling of lt11 "House Strap" and
+// lt55 "House Call" — the NoaCG call-to-action strap, sibling of lt11 "House Strap" and
 // lt14 "House Handle". The house grammar (an amber bar fused to a void blur panel) shaped for
 // the one job a social bug cannot do: ASKING. A solid accent chip holds the imperative
 // ("Follow", "Donate", "Register", "Buy"), the target sits beside it in the panel, and a
@@ -14,9 +14,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineVariant } from './shared';
 
-export const lt19: TemplateVariant = defineVariant(
+export const lt55: TemplateVariant = defineVariant(
   {
-    id: 'lt19',
+    id: 'lt55',
     category: 'lower-third',
     name: 'House Call',
     styleTag: 'noacg',

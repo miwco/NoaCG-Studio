@@ -1,4 +1,4 @@
-// ig15 "Frost Goal" — the GLASS goal meter, sibling of lt08 "Frosted Card" / ig04 "Poll Ring".
+// ig23 "Frost Goal" — the GLASS goal meter, sibling of lt08 "Frosted Card" / ig04 "Poll Ring".
 // The same frosted panel and the same ring geometry as the poll board, pointed at a different
 // question: not "what share said yes" but "how far along is the appeal".
 //
@@ -12,9 +12,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { goalRuntimeJs } from './dataRuntimes';
 import { defineInfographicVariant } from './shared';
 
-export const ig15: TemplateVariant = defineInfographicVariant(
+export const ig23: TemplateVariant = defineInfographicVariant(
   {
-    id: 'ig15',
+    id: 'ig23',
     category: 'infographic',
     name: 'Frost Goal',
     styleTag: 'glass',

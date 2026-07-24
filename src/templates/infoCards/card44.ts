@@ -1,4 +1,4 @@
-// card16 "House Scan" — the NoaCG QR card, sibling of lt11 "House Strap" / card10
+// card44 "House Scan" — the NoaCG QR card, sibling of lt11 "House Strap" / card38
 // "House Product". The house amber bar and void panel carrying a scannable code beside a
 // headline, the written-out address, and one supporting line.
 //
@@ -18,9 +18,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card16: TemplateVariant = defineCardVariant(
+export const card44: TemplateVariant = defineCardVariant(
   {
-    id: 'card16',
+    id: 'card44',
     category: 'info-card',
     name: 'House Scan',
     styleTag: 'noacg',

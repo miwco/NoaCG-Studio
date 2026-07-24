@@ -130,14 +130,14 @@ Eight of the gaps below now ship, as eight types and two new categories (25 desi
 kept the rule the first twelve were built on — *persist a machine only when the derived one is
 wrong* — so only the transition declares one.
 
-- **Goal / progress bar** → the **goal-meter** type (`ig14` House Goal, `ig15` Frost Goal).
+- **Goal / progress bar** → the **goal-meter** type (`ig22` House Goal, `ig23` Frost Goal).
   Two numbers and everything else derived: the share, the grouped figures, the caption. The
   bar and the ring are one type because they differ only in where the derived share is drawn.
   A second measured builder (`infographicGoalRing`) and its `goal-ring` preset exist because a
   goal ring's angle and its counted figure are DIFFERENT numbers — reusing the poll board's
   `ring-fill` would draw a full ring at 3 % raised. `ig05` Rising Total stays a hand-written
   variant: it predates the type and has no unit field.
-- **Milestones / tiers** → the **milestone-track** type (`ig16`, `ig17`), the goal meter's
+- **Milestones / tiers** → the **milestone-track** type (`ig24`, `ig25`), the goal meter's
   sibling question ("which tiers have we passed"). Nodes are spaced EVENLY and the line is
   interpolated between them, never plotted at current/max — see `infographics/dataRuntimes.ts`.
 - **Frames** → a new **`frame` category** (`fr01`–`fr04`: webcam, two-up interview, split
@@ -152,24 +152,24 @@ wrong* — so only the transition declares one.
   entrance waypoint straight to the exit clears it, with `next` as the manual version. Nothing
   in it uses `setTimeout` — a timer inside a template is motion the timeline cannot see, the
   control page cannot pause and the render clock cannot drive.
-- **QR code** → the **qr-card** type (`card16`, `card17`). Honest field model, NOT generation:
+- **QR code** → the **qr-card** type (`card44`, `card45`). Honest field model, NOT generation:
   NoaCG bundles no encoder and generated templates take no runtime dependency, so the code is
   an SPX image field the operator points at their own PNG, and the address beside it is real
   text (which is also what makes the card work for a viewer who cannot scan). The white tile
   and its padding are a scannability requirement, not styling. A bundled encoder remains a real
   option and is recorded as open below.
-- **CTAs** (follow / donate / register / buy) → the **call-to-action** type (`lt19`–`lt21`).
+- **CTAs** (follow / donate / register / buy) → the **call-to-action** type (`lt55`–`lt57`).
   The verb is a FIELD, which is what stops this being four near-identical designs.
-- **Commerce cards** → the **product-card** (`card10`, `card11`), **offer-card** (`card12`,
-  `card13`) and **listing-card** (`card14`, `card15`) types. The listing card is one graphic
+- **Commerce cards** → the **product-card** (`card38`, `card39`), **offer-card** (`card40`,
+  `card41`) and **listing-card** (`card42`, `card43`) types. The listing card is one graphic
   for the auction lot, the property walk-through and the stock counter, because the only thing
   that differs is the value's LABEL — so the label is a field.
-- **Sponsor / logo strips** → `card20` House Sponsors and `card21` Clean Partners
+- **Sponsor / logo strips** → `card48` House Sponsors and `card49` Clean Partners
   (hand-written; see below for why they are not a type). Neither ROTATES, deliberately: the
   ticker type is the one that cycles and it earns it with a real machine, a timer armed at the
   end of a finite entrance, and a pause/resume an operator can reach. A CSS keyframe loop
   swapping slot opacity would be none of those.
-- **Location / travel cards** → `card18` Frost Location and `card19` Volt Location
+- **Location / travel cards** → `card46` Frost Location and `card47` Volt Location
   (hand-written). The pin is a DRAWN MARKER: there is no map surface, no tiles and no
   projection anywhere in the product, so nothing here plots a coordinate — the picture is an
   image field the operator chooses and the coordinates are text they type.
@@ -201,8 +201,8 @@ what the mapping above records.
   type.** Three families in this pack are affected and stay hand-written variants (which the
   catalog has always allowed — `card04`, `vs01`, `ig01`–`ig07` are all in that class):
   - **camera frames** — 2 fields for a single camera, 3 for a screen share, 4 for a two-up;
-  - **sponsor strips** — `card20` carries 4 slots, `card21` carries 6;
-  - **location cards** — `card18` has a picture slot, `card19` has no room for one.
+  - **sponsor strips** — `card48` carries 4 slots, `card49` carries 6;
+  - **location cards** — `card46` has a picture slot, `card47` has no room for one.
   Fixing it properly means letting a type declare OPTIONAL fields (and teaching the factory's
   fields gate to compare against a range), which is a change to the type contract and belongs
   in its own round rather than being bent around here.

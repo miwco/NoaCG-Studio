@@ -1,4 +1,4 @@
-// card12 "Volt Offer" — the SPORT offer card, sibling of lt05 "Angle Slab" / card02 "Slab Card"
+// card40 "Volt Offer" — the SPORT offer card, sibling of lt05 "Angle Slab" / card02 "Slab Card"
 // / card08 "Slab Title". Same sport DNA: a near-black slab painted at the family -8° lean on
 // ::before (a layer no preset ever flattens), a chunky accent edge fused to the leaning side.
 //
@@ -13,9 +13,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card12: TemplateVariant = defineCardVariant(
+export const card40: TemplateVariant = defineCardVariant(
   {
-    id: 'card12',
+    id: 'card40',
     category: 'info-card',
     name: 'Volt Offer',
     styleTag: 'sport',

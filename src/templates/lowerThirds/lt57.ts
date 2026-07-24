@@ -1,9 +1,9 @@
-// lt21 "Volt Call" — the SPORT call-to-action strap, sibling of lt05 "Angle Slab" /
-// lt17 "Volt Handle" / card12 "Volt Offer". The forward-leaning near-black slab with the accent
+// lt57 "Volt Call" — the SPORT call-to-action strap, sibling of lt05 "Angle Slab" /
+// lt17 "Volt Handle" / card40 "Volt Offer". The forward-leaning near-black slab with the accent
 // edge fused to it, carrying the imperative in huge condensed caps, the target beneath it, and
 // a small tracked reason line at the bottom.
 //
-// Same three-field CTA contract as lt19 "House Call" and lt20 "Frost Call" — action · target ·
+// Same three-field CTA contract as lt55 "House Call" and lt56 "Frost Call" — action · target ·
 // reason. Here the ACTION is the display line rather than a chip: in the sport register the
 // instruction is the shout, and the address is what you read after it.
 
@@ -11,9 +11,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineVariant } from './shared';
 
-export const lt21: TemplateVariant = defineVariant(
+export const lt57: TemplateVariant = defineVariant(
   {
-    id: 'lt21',
+    id: 'lt57',
     category: 'lower-third',
     name: 'Volt Call',
     styleTag: 'sport',

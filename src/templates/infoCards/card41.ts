@@ -1,10 +1,10 @@
-// card13 "Clean Offer" — the MINIMAL offer card, sibling of lt01 "Hairline" / lt02 "Underline"
+// card41 "Clean Offer" — the MINIMAL offer card, sibling of lt01 "Hairline" / lt02 "Underline"
 // / card07 "Clean Title". No panel at all: a short accent rule, a tracked-caps kicker, one large
 // offer line, its terms, and a footer holding the promo code in an outlined chip beside the
 // deadline. Whitespace does the work, which is what makes this the offer card for a retailer
 // whose own brand should stay louder than the graphic.
 //
-// Same five-field contract as card12 Volt Offer — the offer type's shape is fixed and only its
+// Same five-field contract as card40 Volt Offer — the offer type's shape is fixed and only its
 // skin changes — including the two `:empty` elements (code, deadline) that vanish rather than
 // leaving a hole when the operator has nothing to put in them.
 
@@ -12,9 +12,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card13: TemplateVariant = defineCardVariant(
+export const card41: TemplateVariant = defineCardVariant(
   {
-    id: 'card13',
+    id: 'card41',
     category: 'info-card',
     name: 'Clean Offer',
     styleTag: 'minimal',

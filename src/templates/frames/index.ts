@@ -13,7 +13,7 @@ export const FRAMES: TemplateVariant[] = [
   fr01, // House Cam — noacg single webcam surround, amber brackets (sibling lt11)
   fr02, // Frost Interview — glass two-up remote interview (sibling lt08)
   fr03, // Volt Split — sport split screen, leaning divider (sibling lt05 / vs01)
-  fr04, // Clean Share — minimal screen-share + presenter inset (sibling lt01 / card14)
+  fr04, // Clean Share — minimal screen-share + presenter inset (sibling lt01 / card42)
 ];
 
 export function frameById(id: string): TemplateVariant | undefined {

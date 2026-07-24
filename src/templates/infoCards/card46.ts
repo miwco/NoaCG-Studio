@@ -1,5 +1,5 @@
-// card18 "Frost Location" — the GLASS location card, sibling of lt08 "Frosted Card" / card03
-// "Frosted Panel" / card11 "Frost Product". A travel/IRL "where we are" card: a wide picture
+// card46 "Frost Location" — the GLASS location card, sibling of lt08 "Frosted Card" / card03
+// "Frosted Panel" / card39 "Frost Product". A travel/IRL "where we are" card: a wide picture
 // across the top of a frosted panel, a drawn map pin beside the place name, the region under
 // it, and one live detail line (local time, weather, distance — whatever the stream is about).
 //
@@ -16,9 +16,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card18: TemplateVariant = defineCardVariant(
+export const card46: TemplateVariant = defineCardVariant(
   {
-    id: 'card18',
+    id: 'card46',
     category: 'info-card',
     name: 'Frost Location',
     styleTag: 'glass',

@@ -1,4 +1,4 @@
-// fr04 "Clean Share" — the MINIMAL screen-share frame, sibling of lt01 "Hairline" / card14
+// fr04 "Clean Share" — the MINIMAL screen-share frame, sibling of lt01 "Hairline" / card42
 // "Clean Listing". The presenter-plus-content layout every webinar, lecture and coding stream
 // runs: a large content window with a hairline edge, a small presenter inset in the corner
 // beside it, and one quiet label strip naming what is on the big window.

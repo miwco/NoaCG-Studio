@@ -1,4 +1,4 @@
-// card10 "House Product" — the NoaCG product card, sibling of lt11 "House Strap" and card06
+// card38 "House Product" — the NoaCG product card, sibling of lt11 "House Strap" and card06
 // "House Topic". The house grammar (an amber bar fused to a void blur panel) turned into the
 // live-commerce lockup every shopping stream needs: a square product shot on the left, the
 // product name over a price row on the right, and one quiet benefit line under it.
@@ -12,9 +12,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card10: TemplateVariant = defineCardVariant(
+export const card38: TemplateVariant = defineCardVariant(
   {
-    id: 'card10',
+    id: 'card38',
     category: 'info-card',
     name: 'House Product',
     styleTag: 'noacg',

@@ -1,9 +1,9 @@
-// card19 "Volt Location" — the SPORT location card, sibling of lt05 "Angle Slab" / card02
-// "Slab Card" / card12 "Volt Offer". The venue/stage marker: a leaning near-black slab with the
+// card47 "Volt Location" — the SPORT location card, sibling of lt05 "Angle Slab" / card02
+// "Slab Card" / card40 "Volt Offer". The venue/stage marker: a leaning near-black slab with the
 // accent edge fused to it, a drawn map pin, the place in huge condensed caps, the region under
 // it, and a mono coordinates/detail line at the bottom.
 //
-// Like card18 "Frost Location", the pin here is a DRAWN MARKER and nothing more — NoaCG has no
+// Like card46 "Frost Location", the pin here is a DRAWN MARKER and nothing more — NoaCG has no
 // map surface, so no design in this pack plots a coordinate or renders a tile. The coordinates
 // line is text the operator types, which is exactly what a venue caption is on air anyway.
 
@@ -11,9 +11,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card19: TemplateVariant = defineCardVariant(
+export const card47: TemplateVariant = defineCardVariant(
   {
-    id: 'card19',
+    id: 'card47',
     category: 'info-card',
     name: 'Volt Location',
     styleTag: 'sport',

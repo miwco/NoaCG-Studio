@@ -1,10 +1,10 @@
-// card21 "Clean Partners" — the MINIMAL sponsor panel, sibling of lt01 "Hairline" /
-// card14 "Clean Listing". The full-attention version of the sponsor strip: a quiet keyline
+// card49 "Clean Partners" — the MINIMAL sponsor panel, sibling of lt01 "Hairline" /
+// card42 "Clean Listing". The full-attention version of the sponsor strip: a quiet keyline
 // panel with a tracked-caps heading over a two-by-three grid of partner slots — the "our
 // partners" card a conference, ceremony or telethon holds on screen between segments, rather
-// than the thin bar card20 runs under live action.
+// than the thin bar card48 runs under live action.
 //
-// Like card20 "House Sponsors", it does NOT rotate and unused slots show a faint reserved
+// Like card48 "House Sponsors", it does NOT rotate and unused slots show a faint reserved
 // mark rather than collapsing. That file's header carries the reasoning for both.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
@@ -14,9 +14,9 @@ import { defineCardVariant } from './shared';
 /** Six slots in a 3 × 2 grid — the shape a partners board takes when it is the whole graphic. */
 const SLOTS = 6;
 
-export const card21: TemplateVariant = defineCardVariant(
+export const card49: TemplateVariant = defineCardVariant(
   {
-    id: 'card21',
+    id: 'card49',
     category: 'info-card',
     name: 'Clean Partners',
     styleTag: 'minimal',

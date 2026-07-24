@@ -1,9 +1,9 @@
-// card15 "House Lot" — the NoaCG listing card, sibling of lt11 "House Strap" / card10
+// card43 "House Lot" — the NoaCG listing card, sibling of lt11 "House Strap" / card38
 // "House Product". The house grammar (an amber bar fused to a void blur panel) shaped for the
 // auction register: the lot photo on the left, the lot title and its description beside it,
 // and the live value block held apart on the right behind a keyline.
 //
-// Same five-field listing contract as card14 Clean Listing, because the shape belongs to the
+// Same five-field listing contract as card42 Clean Listing, because the shape belongs to the
 // type and only the skin belongs to the family: title · meta · value label · value · status.
 // An auction says "Current bid"; a property walk-through says "Guide price"; a stock counter
 // says "Remaining". None of those is a different graphic — they are the same graphic with a
@@ -13,9 +13,9 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { designFieldId, maskLine, maskLines } from '../shared/standard';
 import { defineCardVariant } from './shared';
 
-export const card15: TemplateVariant = defineCardVariant(
+export const card43: TemplateVariant = defineCardVariant(
   {
-    id: 'card15',
+    id: 'card43',
     category: 'info-card',
     name: 'House Lot',
     styleTag: 'noacg',

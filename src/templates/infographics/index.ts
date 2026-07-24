@@ -15,10 +15,10 @@ import { ig10 } from './ig10';
 import { ig11 } from './ig11';
 import { ig12 } from './ig12';
 import { ig13 } from './ig13';
-import { ig14 } from './ig14';
-import { ig15 } from './ig15';
-import { ig16 } from './ig16';
-import { ig17 } from './ig17';
+import { ig22 } from './ig22';
+import { ig23 } from './ig23';
+import { ig24 } from './ig24';
+import { ig25 } from './ig25';
 
 export const INFOGRAPHICS: TemplateVariant[] = [
   ig01, // Big stat count-up
@@ -34,10 +34,10 @@ export const INFOGRAPHICS: TemplateVariant[] = [
   ig11, // House Poll — noacg bar chart (sibling lt11 / ig08)
   ig12, // Volt Poll — sport bar chart (sibling lt06 / card02)
   ig13, // Clean Poll — minimal bar chart (sibling lt01 / ig06)
-  ig14, // House Goal — noacg goal meter, total + progress bar (sibling lt11 / ig05)
-  ig15, // Frost Goal — glass goal ring, share of the target (sibling lt08 / ig04)
-  ig16, // House Milestones — noacg tier rail with reached nodes (sibling lt11 / ig14)
-  ig17, // Volt Milestones — sport tier rail, leaning markers (sibling lt05 / ig03)
+  ig22, // House Goal — noacg goal meter, total + progress bar (sibling lt11 / ig05)
+  ig23, // Frost Goal — glass goal ring, share of the target (sibling lt08 / ig04)
+  ig24, // House Milestones — noacg tier rail with reached nodes (sibling lt11 / ig22)
+  ig25, // Volt Milestones — sport tier rail, leaning markers (sibling lt05 / ig03)
 ];
 
 export function infographicById(id: string): TemplateVariant | undefined {

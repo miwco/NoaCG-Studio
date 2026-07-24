@@ -22,9 +22,9 @@ import { lt15 } from './lt15';
 import { lt16 } from './lt16';
 import { lt17 } from './lt17';
 import { lt18 } from './lt18';
-import { lt19 } from './lt19';
-import { lt20 } from './lt20';
-import { lt21 } from './lt21';
+import { lt55 } from './lt55';
+import { lt56 } from './lt56';
+import { lt57 } from './lt57';
 
 export const LOWER_THIRDS: TemplateVariant[] = [
   // NoaCG house (the product's own on-air look — brand-kit overlays as templates)
@@ -32,7 +32,7 @@ export const LOWER_THIRDS: TemplateVariant[] = [
   lt12, // House Breaking — accent label chip over a void headline panel
   lt13, // House Interview — three-line strap: name / org / mono location
   lt14, // House Handle — the compact social mark (the social-handle type's design)
-  lt19, // House Call — call-to-action strap: amber action chip + the target it points at
+  lt55, // House Call — call-to-action strap: amber action chip + the target it points at
   // Minimal / clean
   lt01, // Hairline — vertical hairline accent, pure typography
   lt02, // Underline — accent underline draws in between name and title
@@ -44,14 +44,14 @@ export const LOWER_THIRDS: TemplateVariant[] = [
   lt06, // Split Bar — stepped name/team bars, bold accent
   lt07, // Number Badge — accent badge (logo slot) + slab text
   lt17, // Volt Handle — compact sport social mark (social-handle type, sport)
-  lt21, // Volt Call — leaning call-to-action slab (call-to-action type, sport)
+  lt57, // Volt Call — leaning call-to-action slab (call-to-action type, sport)
   // Modern social / glass
   lt08, // Frosted Card — backdrop-blur glass card (logo slot)
   lt09, // Gradient Pill — compact pill, name + handle inline
   lt10, // Soft Stack — floating card, accent dot, three-line capable
   lt15, // Frost Strap — glass lower third with a real accent edge (lower-third type, glass)
   lt16, // Frost Handle — compact glass social mark (social-handle type, glass)
-  lt20, // Frost Call — frosted call-to-action pill (call-to-action type, glass)
+  lt56, // Frost Call — frosted call-to-action pill (call-to-action type, glass)
 ];
 
 export function lowerThirdById(id: string): TemplateVariant | undefined {
