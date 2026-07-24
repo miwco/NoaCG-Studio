@@ -57,8 +57,11 @@ export const CATEGORIES: CategoryInfo[] = [
   { id: 'ticker',        name: 'Tickers',                 plannedCount: 6,  available: true , description: 'Scrolling news, info, and index strips.', group: 'essentials' },
   { id: 'scoreboard',    name: 'Scoreboards',             plannedCount: 2,  available: true , description: 'Two-team scores and match status.', group: 'essentials' },
   { id: 'info-card',     name: 'Info cards',              plannedCount: 18, available: true,  description: 'Full / half screen cards — info, readings, quotes and ceremony.', group: 'essentials' },
-  { id: 'starting-soon', name: 'Holding screens',         plannedCount: 13, available: true , description: 'Starting soon, breaks, technical pauses and sign-offs.', group: 'essentials' },
-  { id: 'end-credits',   name: 'Credits & lists',         plannedCount: 12, available: true , description: 'Credit rolls, name walls, sponsor boards and schedules.', group: 'essentials' },
+  // These two carry the TAXONOMY's wording on purpose: they hold exactly the designs their
+  // browse tile does (ss01-13, cr01-12), so a user meeting the same set twice must read the
+  // same name both times. The description carries the nuance the tile name drops.
+  { id: 'starting-soon', name: 'Holding & break screens', plannedCount: 13, available: true , description: 'Starting soon, breaks, technical pauses and sign-offs.', group: 'essentials' },
+  { id: 'end-credits',   name: 'Credits & thanks',        plannedCount: 12, available: true , description: 'Credit rolls, name walls, sponsor boards and schedules.', group: 'essentials' },
   { id: 'corner-bug',    name: 'Bugs & corner logos',     plannedCount: 36, available: true , description: 'Persistent marks: logos, idents, live status, sponsors, chips.', group: 'essentials' },
   // Specials — for particular formats and moments.
   { id: 'infographic',   name: 'Infographics',            plannedCount: 7,  available: true , description: 'Stats, polls, leaderboards, schedules, counters.', group: 'specials' },
