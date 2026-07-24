@@ -59,7 +59,7 @@ ${maskLines([
     css: `/* No panel: the card is a tile and some type on the picture. The box exists for the
    presets to move, and caps how wide the copy under the tile may run. */
 .info-card-box {
-  max-width: calc(360px * var(--scale));  /* a portrait column — it never reaches across the frame */
+  max-width: calc(400px * var(--scale));  /* a portrait column — it never reaches across the frame */
 }
 
 /* THE QUIET ZONE. Deliberately NOT --panel-bg and deliberately not retintable: a QR code
@@ -68,9 +68,9 @@ ${maskLines([
    or tinting this white is the one change in the design that can stop the code working. */
 .info-card-qr {
   position: relative;               /* the empty-slot mark is placed against this tile */
-  width: calc(190px * var(--scale));   /* tile width — the code plus its quiet zone */
-  height: calc(190px * var(--scale));  /* …and height: a true square */
-  padding: calc(14px * var(--scale));  /* THE QUIET ZONE — the clear margin scanners need */
+  width: calc(211px * var(--scale));   /* tile width — the code plus its quiet zone */
+  height: calc(211px * var(--scale));  /* …and height: a true square */
+  padding: calc(16px * var(--scale));  /* THE QUIET ZONE — the clear margin scanners need */
   border-radius: calc(3px * var(--scale));  /* minimal corners: 0-3px, never a pill */
   background: #ffffff;              /* the light field a QR code needs; not a themed colour */
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);  /* one soft lift so the white tile reads over any picture */
@@ -81,7 +81,7 @@ ${maskLines([
 .info-card-qr::after {
   content: '';                      /* a pure decoration, no text */
   position: absolute;               /* inside the tile's quiet zone */
-  inset: calc(14px * var(--scale));  /* sits exactly where the code will */
+  inset: calc(16px * var(--scale));  /* sits exactly where the code will */
   border: 1px dashed rgba(15, 17, 21, 0.35);  /* dark on the white tile: "the code goes here" */
 }
 .info-card-qr.has-image::after {
@@ -99,16 +99,16 @@ ${maskLines([
 
 /* The accent rule — a short hairline between the tile and the words. */
 .info-card-accent {
-  width: calc(64px * var(--scale));  /* a short rule, not a full-width edge */
+  width: calc(71px * var(--scale));  /* a short rule, not a full-width edge */
   height: var(--accent-weight);      /* the family's rule weight */
-  margin: calc(20px * var(--scale)) 0 calc(14px * var(--scale));  /* air above and below */
+  margin: calc(22px * var(--scale)) 0 calc(16px * var(--scale));  /* air above and below */
   background: var(--accent);         /* the one accent surface */
   will-change: transform;            /* hint the browser: presets grow this rule in */
 }
 
 /* The headline — the instruction: what scanning this gets you. */
 .info-card-scan-head {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(36px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;                /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -118,22 +118,22 @@ ${maskLines([
 
 /* The written-out address — the accessible half of the card, for anyone who cannot scan. */
 .info-card-url {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* clearly readable at distance */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* clearly readable at distance */
   font-weight: 700;                 /* bold — it is meant to be copied */
   line-height: 1.3;                 /* address leading */
   letter-spacing: 0.01em;           /* a URL is read character by character */
   overflow-wrap: anywhere;          /* a very long address breaks rather than overflowing */
-  margin-top: calc(8px * var(--scale));  /* headline → address: one clear break */
+  margin-top: calc(9px * var(--scale));  /* headline → address: one clear break */
   color: var(--accent);             /* the accent's second appearance, on the address */
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);  /* the same legibility insurance */
 }
 
 /* The supporting line — the quiet third voice. */
 .info-card-detail {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* body scale under the address */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* body scale under the address */
   font-weight: 400;                 /* regular weight */
   line-height: 1.4;                 /* body text gets room to breathe */
-  margin-top: calc(8px * var(--scale));  /* address → detail: a small break */
+  margin-top: calc(9px * var(--scale));  /* address → detail: a small break */
   color: var(--text-dim);           /* dimmed — never full white twice */
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);  /* legibility over an unknown picture */
 }`,

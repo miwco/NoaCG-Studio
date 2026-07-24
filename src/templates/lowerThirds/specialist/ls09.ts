@@ -78,8 +78,8 @@ ${slot(o, 1, 'lower-third-title', '        ')}
 .lower-third-head {
   display: flex;                    /* accent tick · name · club, in a row */
   align-items: baseline;            /* one shared baseline across the row */
-  gap: calc(14px * var(--scale));
-  padding: calc(13px * var(--scale)) calc(26px * var(--scale)) calc(14px * var(--scale));
+  gap: calc(16px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(31px * var(--scale)) calc(16px * var(--scale));
   min-width: 0;                     /* allow shrinking rather than pushing the slab wide */
 }
 
@@ -89,7 +89,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
   align-self: center;               /* centred on the row, not on the baseline */
   flex: none;                       /* never squeezed by a long name */
   width: var(--accent-weight);      /* the family's bar weight */
-  height: calc(26px * var(--scale));  /* as tall as the name it introduces */
+  height: calc(31px * var(--scale));  /* as tall as the name it introduces */
   background: var(--accent);        /* the one accent surface */
   transform-origin: center;         /* line-reveal scales it from the middle */
 }
@@ -97,7 +97,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
 /* The player name — the row's primary voice, but small next to a real headline: the
    figures below are what the strap is for. */
 .lower-third-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* compact headline (1080p reference) */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* compact headline (1080p reference) */
   line-height: 1.05;                /* condensed caps sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;        /* matchday voice */
@@ -106,7 +106,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
 
 /* The club — the quiet half of the row. */
 .lower-third-title {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* well under the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* well under the name */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* keeps the row uniform */
@@ -124,7 +124,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
 .lower-third-stats {
   display: grid;                    /* the cells sit in a row… */
   grid-auto-flow: column;           /* …as columns */
-  grid-auto-columns: minmax(calc(112px * var(--scale)), 1fr);  /* EQUAL cells — a stat table, not a sentence */
+  grid-auto-columns: minmax(calc(132px * var(--scale)), 1fr);  /* EQUAL cells — a stat table, not a sentence */
   border-top: 1px solid rgba(255, 255, 255, 0.12);  /* the rail's own edge */
   background: rgba(0, 0, 0, 0.30);  /* a shade darker than the slab — a rail, not a stripe */
 }
@@ -132,7 +132,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
 /* One stat cell. */
 .lower-third-stat {
   display: block;                   /* fills its cell */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* the figures are the content */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* the figures are the content */
   line-height: 1.1;                 /* single tight figure row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* 24 PTS, whatever the operator types */
@@ -141,7 +141,7 @@ ${slot(o, 1, 'lower-third-title', '        ')}
   text-align: center;               /* centred in its own cell */
 }
 .lower-third-stats > .lower-third-mask {
-  padding: calc(10px * var(--scale)) calc(16px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(12px * var(--scale)) calc(19px * var(--scale)) calc(14px * var(--scale));
 }
 .lower-third-stats > .lower-third-mask + .lower-third-mask {
   border-left: 1px solid rgba(255, 255, 255, 0.12);  /* the cell divider — drawn, and only between */

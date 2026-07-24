@@ -65,7 +65,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift + the 1px inner edge */
   overflow: hidden;                 /* the accent edge follows the rounded corner */
-  max-width: calc(700px * var(--scale));  /* a ceremony strap stays modest */
+  max-width: calc(875px * var(--scale));  /* a ceremony strap stays modest */
 }
 
 /* The soft accent edge leading the card — lt15's motif, and the graphic's accent node. */
@@ -78,12 +78,12 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 .lower-third-text {
   min-width: 0;                     /* let it shrink so long values wrap instead of overflowing */
-  padding: calc(18px * var(--scale)) calc(34px * var(--scale)) calc(20px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(23px * var(--scale)) calc(43px * var(--scale)) calc(25px * var(--scale)) calc(33px * var(--scale));
 }
 
 /* The MOMENT (f0) leads — the part of the programme, as a small accent label. */
 .lower-third-name {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* label size — the smallest voice */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label size — the smallest voice */
   font-weight: 700;                 /* bold — small tracked caps need the weight */
   line-height: 1.2;                 /* single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -93,21 +93,21 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The name (f1) — the card's headline. */
 .lower-third-title {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(45px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* room for an honorific and a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   color: var(--text-color);         /* primary text color */
-  margin-top: calc(7px * var(--scale));  /* tied to the label above it */
+  margin-top: calc(9px * var(--scale));  /* tied to the label above it */
 }
 
 /* The role and church (f2) — the closing line. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.3;                 /* room if the pairing wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(6px * var(--scale));  /* tied to the name above it */
 }`,
     hasAccent: true,
   }),

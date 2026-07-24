@@ -66,9 +66,9 @@ ${colourHolderHtml('f5', '#ba0c2f')}
 /* The card — one frosted surface, soft enough to appear and clear repeatedly over play. */
 .scoreboard-box {
   position: relative;              /* anchors the accent bar */
-  min-width: calc(420px * var(--scale));  /* a card, not a strap */
+  min-width: calc(525px * var(--scale));  /* a card, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(16px * var(--scale)) calc(24px * var(--scale)) calc(16px * var(--scale));
+  padding: calc(20px * var(--scale)) calc(30px * var(--scale)) calc(20px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's soft radius — a pane, not a slab */
   background: var(--panel-bg);     /* the frosted white wash */
   backdrop-filter: var(--panel-blur);  /* the family's real blur — this is the whole look */
@@ -92,18 +92,18 @@ ${colourHolderHtml('f5', '#ba0c2f')}
 .scoreboard-eventhead {
   display: flex;                   /* chip and label in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(12px * var(--scale));  /* air between them */
+  gap: calc(15px * var(--scale));  /* air between them */
 }
 
 /* The minute chip — a soft pill in the club's own colour. */
 .scoreboard-minute-chip {
   flex-shrink: 0;                  /* the chip keeps its size whatever the label does */
-  padding: calc(4px * var(--scale)) calc(12px * var(--scale));  /* the chip's own frame */
+  padding: calc(5px * var(--scale)) calc(15px * var(--scale));  /* the chip's own frame */
   border-radius: calc(999px * var(--scale));  /* a true pill at any scale */
   background: color-mix(in srgb, var(--team-a, var(--accent)) 70%, transparent);  /* the club colour, softened */
 }
 .scoreboard-minute {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a stamp, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a stamp, not a headline */
   font-weight: 800;                /* heavy at chip size so it reads through the softening */
   line-height: 1.2;                /* compact inside the chip */
   color: var(--text-color);        /* white on the club colour — the safest pairing here */
@@ -113,7 +113,7 @@ ${colourHolderHtml('f5', '#ba0c2f')}
 
 /* The event kind — a soft tracked caps label. */
 .scoreboard-event {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 700;                /* solid at label size */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -124,14 +124,14 @@ ${colourHolderHtml('f5', '#ba0c2f')}
 
 /* The club — the card's biggest line, in the family's rounded sans. */
 .scoreboard-club {
-  font-size: calc(27px * var(--scale) * var(--type-scale));  /* the card's anchor */
+  font-size: calc(34px * var(--scale) * var(--type-scale));  /* the card's anchor */
   font-weight: 700;                /* bold — the club leads the card */
   line-height: 1.2;                /* comfortable for a mixed-case name */
   color: var(--text-color);        /* primary text on the frost */
 }
 .scoreboard-club-mask {
   display: block;                  /* the club owns its own row */
-  margin-top: calc(10px * var(--scale));  /* air under the header */
+  margin-top: calc(13px * var(--scale));  /* air under the header */
 }
 
 ${clipOneLineCss('.scoreboard-club', 320)}
@@ -140,34 +140,34 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 .scoreboard-people {
   display: flex;                   /* the two rows… */
   flex-direction: column;          /* …stacked as one column */
-  gap: calc(6px * var(--scale));   /* the rows read as a pair */
-  margin-top: calc(12px * var(--scale));  /* air above the hairline */
-  padding-top: calc(12px * var(--scale));  /* air under the hairline */
+  gap: calc(8px * var(--scale));   /* the rows read as a pair */
+  margin-top: calc(15px * var(--scale));  /* air above the hairline */
+  padding-top: calc(15px * var(--scale));  /* air under the hairline */
   border-top: 1px solid rgba(255, 255, 255, 0.20);  /* the glass keyline */
 }
 .scoreboard-person {
   display: flex;                   /* mark and name in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(12px * var(--scale));  /* air between them */
+  gap: calc(15px * var(--scale));  /* air between them */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
 
 /* The role mark — a soft dot, ringed in glass; the accent marks the second row. */
 .scoreboard-rolemark {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(10px * var(--scale));  /* small — it marks the row, it does not label it */
-  height: calc(10px * var(--scale));  /* same as the width — a true circle */
+  width: calc(13px * var(--scale));  /* small — it marks the row, it does not label it */
+  height: calc(13px * var(--scale));  /* same as the width — a true circle */
   border-radius: 50%;              /* a ratio cap, not a size — stays round at any scale */
   background: rgba(255, 255, 255, 0.35);  /* neutral on the first row */
 }
 .scoreboard-person-b .scoreboard-rolemark {
   background: var(--accent);       /* the second row is the emphasised one, in every reading */
-  box-shadow: 0 0 0 calc(2px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
+  box-shadow: 0 0 0 calc(3px * var(--scale)) rgba(255, 255, 255, 0.18);  /* a soft glass ring */
 }
 
 /* The names — clearly subordinate to the club. */
 .scoreboard-name {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a step under the club */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a step under the club */
   font-weight: 500;                /* medium — the club above carries the weight */
   line-height: 1.25;               /* comfortable at this size */
   color: var(--text-dim);          /* dimmed on the first row */

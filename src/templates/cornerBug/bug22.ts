@@ -59,8 +59,8 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
 .corner-bug-box {
   display: flex;                   /* the kicker and the stage sit side by side */
   align-items: center;             /* both centred on the pill's axis */
-  gap: calc(16px * var(--scale));  /* air between the words and the mark */
-  padding: calc(12px * var(--scale)) calc(20px * var(--scale));  /* even air inside the pill */
+  gap: calc(20px * var(--scale));  /* air between the words and the mark */
+  padding: calc(15px * var(--scale)) calc(25px * var(--scale));  /* even air inside the pill */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -70,7 +70,7 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
 
 /* The kicker (f0) — a soft caps label, quieter than the marks it introduces. */
 .corner-bug-name {
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -79,7 +79,7 @@ ${slots.map((s) => bugSlotHtml(s, 'diamond', '        ')).join('\n')}
   white-space: nowrap;             /* the kicker stays on one line beside the stage */
 }
 
-${bugSlotCss({ width: 118, height: 46, mark: 'diamond', radius: 'calc(8px * var(--scale))' })}
+${bugSlotCss({ width: 118, height: 46, mark: 'diamond', radius: 'calc(10px * var(--scale))' })}
 
 ${rotationStageCss(118, 46)}`,
 

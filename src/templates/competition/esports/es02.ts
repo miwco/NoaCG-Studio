@@ -59,14 +59,14 @@ ${scoreStructureCss(MARKUP)}
 .${P}-box {
   display: flex;                   /* head above body */
   flex-direction: column;          /* stacked */
-  gap: calc(10px * var(--scale));  /* air between the head and the score row */
-  padding: calc(13px * var(--scale)) calc(30px * var(--scale)) calc(15px * var(--scale)) calc(38px * var(--scale));
+  gap: calc(13px * var(--scale));  /* air between the head and the score row */
+  padding: calc(16px * var(--scale)) calc(38px * var(--scale)) calc(19px * var(--scale)) calc(48px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
-  min-width: calc(920px * var(--scale));  /* the strip holds its measure as scores change */
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  min-width: calc(1150px * var(--scale));  /* the strip holds its measure as scores change */
 }
 
 /* The accent bar — amber, fused to the left edge, wearing the house glow. */
@@ -84,7 +84,7 @@ ${scoreStructureCss(MARKUP)}
 /* The stage line — mono, wide-tracked: the house label voice. */
 .${P}-stage {
   font-family: var(--font-label);  /* JetBrains Mono, the house label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -93,9 +93,9 @@ ${scoreStructureCss(MARKUP)}
 
 /* The phase chip — a void tile with a thin amber keyline. */
 .${P}-status {
-  padding: calc(3px * var(--scale)) calc(11px * var(--scale));
+  padding: calc(4px * var(--scale)) calc(14px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -107,7 +107,7 @@ ${scoreStructureCss(MARKUP)}
 
 /* The team name — house display type on the void. */
 .${P}-team {
-  font-size: calc(32px * var(--scale) * var(--type-scale));
+  font-size: calc(40px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   letter-spacing: var(--display-tracking);
@@ -116,15 +116,15 @@ ${scoreStructureCss(MARKUP)}
 
 /* The score chip — a denser void tile with an amber keyline (the house chip). */
 .${P}-chip {
-  min-width: calc(60px * var(--scale));
-  padding: calc(5px * var(--scale)) calc(15px * var(--scale));
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+  min-width: calc(75px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(19px * var(--scale));
+  border-radius: calc(8px * var(--scale));  /* the house chip radius */
   background: rgba(10, 12, 16, 0.6);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .${P}-figure {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(48px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);            /* amber figures */
@@ -133,7 +133,7 @@ ${scoreStructureCss(MARKUP)}
 
 /* The logo slot — a void plate until the operator picks a file. */
 .${P}-logo {
-  border-radius: calc(6px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.55);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
@@ -151,7 +151,7 @@ ${scoreStructureCss(MARKUP)}
 
 .${P}-series-label {
   font-family: var(--font-label);
-  font-size: calc(11px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;

@@ -65,9 +65,9 @@ export const cr08: TemplateVariant = defineCreditsVariant(
     </div>`,
     css: `/* The frosted viewport — the window the wall travels through. */
 .credits-box {
-  width: calc(980px * var(--scale));   /* a comfortable column for organisation-length names */
-  height: calc(840px * var(--scale));  /* the window height; the loop travels behind it */
-  padding: 0 calc(56px * var(--scale));  /* side air inside the glass */
+  width: calc(1225px * var(--scale));   /* a comfortable column for organisation-length names */
+  height: calc(1050px * var(--scale));  /* the window height; the loop travels behind it */
+  padding: 0 calc(70px * var(--scale));  /* side air inside the glass */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* a wall is a centered column */
   background: var(--panel-bg);     /* translucent white — the glass tint */
@@ -84,7 +84,7 @@ export const cr08: TemplateVariant = defineCreditsVariant(
 
 /* One giving level. Levels stack in normal flow, largest first, as typed. */
 .credits-page {
-  padding: calc(30px * var(--scale)) 0;  /* even air around each level */
+  padding: calc(38px * var(--scale)) 0;  /* even air around each level */
 }
 
 /* The level's name — a tracked caps label between two soft accent rules. The rules are
@@ -93,9 +93,9 @@ export const cr08: TemplateVariant = defineCreditsVariant(
 .credits-heading {
   display: flex;                   /* rule · label · rule on one row */
   align-items: center;             /* the rules meet the label's centerline */
-  gap: calc(20px * var(--scale));  /* air between the label and each rule */
-  margin-bottom: calc(22px * var(--scale));  /* clear air before the first donor */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* label scale — it divides, it does not compete */
+  gap: calc(25px * var(--scale));  /* air between the label and each rule */
+  margin-bottom: calc(28px * var(--scale));  /* clear air before the first donor */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* label scale — it divides, it does not compete */
   font-weight: 600;                /* semibold keeps small caps legible */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* reads as a level, whatever the operator types */
@@ -113,8 +113,8 @@ export const cr08: TemplateVariant = defineCreditsVariant(
 /* A donor. Every name inside a level is set identically — the level is the distinction,
    and setting one giver larger than their neighbour inside a tier is the way to offend both. */
 .credits-entry {
-  padding: calc(8px * var(--scale)) 0;  /* the wall's reading rhythm */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* readable at a distance across a room */
+  padding: calc(10px * var(--scale)) 0;  /* the wall's reading rhythm */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* readable at a distance across a room */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* an organisation's full name may wrap */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -124,17 +124,17 @@ export const cr08: TemplateVariant = defineCreditsVariant(
 
 /* A "Role | Name" line, if the operator writes one (a named gift, a dedication). */
 .credits-row {
-  padding: calc(8px * var(--scale)) 0;  /* the same rhythm as a plain donor */
+  padding: calc(10px * var(--scale)) 0;  /* the same rhythm as a plain donor */
 }
 .credits-role {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a small label above the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a small label above the name */
   font-weight: 500;                /* medium keeps small caps crisp */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* label voice */
   color: var(--text-dim);          /* secondary text color */
 }
 .credits-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* level with the plain donors */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* level with the plain donors */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* shares the wall's rhythm */
   color: var(--text-color);        /* primary text color */
@@ -146,23 +146,23 @@ export const cr08: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* the pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered in the wall's column */
-  gap: calc(20px * var(--scale));  /* even air between mark and words */
-  padding: calc(52px * var(--scale)) 0;  /* a long breath before and after the sign-off */
+  gap: calc(25px * var(--scale));  /* even air between mark and words */
+  padding: calc(65px * var(--scale)) 0;  /* a long breath before and after the sign-off */
 }
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(54px * var(--scale));  /* the appeal's mark, at sign-off size */
+  height: calc(68px * var(--scale));  /* the appeal's mark, at sign-off size */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a dashed slot so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(13px * var(--scale)) calc(26px * var(--scale));  /* a chip the size of a real mark */
+  padding: calc(16px * var(--scale)) calc(33px * var(--scale));  /* a chip the size of a real mark */
   border: 1px dashed rgba(255, 255, 255, 0.3);  /* clearly a placeholder */
   border-radius: var(--panel-radius);  /* the family's panel radius */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest type on the wall */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the wall */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -170,7 +170,7 @@ export const cr08: TemplateVariant = defineCreditsVariant(
 
 /* The closing line — the year/copyright field, used here for the appeal's thanks. */
 .credits-year {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* small print, but readable */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* small print, but readable */
   font-weight: 400;                /* conversational weight */
   color: var(--text-dim);          /* secondary text color */
 }`,

@@ -38,7 +38,7 @@ const RAMP = {
   clean: { heading: 20, step: 27, marker: 'number' as Marker, caps: false, pad: { top: 6, right: 0, bottom: 6, left: 30 } },
   frost: { heading: 20, step: 25, marker: 'check' as Marker, caps: false, pad: { top: 40, right: 54, bottom: 38, left: 44 } },
   volt: { heading: 22, step: 25, marker: 'chip' as Marker, caps: true, pad: { top: 36, right: 56, bottom: 32, left: 44 } },
-  house: { heading: 18, step: 25, marker: 'mono' as Marker, caps: false, pad: { top: 32, right: 52, bottom: 34, left: 38 } },
+  house: { heading: 20, step: 25, marker: 'mono' as Marker, caps: false, pad: { top: 32, right: 52, bottom: 34, left: 38 } },
 } as const;
 
 /** The marker column width — wide enough for a two-digit number in every skin. */

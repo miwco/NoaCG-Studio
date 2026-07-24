@@ -61,7 +61,7 @@ export const tk11: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full strip height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(78px * var(--scale));   /* the strip's fixed height */
+  height: calc(98px * var(--scale));   /* the strip's fixed height */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -72,9 +72,9 @@ export const tk11: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(30px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(38px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(19px * var(--scale) * var(--type-scale)); /* kicker scale — a label, not a headline */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* kicker scale — a label, not a headline */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label block's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -94,21 +94,21 @@ export const tk11: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* items in a single row, width = content */
   align-items: center;             /* items and separators share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(36px * var(--scale)); /* air between the label and the first story */
+  padding-left: calc(45px * var(--scale)); /* air between the label and the first story */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
 /* One story. */
 .ticker-item {
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* comfortable reading size at travel speed */
+  font-size: calc(30px * var(--scale) * var(--type-scale)); /* comfortable reading size at travel speed */
   font-weight: 500;                /* a touch of presence without shouting */
   color: var(--text-color);        /* primary text color */
 }
 
 /* The separator between stories — dimmed punctuation, never a second accent. */
 .ticker-sep {
-  margin: 0 calc(30px * var(--scale)); /* even air on both sides */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
+  margin: 0 calc(38px * var(--scale)); /* even air on both sides */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--text-dim);          /* dimmed so the stories stay the focus */
 }
 
@@ -118,9 +118,9 @@ export const tk11: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the text inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(26px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(33px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.16); /* the keyline that ends the crawl */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice on the strip */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */
@@ -134,6 +134,6 @@ function renderTickerItem(text) {
 }`,
     // Marquee design: the items render twice so sliding one set length loops seamlessly.
     doubleItems: true,
-    tokens: { accentWeight: 'calc(2px * var(--scale))', labelTracking: '0.12em' },
+    tokens: { accentWeight: 'calc(3px * var(--scale))', labelTracking: '0.12em' },
   }),
 );

@@ -62,7 +62,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 .credits-box {
   position: relative;              /* anchors the absolutely-stacked pages inside */
   width: calc(1200px * var(--scale));   /* generous stage width - pages center within it */
-  height: calc(760px * var(--scale));   /* fixed stage - overlong sections paginate (see rowBuilderJs) */
+  height: calc(950px * var(--scale));   /* fixed stage - overlong sections paginate (see rowBuilderJs) */
   overflow: hidden;                /* pages never spill outside the stage */
 }
 
@@ -81,7 +81,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
   flex-direction: column;          /* rows read top to bottom */
   align-items: center;             /* centered horizontally - a poster, not a list */
   justify-content: center;         /* centered vertically inside the stage */
-  gap: calc(18px * var(--scale));  /* even air between heading and every row */
+  gap: calc(23px * var(--scale));  /* even air between heading and every row */
   text-align: center;              /* centered type matches the poster layout */
   will-change: transform, opacity; /* hint: the preset fades + nudges each page */
 }
@@ -90,14 +90,14 @@ export const cr03: TemplateVariant = defineCreditsVariant(
    page it sits on) - the sport lean is painted on ::before, exactly like lt05's slab. */
 .credits-heading {
   position: relative;              /* anchors the painted slab (::before) behind the text */
-  padding: calc(10px * var(--scale)) calc(30px * var(--scale));  /* tight chip, wide sides */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* just under the 32px names - the slab chip, not size, marks it as a heading */
+  padding: calc(13px * var(--scale)) calc(38px * var(--scale));  /* tight chip, wide sides */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* just under the 32px names - the slab chip, not size, marks it as a heading */
   font-weight: 700;                /* headings are shouted */
   line-height: 1.1;                /* tight - chip hugs the caps */
   letter-spacing: var(--label-tracking);  /* the section label's authored tracking */
   text-transform: uppercase;       /* sport labels are always caps */
   color: var(--text-color);        /* primary text on the dark slab */
-  margin-bottom: calc(8px * var(--scale));  /* extra air: chip separates from the rows below */
+  margin-bottom: calc(10px * var(--scale));  /* extra air: chip separates from the rows below */
 }
 
 /* The painted slab behind the heading: lean + volt edge live HERE, on a layer no preset
@@ -120,7 +120,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* The role: small dim caps - the name is the star. */
 .credits-role {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* half the 32px name - the loud/quiet pair reads decisive */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* half the 32px name - the loud/quiet pair reads decisive */
   font-weight: 500;                /* medium - legible without competing */
   line-height: 1.3;                /* normal leading for the small line */
   letter-spacing: var(--label-tracking);  /* the role label's authored tracking */
@@ -130,7 +130,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 
 /* The name: big condensed caps, the loud line of every row. */
 .credits-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* headline of the row - 2:1 over the 16px role */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline of the row - 2:1 over the 16px role */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight - big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -143,8 +143,8 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 /* A plain line inside a section - a name with no role above it. Same shout as a name,
    with the row's stacked padding removed: these come in runs. */
 .credits-entry {
-  padding: calc(6px * var(--scale)) 0;  /* the list rhythm - tighter than a two-line row */
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* sized exactly with .credits-name */
+  padding: calc(8px * var(--scale)) 0;  /* the list rhythm - tighter than a two-line row */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* sized exactly with .credits-name */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight - big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -163,7 +163,7 @@ export const cr03: TemplateVariant = defineCreditsVariant(
   flex-direction: column;          /* stacked vertically */
   align-items: center;             /* centered horizontally */
   justify-content: center;         /* centered vertically */
-  gap: calc(18px * var(--scale));  /* air between the badge and the year line */
+  gap: calc(23px * var(--scale));  /* air between the badge and the year line */
   will-change: transform, opacity; /* hint: the preset fades + nudges it like a page */
 }
 
@@ -171,8 +171,8 @@ export const cr03: TemplateVariant = defineCreditsVariant(
    logo inside stays dead straight while the badge reads mid-sprint. */
 .credits-logo {
   position: relative;              /* anchors the painted badge (::before) behind the logo */
-  width: calc(90px * var(--scale));   /* chunky square badge ... */
-  height: calc(90px * var(--scale));  /* ... same on both axes */
+  width: calc(113px * var(--scale));   /* chunky square badge ... */
+  height: calc(113px * var(--scale));  /* ... same on both axes */
   display: flex;                   /* centers whatever sits inside ... */
   align-items: center;             /* ... vertically */
   justify-content: center;         /* ... and horizontally */
@@ -200,13 +200,13 @@ export const cr03: TemplateVariant = defineCreditsVariant(
 .credits-logo-slot {
   width: 62%;                      /* inset frame inside the badge ... */
   height: 62%;                     /* ... square like its parent */
-  border: calc(2px * var(--scale)) dashed var(--panel-bg);  /* near-black dashes read as "drop here" on any accent tint */
+  border: calc(3px * var(--scale)) dashed var(--panel-bg);  /* near-black dashes read as "drop here" on any accent tint */
   border-radius: 0;                /* hard corners - sport shape language */
 }
 
 /* The year / copyright line under the badge. */
 .credits-year {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* small closing line */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* small closing line */
   font-weight: 600;                /* solid but below the names' 700 */
   line-height: 1.3;                /* normal leading */
   letter-spacing: 0.1em;           /* small caps breathe */

@@ -98,14 +98,14 @@ ${bugLineMasks(o)}
   display: flex;                   /* mark, caption and clock stack as one column */
   flex-direction: column;          /* top to bottom */
   align-items: flex-start;         /* everything hugs the same left edge */
-  gap: calc(10px * var(--scale));  /* even air between the three pieces */
+  gap: calc(11px * var(--scale));  /* even air between the three pieces */
 }
 
 /* The mark area: one box holding both the three-bar placeholder and the logo. */
 .corner-bug-media {
   position: relative;              /* the bars and the logo stack inside this box */
-  width: calc(88px * var(--scale));   /* mark area width */
-  height: calc(56px * var(--scale));  /* mark area height */
+  width: calc(94px * var(--scale));   /* mark area width */
+  height: calc(60px * var(--scale));  /* mark area height */
 }
 
 /* The placeholder — the house three-bar mark: accent / paper / dim, shortening. */
@@ -119,7 +119,7 @@ ${bugLineMasks(o)}
 }
 .corner-bug-mark i {
   display: block;                  /* each <i> is one bar */
-  height: calc(10px * var(--scale));  /* bar thickness */
+  height: calc(11px * var(--scale));  /* bar thickness */
   border-radius: calc(3px * var(--scale));  /* softly rounded bar ends */
 }
 .corner-bug-mark i:nth-child(1) {
@@ -152,7 +152,7 @@ ${bugLineMasks(o)}
 /* The caption (f0) — the house label voice at bug scale. */
 .corner-bug-name {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -164,7 +164,7 @@ ${bugLineMasks(o)}
 /* The clock — mono figures with tabular digits so nothing jitters on the tick. */
 .corner-bug-clock {
   font-family: "JetBrains Mono", Consolas, "Courier New", monospace;  /* the house label face */
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* the mark's focal point */
+  font-size: calc(36px * var(--scale) * var(--type-scale));  /* the mark's focal point */
   font-weight: 400;                /* regular figures — size carries the moment */
   line-height: 1;                  /* one tight row of digits */
   letter-spacing: 0.06em;          /* a touch of air between figures */

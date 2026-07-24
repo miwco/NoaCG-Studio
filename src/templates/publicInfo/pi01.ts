@@ -41,10 +41,10 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 .public-info-box {
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* heading, notice, issuer */
-  gap: calc(10px * var(--scale));  /* the three lines are one statement */
+  gap: calc(13px * var(--scale));  /* the three lines are one statement */
   width: calc(1080px * var(--scale));  /* a wide card — a notice is a paragraph, not a strap */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(28px * var(--scale)) calc(34px * var(--scale));
+  padding: calc(35px * var(--scale)) calc(43px * var(--scale));
   border-left: var(--accent-weight) solid var(--accent);  /* the official mark, on the reading edge */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -54,7 +54,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The heading — what KIND of message this is, before the message itself. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -64,7 +64,7 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
 /* The notice — the sentence people are here for. Set at a comfortable reading size rather
    than a headline size: this is prose, and prose in display type is slower to read. */
 .public-info-body {
-  font-size: calc(28px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
+  font-size: calc(35px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
   font-weight: 400;                /* regular — prose, not a headline */
   line-height: 1.34;               /* generous: this line will wrap */
   color: var(--text-color);        /* primary text color — never dimmed */
@@ -75,15 +75,15 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
    line presets slide the span inside its mask — a divider that travelled with the text would
    read as part of the sentence. */
 .public-info-box > .public-info-mask:last-child {
-  margin-top: calc(4px * var(--scale)); /* a beat of separation */
-  padding-top: calc(14px * var(--scale)); /* room under the rule */
+  margin-top: calc(5px * var(--scale)); /* a beat of separation */
+  padding-top: calc(18px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.12); /* divides notice from attribution */
 }
 
 /* The issuing body — an unattributed public notice is a rumour. */
 .public-info-source {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

@@ -47,7 +47,7 @@ ${lineMasks(o, '        ')}
    right, so the graphic still has no edge anywhere. A plain vertical fade would leave hard
    left and right sides, which is the panel look this family exists to avoid. */
 .lower-third-box {
-  padding: calc(40px * var(--scale)) calc(150px * var(--scale)) calc(34px * var(--scale)) calc(32px * var(--scale));
+  padding: calc(50px * var(--scale)) calc(188px * var(--scale)) calc(43px * var(--scale)) calc(40px * var(--scale));
   background: radial-gradient(ellipse 95% 120% at 10% 100%,
               var(--panel-bg) 0%,
               color-mix(in srgb, var(--panel-bg) 55%, transparent) 50%,
@@ -57,14 +57,14 @@ ${lineMasks(o, '        ')}
 /* The hairline — spans the whole block, which is the widest line's own width. */
 .lower-third-accent {
   height: var(--accent-weight);     /* the family's 1px hairline */
-  margin-bottom: calc(18px * var(--scale));  /* air between the rule and the name */
+  margin-bottom: calc(23px * var(--scale));  /* air between the rule and the name */
   background: var(--accent);        /* bone by default — cinema colour, not signal colour */
   will-change: transform;           /* hint the browser: presets draw this rule in */
 }
 
 /* The name — cinema setting: light weight, wide tracking, generous line height. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(55px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */
@@ -73,24 +73,24 @@ ${lineMasks(o, '        ')}
 
 /* The role — a reading line, quieter than the name but not yet a label. */
 .lower-third-title {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.35;                /* secondary text gets room to breathe */
   letter-spacing: 0.03em;           /* a hint of the family's openness */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(8px * var(--scale));  /* name + role read as one unit */
 }
 
 /* The location (f2) — the third VOICE: the family's signature wide tracked caps. */
 .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   font-weight: 500;                 /* medium keeps tracked caps crisp at this size */
   line-height: 1.4;                 /* wide tracking needs matching leading */
   letter-spacing: var(--label-tracking);  /* 0.34em — the family's signature */
   text-transform: uppercase;        /* SVALBARD, NORWAY — whatever the operator types */
   color: var(--label-color);        /* dimmed — colour belongs to the footage in this family */
-  margin-top: calc(14px * var(--scale));  /* separated — the location is its own beat */
+  margin-top: calc(18px * var(--scale));  /* separated — the location is its own beat */
 }`,
     hasAccent: true,
   }),

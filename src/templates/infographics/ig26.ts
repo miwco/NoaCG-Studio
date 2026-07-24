@@ -65,14 +65,14 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 
 /* The panel — the house void, with the family's amber top edge. */
 .infographic-box {
-  min-width: calc(580px * var(--scale));  /* a board — two club names and a score per row */
+  min-width: calc(725px * var(--scale));  /* a board — two club names and a score per row */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(24px * var(--scale)) calc(30px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(30px * var(--scale)) calc(38px * var(--scale)) calc(18px * var(--scale));
   background: var(--panel-bg);     /* the house void — retints through the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 /* The header — the heading and the round on one row. */
@@ -80,11 +80,11 @@ export const ig26: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* heading and round in one row */
   align-items: baseline;           /* both on one text baseline */
   justify-content: space-between;  /* pushed to opposite ends */
-  gap: calc(18px * var(--scale));  /* the round never crowds a long heading */
+  gap: calc(23px * var(--scale));  /* the round never crowds a long heading */
 }
 .infographic-heading {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
@@ -95,7 +95,7 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 .infographic-sub {
   flex-shrink: 0;                  /* the round keeps its width whatever the heading does */
   font-family: var(--font-label);  /* one mono voice across the header */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* clearly subordinate */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate */
   font-weight: 500;                /* matches the heading's weight */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   color: var(--text-dim);          /* dimmed — never full accent twice in one header */
@@ -106,7 +106,7 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 /* The rule — a thin dim keyline under the header. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin-top: calc(14px * var(--scale));  /* air between the caps and the rule */
+  margin-top: calc(18px * var(--scale));  /* air between the caps and the rule */
   background: rgba(255, 255, 255, 0.14);  /* dim, not accent — the colour stays in the chips */
 }
 
@@ -120,8 +120,8 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-row {
   display: flex;                   /* every part of the match on one line */
   align-items: center;             /* the chip and the names share a centre line */
-  gap: calc(14px * var(--scale));  /* clear air between the columns */
-  padding: calc(11px * var(--scale)) 0;  /* even vertical rhythm down the board */
+  gap: calc(18px * var(--scale));  /* clear air between the columns */
+  padding: calc(14px * var(--scale)) 0;  /* even vertical rhythm down the board */
 }
 .infographic-fixture-row + .infographic-fixture-row {
   border-top: 1px solid rgba(255, 255, 255, 0.08);  /* keyline hairline between matches */
@@ -130,9 +130,9 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 /* The kick-off — mono, dim, in a shared column so the clubs line up down the board. */
 .infographic-fixture-when {
   flex-shrink: 0;                  /* a long club name never squeezes the time */
-  min-width: calc(96px * var(--scale));  /* one shared column width — the clubs align */
+  min-width: calc(120px * var(--scale));  /* one shared column width — the clubs align */
   font-family: var(--font-label);  /* mono: a kick-off is data, not display type */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* reference scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* reference scale */
   font-weight: 500;                /* medium, in one mono voice with the header */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   text-transform: uppercase;       /* "sat" reads as "SAT", whatever is typed */
@@ -145,7 +145,7 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 .infographic-fixture-side {
   flex: 1;                         /* the two clubs share the row's spare width evenly */
   min-width: 0;                    /* allow a long club name to shrink and wrap */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* the biggest text in the row */
   font-weight: var(--display-weight);  /* the house display weight */
   line-height: 1.25;               /* relaxed leading in case a long name wraps */
   color: var(--text-color);        /* primary text on the void */
@@ -157,19 +157,19 @@ export const ig26: TemplateVariant = defineInfographicVariant(
 /* The middle — an amber score chip on a finished match, a dim "v" on an upcoming one. */
 .infographic-fixture-mid {
   flex-shrink: 0;                  /* the middle keeps its width whatever the names do */
-  min-width: calc(64px * var(--scale));  /* one shared column — the clubs align either side */
+  min-width: calc(80px * var(--scale));  /* one shared column — the clubs align either side */
   text-align: center;              /* centred between the two clubs */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a "v" is quiet by nature */
   font-weight: 500;                /* medium — this is the unplayed state */
   color: var(--text-dim);          /* dimmed — nothing has happened yet */
 }
 /* A played match: the score becomes an amber chip, so results read at a glance among fixtures. */
 .infographic-fixture-played .infographic-fixture-mid {
-  padding: calc(4px * var(--scale)) calc(10px * var(--scale));  /* the chip's own frame */
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+  padding: calc(5px * var(--scale)) calc(13px * var(--scale));  /* the chip's own frame */
+  border-radius: calc(8px * var(--scale));  /* the house chip radius */
   background: rgba(10, 12, 16, 0.6);  /* a second, denser layer of the void */
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);  /* a thin amber keyline */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* a result is louder than a fixture */
   font-weight: var(--display-weight);  /* the house display weight */
   color: var(--accent);            /* the results wear the accent */
   font-variant-numeric: tabular-nums;  /* scores align down the column */

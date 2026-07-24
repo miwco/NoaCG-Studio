@@ -62,7 +62,7 @@ ${heldResultCss()}
 /* THE PANEL: the head and the result share one frosted surface, so the press adds to a card
    that is already there rather than opening a second one. */
 .${P}-head {
-  padding: calc(30px * var(--scale)) calc(44px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(38px * var(--scale)) calc(55px * var(--scale)) calc(33px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -72,7 +72,7 @@ ${heldResultCss()}
 
 .${P}-body {
   margin-top: 0;                   /* the result block continues the same panel */
-  padding: calc(22px * var(--scale)) calc(44px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(55px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -94,7 +94,7 @@ ${heldResultCss()}
 /* The kicker. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -103,7 +103,7 @@ ${heldResultCss()}
 
 /* The champion. */
 .${P}-title {
-  font-size: calc(70px * var(--scale) * var(--type-scale));
+  font-size: calc(88px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.04;
   letter-spacing: var(--display-tracking);
@@ -117,7 +117,7 @@ ${heldResultCss()}
 
 /* The score line. */
 .${P}-subject {
-  font-size: calc(48px * var(--scale) * var(--type-scale));
+  font-size: calc(60px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -126,7 +126,7 @@ ${heldResultCss()}
 
 /* The beaten side. */
 .${P}-runner {
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -135,7 +135,7 @@ ${heldResultCss()}
 
 /* The event note. */
 .${P}-note {
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -145,11 +145,11 @@ ${heldResultCss()}
 /* ── The celebration (its own state). ── */
 
 .${P}-celebrating .${P}-body {
-  box-shadow: var(--panel-shadow), inset 0 0 0 calc(2px * var(--scale)) var(--accent);
+  box-shadow: var(--panel-shadow), inset 0 0 0 calc(3px * var(--scale)) var(--accent);
 }
 
 .${P}-celebrating .${P}-head {
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--accent);
 }`,
   }),
 );

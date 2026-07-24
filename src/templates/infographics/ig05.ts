@@ -65,8 +65,8 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
       css: `/* The panel — lt03's quiet keyline card, capped by the design's one accent hairline. */
 .infographic-box {
-  min-width: calc(620px * var(--scale));  /* the track keeps a stable run behind short totals */
-  padding: calc(26px * var(--scale)) calc(40px * var(--scale)) calc(24px * var(--scale));  /* generous inner air */
+  min-width: calc(653px * var(--scale));  /* the track keeps a stable run behind short totals */
+  padding: calc(27px * var(--scale)) calc(42px * var(--scale)) calc(25px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);     /* the panel color (retints via the :root contract) */
   border: 1px solid rgba(255, 255, 255, 0.14);  /* hairline keyline lifts the panel off video */
   border-top: var(--accent-weight) solid var(--accent);  /* the family's accent weight */
@@ -75,7 +75,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The kicker — quiet tracking-wide caps, the accent's second, tiny appearance. */
 .infographic-kicker {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the kicker's authored tracking */
@@ -91,13 +91,13 @@ export const ig05: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* mark and figure sit side by side */
   justify-content: center;         /* centered on the panel's axis */
   align-items: baseline;           /* the small mark rests on the figure's baseline */
-  gap: calc(10px * var(--scale));  /* a thin seam between mark and figure */
+  gap: calc(11px * var(--scale));  /* a thin seam between mark and figure */
   margin-top: calc(8px * var(--scale));  /* kicker and figure read as one unit */
 }
 
 /* The currency mark — static and dimmed: a unit, not part of the counting number. */
 .infographic-currency {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
+  font-size: calc(46px * var(--scale) * var(--type-scale));  /* clearly subordinate to the figure */
   font-weight: 600;                /* semibold so the thin glyph stays visible */
   color: var(--text-dim);          /* dimmed — the total carries the weight */
 }
@@ -105,7 +105,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 /* The total — enormous tabular digits; the count-up preset tweens this text from 0. */
 .infographic-value {
   min-width: 0;                    /* allow the figure to shrink and wrap inside flex */
-  font-size: calc(110px * var(--scale) * var(--type-scale));  /* the whole design IS this number (1080p reference) */
+  font-size: calc(116px * var(--scale) * var(--type-scale));  /* the whole design IS this number (1080p reference) */
   font-weight: 700;                /* bold — the panel's single heavy element */
   line-height: 1;                  /* no dead leading — the track sets the gap below */
   letter-spacing: -0.02em;         /* very large glyphs tighten */
@@ -117,7 +117,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 /* The track — a slim keyline-grey lane the accent fill grows inside. */
 .infographic-track {
   height: calc(8px * var(--scale));  /* hairline-slim lane — the chart stays quiet */
-  margin-top: calc(22px * var(--scale));  /* air between the figure and the bar */
+  margin-top: calc(23px * var(--scale));  /* air between the figure and the bar */
   border-radius: calc(2px * var(--scale));  /* minimal family: 0-2px, never a pill */
   background: rgba(255, 255, 255, 0.14);  /* keyline-grey lane over the panel */
   overflow: hidden;                /* the growing fill is clipped to the lane */
@@ -140,13 +140,13 @@ export const ig05: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* both figures share one line */
   justify-content: space-between;  /* raised hugs left, goal hugs right */
   align-items: baseline;           /* both sit on the same text baseline */
-  gap: calc(32px * var(--scale));  /* distinct info keeps distinct space between */
-  margin-top: calc(12px * var(--scale));  /* small gap up to the track */
+  gap: calc(34px * var(--scale));  /* distinct info keeps distinct space between */
+  margin-top: calc(13px * var(--scale));  /* small gap up to the track */
 }
 
 /* The raised figure — a small bold echo of the total at the bar's start. */
 .infographic-sub {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* footer scale — clearly under the big figure */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* footer scale — clearly under the big figure */
   font-weight: 700;                /* bold — it restates the headline number */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* a currency figure never wraps mid-number */
@@ -155,7 +155,7 @@ export const ig05: TemplateVariant = defineInfographicVariant(
 
 /* The goal line — dimmed and right-aligned: the target, not the news. */
 .infographic-goal {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* same size as the raised figure… */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* same size as the raised figure… */
   font-weight: 400;                /* …contrast through weight, not more fonts */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* "Goal: €250,000" never wraps mid-number */

@@ -60,8 +60,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centred on the lockup's axis */
-  gap: calc(14px * var(--scale));  /* air between the mark and the text */
-  padding: calc(13px * var(--scale)) calc(20px * var(--scale));  /* even air inside the panel */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
+  padding: calc(16px * var(--scale)) calc(25px * var(--scale));  /* even air inside the panel */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -80,7 +80,7 @@ ${bugSlotCss({ width: 46, height: 46, mark: 'bars', radius: '0' })}
 
 /* The event name (f0) — the line the viewer reads first. */
 .corner-bug-name {
-  font-size: calc(19px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(24px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -91,9 +91,9 @@ ${bugSlotCss({ width: 46, height: 46, mark: 'bars', radius: '0' })}
 /* The detail (f1) — day, session or venue, in the mono house label voice. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(4px * var(--scale));  /* the two lines read as one lockup */
+  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* clearly subordinate */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* clearly subordinate */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.25;               /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the house label tracking */

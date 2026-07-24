@@ -75,7 +75,7 @@ ${maskLines([
 /* The slab — near-black, leaning, painted on ::before so no preset can straighten it. */
 .info-card-box {
   position: relative;               /* the painted slab is placed against this box */
-  padding: calc(22px * var(--scale)) calc(48px * var(--scale)) calc(22px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(26px * var(--scale)) calc(56px * var(--scale)) calc(26px * var(--scale)) calc(35px * var(--scale));
 }
 .info-card-box::before {
   content: '';                      /* the slab surface itself */
@@ -91,7 +91,7 @@ ${maskLines([
 .info-card-place-row {
   display: flex;                    /* pin then name, in a row */
   align-items: center;              /* the marker centres against the name's cap height */
-  gap: calc(14px * var(--scale));   /* a thin seam between the marker and the words */
+  gap: calc(16px * var(--scale));   /* a thin seam between the marker and the words */
 }
 
 /* THE PIN — a drawn map marker: a ring with a downward point, made of two CSS shapes.
@@ -99,23 +99,23 @@ ${maskLines([
 .info-card-pin {
   position: relative;               /* the centre dot is positioned against the head */
   flex: none;                       /* never squeezed by a long venue name */
-  width: calc(30px * var(--scale));  /* the marker head's width… */
-  height: calc(30px * var(--scale));  /* …and height: a circle */
-  border: calc(5px * var(--scale)) solid var(--accent);  /* the ring — the accent's second moment */
+  width: calc(35px * var(--scale));  /* the marker head's width… */
+  height: calc(35px * var(--scale));  /* …and height: a circle */
+  border: calc(6px * var(--scale)) solid var(--accent);  /* the ring — the accent's second moment */
   border-radius: 50% 50% 50% 0;     /* three round corners and one point: the classic pin */
   transform: rotate(-45deg);        /* turn the square corner downward into the tail */
 }
 .info-card-pin::after {
   content: '';                      /* the marker's centre dot */
   position: absolute;               /* inside the head… */
-  inset: calc(5px * var(--scale));  /* …with an even margin all round */
+  inset: calc(6px * var(--scale));  /* …with an even margin all round */
   border-radius: 50%;               /* a true circle */
   background: var(--accent);        /* the same accent, filled */
 }
 
 /* The venue name — the slab's one huge voice. */
 .info-card-place {
-  font-size: calc(58px * var(--scale) * var(--type-scale));  /* the whole design IS this line (1080p reference) */
+  font-size: calc(68px * var(--scale) * var(--type-scale));  /* the whole design IS this line (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight — heavy condensed */
   line-height: 1;                   /* huge condensed caps sit very tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -125,24 +125,24 @@ ${maskLines([
 
 /* The region — where the venue is, in tracked caps. */
 .info-card-region {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* body scale under the venue */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* body scale under the venue */
   font-weight: 700;                 /* bold keeps condensed caps legible over video */
   line-height: 1.25;                /* label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the sport register is always caps */
-  margin-top: calc(8px * var(--scale));  /* place → region: they read as one unit */
+  margin-top: calc(9px * var(--scale));  /* place → region: they read as one unit */
   color: var(--label-color);        /* the family's label colour */
 }
 
 /* The coordinates / capacity line — data, set apart above a hairline. */
 .info-card-detail {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
   font-weight: 400;                 /* regular weight — it is reference, not a headline */
   line-height: 1.35;                /* body text gets room to breathe */
   letter-spacing: 0.06em;           /* condensed figures need air to be read one by one */
   font-variant-numeric: tabular-nums;  /* digits keep one width across updates */
-  padding-top: calc(10px * var(--scale));  /* air under the rule */
-  margin-top: calc(12px * var(--scale));  /* region → detail: the slab's largest break */
+  padding-top: calc(12px * var(--scale));  /* air under the rule */
+  margin-top: calc(14px * var(--scale));  /* region → detail: the slab's largest break */
   border-top: 1px solid rgba(255, 255, 255, 0.16);  /* a hairline divider — the family's one rule */
   color: var(--text-dim);           /* dimmed — the third voice on the slab */
 }`,

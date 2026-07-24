@@ -70,7 +70,7 @@ ${maskLines([
 /* The slab — near-black, leaning, painted on ::before so no preset can straighten it. */
 .lower-third-box {
   position: relative;               /* the painted slab is placed against this box */
-  padding: calc(18px * var(--scale)) calc(46px * var(--scale)) calc(20px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(21px * var(--scale)) calc(54px * var(--scale)) calc(24px * var(--scale)) calc(33px * var(--scale));
 }
 .lower-third-box::before {
   content: '';                      /* the slab surface itself */
@@ -84,7 +84,7 @@ ${maskLines([
 
 /* The action — the shout. Everything else on the slab supports it. */
 .lower-third-action {
-  font-size: calc(54px * var(--scale) * var(--type-scale));  /* the strap's one huge voice (1080p reference) */
+  font-size: calc(64px * var(--scale) * var(--type-scale));  /* the strap's one huge voice (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight — heavy condensed */
   line-height: 1;                   /* huge condensed caps sit very tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -94,24 +94,24 @@ ${maskLines([
 
 /* The target — the address, in the accent: what you type in after the shout. */
 .lower-third-target {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly under the action */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* clearly under the action */
   font-weight: 700;                 /* bold — it is meant to be copied */
   line-height: 1.2;                 /* address leading */
   letter-spacing: 0.04em;           /* condensed caps need a little air to stay readable */
   text-transform: uppercase;        /* the sport register is always caps */
   overflow-wrap: anywhere;          /* a very long address breaks rather than overflowing */
-  margin-top: calc(6px * var(--scale));  /* action and target read as one unit */
+  margin-top: calc(7px * var(--scale));  /* action and target read as one unit */
   color: var(--accent);             /* the accent's second, larger appearance */
 }
 
 /* The reason — the small print, tracked and dimmed. */
 .lower-third-reason {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the slab */
   font-weight: 400;                 /* regular weight */
   line-height: 1.3;                 /* body text gets room to breathe */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the sport register is always caps */
-  margin-top: calc(10px * var(--scale));  /* target → reason: a real break */
+  margin-top: calc(12px * var(--scale));  /* target → reason: a real break */
   color: var(--text-dim);           /* dimmed — never full white twice */
 }`,
     hasAccent: true,

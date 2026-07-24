@@ -58,10 +58,10 @@ export const tk08: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label chip + viewport side by side */
   align-items: center;             /* both center on the strip's axis */
-  gap: calc(22px * var(--scale));  /* air between the chip and the story */
+  gap: calc(26px * var(--scale));  /* air between the chip and the story */
   width: calc(1200px * var(--scale));  /* a wide reading strip */
   box-sizing: border-box;          /* padding stays inside the fixed width */
-  padding: calc(16px * var(--scale)) calc(30px * var(--scale));  /* comfortable strip padding */
+  padding: calc(19px * var(--scale)) calc(35px * var(--scale));  /* comfortable strip padding */
   border-radius: var(--panel-radius);  /* the family's panel radius */
   background: var(--panel-bg);     /* the glass tint — retints via the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
@@ -73,9 +73,9 @@ export const tk08: TemplateVariant = defineTickerVariant(
 .ticker-label {
   display: flex;                   /* the dot and the label text sit in a row */
   align-items: center;             /* dot and text share the strip's center line */
-  gap: calc(9px * var(--scale));   /* small gap between the dot and the label */
+  gap: calc(11px * var(--scale));   /* small gap between the dot and the label */
   flex-shrink: 0;                  /* a long story never squeezes the label */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small-caps kicker size */
   font-weight: 700;                /* bold — the label reads as a badge */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* label is always set in caps */
@@ -85,8 +85,8 @@ export const tk08: TemplateVariant = defineTickerVariant(
 /* The dot — a small round accent marker in front of the label (the "on air" light). */
 .ticker-label::before {
   content: '';                     /* pseudo-elements need content to render */
-  width: calc(10px * var(--scale));   /* small dot diameter */
-  height: calc(10px * var(--scale));  /* keep it perfectly round */
+  width: calc(12px * var(--scale));   /* small dot diameter */
+  height: calc(12px * var(--scale));  /* keep it perfectly round */
   border-radius: 999px;            /* full circle */
   background: var(--accent);       /* the dot is pure accent — retints with the palette */
 }
@@ -100,7 +100,7 @@ export const tk08: TemplateVariant = defineTickerVariant(
 
 /* One story — a comfortable reading size, held long enough to read. */
 .ticker-item {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the strip's main voice */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the strip's main voice */
   font-weight: 500;                /* present without shouting */
   line-height: 1.25;               /* a touch of leading if a long story wraps to two lines */
   color: var(--text-color);        /* primary text color */

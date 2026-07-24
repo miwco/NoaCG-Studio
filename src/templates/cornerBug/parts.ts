@@ -130,12 +130,12 @@ ${inset}`;
   display: flex;                   /* the three house bars stack… */
   flex-direction: column;          /* …top to bottom */
   justify-content: center;         /* centered in the mark box */
-  gap: calc(6px * var(--scale));   /* air between the bars */
+  gap: calc(7px * var(--scale));   /* air between the bars */
 }
 .corner-bug-mark i {
   display: block;                  /* each <i> is one bar */
-  height: calc(9px * var(--scale));   /* bar thickness */
-  border-radius: calc(3px * var(--scale));  /* softly rounded bar ends */
+  height: calc(11px * var(--scale));   /* bar thickness */
+  border-radius: calc(4px * var(--scale));  /* softly rounded bar ends */
 }
 .corner-bug-mark i:nth-child(1) {
   width: 100%;                     /* the full-length accent bar on top */
@@ -181,7 +181,7 @@ ${inset}`;
   justify-content: center;         /* …and horizontally */
   border: var(--accent-weight) solid var(--accent);  /* the one accent moment, as an outline */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* small: it is a hint, not content */
+  font-size: calc(16px * var(--scale) * var(--type-scale));  /* small: it is a hint, not content */
   font-weight: 600;                /* semibold keeps tracked caps crisp */
   letter-spacing: 0.16em;          /* tracked caps — label voice */
   color: var(--text-color);        /* readable: this is what a fresh graphic shows */

@@ -84,8 +84,8 @@ ${slot(o, 3, 'lower-third-extra', '        ')}
 
 .lower-third-text {
   min-width: 0;                     /* let it shrink so long values wrap instead of overflowing */
-  max-width: calc(640px * var(--scale));  /* the wrap point for a very long handle */
-  padding: calc(16px * var(--scale)) calc(28px * var(--scale)) calc(16px * var(--scale));
+  max-width: calc(753px * var(--scale));  /* the wrap point for a very long handle */
+  padding: calc(19px * var(--scale)) calc(33px * var(--scale)) calc(19px * var(--scale));
 }
 
 /* The identity row: tag chip, then handle, on one baseline. */
@@ -93,7 +93,7 @@ ${slot(o, 3, 'lower-third-extra', '        ')}
   display: flex;                    /* chip and handle in a row… */
   flex-wrap: wrap;                  /* …wrapping only if the handle is genuinely long */
   align-items: baseline;            /* the chip sits on the handle's baseline */
-  gap: calc(12px * var(--scale));
+  gap: calc(14px * var(--scale));
   min-width: 0;                     /* allow shrinking */
 }
 .lower-third-idrow > .lower-third-mask {
@@ -104,21 +104,21 @@ ${slot(o, 3, 'lower-third-extra', '        ')}
 /* The tag chip — filled, tight, and never wrapped: a bracket tag is an atom. */
 .lower-third-tagwrap {
   flex: none;                       /* the chip keeps its size whatever the handle does */
-  max-width: calc(200px * var(--scale));  /* a bracket tag is three or four characters; a full
+  max-width: calc(235px * var(--scale));  /* a bracket tag is three or four characters; a full
                                              org name pasted here clips inside its own mask
                                              rather than pushing the handle off the slab */
   overflow: hidden;                 /* the clip is what makes the max-width real (bench) */
 }
 .lower-third-tag {
   display: block;                   /* the chip's box is this element */
-  max-width: calc(180px * var(--scale));  /* a tag is 3-4 characters; a longer value clips
+  max-width: calc(212px * var(--scale));  /* a tag is 3-4 characters; a longer value clips
                                              here rather than laying out wider (bench) */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* smaller than the handle it prefixes */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* smaller than the handle it prefixes */
   font-weight: 700;                 /* bold — a tag is set heavy everywhere it appears */
   line-height: 1;                   /* the chip's height comes from its padding */
   letter-spacing: 0.06em;           /* a touch of air keeps 3 caps from fusing */
   text-transform: uppercase;        /* NGT, whatever the operator types */
-  padding: calc(6px * var(--scale)) calc(10px * var(--scale)) calc(7px * var(--scale));
+  padding: calc(7px * var(--scale)) calc(12px * var(--scale)) calc(8px * var(--scale));
   background: var(--accent);        /* the tag is the strap's one filled accent surface */
   color: var(--accent-ink);         /* the family's ink for text ON accent */
   white-space: nowrap;              /* a tag never breaks across lines… */
@@ -128,7 +128,7 @@ ${slot(o, 3, 'lower-third-extra', '        ')}
 
 /* The in-game name — the strap's headline, and the name the audience actually knows. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(52px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 700;                 /* bold — the handle carries the strap */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -137,22 +137,22 @@ ${slot(o, 3, 'lower-third-extra', '        ')}
 
 /* The role — the one line that says what this player does in the game. */
 .lower-third-title {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the handle */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly below the handle */
   font-weight: 600;                 /* semibold keeps tracked caps crisp */
   line-height: 1.25;                /* room if the role wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* MID LANE, whatever the operator types */
   color: var(--accent);             /* the role takes the colour, the way rosters print it */
-  margin-top: calc(8px * var(--scale));  /* tied to the identity row above */
+  margin-top: calc(9px * var(--scale));  /* tied to the identity row above */
 }
 
 /* The legal name and org — the smallest line, and the one many broadcasts leave empty. */
 .lower-third-extra {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
   font-weight: 400;                 /* regular — this line is reference, not billing */
   line-height: 1.3;                 /* room if the pairing wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(4px * var(--scale));  /* tied to the role above it */
+  margin-top: calc(5px * var(--scale));  /* tied to the role above it */
 }`,
       hasAccent: true,
     };

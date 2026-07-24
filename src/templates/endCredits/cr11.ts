@@ -60,7 +60,7 @@ export const cr11: TemplateVariant = defineCreditsVariant(
    still or a candle shot, a frosted slab would be an object between the viewer and the name. */
 .credits-box {
   width: calc(1000px * var(--scale));  /* a comfortable measure for a name and its dates */
-  height: calc(860px * var(--scale));  /* the window height; the roll travels behind it */
+  height: calc(1075px * var(--scale));  /* the window height; the roll travels behind it */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* a roll of names is a centered column */
 }
@@ -72,14 +72,14 @@ export const cr11: TemplateVariant = defineCreditsVariant(
 
 /* One group. Groups stack in normal flow as the roll passes through them. */
 .credits-page {
-  padding: calc(30px * var(--scale)) 0;  /* even, unhurried air around each group */
+  padding: calc(38px * var(--scale)) 0;  /* even, unhurried air around each group */
 }
 
 /* The heading — SMALLER than the names it introduces, which is the whole point: on this
    card nothing is allowed to be louder than a person's name. */
 .credits-heading {
-  margin-bottom: calc(34px * var(--scale));  /* a long breath before the first name */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* deliberately below the names */
+  margin-bottom: calc(43px * var(--scale));  /* a long breath before the first name */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* deliberately below the names */
   font-weight: 500;                /* medium — quiet, but legible in small caps */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -92,13 +92,13 @@ export const cr11: TemplateVariant = defineCreditsVariant(
   align-items: baseline;           /* …and one baseline, like a printed order of service */
   justify-content: center;         /* centered as a pair on the column's axis */
   flex-wrap: wrap;                 /* a very long name pushes the dates to the next row */
-  gap: calc(18px * var(--scale));  /* the space between a name and its dates */
-  padding: calc(15px * var(--scale)) 0;  /* an unhurried rhythm */
+  gap: calc(23px * var(--scale));  /* the space between a name and its dates */
+  padding: calc(19px * var(--scale)) 0;  /* an unhurried rhythm */
 }
 
 /* THE NAME. entry.role is the first half of the typed line — here, the person. */
 .credits-role {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* the largest type on the card */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* the largest type on the card */
   font-weight: 400;                /* LIGHT on purpose: this is not an announcement */
   line-height: 1.2;                /* comfortable for a name that wraps */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -108,7 +108,7 @@ export const cr11: TemplateVariant = defineCreditsVariant(
 
 /* THE DATES. The second half of the line, in the secondary voice. */
 .credits-name {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ~1.75:1 under the name */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* ~1.75:1 under the name */
   font-weight: 400;                /* the same light weight — nothing here is emphasised */
   line-height: 1.3;                /* shares the row's rhythm */
   font-variant-numeric: tabular-nums;  /* years line up down the column */
@@ -118,8 +118,8 @@ export const cr11: TemplateVariant = defineCreditsVariant(
 /* A bare name, or a line of dedication. Set exactly like a name with dates: a person
    without recorded years is not a lesser row. */
 .credits-entry {
-  padding: calc(13px * var(--scale)) 0;  /* the same unhurried rhythm */
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* level with a dated name */
+  padding: calc(16px * var(--scale)) 0;  /* the same unhurried rhythm */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* level with a dated name */
   font-weight: 400;                /* the card's one weight */
   line-height: 1.25;               /* comfortable for a run of names */
   letter-spacing: var(--display-tracking);  /* matches the dated names above */
@@ -132,20 +132,20 @@ export const cr11: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* the pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered in the column */
-  gap: calc(28px * var(--scale));  /* long, even air — the ending is not hurried either */
-  padding: calc(72px * var(--scale)) 0;  /* the longest breath on the card */
+  gap: calc(35px * var(--scale));  /* long, even air — the ending is not hurried either */
+  padding: calc(90px * var(--scale)) 0;  /* the longest breath on the card */
 }
 
 /* The one rule — softened well below the accent's full strength. It is punctuation. */
 .credits-rule {
-  width: calc(72px * var(--scale));  /* a short stroke */
+  width: calc(90px * var(--scale));  /* a short stroke */
   height: 1px;                     /* a true hairline, not the family's accent bar */
   background: color-mix(in srgb, var(--accent) 40%, transparent);  /* barely there */
 }
 
 /* The logo, when one is picked — smaller than any other credits design's. */
 .credits-logo {
-  height: calc(44px * var(--scale));  /* a modest mark; the names are the content */
+  height: calc(55px * var(--scale));  /* a modest mark; the names are the content */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
   opacity: 0.8;                    /* softened, like everything else on this card */
@@ -153,10 +153,10 @@ export const cr11: TemplateVariant = defineCreditsVariant(
 
 /* No logo picked yet — a quiet dashed slot, so the space is visibly reserved. */
 .credits-logo-slot {
-  padding: calc(11px * var(--scale)) calc(22px * var(--scale));  /* a small chip */
+  padding: calc(14px * var(--scale)) calc(28px * var(--scale));  /* a small chip */
   border: 1px dashed rgba(255, 255, 255, 0.24);  /* clearly a placeholder */
   border-radius: var(--panel-radius);  /* the family's panel radius */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the card */
   letter-spacing: 0.1em;           /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -164,7 +164,7 @@ export const cr11: TemplateVariant = defineCreditsVariant(
 
 /* The closing line — the year/copyright field, used here for the final sentence. */
 .credits-year {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* readable, still quieter than a name */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* readable, still quieter than a name */
   font-weight: 400;                /* the card's one weight */
   letter-spacing: 0.03em;          /* a touch of air */
   color: var(--text-dim);          /* secondary text color */

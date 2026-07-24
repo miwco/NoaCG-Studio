@@ -102,7 +102,7 @@ export const fr02: TemplateVariant = defineFrameVariant(
 
 /* The name — the plate's display line. */
 .frame-name {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -114,7 +114,7 @@ export const fr02: TemplateVariant = defineFrameVariant(
   display: inline-flex;            /* the dot and the words share one row */
   align-items: center;             /* dot centred against the text */
   gap: calc(8px * var(--scale));   /* a thin seam between the dot and the words */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

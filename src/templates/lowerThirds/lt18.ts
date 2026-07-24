@@ -52,12 +52,12 @@ ${lineMasks(o)}
 
 /* The text block — transparent: no panel, whitespace and a text shadow do the work. */
 .lower-third-box {
-  padding-left: calc(20px * var(--scale));  /* room for the hairline + a gap */
+  padding-left: calc(25px * var(--scale));  /* room for the hairline + a gap */
 }
 
 /* The handle — the line the viewer reads, kept legible over footage. */
 .lower-third-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -68,13 +68,13 @@ ${lineMasks(o)}
 /* The platform — a dimmed caps label under the handle. */
 .lower-third-title,
 .lower-third-extra {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* clearly subordinate */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate */
   font-weight: 500;                /* regular-plus; contrast comes from the handle */
   line-height: 1.3;                /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a platform label, not a sentence */
   color: var(--text-dim);          /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* handle + platform read as one unit */
+  margin-top: calc(6px * var(--scale));  /* handle + platform read as one unit */
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);  /* readable over bright footage */
 }`,
     hasAccent: true,

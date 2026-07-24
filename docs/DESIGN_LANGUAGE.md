@@ -19,6 +19,23 @@ Values below are for a **1920×1080 canvas**; scale linearly for other resolutio
   - **Kicker / label** (small caps line like "LIVE" or a category): 16–22 px, weight 600–700,
     `text-transform: uppercase`, letter-spacing **0.08–0.2em** (small caps breathe).
 - Size ratio between name and title ≈ **1.8–2.2 : 1**. Closer than 1.5:1 looks indecisive.
+- **The type floor: nothing renders below 20 px at 1080p.** Corner bugs are the one exception at
+  16 px, because a persistent station mark is small by construction. This is not a taste rule -
+  below the floor, text stops surviving broadcast compression and is simply gone on a
+  phone-sized stream window. `node scripts/type-floor.mjs` renders the whole catalog and fails
+  on any violation, so a design that wants a quieter voice gets it through weight, color and
+  tracking, never through size. If a design cannot make its hierarchy work above the floor, the
+  design is too dense - cut a line rather than shrink one.
+- **Frame-anchored geometry does not follow the type.** A near-full-width strip, a 16:9 camera
+  window, the `999px` pill idiom - these are sized against the 1920x1080 frame, so scaling them
+  with the design pushes the graphic off screen. Scale the type and the padding around it; leave
+  the box where the frame put it.
+- **Growing a graphic costs capacity.** Every design has a width budget, and the runtime bench
+  (`e2e/bench.spec.ts`) spends it by doubling the length of every text value. Enlarge the type and
+  that budget shrinks: elements collide, text clips, the strap runs off frame. So a design may
+  grow at most **1.25x** to reach the floor; past that, raise the small labels to the floor and
+  leave the geometry alone. A design already at its bench limit takes the label change only - and
+  if raising one label breaks it, the layout needs the auto-fit pattern (§5), not a bigger box.
 - **Align toward the anchor.** A left-anchored graphic left-aligns, a right-anchored one
   right-aligns. Centering is allowed for a **centre-anchored** graphic only (`bottom-center`), and
   only where the composition is genuinely symmetric — a centred rule, a centred kicker over a

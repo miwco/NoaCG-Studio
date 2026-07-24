@@ -47,7 +47,7 @@ ${cardLineMasks(o)}
     css: `/* The band — a wide, shallow frosted panel: a caption sits across the bottom of the
    picture, never as a block in the middle of it. */
 .info-card-box {
-  padding: calc(24px * var(--scale)) calc(44px * var(--scale));  /* comfortable band padding */
+  padding: calc(28px * var(--scale)) calc(52px * var(--scale));  /* comfortable band padding */
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -59,9 +59,9 @@ ${cardLineMasks(o)}
    bar is what says "this is the other language" without spending a word on it. */
 .info-card-name {
   display: block;                  /* its own row, so the accent bar spans its full height */
-  padding-left: calc(18px * var(--scale));  /* room for the bar plus a real gap */
+  padding-left: calc(21px * var(--scale));  /* room for the bar plus a real gap */
   border-left: var(--accent-weight) solid var(--accent);  /* the source-language marker */
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* context size, not reading size */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* context size, not reading size */
   font-weight: 400;                /* regular — this line is reference, not the message */
   font-style: italic;              /* the second visual cue that it is the source language */
   line-height: 1.35;               /* comfortable if the sentence wraps */
@@ -72,8 +72,8 @@ ${cardLineMasks(o)}
 /* THE TRANSLATION. Full reading size and brightness: this is what the audience is reading. */
 .info-card-title {
   display: block;                  /* its own row under the spoken line */
-  margin-top: calc(14px * var(--scale));  /* a clear break between the two languages */
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* ~1.6:1 over the spoken line */
+  margin-top: calc(16px * var(--scale));  /* a clear break between the two languages */
+  font-size: calc(45px * var(--scale) * var(--type-scale));  /* ~1.6:1 over the spoken line */
   font-weight: 600;                /* solid without shouting */
   line-height: 1.3;                /* a caption almost always wraps to two rows */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -85,8 +85,8 @@ ${cardLineMasks(o)}
 /* THE LANGUAGE NOTE. Optional, tracked caps, the smallest thing on the card. */
 .info-card-extra {
   display: block;                  /* its own row */
-  margin-top: calc(14px * var(--scale));  /* clear of the translation */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the band's smallest type */
+  margin-top: calc(16px * var(--scale));  /* clear of the translation */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the band's smallest type */
   font-weight: 600;                /* firm enough for small caps to carry */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a tag, not as speech */
@@ -94,7 +94,7 @@ ${cardLineMasks(o)}
 }`,
     hasAccent: false,
     tokens: {
-      accentWeight: 'calc(3px * var(--scale))',
+      accentWeight: 'calc(4px * var(--scale))',
       labelTracking: '0.16em',
     },
   }),

@@ -63,7 +63,7 @@ ${h2hStructureCss()}
 
 /* The accent rule under the title, wearing the house glow. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: center;
@@ -72,7 +72,7 @@ ${h2hStructureCss()}
 /* The title — mono, wide-tracked, amber. */
 .${P}-event {
   font-family: var(--font-label);
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(28px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -81,7 +81,7 @@ ${h2hStructureCss()}
 
 /* The side names — house display type. */
 .${P}-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(48px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -90,9 +90,9 @@ ${h2hStructureCss()}
 
 /* The crest slot — a void plate until a file lands in it. */
 .${P}-logo {
-  border-radius: calc(6px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.6);
-  padding: calc(8px * var(--scale));
+  padding: calc(10px * var(--scale));
 }
 .${P}-logo.has-image {
   background: transparent;
@@ -100,7 +100,7 @@ ${h2hStructureCss()}
 
 /* The figures — tabular, so both columns stay in line as the numbers change. */
 .${P}-row-value {
-  font-size: calc(30px * var(--scale) * var(--type-scale));
+  font-size: calc(38px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--text-dim);
@@ -113,7 +113,7 @@ ${h2hStructureCss()}
 /* The stat label — the house mono label voice. */
 .${P}-row-label {
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -122,7 +122,7 @@ ${h2hStructureCss()}
 
 /* The share bars — amber on the void, side B in paper white. */
 .${P}-row-track {
-  border-radius: calc(3px * var(--scale));
+  border-radius: calc(4px * var(--scale));
   background: rgba(10, 12, 16, 0.7);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }

@@ -124,7 +124,7 @@ export const tk15: TemplateVariant = defineTickerVariant(
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
   padding: 0 calc(28px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.22); /* the keyline that ends the crawl */
-  font-size: calc(17px * var(--scale) * var(--type-scale)); /* small, but never small print */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small, but never small print */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

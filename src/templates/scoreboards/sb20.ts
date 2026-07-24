@@ -65,9 +65,9 @@ ${colourHolderHtml('f5', '#d92b2b')}
 /* The card — flat and solid, so it stays legible over a handheld shot at a low bitrate. */
 .scoreboard-box {
   position: relative;              /* anchors the accent rule */
-  min-width: calc(400px * var(--scale));  /* a card, not a strap */
+  min-width: calc(500px * var(--scale));  /* a card, not a strap */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(15px * var(--scale)) calc(24px * var(--scale)) calc(15px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(19px * var(--scale)) calc(30px * var(--scale)) calc(19px * var(--scale)) calc(35px * var(--scale));
   background: var(--panel-bg);     /* the family's solid dark panel */
   box-shadow: var(--panel-shadow); /* the family's lift */
 }
@@ -86,10 +86,10 @@ ${colourHolderHtml('f5', '#d92b2b')}
 .scoreboard-eventhead {
   display: flex;                   /* minute and event in one row */
   align-items: baseline;           /* both on one text baseline */
-  gap: calc(12px * var(--scale));  /* air between them */
+  gap: calc(15px * var(--scale));  /* air between them */
 }
 .scoreboard-minute {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* small: the header is reference */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small: the header is reference */
   font-weight: 700;                /* bold — the minute is the row's anchor */
   line-height: 1.2;                /* compact header leading */
   color: var(--accent);            /* the minute wears the accent */
@@ -97,7 +97,7 @@ ${colourHolderHtml('f5', '#d92b2b')}
   white-space: nowrap;             /* "90+4'" stays on one line */
 }
 .scoreboard-event {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* level with the minute */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* level with the minute */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -107,14 +107,14 @@ ${colourHolderHtml('f5', '#d92b2b')}
 
 /* The club — the card's biggest line, in sentence case. */
 .scoreboard-club {
-  font-size: calc(25px * var(--scale) * var(--type-scale));  /* the card's anchor */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* the card's anchor */
   font-weight: 600;                /* semibold — present, not shouted */
   line-height: 1.22;               /* comfortable for a long mixed-case club name */
   color: var(--text-color);        /* primary text on the panel */
 }
 .scoreboard-club-mask {
   display: block;                  /* the club owns its own row */
-  margin-top: calc(4px * var(--scale));  /* air under the header row */
+  margin-top: calc(5px * var(--scale));  /* air under the header row */
 }
 
 ${clipOneLineCss('.scoreboard-club', 320)}
@@ -123,33 +123,33 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 .scoreboard-people {
   display: flex;                   /* the two rows… */
   flex-direction: column;          /* …stacked as one column */
-  gap: calc(5px * var(--scale));   /* the rows read as a pair */
-  margin-top: calc(11px * var(--scale));  /* air above the keyline */
-  padding-top: calc(11px * var(--scale));  /* air under the keyline */
+  gap: calc(6px * var(--scale));   /* the rows read as a pair */
+  margin-top: calc(14px * var(--scale));  /* air above the keyline */
+  padding-top: calc(14px * var(--scale));  /* air under the keyline */
   border-top: 1px solid rgba(255, 255, 255, 0.20);  /* the family's one divider */
 }
 .scoreboard-person {
   display: flex;                   /* mark and name in one row */
   align-items: center;             /* both on the row's centre line */
-  gap: calc(11px * var(--scale));  /* air between them */
+  gap: calc(14px * var(--scale));  /* air between them */
   min-width: 0;                    /* lets a long name shrink, not overflow */
 }
 
 /* The role mark — a short rule, not a dot: this family marks with lines. */
 .scoreboard-rolemark {
   flex-shrink: 0;                  /* the mark never gives up width */
-  width: calc(12px * var(--scale));  /* a short horizontal rule */
-  height: calc(2px * var(--scale));  /* hairline weight, in keeping with the family */
+  width: calc(15px * var(--scale));  /* a short horizontal rule */
+  height: calc(3px * var(--scale));  /* hairline weight, in keeping with the family */
   background: var(--text-dim);     /* neutral on the first row */
 }
 .scoreboard-person-b .scoreboard-rolemark {
   background: var(--accent);       /* the second row is the emphasised one, in every reading */
-  height: calc(3px * var(--scale));  /* a touch heavier, so the emphasis reads without colour */
+  height: calc(4px * var(--scale));  /* a touch heavier, so the emphasis reads without colour */
 }
 
 /* The names — clearly subordinate to the club. */
 .scoreboard-name {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* a step under the club */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* a step under the club */
   font-weight: 500;                /* medium — the club above carries the weight */
   line-height: 1.3;                /* comfortable at this size */
   color: var(--text-dim);          /* dimmed on the first row */

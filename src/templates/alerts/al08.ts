@@ -51,10 +51,10 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* the lines stack, the stamp sits under them */
   flex-direction: column;          /* text column, then the stamp */
-  gap: calc(14px * var(--scale));  /* air above the stamp */
-  width: calc(760px * var(--scale));   /* a contained panel, not a band */
+  gap: calc(18px * var(--scale));  /* air above the stamp */
+  width: calc(950px * var(--scale));   /* a contained panel, not a band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(24px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(30px * var(--scale)) calc(35px * var(--scale));
   border-radius: var(--panel-radius);  /* the family's corner radius */
   background: linear-gradient(var(--panel-bg), var(--panel-bg)), rgba(8, 12, 18, 0.80);
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
@@ -66,14 +66,14 @@ ${alertLineMasks(o)}
 .alert-lines {
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* service, then status */
-  gap: calc(6px * var(--scale));   /* the two lines are one statement */
+  gap: calc(8px * var(--scale));   /* the two lines are one statement */
   min-width: 0;                    /* let a long status wrap instead of stretching the row */
   text-align: left;                /* a status reads left to right, whatever the zone */
 }
 
 /* The service — the thing this notice is about. */
 .alert-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale)); /* the panel's headline */
+  font-size: calc(38px * var(--scale) * var(--type-scale)); /* the panel's headline */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.15;               /* a wrapped name stays one block */
@@ -82,7 +82,7 @@ ${alertLineMasks(o)}
 
 /* The status — the operator's own words. Not dimmed: this is the sentence people came for. */
 .alert-title {
-  font-size: calc(21px * var(--scale) * var(--type-scale)); /* subordinate to the name, not to the reader */
+  font-size: calc(26px * var(--scale) * var(--type-scale)); /* subordinate to the name, not to the reader */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.32;               /* comfortable across a wrap */
   color: var(--text-color);        /* primary text color */
@@ -91,10 +91,10 @@ ${alertLineMasks(o)}
 /* The stamp — when this was last true. Tabular figures so the minute ticking over does not
    shuffle the line. */
 .alert-stamp {
-  padding-top: calc(12px * var(--scale)); /* room under the rule */
+  padding-top: calc(15px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.16); /* a hairline divides the claim from its age */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
   font-weight: 600;                /* small caps need weight to hold */
   font-variant-numeric: tabular-nums;   /* every digit same width — no wobble on the minute */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */

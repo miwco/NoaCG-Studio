@@ -57,10 +57,10 @@ export const tk10: TemplateVariant = defineTickerVariant(
 .ticker-box {
   display: flex;                   /* label, keyline and viewport in a row */
   align-items: center;             /* all three center on the strip's axis */
-  gap: calc(22px * var(--scale));  /* even air between the pieces */
+  gap: calc(26px * var(--scale));  /* even air between the pieces */
   width: calc(1200px * var(--scale));  /* a wide reading strip */
   box-sizing: border-box;          /* padding stays inside the fixed width */
-  padding: calc(15px * var(--scale)) calc(30px * var(--scale));  /* comfortable strip padding */
+  padding: calc(18px * var(--scale)) calc(35px * var(--scale));  /* comfortable strip padding */
   background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */
   border-radius: var(--panel-radius);  /* the family's near-square radius */
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the authored edge and family lift */
@@ -69,7 +69,7 @@ export const tk10: TemplateVariant = defineTickerVariant(
 /* The label — a quiet tracked-caps kicker in the accent color. */
 .ticker-label {
   flex-shrink: 0;                  /* a long story never squeezes the label */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small label size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small label size */
   font-weight: 700;                /* bold keeps small caps legible */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -92,7 +92,7 @@ export const tk10: TemplateVariant = defineTickerVariant(
 
 /* One story — a comfortable reading size, held long enough to read. */
 .ticker-item {
-  font-size: calc(23px * var(--scale) * var(--type-scale));  /* the strip's main voice */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* the strip's main voice */
   font-weight: 400;                /* regular — the minimal family is quiet */
   line-height: 1.3;                /* leading if a long story wraps to two lines */
   color: var(--text-color);        /* primary text color */

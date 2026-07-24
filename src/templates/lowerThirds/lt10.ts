@@ -59,8 +59,8 @@ ${lineMasks(o)}
   display: flex;                   /* lets the dot sit inline before the name */
   flex-wrap: wrap;                 /* later lines wrap onto their own rows */
   align-items: center;             /* the dot centers on the name row */
-  row-gap: calc(6px * var(--scale));       /* breathing room between wrapped rows */
-  padding: calc(20px * var(--scale)) calc(30px * var(--scale));  /* generous card padding */
+  row-gap: calc(7px * var(--scale));       /* breathing room between wrapped rows */
+  padding: calc(22px * var(--scale)) calc(33px * var(--scale));  /* generous card padding */
   border-radius: var(--panel-radius);                            /* the card's authored radius */
   background-color: var(--panel-bg);       /* the retintable glass layer */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
@@ -70,11 +70,11 @@ ${lineMasks(o)}
 
 /* The accent dot — the design's single sharp dose of brand color. */
 .lower-third-accent {
-  width: calc(10px * var(--scale));        /* small on purpose: a signal, not a shape */
-  height: calc(10px * var(--scale));       /* same as width — a circle needs a square */
+  width: calc(11px * var(--scale));        /* small on purpose: a signal, not a shape */
+  height: calc(11px * var(--scale));       /* same as width — a circle needs a square */
   border-radius: 50%;              /* turn the square into a perfect circle */
   background: var(--accent);       /* the one accent color */
-  margin-right: calc(14px * var(--scale)); /* air between the dot and the name */
+  margin-right: calc(16px * var(--scale)); /* air between the dot and the name */
   flex: none;                      /* never squash the dot when the name wraps */
 }
 
@@ -92,7 +92,7 @@ ${lineMasks(o)}
 
 /* The name — the biggest, boldest line; everything else defers to it. */
 .lower-third-name {
-  font-size: calc(44px * var(--scale) * var(--type-scale));    /* headline size */
+  font-size: calc(49px * var(--scale) * var(--type-scale));    /* headline size */
   font-weight: var(--display-weight);  /* the name's authored display weight */
   line-height: 1.1;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -101,7 +101,7 @@ ${lineMasks(o)}
 
 /* The title line — quieter through lighter weight and a dimmed color. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));    /* half the name: clear hierarchy */
+  font-size: calc(24px * var(--scale) * var(--type-scale));    /* half the name: clear hierarchy */
   font-weight: 400;                /* regular weight steps back */
   line-height: 1.3;                /* smaller text gets more air */
   color: var(--text-dim);          /* dimmed so the name leads */
@@ -110,7 +110,7 @@ ${lineMasks(o)}
 /* The third line — a small spaced-out uppercase label, dimmed like the title. */
 .lower-third-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));    /* the smallest line */
+  font-size: calc(20px * var(--scale) * var(--type-scale));    /* the smallest line */
   font-weight: 600;                /* semibold keeps small uppercase type crisp */
   line-height: 1.3;                /* matches the title's rhythm */
   letter-spacing: var(--label-tracking);  /* the label's authored tracking */
@@ -120,8 +120,8 @@ ${lineMasks(o)}
 
     hasAccent: true,
     tokens: {
-      panelRadius: 'calc(14px * var(--scale))',
-      panelShadow: '0 calc(24px * var(--scale)) calc(70px * var(--scale)) rgba(0, 0, 0, 0.45)',
+      panelRadius: 'calc(16px * var(--scale))',
+      panelShadow: '0 calc(27px * var(--scale)) calc(78px * var(--scale)) rgba(0, 0, 0, 0.45)',
       labelTracking: '0.1em',
       labelColor: 'var(--text-dim)',
       displayWeight: '600',

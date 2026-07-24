@@ -49,27 +49,27 @@ export const pl03: TemplateVariant = definePollVariant(
     </div>`,
     css: `/* The card — the frosted glass panel; presets tween this element (y + opacity). */
 .poll-box {
-  padding: calc(26px * var(--scale)) calc(38px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(33px * var(--scale)) calc(48px * var(--scale)) calc(30px * var(--scale));
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   border-radius: var(--panel-radius);  /* the family's panel radius */
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the family's keyline and lift */
-  min-width: calc(460px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
+  min-width: calc(575px * var(--scale));  /* bars need a measure — a short label never shrinks the chart */
 }
 
 /* The vote pill — a soft accent-keyline chip, the glass family's kicker shape. */
 .poll-cue {
   display: inline-block;           /* the pill hugs its own text */
-  margin-bottom: calc(12px * var(--scale));  /* air under the pill */
-  padding: calc(5px * var(--scale)) calc(14px * var(--scale));
+  margin-bottom: calc(15px * var(--scale));  /* air under the pill */
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   border-radius: 999px;            /* a true pill — the glass family's soft shape */
   background: rgba(255, 255, 255, 0.08);  /* a faint second layer of glass */
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);  /* a soft accent keyline */
   will-change: transform, opacity; /* it pops in, and leaves when voting closes */
 }
 .poll-cue-text {
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* kicker scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast cue is always caps */
@@ -78,7 +78,7 @@ export const pl03: TemplateVariant = definePollVariant(
 
 /* The question — the family's heavier weight, the loudest thing on the card. */
 .poll-mask > span {
-  font-size: calc(31px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
+  font-size: calc(39px * var(--scale) * var(--type-scale));  /* headline scale over a chart */
   font-weight: var(--display-weight);  /* the glass families run heavier weights */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -87,10 +87,10 @@ export const pl03: TemplateVariant = definePollVariant(
 
 /* The chart — one row per option, rendered at runtime. */
 #poll-rows {
-  margin-top: calc(20px * var(--scale));  /* clear break between question and bars */
+  margin-top: calc(25px * var(--scale));  /* clear break between question and bars */
   display: flex;                   /* a simple vertical stack… */
   flex-direction: column;          /* …one row per option */
-  gap: calc(13px * var(--scale));  /* even air between the rows */
+  gap: calc(16px * var(--scale));  /* even air between the rows */
 }
 
 /* One option row — its label and share above, its bar below. */
@@ -98,11 +98,11 @@ export const pl03: TemplateVariant = definePollVariant(
   display: flex;                   /* label on the left… */
   align-items: baseline;           /* …share on the right, on one baseline */
   justify-content: space-between;  /* the share sits at the far end of the measure */
-  gap: calc(16px * var(--scale));  /* a long label never runs into its figure */
-  margin-bottom: calc(6px * var(--scale));  /* air between the label row and its bar */
+  gap: calc(20px * var(--scale));  /* a long label never runs into its figure */
+  margin-bottom: calc(8px * var(--scale));  /* air between the label row and its bar */
 }
 .poll-row-label {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* list scale — under the question */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* list scale — under the question */
   font-weight: 500;                /* readable at a glance */
   line-height: 1.2;                /* leading if a long option wraps */
   color: var(--text-color);        /* primary text color */
@@ -110,7 +110,7 @@ export const pl03: TemplateVariant = definePollVariant(
 }
 .poll-row-value {
   flex-shrink: 0;                  /* the figure never wraps or squeezes */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the same size as its label */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* the same size as its label */
   font-weight: 700;                /* the number carries the row */
   font-variant-numeric: tabular-nums;  /* the figures line up as they count */
   color: var(--accent);            /* the share wears the accent */
@@ -118,7 +118,7 @@ export const pl03: TemplateVariant = definePollVariant(
 
 /* The bar track — a rounded glass groove the fill grows along. */
 .poll-bar {
-  height: calc(12px * var(--scale));  /* a soft, readable bar */
+  height: calc(15px * var(--scale));  /* a soft, readable bar */
   border-radius: 999px;            /* fully rounded — the glass family's shape */
   background: rgba(255, 255, 255, 0.10);  /* a faint layer of glass */
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);  /* a soft keyline */
@@ -132,8 +132,8 @@ export const pl03: TemplateVariant = definePollVariant(
 
 /* The count line — quiet, under the bars. */
 .poll-foot {
-  margin-top: calc(18px * var(--scale));  /* air under the chart */
-  font-size: calc(13px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
+  margin-top: calc(23px * var(--scale));  /* air under the chart */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest text on the card */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast footnote is caps */
   color: var(--text-dim);          /* secondary text — it is a note, not a headline */
@@ -143,14 +143,14 @@ export const pl03: TemplateVariant = definePollVariant(
 
 /* The called leader — its groove takes an accent ring and its figure steps up. */
 .poll-winner .poll-bar {
-  box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);  /* the winning groove is ringed */
+  box-shadow: inset 0 0 0 calc(3px * var(--scale)) var(--accent);  /* the winning groove is ringed */
 }
 .poll-winner .poll-row-label {
   color: var(--accent);            /* the winning option wears the accent */
   font-weight: 700;                /* and steps up a weight */
 }
 .poll-winner .poll-row-value {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* the winning figure grows */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the winning figure grows */
 }
 
 /* Tied — nobody leads, so nobody is marked. The board says so instead of picking a row. */

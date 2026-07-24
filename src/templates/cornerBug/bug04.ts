@@ -69,14 +69,14 @@ ${bugLineMasks(o)}
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered on the mark's axis */
   text-align: center;              /* wrapped caption rows center too */
-  gap: calc(9px * var(--scale));   /* even air between the pieces */
+  gap: calc(10px * var(--scale));   /* even air between the pieces */
 }
 
 /* The mark area: one square holding the placeholder outline and the logo. */
 .corner-bug-media {
   position: relative;              /* the placeholder and the logo stack inside this square */
-  width: calc(72px * var(--scale));   /* mark area width */
-  height: calc(72px * var(--scale));  /* mark area height — a square either way */
+  width: calc(77px * var(--scale));   /* mark area width */
+  height: calc(77px * var(--scale));  /* mark area height — a square either way */
 }
 
 /* The placeholder — a hairline keyline square (minimal draws lines, not fills). */
@@ -102,14 +102,14 @@ ${bugLineMasks(o)}
 
 /* The accent underline — short on purpose: a mark, not a rule across the caption. */
 .corner-bug-rule {
-  width: calc(28px * var(--scale));   /* a short stroke */
+  width: calc(30px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
   background: var(--accent);          /* the one accent color */
 }
 
 /* The caption (f0) — a tiny tracked-caps label, quiet and legible over footage. */
 .corner-bug-name {
-  font-size: calc(15px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 600;                /* medium keeps tracked caps crisp at bug scale */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

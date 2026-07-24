@@ -120,7 +120,7 @@ export function houseWire(o: ResolvedOptions): TickerDesign {
 /* The dot between stories — the accent as punctuation, like the brand overlay. */
 .ticker-sep {
   margin: 0 calc(36px * var(--scale)); /* even air on both sides of the dot */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small — a pause, not a bullet point */
   color: var(--accent);            /* accent dots chain the stories together */
 }
 

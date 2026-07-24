@@ -77,20 +77,20 @@ ${slot(o, 2, 'lower-third-extra')}
 
 /* The panel — the house void, starting where the accent bar ends. */
 .lower-third-box {
-  margin-left: calc(8px * var(--scale));    /* starts where the accent bar ends */
-  padding: calc(18px * var(--scale)) calc(52px * var(--scale)) calc(24px * var(--scale)) calc(32px * var(--scale));
+  margin-left: calc(9px * var(--scale));    /* starts where the accent bar ends */
+  padding: calc(21px * var(--scale)) calc(61px * var(--scale)) calc(28px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  max-width: calc(740px * var(--scale));  /* a correspondent's beat runs long */
+  max-width: calc(871px * var(--scale));  /* a correspondent's beat runs long */
 }
 
 /* The dateline rail: where and when, together and apart from the name. */
 .lower-third-datelinerow {
   display: flex;                    /* dateline and clock on one row */
   align-items: baseline;            /* one shared baseline */
-  gap: calc(14px * var(--scale));   /* the drawn separator sits in this gap */
+  gap: calc(16px * var(--scale));   /* the drawn separator sits in this gap */
   min-width: 0;                     /* allow shrinking */
 }
 .lower-third-datelinerow > .lower-third-mask {
@@ -101,7 +101,7 @@ ${slot(o, 2, 'lower-third-extra')}
 /* The dateline (f0) — the house label voice in the accent. */
 .lower-third-name {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* a dateline is small by convention */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a dateline is small by convention */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -113,7 +113,7 @@ ${slot(o, 2, 'lower-third-extra')}
    one dateline rather than as two facts. */
 .lower-third-clock {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the dateline's own size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the dateline's own size */
   font-weight: 500;                 /* matches the dateline */
   line-height: 1.3;                 /* matches the dateline */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -123,27 +123,27 @@ ${slot(o, 2, 'lower-third-extra')}
 }
 .lower-third-clock::before {
   content: "·";                     /* the separator is DRAWN, never typed into a field */
-  margin-right: calc(14px * var(--scale));  /* balances the flex gap on the other side */
+  margin-right: calc(16px * var(--scale));  /* balances the flex gap on the other side */
   color: var(--text-dim);           /* the same quiet register */
 }
 
 /* The reporter (f1) — the strap's headline, below the dateline. */
 .lower-third-title {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(49px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.06;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   color: var(--text-color);         /* primary text color */
-  margin-top: calc(10px * var(--scale));  /* a clear break below the dateline rail */
+  margin-top: calc(12px * var(--scale));  /* a clear break below the dateline rail */
 }
 
 /* The beat (f2) — the quiet closing line. */
 .lower-third-extra {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.25;                /* room if a long beat wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(6px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(7px * var(--scale));  /* tied to the name above it */
 }`,
     hasAccent: true,
   }),

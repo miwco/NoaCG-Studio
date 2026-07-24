@@ -65,8 +65,8 @@ ${hasLine(o, 2) ? slot(o, 2, 'lower-third-extra', '        ') : ''}
                                                                   the floor the accent draws */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
   overflow: hidden;                 /* the accent floor follows the rounded top */
-  min-width: calc(360px * var(--scale));  /* a floor and two candidates keep ONE width */
-  max-width: calc(520px * var(--scale));  /* compact: two are on screen at once */
+  min-width: calc(450px * var(--scale));  /* a floor and two candidates keep ONE width */
+  max-width: calc(650px * var(--scale));  /* compact: two are on screen at once */
 }
 
 .lower-third-text {
@@ -74,20 +74,20 @@ ${hasLine(o, 2) ? slot(o, 2, 'lower-third-extra', '        ') : ''}
   flex-direction: column;           /* …top to bottom */
   align-items: center;              /* CENTRED — the mirror-safety decision */
   text-align: center;               /* wrapped rows centre too */
-  padding: calc(14px * var(--scale)) calc(26px * var(--scale)) calc(15px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(33px * var(--scale)) calc(19px * var(--scale));
 }
 
 /* The party-colour floor — the graphic's accent node, and the identity a debate viewer
    reads before any word on the card. */
 .lower-third-accent {
-  height: calc(6px * var(--scale));  /* thicker than a hairline: it is the party's colour */
+  height: calc(8px * var(--scale));  /* thicker than a hairline: it is the party's colour */
   background: var(--accent);        /* THE party colour — set it in the Style panel */
   transform-origin: center;         /* the reveal grows from the middle, so it mirrors */
 }
 
 /* The candidate (f0) — the card's headline. */
 .lower-third-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* compact headline (1080p reference) */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* compact headline (1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.12;                /* room for a wrapped surname */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -96,23 +96,23 @@ ${hasLine(o, 2) ? slot(o, 2, 'lower-third-extra', '        ') : ''}
 
 /* The party (f1) — in the party's own colour, which is what ties the name to the floor. */
 .lower-third-title {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* half the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* half the name */
   font-weight: 700;                 /* bold — small tracked caps need the weight */
   line-height: 1.25;                /* room if a long party name wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the civic register */
   color: var(--accent);             /* the same colour as the floor below */
-  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(6px * var(--scale));  /* tied to the name above it */
 }
 
 /* What they are standing for (f2) — the quietest line, and the first one a busy debate
    graphic drops. */
 .lower-third-extra {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the card */
   font-weight: 400;                 /* regular — reference, not billing */
   line-height: 1.3;                 /* room if it wraps */
   color: var(--text-dim);           /* dimmed — never the primary ink twice */
-  margin-top: calc(3px * var(--scale));  /* tied to the party above it */
+  margin-top: calc(4px * var(--scale));  /* tied to the party above it */
 }`,
     hasAccent: true,
   }),

@@ -53,19 +53,19 @@ ${boardStructureCss()}
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(18px * var(--scale));
-  padding: calc(20px * var(--scale)) calc(24px * var(--scale)) calc(22px * var(--scale));
+  gap: calc(23px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(30px * var(--scale)) calc(28px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
   box-shadow: var(--panel-shadow);
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
-  min-width: calc(500px * var(--scale));
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  min-width: calc(625px * var(--scale));
 }
 
 /* The accent rule under the heading, wearing the house glow. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: left center;
@@ -74,7 +74,7 @@ ${boardStructureCss()}
 /* The heading. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -82,7 +82,7 @@ ${boardStructureCss()}
 }
 
 .${P}-title {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(43px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -91,9 +91,9 @@ ${boardStructureCss()}
 
 /* The crest slot — a void plate until a file lands in it. */
 .${P}-logo {
-  border-radius: calc(6px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.55);
-  padding: calc(8px * var(--scale));
+  padding: calc(10px * var(--scale));
 }
 .${P}-logo.has-image {
   background: transparent;
@@ -102,22 +102,22 @@ ${boardStructureCss()}
 /* One player row — a denser void tile. */
 .${P}-row {
   position: relative;
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale)) calc(8px * var(--scale)) calc(14px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(10px * var(--scale)) calc(15px * var(--scale)) calc(10px * var(--scale)) calc(18px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.5);
 }
 
 .${P}-row-index {
-  min-width: calc(24px * var(--scale));
+  min-width: calc(30px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   color: var(--accent);
 }
 
 .${P}-row-name {
-  font-size: calc(24px * var(--scale) * var(--type-scale));
+  font-size: calc(30px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.12;
   color: var(--text-color);
@@ -126,7 +126,7 @@ ${boardStructureCss()}
 .${P}-row-note {
   flex-shrink: 0;
   font-family: var(--font-label);
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -151,8 +151,8 @@ ${boardStructureCss()}
   left: 0;
   top: 0;
   bottom: 0;
-  width: calc(4px * var(--scale));
-  border-radius: calc(6px * var(--scale)) 0 0 calc(6px * var(--scale));
+  width: calc(5px * var(--scale));
+  border-radius: calc(8px * var(--scale)) 0 0 calc(8px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
 }`,

@@ -82,19 +82,19 @@ ${slot(o, 1, 'lower-third-title')}${subBar}
 
 /* The panel — the house void, starting where the accent bar ends. */
 .lower-third-box {
-  margin-left: calc(8px * var(--scale));    /* starts where the accent bar ends */
-  padding: calc(24px * var(--scale)) calc(64px * var(--scale)) 0 calc(34px * var(--scale));
+  margin-left: calc(10px * var(--scale));    /* starts where the accent bar ends */
+  padding: calc(30px * var(--scale)) calc(80px * var(--scale)) 0 calc(43px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  padding-bottom: calc(24px * var(--scale));  /* closes the panel when there is no host rail;
+  padding-bottom: calc(30px * var(--scale));  /* closes the panel when there is no host rail;
                                                  the rail cancels it with a negative margin */
 }
 
 /* The guest's name (f0) — the strap's one heavy element. */
 .lower-third-name {
-  font-size: calc(48px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(60px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -103,11 +103,11 @@ ${slot(o, 1, 'lower-third-title')}${subBar}
 
 /* The guest's role (f1) — the quiet middle voice. */
 .lower-third-title {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.25;                /* room if the role wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(10px * var(--scale));  /* a clear but connected break below the name */
+  margin-top: calc(13px * var(--scale));  /* a clear but connected break below the name */
 }
 
 /* ── The host sub-bar ──
@@ -117,19 +117,19 @@ ${slot(o, 1, 'lower-third-title')}${subBar}
   display: flex;                    /* name and role on one line… */
   flex-wrap: wrap;                  /* …wrapping only if the pair really is too long */
   align-items: baseline;            /* both credits share a baseline */
-  gap: calc(10px * var(--scale));   /* the middot below sits in this gap */
+  gap: calc(13px * var(--scale));   /* the middot below sits in this gap */
   /* The negative margins pull the rail back out to the panel's own padding on three sides —
      including the BOTTOM, so the rail closes the panel instead of floating above a strip of
      it. The box keeps its bottom padding for the case where there is no host to put here. */
-  margin: calc(18px * var(--scale)) calc(-64px * var(--scale)) calc(-24px * var(--scale)) calc(-34px * var(--scale));
-  padding: calc(12px * var(--scale)) calc(64px * var(--scale)) calc(14px * var(--scale)) calc(34px * var(--scale));
+  margin: calc(23px * var(--scale)) calc(-80px * var(--scale)) calc(-30px * var(--scale)) calc(-43px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(80px * var(--scale)) calc(18px * var(--scale)) calc(43px * var(--scale));
   border-top: 1px solid rgba(255, 255, 255, 0.10);  /* the rail's own edge */
   background: rgba(0, 0, 0, 0.28);  /* a shade darker than the panel — a rail, not a stripe */
 }
 
 /* The host's name (f2) — a credit, not a headline: the guest is the story. */
 .lower-third-extra {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* well under the guest's role line */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* well under the guest's role line */
   font-weight: 600;                 /* semibold — it is still a name */
   line-height: 1.2;                 /* single tight credit line */
   color: var(--text-dim);           /* dimmed — the rail is the quiet register */
@@ -139,7 +139,7 @@ ${slot(o, 1, 'lower-third-title')}${subBar}
    operator ever has to type punctuation into a name field. */
 .lower-third-hostrole {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the strap */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -148,7 +148,7 @@ ${slot(o, 1, 'lower-third-title')}${subBar}
 }
 .lower-third-hostrole::before {
   content: "·";                     /* the separator is DRAWN, never typed into a field */
-  margin-right: calc(10px * var(--scale));  /* balances the flex gap on the other side */
+  margin-right: calc(13px * var(--scale));  /* balances the flex gap on the other side */
   color: var(--text-dim);           /* quieter than the label it introduces */
 }
 

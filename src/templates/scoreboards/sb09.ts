@@ -116,7 +116,7 @@ ${colourHoldersHtml('f7', 'f8', '#f6a623', '#7dd3fc')}
 /* The period — the house mono accent label. */
 .scoreboard-phase {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -235,7 +235,7 @@ ${clipOneLineCss('.scoreboard-team', 260)}
 }
 .scoreboard-period-label {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type on the board */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -243,7 +243,7 @@ ${clipOneLineCss('.scoreboard-team', 260)}
   white-space: nowrap;             /* "SET 5" stays on one line */
 }
 .scoreboard-period-score {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* readable, clearly subordinate */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* even rhythm down the column */
   color: var(--text-color);        /* primary text — these are still scores */

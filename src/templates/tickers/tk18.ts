@@ -65,7 +65,7 @@ export const tk18: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, slot filling the rest */
   align-items: stretch;            /* the label block spans the full strip height */
   width: calc(1560px * var(--scale));  /* wide, inside the safe areas */
-  min-height: calc(80px * var(--scale)); /* a floor: a long status wraps and the strip grows */
+  min-height: calc(89px * var(--scale)); /* a floor: a long status wraps and the strip grows */
   background: var(--panel-bg);     /* near-black bar — never pure #000 */
   border-top: var(--accent-weight) solid var(--accent);  /* the strip's authored accent weight */
   will-change: opacity;            /* hint the browser: the preset fades this */
@@ -76,9 +76,9 @@ export const tk18: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the slot */
-  padding: 0 calc(28px * var(--scale));  /* generous horizontal breathing room */
+  padding: 0 calc(31px * var(--scale));  /* generous horizontal breathing room */
   background: var(--accent);       /* the one solid accent surface */
-  font-size: calc(18px * var(--scale) * var(--type-scale)); /* kicker scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* kicker scale */
   font-weight: 700;                /* bold so the small caps carry */
   letter-spacing: var(--label-tracking);  /* the label block's authored tracking */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -92,7 +92,7 @@ export const tk18: TemplateVariant = defineTickerVariant(
   flex-grow: 1;                    /* take all the strip width the label leaves */
   display: flex;                   /* so the current item can be vertically centered */
   align-items: center;             /* the item sits on the strip's centerline */
-  padding: calc(14px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(16px * var(--scale)) calc(33px * var(--scale));
   /* Flush LEFT, whatever anchor zone the graphic is placed in. The root's zone rule sets
      text-align from the anchor (a bottom-CENTER strip inherits centred text), and a centred
      status turns the service-name column below into a ragged edge that lines up with nothing —
@@ -102,7 +102,7 @@ export const tk18: TemplateVariant = defineTickerVariant(
 
 /* One status — the service name column plus the status text. */
 .ticker-item {
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* comfortable at reading distance */
+  font-size: calc(27px * var(--scale) * var(--type-scale)); /* comfortable at reading distance */
   font-weight: 400;                /* regular — a status is read, not scanned */
   line-height: 1.28;               /* comfortable across a wrap */
   color: var(--text-color);        /* primary text color */
@@ -113,8 +113,8 @@ export const tk18: TemplateVariant = defineTickerVariant(
    status along, not be truncated. */
 .ticker-service {
   display: inline-block;           /* so it can hold a minimum width */
-  min-width: calc(320px * var(--scale)); /* the name column */
-  padding-right: calc(20px * var(--scale)); /* air before the status */
+  min-width: calc(356px * var(--scale)); /* the name column */
+  padding-right: calc(22px * var(--scale)); /* air before the status */
   font-weight: 700;                /* the name anchors the row */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* the column reads as labels */

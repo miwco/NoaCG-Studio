@@ -83,7 +83,7 @@ ${lineMasks(o, '        ')}
    instead of pushing the mark out of the panel. */
 .lower-third-text {
   min-width: 0;                     /* the flexbox wrap fix — see above */
-  padding: calc(18px * var(--scale)) calc(34px * var(--scale)) calc(20px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(19px * var(--scale)) calc(36px * var(--scale)) calc(21px * var(--scale)) calc(29px * var(--scale));
 }
 
 /* The accent bar — the family's 8px bar, here dividing the words from the mark. */
@@ -97,17 +97,17 @@ ${lineMasks(o, '        ')}
 
 /* The mark (the ${logoField} image field) — sits in the panel, past the bar. */
 .lower-third-logo {
-  width: calc(84px * var(--scale));   /* mark box width */
-  height: calc(56px * var(--scale));  /* shorter than it is wide: wordmarks are the common case */
+  width: calc(88px * var(--scale));   /* mark box width */
+  height: calc(59px * var(--scale));  /* shorter than it is wide: wordmarks are the common case */
   object-fit: contain;              /* show the whole logo, never crop it */
   align-self: center;               /* centred against the two lines of type */
-  margin: 0 calc(26px * var(--scale));  /* even air on both sides of the mark */
+  margin: 0 calc(27px * var(--scale));  /* even air on both sides of the mark */
   flex: none;                       /* long names never squeeze the mark */
 }
 
 /* The name — the strap's one heavy element. */
 .lower-third-name {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(44px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -117,7 +117,7 @@ ${lineMasks(o, '        ')}
 /* The role — the house label voice: mono caps, tracked, in the accent colour. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* a single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

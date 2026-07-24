@@ -56,9 +56,9 @@ ${alertLineMasks(o)}
 .alert-box {
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the panel's full height */
-  width: calc(880px * var(--scale));   /* a contained panel, not a full-width band */
+  width: calc(1100px * var(--scale));   /* a contained panel, not a full-width band */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  min-height: calc(150px * var(--scale)); /* grows with a wrapped headline */
+  min-height: calc(188px * var(--scale)); /* grows with a wrapped headline */
   overflow: hidden;                /* the flag inherits the panel's rounded corners */
   border-radius: var(--panel-radius);  /* the family's corner radius */
   /* The family's translucent fill over an opaque floor: the blur reads as glass, the floor
@@ -74,10 +74,10 @@ ${ALERT_LEVEL_CSS}
 /* This panel is narrower than the full-width bands, so the flag is too — the word still
    fits, and the text column keeps the room it needs. */
 .alert-flag {
-  min-width: calc(214px * var(--scale) * var(--type-scale));  /* still fits the longest level word */
+  min-width: calc(268px * var(--scale) * var(--type-scale));  /* still fits the longest level word */
 }
 .alert-flag > div {
-  font-size: calc(23px * var(--scale) * var(--type-scale)); /* scaled to the narrower slab */
+  font-size: calc(29px * var(--scale) * var(--type-scale)); /* scaled to the narrower slab */
 }
 
 /* The text column — three lines, centred against the flag. */
@@ -85,15 +85,15 @@ ${ALERT_LEVEL_CSS}
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* headline, detail, source */
   justify-content: center;         /* centred against the flag's height */
-  gap: calc(6px * var(--scale));   /* tight — the three lines are one statement */
-  padding: calc(20px * var(--scale)) calc(28px * var(--scale)); /* air inside the panel */
+  gap: calc(8px * var(--scale));   /* tight — the three lines are one statement */
+  padding: calc(25px * var(--scale)) calc(35px * var(--scale)); /* air inside the panel */
   min-width: 0;                    /* let a long headline wrap instead of stretching the flex row */
   text-align: left;                /* an alert reads from the flag outward, always */
 }
 
 /* The headline — the sentence someone acts on. */
 .alert-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale)); /* the loudest text in the panel */
+  font-size: calc(40px * var(--scale) * var(--type-scale)); /* the loudest text in the panel */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.15;               /* wrapped headlines stay one block */
@@ -102,7 +102,7 @@ ${ALERT_LEVEL_CSS}
 
 /* The detail — what, where, and until when. */
 .alert-title {
-  font-size: calc(21px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
+  font-size: calc(26px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.3;                /* comfortable for a full sentence */
   color: var(--text-dim);          /* secondary text color */
@@ -110,9 +110,9 @@ ${ALERT_LEVEL_CSS}
 
 /* The source — who says so. */
 .alert-extra {
-  margin-top: calc(3px * var(--scale)); /* a beat of separation from the detail */
+  margin-top: calc(4px * var(--scale)); /* a beat of separation from the detail */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

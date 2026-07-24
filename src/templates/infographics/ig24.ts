@@ -92,9 +92,9 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 /* The panel — the house void. A fixed width is what makes the rail a rail: the columns
    divide THIS width evenly, so the track keeps its shape whatever the labels say. */
 .infographic-box {
-  width: calc(880px * var(--scale));  /* the rail's run — four tiers read comfortably across it */
+  width: calc(1100px * var(--scale));  /* the rail's run — four tiers read comfortably across it */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(22px * var(--scale)) calc(34px * var(--scale)) calc(24px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(43px * var(--scale)) calc(30px * var(--scale)) calc(35px * var(--scale));
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -106,19 +106,19 @@ export const ig24: TemplateVariant = defineInfographicVariant(
   display: flex;                   /* the two blocks share one row */
   justify-content: space-between;  /* left block hugs left, count hugs right */
   align-items: baseline;           /* both sit on the same text baseline */
-  gap: calc(28px * var(--scale));  /* distinct information keeps distinct space */
+  gap: calc(35px * var(--scale));  /* distinct information keeps distinct space */
 }
 .infographic-head-left {
   display: flex;                   /* the label and the figure sit side by side */
   align-items: baseline;           /* on one baseline */
-  gap: calc(14px * var(--scale));  /* a clear seam between a word and a number */
+  gap: calc(18px * var(--scale));  /* a clear seam between a word and a number */
   min-width: 0;                    /* let a long label wrap rather than widen the panel */
 }
 
 /* The label — the house mono caps line naming the track. */
 .infographic-kicker {
   font-family: var(--font-label);  /* the house label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                /* bold keeps small caps legible over video */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
@@ -127,7 +127,7 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 
 /* The running figure — where we are right now, grouped by the rebuild. */
 .infographic-current {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* the row's one large voice */
+  font-size: calc(50px * var(--scale) * var(--type-scale));  /* the row's one large voice */
   font-weight: 700;                /* bold — it is the headline number */
   line-height: 1.05;               /* no dead leading around the figure */
   letter-spacing: -0.01em;         /* large glyphs tighten */
@@ -138,7 +138,7 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 /* The tier count — "2 / 4", the derived progress through the list. */
 .infographic-reached {
   font-family: var(--font-label);  /* the house label face — a ratio reads as data */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly under the figure */
+  font-size: calc(28px * var(--scale) * var(--type-scale));  /* clearly under the figure */
   font-weight: 700;                /* bold — still a headline of its own */
   font-variant-numeric: tabular-nums;  /* equal-width digits across updates */
   white-space: nowrap;             /* "10 / 12" never wraps */
@@ -148,14 +148,14 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 /* The rail — the lane, the line, and the node columns share one stacking context. */
 .infographic-rail {
   position: relative;              /* the track is positioned against this block */
-  margin-top: calc(26px * var(--scale));  /* air between the heading row and the rail */
-  padding-top: calc(10px * var(--scale));  /* room for the line, which sits at the top of the rail */
+  margin-top: calc(33px * var(--scale));  /* air between the heading row and the rail */
+  padding-top: calc(13px * var(--scale));  /* room for the line, which sits at the top of the rail */
 }
 
 /* The lane — the empty rail the line runs along. It is inset by half a column on each
    side so the first and last nodes (at 12.5% and 87.5% of four) sit ON the drawn rail. */
 .infographic-milestone-track {
-  height: calc(8px * var(--scale));  /* a slim rail — the nodes carry the weight */
+  height: calc(10px * var(--scale));  /* a slim rail — the nodes carry the weight */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   background: rgba(255, 255, 255, 0.12);  /* the empty lane over the void panel */
   overflow: hidden;                /* the running line is clipped to the lane */
@@ -177,7 +177,7 @@ export const ig24: TemplateVariant = defineInfographicVariant(
    are. Each column centres its own dot, target and label. */
 .infographic-nodes {
   display: flex;                   /* one column per milestone */
-  margin-top: calc(-14px * var(--scale));  /* pull the dots back up onto the rail */
+  margin-top: calc(-18px * var(--scale));  /* pull the dots back up onto the rail */
 }
 .infographic-node {
   flex: 1 1 0;                     /* every milestone gets exactly the same width */
@@ -190,9 +190,9 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 
 /* The dot — the milestone marker sitting on the rail. Unreached: a hollow grey ring. */
 .infographic-node-dot {
-  width: calc(20px * var(--scale));   /* marker width… */
-  height: calc(20px * var(--scale));  /* …and height: a circle */
-  border: calc(3px * var(--scale)) solid rgba(255, 255, 255, 0.3);  /* the unreached ring */
+  width: calc(25px * var(--scale));   /* marker width… */
+  height: calc(25px * var(--scale));  /* …and height: a circle */
+  border: calc(4px * var(--scale)) solid rgba(255, 255, 255, 0.3);  /* the unreached ring */
   border-radius: 50%;              /* a true circle */
   background: var(--panel-bg);     /* punch the rail out behind the marker */
 }
@@ -214,24 +214,24 @@ export const ig24: TemplateVariant = defineInfographicVariant(
 
 /* The target figure under each dot. */
 .infographic-node-target {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the node's headline value */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* the node's headline value */
   font-weight: 700;                /* bold — it is a number to hit */
   line-height: 1.2;                /* compact under the dot */
   font-variant-numeric: tabular-nums;  /* equal-width digits down the row of nodes */
-  margin-top: calc(10px * var(--scale));  /* air between the dot and its figure */
+  margin-top: calc(13px * var(--scale));  /* air between the dot and its figure */
   color: var(--text-dim);          /* dimmed until the milestone is reached */
 }
 
 /* The milestone's name, the quietest line on the panel. */
 .infographic-node-label {
   font-family: var(--font-label);  /* the house label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail — held at the 16px broadcast-safe floor */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the rail — held at the 16px broadcast-safe floor */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.25;               /* wrapped names stay readable */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* reads as a label, whatever the operator types */
   overflow-wrap: break-word;       /* a long name wraps inside its column */
-  margin-top: calc(4px * var(--scale));  /* figure and name read as one unit */
+  margin-top: calc(5px * var(--scale));  /* figure and name read as one unit */
   color: var(--text-dim);          /* dimmed until the milestone is reached */
 }`,
 

@@ -57,12 +57,12 @@ export const es01: TemplateVariant = defineEsportsVariant(
 .${P}-box {
   display: flex;                   /* head above body */
   flex-direction: column;          /* stacked */
-  gap: calc(10px * var(--scale));  /* air between the head and the score row */
-  padding: calc(14px * var(--scale)) calc(28px * var(--scale)) calc(16px * var(--scale)) calc(34px * var(--scale));
+  gap: calc(13px * var(--scale));  /* air between the head and the score row */
+  padding: calc(18px * var(--scale)) calc(35px * var(--scale)) calc(20px * var(--scale)) calc(43px * var(--scale));
   background: var(--panel-bg);     /* the near-black sport panel */
   border-radius: var(--panel-radius);  /* sport: square */
   box-shadow: var(--panel-shadow); /* the family's hard drop */
-  min-width: calc(940px * var(--scale));  /* a match strip reads at a fixed measure — wide enough that two-word team names stay on one line */
+  min-width: calc(1175px * var(--scale));  /* a match strip reads at a fixed measure — wide enough that two-word team names stay on one line */
 }
 
 /* The accent block — fused to the left edge, and the surface the phase marks tint. */
@@ -79,7 +79,7 @@ export const es01: TemplateVariant = defineEsportsVariant(
 /* The stage line — where in the series this map sits. */
 .${P}-stage {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));
+  font-size: calc(21px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;       /* stage lines shout, quietly */
@@ -88,9 +88,9 @@ export const es01: TemplateVariant = defineEsportsVariant(
 
 /* The phase chip — the machine's word, in the accent's ink on a dim tile. */
 .${P}-status {
-  padding: calc(3px * var(--scale)) calc(10px * var(--scale));
+  padding: calc(4px * var(--scale)) calc(13px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;          /* a chip's word needs the extra air */
   text-transform: uppercase;
@@ -101,7 +101,7 @@ export const es01: TemplateVariant = defineEsportsVariant(
 
 /* The team name — big sport display type. */
 .${P}-team {
-  font-size: calc(34px * var(--scale) * var(--type-scale));
+  font-size: calc(43px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.05;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);
@@ -111,13 +111,13 @@ export const es01: TemplateVariant = defineEsportsVariant(
 
 /* The score chip — a denser tile holding the map score. */
 .${P}-chip {
-  min-width: calc(62px * var(--scale));
-  padding: calc(4px * var(--scale)) calc(14px * var(--scale));
+  min-width: calc(78px * var(--scale));
+  padding: calc(5px * var(--scale)) calc(18px * var(--scale));
   background: rgba(0, 0, 0, 0.45);  /* a second, darker layer of the panel */
 }
 
 .${P}-figure {
-  font-size: calc(40px * var(--scale) * var(--type-scale));
+  font-size: calc(50px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);            /* the scores wear the accent… */
@@ -140,7 +140,7 @@ export const es01: TemplateVariant = defineEsportsVariant(
 
 .${P}-series-label {
   font-family: var(--font-label);
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;

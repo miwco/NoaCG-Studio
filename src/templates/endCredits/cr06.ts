@@ -64,8 +64,8 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* The viewport — the window the reel travels through. Presets fade THIS on out. */
 .credits-box {
-  width: calc(900px * var(--scale));   /* the reel's measure — a comfortable column of names */
-  height: calc(820px * var(--scale));  /* the window height; the loop travels behind it */
+  width: calc(1125px * var(--scale));   /* the reel's measure — a comfortable column of names */
+  height: calc(1025px * var(--scale));  /* the window height; the loop travels behind it */
   overflow: hidden;                /* the rows above and below the window are not drawn */
   text-align: center;              /* the reel is a centered column, like a film's */
 }
@@ -77,14 +77,14 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* One section of the reel. On a loop these stack in normal flow, one after another. */
 .credits-page + .credits-page {
-  margin-top: calc(38px * var(--scale));  /* a clear break between sections */
+  margin-top: calc(48px * var(--scale));  /* a clear break between sections */
 }
 
 /* Section heading — the house mono label in the accent color. */
 .credits-heading {
-  margin-bottom: calc(20px * var(--scale));  /* air before the section's first credit */
+  margin-bottom: calc(25px * var(--scale));  /* air before the section's first credit */
   font-family: var(--font-label);  /* the family's mono label face */
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — it titles the section */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* label scale — it titles the section */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   letter-spacing: var(--label-tracking);  /* wide tracking — the label breathes */
   text-transform: uppercase;       /* label voice, whatever the operator types */
@@ -93,13 +93,13 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* One credit — role above name, the classic reel stack. */
 .credits-row {
-  padding: calc(11px * var(--scale)) 0;  /* the reel's reading rhythm */
+  padding: calc(14px * var(--scale)) 0;  /* the reel's reading rhythm */
 }
 
 /* The role — the quiet half of the pair. */
 .credits-role {
   font-family: var(--font-label);  /* mono, so roles read as data and names as people */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* ~1:2 under the name */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* ~1:2 under the name */
   font-weight: 400;                /* light — this line labels, it does not announce */
   letter-spacing: 0.08em;          /* small mono caps need a little air */
   text-transform: uppercase;       /* role labels are set in caps */
@@ -108,8 +108,8 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* The name — the person. The loud half of every pair. */
 .credits-name {
-  margin-top: calc(4px * var(--scale));  /* role and name read as one unit */
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* ~2:1 over the role */
+  margin-top: calc(5px * var(--scale));  /* role and name read as one unit */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* ~2:1 over the role */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -119,8 +119,8 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* A pipe-less line inside a section — a name with no role, or a line of thanks. */
 .credits-entry {
-  padding: calc(8px * var(--scale)) 0;  /* tighter than a role-above-name stack */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
+  padding: calc(10px * var(--scale)) 0;  /* tighter than a role-above-name stack */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.25;               /* comfortable for a run of names */
   color: var(--text-color);        /* primary text color */
@@ -132,13 +132,13 @@ export const cr06: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* the three pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* centered in the reel's column */
-  gap: calc(20px * var(--scale));  /* even air between rule, mark and year */
-  padding: calc(56px * var(--scale)) 0;  /* a long breath before and after the sign-off */
+  gap: calc(25px * var(--scale));  /* even air between rule, mark and year */
+  padding: calc(70px * var(--scale)) 0;  /* a long breath before and after the sign-off */
 }
 
 /* The amber rule — the house accent, laid flat as the reel's punctuation. */
 .credits-rule {
-  width: calc(90px * var(--scale));  /* a short stroke — a mark, not a divider */
+  width: calc(113px * var(--scale));  /* a short stroke — a mark, not a divider */
   height: var(--accent-weight);    /* the family's accent weight */
   background: var(--accent);       /* the one sharp dose of accent color */
   box-shadow: var(--accent-glow);  /* the house glow, on the accent element only */
@@ -146,17 +146,17 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 
 /* The logo, when one is picked. Capped by height so any aspect ratio behaves. */
 .credits-logo {
-  height: calc(58px * var(--scale));  /* the sign-off's mark, clearly bigger than a footer logo */
+  height: calc(73px * var(--scale));  /* the sign-off's mark, clearly bigger than a footer logo */
   width: auto;                     /* keep the logo's own proportions */
   object-fit: contain;             /* never crop or stretch the mark */
 }
 
 /* No logo picked yet — a dashed slot so the space is visibly reserved, not broken. */
 .credits-logo-slot {
-  padding: calc(14px * var(--scale)) calc(26px * var(--scale));  /* a chip the size of a real mark */
+  padding: calc(18px * var(--scale)) calc(33px * var(--scale));  /* a chip the size of a real mark */
   border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);  /* clearly a placeholder */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest type in the reel */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type in the reel */
   letter-spacing: 0.12em;          /* small caps breathe */
   text-transform: uppercase;       /* placeholder voice */
   color: var(--text-dim);          /* secondary text color */
@@ -165,7 +165,7 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 /* The year / copyright line. */
 .credits-year {
   font-family: var(--font-label);  /* mono, like every piece of house small print */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* small print scale */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* small print scale */
   letter-spacing: 0.06em;          /* a little air at small size */
   color: var(--text-dim);          /* secondary text color */
 }`,
@@ -201,7 +201,7 @@ function renderEndBlock(yearHtml, logoSrc) {
          '</div>';
 }`,
     tokens: {
-      accentWeight: 'calc(3px * var(--scale))',
+      accentWeight: 'calc(4px * var(--scale))',
       labelTracking: '0.24em',
     },
   }),

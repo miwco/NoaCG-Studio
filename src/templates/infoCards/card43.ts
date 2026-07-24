@@ -88,9 +88,9 @@ ${maskLines([
 .info-card-box {
   display: flex;                    /* the three blocks sit in one row */
   align-items: center;              /* they centre against each other */
-  gap: calc(26px * var(--scale));   /* the seams between them */
+  gap: calc(33px * var(--scale));   /* the seams between them */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(22px * var(--scale)) calc(34px * var(--scale)) calc(22px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(43px * var(--scale)) calc(28px * var(--scale)) calc(30px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -101,8 +101,8 @@ ${maskLines([
 .info-card-shot {
   position: relative;               /* the empty-slot mark is placed against this box */
   flex: none;                       /* never squeezed by a long lot title */
-  width: calc(120px * var(--scale));   /* photo width */
-  height: calc(120px * var(--scale));  /* …and height — a square crop */
+  width: calc(150px * var(--scale));   /* photo width */
+  height: calc(150px * var(--scale));  /* …and height — a square crop */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   overflow: hidden;                 /* the photo is clipped to the rounded square */
 }
@@ -136,7 +136,7 @@ ${maskLines([
 
 /* The lot title — the card's confident display line. */
 .info-card-listing-title {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -145,10 +145,10 @@ ${maskLines([
 
 /* The description — the facts about the lot, dimmed. */
 .info-card-meta {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* body scale under the title */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* body scale under the title */
   font-weight: 400;                 /* regular weight */
   line-height: 1.35;                /* body text gets room to breathe */
-  margin-top: calc(8px * var(--scale));  /* title → meta: one clear break */
+  margin-top: calc(10px * var(--scale));  /* title → meta: one clear break */
   color: var(--text-dim);           /* dimmed — never full white twice */
 }
 
@@ -156,19 +156,19 @@ ${maskLines([
 .info-card-status {
   display: inline-flex;             /* the dot and the text share one baseline row */
   align-items: center;              /* dot centred against the text */
-  gap: calc(8px * var(--scale));    /* a thin seam between the dot and the words */
+  gap: calc(10px * var(--scale));    /* a thin seam between the dot and the words */
   font-family: var(--font-label);   /* the house label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                 /* bold — a status is a signal */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* reads as a status, whatever the operator types */
-  margin-top: calc(10px * var(--scale));  /* meta → status: a small break */
+  margin-top: calc(13px * var(--scale));  /* meta → status: a small break */
   color: var(--accent);             /* the accent's second, small appearance */
 }
 .info-card-status::before {
   content: '';                      /* the dot — decoration, so it never becomes text */
-  width: calc(9px * var(--scale));  /* a small round marker… */
-  height: calc(9px * var(--scale));  /* …a true circle */
+  width: calc(11px * var(--scale));  /* a small round marker… */
+  height: calc(11px * var(--scale));  /* …a true circle */
   border-radius: 50%;               /* round it */
   background: currentColor;         /* follows the status colour */
   box-shadow: var(--accent-glow);   /* the house glow, at dot scale */
@@ -180,7 +180,7 @@ ${maskLines([
 /* The value block — held apart on the right behind a keyline, never squeezed. */
 .info-card-value-block {
   flex: none;                       /* the figure keeps its room whatever the title does */
-  padding-left: calc(26px * var(--scale));  /* air on the keyline's inner side */
+  padding-left: calc(33px * var(--scale));  /* air on the keyline's inner side */
   border-left: 1px solid rgba(255, 255, 255, 0.12);  /* the panel's one internal rule */
   text-align: right;                /* label and figure hang from the right edge */
 }
@@ -188,7 +188,7 @@ ${maskLines([
 /* The value label — what the figure means: current bid, guide price, remaining. */
 .info-card-value-label {
   font-family: var(--font-label);   /* the house label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                 /* bold keeps small caps legible over video */
   line-height: 1.2;                 /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -198,12 +198,12 @@ ${maskLines([
 
 /* The figure — live money, in the accent: the number a bidder is watching. */
 .info-card-value {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* the block's one large voice */
+  font-size: calc(58px * var(--scale) * var(--type-scale));  /* the block's one large voice */
   font-weight: 700;                 /* heavy — the loudest number on the card */
   line-height: 1.05;                /* no dead leading around the figure */
   letter-spacing: -0.01em;          /* large glyphs tighten */
   font-variant-numeric: tabular-nums;  /* digits keep one width as the bid climbs */
-  margin-top: calc(4px * var(--scale));  /* label and figure read as one unit */
+  margin-top: calc(5px * var(--scale));  /* label and figure read as one unit */
   color: var(--accent);             /* the accent's main moment in this card */
 }`,
     hasAccent: true,

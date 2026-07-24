@@ -92,11 +92,11 @@ ${personColumn(o, right, classes, '        ')}
    the accent as a FILL rather than as a rule: at a glance the band is what you read. */
 .lower-third-header {
   background: var(--accent);        /* the one bold accent surface, sport-style */
-  padding: calc(7px * var(--scale)) calc(26px * var(--scale)) calc(8px * var(--scale));
+  padding: calc(9px * var(--scale)) calc(33px * var(--scale)) calc(10px * var(--scale));
 }
 .lower-third-name {
   display: block;                   /* the band's text fills its row */
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* a header, not a headline */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* a header, not a headline */
   font-weight: 500;                 /* Oswald is already condensed — weight would blunt it */
   line-height: 1.1;                 /* one tight band row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -107,19 +107,19 @@ ${personColumn(o, right, classes, '        ')}
 /* The callers area, below the band. The grid lives HERE and not on the box, because the
    box has to stack the header row above it. */
 .lower-third-callers {
-  padding: calc(18px * var(--scale)) calc(26px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(23px * var(--scale)) calc(33px * var(--scale)) calc(25px * var(--scale));
 }
 
 ${duoGridCss({
-  gap: 'calc(28px * var(--scale))',
-  columnMax: 'calc(400px * var(--scale))',
+  gap: 'calc(35px * var(--scale))',
+  columnMax: 'calc(500px * var(--scale))',
   divider: true,
   container: '.lower-third-callers',
 })}
 
 /* Each caller's name — both identical: on the call, neither voice outranks the other. */
 .lower-third-caller {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   line-height: 1.05;                /* condensed caps sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;        /* matchday voice */
@@ -128,12 +128,12 @@ ${duoGridCss({
 
 /* Each caller's job — the small line that makes the pair legible as a booth. */
 .lower-third-callerrole {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
   line-height: 1.25;                /* room if the job title wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* keeps the block uniform */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(5px * var(--scale));  /* tied to the name above it */
+  margin-top: calc(6px * var(--scale));  /* tied to the name above it */
 }`,
       // The accent is the header band — a filled surface, not a bar node. The presets fall
       // back to moving the box, which is right: the booth arrives as one slab.

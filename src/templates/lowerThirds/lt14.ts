@@ -58,8 +58,8 @@ ${lineMasks(o)}
 
 /* The panel — the house void, tighter than a strap's: this is a mark, not a title. */
 .lower-third-box {
-  margin-left: calc(8px * var(--scale));  /* starts where the bar ends */
-  padding: calc(14px * var(--scale)) calc(26px * var(--scale)) calc(14px * var(--scale)) calc(20px * var(--scale));
+  margin-left: calc(10px * var(--scale));  /* starts where the bar ends */
+  padding: calc(18px * var(--scale)) calc(33px * var(--scale)) calc(18px * var(--scale)) calc(25px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -68,7 +68,7 @@ ${lineMasks(o)}
 
 /* The handle — the line the viewer is meant to read and remember. */
 .lower-third-name {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* well under the strap's 54px */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* well under the strap's 54px */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                 /* tight */
   letter-spacing: var(--display-tracking);  /* the handle's authored tracking */
@@ -79,13 +79,13 @@ ${lineMasks(o)}
 .lower-third-title,
 .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* clearly subordinate */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* a technical label, not a sentence */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(7px * var(--scale));  /* handle + platform read as one unit */
+  margin-top: calc(9px * var(--scale));  /* handle + platform read as one unit */
 }`,
     hasAccent: true,
     tokens: {

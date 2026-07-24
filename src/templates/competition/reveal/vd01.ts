@@ -57,7 +57,7 @@ export const vd01: TemplateVariant = defineRevealVariant(
 
 /* The accent — a slab under the question, tinted by the ruling. */
 .${P}-accent {
-  height: calc(4px * var(--scale));
+  height: calc(5px * var(--scale));
   background: var(--text-dim);     /* neutral until a ruling is made */
   transform-origin: center;
 }
@@ -65,7 +65,7 @@ export const vd01: TemplateVariant = defineRevealVariant(
 /* The question. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(20px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -74,7 +74,7 @@ export const vd01: TemplateVariant = defineRevealVariant(
 
 /* What is being ruled on. */
 .${P}-title {
-  font-size: calc(48px * var(--scale) * var(--type-scale));
+  font-size: calc(60px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   letter-spacing: var(--display-tracking);
@@ -84,7 +84,7 @@ export const vd01: TemplateVariant = defineRevealVariant(
 
 /* The mark — a tick or a cross, the biggest thing on the card. */
 .${P}-mark {
-  font-size: calc(150px * var(--scale) * var(--type-scale));
+  font-size: calc(188px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 0.9;
   color: var(--text-dim);
@@ -92,9 +92,9 @@ export const vd01: TemplateVariant = defineRevealVariant(
 
 /* The ruling's word. */
 .${P}-word {
-  padding: calc(6px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(8px * var(--scale)) calc(25px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(26px * var(--scale) * var(--type-scale));
+  font-size: calc(33px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.2em;
   color: var(--accent-ink);
@@ -104,7 +104,7 @@ export const vd01: TemplateVariant = defineRevealVariant(
 /* The note under the ruling. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(16px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;

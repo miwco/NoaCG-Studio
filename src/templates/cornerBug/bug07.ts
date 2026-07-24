@@ -60,8 +60,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the accent edge, the mark and the text sit in a row */
   align-items: center;             /* everything centred on the slab's axis */
-  gap: calc(14px * var(--scale));  /* air between the mark and the text */
-  padding-right: calc(18px * var(--scale));  /* air before the slab's right edge */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
+  padding-right: calc(23px * var(--scale));  /* air before the slab's right edge */
   background: var(--panel-bg);     /* the solid slab */
   border-radius: var(--panel-radius);  /* sport is square-cornered */
   box-shadow: var(--panel-shadow); /* the family's hard offset shadow */
@@ -80,7 +80,7 @@ ${bugSlotCss({ width: 44, height: 44, mark: 'slab', radius: '0' })}
 
 /* The mark keeps its own air inside the slab (the accent edge has none of its own). */
 .corner-bug-media {
-  margin: calc(12px * var(--scale)) 0 calc(12px * var(--scale)) calc(14px * var(--scale));
+  margin: calc(15px * var(--scale)) 0 calc(15px * var(--scale)) calc(18px * var(--scale));
 }
 
 /* The placeholder block is quiet: it marks the slot, it is not a shape in the design. */
@@ -98,7 +98,7 @@ ${bugSlotCss({ width: 44, height: 44, mark: 'slab', radius: '0' })}
 
 /* The channel (f0) — heavy condensed caps, the sport voice at bug scale. */
 .corner-bug-name {
-  font-size: calc(24px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(30px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* condensed caps need no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -109,8 +109,8 @@ ${bugSlotCss({ width: 44, height: 44, mark: 'slab', radius: '0' })}
 /* The show (f1) — a tracked caps line under the channel. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(4px * var(--scale));  /* the two lines read as one lockup */
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* clearly subordinate */
+  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* clearly subordinate */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.25;               /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* sport opens its labels up */

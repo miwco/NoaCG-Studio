@@ -72,19 +72,19 @@ ${refRow}${creditRow}    </div>`,
 
       css: `/* The panel — quiet and light, the same surface as the rest of the worship pack. */
 .lower-third-box {
-  padding: calc(22px * var(--scale)) calc(44px * var(--scale)) calc(24px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(28px * var(--scale)) calc(55px * var(--scale)) calc(30px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);      /* the minimal family's quiet panel */
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow);  /* the family's panel lift */
-  max-width: calc(680px * var(--scale));  /* a reference is short; nothing here needs the frame */
+  max-width: calc(850px * var(--scale));  /* a reference is short; nothing here needs the frame */
 }
 
 /* The hairline — the pack's shared punctuation mark. */
 .lower-third-accent {
-  width: calc(46px * var(--scale));  /* a short mark, not a rule across the panel */
-  height: calc(2px * var(--scale));  /* a hairline */
+  width: calc(58px * var(--scale));  /* a short mark, not a rule across the panel */
+  height: calc(3px * var(--scale));  /* a hairline */
   background: var(--accent);        /* the one accent surface */
-  margin-bottom: calc(14px * var(--scale));  /* air between the mark and the reference */
+  margin-bottom: calc(18px * var(--scale));  /* air between the mark and the reference */
   transform-origin: left center;    /* line-reveal draws it from this end */
 }
 
@@ -94,7 +94,7 @@ ${refRow}${creditRow}    </div>`,
   display: flex;                    /* reference and translation in a row… */
   flex-wrap: wrap;                  /* …wrapping only if the reference is genuinely long */
   align-items: baseline;            /* one shared baseline */
-  gap: calc(12px * var(--scale));
+  gap: calc(15px * var(--scale));
   min-width: 0;                     /* allow shrinking */
 }
 .lower-third-refrow > .lower-third-mask,
@@ -106,7 +106,7 @@ ${refRow}${creditRow}    </div>`,
 /* The reading (f0) — the graphic's headline. Tabular figures so chapter and verse
    numbers keep an even rhythm rather than bunching. */
 .lower-third-name {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(53px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 600;                 /* semibold: present without shouting */
   line-height: 1.1;                 /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -116,7 +116,7 @@ ${refRow}${creditRow}    </div>`,
 
 /* The translation (f1) — small caps beside the reference, in the accent. */
 .lower-third-translation {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* a suffix, not a line */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a suffix, not a line */
   font-weight: 700;                 /* bold — three small caps need the weight */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -130,14 +130,14 @@ ${refRow}${creditRow}    </div>`,
   display: flex;                    /* reader and office on one row… */
   flex-wrap: wrap;                  /* …wrapping only if both are long */
   align-items: baseline;            /* one shared baseline */
-  gap: calc(10px * var(--scale));   /* the drawn middot sits in this gap */
-  margin-top: calc(12px * var(--scale));  /* a clear break below the reference */
+  gap: calc(13px * var(--scale));   /* the drawn middot sits in this gap */
+  margin-top: calc(15px * var(--scale));  /* a clear break below the reference */
   min-width: 0;                     /* allow shrinking */
 }
 
 /* The reader (f2) — the courtesy line. */
 .lower-third-title {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* half the reference, on purpose */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* half the reference, on purpose */
   font-weight: 500;                 /* medium — it is a name, but not the subject */
   line-height: 1.25;                /* room if the name wraps */
   color: var(--text-dim);           /* dimmed — never the primary ink twice */
@@ -145,7 +145,7 @@ ${refRow}${creditRow}    </div>`,
 
 /* The reader's office (f3) — the quietest voice. */
 .lower-third-extra {
-  font-size: calc(15px * var(--scale) * var(--type-scale));  /* the smallest thing on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest thing on the strap */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* single tight label line */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -157,7 +157,7 @@ ${refRow}${creditRow}    </div>`,
    dangling separator. */
 .lower-third-creditrow > .lower-third-mask + .lower-third-mask::before {
   content: "·";                     /* the join, owned by the design */
-  margin-right: calc(10px * var(--scale));  /* balances the flex gap on the other side */
+  margin-right: calc(13px * var(--scale));  /* balances the flex gap on the other side */
   color: var(--text-dim);           /* quieter than the words it joins */
 }`,
       hasAccent: true,

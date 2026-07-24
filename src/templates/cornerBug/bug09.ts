@@ -57,8 +57,8 @@ ${statusSourcesHtml(ids)}`,
 .corner-bug-box {
   display: flex;                   /* the dot and the word sit side by side */
   align-items: center;             /* both centered on the chip's axis */
-  gap: calc(10px * var(--scale));  /* air between the dot and the word */
-  padding: calc(9px * var(--scale)) calc(16px * var(--scale));  /* even air inside the chip */
+  gap: calc(11px * var(--scale));  /* air between the dot and the word */
+  padding: calc(10px * var(--scale)) calc(17px * var(--scale));  /* even air inside the chip */
   background: var(--panel-bg);     /* the void panel */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -68,8 +68,8 @@ ${statusSourcesHtml(ids)}`,
 
 /* The dot — the accent moment, breathing while the show is live. */
 .corner-bug-dot {
-  width: calc(11px * var(--scale));   /* a small dot… */
-  height: calc(11px * var(--scale));  /* …round */
+  width: calc(12px * var(--scale));   /* a small dot… */
+  height: calc(12px * var(--scale));  /* …round */
   border-radius: 50%;              /* the on-air lamp */
   background: var(--accent);       /* the one accent colour */
   box-shadow: var(--accent-glow);  /* the house glow, on the accent only */
@@ -86,7 +86,7 @@ ${statusSourcesHtml(ids)}`,
 /* The status word (f0) — the house mono label voice at chip scale. */
 .corner-bug-name {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house label tracking */

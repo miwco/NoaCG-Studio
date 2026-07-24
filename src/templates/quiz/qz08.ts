@@ -50,7 +50,7 @@ export const qz08: TemplateVariant = defineQuizVariant(
     </div>`,
     css: `/* The card — restrained and near-black, the minimal family's quiet slab. */
 .quiz-box {
-  padding: calc(30px * var(--scale)) calc(40px * var(--scale));  /* generous card air */
+  padding: calc(32px * var(--scale)) calc(42px * var(--scale));  /* generous card air */
   background: var(--panel-bg);     /* the palette's near-black panel — retints via the :root contract */
   border-radius: var(--panel-radius);  /* the family's near-square radius */
   box-shadow: var(--panel-keyline), var(--panel-shadow);  /* the authored edge and family lift */
@@ -58,7 +58,7 @@ export const qz08: TemplateVariant = defineQuizVariant(
 
 /* The question — confident display type, the loudest thing on the card. */
 .quiz-mask > span {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* headline scale */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline scale */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -68,7 +68,7 @@ export const qz08: TemplateVariant = defineQuizVariant(
 /* The keyline — a thin dim rule under the question. */
 .quiz-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin: calc(20px * var(--scale)) 0;  /* air above and below the rule */
+  margin: calc(21px * var(--scale)) 0;  /* air above and below the rule */
   background: rgba(255, 255, 255, 0.16);  /* dim, not accent — the color stays in the letters */
 }
 
@@ -86,10 +86,10 @@ export const qz08: TemplateVariant = defineQuizVariant(
   flex-direction: column;          /* …one above the other */
   align-items: center;             /* centered in the half */
   justify-content: center;         /* and centered in its height */
-  gap: calc(14px * var(--scale));  /* air between the letter and the answer */
-  min-width: calc(190px * var(--scale));  /* a half never shrinks to its text */
-  min-height: calc(120px * var(--scale)); /* both halves keep the same standing height */
-  padding: calc(6px * var(--scale)) calc(22px * var(--scale));  /* room around the answer */
+  gap: calc(15px * var(--scale));  /* air between the letter and the answer */
+  min-width: calc(200px * var(--scale));  /* a half never shrinks to its text */
+  min-height: calc(126px * var(--scale)); /* both halves keep the same standing height */
+  padding: calc(6px * var(--scale)) calc(23px * var(--scale));  /* room around the answer */
 }
 
 /* The single hairline between the halves — the minimal family divides with a rule, not a box. */
@@ -105,21 +105,21 @@ export const qz08: TemplateVariant = defineQuizVariant(
 
 /* The letter — a small accent glyph in a thin keyline ring. */
 .quiz-letter {
-  width: calc(40px * var(--scale));   /* a small square ring… */
-  height: calc(40px * var(--scale));  /* …the answer's marker */
+  width: calc(42px * var(--scale));   /* a small square ring… */
+  height: calc(42px * var(--scale));  /* …the answer's marker */
   display: flex;                   /* centers the letter… */
   align-items: center;             /* …vertically… */
   justify-content: center;         /* …and horizontally */
   border-radius: calc(4px * var(--scale));  /* the family's near-square radius */
   box-shadow: inset 0 0 0 calc(2px * var(--scale)) var(--accent);  /* a thin accent keyline ring */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the letter — a marker, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the letter — a marker, not a headline */
   font-weight: 700;                /* bold keeps the small glyph legible */
   color: var(--accent);            /* the letter wears the accent */
 }
 
 /* The answer — centered under its letter. */
 .quiz-text {
-  font-size: calc(25px * var(--scale) * var(--type-scale));  /* a two-answer board can speak up a little */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* a two-answer board can speak up a little */
   font-weight: 400;                /* regular — the minimal family is quiet */
   line-height: 1.2;                /* leading if a long answer wraps */
   text-align: center;              /* the answer sits under the middle of its letter */

@@ -61,7 +61,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
    a surface that is already there rather than opening a second one. */
 .${P}-head,
 .${P}-body {
-  padding: calc(26px * var(--scale)) calc(30px * var(--scale));
+  padding: calc(33px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
@@ -70,8 +70,8 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 }
 
 .${P}-body {
-  margin-top: calc(14px * var(--scale));
-  padding: calc(18px * var(--scale)) calc(30px * var(--scale));
+  margin-top: calc(18px * var(--scale));
+  padding: calc(23px * var(--scale)) calc(38px * var(--scale));
 }
 
 /* The accent — a soft rule down the card's left edge. */
@@ -90,17 +90,17 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 
 /* The portrait — softly rounded, on a glass plate until a file lands in it. */
 .${P}-portrait {
-  border-radius: calc(18px * var(--scale));
+  border-radius: calc(23px * var(--scale));
   background: rgba(255, 255, 255, 0.1);
 }
 
 /* The tagline — an accent pill. */
 .${P}-tagline {
-  padding: calc(5px * var(--scale)) calc(14px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);        /* the family's ink on an accent-filled pill */
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -108,7 +108,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 
 /* The name. */
 .${P}-name {
-  font-size: calc(62px * var(--scale) * var(--type-scale));
+  font-size: calc(78px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.04;
   letter-spacing: var(--display-tracking);
@@ -117,7 +117,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 
 /* The role / team line. */
 .${P}-role {
-  font-size: calc(19px * var(--scale) * var(--type-scale));
+  font-size: calc(24px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -126,14 +126,14 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 
 /* Each stat is its own glass tile. */
 .${P}-stat {
-  padding: calc(12px * var(--scale)) calc(18px * var(--scale));
-  border-radius: calc(14px * var(--scale));
+  padding: calc(15px * var(--scale)) calc(23px * var(--scale));
+  border-radius: calc(18px * var(--scale));
   background: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .${P}-stat-value {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(48px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -141,7 +141,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 }
 
 .${P}-stat-label {
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -151,7 +151,7 @@ export const pc03: TemplateVariant = defineMatchupVariant(
 /* ── The MVP flourish (its own state). ── */
 
 .${P}-mvp .${P}-head {
-  box-shadow: var(--panel-shadow), inset 0 0 0 calc(2px * var(--scale)) var(--accent);
+  box-shadow: var(--panel-shadow), inset 0 0 0 calc(3px * var(--scale)) var(--accent);
 }`,
   }),
 );

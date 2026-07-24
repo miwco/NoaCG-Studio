@@ -47,7 +47,7 @@ ${lineMasks(o, '      ')}
    a panel with a soft side. Fading from a centre outward leaves no edge at all, which is the
    whole point of the family. The wide padding is what gives the falloff room to happen. */
 .lower-third-box {
-  padding: calc(46px * var(--scale)) calc(190px * var(--scale)) calc(48px * var(--scale)) calc(34px * var(--scale));
+  padding: calc(54px * var(--scale)) calc(224px * var(--scale)) calc(56px * var(--scale)) calc(40px * var(--scale));
   background: radial-gradient(ellipse 85% 105% at 12% 50%,
               var(--panel-bg) 0%,
               color-mix(in srgb, var(--panel-bg) 55%, transparent) 45%,
@@ -56,16 +56,16 @@ ${lineMasks(o, '      ')}
 
 /* The hairline — the only drawn element in the design, and the thinnest in the product. */
 .lower-third-accent {
-  width: calc(120px * var(--scale));  /* a short mark above the name */
+  width: calc(141px * var(--scale));  /* a short mark above the name */
   height: var(--accent-weight);     /* the family's 1px hairline */
-  margin-bottom: calc(16px * var(--scale));  /* air between the mark and the name */
+  margin-bottom: calc(19px * var(--scale));  /* air between the mark and the name */
   background: var(--accent);        /* bone by default — cinema colour, not signal colour */
   will-change: transform;           /* hint the browser: presets draw this mark in */
 }
 
 /* The name — cinema setting: light weight, wide tracking, generous line height. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight (400 — light, not bold) */
   line-height: 1.15;                /* light type needs more air than heavy type */
   letter-spacing: var(--display-tracking);  /* POSITIVE — the family's type opens up */
@@ -75,13 +75,13 @@ ${lineMasks(o, '      ')}
 /* The role — the widest-tracked line in the product, dimmed rather than accented. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* small — the tracking gives it presence */
   font-weight: 500;                 /* medium keeps tracked caps crisp at this size */
   line-height: 1.4;                 /* wide tracking needs matching leading */
   letter-spacing: var(--label-tracking);  /* 0.34em — the family's signature */
   text-transform: uppercase;        /* whatever the operator types reads as a caption */
   color: var(--label-color);        /* dimmed — colour belongs to the footage in this family */
-  margin-top: calc(12px * var(--scale));  /* clear air below the name */
+  margin-top: calc(14px * var(--scale));  /* clear air below the name */
 }`,
     hasAccent: true,
   }),

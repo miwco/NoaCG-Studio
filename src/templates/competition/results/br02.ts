@@ -53,18 +53,18 @@ ${bracketBodyCss()}
 .${P}-box {
   display: flex;
   flex-direction: column;
-  gap: calc(18px * var(--scale));
-  padding: calc(20px * var(--scale)) calc(24px * var(--scale)) calc(24px * var(--scale));
+  gap: calc(23px * var(--scale));
+  padding: calc(25px * var(--scale)) calc(30px * var(--scale)) calc(30px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
   box-shadow: var(--panel-shadow);
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 /* The accent rule under the heading, wearing the house glow. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: left center;
@@ -72,7 +72,7 @@ ${bracketBodyCss()}
 
 /* The heading. */
 .${P}-title {
-  font-size: calc(30px * var(--scale) * var(--type-scale));
+  font-size: calc(38px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.06;
   letter-spacing: var(--display-tracking);
@@ -81,13 +81,13 @@ ${bracketBodyCss()}
 
 /* The champion chip — amber ink on the void, only rendered once there is a champion. */
 .${P}-champion {
-  padding: calc(5px * var(--scale)) calc(14px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(6px * var(--scale)) calc(18px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: var(--accent);
   color: var(--accent-ink);
   box-shadow: var(--accent-glow);
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -96,7 +96,7 @@ ${bracketBodyCss()}
 /* The round label — mono, wide-tracked. */
 .${P}-round-name {
   font-family: var(--font-label);
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -105,14 +105,14 @@ ${bracketBodyCss()}
 
 /* One tie — a void tile with a quiet left edge. */
 .${P}-tie {
-  padding: calc(9px * var(--scale)) calc(13px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(11px * var(--scale)) calc(16px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.55);
-  border-left: calc(3px * var(--scale)) solid rgba(255, 255, 255, 0.1);
+  border-left: calc(4px * var(--scale)) solid rgba(255, 255, 255, 0.1);
 }
 
 .${P}-tie-side {
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   line-height: 1.5;
   color: var(--text-color);

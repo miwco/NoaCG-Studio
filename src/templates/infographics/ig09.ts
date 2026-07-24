@@ -55,9 +55,9 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 
       css: `/* The frosted panel — same glass language as the Frosted Card lower third. */
 .infographic-box {
-  min-width: calc(560px * var(--scale));  /* a board, not a strap — short names keep air */
+  min-width: calc(622px * var(--scale));  /* a board, not a strap — short names keep air */
   box-sizing: border-box;          /* padding stays inside the measured width */
-  padding: calc(30px * var(--scale)) calc(38px * var(--scale)) calc(14px * var(--scale));  /* generous air */
+  padding: calc(33px * var(--scale)) calc(42px * var(--scale)) calc(16px * var(--scale));  /* generous air */
   background: var(--panel-bg);     /* the glass tint — retints via the :root contract */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -67,7 +67,7 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 
 /* Heading — a soft accent caps kicker (glass carries the accent in the label). */
 .infographic-heading {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* kicker scale — a label, not a headline */
   font-weight: 700;                /* bold keeps small caps legible */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -79,7 +79,7 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 /* The rule — a soft keyline under the heading. */
 .infographic-rule {
   height: 1px;                     /* a true keyline — 1px at every resolution */
-  margin-top: calc(16px * var(--scale));  /* air between the caps and the rule */
+  margin-top: calc(18px * var(--scale));  /* air between the caps and the rule */
   background: rgba(255, 255, 255, 0.18);  /* soft glass keyline */
 }
 
@@ -93,8 +93,8 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 .infographic-row {
   display: flex;                   /* time, dot and show share one line */
   align-items: baseline;           /* the two text sizes sit on one baseline */
-  gap: calc(24px * var(--scale));  /* clear air between time, dot and show */
-  padding: calc(15px * var(--scale)) 0;  /* even vertical rhythm down the board */
+  gap: calc(27px * var(--scale));  /* clear air between time, dot and show */
+  padding: calc(17px * var(--scale)) 0;  /* even vertical rhythm down the board */
 }
 .infographic-row + .infographic-row {
   border-top: 1px solid rgba(255, 255, 255, 0.12);  /* soft keyline between rows */
@@ -103,8 +103,8 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 /* The time — tabular so every row's digits line up in one column. */
 .infographic-time {
   flex-shrink: 0;                  /* a long show name never squeezes the time */
-  min-width: calc(96px * var(--scale));  /* one shared column width — the dots align */
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* the anchor of each row */
+  min-width: calc(107px * var(--scale));  /* one shared column width — the dots align */
+  font-size: calc(31px * var(--scale) * var(--type-scale));  /* the anchor of each row */
   font-weight: 700;                /* the glass families run heavier weights */
   line-height: 1.15;               /* tight leading */
   font-variant-numeric: tabular-nums;  /* equal-width digits — times align across rows */
@@ -115,18 +115,18 @@ export const ig09: TemplateVariant = defineInfographicVariant(
 /* The dot — a small accent circle between time and show. */
 .infographic-dot {
   flex-shrink: 0;                  /* the dot keeps its size */
-  width: calc(8px * var(--scale)); /* a small glass dot */
-  height: calc(8px * var(--scale));  /* a true circle */
+  width: calc(9px * var(--scale)); /* a small glass dot */
+  height: calc(9px * var(--scale));  /* a true circle */
   border-radius: 50%;              /* stays round at any scale */
   background: var(--accent);       /* the accent dose threading the rows */
   position: relative;              /* so the nudge below can move it */
-  top: calc(-6px * var(--scale));  /* lift off the baseline — optically centered */
+  top: calc(-7px * var(--scale));  /* lift off the baseline — optically centered */
 }
 
 /* The show name — quiet against the time: smaller, lighter, dimmed. */
 .infographic-show {
   min-width: 0;                    /* allow the name to shrink and wrap inside flex */
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly subordinate to the time */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* clearly subordinate to the time */
   font-weight: 500;                /* medium; contrast comes from the time */
   line-height: 1.35;               /* relaxed leading in case a title wraps */
   color: var(--text-dim);          /* dimmed — never full white twice in one row */

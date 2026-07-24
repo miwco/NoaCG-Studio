@@ -72,7 +72,7 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
   box-shadow: var(--panel-shadow); /* one deep lifting shadow */
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);  /* the house strip's amber top edge */
   overflow: hidden;                /* the block separators stop at the panel's edge */
 }
 
@@ -91,19 +91,19 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 .scoreboard-team-block {
   display: flex;                   /* chip, name and score share one row */
   align-items: center;             /* all three on the strip's center line */
-  gap: calc(14px * var(--scale));  /* air inside the block */
-  padding: calc(13px * var(--scale)) calc(20px * var(--scale));  /* the strip's height comes from here */
+  gap: calc(18px * var(--scale));  /* air inside the block */
+  padding: calc(16px * var(--scale)) calc(25px * var(--scale));  /* the strip's height comes from here */
   min-width: 0;                    /* lets a long team name shrink and wrap, not overflow */
 }
-.scoreboard-team-a { padding-left: calc(26px * var(--scale)); }  /* clear the accent edge */
+.scoreboard-team-a { padding-left: calc(33px * var(--scale)); }  /* clear the accent edge */
 
 /* The club colour chip — the one place a team's own colour appears on this bug. It falls
    back to the graphic's accent, so a board with no colours set still looks deliberate. */
 .scoreboard-colour-chip {
   flex-shrink: 0;                  /* the chip never gives up width */
-  width: calc(6px * var(--scale)); /* a slim vertical mark, not a badge */
+  width: calc(8px * var(--scale)); /* a slim vertical mark, not a badge */
   align-self: stretch;             /* full height of the team block */
-  border-radius: calc(3px * var(--scale));  /* softened ends, house chip family */
+  border-radius: calc(4px * var(--scale));  /* softened ends, house chip family */
   background: var(--team-a, var(--accent));  /* the club colour, or the graphic's accent */
 }
 .scoreboard-team-b .scoreboard-colour-chip {
@@ -112,7 +112,7 @@ ${colourHoldersHtml('f6', 'f7', '#f6a623', '#7dd3fc')}
 
 /* The team name — house display type, a step under the scores. */
 .scoreboard-team {
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* readable at a glance, quiet next to the score */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* readable at a glance, quiet next to the score */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -128,7 +128,7 @@ ${clipOneLineCss('.scoreboard-score', 130)}
 
 /* The score — the loudest figure on the strip, in the accent, tabular so it never jitters. */
 .scoreboard-score {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* scores lead a scoreboard */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1;                  /* the figure sits tight on the center line */
   color: var(--accent);            /* the scores wear the accent */
@@ -141,8 +141,8 @@ ${clipOneLineCss('.scoreboard-score', 130)}
   flex-direction: column;          /* …stacked as one column */
   align-items: center;             /* both centered on the block's axis */
   justify-content: center;         /* vertically centered in the strip */
-  gap: calc(2px * var(--scale));   /* the two rows read as one unit */
-  padding: calc(9px * var(--scale)) calc(22px * var(--scale));  /* snug frame around the two rows */
+  gap: calc(3px * var(--scale));   /* the two rows read as one unit */
+  padding: calc(11px * var(--scale)) calc(28px * var(--scale));  /* snug frame around the two rows */
   background: rgba(10, 12, 16, 0.6);  /* a second, denser layer of the void */
   box-shadow: inset calc(1px * var(--scale)) 0 0 0 rgba(255, 255, 255, 0.08);  /* a hairline seam from the team blocks */
 }
@@ -150,7 +150,7 @@ ${clipOneLineCss('.scoreboard-score', 130)}
 /* The period chip — the house mono label, in the accent. */
 .scoreboard-phase {
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* a label, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* a label, not a headline */
   font-weight: 500;                /* medium keeps tracked mono caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the house's wide label tracking */
@@ -163,7 +163,7 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
 /* The match clock — mono digits, tabular, so a ticking second never moves the strip. */
 .scoreboard-clock {
   font-family: var(--font-label);  /* mono: a clock is data, not display type */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly the block's anchor */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* clearly the block's anchor */
   font-weight: 500;                /* matches the label's weight — one mono voice */
   line-height: 1.05;               /* tight under the period chip */
   color: var(--text-color);        /* primary white — the clock is read constantly */

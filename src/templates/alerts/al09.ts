@@ -123,7 +123,7 @@ ${alertLineMasks(o)}
 /* The attribution — where this is coming from. */
 .alert-extra {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

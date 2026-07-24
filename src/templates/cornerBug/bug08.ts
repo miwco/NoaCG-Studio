@@ -58,7 +58,7 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the three pieces sit side by side */
   align-items: center;             /* all centered on the lockup's axis */
-  gap: calc(14px * var(--scale));  /* even air between the pieces */
+  gap: calc(18px * var(--scale));  /* even air between the pieces */
 }
 
 ${bugSlotCss({ width: 46, height: 46, mark: 'keyline' })}
@@ -71,7 +71,7 @@ ${bugSlotCss({ width: 46, height: 46, mark: 'keyline' })}
 /* The accent rule — a short vertical hairline dividing the mark from the text. */
 .corner-bug-accent {
   width: var(--accent-weight);     /* the family's hairline weight */
-  height: calc(40px * var(--scale));  /* a short stroke, not a full-height edge */
+  height: calc(50px * var(--scale));  /* a short stroke, not a full-height edge */
   background: var(--accent);       /* the one accent colour */
   flex: none;                      /* never squeezed by the text beside it */
 }
@@ -85,7 +85,7 @@ ${bugSlotCss({ width: 46, height: 46, mark: 'keyline' })}
 
 /* The channel (f0) — the name the viewer should recognise at a glance. */
 .corner-bug-name {
-  font-size: calc(20px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(25px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -96,8 +96,8 @@ ${bugSlotCss({ width: 46, height: 46, mark: 'keyline' })}
 /* The show (f1) — a tiny tracked caps label under the channel. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(4px * var(--scale));  /* the two lines read as one lockup */
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* clearly subordinate */
+  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* clearly subordinate */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.3;                /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

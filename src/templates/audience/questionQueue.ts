@@ -52,7 +52,7 @@ function queueCss(family: StyleTag): string {
   left: 0;                         /* the gutter the row's own padding-left leaves for it */
   top: 0;                          /* full height, top… */
   bottom: 0;                       /* …to bottom */
-  width: calc(6px * var(--scale));
+  width: calc(8px * var(--scale));
   background: var(--accent);       /* a solid accent edge on the live row */
 }`
       : family === 'noacg'
@@ -62,7 +62,7 @@ function queueCss(family: StyleTag): string {
   left: 0;                         /* the gutter the row's own padding-left leaves for it */
   top: 0;                          /* full height, top… */
   bottom: 0;                       /* …to bottom */
-  width: calc(4px * var(--scale));
+  width: calc(5px * var(--scale));
   background: var(--accent);       /* a solid amber edge on the live row */
   box-shadow: var(--accent-glow);  /* the family's glow — follows the accent color */
 }`
@@ -70,26 +70,26 @@ function queueCss(family: StyleTag): string {
   content: '';                     /* painted layer — safe from every tween */
   position: absolute;              /* pinned to the row's leading edge */
   left: 0;                         /* the gutter the row's own padding-left leaves for it */
-  top: calc(6px * var(--scale));   /* a dot, centred on the first line of the row */
-  width: calc(8px * var(--scale));
-  height: calc(8px * var(--scale));
+  top: calc(8px * var(--scale));   /* a dot, centred on the first line of the row */
+  width: calc(10px * var(--scale));
+  height: calc(10px * var(--scale));
   border-radius: 50%;              /* a round marker — the quieter families mark with a dot */
   background: var(--accent);       /* the card's one accent dose */
 }`;
   return `/* The queue — one row per question the moderator typed. The rows read left whatever edge
    the card is anchored to; that rule is the category's, in shared.ts. */
 #audience-queue {
-  margin-top: calc(4px * var(--scale));  /* the heading already carries its own air */
+  margin-top: calc(5px * var(--scale));  /* the heading already carries its own air */
   display: flex;                   /* a simple vertical stack… */
   flex-direction: column;          /* …one row per question */
-  gap: calc(12px * var(--scale));  /* even air between the rows */
+  gap: calc(15px * var(--scale));  /* even air between the rows */
   will-change: transform, opacity; /* the list arrives as one block */
 }
 
 /* One queued question — its text, then who asked and from where. */
 .audience-queue-row {
   position: relative;              /* anchors the live marker (::before) */
-  padding-left: calc(16px * var(--scale));  /* the gutter the live marker sits in */
+  padding-left: calc(20px * var(--scale));  /* the gutter the live marker sits in */
   opacity: 0.62;                   /* waiting rows sit back; the live one comes forward */
 }
 .audience-queue-text {
@@ -98,7 +98,7 @@ function queueCss(family: StyleTag): string {
   -webkit-line-clamp: 2;           /* a long question ends in an ellipsis after two lines */
   line-clamp: 2;                   /* the standard spelling, for browsers that have it */
   overflow: hidden;                /* what the clamp cuts is hidden, ellipsis and all */
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* list scale */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* list scale */
   font-weight: ${family === 'sport' ? '700' : '500'};
   line-height: 1.25;               /* room between the two lines */
   color: var(--text-color);        /* primary text */
@@ -108,9 +108,9 @@ function queueCss(family: StyleTag): string {
 /* The row's own attribution — quieter than the question, and gone entirely when the moderator
    pasted a bare list with no names in it. */
 .audience-queue-meta {
-  margin-top: calc(3px * var(--scale));
+  margin-top: calc(4px * var(--scale));
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(12px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast source line is caps */
@@ -137,9 +137,9 @@ ${liveMark}
 
 /* The position readout — "3 of 12", under the list. */
 .audience-queue-count {
-  margin-top: calc(16px * var(--scale));  /* air under the list */
+  margin-top: calc(20px * var(--scale));  /* air under the list */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a broadcast readout is caps */
@@ -153,10 +153,10 @@ ${liveMark}
 function css(family: StyleTag): string {
   const pad =
     family === 'sport'
-      ? 'calc(24px * var(--scale)) calc(40px * var(--scale)) calc(22px * var(--scale)) calc(44px * var(--scale))'
+      ? 'calc(30px * var(--scale)) calc(50px * var(--scale)) calc(28px * var(--scale)) calc(55px * var(--scale))'
       : family === 'noacg'
-        ? 'calc(22px * var(--scale)) calc(34px * var(--scale)) calc(20px * var(--scale)) calc(38px * var(--scale))'
-        : 'calc(24px * var(--scale)) calc(32px * var(--scale)) calc(22px * var(--scale))';
+        ? 'calc(28px * var(--scale)) calc(43px * var(--scale)) calc(25px * var(--scale)) calc(48px * var(--scale))'
+        : 'calc(30px * var(--scale)) calc(40px * var(--scale)) calc(28px * var(--scale))';
   return `${labelFace(family)}${panelCss(family, pad)}
 
 ${kickerCss(family)}

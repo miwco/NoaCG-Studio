@@ -113,7 +113,7 @@ export const fr04: TemplateVariant = defineFrameVariant(
 
 /* The topic — what is on the big window. The strip's one display line. */
 .frame-name {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* label-strip size (1080p reference) */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* label-strip size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -132,7 +132,7 @@ export const fr04: TemplateVariant = defineFrameVariant(
 
 /* The presenter — tracked caps, the strip's label voice. */
 .frame-role {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.3;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -143,7 +143,7 @@ export const fr04: TemplateVariant = defineFrameVariant(
 
 /* The detail — the quietest voice on the strip; gone entirely when cleared (:empty). */
 .frame-detail {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the same size as the credit… */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the same size as the credit… */
   font-weight: 400;                /* …with contrast through weight, not more fonts */
   line-height: 1.3;                /* compact leading */
   padding-left: calc(16px * var(--scale));  /* air after the divider */

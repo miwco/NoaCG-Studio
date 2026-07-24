@@ -74,7 +74,7 @@ ${stack(
 
 ${accentCss(skin, P, pad)}
 
-${labelCss(`.${P}-kicker`, 19, 'The now label (f0) — "NOW PLAYING", or its equivalent in the show’s own language.')}
+${labelCss(`.${P}-kicker`, 21, 'The now label (f0) — "NOW PLAYING", or its equivalent in the show’s own language.')}
 
 /* What is playing now (f1) — the largest type in the card, and the reason it exists. */
 .${P}-now {
@@ -101,7 +101,7 @@ ${decl('margin-top', px(8), 'title and detail read as one unit')}
 
 ${dividerCss(`.${P}-divider`, 'The divider — the line between what is on now and what is next.', 20)}
 
-${labelCss(`.${P}-nextlabel`, 17, 'The next label (f3) — smaller than the now label: the second half is the quieter one.')}
+${labelCss(`.${P}-nextlabel`, 20, 'The next label (f3) — smaller than the now label: the second half is the quieter one.')}
 
 /* What is coming up (f4) — deliberately below the now title in size, so a glance tells
    the two halves apart without reading either label. */

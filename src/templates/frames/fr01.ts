@@ -136,7 +136,7 @@ export const fr01: TemplateVariant = defineFrameVariant(
 /* The name — the plate's display line. */
 .frame-name {
   max-width: calc(560px * var(--scale));  /* a very long name wraps rather than running on */
-  font-size: calc(30px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;               /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -147,7 +147,7 @@ export const fr01: TemplateVariant = defineFrameVariant(
 .frame-role {
   max-width: calc(560px * var(--scale));  /* the same wrap cap as the name */
   font-family: var(--font-label);  /* the house label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps small caps legible over video */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

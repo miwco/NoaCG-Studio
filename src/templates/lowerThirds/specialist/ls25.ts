@@ -90,7 +90,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   border-radius: var(--panel-radius);  /* the family's corner radius */
   box-shadow: var(--panel-shadow), var(--panel-keyline);  /* lift + the 1px inner edge */
   overflow: hidden;                 /* the artwork's corner follows the card's */
-  max-width: calc(760px * var(--scale));  /* a release line runs long */
+  max-width: calc(950px * var(--scale));  /* a release line runs long */
 }
 
 /* The artwork slot — SQUARE. aspect-ratio holds the shape whatever the text does, so a
@@ -99,7 +99,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex: 0 0 auto;                   /* never squeezed by a long track title */
   align-self: stretch;              /* matches the text block's height… */
   aspect-ratio: 1 / 1;              /* …and stays square against it */
-  min-width: calc(104px * var(--scale));  /* a floor, for a one-line strap */
+  min-width: calc(130px * var(--scale));  /* a floor, for a one-line strap */
   background: var(--accent);        /* the placeholder square is the accent surface */
   position: relative;               /* the artwork covers this box */
 }
@@ -119,12 +119,12 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the artwork */
   min-width: 0;                     /* let it shrink so long titles wrap instead of overflowing */
-  padding: calc(16px * var(--scale)) calc(32px * var(--scale)) calc(18px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(20px * var(--scale)) calc(40px * var(--scale)) calc(23px * var(--scale)) calc(30px * var(--scale));
 }
 
 /* The track (f0) — the headline: it is what the viewer is hearing. */
 .lower-third-name {
-  font-size: calc(34px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(43px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* a title wraps — give the rows air */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -134,22 +134,22 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 /* The artist (f1) — set in caps and in the accent: on a music strap the artist is a mark
    as much as a name, which is how sleeve typography treats it too. */
 .lower-third-title {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the track */
+  font-size: calc(24px * var(--scale) * var(--type-scale));  /* clearly below the track */
   font-weight: 700;                 /* bold — tracked caps at this size need the weight */
   line-height: 1.25;                /* room if a long artist name wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* the sleeve voice */
   color: var(--accent);             /* the strap's one coloured line */
-  margin-top: calc(7px * var(--scale));  /* tied to the track above it */
+  margin-top: calc(9px * var(--scale));  /* tied to the track above it */
 }
 
 /* The release (f2) — album and label, the quietest line. */
 .lower-third-extra {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice on the strap */
   font-weight: 400;                 /* regular — reference, not billing */
   line-height: 1.3;                 /* room if the pairing wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(4px * var(--scale));  /* tied to the artist above it */
+  margin-top: calc(5px * var(--scale));  /* tied to the artist above it */
 }`,
       hasAccent: true,
     };

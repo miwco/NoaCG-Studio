@@ -77,13 +77,13 @@ ${personColumn(o, right, classes, '        ')}
   will-change: transform;           /* hint the browser: presets grow this bar in */
 }
 
-${duoGridCss({ gap: 'calc(30px * var(--scale))', columnMax: 'calc(460px * var(--scale))', divider: true })}
+${duoGridCss({ gap: 'calc(33px * var(--scale))', columnMax: 'calc(511px * var(--scale))', divider: true })}
 
 /* The panel — the house void, starting where the accent bar ends. The grid declarations
    above set the two-column structure; these are its surface and its room. */
 .lower-third-box {
-  margin-left: calc(8px * var(--scale));    /* starts where the accent bar ends */
-  padding: calc(24px * var(--scale)) calc(46px * var(--scale)) calc(26px * var(--scale)) calc(34px * var(--scale));
+  margin-left: calc(9px * var(--scale));    /* starts where the accent bar ends */
+  padding: calc(27px * var(--scale)) calc(51px * var(--scale)) calc(29px * var(--scale)) calc(38px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -99,7 +99,7 @@ ${duoGridCss({ gap: 'calc(30px * var(--scale))', columnMax: 'calc(460px * var(--
 
 /* Each person's name — the panel's heavy voice. */
 .lower-third-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.08;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -109,13 +109,13 @@ ${duoGridCss({ gap: 'calc(30px * var(--scale))', columnMax: 'calc(460px * var(--
 /* Each person's role — the house label voice: mono caps, tracked, in the accent color. */
 .lower-third-title {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the quietest voice on the strap */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   line-height: 1.3;                 /* room if the role wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* label voice, whatever the operator types */
   color: var(--label-color);        /* the family's label color */
-  margin-top: calc(12px * var(--scale));  /* the role is its own beat below the name */
+  margin-top: calc(13px * var(--scale));  /* the role is its own beat below the name */
 }`,
       hasAccent: true,
     };

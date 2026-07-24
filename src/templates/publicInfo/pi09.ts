@@ -58,10 +58,10 @@ ${piMasks(o, [[4, 'public-info-source']])}
 .public-info-box {
   display: flex;                   /* the language block, then the attribution */
   flex-direction: column;          /* stacked */
-  gap: calc(18px * var(--scale));  /* air above the attribution */
+  gap: calc(23px * var(--scale));  /* air above the attribution */
   width: calc(1120px * var(--scale));  /* one column of prose, comfortably wide */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
-  padding: calc(28px * var(--scale)) calc(34px * var(--scale));
+  padding: calc(35px * var(--scale)) calc(43px * var(--scale));
   border-left: var(--accent-weight) solid var(--accent);  /* the official mark, on the reading edge */
   background: var(--panel-bg);     /* near-black — never pure #000 */
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
@@ -73,7 +73,7 @@ ${PI_LANG_STACK_CSS}
 /* The heading — one per language. */
 .public-info-kicker {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* small: it labels, it does not shout */
   font-weight: 700;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a category stamp */
@@ -82,7 +82,7 @@ ${PI_LANG_STACK_CSS}
 
 /* The notice — identical treatment in both languages. */
 .public-info-body {
-  font-size: calc(28px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
+  font-size: calc(35px * var(--scale) * var(--type-scale)); /* comfortable at a distance */
   font-weight: 400;                /* regular — prose, not a headline */
   line-height: 1.34;               /* generous: this line will wrap */
   color: var(--text-color);        /* primary text color — in BOTH languages */
@@ -91,14 +91,14 @@ ${PI_LANG_STACK_CSS}
 /* The hairline above the shared attribution, drawn on the MASK — a span is inline-block, so
    a rule on it would only be as wide as the words. */
 .public-info-box > .public-info-mask:last-child {
-  padding-top: calc(16px * var(--scale)); /* room under the rule */
+  padding-top: calc(20px * var(--scale)); /* room under the rule */
   border-top: 1px solid rgba(255, 255, 255, 0.12); /* divides notice from attribution */
 }
 
 /* The issuing body — one attribution for both languages. */
 .public-info-source {
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the panel */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

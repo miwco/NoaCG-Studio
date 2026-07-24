@@ -56,8 +56,8 @@ ${bugLineMasks(o, '        ')}
 .corner-bug-box {
   display: flex;                   /* the mark and the text sit side by side */
   align-items: center;             /* both centred on the lockup's axis */
-  gap: calc(14px * var(--scale));  /* air between the mark and the text */
-  padding: calc(12px * var(--scale)) calc(18px * var(--scale));  /* even air inside the slab */
+  gap: calc(18px * var(--scale));  /* air between the mark and the text */
+  padding: calc(15px * var(--scale)) calc(23px * var(--scale));  /* even air inside the slab */
   background: var(--panel-bg);     /* the solid slab */
   border-bottom: var(--accent-weight) solid var(--accent);  /* the one accent moment */
   border-radius: var(--panel-radius);  /* sport is square-cornered */
@@ -80,7 +80,7 @@ ${bugSlotCss({ width: 48, height: 48, mark: 'slab', radius: '0' })}
 
 /* The fixture (f0) — heavy condensed caps, the sport voice at bug scale. */
 .corner-bug-name {
-  font-size: calc(21px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
+  font-size: calc(26px * var(--scale) * var(--type-scale));   /* compact — a mark, not a title */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1;                  /* condensed caps need no leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -91,8 +91,8 @@ ${bugSlotCss({ width: 48, height: 48, mark: 'slab', radius: '0' })}
 /* The detail (f1) — the round, stage or venue, as a tracked caps line. */
 .corner-bug-title,
 .corner-bug-extra {
-  margin-top: calc(5px * var(--scale));  /* the two lines read as one lockup */
-  font-size: calc(11px * var(--scale) * var(--type-scale));   /* clearly subordinate */
+  margin-top: calc(6px * var(--scale));  /* the two lines read as one lockup */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* clearly subordinate */
   font-weight: 500;                /* medium keeps tracked caps crisp */
   line-height: 1.25;               /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* sport opens its labels up */

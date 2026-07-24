@@ -61,7 +61,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
   display: flex;                   /* label left, viewport filling, cap right */
   align-items: stretch;            /* the caps span the full rail height */
   width: calc(1660px * var(--scale));  /* near full-width, inside the safe areas */
-  height: calc(84px * var(--scale));   /* the rail's fixed height */
+  height: calc(105px * var(--scale));   /* the rail's fixed height */
   background: var(--panel-bg);     /* flat near-black slab */
   border-radius: var(--panel-radius);  /* the family's radius — square */
   box-shadow: var(--panel-shadow); /* the family's hard offset */
@@ -73,11 +73,11 @@ export const tk13: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the label text inside the block */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(34px * var(--scale));  /* the lean eats horizontal room — give it back */
-  margin-right: calc(8px * var(--scale)); /* the lean must not touch the first fixture */
+  padding: 0 calc(43px * var(--scale));  /* the lean eats horizontal room — give it back */
+  margin-right: calc(10px * var(--scale)); /* the lean must not touch the first fixture */
   background: var(--accent);       /* the one solid accent surface */
   transform: skewX(-9deg);         /* the family's lean */
-  font-size: calc(20px * var(--scale) * var(--type-scale)); /* kicker scale */
+  font-size: calc(25px * var(--scale) * var(--type-scale)); /* kicker scale */
   font-weight: 700;                /* bold so the caps carry */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a tag, whatever the operator types */
@@ -100,7 +100,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
   display: inline-flex;            /* fixtures in a single row, width = content */
   align-items: center;             /* fixtures share a baseline zone */
   white-space: nowrap;             /* never wrap — the track is one continuous line */
-  padding-left: calc(30px * var(--scale)); /* air between the label and the first fixture */
+  padding-left: calc(38px * var(--scale)); /* air between the label and the first fixture */
   will-change: transform;          /* the marquee animates x every frame */
 }
 
@@ -108,9 +108,9 @@ export const tk13: TemplateVariant = defineTickerVariant(
 .ticker-item {
   display: inline-flex;            /* the score chip sits inline with the names */
   align-items: center;             /* names and chip share a centreline */
-  gap: calc(14px * var(--scale));  /* air around the score chip */
-  margin-right: calc(46px * var(--scale)); /* generous air between fixtures */
-  font-size: calc(24px * var(--scale) * var(--type-scale)); /* the rail's main voice */
+  gap: calc(18px * var(--scale));  /* air around the score chip */
+  margin-right: calc(58px * var(--scale)); /* generous air between fixtures */
+  font-size: calc(30px * var(--scale) * var(--type-scale)); /* the rail's main voice */
   font-weight: var(--display-weight);  /* the family's heavy weight */
   letter-spacing: var(--display-tracking); /* condensed caps sit close */
   text-transform: uppercase;       /* the family shouts in caps */
@@ -120,7 +120,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
 /* The score, lifted out of the fixture and boxed. This is the thing being scanned for, so it
    gets the contrast, the tabular figures and the only fill on the item. */
 .ticker-score {
-  padding: calc(3px * var(--scale)) calc(12px * var(--scale));
+  padding: calc(4px * var(--scale)) calc(15px * var(--scale));
   background: rgba(255, 255, 255, 0.14); /* a lifted surface, not a second accent */
   font-variant-numeric: tabular-nums;   /* every digit same width — the column scans straight */
   color: var(--text-color);        /* full contrast: this is the fact people came for */
@@ -131,9 +131,9 @@ export const tk13: TemplateVariant = defineTickerVariant(
   display: flex;                   /* center the text inside the cap */
   align-items: center;             /* vertical centering */
   flex-shrink: 0;                  /* never squeezed by the scrolling viewport */
-  padding: 0 calc(26px * var(--scale));  /* mirrors the label block's breathing room */
+  padding: 0 calc(33px * var(--scale));  /* mirrors the label block's breathing room */
   border-left: 1px solid rgba(255, 255, 255, 0.16); /* the keyline that ends the crawl */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* the quietest voice on the rail */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice on the rail */
   font-weight: 600;                /* small caps need weight to hold */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as a stamp */

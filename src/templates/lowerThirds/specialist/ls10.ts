@@ -90,8 +90,8 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The crest panel — a solid accent block, square-ish whatever the text does. */
 .lower-third-accent {
-  flex: 0 0 calc(112px * var(--scale));   /* fixed width; long names never squeeze the badge */
-  min-height: calc(112px * var(--scale)); /* stays roughly square even with one short line */
+  flex: 0 0 calc(124px * var(--scale));   /* fixed width; long names never squeeze the badge */
+  min-height: calc(124px * var(--scale)); /* stays roughly square even with one short line */
   display: flex;                    /* centre the crest inside the panel */
   align-items: center;              /* …vertically */
   justify-content: center;          /* …horizontally */
@@ -103,7 +103,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   width: 100%;                      /* fill the panel width… */
   height: 100%;                     /* …and its height… */
   object-fit: contain;              /* …without distorting the artwork */
-  padding: calc(16px * var(--scale));  /* breathing room, so a square crest isn't edge to edge */
+  padding: calc(18px * var(--scale));  /* breathing room, so a square crest isn't edge to edge */
 }
 
 /* The text stack, centred against the crest. */
@@ -112,14 +112,14 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
   flex-direction: column;           /* top to bottom */
   justify-content: center;          /* vertically centred against the crest panel */
   min-width: 0;                     /* let it shrink so long names wrap instead of overflowing */
-  max-width: calc(600px * var(--scale));  /* the wrap point for a very long player name */
+  max-width: calc(667px * var(--scale));  /* the wrap point for a very long player name */
   gap: calc(4px * var(--scale));    /* the three lines read as one block */
-  padding: calc(16px * var(--scale)) calc(32px * var(--scale)) calc(18px * var(--scale)) calc(28px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(36px * var(--scale)) calc(20px * var(--scale)) calc(31px * var(--scale));
 }
 
 /* The player name — the strap's headline. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(51px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   line-height: 1.02;                /* condensed caps sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;        /* matchday voice */
@@ -129,7 +129,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 /* The position — the middle voice, and the one that carries the accent colour: on a strap
    led by a club badge, the accent belongs to the player's role, not to another surface. */
 .lower-third-title {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* clearly below the name */
   line-height: 1.2;                 /* single tight row */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* keeps the stack uniform */
@@ -138,7 +138,7 @@ ${slot(o, 2, 'lower-third-extra', '        ')}
 
 /* The club — the quietest line: the crest has already said it, so this only confirms it. */
 .lower-third-extra {
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the stack */
   line-height: 1.2;                 /* same rhythm as the position */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* keeps the stack uniform */

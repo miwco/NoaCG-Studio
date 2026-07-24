@@ -72,27 +72,27 @@ ${slots.map((s) => bugSlotHtml(s, 'slab', '        ')).join('\n')}
   display: flex;                   /* centre the kicker inside the chip */
   align-items: center;             /* vertically… */
   justify-content: center;         /* …and horizontally */
-  padding: calc(12px * var(--scale)) calc(18px * var(--scale));  /* air around the words */
+  padding: calc(15px * var(--scale)) calc(22px * var(--scale));  /* air around the words */
   background: var(--accent);       /* the one accent moment */
 }
 
 /* The kicker (f0) — heavy tracked caps in the chip's dark ink. */
 .corner-bug-name {
-  font-size: calc(13px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: var(--display-weight);  /* the family's heavy display weight */
   line-height: 1.15;               /* condensed caps need almost no leading */
   letter-spacing: var(--label-tracking);  /* sport opens its labels up */
   text-transform: uppercase;       /* sport shouts in caps */
   color: var(--accent-ink);        /* dark-on-accent, the family's chip ink */
-  max-width: calc(150px * var(--scale));  /* a long kicker wraps rather than stretching the chip */
+  max-width: calc(185px * var(--scale));  /* a long kicker wraps rather than stretching the chip */
 }
 
 /* The row — the three sponsor marks on the slab, evenly spaced. */
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(26px * var(--scale));  /* generous air — partner marks must not read as one logo */
-  padding: calc(12px * var(--scale)) calc(24px * var(--scale));  /* air inside the slab */
+  gap: calc(32px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  padding: calc(15px * var(--scale)) calc(30px * var(--scale));  /* air inside the slab */
 }
 
 ${bugSlotCss({ width: 88, height: 38, mark: 'slab', radius: '0' })}

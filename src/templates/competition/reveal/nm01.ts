@@ -61,7 +61,7 @@ ${revealStructureCss()}
 
 /* The accent — an amber rule under the category, glowing. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: center;
@@ -70,7 +70,7 @@ ${revealStructureCss()}
 /* The kicker — mono, wide-tracked: the house label voice. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(20px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -79,7 +79,7 @@ ${revealStructureCss()}
 
 /* The category. */
 .${P}-title {
-  font-size: calc(46px * var(--scale) * var(--type-scale));
+  font-size: calc(58px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   letter-spacing: var(--display-tracking);
@@ -88,13 +88,13 @@ ${revealStructureCss()}
 
 /* One nominee. */
 .${P}-nominee {
-  padding: calc(10px * var(--scale)) calc(24px * var(--scale));
-  border-radius: calc(6px * var(--scale));
+  padding: calc(13px * var(--scale)) calc(30px * var(--scale));
+  border-radius: calc(8px * var(--scale));
   background: rgba(10, 12, 16, 0.5);
 }
 
 .${P}-nominee-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));
+  font-size: calc(48px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1.08;
   color: var(--text-color);
@@ -102,7 +102,7 @@ ${revealStructureCss()}
 
 .${P}-nominee-detail {
   font-family: var(--font-label);
-  font-size: calc(14px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;

@@ -82,9 +82,9 @@ ${maskLines([
 .info-card-box {
   display: flex;                    /* photo and copy sit side by side */
   align-items: center;              /* the shot centres against the text block */
-  gap: calc(28px * var(--scale));   /* the seam between the shot and the copy */
+  gap: calc(31px * var(--scale));   /* the seam between the shot and the copy */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(26px * var(--scale)) calc(40px * var(--scale)) calc(26px * var(--scale)) calc(26px * var(--scale));
+  padding: calc(29px * var(--scale)) calc(44px * var(--scale)) calc(29px * var(--scale)) calc(29px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -95,8 +95,8 @@ ${maskLines([
 .info-card-shot {
   position: relative;               /* the empty-slot mark is placed against this box */
   flex: none;                       /* never squeezed by a long product name */
-  width: calc(132px * var(--scale));   /* product shot width */
-  height: calc(132px * var(--scale));  /* …and height — a square crop */
+  width: calc(147px * var(--scale));   /* product shot width */
+  height: calc(147px * var(--scale));  /* …and height — a square crop */
   border-radius: var(--panel-radius);  /* the family's corner treatment */
   overflow: hidden;                 /* the photo is clipped to the rounded square */
 }
@@ -129,7 +129,7 @@ ${maskLines([
 
 /* The product name — the confident display line. */
 .info-card-product {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(42px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.12;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
@@ -141,13 +141,13 @@ ${maskLines([
   display: flex;                    /* price, was-price and chip in a row */
   flex-wrap: wrap;                  /* a long price + chip wraps instead of overflowing */
   align-items: baseline;            /* all three sit on the same text baseline */
-  gap: calc(16px * var(--scale));   /* clear air between three different figures */
-  margin-top: calc(12px * var(--scale));  /* name → price: one clear break */
+  gap: calc(18px * var(--scale));   /* clear air between three different figures */
+  margin-top: calc(13px * var(--scale));  /* name → price: one clear break */
 }
 
 /* The current price — the graphic's single loudest value. */
 .info-card-price {
-  font-size: calc(52px * var(--scale) * var(--type-scale));  /* the number people are here for */
+  font-size: calc(58px * var(--scale) * var(--type-scale));  /* the number people are here for */
   font-weight: 700;                 /* heavy — it outranks the product name on purpose */
   line-height: 1;                   /* no dead leading around the figure */
   letter-spacing: -0.01em;          /* very large glyphs tighten */
@@ -157,7 +157,7 @@ ${maskLines([
 
 /* The previous price — struck through and dimmed: context, not an offer. */
 .info-card-was {
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* clearly subordinate to the price */
+  font-size: calc(29px * var(--scale) * var(--type-scale));  /* clearly subordinate to the price */
   font-weight: 400;                 /* regular — contrast through weight, not more fonts */
   font-variant-numeric: tabular-nums;  /* equal-width digits beside the price */
   text-decoration: line-through;    /* the broadcast shorthand for "was" */
@@ -168,10 +168,10 @@ ${maskLines([
 /* The savings chip — a small solid badge. Empty field = no chip at all (:empty),
    so an operator who has nothing to claim simply leaves it blank. */
 .info-card-chip {
-  padding: calc(5px * var(--scale)) calc(12px * var(--scale));  /* a compact badge */
+  padding: calc(6px * var(--scale)) calc(13px * var(--scale));  /* a compact badge */
   border-radius: calc(4px * var(--scale));  /* a chip, not a pill */
   background: var(--accent);        /* solid accent — the loudest small surface */
-  font-size: calc(18px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                 /* bold keeps small caps legible over video */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* reads as a badge, whatever the operator types */
@@ -184,10 +184,10 @@ ${maskLines([
 
 /* The benefit line — quiet on purpose: the reason to buy, not the offer. */
 .info-card-detail {
-  font-size: calc(21px * var(--scale) * var(--type-scale));  /* body scale under the price row */
+  font-size: calc(23px * var(--scale) * var(--type-scale));  /* body scale under the price row */
   font-weight: 400;                 /* regular weight */
   line-height: 1.35;                /* body text gets room to breathe */
-  margin-top: calc(14px * var(--scale));  /* price row → detail: a real break */
+  margin-top: calc(16px * var(--scale));  /* price row → detail: a real break */
   color: var(--text-dim);           /* dimmed — the third voice in the card */
 }`,
     hasAccent: true,

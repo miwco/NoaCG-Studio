@@ -79,9 +79,9 @@ ${Array.from(
 .info-card-box {
   display: flex;                    /* the label and the row sit side by side */
   align-items: center;              /* the label centres against the logos */
-  gap: calc(28px * var(--scale));   /* the seam between the label and the first partner */
+  gap: calc(33px * var(--scale));   /* the seam between the label and the first partner */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(16px * var(--scale)) calc(32px * var(--scale)) calc(16px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(19px * var(--scale)) calc(38px * var(--scale)) calc(19px * var(--scale)) calc(28px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -91,9 +91,9 @@ ${Array.from(
 /* The label — the house mono caps line. It wraps to two short rows rather than pushing
    the partner row off the panel. */
 .info-card-sponsor-label {
-  max-width: calc(180px * var(--scale));  /* two short caps rows at most */
+  max-width: calc(212px * var(--scale));  /* two short caps rows at most */
   font-family: var(--font-label);   /* the house label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                 /* bold keeps small caps legible over video */
   line-height: 1.25;                /* wrapped label rows stay readable */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -111,9 +111,9 @@ ${Array.from(
    neighbours — the panel's one internal rule. */
 .info-card-slot {
   position: relative;               /* the reserved mark is placed against this box */
-  width: calc(150px * var(--scale));   /* the slot's booked width */
-  height: calc(62px * var(--scale));   /* …and its height */
-  padding: 0 calc(18px * var(--scale));  /* air so two neighbouring marks never touch */
+  width: calc(176px * var(--scale));   /* the slot's booked width */
+  height: calc(73px * var(--scale));   /* …and its height */
+  padding: 0 calc(21px * var(--scale));  /* air so two neighbouring marks never touch */
 }
 .info-card-slot + .info-card-slot {
   border-left: 1px solid rgba(255, 255, 255, 0.12);  /* a keyline between partners */
@@ -124,9 +124,9 @@ ${Array.from(
 .info-card-slot::after {
   content: '';                      /* a pure decoration, no text */
   position: absolute;               /* inside the slot's padding */
-  inset: calc(6px * var(--scale)) calc(18px * var(--scale));  /* the space a logo will occupy */
+  inset: calc(7px * var(--scale)) calc(21px * var(--scale));  /* the space a logo will occupy */
   border: 1px dashed rgba(255, 255, 255, 0.22);  /* faint: booked, not filled */
-  border-radius: calc(4px * var(--scale));  /* a soft reserve, not a hard frame */
+  border-radius: calc(5px * var(--scale));  /* a soft reserve, not a hard frame */
 }
 .info-card-slot.has-image::after {
   content: none;                    /* a real partner mark needs no reserve */

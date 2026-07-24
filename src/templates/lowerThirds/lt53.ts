@@ -93,9 +93,9 @@ ${lineMasks(o, '        ')}
 .lower-third-box {
   display: flex;                    /* well and words sit side by side */
   align-items: center;              /* …vertically centred against each other */
-  gap: calc(24px * var(--scale));   /* the gap between the well and the words */
+  gap: calc(28px * var(--scale));   /* the gap between the well and the words */
   margin-left: var(--accent-weight);  /* starts where the accent bar ends */
-  padding: calc(20px * var(--scale)) calc(52px * var(--scale)) calc(22px * var(--scale)) calc(24px * var(--scale));
+  padding: calc(24px * var(--scale)) calc(61px * var(--scale)) calc(26px * var(--scale)) calc(28px * var(--scale));
   background: var(--panel-bg);      /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -108,12 +108,12 @@ ${
    Zero radius: the house family puts no rounding on its surfaces. */
 .lower-third-well {
   flex: none;                       /* fixed size; long names never squeeze it */
-  width: calc(82px * var(--scale));   /* well width */
-  height: calc(82px * var(--scale));  /* …square */
+  width: calc(96px * var(--scale));   /* well width */
+  height: calc(96px * var(--scale));  /* …square */
   display: flex;                    /* centre the mark inside */
   align-items: center;              /* …vertically */
   justify-content: center;          /* …horizontally */
-  padding: calc(11px * var(--scale));  /* breathing room around the mark */
+  padding: calc(13px * var(--scale));  /* breathing room around the mark */
   background: color-mix(in srgb, var(--text-color) 8%, transparent);  /* the well's lift */
 }
 
@@ -134,7 +134,7 @@ ${
 
 /* Name (f0) — the block's one heavy element. */
 .lower-third-name {
-  font-size: calc(42px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(49px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -143,16 +143,16 @@ ${
 
 /* Role (f1) — the second reading voice. */
 .lower-third-title {
-  font-size: calc(22px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(26px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular — hierarchy comes from the name's weight */
   line-height: 1.25;                /* room if the role wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(4px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Organisation (f2) — still a reading line, one step quieter than the role. */
 .lower-third-extra {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* below the role, above the status line */
+  font-size: calc(22px * var(--scale) * var(--type-scale));  /* below the role, above the status line */
   font-weight: 400;                 /* regular weight — this line is not a label */
   line-height: 1.25;                /* room if the organisation wraps */
   color: var(--text-dim);           /* dimmed — never pure white twice */
@@ -163,12 +163,12 @@ ${
    by POSITION, so field renumbering can never break it. */
 .lower-third-text .lower-third-mask:nth-child(4) .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* the smallest voice in the block */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the block */
   font-weight: 500;                 /* medium keeps tracked caps crisp */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* LIVE · HELSINKI, whatever the operator types */
   color: var(--label-color);        /* the family's label colour (the accent) */
-  margin-top: calc(12px * var(--scale));  /* separated — the status line is its own beat */
+  margin-top: calc(14px * var(--scale));  /* separated — the status line is its own beat */
 }`,
       hasAccent: true,
     };

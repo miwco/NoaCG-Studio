@@ -44,7 +44,7 @@ ${lineMasks(o, '      ')}
   flex-direction: column;          /* one above the other */
   align-items: center;             /* the symmetric composition this design is built on */
   text-align: center;              /* …and wrapped rows centre too */
-  padding: calc(18px * var(--scale)) calc(40px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(19px * var(--scale)) calc(42px * var(--scale)) calc(21px * var(--scale));
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -54,9 +54,9 @@ ${lineMasks(o, '      ')}
 
 /* The accent rule — a short mark opening the chip, with the family's rounded ends. */
 .lower-third-accent {
-  width: calc(46px * var(--scale));  /* a short centred mark */
+  width: calc(48px * var(--scale));  /* a short centred mark */
   height: var(--accent-weight);    /* the family's accent weight */
-  margin-bottom: calc(14px * var(--scale));  /* air between the mark and the name */
+  margin-bottom: calc(15px * var(--scale));  /* air between the mark and the name */
   border-radius: var(--accent-weight);  /* rounded ends — glass geometry, never a hard slab */
   background: var(--accent);       /* the one accent surface in the design */
   will-change: transform;          /* hint the browser: presets draw this mark in */
@@ -64,7 +64,7 @@ ${lineMasks(o, '      ')}
 
 /* The name — the line the viewer reads first. */
 .lower-third-name {
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the glass families run heavier weights */
   line-height: 1.1;                /* tight — big text needs little leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -73,7 +73,7 @@ ${lineMasks(o, '      ')}
 
 /* The role — a dimmed supporting line under the name. */
 .lower-third-title {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 500;                /* medium — quiet next to the name */
   line-height: 1.25;               /* a touch of air at small sizes */
   color: var(--text-dim);          /* dimmed — never pure white twice */

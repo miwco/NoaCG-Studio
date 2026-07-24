@@ -51,19 +51,19 @@ ${mapStructureCss()}
 .${P}-box {
   display: flex;                   /* head above the map list */
   flex-direction: column;          /* stacked */
-  gap: calc(14px * var(--scale));
-  padding: calc(18px * var(--scale)) calc(22px * var(--scale)) calc(20px * var(--scale));
+  gap: calc(18px * var(--scale));
+  padding: calc(23px * var(--scale)) calc(28px * var(--scale)) calc(25px * var(--scale));
   background: var(--panel-bg);
   backdrop-filter: var(--panel-blur);
   -webkit-backdrop-filter: var(--panel-blur);
   box-shadow: var(--panel-shadow);
-  border-top: calc(2px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
-  min-width: calc(360px * var(--scale));
+  border-top: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  min-width: calc(450px * var(--scale));
 }
 
 /* The accent rule between the title and the maps, wearing the house glow. */
 .${P}-accent {
-  height: calc(2px * var(--scale));
+  height: calc(3px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
   transform-origin: left center;
@@ -71,7 +71,7 @@ ${mapStructureCss()}
 
 /* The series title — house display type. */
 .${P}-title {
-  font-size: calc(21px * var(--scale) * var(--type-scale));
+  font-size: calc(26px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   letter-spacing: var(--display-tracking);
   color: var(--text-color);
@@ -80,16 +80,16 @@ ${mapStructureCss()}
 /* One map row — a denser void tile with room for the cursor. */
 .${P}-row {
   position: relative;
-  padding: calc(8px * var(--scale)) calc(12px * var(--scale)) calc(8px * var(--scale)) calc(16px * var(--scale));
-  border-radius: calc(6px * var(--scale));  /* the house chip radius */
+  padding: calc(10px * var(--scale)) calc(15px * var(--scale)) calc(10px * var(--scale)) calc(20px * var(--scale));
+  border-radius: calc(8px * var(--scale));  /* the house chip radius */
   background: rgba(10, 12, 16, 0.55);
 }
 
 /* The map number — mono, wide-tracked, dim: the house label voice. */
 .${P}-row-index {
-  min-width: calc(22px * var(--scale));
+  min-width: calc(28px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   color: var(--text-dim);
@@ -98,16 +98,16 @@ ${mapStructureCss()}
 
 /* The map name. */
 .${P}-row-map {
-  font-size: calc(18px * var(--scale) * var(--type-scale));
+  font-size: calc(23px * var(--scale) * var(--type-scale));
   font-weight: 600;
   color: var(--text-color);
 }
 
 /* The mark — the short name of the side that took the map, in mono. */
 .${P}-row-mark {
-  min-width: calc(56px * var(--scale));
+  min-width: calc(70px * var(--scale));
   font-family: var(--font-label);
-  font-size: calc(13px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 500;
   letter-spacing: var(--label-tracking);
   color: var(--accent);
@@ -141,8 +141,8 @@ ${mapStructureCss()}
   left: 0;
   top: 0;
   bottom: 0;
-  width: calc(4px * var(--scale));
-  border-radius: calc(6px * var(--scale)) 0 0 calc(6px * var(--scale));
+  width: calc(5px * var(--scale));
+  border-radius: calc(8px * var(--scale)) 0 0 calc(8px * var(--scale));
   background: var(--accent);
   box-shadow: var(--accent-glow);
 }

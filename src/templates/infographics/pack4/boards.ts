@@ -112,7 +112,7 @@ export function buildFactsBoard(skin: Pack4Skin, o: ResolvedOptions): IgDesign {
       'facts',
     ),
 
-    css: `${boardChrome(skin, pad, skin.id === 'volt' ? 22 : 19, 560)}
+    css: `${boardChrome(skin, pad, skin.id === 'volt' ? 22 : 20, 560)}
 
 /* One fact: the term above, then what it means. Stacked rather than side by side, because an
    explanation is a sentence and a two-column row would squeeze it into a gutter. */
@@ -129,7 +129,7 @@ ${decl('border-top', '1px solid rgba(255, 255, 255, 0.12)', 'a keyline hairline 
 .${P}-fact-term {
 ${decl('display', 'block', 'its own row above the explanation')}
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(17), 'small: the term labels the fact, it is not the fact')}
+${decl('font-size', typeSize(20), 'small: the term labels the fact, it is not the fact')}
 ${decl('font-weight', '700', 'bold keeps small caps legible')}
 ${decl('line-height', '1.25', 'one tight label line')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}
@@ -177,7 +177,7 @@ export function buildRecapBoard(skin: Pack4Skin, o: ResolvedOptions): IgDesign {
       'action items',
     ),
 
-    css: `${boardChrome(skin, pad, skin.id === 'volt' ? 22 : 19, 620)}
+    css: `${boardChrome(skin, pad, skin.id === 'volt' ? 22 : 20, 620)}
 
 /* One action item: the owner's chip and the action on one line, sharing a baseline. */
 .${P}-row {
@@ -199,7 +199,7 @@ ${decl('border-top', '1px solid rgba(255, 255, 255, 0.12)', 'a keyline hairline 
 ${decl('flex', '0 0 auto', 'the owner column never stretches')}
 ${decl('min-width', px(150), 'one shared column width — the actions align vertically')}
 ${decl('font-family', 'var(--font-label)', "the family's label face")}
-${decl('font-size', typeSize(18), 'small: a name, not the item')}
+${decl('font-size', typeSize(20), 'small: a name, not the item')}
 ${decl('font-weight', '700', 'bold keeps small caps legible')}
 ${decl('line-height', '1.3', 'one tight label line')}
 ${decl('letter-spacing', 'var(--label-tracking)', "the family's label tracking")}

@@ -121,7 +121,7 @@ export const fr03: TemplateVariant = defineFrameVariant(
 
 /* The name — heavy condensed caps: the split screen's one loud voice per side. */
 .frame-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
+  font-size: calc(47px * var(--scale) * var(--type-scale));  /* nameplate size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight — heavy condensed */
   line-height: 1.02;               /* condensed caps sit tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -131,7 +131,7 @@ export const fr03: TemplateVariant = defineFrameVariant(
 
 /* The role — tracked caps under the name, in the family's label colour. */
 .frame-role {
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                /* bold keeps condensed caps legible over video */
   line-height: 1.25;               /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

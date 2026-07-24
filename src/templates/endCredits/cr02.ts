@@ -61,9 +61,9 @@ export const cr02: TemplateVariant = defineCreditsVariant(
    window the track rolls through; the preset measures its clientHeight for the travel. */
 .credits-box {
   width: calc(1100px * var(--scale));      /* the reading column: generous but not full-frame */
-  height: calc(720px * var(--scale));      /* the roll window — travel distance comes from this */
+  height: calc(900px * var(--scale));      /* the roll window — travel distance comes from this */
   overflow: hidden;                /* the track scrolls through, never past, this window */
-  padding: 0 calc(56px * var(--scale));    /* side air only — rows may roll under top/bottom edges */
+  padding: 0 calc(70px * var(--scale));    /* side air only — rows may roll under top/bottom edges */
   border-radius: var(--panel-radius);                            /* the family's panel radius */
   background-color: var(--panel-bg);       /* the retintable glass layer */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
@@ -78,26 +78,26 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 
 /* One section of credits (rebuildCredits wraps each heading+rows group in this). */
 .credits-page {
-  margin-bottom: calc(44px * var(--scale));        /* clear air between sections while rolling */
+  margin-bottom: calc(55px * var(--scale));        /* clear air between sections while rolling */
 }
 
 /* A section heading — spans the full width, centered, led by the accent dot. */
 .credits-heading {
   text-align: center;              /* headings sit on the panel's center axis */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(20px * var(--scale) * var(--type-scale));    /* a label, not a headline — the names lead */
+  font-size: calc(25px * var(--scale) * var(--type-scale));    /* a label, not a headline — the names lead */
   font-weight: 600;                /* semibold keeps small uppercase type crisp (lt10's label) */
   letter-spacing: var(--label-tracking);  /* the heading's authored tracking */
   text-transform: uppercase;       /* label styling, whatever case the operator types */
   color: var(--label-color);        /* the heading's authored color */
-  margin-bottom: calc(18px * var(--scale));        /* air before the section's first credit row */
+  margin-bottom: calc(23px * var(--scale));        /* air before the section's first credit row */
 }
 
 /* The accent dot — lt10's motif, the design's single sharp dose of brand color. */
 .credits-dot {
   display: inline-block;           /* rides inline before the heading text */
-  width: calc(8px * var(--scale));         /* small on purpose: a signal, not a shape */
-  height: calc(8px * var(--scale));        /* same as width — a circle needs a square */
+  width: calc(10px * var(--scale));         /* small on purpose: a signal, not a shape */
+  height: calc(10px * var(--scale));        /* same as width — a circle needs a square */
   border-radius: 50%;              /* turn the square into a perfect circle */
   background: var(--accent);       /* the one accent color */
   vertical-align: middle;          /* optically centers on the heading's cap height */
@@ -105,21 +105,21 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 
 /* Inside a heading the dot needs air before the text; in the end block it stands alone. */
 .credits-heading .credits-dot {
-  margin-right: calc(12px * var(--scale)); /* air between the dot and the heading text */
+  margin-right: calc(15px * var(--scale)); /* air between the dot and the heading text */
 }
 
 /* One credit — a two-column grid whose gutter forms the roll's quiet central axis. */
 .credits-row {
   display: grid;                   /* two columns meeting at the middle */
   grid-template-columns: 1fr 1fr;  /* equal halves: roles left, names right */
-  column-gap: calc(48px * var(--scale));   /* the central gutter both columns align to */
-  margin-bottom: calc(14px * var(--scale));        /* steady rhythm between rows */
+  column-gap: calc(60px * var(--scale));   /* the central gutter both columns align to */
+  margin-bottom: calc(18px * var(--scale));        /* steady rhythm between rows */
 }
 
 /* The role — quieter through lighter weight and a dimmed color, pushed to the gutter. */
 .credits-role {
   text-align: right;               /* right-aligned: every role ends at the central axis */
-  font-size: calc(22px * var(--scale) * var(--type-scale));    /* clearly smaller than the name: hierarchy */
+  font-size: calc(28px * var(--scale) * var(--type-scale));    /* clearly smaller than the name: hierarchy */
   font-weight: 400;                /* regular weight steps back */
   line-height: 1.3;                /* smaller text gets more air */
   color: var(--text-dim);          /* dimmed so the name leads (lt10's title treatment) */
@@ -129,7 +129,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 /* The name — the strongest voice in the roll; everything else defers to it. */
 .credits-name {
   text-align: left;                /* left-aligned: every name starts at the central axis */
-  font-size: calc(26px * var(--scale) * var(--type-scale));    /* the biggest running text in the roll */
+  font-size: calc(33px * var(--scale) * var(--type-scale));    /* the biggest running text in the roll */
   font-weight: 600;                /* strong but not shouty — lt10's name weight */
   line-height: 1.3;                /* matches the role so both columns share a baseline */
   color: var(--text-color);        /* primary text color */
@@ -139,9 +139,9 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 /* A plain line inside a section — a name with no role, so no column to align against:
    it centers on the same axis the two-column gutter forms. */
 .credits-entry {
-  padding: calc(5px * var(--scale)) 0;  /* the list rhythm, tighter than a credit row */
+  padding: calc(6px * var(--scale)) 0;  /* the list rhythm, tighter than a credit row */
   text-align: center;              /* centered on the roll's own axis */
-  font-size: calc(26px * var(--scale) * var(--type-scale));  /* sized with the names beside it */
+  font-size: calc(33px * var(--scale) * var(--type-scale));  /* sized with the names beside it */
   font-weight: 600;                /* strong but not shouty — matches .credits-name */
   line-height: 1.3;                /* shares the roll's baseline rhythm */
   color: var(--text-color);        /* primary text color */
@@ -153,27 +153,27 @@ export const cr02: TemplateVariant = defineCreditsVariant(
   display: flex;                   /* a simple vertical stack */
   flex-direction: column;          /* dot above logo above year */
   align-items: center;             /* everything on the panel's center axis */
-  gap: calc(22px * var(--scale));          /* even breathing room between the three pieces */
-  padding: calc(30px * var(--scale)) 0;    /* air around the finale while it holds on screen */
+  gap: calc(28px * var(--scale));          /* even breathing room between the three pieces */
+  padding: calc(38px * var(--scale)) 0;    /* air around the finale while it holds on screen */
 }
 
 /* The imported logo — capped so any drop-in file sits politely above the year. */
 .credits-logo {
-  max-width: calc(280px * var(--scale));   /* never wider than the reading column's heart */
-  max-height: calc(120px * var(--scale));  /* never taller than a clean end-card lockup */
+  max-width: calc(350px * var(--scale));   /* never wider than the reading column's heart */
+  max-height: calc(150px * var(--scale));  /* never taller than a clean end-card lockup */
 }
 
 /* The placeholder shown until a logo is imported — an intentional, softly outlined slot. */
 .credits-logo-slot {
-  width: calc(280px * var(--scale));       /* same footprint the real logo will occupy */
-  height: calc(120px * var(--scale));      /* so the finale's layout doesn't shift on import */
+  width: calc(350px * var(--scale));       /* same footprint the real logo will occupy */
+  height: calc(150px * var(--scale));      /* so the finale's layout doesn't shift on import */
   display: flex;                   /* centers the slot label */
   align-items: center;             /* label centered vertically */
   justify-content: center;         /* label centered horizontally */
   border: calc(1px * var(--scale)) solid rgba(255, 255, 255, 0.18);  /* the glass-family keyline */
-  border-radius: calc(14px * var(--scale));        /* rounded like everything in this family */
+  border-radius: calc(18px * var(--scale));        /* rounded like everything in this family */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));    /* a quiet label, not content */
+  font-size: calc(20px * var(--scale) * var(--type-scale));    /* a quiet label, not content */
   font-weight: 600;                /* semibold keeps the small uppercase label crisp */
   letter-spacing: var(--label-tracking);  /* matches the heading label's tracking */
   text-transform: uppercase;       /* label styling */
@@ -182,7 +182,7 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 
 /* The year / copyright line — the roll's last, quietest word. */
 .credits-year {
-  font-size: calc(20px * var(--scale) * var(--type-scale));    /* small and dignified */
+  font-size: calc(25px * var(--scale) * var(--type-scale));    /* small and dignified */
   font-weight: 400;                /* regular weight — nothing left to compete with */
   color: var(--text-dim);          /* dimmed, like the roles above it */
 }`,
@@ -227,7 +227,7 @@ function renderEndBlock(yearHtml, logoSrc) {
   '</div>';
 }`,
     tokens: {
-      panelShadow: '0 calc(20px * var(--scale)) calc(60px * var(--scale)) rgba(0, 0, 0, 0.35)',
+      panelShadow: '0 calc(25px * var(--scale)) calc(75px * var(--scale)) rgba(0, 0, 0, 0.35)',
       labelTracking: '0.1em',
       labelColor: 'var(--text-color)',
     },

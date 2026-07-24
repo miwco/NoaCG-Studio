@@ -42,10 +42,10 @@ ${lineMasks(o)}
    the strip's top-left. A real element, so the graphic type can address it. */
 .lower-third-accent {
   position: absolute;              /* pinned inside the positioned root */
-  left: calc(20px * var(--scale));    /* sits just inside the panel's left padding */
-  top: calc(18px * var(--scale));     /* aligned with the handle's cap height */
-  width: calc(10px * var(--scale));   /* a small dot… */
-  height: calc(10px * var(--scale));  /* …round */
+  left: calc(25px * var(--scale));    /* sits just inside the panel's left padding */
+  top: calc(23px * var(--scale));     /* aligned with the handle's cap height */
+  width: calc(13px * var(--scale));   /* a small dot… */
+  height: calc(13px * var(--scale));  /* …round */
   border-radius: 50%;              /* the glass dot */
   background: var(--accent);       /* the one accent moment */
   will-change: transform;          /* hint the browser: presets may pop this */
@@ -53,7 +53,7 @@ ${lineMasks(o)}
 
 /* The panel — a compact frosted tile: this is a persistent mark, not a title card. */
 .lower-third-box {
-  padding: calc(14px * var(--scale)) calc(24px * var(--scale)) calc(14px * var(--scale)) calc(38px * var(--scale));
+  padding: calc(18px * var(--scale)) calc(30px * var(--scale)) calc(18px * var(--scale)) calc(48px * var(--scale));
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -63,7 +63,7 @@ ${lineMasks(o)}
 
 /* The handle — the line the viewer is meant to read and remember. */
 .lower-third-name {
-  font-size: calc(28px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
+  font-size: calc(35px * var(--scale) * var(--type-scale));  /* compact — a mark, not a headline */
   font-weight: var(--display-weight);  /* the glass families run heavier weights */
   line-height: 1.1;                /* tight */
   letter-spacing: var(--display-tracking);  /* the handle's authored tracking */
@@ -73,13 +73,13 @@ ${lineMasks(o)}
 /* The platform — a soft caps label under the handle, in the accent color. */
 .lower-third-title,
 .lower-third-extra {
-  font-size: calc(14px * var(--scale) * var(--type-scale));  /* clearly subordinate */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly subordinate */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.3;                /* air if it wraps */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;       /* a platform label, not a sentence */
   color: var(--label-color);       /* glass carries the accent in the label */
-  margin-top: calc(5px * var(--scale));  /* handle + platform read as one unit */
+  margin-top: calc(6px * var(--scale));  /* handle + platform read as one unit */
 }`,
     hasAccent: true,
   }),

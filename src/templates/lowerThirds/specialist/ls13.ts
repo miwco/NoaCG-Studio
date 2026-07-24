@@ -81,19 +81,19 @@ ${personColumn(o, right, classes, '        ')}
 
 /* The casters row. */
 .lower-third-casters {
-  padding: calc(20px * var(--scale)) calc(32px * var(--scale)) calc(20px * var(--scale));
+  padding: calc(21px * var(--scale)) calc(34px * var(--scale)) calc(21px * var(--scale));
 }
 
 ${duoGridCss({
-  gap: 'calc(34px * var(--scale))',
-  columnMax: 'calc(420px * var(--scale))',
+  gap: 'calc(36px * var(--scale))',
+  columnMax: 'calc(442px * var(--scale))',
   divider: true,
   container: '.lower-third-casters',
 })}
 
 /* Each caster's name — identical on both sides: on the desk neither one is the guest. */
 .lower-third-name {
-  font-size: calc(36px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(38px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: 700;                 /* bold — the desk strap can take the room */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -103,7 +103,7 @@ ${duoGridCss({
 
 /* Each caster's handle — the follow line, in the accent so it reads as an address. */
 .lower-third-title {
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* clearly below the name */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* clearly below the name */
   font-weight: 600;                 /* semibold keeps a small handle legible */
   line-height: 1.25;                /* room if a long handle wraps */
   letter-spacing: 0.02em;           /* handles are read character by character — a little air helps */

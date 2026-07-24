@@ -45,17 +45,17 @@ ${piMasks(o, [[0, 'public-info-source-main'], [1, 'public-info-source-note']])}
 .public-info-box {
   display: flex;                   /* stack the two lines */
   flex-direction: column;          /* source, then qualifier */
-  gap: calc(2px * var(--scale));   /* the qualifier belongs to the line above it */
-  max-width: calc(620px * var(--scale)); /* long attributions wrap rather than run off */
-  padding: calc(10px * var(--scale)) calc(14px * var(--scale));
-  border-left: calc(2px * var(--scale)) solid var(--accent); /* a hairline mark on the reading edge */
+  gap: calc(3px * var(--scale));   /* the qualifier belongs to the line above it */
+  max-width: calc(775px * var(--scale)); /* long attributions wrap rather than run off */
+  padding: calc(13px * var(--scale)) calc(18px * var(--scale));
+  border-left: calc(3px * var(--scale)) solid var(--accent); /* a hairline mark on the reading edge */
   background: rgba(10, 12, 16, 0.62); /* a scrim, deliberately lighter than the pack's panels */
   text-align: left;                /* an attribution reads left to right, whatever the zone */
 }
 
 /* The source — the fact that has to survive a re-encode and a small screen. */
 .public-info-source-main {
-  font-size: calc(19px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
+  font-size: calc(24px * var(--scale) * var(--type-scale)); /* the floor for legible on-air text */
   font-weight: 600;                /* weight, not size, is what keeps small text readable */
   line-height: 1.25;               /* comfortable across a wrap */
   color: var(--text-color);        /* primary text color */
@@ -63,7 +63,7 @@ ${piMasks(o, [[0, 'public-info-source-main'], [1, 'public-info-source-note']])}
 
 /* The qualifier — the caveat a careful broadcaster adds and a careless one drops. */
 .public-info-source-note {
-  font-size: calc(15px * var(--scale) * var(--type-scale)); /* quieter, but not decorative */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* quieter, but not decorative */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.3;                /* comfortable across a wrap */
   color: var(--text-dim);          /* secondary text color */

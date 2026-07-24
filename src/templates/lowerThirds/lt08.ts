@@ -46,7 +46,7 @@ export const lt08: TemplateVariant = defineVariant(
     const boxLogoDecls = o.logoEnabled
       ? `
   position: relative;              /* anchor for the absolutely-placed logo */
-  padding-left: calc(112px * var(--scale));  /* 30 padding + 64 logo + 18 gap */`
+  padding-left: calc(132px * var(--scale));  /* 30 padding + 64 logo + 18 gap */`
       : '';
 
     const logoCss = o.logoEnabled
@@ -55,12 +55,12 @@ export const lt08: TemplateVariant = defineVariant(
 /* The logo: a rounded square, vertically centered against the text block. */
 .lower-third-logo {
   position: absolute;              /* out of flow — the card's left padding reserves its space */
-  left: calc(30px * var(--scale)); /* aligned with the card's horizontal padding */
+  left: calc(35px * var(--scale)); /* aligned with the card's horizontal padding */
   top: 50%;                        /* centered on the card… */
   transform: translateY(-50%);     /* …whatever the number of text lines */
-  width: calc(64px * var(--scale));   /* logo square width */
-  height: calc(64px * var(--scale));  /* logo square height */
-  border-radius: calc(12px * var(--scale));  /* rounded corners echo the card shape */
+  width: calc(75px * var(--scale));   /* logo square width */
+  height: calc(75px * var(--scale));  /* logo square height */
+  border-radius: calc(14px * var(--scale));  /* rounded corners echo the card shape */
   object-fit: cover;               /* fill the square without distorting the image */
 }`
       : '';
@@ -86,7 +86,7 @@ ${logo}${lineMasks(o)}
 
       css: `/* The frosted card — translucent panel, heavy backdrop blur, one soft lifting shadow. */
 .lower-third-box {
-  padding: calc(22px * var(--scale)) calc(30px * var(--scale));  /* generous inner air */${boxLogoDecls}
+  padding: calc(26px * var(--scale)) calc(35px * var(--scale));  /* generous inner air */${boxLogoDecls}
   background: var(--panel-bg);     /* translucent white — the glass tint */
   backdrop-filter: var(--panel-blur);  /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
@@ -96,7 +96,7 @@ ${logo}${lineMasks(o)}
 
 /* Line 1 — the name leads. */
 .lower-third-name {
-  font-size: calc(46px * var(--scale) * var(--type-scale));  /* headline size */
+  font-size: calc(54px * var(--scale) * var(--type-scale));  /* headline size */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.1;                /* tight leading — big text needs less */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -105,8 +105,8 @@ ${logo}${lineMasks(o)}
 
 /* Line 2 — the title/role sits quietly under the name. */
 .lower-third-title {
-  margin-top: calc(6px * var(--scale));  /* small gap: name + title read as one unit */
-  font-size: calc(23px * var(--scale) * var(--type-scale));  /* half the name — clear hierarchy */
+  margin-top: calc(7px * var(--scale));  /* small gap: name + title read as one unit */
+  font-size: calc(27px * var(--scale) * var(--type-scale));  /* half the name — clear hierarchy */
   font-weight: 500;                /* medium — present but not competing */
   line-height: 1.3;                /* roomier leading at reading size */
   color: var(--text-dim);          /* dimmed secondary text */
@@ -114,9 +114,9 @@ ${logo}${lineMasks(o)}
 
 /* Line 3 (optional) — a small-caps kicker, e.g. a handle or a location. */
 .lower-third-extra {
-  margin-top: calc(10px * var(--scale));  /* a touch more air before the kicker */
+  margin-top: calc(12px * var(--scale));  /* a touch more air before the kicker */
   font-family: var(--font-label);  /* the family's label face */
-  font-size: calc(17px * var(--scale) * var(--type-scale));   /* small label size */
+  font-size: calc(20px * var(--scale) * var(--type-scale));   /* small label size */
   font-weight: 600;                /* semibold keeps small caps legible */
   line-height: 1.2;                /* compact single-line label */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */

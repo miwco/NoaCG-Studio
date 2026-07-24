@@ -62,7 +62,7 @@ ${heldResultCss()}
 
 /* The accent — a slab under the kicker. */
 .${P}-accent {
-  height: calc(5px * var(--scale));
+  height: calc(6px * var(--scale));
   background: var(--accent);
   transform-origin: center;
 }
@@ -70,7 +70,7 @@ ${heldResultCss()}
 /* The kicker above the champion. */
 .${P}-kicker {
   font-family: var(--font-label);
-  font-size: calc(22px * var(--scale) * var(--type-scale));
+  font-size: calc(28px * var(--scale) * var(--type-scale));
   font-weight: 700;
   letter-spacing: var(--label-tracking);
   text-transform: uppercase;
@@ -79,7 +79,7 @@ ${heldResultCss()}
 
 /* The champion. */
 .${P}-title {
-  font-size: calc(88px * var(--scale) * var(--type-scale));
+  font-size: calc(110px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   letter-spacing: var(--display-tracking);
@@ -94,7 +94,7 @@ ${heldResultCss()}
 
 /* The score line — the press's payload. */
 .${P}-subject {
-  font-size: calc(56px * var(--scale) * var(--type-scale));
+  font-size: calc(70px * var(--scale) * var(--type-scale));
   font-weight: var(--display-weight);
   line-height: 1;
   color: var(--accent);
@@ -104,7 +104,7 @@ ${heldResultCss()}
 /* The beaten side. */
 .${P}-runner {
   font-family: var(--font-label);
-  font-size: calc(20px * var(--scale) * var(--type-scale));
+  font-size: calc(25px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -114,7 +114,7 @@ ${heldResultCss()}
 /* The event note. */
 .${P}-note {
   font-family: var(--font-label);
-  font-size: calc(15px * var(--scale) * var(--type-scale));
+  font-size: calc(20px * var(--scale) * var(--type-scale));
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -128,7 +128,7 @@ ${heldResultCss()}
 }
 
 .${P}-celebrating .${P}-accent {
-  width: calc(640px * var(--scale));                      /* the slab opens out across the frame */
+  width: calc(800px * var(--scale));                      /* the slab opens out across the frame */
 }`,
   }),
 );

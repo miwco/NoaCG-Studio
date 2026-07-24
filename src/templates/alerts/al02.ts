@@ -57,12 +57,12 @@ ${alertLineMasks(o)}
   display: flex;                   /* flag left, text column filling the rest */
   align-items: stretch;            /* the flag spans the bar's full height */
   width: calc(1680px * var(--scale));  /* near full-width, inside the safe areas */
-  min-height: calc(148px * var(--scale)); /* the bar grows if the headline wraps */
+  min-height: calc(185px * var(--scale)); /* the bar grows if the headline wraps */
   max-width: none;                 /* this design sets its own width, not the auto-fit cap */
   background: var(--panel-bg);     /* void rgba(10,12,16,.86) by default */
   backdrop-filter: var(--panel-blur);      /* the family's backdrop treatment */
   -webkit-backdrop-filter: var(--panel-blur);  /* Safari spelling of the same effect */
-  border-bottom: calc(3px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-bottom: calc(4px * var(--scale)) solid color-mix(in srgb, var(--accent) 50%, transparent);
   box-shadow: var(--panel-shadow); /* the family's lift off the picture */
 }
 
@@ -73,15 +73,15 @@ ${ALERT_LEVEL_CSS}
   display: flex;                   /* stack the lines */
   flex-direction: column;          /* headline, detail, source */
   justify-content: center;         /* centred against the flag's height */
-  gap: calc(7px * var(--scale));   /* tight — the three lines are one statement */
-  padding: calc(22px * var(--scale)) calc(40px * var(--scale)); /* generous house air */
+  gap: calc(9px * var(--scale));   /* tight — the three lines are one statement */
+  padding: calc(28px * var(--scale)) calc(50px * var(--scale)); /* generous house air */
   min-width: 0;                    /* let a long headline wrap instead of stretching the flex row */
   text-align: left;                /* an alert reads from the flag outward, always */
 }
 
 /* The headline — the sentence someone acts on. */
 .alert-name {
-  font-size: calc(42px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
+  font-size: calc(53px * var(--scale) * var(--type-scale)); /* the loudest text in the graphic */
   font-weight: var(--display-weight);  /* the family's heading weight */
   letter-spacing: var(--display-tracking); /* big text tightens */
   line-height: 1.1;                /* wrapped headlines stay one block */
@@ -90,7 +90,7 @@ ${ALERT_LEVEL_CSS}
 
 /* The detail — what, where, and until when. */
 .alert-title {
-  font-size: calc(25px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
+  font-size: calc(31px * var(--scale) * var(--type-scale)); /* clearly subordinate to the headline */
   font-weight: 400;                /* regular — this line is read, not scanned */
   line-height: 1.25;               /* comfortable for a full sentence */
   color: var(--text-dim);          /* secondary text color */
@@ -98,9 +98,9 @@ ${ALERT_LEVEL_CSS}
 
 /* The source — who says so, in the house mono voice. */
 .alert-extra {
-  margin-top: calc(4px * var(--scale)); /* a beat of separation from the detail */
+  margin-top: calc(5px * var(--scale)); /* a beat of separation from the detail */
   font-family: var(--font-label);  /* the house mono label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
+  font-size: calc(20px * var(--scale) * var(--type-scale)); /* the quietest voice in the graphic */
   font-weight: 700;                /* bold mono caps read as a stamp */
   letter-spacing: var(--label-tracking);  /* tracked caps breathe */
   text-transform: uppercase;       /* reads as an attribution stamp */

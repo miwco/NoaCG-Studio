@@ -62,12 +62,12 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
   display: flex;                   /* the three pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: flex-end;           /* all hug the right edge — this one parks bottom-right */
-  gap: calc(9px * var(--scale));   /* even air between the pieces */
+  gap: calc(11px * var(--scale));   /* even air between the pieces */
 }
 
 /* The kicker (f0) — a tiny tracked-caps label, quiet over bright footage. */
 .corner-bug-name {
-  font-size: calc(11px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -78,7 +78,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 
 /* The accent rule — short on purpose: a mark, not a line across the frame. */
 .corner-bug-accent {
-  width: calc(28px * var(--scale));   /* a short stroke */
+  width: calc(35px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
   background: var(--accent);          /* the one accent colour */
 }

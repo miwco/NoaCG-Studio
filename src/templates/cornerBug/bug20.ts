@@ -61,12 +61,12 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
   display: flex;                   /* the three pieces stack… */
   flex-direction: column;          /* …top to bottom */
   align-items: center;             /* everything centred on the strip's axis */
-  gap: calc(10px * var(--scale));  /* even air between the pieces */
+  gap: calc(13px * var(--scale));  /* even air between the pieces */
 }
 
 /* The kicker (f0) — a tiny tracked-caps label, quiet over bright footage. */
 .corner-bug-name {
-  font-size: calc(12px * var(--scale) * var(--type-scale));   /* tiny label size */
+  font-size: calc(16px * var(--scale) * var(--type-scale));   /* tiny label size */
   font-weight: 600;                /* semibold keeps small caps crisp */
   line-height: 1.2;                /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -77,7 +77,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 
 /* The accent rule — short on purpose: a mark, not a line across the frame. */
 .corner-bug-accent {
-  width: calc(34px * var(--scale));   /* a short stroke */
+  width: calc(43px * var(--scale));   /* a short stroke */
   height: var(--accent-weight);       /* the family's hairline weight */
   background: var(--accent);          /* the one accent colour */
 }
@@ -86,7 +86,7 @@ ${slots.map((s) => bugSlotHtml(s, 'keyline', '        ')).join('\n')}
 .corner-bug-row {
   display: flex;                   /* the marks sit side by side */
   align-items: center;             /* all on one baseline */
-  gap: calc(30px * var(--scale));  /* generous air — partner marks must not read as one logo */
+  gap: calc(38px * var(--scale));  /* generous air — partner marks must not read as one logo */
 }
 
 ${bugSlotCss({ width: 92, height: 40, mark: 'keyline' })}

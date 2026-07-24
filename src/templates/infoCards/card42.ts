@@ -75,8 +75,8 @@ ${maskLines([
 .info-card-box {
   display: flex;                    /* photo | copy | value, in one row */
   align-items: center;              /* the three blocks centre against each other */
-  gap: calc(26px * var(--scale));   /* the seams between them */
-  padding: calc(22px * var(--scale)) calc(30px * var(--scale));  /* generous inner air */
+  gap: calc(33px * var(--scale));   /* the seams between them */
+  padding: calc(28px * var(--scale)) calc(38px * var(--scale));  /* generous inner air */
   background: var(--panel-bg);      /* the panel color (retints via the :root contract) */
   border: 1px solid rgba(255, 255, 255, 0.14);  /* hairline keyline lifts the panel off video */
   border-top: var(--accent-weight) solid var(--accent);  /* the family's accent weight, on top */
@@ -87,9 +87,9 @@ ${maskLines([
 .info-card-shot {
   position: relative;               /* the empty-slot mark is placed against this box */
   flex: none;                       /* never squeezed by a long listing title */
-  width: calc(148px * var(--scale));   /* photo width */
-  height: calc(111px * var(--scale));  /* …and height — a 4:3 crop */
-  border-radius: calc(3px * var(--scale));  /* minimal corners: 0-3px, never a pill */
+  width: calc(185px * var(--scale));   /* photo width */
+  height: calc(139px * var(--scale));  /* …and height — a 4:3 crop */
+  border-radius: calc(4px * var(--scale));  /* minimal corners: 0-3px, never a pill */
   overflow: hidden;                 /* the photo is clipped to the rectangle */
 }
 
@@ -122,7 +122,7 @@ ${maskLines([
 
 /* The listing title — the card's display line. */
 .info-card-listing-title {
-  font-size: calc(32px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
+  font-size: calc(40px * var(--scale) * var(--type-scale));  /* card heading size (1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.15;                /* headline leading */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -131,10 +131,10 @@ ${maskLines([
 
 /* The specification line — the facts, dimmed. */
 .info-card-meta {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* body scale under the title */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* body scale under the title */
   font-weight: 400;                 /* regular weight */
   line-height: 1.35;                /* body text gets room to breathe */
-  margin-top: calc(8px * var(--scale));  /* title → meta: one clear break */
+  margin-top: calc(10px * var(--scale));  /* title → meta: one clear break */
   color: var(--text-dim);           /* dimmed — never full white twice */
 }
 
@@ -143,18 +143,18 @@ ${maskLines([
 .info-card-status {
   display: inline-flex;             /* the dot and the text share one baseline row */
   align-items: center;              /* dot centred against the text */
-  gap: calc(8px * var(--scale));    /* a thin seam between the dot and the words */
-  font-size: calc(17px * var(--scale) * var(--type-scale));  /* label scale */
+  gap: calc(10px * var(--scale));    /* a thin seam between the dot and the words */
+  font-size: calc(21px * var(--scale) * var(--type-scale));  /* label scale */
   font-weight: 700;                 /* bold — a status is a signal */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* reads as a status, whatever the operator types */
-  margin-top: calc(10px * var(--scale));  /* meta → status: a small break */
+  margin-top: calc(13px * var(--scale));  /* meta → status: a small break */
   color: var(--accent);             /* the accent's second, small appearance */
 }
 .info-card-status::before {
   content: '';                      /* the dot — decoration, so it never becomes text */
-  width: calc(8px * var(--scale));  /* a small round marker… */
-  height: calc(8px * var(--scale));  /* …a true circle */
+  width: calc(10px * var(--scale));  /* a small round marker… */
+  height: calc(10px * var(--scale));  /* …a true circle */
   border-radius: 50%;               /* round it */
   background: currentColor;         /* follows the status colour */
 }
@@ -165,14 +165,14 @@ ${maskLines([
 /* The value block — held apart on the right, right-aligned, never squeezed. */
 .info-card-value-block {
   flex: none;                       /* the figure keeps its room whatever the title does */
-  padding-left: calc(26px * var(--scale));  /* air on the divider's inner side */
+  padding-left: calc(33px * var(--scale));  /* air on the divider's inner side */
   border-left: 1px solid rgba(255, 255, 255, 0.14);  /* a hairline divider — the family's one rule */
   text-align: right;                /* label and figure hang from the right edge */
 }
 
 /* The value label — what the figure means: guide price, current bid, remaining. */
 .info-card-value-label {
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* label scale — a caption, not a headline */
   font-weight: 700;                 /* bold keeps small caps legible over video */
   line-height: 1.2;                 /* compact label leading */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
@@ -182,12 +182,12 @@ ${maskLines([
 
 /* The figure — the value a viewer is here for. */
 .info-card-value {
-  font-size: calc(44px * var(--scale) * var(--type-scale));  /* the block's one large voice */
+  font-size: calc(55px * var(--scale) * var(--type-scale));  /* the block's one large voice */
   font-weight: 700;                 /* heavy — the loudest number on the card */
   line-height: 1.05;                /* no dead leading around the figure */
   letter-spacing: -0.01em;          /* large glyphs tighten */
   font-variant-numeric: tabular-nums;  /* digits keep one width across updates */
-  margin-top: calc(4px * var(--scale));  /* label and figure read as one unit */
+  margin-top: calc(5px * var(--scale));  /* label and figure read as one unit */
   color: var(--text-color);         /* primary text color */
 }`,
     hasAccent: false,

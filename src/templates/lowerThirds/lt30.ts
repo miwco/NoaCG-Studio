@@ -58,12 +58,12 @@ ${lineMasks(o, '        ')}
 
 /* The text block — no panel; the rule and the whitespace are the structure. */
 .lower-third-box {
-  padding-left: calc(28px * var(--scale));  /* room for the rule plus a printed-margin gap */
+  padding-left: calc(35px * var(--scale));  /* room for the rule plus a printed-margin gap */
 }
 
 /* Name (f0) — the block's one heavy element. */
 .lower-third-name {
-  font-size: calc(48px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
+  font-size: calc(60px * var(--scale) * var(--type-scale));  /* headline size (values are 1080p reference) */
   font-weight: var(--display-weight);  /* the family's display weight */
   line-height: 1.05;                /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
@@ -72,32 +72,32 @@ ${lineMasks(o, '        ')}
 
 /* Role (f1) — the second reading voice. */
 .lower-third-title {
-  font-size: calc(24px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
+  font-size: calc(30px * var(--scale) * var(--type-scale));  /* ≈2:1 below the name — clear hierarchy */
   font-weight: 400;                 /* regular weight; contrast comes from the name */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(5px * var(--scale));  /* name + role read as one unit */
+  margin-top: calc(6px * var(--scale));  /* name + role read as one unit */
 }
 
 /* Organisation (f2) — still a reading line, one step quieter than the role. */
 .lower-third-extra {
-  font-size: calc(20px * var(--scale) * var(--type-scale));  /* below the role, above the dateline */
+  font-size: calc(25px * var(--scale) * var(--type-scale));  /* below the role, above the dateline */
   font-weight: 400;                 /* regular weight — this line is not a label */
   line-height: 1.3;                 /* secondary text gets room to breathe */
   color: var(--text-dim);           /* dimmed — never pure white twice */
-  margin-top: calc(3px * var(--scale));  /* sits close under the role: one credential unit */
+  margin-top: calc(4px * var(--scale));  /* sits close under the role: one credential unit */
 }
 
 /* Dateline (f3) — the fourth row changes VOICE: ruled off, tracked caps, accent colour.
    Selected by position, so it works whatever the fields end up numbered. */
 .lower-third-text .lower-third-mask:nth-child(4) {
-  margin-top: calc(15px * var(--scale));  /* air above the dateline */
-  padding-top: calc(13px * var(--scale));  /* …and inside it, above the caps */
+  margin-top: calc(19px * var(--scale));  /* air above the dateline */
+  padding-top: calc(16px * var(--scale));  /* …and inside it, above the caps */
   border-top: 1px solid color-mix(in srgb, var(--text-color) 20%, transparent);  /* the printed divider */
 }
 .lower-third-text .lower-third-mask:nth-child(4) .lower-third-extra {
   font-family: var(--font-label);   /* the family's label face */
-  font-size: calc(16px * var(--scale) * var(--type-scale));  /* the smallest voice in the block */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest voice in the block */
   font-weight: 600;                 /* small caps need weight to stay crisp */
   letter-spacing: var(--label-tracking);  /* the family's label tracking */
   text-transform: uppercase;        /* BRUSSELS · LIVE, whatever the operator types */
