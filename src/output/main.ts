@@ -177,10 +177,12 @@ async function boot(): Promise<void> {
     if (row.msg.t !== 'event') return null;
     const at = rowInstant(row.created_at, Date.now());
     const held = mergedData.get(row.graphic)?.[clock.field];
-    if (row.msg.event === 'clockStart') return startedClockValue(held ?? clock.start, clock.countsDown, at);
-    if (row.msg.event === 'clockStop') return heldClockValue(held ?? clock.start, clock.countsDown, at);
-    // Reset is a separate operation and never assumes zero: back to the period's own start.
-    if (row.msg.event === 'clockReset') return heldClockValue(clock.start, clock.countsDown, at);
+    if (row.msg.event === 'clockStart') return startedClockValue(held ?? clock.seed, clock.countsDown, at);
+    if (row.msg.event === 'clockStop') return heldClockValue(held ?? clock.seed, clock.countsDown, at);
+    // Reset is a separate operation, and `resetTo` is what the RUNTIME returns to rather than
+    // what the element happens to read - the two must record the same number or a reboot after
+    // a reset would recover a different time from the one on air.
+    if (row.msg.event === 'clockReset') return clock.resetTo;
     return null;
   };
   const applyClock = (row: ControlEventRow, clock: ClockSpec, value: string) => {

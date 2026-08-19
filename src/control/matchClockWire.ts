@@ -33,8 +33,15 @@ export interface ClockSpec {
   field: string;
   /** `data-count="down"` — a design decision, never an operator one. */
   countsDown: boolean;
-  /** What `resetMatchClock` returns to: `data-start`, else the element's own initial text. */
-  start: string;
+  /** The clock's value before the wire has said anything: `data-start`, else the element's own
+   *  initial text. Mirrors the runtime's `initMatchClock`. */
+  seed: string;
+  /** What `resetMatchClock` returns to — `data-start`, else ZERO, which is what the runtime
+   *  actually does. It is deliberately not `seed`: at reset time the element's text is the
+   *  RUNNING time, so falling back to it would reset a clock to wherever it had got to. The two
+   *  differ only on a clock element with no `data-start`, which the scoreboard emitter never
+   *  produces (it always writes the attribute and the text together). */
+  resetTo: string;
 }
 
 /**
@@ -55,10 +62,12 @@ export function clockSpecFromHtml(html: string): ClockSpec | null {
     [...node.classList].some((c) => c.endsWith('-clock')),
   );
   if (!el || !el.id) return null;                  // a readout with no field id is not on the wire
+  const dataStart = el.getAttribute('data-start');
   return {
     field: el.id,
     countsDown: el.getAttribute('data-count') === 'down',
-    start: el.getAttribute('data-start') || (el.textContent ?? '').trim(),
+    seed: dataStart || (el.textContent ?? '').trim(),
+    resetTo: dataStart || '0',
   };
 }
 

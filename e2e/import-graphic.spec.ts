@@ -93,7 +93,10 @@ test('import graphic: the wizard is a setup flow — create lands in the editor,
   expect(css).not.toContain('--type-scale');
   await page.getByTestId('dock-tab-style').click();
   await expect(page.locator('.panel-body')).toContainText('Size');
-  await expect(page.locator('.panel-body')).not.toContainText('Text size');
+  // The knob is a SECTION HEADING, so ask for the heading. A bare panel-wide substring search
+  // also matched the legibility floors' "Minimum text size" legend beside it - a different
+  // control, correctly present, that made this read as a regression it was not.
+  await expect(page.locator('.panel-body h3', { hasText: 'Text size' })).toHaveCount(0);
 });
 
 test('import graphic: fields added from the Data tab are real placed layers — the wizard step, replaced', async ({ page }) => {

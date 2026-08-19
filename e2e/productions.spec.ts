@@ -834,7 +834,10 @@ test('a match clock survives a renderer reboot: the wire carries the instant the
       localRow: w.rowInstant(undefined, T),
     };
   }, CLOCK_HTML);
-  expect(wire.spec).toEqual({ field: 'f5', countsDown: true, start: '12:00' });
+  // `seed` and `resetTo` differ only when the markup carries no data-start, which the scoreboard
+  // emitter never produces — they are separate because the RUNTIME reads different things for
+  // the two jobs, and a disagreement would recover a different time from the one on air.
+  expect(wire.spec).toEqual({ field: 'f5', countsDown: true, seed: '12:00', resetTo: '12:00' });
   expect(wire.noClock).toBeNull();
   expect(wire.started).toBe('45:00@1755600000000');
   expect(wire.derived).toBe('67:00');

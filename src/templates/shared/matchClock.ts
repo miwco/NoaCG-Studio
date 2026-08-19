@@ -180,9 +180,14 @@ function stopMatchClock() {
   if (matchClockTimer) { clearInterval(matchClockTimer); matchClockTimer = null; }
 }
 
-// resetMatchClock(): back to the period's own starting value (data-start, else the element's
-// original text), held. Reset is deliberately a separate operation from stop, and it never
-// assumes zero: a period that counts down from 12:00 resets to 12:00, not to nothing.
+// resetMatchClock(): back to the period's own starting value, held. Reset is deliberately a
+// separate operation from stop, and it never assumes zero for a design that says otherwise: a
+// period that counts down from 12:00 resets to 12:00, not to nothing.
+//
+// It reads data-start ALONE — falling back to the element's text would be wrong here, because
+// by reset time that text is the RUNNING time and a reset would return the clock to wherever it
+// had got to. Every generated clock carries the attribute (scoreboards/scorebugShared.ts writes
+// it and the text together), so the zero fallback is for markup that never ships.
 function resetMatchClock() {
   stopMatchClock();
   var el = matchClockEl();

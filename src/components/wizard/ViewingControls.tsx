@@ -105,7 +105,10 @@ export default function ViewingControls({ value, onChange }: Props) {
       {/* One decision, three answers. A radio group also makes the DEFAULT visible, which two
           checkboxes could not: "neither ticked" and "the standard floors" looked the same. */}
       <fieldset className="viewing-floors" data-testid="wz-floors">
-        <legend>Text sizes</legend>
+        {/* "Minimum", not "Text size": the Style panel's own `Text size` heading is the global
+            `--type-scale` knob, and these three are a FLOOR - what may ship, not how big the
+            type is. Two controls a user meets side by side must not read as the same one. */}
+        <legend>Minimum text size</legend>
         {FLOOR_CHOICES.map((choice) => (
           <label className="dlg-check" key={choice.id}>
             <input
