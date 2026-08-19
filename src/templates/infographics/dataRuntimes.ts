@@ -16,7 +16,7 @@
 //     only in CSS. Every runtime here renders into `#infographic-rows` with one direct child
 //     per item, which is precisely what the shared `rows-cascade` builder animates.
 //
-// This file holds the agenda, poll, goal, milestone and ELECTION NIGHT runtimes;
+// This file holds the agenda, STAT-LIST, poll, goal, milestone and ELECTION NIGHT runtimes;
 // `sportsRuntimes.ts` holds the sports pack's four (team sheet, league table, stat comparison,
 // fixtures/results) under the same rules.
 //
@@ -62,6 +62,68 @@ function rebuildInfographic() {
 }
 
 // Render once on load so the preview shows the board before the first update().
+// This file loads in <head>, before the board elements exist — wait for the DOM.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', rebuildInfographic);
+} else {
+  rebuildInfographic();            // DOM already parsed (e.g. an inline preview build)
+}`;
+}
+
+/**
+ * The STAT-LIST rebuild: renders "Label | figure" rows into #infographic-rows.
+ * Structure per row: .infographic-row > .infographic-stat-label + .infographic-stat-figure.
+ *
+ * It is its own runtime rather than a reuse of the bar shapes, and the reason is the whole
+ * point of the composition it serves. `barsRuntimeJs` and `seatBarsRuntimeJs` nest the figure's
+ * cap INSIDE the bar's fill so the readout rides a growing tip, which means a design taking one
+ * of those cannot express its figure as a grid COLUMN - ig38 had to lift the track out of flow
+ * and reserve the lane with the row's own padding to get a figure pinned at one edge. A stat
+ * list is a TABLE: label and figure are siblings, so the row really is two columns and the
+ * figures share one right edge because they are in the same track, not because a padding
+ * happens to clear the room.
+ *
+ * The figure is rendered as TEXT, exactly as typed. Nothing here parses it, so "€4.21bn",
+ * "12.4 %" and "1,203" all survive intact - the tolerant number parse the goal and milestone
+ * runtimes need exists because those DERIVE a share from their figures, and a stat list derives
+ * nothing.
+ *
+ * The LAST pipe splits the line, not the first (the schedule board's rule): the figure is the
+ * short final part, so a label may contain a "|" of its own.
+ */
+export function statListRuntimeJs(): string {
+  return `// escapeHtml(): the rows below are built with innerHTML — operator text is escaped
+// first so a label like "Profit <2025" reads as text and never runs as markup.
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// rebuildInfographic(): parse the hidden #f0 source (one "Label | figure" per line) and
+// rebuild the #infographic-rows table. The LAST pipe splits the line — the figure is the short
+// final part, so a label may itself contain a "|". Lines without both parts are skipped.
+function rebuildInfographic() {
+  var rows = document.getElementById('infographic-rows');
+  var lines = document.getElementById('f0').textContent.split('\\n');
+  var html = '';
+  lines.forEach(function (raw) {
+    var line = raw.trim();
+    if (line === '') return;                       // skip blank lines
+    var split = line.lastIndexOf('|');             // last pipe — labels may contain one
+    if (split === -1) return;                      // no pipe: not a "Label | figure" line
+    var label = line.slice(0, split).trim();
+    var figure = line.slice(split + 1).trim();
+    if (label === '' || figure === '') return;     // skip half-empty rows
+    // The figure is written as typed: no parse, so a currency mark, a unit or a thousands
+    // separator all survive. Nothing here derives a share from it.
+    html += '<div class="infographic-row">'
+          +   '<span class="infographic-stat-label">' + escapeHtml(label) + '</span>'
+          +   '<span class="infographic-stat-figure">' + escapeHtml(figure) + '</span>'
+          + '</div>';
+  });
+  rows.innerHTML = html;
+}
+
+// Render once on load so the preview shows the table before the first update().
 // This file loads in <head>, before the board elements exist — wait for the DOM.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', rebuildInfographic);

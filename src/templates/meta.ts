@@ -303,6 +303,11 @@ export const VARIANT_META: Record<string, DeclaredTemplateMeta> = {
   // operator reaches for it as a results board - but its structure is declared as a side panel,
   // which is the placement that makes it a different graphic from the centre-frame boards.
   ig38: { category: 'results', subtype: 'vote-result', structures: ['side-panel', 'rows'], coverage: 'panel', positionalSemantics: ['items', 'topic', 'headline', 'description', 'topic'], extraCapabilities: ['repeating'] },
+  // The two-column stat list. It files as a statistics panel rather than under results: the
+  // rows are figures being stated, not a contest being reported, and an operator reaches for it
+  // by "the key figures board". TABLE is the structure that separates it from the facts boards
+  // (ig14-ig17), which set a term over its explanation and have no second column at all.
+  ig39: { category: 'stats', subtype: 'stat-panel', structures: ['table', 'rows'], positionalSemantics: ['items', 'headline', 'date', 'source', 'date'], extraCapabilities: ['repeating'] },
   bug37: { category: 'bug', subtype: 'location', structures: ['corner-chip'], positionalSemantics: ['amount', 'location'] },
   // info-card split (§4): card04 turned out to be a QUOTE card (Quote + Name + Role) — the
   // quote category's first catalog content, found by the factory's schema-length assertion.

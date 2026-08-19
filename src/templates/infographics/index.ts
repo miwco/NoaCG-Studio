@@ -41,6 +41,7 @@ import { ig35 } from './ig35';
 import { ig36 } from './ig36';
 import { ig37 } from './ig37';
 import { ig38 } from './ig38';
+import { ig39 } from './ig39';
 
 export const INFOGRAPHICS: TemplateVariant[] = [
   ig01, // Big stat count-up
@@ -84,6 +85,7 @@ export const INFOGRAPHICS: TemplateVariant[] = [
   ig36, // Turnout Dial - a printed dial filling to the turnout, with the swing
   ig37, // House Forecast - the weather pack's 3-day board: day, condition, high/low
   ig38, // Results Rail - the count-night side dashboard: one washed row per district
+  ig39, // Key Figures - the printed two-column stat list: label left, big figure right
 ];
 
 export function infographicById(id: string): TemplateVariant | undefined {
