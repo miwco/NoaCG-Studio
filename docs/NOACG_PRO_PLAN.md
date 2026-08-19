@@ -3161,3 +3161,124 @@ fixtures at 0.08 padding / 4.6 gap must still stop. Observed in passing, not act
 sweep reads `text-over-rule` on gt03/gt04 (clock digits over their own decorative ring) -
 a shipped-design instrument artifact to keep in mind if a collision ever stops an emitted
 ring timer.
+
+## 25. The owner's six taste rules as code, and the paid corpus re-judged - 2026-08-20
+
+The owner read four galleries on 2026-08-19 and, across roughly sixty individual comments, named
+the same small set of composition faults - a mark not centred in the square it sits in (ten of
+thirty-six rows, the single most-repeated complaint in the corpus), secondary text "unacceptably
+small", text "too thin" and "grey on black … unreadable", a mark eating a topic card's primary
+real estate, and a package carrying its wordmark on two pieces of three. Until those are numbers,
+the owner IS the gate and each verdict costs a human evening.
+
+`src/ai/spike/tasteCheck.ts` is those six rules as measurements of a rendered frame, driven by
+`scripts/pro-taste-rejudge.mjs`. It REPORTS and does not gate, like every instrument beside it,
+and two of the six carry no pass/fail at all and say so where they are measured: rule 2 because
+the owner stated it is conditional ("sometimes it can work, and that's kind of the problem"), and
+rule 3 because the ratified secondary floor already exists in `model/designRules.ts` and
+disagrees with the owner by a factor the owner has not re-ratified. An instrument that invents a
+threshold to settle a disagreement has replaced the measurement with the opinion.
+
+### 25.1 What the re-judge cost, and what it covered
+
+**Nothing.** Every round it reads is already paid for and its code is committed, so the whole
+corpus goes back through any instrument written afterwards for free - which is the only
+affordable way to ask "would this have caught what the owner caught?". Re-judged: the 36 package
+rows of `round-2026-08-16` + `round-2026-08-17` (the blind sets gallery the owner read), and the
+4 language sets of `round-2026-08-19-topiccard`.
+
+**One coverage hole was found by the first run and closed.** The 2026-08-16 round predates the
+package surface, so its set members exist on disk as PNG frames and never as code. Judging only
+what was on disk read 18 rows of three pieces against 18 rows of one and reported the older round
+as CLEAN - a corpus half of which was never measured. A missing member is now REBUILT from the
+saved `language.json` through the same `composeGraphic` the recompose path uses: deterministic,
+free, and both halves of the corpus now go through one composer.
+
+### 25.2 Rule 1 - the mark is centred in its container. REPRODUCED, 10 of 10
+
+**Perfect recall on the owner's own rows.** The instrument fires on all ten the owner named
+(S-01, S-02, S-05, S-06, S-07, S-11, S-17, S-19, S-20, S-33) and on fourteen more, and stays
+quiet on twelve. The extras are not noise: every firing row is a SQUARE mark in a sponsor-bug
+tile sized to its caption, and every quiet row carries a WIDE wordmark that fills that tile by
+fitting. One construction, one defect, named by the owner on the examples a blind read stops at.
+
+Two calibration decisions made this work, and the first version got both wrong:
+
+- **The axes are asked separately.** Measuring both axes of the smallest surface above the mark
+  read eight shipped catalog designs as 0.84-0.96 off centre, because a mark docked at one end of
+  a broadcast-width strap is off-centre IN THE STRAP by construction. Restricting the container
+  to one holding the mark ALONE then lost the owner's actual case, where the tile also carries
+  "ON AIR". Both readings are recovered by asking which axis the flow did NOT decide: a container
+  laying the mark beside its words leaves VERTICAL free, one stacking it over them leaves
+  HORIZONTAL free, a well holding no words leaves both.
+- **Disjointness is tested against painted TEXT only.** An accent bar down the tile's left edge is
+  disjoint from the mark horizontally and is decoration on the container, not a peer the flow
+  balanced against. Including it suppressed the one case the rule exists for.
+
+Thresholds read off `pro-taste-rejudge --control` over the 25 mark-capable lower thirds, twice
+(square crest, tall shield): on the axis the design chose, nine read 0.0, three read 0.03-0.04,
+one reads 0.14 (ls29, 21px over against 28px under). `MARK_CENTRE_OFFSET = 0.12` ANDed with
+`MARK_CENTRE_MIN_PX = 8` clears the whole shipped catalog with a pixel to spare, while the
+owner's own named case - 20px from one tile edge, 45px from the other - is 25px, three times
+above the floor.
+
+### 25.3 Rule 5 - a mark never eats primary real estate. Reproduced on the case named
+
+B27 is the row the owner named ("it takes valuable real estate - it should be on the same row as
+the text"), and both rules fire on it: the topic-card mark shares 0.0 of a row with the headline
+and sits 38px from the left edge against 400px from the right. All three mark-carrying topic
+cards in that round read the same way.
+
+It also fires on the SPONSOR BUG of 34 of the 36 set rows, which the owner did not name - and
+that is a report, not an over-fire. Measured over the 28 shipped corner bugs, row share runs
+0-1.0 with a median of 0.49 and the rule fires on two: **26 of 28 shipped bugs put the mark
+BESIDE the caption, and Pro stacks it above.** Silencing that with a per-type override would be
+moving a threshold to hide a design, which is the failure `PRO_GRAPHICS.countdown` already warns
+about. It goes in front of the owner as a question instead.
+
+### 25.4 Rule 6 - a package's mark is on every piece or none. Reproduced, on every row
+
+Fires on all 36 set rows and all 4 topic-card rows: the mark is on the lower third, the sponsor
+bug and the topic card, and never on the countdown, because `PRO_GRAPHICS.countdown` declares
+`takesMark: false`. The declaration is reported rather than treated as an exemption - the owner
+was looking at a rendered set, not at the registry, and "this doesn't work; if you skip the logo
+then it would fit" is a verdict on a platform decision, not on an accident.
+
+### 25.5 Rule 3 - the secondary floor. THE INSTRUMENT MISSES THE CASE THE OWNER USED TO STATE IT
+
+Reported and never judged, as designed - but the reading is blind exactly where the complaint
+came from. `secondaryType` is null on **36 of 36 sponsor bugs**, because a one-line graphic has
+no second line and its single caption classes as PRIMARY. The owner's words for this rule are
+"ON AIR" and sponsor-bug wordmarks; those are the frames the rule cannot see.
+
+Where it does read, the corpus sits at 26px on every lower third and 38px on every countdown,
+against a ratified standard-mode secondary floor of 20px hard / 22px warn. The owner calls 24px
+"way too small". **The gap to re-ratify is between 22px and something above 26px**, and the
+number to settle it against is the sponsor bug's 24px caption - which needs the rule restated as
+"the smallest informational line has a floor", not "the second line does".
+
+### 25.6 Rule 4 - weight and contrast together. FRAMING RIGHT, FLOORS WRONG
+
+The joint framing is the one the owner asked for: report text that clears its SIZE floor and
+still fails on weight or contrast, because "a size-only legibility instrument passes text the
+owner cannot read". Implemented, it fires on 2 of 36 rows (a countdown label at 38px, weight 400)
+and on **none of the four rows the owner named** (S-03, S-14, S-20, S-33).
+
+Measured, those four read: S-03's supporting line at 26px, **contrast 3.04:1** - which clears the
+3:1 large-text floor by four hundredths; S-14's 54px name at **weight 400**; S-33's and S-20's
+countdown labels at weight 400 with contrast 6.74. Corpus-wide the weakest readings are contrast
+3.01:1 and weight 400.
+
+**So the miss is in the floors, not in the joint reading**, and the instrument now carries the
+numbers a re-ratification needs whether or not a floor fired: `TasteReport.weakest` reports the
+frame's lightest and faintest informational text every time. A contrast floor the owner would
+accept sits above 3.04:1; a weight floor sits above 400 for text this size.
+
+### 25.7 Two blind spots worth stating
+
+- **A panel-free design is invisible to rules 1 and 5.** The minimalist language (B-28, S-09,
+  S-10) resolves no surface at all, so `markCentre` and `markRow` are null on every piece of it -
+  the same blindness §17.2 recorded for the panel-less super's legibility.
+- **Rule 6 sees artwork, not wordmarks.** Presence is "the `filelist` field paints something",
+  which is how the composer places every mark it places; a wordmark set as TEXT would read as
+  absent.
