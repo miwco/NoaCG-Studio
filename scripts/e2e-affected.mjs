@@ -576,7 +576,9 @@ function isAncestor(maybeAncestor, ref) {
  *
  * Walking the first-parent chain (rather than only looking at HEAD) keeps this working after
  * follow-up commits: the integration is not verified until it is verified, and adding a commit
- * on top does not make the merge older news.
+ * on top does not make the merge older news. The walk stops at the first merge that is ALREADY
+ * contained in main - see the comment on that line; below it there is nothing of this branch's
+ * to integrate.
  *
  * @returns {string|null} the fork point, or null when this branch has merged nothing from main
  */
@@ -592,6 +594,15 @@ function integrationBase() {
     .split('\n')
     .filter(Boolean);
   for (const merge of merges) {
+    // A MERGE THAT IS ALREADY ON MAIN IS NOT THIS BRANCH'S INTEGRATION TO VERIFY. Landing a
+    // branch leaves a merge commit on main, so every branch cut from main afterwards inherits it
+    // in its first-parent chain - and without this line the walk finds that one, hands back a
+    // fork point from somebody else's work, and a six-file branch gets planned as if it had
+    // merged half the repository. It was measured doing exactly that on run 32301201748: a
+    // six-file push planned 6 shards instead of 3, because this branch was cut from a `main`
+    // whose tip happened to be a merge commit. Everything below such a merge is main's own
+    // history and was verified when it landed, so stopping here is the whole answer, not a skip.
+    if (mainRefs.some((ref) => isAncestor(merge, ref))) return null;
     const [, p1, p2] = git('rev-list', '--parents', '-n', '1', merge).split(/\s+/);
     // A merge with one parent is an octopus artefact or a grafted history; skip rather than
     // guess. `p2` came from main only if a main ref still contains it.

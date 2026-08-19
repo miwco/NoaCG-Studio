@@ -277,6 +277,22 @@ test('a merge commit plans from the fork point, so the catalog gate is not skipp
     // must not silently rewrite an explicit ref when there is no merge to integrate.
     git('checkout', 'main');
     assert.equal(plan('--json', '--integration', 'HEAD~1').base, 'HEAD~1');
+
+    // …AND A MERGE THAT IS ALREADY ON MAIN IS SOMEBODY ELSE'S INTEGRATION. Land the feature
+    // branch, cut a fresh branch from the resulting merge commit, and change one harmless file:
+    // the inherited merge must not drag that branch's plan back to a fork point from the work
+    // that landed. Measured failing on run 32301201748 - a six-file push planned six shards
+    // instead of three because `main`'s tip happened to be a merge commit.
+    git('merge', '--no-ff', '-m', 'Merge branch feature into main', 'feature');
+    const landed = git('rev-parse', 'HEAD');
+    git('checkout', '-b', 'fresh');
+    write('src/legal.css', '/* tweak */\n');
+    git('add', '-A');
+    git('commit', '-m', 'tweak the legal page');
+    const fresh = plan('--json', '--integration', landed);
+    assert.equal(fresh.base, landed, 'an inherited merge is not this branch\'s integration');
+    assert.deepEqual(fresh.specs, ['legal.spec.ts']);
+    assert.equal(fresh.catalog, false);
   } finally {
     rmSync(repo, { recursive: true, force: true, maxRetries: 5 });
   }
