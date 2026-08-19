@@ -17,6 +17,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIGURED_TRIGGERS, FOCUS } from './e2e-lists.mjs';
+import { readTable } from './e2e-durations.mjs';
 
 /**
  * True only when this file was RUN, not imported. `planFor` below is exported for tests, and
@@ -445,6 +446,52 @@ export function planFor(changed, { sprintFocus = false } = {}) {
 }
 
 /**
+ * How much runner time one shard should be worth, in minutes of measured test execution.
+ *
+ * Chosen so a FULL plan lands on nine shards - the count ci.yml has used since 2026-08-08 and
+ * the one its own comment argues for (past nine, an extra independent runner adds more
+ * infrastructure-hiccup surface and more queueing against the 20-concurrent-job ceiling than it
+ * takes off the clock). 66.9 measured minutes / 7.5 = 8.9 -> 9, without leaning on the cap.
+ */
+export const SHARD_TARGET_MINUTES = 7.5;
+
+/** The ceiling, for the reasons ci.yml's `strategy` comment gives. */
+export const MAX_SHARDS = 9;
+
+/**
+ * HOW MANY RUNNERS THIS PLAN IS WORTH, from measured minutes rather than from a file count.
+ *
+ * The old rule was `full ? 9 : min(4, floor(files / 4))`, and the cap was the expensive half:
+ * under sprint focus and the curated map, a "subset" is routinely 70-100 of the 128 spec files,
+ * so 80% of the suite ran on 44% of the runners and a targeted run finished LATER than the full
+ * one. Measured on run 32174589727: 103 specs, 58.3 min of tests, 4 shards, 14.6 min each -
+ * against 7.4 min a shard on the full run beside it.
+ *
+ * A spec the table has never measured counts as the MEDIAN rather than as zero: a new spec file
+ * must be able to raise the shard count, and zero would let a plan made entirely of new specs
+ * ask for one runner. The direction matters more than the accuracy here - this decides only how
+ * many runners Playwright's own `--shard=i/n` spreads the plan across, never which tests run, so
+ * a wrong number costs wall clock and can never cost coverage.
+ *
+ * @param {{ mode: 'none'|'subset'|'full', specs: string[] }} plan
+ * @param {{ minutes: Record<string, number> }} [table]
+ * @returns {number} shard count, at least 1
+ */
+export function shardsFor({ mode, specs }, table = readTable()) {
+  const known = Object.values(table.minutes);
+  if (mode === 'none') return 1;
+  let minutes;
+  if (mode === 'full') {
+    minutes = known.reduce((a, b) => a + b, 0);
+  } else {
+    const sorted = [...known].sort((a, b) => a - b);
+    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 0;
+    minutes = specs.reduce((sum, spec) => sum + (table.minutes[spec] ?? median), 0);
+  }
+  return Math.min(MAX_SHARDS, Math.max(1, Math.ceil(minutes / SHARD_TARGET_MINUTES)));
+}
+
+/**
  * THE RUN LIST, as a pure function of a plan. One entry per Playwright invocation this command
  * is responsible for: the mapped/full suite, and the catalog calibration tripwire, which is a
  * SEPARATE config and therefore a separate process.
@@ -555,9 +602,12 @@ function integrationBase() {
 }
 
 /** The plan, as CI consumes it. `mode` covers the specs to run; `catalog` is independent of it,
- *  because a catalog change can need the calibration gate while needing no feature spec. */
+ *  because a catalog change can need the calibration gate while needing no feature spec.
+ *  `shards` rides along so the runner count is decided by the same tested code that decides the
+ *  specs, rather than by arithmetic written into a workflow file. */
 function emitJson({ mode, specs, catalog, base, changed }) {
-  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, base, changed })}\n`);
+  const shards = shardsFor({ mode, specs });
+  process.stdout.write(`${JSON.stringify({ mode, specs, catalog, shards, base, changed })}\n`);
 }
 
 /** Everything the CLI does: resolve the diff, classify it, report it, and run what it named. */
@@ -585,19 +635,49 @@ function main() {
   const baseArg = args.find((a) => !a.startsWith('--'));
   const log = asJson ? () => {} : console.log;
 
+  // --all is "the whole suite, with no diff at all" - what `main` and an unusable diff base both
+  // want. It lived as a hand-written `{"mode":"full",...}` literal inside ci.yml, which meant the
+  // two paths that run the MOST tests were the two the tested code never saw, and neither could
+  // be given a shard count without duplicating the arithmetic in YAML. Sprint focus deliberately
+  // does not apply: this is the honest full escalation, which is the point of asking for it.
+  if (args.includes('--all')) {
+    if (asJson) {
+      emitJson({ mode: 'full', specs: [], catalog: true, base: null, changed: null });
+      return 0;
+    }
+    log('e2e-affected: --all - running the FULL suite and the catalog gate, with no diff.');
+    if (listOnly) return 0;
+    const { status, runs } = runPlan({ mode: 'full', specs: [], catalog: true }, ({ args: a }) =>
+      spawnSync('npx', a, { stdio: 'inherit', shell: true }).status,
+    );
+    log(summariseRuns(runs, status));
+    return status;
+  }
+
   // INTEGRATION MODE. `--integration` asks the question a post-merge run has to ask - "does the
   // COMBINED state hold" - by moving the base back to the fork point (see `integrationBase`).
   // It is also taken automatically when HEAD is itself a merge that brought main in, because
   // that is precisely the moment someone is about to push an unverified combination and the
   // ceremony of remembering a flag is what fails. `--no-integration` forces the plain
-  // branch-only diff for a one-off. An explicit base argument always wins: it was asked for.
+  // branch-only diff for a one-off.
+  //
+  // A BASE ARGUMENT AND `--integration` COMPOSE, and that is what CI needs. Passing a base used
+  // to switch integration off entirely ("it was asked for"), which was right for a person naming
+  // a ref by hand and wrong for the automated caller: ci.yml passes `github.event.before`, so on
+  // a merge commit the plan diffed the pre-merge branch tip against the merge and saw only the
+  // files MAIN had brought in. Measured over the last 120 merge-of-main commits in this
+  // repository, 71 of them (59%) would have been planned differently from the fork point: 17
+  // skipped the catalog calibration gate the combined tree needed, and 8 skipped E2E altogether
+  // with `mode: none` - a green verdict on a combination nothing had run. The fork point is
+  // always an ancestor of the push base, so preferring it fails toward running MORE, which is
+  // the direction every other fallback in this file fails in. Without the flag the old rule
+  // stands untouched: a bare `e2e-affected <ref>` still means exactly that ref.
   const wantsIntegration = !args.includes('--no-integration');
-  const headIsMainMerge = !baseArg && git('rev-list', '--parents', '-n', '1', 'HEAD').split(/\s+/).length > 2;
+  const askedForIntegration = args.includes('--integration');
+  const headIsMainMerge = () => git('rev-list', '--parents', '-n', '1', 'HEAD').split(/\s+/).length > 2;
   const integration =
-    !baseArg && wantsIntegration && (args.includes('--integration') || headIsMainMerge)
-      ? integrationBase()
-      : null;
-  const base = baseArg ?? integration ?? git('merge-base', 'HEAD', 'main');
+    wantsIntegration && (askedForIntegration || (!baseArg && headIsMainMerge())) ? integrationBase() : null;
+  const base = integration ?? baseArg ?? git('merge-base', 'HEAD', 'main');
   if (integration) {
     log(
       `e2e-affected: INTEGRATION base ${base.slice(0, 8)} - this branch has taken main in, so the plan covers BOTH sides' changes since the fork, not just the branch's.`,

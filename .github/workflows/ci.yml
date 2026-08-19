@@ -164,6 +164,18 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" = "pull_request" ]; then BASE="$PR_BASE"; else BASE="$PUSH_BEFORE"; fi
+          # The fork-point base below asks "is this merge's second parent contained in main?",
+          # which needs a main ref to ask it OF. `fetch-depth: 0` above brings the remote branches
+          # with it, but a missing `origin/main` would make that question answer "no merge here"
+          # and quietly hand back the narrow base - a silent hole where a loud one belongs. So
+          # fetch it if it is absent, and if it still cannot be had, run everything.
+          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+            git fetch --no-tags --quiet origin '+refs/heads/main:refs/remotes/origin/main' || true
+          fi
+          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+            echo "::warning title=E2E plan::No origin/main to measure a merge against - running the FULL suite."
+            BASE=""
+          fi
           # MAIN RUNS EVERYTHING. Every other run tests what THIS change can affect, which is
           # the right economics for a branch and the wrong one for the branch production ships
           # from: a spec no change maps to is never selected, so it can break and stay green
@@ -180,7 +192,7 @@ jobs:
           # supposed to be watched.
           if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ]; then
             echo "::notice title=E2E plan::main - running the FULL suite regardless of the diff."
-            PLAN='{"mode":"full","specs":[],"catalog":true}'
+            PLAN="$(node scripts/e2e-affected.mjs --json --all)"
           # An absent, all-zero (first push of a branch) or garbage-collected base means we
           # cannot know what changed. Then we do not guess: the fallback is the whole suite,
           # because the one thing a fallback must never do is run LESS than the truth.
@@ -188,24 +200,34 @@ jobs:
             || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
             echo "::notice title=E2E plan::No usable diff base ('${BASE}') - running the FULL suite."
-            PLAN='{"mode":"full","specs":[],"catalog":true}'
+            PLAN="$(node scripts/e2e-affected.mjs --json --all)"
           else
-            PLAN="$(node scripts/e2e-affected.mjs --json "$BASE")"
+            # `--integration` is what makes a MERGE COMMIT honest. Without it the base is the
+            # pre-merge branch tip, so the diff is only what `main` brought in and the branch's
+            # own work - the half that has never been tested against this tree - is invisible.
+            # Replayed over the last 120 merge-of-main commits here, 71 (59%) would have been
+            # planned differently: 17 skipped the catalog calibration gate the combined tree
+            # needed, and 8 skipped E2E entirely with `mode: none`, reporting green on a
+            # combination nothing had run. The flag moves the base to the FORK POINT, which is
+            # always an ancestor of this one, so it can only ever plan MORE. On a branch that
+            # merged nothing it does nothing at all, and `$BASE` is used exactly as before.
+            PLAN="$(node scripts/e2e-affected.mjs --json --integration "$BASE")"
           fi
           echo "plan: $PLAN"
-          # Shard count follows the size of the plan. Full runs get nine; a subset gets one
-          # runner per ~4 spec files, capped at four - beyond that the 52 s of per-shard setup
-          # costs more than it saves. The floor of 1 also keeps every shard non-empty:
-          # a shard with no tests writes no blob report, and the upload below treats a missing
-          # report as an error rather than silently reporting on less than was run.
+          # The shard count comes WITH the plan (scripts/e2e-affected.mjs `shardsFor`), sized from
+          # measured minutes per spec file rather than from a file count. It used to be computed
+          # here, as `full ? 9 : min(4, floor(files / 4))`, and the cap was expensive: a "subset"
+          # under sprint focus is routinely 70-100 of the 128 spec files, so run 32174589727 put
+          # 58.3 minutes of tests on four runners - 14.6 min a shard, against 7.4 on the full run
+          # beside it. Arithmetic that decides how long everyone waits belongs in the tested
+          # module, not in a YAML string nothing can exercise.
           node -e '
             const plan = JSON.parse(process.argv[1]);
-            const shards = plan.mode === "full" ? 9 : Math.min(4, Math.max(1, Math.floor(plan.specs.length / 4)));
             console.log([
               `mode=${plan.mode}`,
               `specs=${plan.specs.join(" ")}`,
               `catalog=${plan.catalog}`,
-              `matrix=${JSON.stringify({ shardIndex: Array.from({ length: shards }, (_, i) => i + 1), shardTotal: [shards] })}`,
+              `matrix=${JSON.stringify({ shardIndex: Array.from({ length: plan.shards }, (_, i) => i + 1), shardTotal: [plan.shards] })}`,
             ].join("\n"));
           ' "$PLAN" >> "$GITHUB_OUTPUT"
 
@@ -222,26 +244,39 @@ jobs:
       # Let every shard finish so one failure cannot hide another and all evidence reaches
       # the combined report.
       fail-fast: false
-      # Sized by the plan job, not fixed here. A full run gets nine shards: wall time is
-      # fixed-cost + test-time/shards, and on run 30539377062 a shard spent 52 s on setup
-      # (checkout, npm ci, the browser, and a 7 s dev-server boot) against 12.8 min of tests -
-      # so ~94% of the clock is the part sharding divides, and 13.6 min becomes ~7.
+      # Sized by the plan job, not fixed here, and since 2026-08-19 sized from MEASURED MINUTES
+      # (scripts/e2e-affected.mjs `shardsFor`, scripts/e2e-durations.json): about 7.5 minutes of
+      # test execution per runner, capped at nine. The full suite is 66.9 measured minutes, so a
+      # full plan still lands on nine - the count this comment has argued for since 2026-08-08,
+      # unchanged. What changed is the SUBSET, which used to be capped at four runners however
+      # big it was: under sprint focus and the curated map a subset is routinely 70-100 of the
+      # 128 spec files, so run 32174589727 put 58.3 minutes of tests on four shards (14.6 min
+      # each) while the full run beside it did 66.9 on nine (7.4 min each). A targeted run that
+      # finishes later than the exhaustive one is not a cheaper answer, it is a slower one.
       #
       # Nine and not twelve, even though the arithmetic keeps improving: every shard is an
       # independent runner doing its own checkout and install, so the chance that ONE of them
       # hits an infrastructure hiccup grows with the count, and with retries: 0 and
       # fail-fast: false a single hiccup reds the whole gate. Nine takes most of the win for
       # a fraction of the added surface, and leaves room under the 20-concurrent-job ceiling
-      # for an overlapping PR run.
+      # for an overlapping PR run - which is a real constraint here, not a theoretical one:
+      # measured over the 60 runs to 2026-08-19, runs that started while two other branches
+      # were mid-gate waited 22 to 45 minutes in the queue before a shard began.
       #
-      # THE NINTH SHARD IS HEADROOM, NOT SPEED, and it is the right lever: Playwright shards
-      # by spec FILE, not by measured time, so the spread is what matters. On run 32178282707
-      # (full, green) the eight shards ran 7.4 / 8.6 / 8.7 / 9.5 / 9.7 / 10.9 / 13.1 / 14.2
-      # min - a slowest shard at 71% of the 20-minute budget, entirely from an unlucky split
-      # rather than from anything being wrong. A ninth shard pulls that back to ~12.4 min
-      # (62%). Raising timeout-minutes was the tempting alternative and is refused on purpose:
-      # a loose budget makes the timeout stop distinguishing a genuinely hung shard from a
-      # busy one, which is the whole reason the limit exists. Keep it at 20 and add capacity.
+      # THE NINTH SHARD IS HEADROOM, NOT SPEED, and it is the right lever: Playwright shards by
+      # test COUNT, not by measured time, so the spread within a shard set is what matters. On
+      # run 32178282707 (full, green) the eight shards ran 7.4 / 8.6 / 8.7 / 9.5 / 9.7 / 10.9 /
+      # 13.1 / 14.2 min - a slowest shard at 71% of the 20-minute budget, entirely from an
+      # unlucky split rather than from anything being wrong. A ninth shard pulls that back to
+      # ~12.4 min (62%). Raising timeout-minutes was the tempting alternative and is refused on
+      # purpose: a loose budget makes the timeout stop distinguishing a genuinely hung shard
+      # from a busy one, which is the whole reason the limit exists. Keep it at 20 and add
+      # capacity. The residual imbalance was measured too and left alone: across 33 full runs
+      # the slowest shard averaged 12.66 min against a perfectly-balanced 9.88, and roughly half
+      # of that gap is runner-to-runner variance rather than the split. Bin-packing spec files
+      # by duration would recover the other half and would have to hand Playwright an explicit
+      # per-shard file list - at which point a spec file missing from the durations table is a
+      # spec nobody runs. Sizing the COUNT from measurement is the part that cannot go silent.
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v5

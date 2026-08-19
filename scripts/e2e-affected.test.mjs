@@ -14,10 +14,13 @@
 // driven with fake exit codes, with no dev server, no browser and no minutes on the clock.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { planFor, runPlan, runsFor, summariseRuns } from './e2e-affected.mjs';
+import { MAX_SHARDS, planFor, runPlan, runsFor, shardsFor, summariseRuns } from './e2e-affected.mjs';
+import { readTable } from './e2e-durations.mjs';
 
 const E2E_DIR = fileURLToPath(new URL('../e2e/', import.meta.url));
 
@@ -192,4 +195,129 @@ test('public legal pages select their clean-URL and responsive-layout spec', () 
     assert.equal(mode, 'subset');
     assert.deepEqual(specs, ['legal.spec.ts']);
   }
+});
+
+// ── The merge-commit blind spot, pinned against a REAL merge ────────────────
+//
+// THE RULE: a run whose HEAD took `main` in must plan from the FORK POINT, so the plan covers
+// both sides' changes. Otherwise the diff base is the pre-merge branch tip, the file list is
+// only what MAIN brought in, and a branch whose own work was a catalog change gets
+// `catalog: false` - the calibration gate skipped, and a green verdict that was earned by the
+// run BEFORE the merge.
+//
+// It is not hypothetical: replaying the last 120 merge-of-main commits in this repository
+// through `planFor` from both bases, 71 of them (59%) would have been planned differently - 17
+// of those skipping the catalog gate the combined tree needed, and 8 skipping E2E entirely with
+// `mode: none`. Local `--integration` always did the right thing; CI passed an explicit base,
+// which used to switch integration off.
+//
+// The test drives the real CLI over a real git repository with a real merge, because the thing
+// under test IS the base resolution - `planFor` cannot see it. The `--no-integration` half is
+// the mutation: it reproduces the old behaviour and proves the guard has something to catch.
+test('a merge commit plans from the fork point, so the catalog gate is not skipped', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'e2e-affected-merge-'));
+  // stderr is swallowed on purpose: git narrates every checkout and every CRLF conversion, and
+  // this test's output should be its assertions, not a second git log.
+  const git = (...args) =>
+    execFileSync('git', args, { cwd: repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  const write = (rel, body) => {
+    mkdirSync(dirname(join(repo, rel)), { recursive: true });
+    writeFileSync(join(repo, rel), body);
+  };
+  const cli = fileURLToPath(new URL('./e2e-affected.mjs', import.meta.url));
+  const plan = (...args) =>
+    JSON.parse(execFileSync(process.execPath, [cli, ...args], { cwd: repo, encoding: 'utf8' }));
+
+  try {
+    git('init', '-b', 'main');
+    git('config', 'user.email', 'test@example.invalid');
+    git('config', 'user.name', 'Test');
+    git('config', 'commit.gpgsign', 'false');
+    write('README.md', 'base\n');
+    git('add', '-A');
+    git('commit', '-m', 'base');
+
+    // The branch's OWN work is the catalog change - the half a post-merge diff cannot see.
+    git('checkout', '-b', 'feature');
+    write('src/templates/competition/esp09.ts', 'export const esp09 = {};\n');
+    git('add', '-A');
+    git('commit', '-m', 'add a design');
+    const branchTip = git('rev-parse', 'HEAD');
+
+    // …and main moves on, touching something that maps nowhere near the catalog.
+    git('checkout', 'main');
+    write('src/landing/motion.ts', 'export const motion = {};\n');
+    git('add', '-A');
+    git('commit', '-m', 'landing motion');
+
+    git('checkout', 'feature');
+    git('merge', '--no-ff', '-m', 'Merge branch main into feature', 'main');
+
+    // THE MUTATION: the old behaviour, reproduced by switching integration off. CI passed
+    // `github.event.before` - the pre-merge branch tip - and got exactly this.
+    const pushBase = plan('--json', '--no-integration', branchTip);
+    assert.equal(pushBase.catalog, false, 'the mutation must reproduce the skipped catalog gate');
+    assert.ok(
+      !pushBase.specs.includes('catalog-baseline.spec.ts'),
+      'the mutation must also lose the catalog specs, or this test proves nothing',
+    );
+
+    // THE GUARD: the same base, with integration asked for. The fork point is an ancestor of the
+    // push base, so the plan can only grow.
+    const forked = plan('--json', '--integration', branchTip);
+    assert.equal(forked.catalog, true, 'the merged tree carries a catalog change - the gate must run');
+    assert.ok(forked.specs.includes('catalog-baseline.spec.ts'));
+    assert.ok(forked.specs.includes('landing.spec.ts'), "main's side of the merge must be covered too");
+    assert.equal(forked.base, git('merge-base', branchTip, 'main'));
+
+    // …and with no base at all, which is how a person runs it, the same answer.
+    assert.equal(plan('--json', '--integration').catalog, true);
+
+    // A branch that has merged nothing from main keeps the base it was given: `--integration`
+    // must not silently rewrite an explicit ref when there is no merge to integrate.
+    git('checkout', 'main');
+    assert.equal(plan('--json', '--integration', 'HEAD~1').base, 'HEAD~1');
+  } finally {
+    rmSync(repo, { recursive: true, force: true, maxRetries: 5 });
+  }
+});
+
+// ── Shard sizing, pinned to what it is FOR ─────────────────────────────────
+//
+// THE RULE: the runner count follows measured minutes, not a file count. The old rule capped a
+// subset at four shards however big it was, and under sprint focus plus the curated map a subset
+// is routinely 70-100 of the 128 spec files - so 80% of the suite ran on 44% of the runners and
+// finished later than the full suite beside it (run 32174589727: 103 specs, 58.3 min, 4 shards,
+// 14.6 min per shard, against 7.4 min on the full run).
+const FAKE_TABLE = { minutes: { 'a.spec.ts': 8, 'b.spec.ts': 4, 'c.spec.ts': 2, 'd.spec.ts': 1 } };
+
+test('shard count follows measured minutes, and a full plan still lands on nine', () => {
+  // 15 measured minutes over the whole fake suite -> ceil(15 / 7.5) = 2.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 2);
+  // The real table is what CI uses, and it must reproduce the nine shards ci.yml has run since
+  // 2026-08-08 - this change is about the SUBSET cap, not about resizing the full run.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }), 9);
+
+  // A subset is sized by ITS OWN minutes, so a heavy plan gets more runners than a light one.
+  assert.equal(shardsFor({ mode: 'subset', specs: ['a.spec.ts', 'b.spec.ts'] }, FAKE_TABLE), 2);
+  assert.equal(shardsFor({ mode: 'subset', specs: ['d.spec.ts'] }, FAKE_TABLE), 1);
+
+  // The old cap is gone: a subset covering most of the suite gets most of the runners.
+  const nearlyEverything = Object.keys(readTable().minutes).slice(0, 100);
+  assert.ok(
+    shardsFor({ mode: 'subset', specs: nearlyEverything }) > 4,
+    'a subset worth more than four shards must be allowed to have them',
+  );
+});
+
+test('shard count never leaves a plan with no runner, and never exceeds the ceiling', () => {
+  assert.equal(shardsFor({ mode: 'none', specs: [] }, FAKE_TABLE), 1);
+  assert.equal(shardsFor({ mode: 'subset', specs: [] }, FAKE_TABLE), 1);
+  // Every entry unknown: each counts as the MEDIAN rather than as zero, or a plan made entirely
+  // of brand-new spec files would ask for a single runner.
+  const brandNew = ['new-1.spec.ts', 'new-2.spec.ts', 'new-3.spec.ts', 'new-4.spec.ts'];
+  assert.ok(shardsFor({ mode: 'subset', specs: brandNew }, FAKE_TABLE) >= 2);
+  // A table that has been deleted or emptied degrades to one shard rather than to a crash.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, { minutes: {} }), 1);
+  assert.ok(shardsFor({ mode: 'subset', specs: Object.keys(readTable().minutes) }) <= MAX_SHARDS);
 });
