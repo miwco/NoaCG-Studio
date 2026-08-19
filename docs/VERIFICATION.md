@@ -84,6 +84,27 @@ plan sharded nine ways, the factory gates, the catalog tripwire when raised) in 
 minutes, free, on a clean checkout. The safe-merge workflow's Phase 3 prefers a CI run green on
 exactly the commit being promoted and falls back to the local pair only when there isn't one.
 
+**A GREEN run is not a verdict either, until you have read which jobs actually ran.** The E2E plan
+diffs against `github.event.before` - the PREVIOUS PUSH - and the concurrency group cancels the
+in-flight run on every new push to a branch. Push the change, then push a doc line two minutes
+later, and the second run plans only that doc line: `plan: {"mode":"none","specs":[],
+"catalog":false}`, every shard and the catalog tripwire SKIPPED, the run green on build and the
+factory gates alone - while the run that would have covered the change was cancelled before it
+finished. Nothing ever gated the change, and the tick says otherwise. Measured 2026-08-19 on
+`claude/catalog-names-stat-list-97cbd3`: three pushes in nine minutes, two cancelled, the survivor
+green with four of eight jobs skipped - on a branch whose whole subject was the catalog, which is
+the one thing `e2e/catalog-baseline.spec.ts` only ever checks in CI.
+
+```bash
+gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'
+```
+
+Skipped shards on a change that touches specs or the catalog mean the run answered a smaller
+question than you asked. Ask for the whole one: `gh workflow run ci.yml --ref <branch>`. A
+dispatched run has no `event.before`, finds no diff base, and escalates to the FULL suite by
+design. (A pull request does the same through `PR_BASE`, which is why a PR's run is trustworthy
+where a rapid second push's is not.)
+
 A shard that stops AT its 20-minute `timeout-minutes` is not a verdict on the change. Playwright
 shards by spec FILE, not by measured time, so the spread between the fastest and slowest shard is
 large and moves with the file list: on run 32178282707 the eight shards ran 7.4 to 14.2 minutes on
