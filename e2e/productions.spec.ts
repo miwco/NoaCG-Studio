@@ -792,3 +792,56 @@ test('pictures upload straight into the rundown: one cue each, one layer, and th
   await expect(rows).toHaveCount(0);
   await expect.poll(poolCount).toBe(0);
 });
+
+test('a match clock survives a renderer reboot: the wire carries the instant the value was true', async ({ page }) => {
+  // docs/CLOUD_PLAYOUT.md §3. A clock is the one value that keeps moving with nobody commanding
+  // it, so a snapshot of the commands cannot rebuild it — a browser source reloaded at 67
+  // minutes came back at 0:00, on air. `control/matchClockWire.ts` is the wire half of the fix:
+  // it reads the clock out of the published markup (no design declares anything) and stamps the
+  // value with the clockStart ROW's own server time, which every renderer sees identically and
+  // a boot-time replay of the log reconstructs exactly.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  // The markup is the scoreboard contract's own shape (`.<prefix>-clock` carrying a field id,
+  // `data-count`, `data-start`) written out here rather than taken from a catalog design: this
+  // asserts what the READER promises, and every clock-bearing design in the catalog is walked
+  // for real by e2e/sports.spec.ts.
+  const CLOCK_HTML =
+    '<div class="scoreboard"><span id="f0">HOME</span>'
+    + '<span class="scoreboard-clock" id="f5" data-count="down" data-start="12:00">12:00</span></div>';
+  const wire = await page.evaluate(async (html) => {
+    const w = await import('/src/control/matchClockWire.ts');
+    const spec = w.clockSpecFromHtml(html);
+    const T = 1_755_600_000_000;
+    return {
+      spec,
+      // A graphic with no clock says so rather than guessing a field.
+      noClock: w.clockSpecFromHtml('<div class="lower-third"><span id="f0">Name</span></div>'),
+      // Start stamps the value it reads AT that instant; 45:00 held is 45:00.
+      started: w.startedClockValue('45:00', false, T),
+      // …and 22 minutes later the same string still resolves to the right second.
+      derived: w.clockValueAt(`45:00@${T}`, false, T + 22 * 60_000),
+      down: w.clockValueAt(`12:00@${T}`, true, T + 90_000),
+      // A countdown never runs past zero, however long the outage was.
+      floor: w.clockValueAt(`0:30@${T}`, true, T + 10 * 60_000),
+      // Holding banks the derived time back as a plain value, so the snapshot holds a real time.
+      held: w.heldClockValue(`45:00@${T}`, false, T + 125_000),
+      // A stamp that is not a number degrades to a HELD clock reading the right time, never to
+      // a clock counting from 1970.
+      broken: w.clockValueAt('45:00@nonsense', false, T),
+      // The row's own server time is the anchor; a locally-authored row has none.
+      rowTime: w.rowInstant(new Date(T).toISOString(), 1),
+      localRow: w.rowInstant(undefined, T),
+    };
+  }, CLOCK_HTML);
+  expect(wire.spec).toEqual({ field: 'f5', countsDown: true, start: '12:00' });
+  expect(wire.noClock).toBeNull();
+  expect(wire.started).toBe('45:00@1755600000000');
+  expect(wire.derived).toBe('67:00');
+  expect(wire.down).toBe('10:30');
+  expect(wire.floor).toBe('0:00');
+  expect(wire.held).toBe('47:05');
+  expect(wire.broken).toBe('45:00');
+  expect(wire.rowTime).toBe(1_755_600_000_000);
+  expect(wire.localRow).toBe(1_755_600_000_000);
+});

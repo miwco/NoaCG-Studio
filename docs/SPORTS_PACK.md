@@ -151,6 +151,26 @@ exists for:
 - **Reset is a separate operation, and it never assumes zero.** `resetMatchClock` returns to the
   element's own `data-start`, so a period that runs from 12:00 resets to 12:00 — the same "reset
   is two operations" rule the state machine holds for visual state and data.
+- **Ticking is DISPLAY, not state (2026-08-19).** The clock's truth is a TIME ORIGIN — a value
+  and the instant it was true — and every renderer paints `value ± elapsed`. It used to be a
+  counter each renderer incremented once a second in its own memory, which is three live faults
+  at once: two renderers started a second apart stayed a second apart for the whole match and
+  drifted further whenever either was throttled (a browser source in a background tab is
+  throttled to roughly one timer a minute); a monitor that unmounted and came back restarted
+  from the seed; and **a browser-source reload at 67 minutes aired 0:00**, because the only copy
+  of "67" was in the memory that had just been thrown away.
+
+  The origin travels as the clock FIELD's own value with the instant appended —
+  `"45:00@1755600000000"` — which is why the fix needs no new field, no new message and no new
+  report: a clock value already rides every Take, ✎ Update and boot recovery. A plain value with
+  no `@` is a HELD time, which is what every existing template, export and typed correction
+  already sends, so nothing downstream changed. The stamp is **derived, never invented**: it is
+  the `clockStart` row's own server time (`control/matchClockWire.ts`, attached in
+  `output/main.ts`), so every renderer computes the same one and a boot-time replay of the log
+  reconstructs it exactly. There is no authority to elect.
+
+  A tick now computes nothing and remembers nothing — it is a repaint — so a missed or late one
+  costs a frame of freshness and never a second of match time.
 
 ### The clock group has three states, not two
 

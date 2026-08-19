@@ -208,6 +208,18 @@ The page:
   ordinary reopen still paints at once. The settle is fixed rather than "wait for quiet": a
   recovered state can legitimately keep moving (a ticker, a clock), so a quiet-period test would
   never fire.
+- **A MATCH CLOCK is the one value a snapshot cannot rebuild, so it carries its own origin.**
+  Everything else on the wire is a value somebody sent; a clock keeps moving with nobody
+  commanding it, and until 2026-08-19 the only copy of "67 minutes" was in the renderer's own
+  memory — so a browser source reloaded at 67 minutes came back at 0:00, on air, with nothing on
+  the operator's screen saying so. The clock's field value now carries the instant it was true
+  (`"45:00@1755600000000"`) and every renderer paints `value ± elapsed`, which also ends the
+  two-renderer drift and the background-tab throttle. The stamp is DERIVED, not invented: it is
+  the `clockStart` row's own `created_at`, so every renderer computes the same one and a
+  boot-time replay of the log reconstructs it exactly. `control/matchClockWire.ts` reads the
+  clock out of the published markup (no design declares anything) and `output/main.ts` attaches
+  the stamp into `mergedData` — which is what the report persists and what boot recovery replays,
+  so the recovery is the ordinary one. Runtime half: `templates/shared/matchClock.ts`.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside

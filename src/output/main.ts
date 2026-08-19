@@ -18,6 +18,13 @@ import {
   followControlLog,
   type ControlEventRow,
 } from '../control/hostedControl';
+import {
+  clockSpecFromHtml,
+  heldClockValue,
+  rowInstant,
+  startedClockValue,
+  type ClockSpec,
+} from '../control/matchClockWire';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -151,6 +158,36 @@ async function boot(): Promise<void> {
   const liveGraphics = new Set<string>();
   setInterval(() => liveGraphics.forEach((g) => stage.requestState(g)), 1000);
 
+  // ── THE MATCH CLOCK'S TIME ORIGIN (control/matchClockWire.ts). A clock is the one value that
+  // keeps moving with nobody commanding it, so a snapshot of the commands cannot rebuild it: a
+  // browser source reloaded at 67 minutes used to come back at 0:00. The clock's own field value
+  // therefore carries the instant it was true (`"45:00@1755600000000"`), and this is where that
+  // stamp is attached — DERIVED from the clockStart row's own server time, so every renderer
+  // computes the same one and a boot-time replay of the log reconstructs it exactly. Stopping
+  // banks the derived time back as a plain value; resetting banks the period's own start. All
+  // three land in `mergedData`, which is what the report persists and what boot recovery
+  // replays — which is the whole recovery. ──
+  const clockSpecs = new Map<string, ClockSpec>();
+  for (const spec of resolved.output.graphics) {
+    const clock = clockSpecFromHtml(spec.html);
+    if (clock) clockSpecs.set(spec.key, clock);
+  }
+  /** The clock value this row leaves behind, or null when the row does not move the clock. */
+  const clockAfter = (row: ControlEventRow, clock: ClockSpec): string | null => {
+    if (row.msg.t !== 'event') return null;
+    const at = rowInstant(row.created_at, Date.now());
+    const held = mergedData.get(row.graphic)?.[clock.field];
+    if (row.msg.event === 'clockStart') return startedClockValue(held ?? clock.start, clock.countsDown, at);
+    if (row.msg.event === 'clockStop') return heldClockValue(held ?? clock.start, clock.countsDown, at);
+    // Reset is a separate operation and never assumes zero: back to the period's own start.
+    if (row.msg.event === 'clockReset') return heldClockValue(clock.start, clock.countsDown, at);
+    return null;
+  };
+  const applyClock = (row: ControlEventRow, clock: ClockSpec, value: string) => {
+    mergedData.set(row.graphic, { ...mergedData.get(row.graphic), [clock.field]: value });
+    stage.apply(row.graphic, { t: 'update', data: { [clock.field]: value } });
+  };
+
   const apply = (row: ControlEventRow) => {
     lastAppliedId = Math.max(lastAppliedId, row.id);
     const snapshot = snapshotAt.get(row.graphic);
@@ -166,7 +203,17 @@ async function boot(): Promise<void> {
     } else if (msg.t === 'stop') {
       liveGraphics.delete(row.graphic);
     }
+    // The clock's new value goes in BEFORE a start and AFTER a hold. Starting, the shared origin
+    // must already be in the document when `startMatchClock` runs, or the runtime mints a local
+    // one and this renderer's clock is anchored a network hop away from every other's. Holding,
+    // the banked value is what the graphic has just settled on, so it follows the event that
+    // settled it.
+    const clock = clockSpecs.get(row.graphic);
+    const clockValue = clock ? clockAfter(row, clock) : null;
+    const starting = msg.t === 'event' && msg.event === 'clockStart';
+    if (clock && clockValue !== null && starting) applyClock(row, clock, clockValue);
     stage.apply(row.graphic, msg);
+    if (clock && clockValue !== null && !starting) applyClock(row, clock, clockValue);
     // Status rows ('cue'/'staged'/'live') are for the operator pages; the stage ignored them
     // and so does the report path.
     const forwarded = msg.t === 'update' || msg.t === 'play' || msg.t === 'stop' || msg.t === 'next' || msg.t === 'event' || msg.t === 'snap';
