@@ -448,14 +448,31 @@ export function planFor(changed, { sprintFocus = false } = {}) {
 /**
  * How much runner time one shard should be worth, in minutes of measured test execution.
  *
- * Chosen so a FULL plan lands on nine shards - the count ci.yml has used since 2026-08-08 and
- * the one its own comment argues for (past nine, an extra independent runner adds more
- * infrastructure-hiccup surface and more queueing against the 20-concurrent-job ceiling than it
- * takes off the clock). 66.9 measured minutes / 7.5 = 8.9 -> 9, without leaning on the cap.
+ * SET FROM THE FIXED COST OF ADDING A SHARD, which is now about a minute: 0.3 of job setup
+ * (checkout 0.08, setup-node 0.03, a cached `npm ci` 0.13, the browser cache 0.08) and about 0.7
+ * inside the step for Playwright's own start and the dev-server boot. Measured on run
+ * 32301623379: three shards, 22.0 table-minutes, 7.8-9.7 min per job - which the model
+ * `minutes / n + 1.0` predicts to within a few seconds, and which the nine-shard full runs
+ * beside it match too.
+ *
+ * At three minutes a shard the setup is ~25% overhead, and below that an extra runner stops
+ * paying. It is deliberately much lower than it could have been before 2026-08-19: until the
+ * apt call in `.github/actions/playwright-chromium` was tied to the browser cache miss, adding a
+ * shard cost 3.5 minutes of setup rather than one, and the old workflow comment's "beyond four,
+ * the 52 s of per-shard setup costs more than it saves" was understating its own case. Making a
+ * shard cheap is what makes sharding finely correct.
+ *
+ * The FULL plan is 66.9 measured minutes, so this target would ask for 23 shards and the cap
+ * below is what holds it at the nine ci.yml has run since 2026-08-08.
  */
-export const SHARD_TARGET_MINUTES = 7.5;
+export const SHARD_TARGET_MINUTES = 3;
 
-/** The ceiling, for the reasons ci.yml's `strategy` comment gives. */
+/**
+ * The ceiling, for the reasons ci.yml's `strategy` comment gives: every shard is an independent
+ * runner, so the chance one of them hits an infrastructure hiccup grows with the count, and the
+ * account's 20-concurrent-job limit is a real constraint here - runs starting while two other
+ * branches were mid-gate waited 22 to 45 minutes for a runner over the 60 runs to 2026-08-19.
+ */
 export const MAX_SHARDS = 9;
 
 /**

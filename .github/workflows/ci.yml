@@ -245,14 +245,21 @@ jobs:
       # the combined report.
       fail-fast: false
       # Sized by the plan job, not fixed here, and since 2026-08-19 sized from MEASURED MINUTES
-      # (scripts/e2e-affected.mjs `shardsFor`, scripts/e2e-durations.json): about 7.5 minutes of
-      # test execution per runner, capped at nine. The full suite is 66.9 measured minutes, so a
-      # full plan still lands on nine - the count this comment has argued for since 2026-08-08,
-      # unchanged. What changed is the SUBSET, which used to be capped at four runners however
-      # big it was: under sprint focus and the curated map a subset is routinely 70-100 of the
-      # 128 spec files, so run 32174589727 put 58.3 minutes of tests on four shards (14.6 min
-      # each) while the full run beside it did 66.9 on nine (7.4 min each). A targeted run that
-      # finishes later than the exhaustive one is not a cheaper answer, it is a slower one.
+      # (scripts/e2e-affected.mjs `shardsFor`, scripts/e2e-durations.json): about three minutes
+      # of test execution per runner, capped at nine. The full suite is 66.9 measured minutes, so
+      # a full plan is held at nine by the cap - the count this comment has argued for since
+      # 2026-08-08, unchanged.
+      #
+      # What changed is the SUBSET, which used to be capped at four runners however big it was:
+      # under sprint focus and the curated map a subset is routinely 70-100 of the 128 spec
+      # files, so run 32174589727 put 58.3 minutes of tests on four shards (14.6 min each) while
+      # the full run beside it did 66.9 on nine (7.4 min each). A targeted run that finishes
+      # later than the exhaustive one is not a cheaper answer, it is a slower one.
+      #
+      # Three minutes and not more because a shard is now CHEAP to add - about one minute all in
+      # (0.3 of job setup, 0.7 of Playwright start and dev-server boot), where before the apt
+      # change below it was 3.5. That is why the old "one runner per ~4 spec files, capped at
+      # four" was right at the time and is wrong now.
       #
       # Nine and not twelve, even though the arithmetic keeps improving: every shard is an
       # independent runner doing its own checkout and install, so the chance that ONE of them

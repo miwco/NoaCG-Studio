@@ -15,7 +15,7 @@ The cost and capacity policy for the Pro account is
 
    An `E2E plan` job answers that first, by running `scripts/e2e-affected.mjs --json
    --integration` against the diff base (the PR base, or the previous branch tip on a push).
-   Its output decides both which specs run and how many runners they get - about 7.5 measured
+   Its output decides both which specs run and how many runners they get - about three measured
    minutes of test execution per runner, capped at nine, from the durations table in
    `scripts/e2e-durations.json`. It also raises the **catalog calibration gate** for changes
    that can move catalog output or the bench.

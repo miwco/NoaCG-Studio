@@ -308,15 +308,18 @@ test('a merge commit plans from the fork point, so the catalog gate is not skipp
 const FAKE_TABLE = { minutes: { 'a.spec.ts': 8, 'b.spec.ts': 4, 'c.spec.ts': 2, 'd.spec.ts': 1 } };
 
 test('shard count follows measured minutes, and a full plan still lands on nine', () => {
-  // 15 measured minutes over the whole fake suite -> ceil(15 / 7.5) = 2.
-  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 2);
+  // 15 measured minutes over the whole fake suite -> ceil(15 / 3) = 5.
+  assert.equal(shardsFor({ mode: 'full', specs: [] }, FAKE_TABLE), 5);
   // The real table is what CI uses, and it must reproduce the nine shards ci.yml has run since
-  // 2026-08-08 - this change is about the SUBSET cap, not about resizing the full run.
+  // 2026-08-08 - this change is about how a SUBSET is sized, not about resizing the full run.
   assert.equal(shardsFor({ mode: 'full', specs: [] }), 9);
 
   // A subset is sized by ITS OWN minutes, so a heavy plan gets more runners than a light one.
-  assert.equal(shardsFor({ mode: 'subset', specs: ['a.spec.ts', 'b.spec.ts'] }, FAKE_TABLE), 2);
+  assert.equal(shardsFor({ mode: 'subset', specs: ['a.spec.ts', 'b.spec.ts'] }, FAKE_TABLE), 4);
   assert.equal(shardsFor({ mode: 'subset', specs: ['d.spec.ts'] }, FAKE_TABLE), 1);
+  // A plan too small to be worth splitting is not split: an extra runner costs about a minute
+  // of setup, so below ~3 minutes of tests a second shard makes the answer arrive later.
+  assert.equal(shardsFor({ mode: 'subset', specs: ['c.spec.ts'] }, FAKE_TABLE), 1);
 
   // The old cap is gone: a subset covering most of the suite gets most of the runners.
   const nearlyEverything = Object.keys(readTable().minutes).slice(0, 100);

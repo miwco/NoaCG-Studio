@@ -95,14 +95,17 @@ minutes, free, on a clean checkout. The safe-merge workflow's Phase 3 prefers a 
 exactly the commit being promoted and falls back to the local pair only when there isn't one.
 
 **The shard count follows measured minutes, not a file count** (`shardsFor` in
-`scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about 7.5 minutes of test
-execution per runner, capped at nine. A full plan is 66.9 measured minutes and still lands on nine.
-What that replaced was a subset cap of four runners however big the subset was - and under sprint
-focus plus the curated map a subset is routinely 70-100 of the 128 spec files, so run 32174589727
-put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it did 66.9 on
-nine (7.4 min each). The table only decides how many runners `--shard` spreads the plan across, so
-a stale entry costs wall clock and never coverage; `npm run check:e2e-durations` reports drift and
-the script's header says how to refresh it from a real run's blob reports.
+`scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about three minutes of test
+execution per runner, capped at nine. A full plan is 66.9 measured minutes and the cap holds it at
+nine. What that replaced was a subset cap of four runners however big the subset was - and under
+sprint focus plus the curated map a subset is routinely 70-100 of the 128 spec files, so run
+32174589727 put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it
+did 66.9 on nine (7.4 min each). Three minutes is set from what a shard now COSTS to add - about
+one minute all in, against 3.5 before the browser-setup change below - so the target is a
+consequence of that fix, not an independent guess. The table only decides how many runners
+`--shard` spreads the plan across, so a stale entry costs wall clock and never coverage;
+`npm run check:e2e-durations` reports drift and the script's header says how to refresh it from a
+real run's blob reports.
 
 A shard that stops AT its 20-minute `timeout-minutes` is not a verdict on the change. Playwright
 shards by test COUNT, not by measured time, so the spread between the fastest and slowest shard is
