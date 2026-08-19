@@ -73,23 +73,52 @@ the merge's two parents), so the plan is the union of both sides' changes since 
 that is exactly the moment someone is about to push an unverified combination; `--no-integration`
 forces the plain branch-only diff.
 
-It stays cheap: a wide diff escalates, and under sprint focus an escalation is the 34-spec set,
-not 103. The order is **update from main -> verify the combined state -> fix -> push**, and CI
-remains the final authority.
+It stays cheap: a wide diff escalates, and under sprint focus an escalation is the focus set, not
+all 128 spec files. The order is **update from main -> verify the combined state -> fix -> push**,
+and CI remains the final authority.
+
+**CI asks the same question, since 2026-08-19.** It used to pass `github.event.before` as the base,
+which switched integration off - so a merge commit's run diffed the pre-merge branch tip against the
+merge and saw only the files `main` had brought in. Replaying the last 120 merge-of-main commits in
+this repository through the planner from both bases, **71 (59%) would have been planned
+differently**: 17 skipped the catalog calibration gate the combined tree needed, and 8 skipped E2E
+entirely with `mode: none`, reporting green on a combination nothing had run. The plan job now
+passes `--integration` alongside the base, so the fork point wins when there is a merge to integrate
+and the given base is used untouched when there is not. That does not make the local run redundant -
+it means a forgotten local run is no longer a silent hole.
 
 ## The pre-merge gate belongs to CI, not the laptop
 
 `ci.yml` runs on every branch push and does strictly more than a local run can (build, the affected
-plan sharded nine ways, the factory gates, the catalog tripwire when raised) in six to nine
+plan sharded up to nine ways, the factory gates, the catalog tripwire when raised) in about ten
 minutes, free, on a clean checkout. The safe-merge workflow's Phase 3 prefers a CI run green on
 exactly the commit being promoted and falls back to the local pair only when there isn't one.
 
+**The shard count follows measured minutes, not a file count** (`shardsFor` in
+`scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about 7.5 minutes of test
+execution per runner, capped at nine. A full plan is 66.9 measured minutes and still lands on nine.
+What that replaced was a subset cap of four runners however big the subset was - and under sprint
+focus plus the curated map a subset is routinely 70-100 of the 128 spec files, so run 32174589727
+put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it did 66.9 on
+nine (7.4 min each). The table only decides how many runners `--shard` spreads the plan across, so
+a stale entry costs wall clock and never coverage; `npm run check:e2e-durations` reports drift and
+the script's header says how to refresh it from a real run's blob reports.
+
 A shard that stops AT its 20-minute `timeout-minutes` is not a verdict on the change. Playwright
-shards by spec FILE, not by measured time, so the spread between the fastest and slowest shard is
-large and moves with the file list: on run 32178282707 the eight shards ran 7.4 to 14.2 minutes on
-identical work. Re-run the unchanged SHA before bisecting. The fix for a shard creeping toward its
-budget is a SHARD, never a looser timeout - a budget raised to accommodate the slowest healthy
-shard no longer distinguishes it from a hung one.
+shards by test COUNT, not by measured time, so the spread between the fastest and slowest shard is
+real and moves with the file list: on run 32178282707 the eight shards ran 7.4 to 14.2 minutes on
+identical work, and across 33 full runs the slowest shard averaged 12.7 minutes against a
+perfectly-balanced 9.9 - about half of that gap runner-to-runner variance rather than the split.
+Re-run the unchanged SHA before bisecting. The fix for a shard creeping toward its budget is a
+SHARD, never a looser timeout - a budget raised to accommodate the slowest healthy shard no longer
+distinguishes it from a hung one.
+
+**Setup is the other half of a shard's clock, and it is shared.** `.github/actions/playwright-chromium`
+is the one place the browser cache and its apt call live, for the nine shards and both gate jobs.
+Until 2026-08-19 it reconciled system dependencies on every job, cache hit or miss: measured over 60
+runs that was 3.15 minutes of the composite on a cache hit, of which the cache restore was 3 seconds
+and apt was the rest - cut off at its own 180-second bound, installing fonts nothing here reads. It
+is now tied to the browser cache miss, and the same action measures 0.03-0.10 minutes on a hit.
 
 ## One browser-driving job per MACHINE, not per worktree
 
