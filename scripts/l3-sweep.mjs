@@ -246,6 +246,27 @@ const results = await page.evaluate(async (CATEGORY) => {
             detail: { midNums, endNums, midWidths, endWidths, landed },
           };
         }
+        // The MILESTONE track — its measured motion is the progress line, and its #f0 never
+        // changes, so without this branch the four milestone designs fell to the count check
+        // below and were reported as broken for animating exactly what they are meant to.
+        // Read mid-flight against settled, like the bar readouts above: the rebuild renders the
+        // fill AT its value, so a before/after pair would compare a number with itself.
+        if (d.querySelector('.infographic-milestone-fill')) {
+          const fill = d.querySelector('.infographic-milestone-fill');
+          const width = () => parseFloat(getComputedStyle(fill).width);
+          w.play();
+          await new Promise((r) => setTimeout(r, 250));
+          const mid = width();
+          await new Promise((r) => setTimeout(r, 1600));
+          const end = width();
+          const track = fill.parentElement.getBoundingClientRect().width;
+          const want = (Number(fill.getAttribute('data-value')) / 100) * track;
+          return {
+            milestoneRan: mid !== end && Math.abs(end - want) < track * 0.04,
+            nodes: d.querySelectorAll('.infographic-node').length,
+            detail: { mid, end, want },
+          };
+        }
         w.play();
         const el = d.getElementById('f0');
         const first = el.textContent;
@@ -253,7 +274,8 @@ const results = await page.evaluate(async (CATEGORY) => {
         return { counting: el.textContent !== first || first === '0' };
       });
       row.checks.autoFit =
-        !r9.fatal && r9.errs.length === 0 && (r9.bars >= 3 || r9.rows >= 2 || !!r9.ringMoved || !!r9.counting);
+        !r9.fatal && r9.errs.length === 0
+        && (r9.bars >= 3 || r9.rows >= 2 || !!r9.ringMoved || !!r9.counting || !!r9.milestoneRan);
       if (!row.checks.autoFit) row.issues.push('infographic: ' + JSON.stringify(r9));
       out.push(row);
       continue;
