@@ -293,8 +293,8 @@ test('two DIFFERENT graphics in one document do not write into each other', asyn
   // cannot be told apart — which is why this test uses two different designs.
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await serve(page, await downloadOgraf(page), 'http://ograf-a.local', 'hairline');
-  await createProject(page, { name: 'Public Notice' });
-  await serve(page, await downloadOgraf(page), 'http://ograf-b.local', 'public_notice');
+  await createProject(page, { category: 'Info cards', name: 'Public Advisory' });
+  await serve(page, await downloadOgraf(page), 'http://ograf-b.local', 'public_advisory');
 
   const result = await page.evaluate(async () => {
     type Driver = HTMLElement & {
@@ -391,10 +391,10 @@ test('actions called concurrently, too early, or after dispose all answer with a
 test('a production holding two designs with the same name ships two distinct manifest ids', async ({ page }) => {
   // The OGraf spec requires ids to be unique per package, and a renderer registers each Graphic
   // with `customElements.define(manifest.id, class)` — a repeat id throws before the second
-  // graphic is ever mounted. The catalog does hold same-named designs in different categories
-  // (bug05/lt54 "House Ident", card30/pi01 "Public Notice", ig38/tk13 "Results Rail",
-  // tt01/ig03 "Timing Tower", fr03/qz05 "Volt Split"), so one production can hold both members
-  // of a pair. What keeps them apart is the show export renaming the second graphic before any
+  // graphic is ever mounted. No two CATALOG designs share a name any more (catalog-baseline
+  // holds that), but a production still reaches two same-named graphics the ordinary way: the
+  // same design added twice, which is what a show does the moment it needs two straps of one
+  // look. What keeps them apart is the show export renaming the second graphic before any
   // target packages it — the id derives from that same renamed template, so folder, file and id
   // carry the suffix together. Sourcing the id anywhere else would let them disagree.
   await page.goto('/app');
@@ -403,7 +403,8 @@ test('a production holding two designs with the same name ships two distinct man
     const { variantsFor } = await import('/src/templates/catalog.ts');
     const { buildShowZipFor } = await import('/src/export/showExport.ts');
     const find = (category: string, name: string) => variantsFor(category).find((v) => v.name === name)!;
-    const pair = [find('corner-bug', 'House Ident'), find('lower-third', 'House Ident')];
+    const ident = find('corner-bug', 'House Ident');
+    const pair = [ident, ident];
     const graphics = pair.map((variant, i) => {
       const template = variant.create({});
       return {
@@ -422,7 +423,7 @@ test('a production holding two designs with the same name ships two distinct man
     return { sourceNames: pair.map((v) => v.name), manifestPaths, ids };
   });
 
-  // Both members really do carry the same catalog name — otherwise the test proves nothing.
+  // Both graphics really do carry the same name — otherwise the test proves nothing.
   expect(result.sourceNames).toEqual(['House Ident', 'House Ident']);
   expect(result.ids, 'the OGraf ids must be distinct AND carry the folders\' own suffix').toEqual([
     'noacg-house-ident',

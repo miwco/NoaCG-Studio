@@ -50,7 +50,7 @@ answers to (all of them appear as control-page buttons, greyed by the structural
 |----|------|--------|--------|-----------------|--------|--------------|-------|
 | tk11 | Headline Crawl | minimal | marquee | — | items, label, source | bottom-center | Two fixed caps frame the travel |
 | tk12 | Upper Crawl | minimal | marquee | — | items, label | **top-center** | Accent edge on the UNDERSIDE; slimmer type |
-| tk13 | Results Rail | sport | marquee | — | results, label, round | bottom-center | `HOME 2 - 1 AWAY` → score lifted into a chip |
+| tk13 | Results Crawl | sport | marquee | — | results, label, round | bottom-center | `HOME 2 - 1 AWAY` → score lifted into a chip |
 | tk14 | Market Board | minimal | marquee | — | instruments, label, session | bottom-center | Delta carries arrow **+** sign **+** colour |
 | tk15 | Public Notice Crawl | minimal | marquee | — | notices, label, source | bottom-center | Fully opaque, largest crawl type, permanent source cap |
 | tk16 | Breaking Crawl | minimal | marquee + loop | — | lines, label | bottom-center | Live dot: 1.8 s yoyo loop, floor 0.35 — never a strobe |

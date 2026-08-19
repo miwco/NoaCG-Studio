@@ -38,7 +38,7 @@ export const TICKERS: TemplateVariant[] = [
   tk17, // Bilingual Crawl — both languages per item, equally weighted
   tk14, // Market Board — minimal index crawl: arrow + sign + colour deltas
   tk22, // Market Decks — glass double-decker: the lead quote still, the rest crawling
-  tk13, // Results Rail — sport results crawl with the score boxed out
+  tk13, // Results Crawl — sport results crawl with the score boxed out
   tk02, // Volt Rail — sport marquee (sibling lt05/lt06)
   tk03, // Glass Flip — glass item flip (sibling lt08/lt09)
   tk04, // bench-winner ticker variant

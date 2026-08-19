@@ -133,9 +133,10 @@ disagree with each other.
   a digit, keeps the id clear of HTML's reserved element names, and gives the namespace the
   spec's reverse-DNS recommendation is really after. Folder and file names keep the plain slug,
   the way SPX and CasparCG expect. **Uniqueness comes from the NAME, not from a separate id
-  register.** The catalog does hold same-named designs in different categories (bug05/lt54
-  "House Ident", card30/pi01 "Public Notice", ig38/tk13 "Results Rail", tt01/ig03 "Timing Tower",
-  fr03/qz05 "Volt Split"), and one production may hold both members of such a pair. The
+  register.** No two CATALOG designs share a name (five pairs had drifted together by
+  2026-08-19 and were renamed; `e2e/catalog-baseline.spec.ts` holds the rule), but a production
+  reaches two same-named graphics the ordinary way - by adding one design twice, which is what
+  a show does the moment it needs two straps of one look. The
   whole-show export resolves that by suffixing the graphic's name (`House Ident 2`) before any
   target packages it, and the id derives from that same renamed template - so the folder, the
   file and the manifest id carry the suffix together (`house_ident_2/`, `noacg-house-ident-2`).

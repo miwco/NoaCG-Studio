@@ -1,5 +1,5 @@
 // ig25 "Volt Milestones" — the SPORT milestone track, sibling of lt05 "Angle Slab" /
-// ig03 "Timing Tower" / ig12 "Volt Poll". The same tier rail as ig24 "House Milestones" — same
+// ig03 "Gap Stack" / ig12 "Volt Poll". The same tier rail as ig24 "House Milestones" — same
 // two fields, same shared rebuild, same evenly spaced geometry — drawn in the sport register:
 // a leaning near-black slab, a squared rail, and hard-edged square markers instead of dots.
 //

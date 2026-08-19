@@ -26,7 +26,7 @@ export const QUIZ: TemplateVariant[] = [
   qz10, // House Triple — noacg, three tall rows
   qz11, // Frost Triple — glass, three tall chips
   qz12, // Clean Triple — minimal, three hairline-split rows
-  qz05, // Volt Split — sport, two equal slabs
+  qz05, // Arena Split — sport, two equal slabs
   qz06, // House Split — noacg, two equal blocks
   qz07, // Frost Split — glass, two equal blocks
   qz08, // Clean Split — minimal, two halves and a hairline

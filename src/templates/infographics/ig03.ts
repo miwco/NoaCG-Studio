@@ -1,4 +1,4 @@
-// ig03 "Timing Tower" — sport style, the infographic sibling of lt05 "Angle Slab" /
+// ig03 "Gap Stack" — sport style, the infographic sibling of lt05 "Angle Slab" /
 // lt06 "Split Bar". A race-control standings stack: a caps title with an accent dash on
 // top, then one compact dark slab row per driver — position number on a skewed accent
 // chip, three-letter code in condensed bold caps, gap figure right-aligned and dimmed
@@ -17,7 +17,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
   {
     id: 'ig03',
     category: 'infographic',
-    name: 'Timing Tower',
+    name: 'Gap Stack',
     styleTag: 'sport',
     description: 'A live-timing standings stack - leaning slab rows with position chips and gaps.',
     maxLines: 2,
@@ -32,7 +32,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
     defaultZone: 'top-left',
   },
   {
-    name: 'Timing Tower',
+    name: 'Gap Stack',
     description:
       'A race-control standings tower - the sibling of the Angle Slab and Split Bar lower ' +
       'thirds. Each row is a leaning dark slab: a skewed accent chip carries the position ' +
@@ -47,7 +47,7 @@ export const ig03: TemplateVariant = defineInfographicVariant(
     return {
       // Structure: .infographic-box holds the caps title and the tower; #infographic-rows is rebuilt from
       // the hidden #f0 source by rebuildInfographic() — exactly like a ticker's track.
-      html: `    <!-- Timing Tower: caps title with an accent dash, then one leaning slab row per driver. -->
+      html: `    <!-- Gap Stack: caps title with an accent dash, then one leaning slab row per driver. -->
     <div class="infographic-box">
       <!-- Title — the tower's caps kicker; its accent dash is painted by CSS (SPX writes field f1 here). -->
       <div class="infographic-title" id="f1">${titleText}</div>

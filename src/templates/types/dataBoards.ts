@@ -94,7 +94,7 @@ export const agendaType: GraphicType = {
       create: (_type, options) => ig09.create(options),
     },
     {
-      // Designed FOR this cell rather than promoting ig03 Timing Tower. ig03 fits the SHAPE of
+      // Designed FOR this cell rather than promoting ig03 Gap Stack. ig03 fits the SHAPE of
       // an agenda (rows plus a title) but its rows are live-timing standings, not a schedule,
       // and pairing it up was left as an open design call. A purpose-built sport schedule board
       // sidesteps that ambiguity — sibling of lt06 Split Bar and card02 Slab Card.

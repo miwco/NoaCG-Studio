@@ -167,6 +167,61 @@ test('no catalog variant hides a data holder with an inline style', async ({ pag
   ).toEqual([]);
 });
 
+/**
+ * A catalog NAME is what the user picks by, so two designs may not share one.
+ *
+ * Export already survives a collision - the whole-show export suffixes the second graphic
+ * ("House Ident 2") so the folders, files and OGraf ids stay distinct (docs/OGRAF.md). The
+ * USER does not: Browse offers two identical cards with nothing to choose between, and a
+ * production holding both silently renames one in the operator's rundown. Five pairs had
+ * drifted together by 2026-08-19 (bug05/lt54, card30/pi01, ig38/tk13, tt01/ig03, fr03/qz05),
+ * every one of them a design added years after the name it landed on.
+ *
+ * BOTH names are checked because a design writes two: the VARIANT name is the Browse card,
+ * and the created template's name is what a production, a rundown and an export folder carry.
+ * They are the same string by convention, and a design that lets them drift is its own defect.
+ */
+test('no two catalog designs share a name', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+
+  const named = (await page.evaluate(`(async () => {
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const out = [];
+    for (const [category, variants] of Object.entries(CATALOG)) {
+      for (const variant of variants ?? []) {
+        let templateName = null;
+        try { templateName = variant.create({}).name; } catch { /* the emit test reports this */ }
+        out.push({ id: variant.id, category, name: variant.name, templateName });
+      }
+    }
+    return out.sort((a, b) => a.id.localeCompare(b.id));
+  })()`)) as { id: string; category: string; name: string; templateName: string | null }[];
+  expect(named.length).toBeGreaterThan(0);
+
+  const byName = new Map<string, string[]>();
+  for (const v of named) byName.set(v.name, [...(byName.get(v.name) ?? []), `${v.id} (${v.category})`]);
+  const collisions = [...byName.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([name, ids]) => `"${name}": ${ids.join(' + ')}`);
+
+  expect(
+    collisions,
+    'Two designs carry the same catalog name. Rename the one whose category the name fits ' +
+      'worse - Browse cannot tell them apart, and a production holding both renames one.',
+  ).toEqual([]);
+
+  const drifted = named
+    .filter((v) => v.templateName !== null && v.templateName !== v.name)
+    .map((v) => `${v.id}: card "${v.name}" vs template "${v.templateName}"`);
+  expect(
+    drifted,
+    'A design\'s variant name and the name of the template it creates must match - the user ' +
+      'picks by the first and operates by the second.',
+  ).toEqual([]);
+});
+
 // ── The render fingerprint — the gate tokenization must not move ────────────────────────
 
 interface Rendered {

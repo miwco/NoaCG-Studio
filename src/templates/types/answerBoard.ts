@@ -193,7 +193,7 @@ export const twoAnswerBoardType: GraphicType = {
   designs: [
     {
       id: 'qz05',
-      name: 'Volt Split',
+      name: 'Arena Split',
       description: 'A leaning sport board for two answers: the question over two equal accent slabs.',
       styleTag: 'sport',
       palette: paletteById('volt'),

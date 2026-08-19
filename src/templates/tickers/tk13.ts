@@ -1,4 +1,4 @@
-// tk13 "Results Rail" — the results ticker. Items are written the way a results service
+// tk13 "Results Crawl" — the results ticker. Items are written the way a results service
 // writes them, "HOME 2 - 1 AWAY", and the runtime pulls the SCORE out of the middle and puts
 // it in a chip of its own.
 //
@@ -13,7 +13,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
   {
     id: 'tk13',
     category: 'ticker',
-    name: 'Results Rail',
+    name: 'Results Crawl',
     styleTag: 'sport',
     description: 'A results crawl that boxes the score out of each fixture so the strip can be scanned.',
     maxLines: 3,
@@ -37,7 +37,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
     defaultZone: 'bottom-center',
   },
   {
-    name: 'Results Rail',
+    name: 'Results Crawl',
     description:
       'The results crawl: fixtures travel past a leaning accent label, each one with its ' +
       'score lifted into a chip so the strip can be scanned rather than read. A fixed round ' +
@@ -45,7 +45,7 @@ export const tk13: TemplateVariant = defineTickerVariant(
     uicolor: '3',
   },
   (o) => ({
-    html: `    <!-- Results Rail: leaning label left, fixtures travelling, round cap right. -->
+    html: `    <!-- Results Crawl: leaning label left, fixtures travelling, round cap right. -->
     <div class="ticker-box">
       <!-- The label block — the strip's single accent moment. -->
       <div class="ticker-label"><span id="f1">${o.lines[1]?.sample || 'Results'}</span></div>

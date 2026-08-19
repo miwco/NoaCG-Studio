@@ -1,4 +1,4 @@
-// lt54 "House Ident" — the house strap that ends with a mark: name and mono role, then the amber
+// lt54 "House Signature" — the house strap that ends with a mark: name and mono role, then the amber
 // bar, then the channel or partner logo. The bar does double duty here — it is still the family's
 // 8 px accent, but it also divides the words from the mark, which is why this design puts it in
 // the middle rather than on an edge.
@@ -14,7 +14,7 @@ export const lt54: TemplateVariant = defineVariant(
   {
     id: 'lt54',
     category: 'lower-third',
-    name: 'House Ident',
+    name: 'House Signature',
     styleTag: 'noacg',
     description: 'Name and mono role, the amber bar as a divider, then the channel mark.',
     maxLines: 2,
@@ -29,7 +29,7 @@ export const lt54: TemplateVariant = defineVariant(
     defaultZone: 'bottom-left',
   },
   {
-    name: 'House Ident',
+    name: 'House Signature',
     description:
       'The house strap signed with a mark: the void panel carries the name and a mono role, the ' +
       '8 px amber bar divides, and the channel or partner logo closes the block. Leave the image ' +
@@ -47,7 +47,7 @@ export const lt54: TemplateVariant = defineVariant(
       : '\n      <!-- No logo slot on this graphic — turn it on in the wizard to add one. -->';
 
     return {
-      html: `    <!-- House Ident: [void panel: name / mono role] [8px accent bar] [channel mark]. -->
+      html: `    <!-- House Signature: [void panel: name / mono role] [8px accent bar] [channel mark]. -->
     <div class="lower-third-box">
       <div class="lower-third-text">
 ${lineMasks(o, '        ')}

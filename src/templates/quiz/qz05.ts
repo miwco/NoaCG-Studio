@@ -1,4 +1,4 @@
-// qz05 "Volt Split" — the SPORT two-answer board, sibling of qz01 "Arena Quiz" and lt06
+// qz05 "Arena Split" — the SPORT two-answer board, sibling of qz01 "Arena Quiz" and lt06
 // "Split Bar". Two answers are not a short list, they are a CHOICE, so this board drops the
 // stacked rows for two equal slabs standing side by side under the question: the shape a
 // true/false, a this-or-that and an A/B call all take on air.
@@ -15,7 +15,7 @@ export const qz05: TemplateVariant = defineQuizVariant(
   {
     id: 'qz05',
     category: 'quiz',
-    name: 'Volt Split',
+    name: 'Arena Split',
     styleTag: 'sport',
     description: 'A leaning sport board for two answers: the question over two equal accent slabs.',
     maxLines: 1,
@@ -27,7 +27,7 @@ export const qz05: TemplateVariant = defineQuizVariant(
     defaultZone: 'mid-center',
   },
   {
-    name: 'Volt Split',
+    name: 'Arena Split',
     description:
       'The sport two-answer board, sibling of qz01 Arena Quiz and lt06 Split Bar: a leaning ' +
       'dark slab carries the question in condensed heavy caps over two equal answer blocks, ' +
@@ -39,7 +39,7 @@ export const qz05: TemplateVariant = defineQuizVariant(
     // Structure: the leaning card holds the masked question and a two-column answer grid. The
     // grid keeps the blocks EQUAL however uneven the two answers are — "True" next to a full
     // sentence still reads as one choice, not as a large option and a small one.
-    html: `    <!-- Volt Split: leaning sport card — question on top, two equal answer blocks below. -->
+    html: `    <!-- Arena Split: leaning sport card — question on top, two equal answer blocks below. -->
     <div class="quiz-box">
       <!-- The question — slides up from behind this overflow mask on entrance. -->
       <div class="quiz-mask"><span id="f0">${o.lines[0]?.sample || C.question}</span></div>

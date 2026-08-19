@@ -284,7 +284,7 @@ test('the notice escalates and stands down without moving the main walk', async 
 });
 
 test('the notice’s level events reach the generated control page', async ({ page }) => {
-  await createProject(page, { category: 'Info cards', name: 'Public Notice' });
+  await createProject(page, { category: 'Info cards', name: 'Public Advisory' });
   await page.getByTestId('dock-tab-control').click();
   // The Rehearse panel and the timeline's simulator both offer the event, which is the point:
   // one button comes from the machine's `controls` metadata, the other from the graph itself.

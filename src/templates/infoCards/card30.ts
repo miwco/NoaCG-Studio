@@ -1,4 +1,4 @@
-// card30 "Public Notice" — the MINIMAL public-information card. A weather warning, a transport
+// card30 "Public Advisory" — the MINIMAL public-information card. A weather warning, a transport
 // disruption, a civic announcement: the authority chip, what has happened, the detail, and —
 // with its own accent rule and its own weight — what to do about it.
 //
@@ -16,7 +16,7 @@ export const card30: TemplateVariant = defineCardVariant(
   {
     id: 'card30',
     category: 'info-card',
-    name: 'Public Notice',
+    name: 'Public Advisory',
     styleTag: 'minimal',
     description: 'A public-information notice: authority chip, headline, detail, and what to do.',
     maxLines: 5,
@@ -28,7 +28,7 @@ export const card30: TemplateVariant = defineCardVariant(
     defaultZone: 'mid-center',
   },
   {
-    name: 'Public Notice',
+    name: 'Public Advisory',
     description:
       'The minimal public-information notice: an accent-filled authority chip, the headline, ' +
       'the details in paragraph type, and the instruction set apart with its own accent rule ' +

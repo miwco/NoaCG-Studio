@@ -100,7 +100,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt51, // House Center — the bar turned horizontal over a centred void panel
   lt52, // House Right — mirrored: bar on the outside edge, type ragged-left
   lt53, // House Board — logo well + four lines, the long-interview board
-  lt54, // House Ident — words, bar, then the channel mark (trailing logo)
+  lt54, // House Signature — words, bar, then the channel mark (trailing logo)
   lt14, // House Handle — the compact social mark (the social-handle type's design)
   lt55, // House Call — call-to-action strap: amber action chip + the target it points at
   // Minimal / clean

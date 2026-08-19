@@ -474,7 +474,7 @@ export const noticeCardType: GraphicType = {
   designs: [
     {
       id: 'card30',
-      name: 'Public Notice',
+      name: 'Public Advisory',
       description: 'A public-information notice: authority chip, headline, detail, and what to do.',
       styleTag: 'minimal',
       palette: CLEAN.palette,

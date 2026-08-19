@@ -249,7 +249,7 @@ Design decisions baked in:
 | `starting-soon` | `holding` |
 | `end-credits` | `credits` |
 | `corner-bug` | `bug` |
-| `infographic` | split per variant: `stats` (ig01 Big Stat, ig02 Glass Bars), `results` (ig03 Timing Tower), `poll-quiz` (ig04 Poll Ring, ig07 Election Bars, ig11-ig13 polls), `progress` (ig05 Rising Total), `list` (ig06, ig08-ig10 schedules) |
+| `infographic` | split per variant: `stats` (ig01 Big Stat, ig02 Glass Bars), `results` (ig03 Gap Stack), `poll-quiz` (ig04 Poll Ring, ig07 Election Bars, ig11-ig13 polls), `progress` (ig05 Rising Total), `list` (ig06, ig08-ig10 schedules) |
 | `game-timer` | `timer` |
 | `versus` | `reveal`/versus |
 | `quiz` | `poll-quiz`/quiz-question |

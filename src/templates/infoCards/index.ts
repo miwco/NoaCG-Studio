@@ -121,7 +121,7 @@ export const INFO_CARDS: TemplateVariant[] = [
   card27, // Frost Checklist — glass checklist (process-steps)
   card28, // Volt Process — sport runsheet (process-steps)
   card29, // House Runbook — house process (process-steps)
-  card30, // Public Notice — minimal public information (notice-card)
+  card30, // Public Advisory — minimal public information (notice-card)
   card31, // Frost Advisory — glass venue advisory (notice-card)
   card32, // Alert Slab — sport safety notice (notice-card)
   card33, // House Notice — house service notice (notice-card)
