@@ -72,6 +72,20 @@ test('the SPIKE family counts too - it renders the catalog at 1920x1080 like any
   }
 });
 
+test('the TASTE re-judge counts - it is named like no family and mounts more frames than most', () => {
+  // `pro-taste-rejudge.mjs` mounts every piece of every row in a finished round at 1920x1080 -
+  // 108 of them across the two checkpoint rounds - and sweeps the catalog in `--control`. It is
+  // listed by name rather than renamed into a family, because "rejudge" is what it does and a
+  // name chosen to satisfy this file would be a name that lies.
+  for (const cmd of [
+    'node scripts/pro-taste-rejudge.mjs --control',
+    'node scripts/pro-taste-rejudge.mjs benchmarks/pro/evidence/round-2026-08-16 benchmarks/pro/evidence/round-2026-08-17 --sets',
+    'node C:\\claude\\NoaCG-Studio\\scripts\\pro-taste-rejudge.mjs --control --category=corner-bug',
+  ]) {
+    assert.ok(invokesSweep(cmd), cmd);
+  }
+});
+
 test('MENTIONING a command is not running one', () => {
   // The regression that motivated positional matching. Each of these contains the text of an
   // invocation and starts nothing; denying any of them is a bug.
