@@ -628,6 +628,38 @@ against a real class set before treating the numbers as coverage.
 user's imported artwork is not"). It measured a proxy and predicts nothing about imports. Check
 what a benchmark was run ON before citing its number.
 
+## The AI door is "inspired by this design", never "Recreate" (owner, 2026-08-19)
+
+The recreate bench takes a finished graphic's PICTURE and returns a NoaCG template. The owner
+read all 13 references across four paid rounds (`recreate-round-v4`…`v7`) and the verdict was one
+sentence, repeated: **"I could use it, but it's not the same graphic."** Roughly eight or nine of
+the thirteen were airable, one was very close to its original, one was rejected outright. None
+was a reproduction.
+
+**So the door is named for what it delivers.** Ship it as *"inspired by this design"* /
+*"make me something like this"* and it keeps its promise every time; ship it as *"recreate this
+graphic"* and every user reads the same gap as a failure. This is a product decision the owner
+made on the evidence, not a hedge about model quality - the output is good, and calling it a
+recreation is what would make it look bad.
+
+Three consequences that follow from the name, and are not optional once it is chosen:
+
+- **The similarity score is an internal instrument, never a user-facing promise.** It is
+  calibrated (a good rebuild measures 42-58% of active blocks, a scale-broken one 19-34%, the
+  wrong-design control 6%) and it exists to steer the loop, not to tell a user how close they
+  got. A percentage on screen turns "inspired by" back into "recreate" with a number attached.
+- **The reference's own text is a starting point, not a target.** The fields are the deliverable;
+  the words in the picture are sample data.
+- **Named capability gaps stay named** rather than being sold as near-misses. Measured over the
+  thirteen references, the model reliably cannot do: diagonal or chamfered corners (everything
+  comes out a straight box), thin decorative rules inside a banner, 3D/glow/shadow text
+  treatments, fade-to-transparent edges, and an accent line that "draws out" and stops short. A
+  design whose identity IS one of those is a design this door should not be pointed at.
+
+The bench's own economics were retuned on the same read (`scripts/import-recreate-spike.mjs`, and
+`docs/NOACG_PRO_PLAN.md` §26): the loop now ships the BEST round rather than the last one, and
+stops paying once a round has answered a nearly-clean template with a worse one.
+
 ## Deliberately out of scope
 
 Layered/PSD imports, OCR/text detection, Google Sheets, multi-step logic, state-machine

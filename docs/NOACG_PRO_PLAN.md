@@ -3282,3 +3282,91 @@ accept sits above 3.04:1; a weight floor sits above 400 for text this size.
 - **Rule 6 sees artwork, not wordmarks.** Presence is "the `filelist` field paints something",
   which is how the composer places every mark it places; a wordmark set as TEXT would read as
   absent.
+
+## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
+
+Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are
+measured against `recreate-round-v4`…`v7` with `--replay`, which spends nothing.
+
+### 26.1 The stress pass did not miss an overlap. There was none - and the one signal that
+existed was thrown away
+
+The owner rejected batch 1.4 for its right-hand clock box overlapping the score at three digits,
+and the note asked why the stress arm did not fire. Reproduced against the archived round-3
+template, mounted through the same `composeDocument` the round used:
+
+- **There is no geometric overlap.** At three digits the score `#f5` paints x 844-1031; the clock
+  panel's left edge is 1046 and the banner it sits on ends at 1048. At the stress value (four
+  digits) the score still ends at 1031, because the banner's own auto-fit shrinks the type. The
+  archived stress PNG and a fresh re-render agree to the pixel. What the owner is reading is a
+  15px gap closed by an italic numeral's drop shadow, against a panel drawn 2px OVER the banner
+  it abuts - a near-collision the composition reads as a collision, which no instrument here
+  measures and none claimed to.
+- **The bench's own overlap check could not have found one anyway.** `runtimeBench`'s
+  `overlapIssues` pairs LEAVES, and `collectLeaves` keeps only elements that own text or are
+  `<img>`. An opaque PANEL covering text is never in a pair. That is a real hole; it is simply
+  not the hole that produced this frame.
+- **THE DEFECT IS THAT THE LOOP DISCARDED THE WARNING.** Round 3 finished `ok: true` carrying
+  exactly one finding: `bench-stress: #f7 extends past .scorebug-clock-panel, the nearest thing
+  painted behind it, once every text value is doubled in length` - which names, by class, the
+  element the owner rejected the graphic over. It was a WARNING, and the emit wrapper reduced
+  `validation.warnings` to `.length`. No warning has ever reached the ledger, the gallery, or the
+  model's repair round. The loop called that round CLEAN and stopped.
+
+  Fixed: warnings are carried out of the wrapper and join the ADVISORY channel the readability
+  findings already use - visible to the ledger, the gallery and the model, blocking nothing, for
+  the reason that channel exists (a recreation answers to its reference, and a warning that
+  blocked would deadlock the loop against its own ground truth). This is §16's argument arriving
+  one directory over: a pipeline's own findings living somewhere the gate does not look.
+
+  Worth stating beside it: `reactionFindings` exempts any field whose default value is numeric,
+  which is right for "did the box grow" - a scoreboard's digit plate is supposed to be fixed -
+  and means the two score fields contributed nothing there either.
+
+### 26.2 The loop ships the BEST round now, not the last
+
+"Round two looks better than round three" (batch 2.b). `bestRoundIndex` picks fewest findings,
+then closest to the reference, then earliest - so a later round has to actually beat an earlier
+one and a tie never discards the money the earlier round already paid for. `deliverable` is a
+property of the round that SHIPS, and the importable file, the ledger's similarity and the
+gallery's verdict all come off that one index.
+
+Replayed over the four archives it moves the kept round on **five graphics**, every one of them in
+the owner's favour: v4 batch-2-b keeps round 2 (1 finding, 51.1%) over round 3 (12 findings,
+50.4%) - the owner's own case; v4 batch-1-2 keeps round 0 (56.1%) over round 3 (54.4%) at equal
+findings, and round 0 is the one the owner called "already good enough"; v4 batch-2-e keeps round
+2 over round 3; v5 batch-1-2 keeps round 2 (1 finding) over round 3 (2); v6 batch-2-b keeps round
+1 (1 finding) over round 3 (3).
+
+### 26.3 The convergence stop that IS safe, and the obvious one that is not
+
+`stopAfterRound` stops only when a round has answered a NEARLY-CLEAN template with a worse one.
+Once the model has been shown a template one finding from done and returns a worse one, the next
+round is fed the worse template, and across the archives it never recovered the earlier round's
+quality. The "nearly clean" cut is 2 findings, read off the corpus: every unrecovered regression
+came off a round with ONE finding (v4 batch-2-b 1→12, v6 batch-2-b 1→13→3, v4 batch-1-2 1→3), and
+the one regression that did recover came off a round with FOUR (v5 batch-2-b 4→7→1). One reading
+each side, and that is stated rather than dressed up.
+
+**Measured saving: 3 of 66 rounds across the four archives (4.5%, about $0.15 of $3.33), with no
+deliverable result lost.** Modest, and it is the honest number.
+
+The cut is mutation-controlled rather than asserted: raised to 10 findings the same replay saves
+twice as much (4 rounds on v4 alone) and **loses a deliverable result**, which is what a cut set
+too loose looks like. `--control` additionally runs both rules against archived fixtures from both
+sides, including the two "must not stop" cases a score-based stop gets wrong.
+
+**The obvious stop was replayed and is NOT safe, which is the more useful finding.** On every
+round the owner could not tell apart, the reference score moves by 0.0-2.0 points, so "stop when
+the score stops moving" looks perfectly separable. Replayed, it costs v5 batch-2-e its
+DELIVERABLE result - a flat round at 48.3% was followed by a +5.5 point round that cleared the
+last finding - and costs v5 batch-2-b its best round. **The rounds the owner cannot see are
+exactly the rounds that clear the last machine finding**: cheap to the eye, and the whole verdict.
+A frame-to-frame diff is no better: it reads two rounds the owner called identical at 51.5% and
+two others at 99.9-100%, so it cannot express the owner's own criterion either.
+
+### 26.4 The door's name
+
+Recorded in `docs/IMPORT_MVP.md`: the wizard door is **"inspired by this design"**, never
+"Recreate". Owner-decided on the evidence - the output is airable and is never the same graphic,
+and the name is what makes that a promise kept rather than a promise broken.
