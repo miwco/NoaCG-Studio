@@ -17,6 +17,14 @@ catalog gate can pass while CI's full plan goes red on it - which is exactly wha
 2026-08-19 to a nine-design branch with four green catalog runs behind it. The healthy diff is
 purely additive: ids added, nothing existing changed. Details: docs/VERIFICATION.md.
 
+**A DESIGN'S NAME IS ITS OWN - no two may share one**, and the same spec holds that (both names:
+the variant's, which is the Browse card, and the created template's, which is what a production,
+a rundown and an export folder carry). Export already survived a collision by suffixing the
+second graphic; the user never did - Browse offered two identical cards with nothing to choose
+between. Five pairs had drifted together by 2026-08-19 (bug05/lt54, card30/pi01, ig38/tk13,
+tt01/ig03, fr03/qz05), every one of them a later design landing on an earlier one's name. When
+a new design's name is taken, rename the NEW one; renaming a shipped design moves its baseline.
+
 blank.ts + the catalog, resolved through catalog.ts (CATALOG, variantsFor/variantById).
 
 **structuralAnchor.ts** - the one table answering "does a catalog structure carry this intent,
@@ -619,11 +627,14 @@ assembler calls after every update(). **Nothing about the list is ever expressed
 fields**: a template does not grow `f7`…`f26` because a weekend has twenty fixtures. The SPX
 definition stays small (so a control page shows one multi-line editor, and adding a substitute
 is typing a line), the motion is MEASURED from the rendered rows, and the rebuild is per TYPE
-rather than per design. `dataRuntimes.ts` holds the agenda, poll, goal, milestone and ELECTION
-shapes; **sportsRuntimes.ts** holds the sports pack's fixtures shape. Both escape operator text before
-it reaches innerHTML and SKIP a malformed line rather than rendering an empty row, and both
-render into `#infographic-rows` with one direct child per item - exactly what `rows-cascade`
+rather than per design. `dataRuntimes.ts` holds the agenda, STAT-LIST, poll, goal, milestone and
+ELECTION shapes; **sportsRuntimes.ts** holds the sports pack's fixtures shape. Both escape operator
+text before it reaches innerHTML and SKIP a malformed line rather than rendering an empty row, and
+both render into `#infographic-rows` with one direct child per item - exactly what `rows-cascade`
 measures.
+**Which pipe splits a line is a per-shape decision, not a convention** - the schedule board takes
+the FIRST (a show name may contain a pipe, the time cannot), the stat list takes the LAST (the
+figure is the short final part, so the label is what may contain one). Say which, in the runtime.
 - **startingSoon/** - ss01…ss20, the HOLDING SCREEN set (prefix 'starting-soon'; hold-loop preset:
   entrance + calm .starting-soon-pulse breathing + clock via shared/clock.ts). DATA BLOCKS via
   convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
@@ -706,7 +717,7 @@ measures.
   any `<div id="fN" style="…display: none">` in the emitted HTML. An `<img id="fN">` is the one
   exception and is excluded there: an empty image slot hides itself inline through
   `setFieldValue`, and `resetGraphicInline` restates that after clearing.
-- **infographics/** - ig01…ig38 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+- **infographics/** - ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
   igPresets (count-up / bars-grow / ring-fill / rows-cascade / **goal-ring** / **milestone-run**)
   + **igMotion.ts** + **dataRuntimes.ts** (the rebuilds several designs of a type share:
   schedule rows, bar rows, the GOAL meter in its two drawn shapes, the MILESTONE track).
@@ -734,6 +745,18 @@ measures.
   the row (the wash) and pins the cap against it, and reserves the figure's lane with the row's
   own padding, because an out-of-flow cap reserves no width. The first draft laid the row out as
   `label | figure` and rendered every figure on top of its district's name.
+  **ig39 "Key Figures" is the other half of that lesson** - the catalog's first TWO-COLUMN STAT
+  LIST (a header band, `label | figure` rows, a footer rule with the source and the date). It is
+  what a design gets when the runtime is written for the composition instead of borrowed: label
+  and figure are SIBLINGS in `statListRuntimeJs`, so the row is a real grid and the figures share
+  an edge because they share a column. Two rules it holds beyond that, both stated in its source:
+  a figure is rendered exactly as typed (nothing parses it, because nothing derives a share from
+  it, so "€4.21bn" and "12.4 %" survive intact), and a stat column asks for **lining** numerals as
+  well as tabular ones - the editorial text serif defaults to old-style figures that ride at
+  x-height with 3, 4, 7 and 9 below the line, which put "42" lower than "18,400" beside it and
+  broke the baseline every figure shares with its label. `tabular-nums` alone does not catch that,
+  and neither does the numerals gate: it measures whether a figure's box MOVES, and old-style
+  digits are perfectly stable at the wrong height.
   **The ELECTION NIGHT mini-pack is ig34-ig36** (the catalog's first EDITORIAL infographics, all
   siblings of lt25 "Masthead"): a seat board whose parties are one "Party | seats" textarea, a
   coalition majority meter, and a turnout dial. Three rules they hold, each written into the
