@@ -1387,7 +1387,7 @@ const rows = results.filter((r) => r.rounds?.length).map((r) => {
   const kept = r.rounds[r.keptRound] ?? r.rounds.at(-1);
   return `<section class="${r.deliverable ? 'ok' : 'dirty'}">
   <h2>${r.slug} — ${r.deliverable ? 'DELIVERABLE' : 'stopped dirty'} · round ${kept.round} kept · ${(r.similarity * 100).toFixed(1)}% · $${(r.costUsd ?? 0).toFixed(3)}</h2>
-  <div class="row"><figure><img src="${r.slug.startsWith('control-') ? `${r.slug.replace(/-self$/, '')}.reference.png` : `${r.slug}.reference.png`}" loading="lazy"><figcaption>reference</figcaption></figure>${cells}</div>
+  <div class="row"><figure><img src="${r.slug.startsWith('control-') ? `${r.slug.replace(/-(?:self|warning)$/, '')}.reference.png` : `${r.slug}.reference.png`}" loading="lazy"><figcaption>reference</figcaption></figure>${cells}</div>
   <details><summary>the kept round's findings</summary><pre>${(kept.findings ?? []).join('\n') || '(none)'}</pre></details>
   <details><summary>the kept round's advisories (measured, never blocking)</summary><pre>${(kept.advisories ?? []).join('\n') || '(none)'}</pre></details>
 </section>`;
