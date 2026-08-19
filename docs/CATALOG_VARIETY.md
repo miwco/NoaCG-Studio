@@ -377,6 +377,12 @@ before the contract widens.
 
 7. **A column grid.** 17 designs of 459 use grid columns. There is no editorial two-column card,
    no fixture table that reads as a printed table, no magazine contents page.
+   *2026-08-19: the printed-table half is answered.* `ig39` "Key Figures" is the catalog's first
+   two-column STAT LIST - a header band, `label | figure` rows in one grid, a footer rule with
+   the source and the date - and it took a repeating runtime of its own to get there, because
+   every existing rows runtime nests the figure inside a growing bar and so cannot express a
+   second column at all (src/templates/AGENTS.md). The contents page and the two-column card
+   are still absent.
 8. **Type as the composition.** The catalog's display size tops out around 52 px for 21% of
    designs; 16 designs go over 110 px. There is no oversized-numeral scoreboard, no full-frame
    word, no type-that-bleeds-off-frame opener.
