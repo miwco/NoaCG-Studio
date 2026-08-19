@@ -1211,10 +1211,25 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         />
       )}
       {sub === 'audience' && <ProductionAudienceWorkspace show={show} setShows={setShows} />}
-      {!sub && (
-      <>
-      <section className="pd-main">
-        <div className="pd-monitors">
+      {/* THE PLAYOUT SURFACE STAYS MOUNTED behind a sub-page, hidden rather than unmounted.
+          Unmounting it destroyed the PROGRAM monitor's iframes, so a trip to Data or Audience
+          RELOADED every live graphic: a running match clock came back at its seed, and anything
+          else with runtime state came back from the top. Nothing on this page is a reason to
+          restart a graphic that is on air. `display: none` costs the monitors their measured
+          width while they are away, which the ResizeObserver hands straight back. */}
+      <section className={`pd-main${sub ? ' pd-offstage' : ''}`}>
+        {/* `--pd-ar` is the PREVIEW graphic's aspect ratio as a bare number. The monitor cap is
+            a height and CSS cannot derive a width from `aspect-ratio`, so the grid turns the cap
+            into a track width with this (docs/PLAYOUT_DASHBOARD.md §2). A portrait graphic
+            therefore caps at the same HEIGHT as a 16:9 one rather than the same width. */}
+        <div
+          className="pd-monitors"
+          style={
+            previewTemplate
+              ? { ['--pd-ar' as string]: previewTemplate.resolution.width / previewTemplate.resolution.height }
+              : undefined
+          }
+        >
           <div className="pd-monitor pd-pvw">
             <h2>
               <span className="pd-dot" aria-hidden="true" />
@@ -1743,7 +1758,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         </details>
       </section>
 
-      <aside className="pd-rail">
+      <aside className={`pd-rail${sub ? ' pd-offstage' : ''}`}>
         <div className="pd-rail-head">
           <h2>Cue rundown</h2>
           <span className="muted">{cues.length}</span>
@@ -2010,8 +2025,6 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           />
         </div>
       </aside>
-      </>
-      )}
       {exportOpen && <ProductionExportDialog show={show} onClose={() => setExportOpen(false)} />}
     </ProductionShell>
   );

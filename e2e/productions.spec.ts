@@ -156,8 +156,13 @@ test('the rundown is the only list: the last cue takes its graphic with it', asy
 test('the production page fits one 1080p screen, and the preview takes only the room left over', async ({ page }) => {
   // Acceptance round 2, 2026-08-05: "the preview video is way too big — I want the whole page
   // to fit on one screen". Fitting the preview on WIDTH alone gave it 862px of a 1027px column
-  // on a full-HD screen, so the verbs and the cue editor sat below the fold. The page is a
-  // cockpit: the strips take their natural height and the preview takes what is left.
+  // on a full-HD screen, so the verbs and the cue editor sat below the fold.
+  //
+  // This is the SIMPLE case, and it stays the simple case: a two-field lower third fits one
+  // 1080p screen with nothing scrolling at all. It is NOT a rule that the page may never
+  // scroll — a graphic with many fields is allowed to make it long, and the monitor cap is
+  // what buys that room back (docs/PLAYOUT_DASHBOARD.md §2, and the scroll-model specs in
+  // production-controls.spec.ts). What this pins is that the simple case never has to.
   await page.setViewportSize({ width: 1920, height: 1080 });
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await page.getByTestId('dock-tab-control').click();
@@ -174,7 +179,7 @@ test('the production page fits one 1080p screen, and the preview takes only the 
     const frame = document.querySelector('.pd-pvw .pd-frame')!.getBoundingClientRect();
     const log = document.querySelector('[data-testid="action-log"]')!.getBoundingClientRect();
     return {
-      // Nothing scrolls: not the column, not the document.
+      // Nothing scrolls here: not the column (which is never a scroller now), not the document.
       columnOverflow: main.scrollHeight - main.clientHeight,
       documentOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       // The LAST thing on the page is above the fold — that is what "one screen" means.
@@ -189,9 +194,10 @@ test('the production page fits one 1080p screen, and the preview takes only the 
   expect(fit.documentOverflow).toBe(0);
   expect(fit.lastRowBottom).toBeLessThanOrEqual(fit.viewportHeight);
   expect(fit.frameRatio).toBe(1.78);
-  // Big enough to judge a graphic by, small enough to leave the operator's controls on screen.
+  // Big enough to judge a graphic by, small enough to leave the operator's controls on screen —
+  // and since 2026-08-19 that upper bound is the §2 monitor cap, not "whatever is left over".
   expect(fit.frameHeight).toBeGreaterThan(240);
-  expect(fit.frameHeight).toBeLessThan(fit.viewportHeight * 0.62);
+  expect(fit.frameHeight).toBeLessThanOrEqual(fit.viewportHeight * 0.27);
 });
 
 test('the /output page answers honestly offline and builds a stage from a payload', async ({ page }) => {

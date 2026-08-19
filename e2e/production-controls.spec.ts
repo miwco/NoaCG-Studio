@@ -469,3 +469,92 @@ test('± LIVE NUMBERS on the EXPORTED controller: the bump is a partial, carryin
   await ctl.close();
   await air.close();
 });
+
+// ── The desktop scroll model (docs/PLAYOUT_DASHBOARD.md §2) ───────────────────────────────
+// Owner report 2026-08-19, from a 1080p monitor: the EDITOR — where scores, names and texts are
+// changed mid-show — had its own scrollbar, so operating a graphic with many fields meant
+// scrolling a small box inside a page that could not scroll at all. The owner's correction names
+// both halves: "I don't mind scrolling the whole page… I also don't want it too small", and "we
+// should rather make the preview and program screens a bit smaller… you see what's out all the
+// time". So: the PAGE scrolls, nothing is shrunk to fit, and the monitors stay in view.
+//
+// The cue rail is the ONE exception. A forty-cue rundown has nowhere else to go, so it keeps its
+// own scroller — inside a rail that sticks under the header rather than sliding away.
+test.describe('the production page scrolls as one page', () => {
+  /** The structural half, at the nominal 1080p the report names. */
+  test.describe('at 1920x1080', () => {
+    test.use({ viewport: { width: 1920, height: 1080 } });
+
+    test('nothing between the page and the editor is a scroller, and the monitors are capped', async ({ page }) => {
+      await createProject(page, { name: 'Arena Quiz' });
+      await productionFor(page, 'Quiz Night');
+      await expect(page.getByTestId('cue-editor')).toBeVisible();
+
+      const overflowOf = (sel: string) => page.locator(sel).evaluate((el) => getComputedStyle(el).overflowY);
+      // `hidden` counts as a failure here: it is what clipped the editor's own bottom rows.
+      expect(await overflowOf('.pd-main')).not.toMatch(/auto|scroll|hidden/);
+      expect(await overflowOf('.pd-editor')).not.toMatch(/auto|scroll/);
+      expect(await overflowOf('.pd-activity')).not.toMatch(/auto|scroll/);
+      // The one exception, and it is deliberate.
+      expect(await overflowOf('.pd-cues')).toMatch(/auto|scroll/);
+
+      // The monitors give up the height the editor needed: near 30vh, both still 16:9 and still
+      // side by side — smaller, never stacked (§3's rule about air staying beside preview).
+      const monitors = await page.locator('.pd-monitors').boundingBox();
+      expect(monitors!.height).toBeLessThanOrEqual(1080 * 0.32);
+      const pvw = await page.locator('.pd-pvw .pd-frame').boundingBox();
+      const pgm = await page.locator('.pd-pgm .pd-frame').boundingBox();
+      expect(Math.abs(pvw!.y - pgm!.y)).toBeLessThanOrEqual(2);
+      expect(pgm!.x).toBeGreaterThan(pvw!.x + pvw!.width - 2);
+      expect(Math.abs(pvw!.width / pvw!.height - 16 / 9)).toBeLessThan(0.05);
+      expect(Math.abs(pgm!.width / pgm!.height - 16 / 9)).toBeLessThan(0.05);
+
+      // §3: a horizontal scrollbar on this surface is a layout bug, never an affordance.
+      const doc = await page.evaluate(() => ({
+        scrollWidth: document.scrollingElement!.scrollWidth,
+        clientWidth: document.scrollingElement!.clientWidth,
+      }));
+      expect(doc.scrollWidth).toBeLessThanOrEqual(doc.clientWidth);
+    });
+  });
+
+  /** The reported case. A 1080p monitor at the 125% Windows scaling this laptop ships with, less
+   *  the browser's own chrome, is 1536x814 CSS px — and THAT is where the eight-field quiz did
+   *  not fit: .pd-editor was 178px tall over 240px of content and the document could not scroll
+   *  a single pixel. Nominal 1920x1080 hid it, which is why the report was not reproducible
+   *  from the numbers alone. */
+  test.describe('at a scaled 1080p (1536x814)', () => {
+    test.use({ viewport: { width: 1536, height: 814 } });
+
+    test('a graphic with eight fields makes the PAGE longer, not the editor scrollable', async ({ page }) => {
+      await createProject(page, { name: 'Arena Quiz' });
+      await productionFor(page, 'Quiz Night');
+      const editor = page.getByTestId('cue-editor');
+      await expect(editor).toBeVisible();
+      expect(await editor.locator('.field-row').count()).toBeGreaterThanOrEqual(8);
+
+      // The editor shows all of itself — the reported defect, gone.
+      expect(await editor.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+
+      // Now take the height away: a shorter window (or a graphic with more fields than this
+      // one) is where the model has to prove itself. The PAGE grows; the editor still does not.
+      await page.setViewportSize({ width: 1536, height: 560 });
+      expect(await editor.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+      const doc = await page.evaluate(() => ({
+        scrollHeight: document.scrollingElement!.scrollHeight,
+        clientHeight: document.scrollingElement!.clientHeight,
+      }));
+      expect(doc.scrollHeight).toBeGreaterThan(doc.clientHeight);
+
+      // Scrolled to the bottom, preview and program are STILL on screen — "you see what's out
+      // all the time" — and so is the rundown the next cue is picked from.
+      await page.evaluate(() => document.scrollingElement!.scrollTo(0, 10_000));
+      await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(0);
+      for (const sel of ['.pd-monitors', '.pd-rail']) {
+        const box = await page.locator(sel).boundingBox();
+        expect(box!.y, `${sel} scrolled away above the fold`).toBeGreaterThanOrEqual(0);
+        expect(box!.y + box!.height, `${sel} pushed off the bottom`).toBeLessThanOrEqual(561);
+      }
+    });
+  });
+});

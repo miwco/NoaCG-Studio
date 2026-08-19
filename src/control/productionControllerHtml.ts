@@ -64,15 +64,21 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body { margin:0; background:var(--bg); color:var(--text); overflow:hidden;
+  /* THE PAGE IS THE ONLY SCROLLER (docs/PLAYOUT_DASHBOARD.md 2). This page used to be locked
+     to the viewport, so a graphic with many fields grew a scrollbar INSIDE the editor - the
+     pane an operator changes scores and names in mid-show. Every block is content-sized; a
+     long form makes a long page, and the monitors and the rundown stay put by being sticky. */
+  html { height: 100%; }
+  body { margin:0; min-height:100%; background:var(--bg); color:var(--text);
     font:14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif; }
   /* NO SCROLLBAR CHROME, anywhere (§3). A horizontal scrollbar here is a layout bug. */
   .cues, .editor, .feed { scrollbar-width:none; }
   .cues::-webkit-scrollbar, .editor::-webkit-scrollbar, .feed::-webkit-scrollbar { width:0; height:0; }
 
+  /* Sticky: the page scrolls under it, and All out has to stay one reach away. */
   header { display:flex; align-items:center; gap:10px; height:50px; padding:0 14px;
-    border-bottom:1px solid var(--line); background:var(--panel); }
+    border-bottom:1px solid var(--line); background:var(--panel);
+    position:sticky; top:0; z-index:20; }
   header h1 { font-size:14px; margin:0; font-weight:600; white-space:nowrap; }
   header h1 span { color:var(--dim); font-weight:400; }
   .mode { font-size:11px; font-weight:700; letter-spacing:.1em; padding:3px 10px; border-radius:99px;
@@ -88,12 +94,24 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
     border:1px solid rgba(239,68,68,.55); border-radius:7px; padding:7px 13px; cursor:pointer; white-space:nowrap; }
   .allout:disabled { color:var(--dim); border-color:var(--line); cursor:default; }
 
-  main { display:grid; grid-template-columns: minmax(0,1fr) 380px; height: calc(100% - 50px); }
-  .stage { min-width:0; display:flex; flex-direction:column; gap:10px; padding:12px 14px; overflow:hidden; }
-  .rail { border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  main { display:grid; grid-template-columns: minmax(0,1fr) 380px; min-height: calc(100vh - 50px); }
+  /* The divider is drawn by the STAGE column, which runs the whole page - the rail is sticky
+     and only ever a viewport tall, so a border on it would stop dead partway down. */
+  .stage { min-width:0; display:flex; flex-direction:column; gap:10px; padding:12px 14px;
+    border-right:1px solid var(--line); }
+  /* THE ONE EXCEPTION to content-sizing: a forty-cue rundown has nowhere else to go, so the
+     rail is a viewport-tall sticky column with its list scrolling inside. */
+  .rail { display:flex; flex-direction:column; position:sticky; top:50px; align-self:start;
+    height:calc(100vh - 50px); }
 
-  /* Monitors: PREVIEW beside PROGRAM, equal, 16:9, sized by the column. */
-  .monitors { display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:none; }
+  /* Monitors: PREVIEW beside PROGRAM, equal, CAPPED near 30vh and STICKY - you see what is out
+     all the time, and the options below it get the rest of the page. The cap is a track WIDTH
+     because each screen takes its height from its width through aspect-ratio; the number below
+     is this production's own ratio, capped at 16/9 so neither screen exceeds the budget. */
+  .monitors { display:grid; justify-content:start; gap:12px; flex:none;
+    grid-template-columns: repeat(2, minmax(0, calc(26vh * ${Math.min(payload.width / payload.height, 16 / 9).toFixed(4)})));
+    position:sticky; top:50px; z-index:5; background:var(--bg);
+    margin:-12px -14px -10px; padding:12px 14px 10px; }
   .monitor { display:flex; flex-direction:column; min-width:0; }
   .monitor h2 { margin:0 0 5px; font-size:10.5px; letter-spacing:.16em; font-weight:700;
     display:flex; align-items:center; gap:7px; min-width:0; }
@@ -134,7 +152,8 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
   .onair-line b { color:var(--air); font-weight:600; }
 
   /* The cue editor. */
-  .editor { flex:0 1 auto; min-height:0; overflow:auto; background:var(--panel);
+  /* Content-sized, never a scroller: this is the pane the owner reported. */
+  .editor { flex:none; background:var(--panel);
     border:1px solid var(--line); border-radius:9px; padding:10px 13px; }
   .editor.live { border-color:rgba(239,68,68,.75); box-shadow: inset 0 0 0 1px rgba(239,68,68,.4); }
   .editor.pvw { border-color:rgba(246,166,35,.6); }
@@ -176,7 +195,7 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
     border:1px solid var(--line); border-radius:6px; padding:6px 11px; cursor:pointer; }
 
   /* Activity: one collapsed line. */
-  .feed { flex:0 1 auto; min-height:0; overflow:auto; font-size:12.5px; color:var(--dim); }
+  .feed { flex:none; font-size:12.5px; color:var(--dim); padding-bottom:12px; }
   .feed summary { cursor:pointer; padding:2px 0; }
   .feed div { padding:1px 0; }
   .feed .t { font-family:var(--mono); font-size:11px; color:#5c6371; margin-right:8px; }
@@ -211,11 +230,13 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
 
   /* Phone (§3): one column, monitors still side by side, verbs pinned to the bottom. */
   @media (max-width: 900px) {
-    body { overflow:auto; }
-    main { display:flex; flex-direction:column; height:auto; }
-    .rail { border-left:none; border-top:1px solid var(--line); }
+    main { display:flex; flex-direction:column; min-height:0; }
+    .stage { border-right:none; }
+    /* Not sticky at this width: the verbs are pinned to the bottom of the screen instead, and
+       a monitor block stuck to the top would cover the cue list it sits above. */
+    .monitors { position:static; margin:0; padding:0; }
+    .rail { position:static; height:auto; align-self:auto; border-top:1px solid var(--line); }
     .cues { max-height:46vh; flex:none; }
-    .editor, .feed { flex:none; overflow:visible; }
     header { height:46px; padding:0 10px; }
     .clock, header a { display:none; }
     .monitor h2 { font-size:9px; letter-spacing:.1em; }
