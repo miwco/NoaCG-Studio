@@ -1017,6 +1017,28 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
    narrow to that one heading; the wizard's own `.wz-step .panel-section > h3 .muted` rule is
    more specific and still wins on the wizard steps. */
 .viewing-section > h3 .muted { text-transform: none; letter-spacing: 0; }
+/* The size-floor tri-state (components/wizard/ViewingControls.tsx). A real <fieldset>, because
+   the three radios are ONE decision and a screen reader has to hear that; the browser's own
+   fieldset border and inline padding are dropped so it sits in the panel like every other
+   section, and the legend keeps the panel's small-caps label idiom. */
+.viewing-floors {
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.viewing-floors > legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
 
 .field-row { margin-bottom: 12px; }
 .field-row .field-meta { display: flex; justify-content: space-between; align-items: baseline; }

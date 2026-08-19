@@ -201,8 +201,23 @@ Landed after, closing two holes the slice left:
   existed before R4 can now be re-measured for a phone or a venue. Pinned in
   e2e/design-rules-product.spec.ts (the pin fails if the subscription is put back).
 - **The rules are a READINESS ROW**, not an unclaimed raw finding: "Reads where it will be
-  watched" (validation/readiness.ts) over the five `legibility-*` rules. A live row, so the
+  watched" (validation/readiness.ts) over the `legibility-*` rules. A live row, so the
   raw one-shot path reports it untested rather than borrowing the credit.
+- **The floors are ONE control with three answers** (2026-08-19). They shipped as two
+  checkboxes over the single tri-state, which is a control that lies about its own shape:
+  ticking "Guaranteed readable size" silently changed what "Broadcast text sizes" meant,
+  un-ticking one could not say which of the other two states you landed in, and the pair could
+  express a fourth combination the model does not have. `ViewingControls.tsx` now renders three
+  radios in a real `<fieldset>`, each phrased as what it PERMITS rather than as a feature to
+  switch on — because a floor is a rule about what may ship — and the DEFAULT is visible, which
+  "neither ticked" never was.
+- **Supporting text has its own rule id**, `legibility-secondary-size`, claimed by the same
+  readiness row. The three choices move the SECONDARY floors and barely touch the primary one
+  (standard: supporting text and fine print at 1.85% with a warning band to 2.2%; safe: 5% and
+  4% with no band), so a person choosing between them is choosing about supporting text, and one
+  `legibility-size` rule could not say which of their findings the choice governs. REPORTING
+  only — it is a warning like every other finding on that row, and the `legibility-` prefix is
+  the whole selector the custom lane's blocking set uses, so nothing there changed.
 
 Still owed from §23.1, not part of this slice: the catalog fixes for tk01/ig01/sb01, the
 countdown spacing-threshold relaxation, the control-page smoke in the loop, and the owner's
