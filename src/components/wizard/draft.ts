@@ -35,6 +35,7 @@ import { PALETTES, paletteById } from '../../model/wizard';
 import type { EasingId } from '../../model/easings';
 import { ensureFontFace, fontByStack, type CustomFont } from '../../model/fonts';
 import type { EraseRect, RegionInk } from '../../assets/eraseRegion';
+import type { SvgImportResult } from '../../assets/svgImport';
 import type { ProjectLegibility } from '../../model/designRules';
 
 /** ONE applied baked-text erase: the marked rectangle (in the artwork's SOURCE pixels) and
@@ -90,6 +91,29 @@ export interface DesignFieldSpec {
   lineHeight: number | null;
   /** Letter-spacing in design px; null = normal. */
   letterSpacing: number | null;
+}
+
+/** One detected SVG text layer in the mapping step (docs/SVG_IMPORT_PLAN.md §2). */
+export interface SvgFieldDraft {
+  /** The candidate's marker id in the sanitized markup (assets/svgImport.ts). */
+  candidateId: string;
+  /** Whether this layer becomes an operator field. */
+  on: boolean;
+  /** Operator-facing field label (editable; prefilled from the layer name). */
+  title: string;
+  /** The field's sample/default value (editable; prefilled from the layer's own text). */
+  sample: string;
+  /** A numeric-looking sample emits ftype "number". */
+  numeric: boolean;
+}
+
+/** How one font family the SVG references resolves (plan §4). */
+export interface SvgFontDraft {
+  family: string;
+  /** A bundled face whose family name matches. */
+  fontId: string | null;
+  /** A fetched (Google) or uploaded face — embedded like any custom font. */
+  customFont: CustomFont | null;
 }
 
 export interface WizardDraft {
@@ -173,6 +197,17 @@ export interface WizardDraft {
   /** The Text step's placed fields (Import Graphic). Ordered; each becomes a real placed
    *  field at build, AFTER the erase-seeded ones. */
   designFields: DesignFieldSpec[];
+  /** The imported SVG (the SVG road, docs/SVG_IMPORT_PLAN.md): sanitized + inventoried at
+   *  drop, width/height already fitted to the frame. null outside svg mode. */
+  designSvg: SvgImportResult | null;
+  /** The mapping step's working state, one row per detected text layer: which become
+   *  operator fields, and their edited labels/samples. Initialized from the inventory
+   *  (all ON — or only the `f:`-prefixed ones when any layer opted in by name). */
+  svgFields: SvgFieldDraft[];
+  /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
+   *  the mapping step offers the Google fetch or an upload for the rest. An entry with
+   *  neither source is UNRESOLVED — created anyway, with a warning. */
+  svgFonts: SvgFontDraft[];
   /** The project's legibility settings (model/designRules.ts): viewing target + the two
    *  size-floor toggles. PROJECT METADATA, never template CSS — draftToOptions does not read
    *  it; the create paths land it on the store, which persists it with the project. An
@@ -223,6 +258,9 @@ export function initialDraft(): WizardDraft {
     designOriginal: null,
     designErases: [],
     designFields: [],
+    designSvg: null,
+    svgFields: [],
+    svgFonts: [],
     legibility: {},
   };
 }
@@ -302,6 +340,26 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
     // null = the user hasn't decided; resolveOptions then falls back to "an image exists".
     logoEnabled: draft.logoEnabled ?? undefined,
     designArt: draft.designArt ?? undefined,
+    designSvg: draft.designSvg
+      ? {
+          markup: draft.designSvg.markup,
+          width: draft.designSvg.width,
+          height: draft.designSvg.height,
+          fields: draft.svgFields
+            .filter((f) => f.on)
+            .map((f) => ({
+              candidateId: f.candidateId,
+              title: f.title.trim() || 'Text',
+              sample: f.sample,
+              numeric: f.numeric,
+            })),
+          fonts: draft.svgFonts.map((f) => ({
+            family: f.family,
+            fontId: f.fontId ?? undefined,
+            customFont: f.customFont ?? undefined,
+          })),
+        }
+      : undefined,
   };
 }
 

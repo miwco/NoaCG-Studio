@@ -9889,6 +9889,16 @@
       "body>script[1]": "931a670cd9f9a032",
       "body>script[2]": "931a670cd9f9a032"
     },
+    "svg01": {
+      "#count": "7",
+      "body": "8d64b94dad61c592",
+      "body>div.imported-design[1]": "6aa7847e5564e728",
+      "body>div.imported-design[1]>div.imported-design-box[1]": "6aa7847e5564e728",
+      "body>div.imported-design[1]>div.imported-design-box[1]>svg[1]": "6aa7847e5564e728",
+      "body>div.imported-design[1]>div.imported-design-box[1]>svg[1]>rect[1]": "6aa7847e5564e728",
+      "body>script[1]": "931a670cd9f9a032",
+      "body>script[2]": "931a670cd9f9a032"
+    },
     "tk01": {
       "#count": "26",
       "body": "8d64b94dad61c592",
