@@ -72,10 +72,13 @@ export const SWEEP_SCRIPTS =
   // is NOT safely name-shaped: of the nine scripts here whose name ends in `-sweep`, two
   // (`reference-companion-sweep`, `spx-corpus-sweep`) open no browser at all, so a
   // `[\w-]*-sweep` entry beside the `*bench*` and `*spike*` families would queue two scripts
-  // that cost nothing - the "too eager" failure this module exists to avoid. All three below
+  // that cost nothing - the "too eager" failure this module exists to avoid. All four below
   // render the catalog at 1920x1080 through the app: `occlusion-sweep` is the calibration the
-  // occlusion rule is read off, and the other two were already doing it unlisted.
-  + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep'
+  // occlusion rule is read off, `design-rules-audit-sweep` and `plate-legibility-sweep` were
+  // already doing it unlisted, and `footprint-stability-sweep` was listed the day it was written.
+  // `footprint-stability-sweep` renders the whole registry TWICE (short text, then long), so it
+  // is the heaviest of the four and the one that would hurt most sitting beside a live suite.
+  + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
   + `|acceptance-shots|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 

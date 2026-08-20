@@ -178,6 +178,9 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 
 ${clipOneLineCss('.scoreboard-name', 310)}`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 590,
     fields: matchEventFields({
       event: 'SUBSTITUTION', minute: "72'", team: 'Norway',
       detail: 'S. Solberg', player: 'H. Reistad', colour: '#ba0c2f',

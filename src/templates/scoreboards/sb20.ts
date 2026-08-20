@@ -160,6 +160,9 @@ ${clipOneLineCss('.scoreboard-club', 320)}
 
 ${clipOneLineCss('.scoreboard-name', 300)}`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 590,
     fields: matchEventFields({
       event: 'Substitution', minute: "58'", team: 'Ashton United',
       detail: 'Dan Whitehead', player: 'Joe Ferguson', colour: '#d92b2b',

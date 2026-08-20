@@ -152,6 +152,9 @@ ${spotlightHolderHtml('f9')}
   color: var(--text-color);        /* decided — the chase is over */
 }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 960,
     fields: podiumFields({ heading: 'SCORES', names: [...NAMES], scores: [...SCORES] }),
     popFields: ['f2', 'f4', 'f6', 'f8'],
     lineCount: 9,

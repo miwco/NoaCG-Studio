@@ -182,6 +182,9 @@ ${clampTwoLinesCss('.scoreboard-team')}
 .scoreboard-final .scoreboard-score { color: var(--text-color); }
 .scoreboard-final .scoreboard-clockblock { opacity: 0.7; }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 490,
     fields: scorebugFields({
       teamA: 'Ashton United', scoreA: '1', teamB: 'Marske Town', scoreB: '1',
       period: '2nd half', clock: '58:00', colourA: '#d92b2b', colourB: '#1f4fd8',

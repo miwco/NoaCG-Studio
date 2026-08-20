@@ -195,6 +195,9 @@ ${clipOneLineCss('.scoreboard-clock', 150)}
 .scoreboard-final .scoreboard-score { color: var(--accent); }
 .scoreboard-final .scoreboard-clockblock { opacity: 0.7; }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 990,
     fields: scorebugFields({
       teamA: 'Sweden', scoreA: '24', teamB: 'Denmark', scoreB: '26',
       period: '2H', clock: '30:00', colourA: '#fecc02', colourB: '#c60c30',

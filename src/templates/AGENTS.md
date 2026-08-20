@@ -137,9 +137,8 @@ tile-wall presentation, which no longer ships):
 - **shared/base.ts** - generic assembler pieces: :root vars, zones, auto-fit, runtime scaffold.
 - **shared/logoSlot.ts** - the shared OPTIONAL logo slot every `logo: 'optional'` design inherits
   unless it hand-authors its own (`designHasLogoSlot`). **On a LOWER THIRD it places the mark
-  BESIDE the words, never above them**: measured 2026-08-14, the leading-row form made `lt02` 83%
-  taller, `lt25` 74% and `lt11` 57%, while every design that sets its mark beside the text grew
-  only in width - and a strap's height is the one dimension it cannot spend. Cards keep the
+  BESIDE the words, never above them**: measured 2026-08-14, the leading-row form grew straps up
+  to 83% taller - and a strap's height is the one dimension it cannot spend. Cards keep the
   leading row, where a mark above a heading is ordinary. Two rules the fix bought, both binding on
   anything that injects markup into a design it cannot see: **inject as the LAST child** (a first
   child renumbers every `nth-child` selector the design wrote about its own children - lt02 put
@@ -149,56 +148,46 @@ tile-wall presentation, which no longer ships):
   exactly two items in one row. That is not tidiness: the first version left them loose and gave
   the mark `grid-row: 1 / -1`, which is a NO-OP against a rule that declares columns only (a
   negative row line counts back from the EXPLICIT grid, and with no row track `-1` resolves to
-  line 1). Measured 2026-08-14 - the mark sat in row ONE, beside the name: it re-grew the strap it
-  was moved to protect (lt11 +7.7%, lt32 +18%, lt02 +6.6% with a crest) and sat 19-28px above the
-  stack's centre on every design. There is no count-free way to span an unknown number of implicit
+  line 1). There is no count-free way to span an unknown number of implicit
   rows, so the wrapper removes the rows from the question; with it, a crest costs a strap ZERO
   height and sits at offset 0 on all 24 designs. Two rules from the same measurement: **the clear
   space is the mark's own MARGIN, never the box's `column-gap`** (a track is charged its gap even
   when nothing is in it, so an empty slot shifted the words 26px), and the lockup takes
   `row-gap: inherit`, which is what keeps a design that spaced its lines from its own box spacing
-  them identically. **`designHasLogoSlot` MISSES NOTHING**, and the note that used to stand here
-  claiming five designs (lt07, lt08, lt41, lt49, lt53) slip past it was wrong - measured
-  2026-08-15 over all 24 mark-capable lower thirds rendered with a real mark, EIGHTEEN
-  hand-author a slot and all eighteen are detected; only six (lt02, lt05, lt11, lt15, lt25,
-  lt32) take the shared one, and only those six emit a `.{prefix}-lockup`. A design's slot is
+  them identically. **`designHasLogoSlot` MISSES NOTHING** - measured 2026-08-15 over all 24
+  mark-capable lower thirds with a real mark: only six (lt02, lt05, lt11, lt15, lt25,
+  lt32) take the shared slot, and only those six emit a `.{prefix}-lockup`. A design's slot is
   conditional on the same `logoEnabled` the check is guarded by, so by the time it runs a design
   that has a slot has already emitted the `<img>` AND the filelist field. **Do not add a
   `design.css` clause**: it changes 0 of the 24 answers and would later be wrong, because a
   design may style `.{prefix}-logo` unconditionally (lt07's badge is an accent square with or
   without a mark) and would then be denied the field entirely. Two real things the sweep did
   find, both by design and both stated in each design's own source: a slot drawn in a WELL
-  reserves that well's width while EMPTY (lt08 97px, lt41 107px, lt53 124px, lt49 133px, and
-  lt30/ls12/ls17/ls18/ls29 up to 188px); and the `mark-crowded` readings that prompted this look
+  reserves that well's width while EMPTY (97-188px across the nine designs that draw one);
+  and the `mark-crowded` readings that prompted this look
   are an INSTRUMENT artifact, not a catalog defect - a mark that fills its well carries its clear
   space as the `<img>`'s own padding, which `spacingCheck`'s border box swallowed. **That fix is
-  made in `src/ai/spike/spacingCheck.ts` and never here, because no design is at fault.** It
-  landed 2026-08-15 (`markContentRect`) and `node scripts/spike-mark-clearance-sweep.mjs` is the
-  re-runnable measurement: over the same 24, exactly three readings move and all move up - lt07
-  0.22 -> 0.36, lt41 0.31 -> 0.52, ls10 0.25 -> 0.56 against a 0.25 floor - because only those
-  three pad the image itself; the other 21 do not shift at all. **ls18 and ls25 stay flagged and
-  neither is a defect**: their clear space is 22px and 30px, which lt08 and lt15 both PASS at
-  (22px and 26px), and they fail only because their marks are 135px and 130px tall where the
-  others are 75px and 84px - the unit is the mark's own height, so a design that gives its mark
-  room divides by its own generosity. ls25 is additionally a `picture` well showing square cover
+  made in `src/ai/spike/spacingCheck.ts` and never here, because no design is at fault**
+  (`markContentRect`, 2026-08-15; `node scripts/spike-mark-clearance-sweep.mjs` is the
+  re-runnable measurement). **ls18 and ls25 stay flagged and
+  neither is a defect**: their clear space matches designs that PASS, and they fail only
+  because their marks are far taller - the unit is the mark's own height, so a design that
+  gives its mark room divides by its own generosity. ls25 is additionally a `picture` well showing square cover
   art `object-fit: cover`, which is that design being right. A sweep still compares against a BARE
   render rather than an absolute, because `findPanel` resolves for only 10 of these 24 - and the
   ABSOLUTE ratios depend on which mark is rendered, while the set that moves does not.
   **"A strap spends width, never height" now holds on the hand-authored slots too, and settling it
-  cost the sweep a new column - because a height figure cannot say WHY.** The four designs that
-  grew (ls29 139 -> 191px, ls17 130 -> 168, lt49 138 -> 155, lt53 139 -> 146) were all recorded as
-  "its own well sizes the row"; measured per design, that was true of TWO. Two rules came out of
-  the correction:
+  cost the sweep a new column - because a height figure cannot say WHY.** Two rules came out of
+  measuring the four designs that grew per design:
   - **A mark makes a strap taller in two opposite ways, and the fix for one is the fix for
     nothing else.** Either the mark's own furniture is taller than the words (bound the well), or
     the mark's column came out of a CAPPED text measure and the words needed more height (widen the
     cap - `sideBySideSizeCss`'s answer, and the owner's mark-size ruling: widen the strap's wrap
-    cap, never the mark's cap alone). ls29 and ls17 were the second kind: ls29's box hit its 871px
-    cap and the reporter's name broke across two rows, ls17's hit 894 and the name row broke in two
-    under its own `flex-wrap`. Both now widen their cap by the mark's column when the slot is on,
+    cap, never the mark's cap alone). ls29 and ls17 were the second kind - each hit its own cap
+    and a name row broke in two. Both now widen their cap by the mark's column when the slot is on,
     and both declare the width, the clear space and the measure as three consts, because the third
-    is computed from the first two. ls29 139 -> 139px, ls17 130 -> 130px, growing sideways only;
-    ls17's `mark-adrift` finding cleared with it (2.34 -> 0.48).
+    is computed from the first two. Both now grow sideways only, and ls17's `mark-adrift`
+    finding cleared with it.
   - **Invisible furniture must never carry a fixed height, and bounding it needs the image OUT OF
     FLOW.** Both mark areas were fixed boxes (96px, 112px) drawing nothing but a placeholder
     hairline, commented "fixed, so the artwork never sets the strap's height" - true of the artwork
@@ -210,11 +199,11 @@ tile-wall presentation, which no longer ships):
   - **A SQUARE crest and a PORTRAIT one fail differently, and the sweep only ever rendered the
     square.** `e2e/catalog/mark-height.spec.ts` - the gate this rule now has, in the catalog suite,
     so `test:e2e:catalog` runs it - measures every mark-capable lower third against BOTH shapes,
-    and found two more designs on its first run: lt07 153 -> 188px and ls10 124 -> 212px (+71%),
+    and found two more designs on its first run (lt07 and ls10, up to +71%),
     both clean with a square crest. Cause in both: an in-flow `<img>` at `width: 100%` +
     `height: 100%` inside a badge sized by `min-height`, so the percentage resolves against an
-    INDEFINITE height and the artwork's own aspect at the badge's width becomes the badge's height
-    (107 - 26px padding = 81, x2 = 162, + 26 = 188 - the arithmetic lands exactly). Both badges are
+    INDEFINITE height and the artwork's own aspect at the badge's width becomes the badge's
+    height. Both badges are
     drawn accent squares whose own source promises "roughly square", so a 1:1.75 badge is a defect
     rather than a composition: the image is absolute in both now. **The pattern to grep for is a
     definite-height well, not this list** - lt41, lt49, lt53, ls18 and ls25 carry the same in-flow
@@ -240,10 +229,9 @@ tile-wall presentation, which no longer ships):
   wrapped line grew that strap by up to 73% - the failure the beside-the-text rule exists to
   prevent, arriving through the width. So `applyLogoSlot` WIDENS the box's own `maxTextWidthCss`
   cap by the mark's column (260 + 26px) instead: the words keep their whole measure and the
-  graphic grows in the one dimension a strap may spend. Measured result: wordmark 33 -> 65px,
-  rail 10 -> 20px, crest 68 -> 84px, ZERO newly wrapped lines (two designs STOPPED wrapping),
-  ZERO height growth, nothing outside the title-safe area. 84px is the height ceiling because at
-  96 the mark starts setting the row's height itself (+8.5%) and at 110 +19.7%. The cap
+  graphic grows in the one dimension a strap may spend. Measured result: marks roughly doubled,
+  ZERO newly wrapped lines, ZERO height growth, nothing outside the title-safe area. 84px is
+  the height ceiling because past it the mark starts setting the row's height itself. The cap
   arithmetic reads `computeMaxTextWidth`, the same function the assembler calls, so the two
   cannot disagree unless this category grows a `CategorySpec.maxTextWidth` of its own - it has
   none. Pinned by `e2e/wizard-logo.spec.ts`, mutation-tested.
@@ -817,18 +805,13 @@ figure is the short final part, so the label is what may contain one). Say which
   (spxStarter cssForSubfolder; zip import strips the hop back). Contract + diagnosis:
   docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts + e2e/import-prepare.spec.ts +
   e2e/import-stretch.spec.ts.
-  **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md):
-  a layered SVG inlined VERBATIM into the HTML, its own `<text>`/`<tspan>` nodes bound as
-  `id="fN"` so the standard update() writes the designer's exact typography - no `#fwN`
-  placement rules, no erase, no stretch. The only markup edits are the bound ids and the
-  `-art` class on the root `<svg>`; sanitization happens at import (assets/svgImport.ts) and
-  the export gate re-checks it (validateTemplate rules 'svg' / 'svg-binding'). Its
-  overflow-only fit is a `fitPlacedText` applying `textLength` past the recorded original
-  width; its presets are the same box-only DESIGN_PRESETS. Fields are chosen in the wizard's
-  mapping step (mode 'svg'), never an open line list (`fieldPlan: fixed`). The bound text
-  nodes and the SVG's top-level named `<g>` layers are REGISTRY PARTS (model/structure.ts:
-  lines channel 'rise' - SVG text has no mask - and blocks labelled by layer name), so
-  per-layer motion has real targets. E2E: e2e/import-svg.spec.ts.
+  **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md,
+  the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
+  as `id="fN"` (the only markup edits: bound ids + the `-art` class); sanitized at import
+  (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
+  `textLength` fit; box-only DESIGN_PRESETS; `fieldPlan: fixed` (fields = the mapping step's
+  choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
+  E2E: e2e/import-svg.spec.ts.
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
   highlight, question queue, community/prayer request), 20 designs in five per-form files
@@ -911,6 +894,62 @@ figure is the short final part, so the label is what may contain one). Say which
   draws the wrong number of rows - the one thing the assembler cannot derive from the design, and
   silent in every other check. All three boards share ONE machine (types/answerBoard.ts): because
   the pick is DATA, halving the rows changes no state at all.
+
+## THE STAGE: which graphics may change size with the operator's text, and which may not
+
+`width: fit-content` (DESIGN_LANGUAGE §5) is the catalog's default, and it is only HALF right.
+On a NAMEPLATE it is the broadcast convention - each guest gets a strap cut to their name. On a
+BOARD it is a defect: the same panel comes back all evening with different content, and an
+audience reads a graphic that re-sizes itself as a graphic that is broken, however correct each
+individual frame is.
+
+**The families.** HUG keeps `fit-content`: lower-third, corner-bug, end-credits,
+imported-design, and the already-full-frame frame / transition / versus. FIXED declares a stage:
+every other category. Ratified by the owner 2026-08-20 along with the overflow answer - inside a
+stage, text WRAPS first and then SHRINKS to the type floor, never widens the box.
+
+**`scripts/footprint-stability-sweep.mjs` is the instrument** (`--stage` prints the width a
+design settles at; the default run reports the delta between two content lengths on BOTH axes).
+The registry-wide first run: 264 of the 314 board designs changed size with ordinary operator
+text. Four readings that are binding on anyone extending this:
+
+- **MEASURE BOTH AXES.** A `min-width` floor does not make a board stable, it changes which
+  dimension moves. qz01 is pinned at 1080px wide at every content length - the floor makes the
+  absolutely positioned root shrink-wrap to exactly the floor, so `fit-content` has no room to
+  grow into and the wrap cap above it never binds - and the text that can no longer widen the
+  board wraps and makes it 26% TALLER. A width-only sweep called that design clean.
+- **A NULL BOX IS NOT A STABLE BOX.** A full-frame design has no plate under the sweep's 95%
+  rule and often no `-box` either, so the verdict must come from the boxes that were MEASURED.
+  Starting-soon reads as the worst category on `box` (20/20, 550px median) and is the mildest in
+  fact: its plate is the 1805x1015 ambient backdrop on all 20, its bbox is the frame, and the
+  box that moves is invisible furniture behind centred text.
+- **THE STAGE IS THE DESIGN'S NUMBER, NEVER THE CATEGORY CAP.** The cap is a maximum for text.
+  Handing all 25 scoreboards the 60% cap would repaint the category as identical slabs. Each
+  design declares the width it holds a realistic worst case at (`SbDesign.stageWidth`, px at
+  1080p), emitted through `stageWidthCss` with the same two-declaration `min()` fallback the
+  wrap cap uses. **Freezing at the design's own SAMPLE content is the wrong number** and was
+  tried: at 505px sb03 clipped "MANCHESTER UNITED" to "MANC". A stage is sized for the longest
+  content it will really carry, and short content leaves reserved void - the strap-floor
+  doctrine, one level up.
+- **WHERE THE SLACK GOES IS PART OF THE FIX.** `stageJustifyCss` puts it where the anchor
+  already reads (left zone keeps left, centre stays centred), so the panel edges stop moving
+  without the words moving instead. **A design whose box paints edge-to-edge furniture needs its
+  text cells to absorb the slack as well**: sb23's accent rule is `left:0;right:0` on the box,
+  so a stage wider than its cells left a hairline hanging in empty space until the two club
+  cells took `flex: 1 1 0`.
+
+**The gate is `e2e/catalog/footprint-stability.spec.ts`**, in the catalog suite. It selects its
+targets on the `--stage-width` marker `stageBoxCss` emits - never a list in the spec - so the next
+category to flip is covered the day it flips, and it measures `offsetWidth` rather than the painted
+rect, because sb21 leans its panel and a bounding box widens with HEIGHT. **A staged design that
+still moves fails here**; the sweep beside it is the diagnostic that says which element carries it.
+
+**Where it stands.** Scoreboards are flipped: all 25 declare a stage and the panel is
+width-stable on all 25 (was 23 of 25 moving, sb03 by 86%). Nine still grow in HEIGHT when a name
+wraps to a second row, and a handful move an inner name cell inside the fixed panel - both are
+the second half of the contract (reserved rows plus `fitPlacedText`, `shared/textFit.ts`, which
+today only imported designs use), and the gate asserts WIDTH only until that mechanism exists.
+The other fifteen board categories still hug.
 
 ## The :root style contract
 

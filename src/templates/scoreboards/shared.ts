@@ -46,6 +46,7 @@ import {
   resolveHeadingFont,
   rootVarsCss,
   setFieldValueJs,
+  stageBoxCss,
   zoneCssText,
 } from '../shared/base';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
@@ -79,6 +80,21 @@ export interface SbDesign {
   popFields?: string[];
   /** How many masked lines the animation presets choreograph. Absent = the fixed contract's 4. */
   lineCount?: number;
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this scorebug was drawn for.
+   *
+   * A scorebug is the category where a hugging panel fails worst, because the operator does not
+   * even have to do anything for it to move — `update()` writes team names and scores while the
+   * graphic is ON AIR, so the bar physically re-sizes itself when a substitute with a longer
+   * name comes on. Measured 2026-08-20 (`scripts/footprint-stability-sweep.mjs`): 23 of 25
+   * designs move and 18 of them move the drawn panel itself, sb03 by 86% (505 -> 940px).
+   *
+   * The declared number is what the design settles at with its own sample content, so the look
+   * at design content is unchanged and only the movement around it goes away. Omit it and the
+   * panel keeps hugging, which is the pre-2026-08-20 behaviour and still right for a design
+   * whose whole idea is a chip cut to its label.
+   */
+  stageWidth?: number;
   /**
    * Extra design-owned runtime JS — a rows rebuild, a design's own painter — emitted OUTSIDE
    * the marked ANIMATION region, before it, so the timeline can never rewrite it. Same seam
@@ -273,9 +289,13 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
   opacity: 0;                      /* hidden until play() runs the entrance */
 }
 
-/* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
+/* ── ${design.stageWidth ? 'The stage: the bar keeps its own width and the names fit inside it.' : 'Auto-fit: the panel hugs its content and wraps instead of overflowing.'} ── */
 .scoreboard-box {
-  width: fit-content;              /* the panel hugs the two team groups */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this bar was drawn for')
+      : '  width: fit-content;              /* the panel hugs the two team groups */'
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }

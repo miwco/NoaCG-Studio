@@ -187,6 +187,9 @@ ${clipOneLineCss('.scoreboard-clock', 150)}
 .scoreboard-final .scoreboard-score { color: var(--accent); }
 .scoreboard-final .scoreboard-clock { color: var(--text-dim); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 960,
     fields: scorebugFields({
       teamA: 'LAL', scoreA: '88', teamB: 'BOS', scoreB: '84',
       period: 'Q4', clock: '12:00', colourA: '#fdb927', colourB: '#007a33',

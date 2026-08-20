@@ -112,6 +112,7 @@ ${colourHoldersHtml('f6', 'f7', '#12409f', '#6b2fa0')}
 
 /* The club-code cell - the club colour is the ground, not an ornament beside the words. */
 .scoreboard-name-cell {
+  flex: 1 1 0;                     /* the two club cells share the stage's spare room between them */
   padding-left: calc(24px * var(--scale));  /* codes get more air than figures do */
   padding-right: calc(24px * var(--scale)); /* symmetric, so the cell reads as a block */
 }
@@ -197,6 +198,9 @@ ${clipOneLineCss('.scoreboard-phase', 150)}
 .scoreboard-final .scoreboard-score-cell { background: var(--accent); }
 .scoreboard-final .scoreboard-score { color: var(--accent-ink); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 960,
     fields: scorebugFields({
       teamA: 'ARC', scoreA: '2', teamB: 'YLE', scoreB: '1',
       period: '2ND', clock: '67:14', colourA: '#12409f', colourB: '#6b2fa0',

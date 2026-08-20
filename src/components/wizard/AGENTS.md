@@ -2,12 +2,9 @@
 
 Loaded alongside the root `AGENTS.md` and `src/components/AGENTS.md` when working in this
 directory (Claude reads it via this directory's `CLAUDE.md` import; Codex reads it directly).
-Keep it accurate.
-
-Split out of `src/components/AGENTS.md` on 2026-08-08, which every session touching any
-component loaded in full while a third of it described one directory. This chain now sits close
-to `project_doc_max_bytes` and `npm run check:shared-instructions` refuses a careless addition:
-add a RULE here, leave the reasoning in the code's own comments.
+Keep it accurate. This chain sits close to `project_doc_max_bytes` and
+`npm run check:shared-instructions` refuses a careless addition: add a RULE here, leave the
+reasoning in the code's own comments.
 
 ## Wizard (wizard/)
 
@@ -16,15 +13,14 @@ preview), draft.ts, WizardPreview, MiniPreview, steps/. Creating calls `variant.
 which generates the complete, commented template. THREE entry cards (template, Create with AI,
 Import graphic) in a two-column grid, plus the separated video strip; Advanced mode adds blank.
 An ODD LAST CARD spans the row (`.wz-entry-card:last-child:nth-child(odd)`) and sizes to its
-OWN copy — the row-alignment reserves are two empty lines on a card with no row-mate.
-Create with AI is the ONE AI
-door - NoaCG Pro is an execution TIER inside it, never a second card; there is no kit card
-either — see the kit path below.
+OWN copy — the row-alignment reserves are two empty lines on a card with no row-mate. Create
+with AI is the ONE AI door - NoaCG Pro is an execution TIER inside it, never a second card;
+there is no kit card either (see the kit path below).
 
 **THE ENTRY STEP'S CONTENT** (steps/EntryStep.tsx, handoff §2a; reasoning in that file's
 comments). Hero = the LANDING PAGE's headline verbatim plus a subtitle naming BOTH routes to
-air - the cloud control panel and EVERY export target, never a sample of three - with no second
-brand mark and no export-target chip row: the targets belong in the SENTENCE, and a new export
+air - the cloud control panel and EVERY export target, never a sample of three - no second
+brand mark, no export-target chip row: the targets belong in the SENTENCE, and a new export
 target updates this copy too. Home = a full-width ROW whose Graphics / Productions
 shortcuts are SIBLINGS of the body button, shown only when there is saved work. The video strip
 is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both AI doors
@@ -37,9 +33,9 @@ CHAIN (`.wz-stepcount ~ .fb-open`, `.fb-open ~ .gallery-close`), since the step 
 absent on Entry and the button absent offline and whichever exists first takes the auto margin;
 and the shell behind the wizard mounts a SECOND button, so a locator says which via `data-area`.
 
-**LAYOUT AFTER ENTRY: rail | form column | preview** (handoff §2). Entry is a card menu, so it
-renders NO creation-step navigation and uses the rail's 216px for the menu. The rail appears
-immediately after a card is chosen. From then on, the steps are a 216px vertical RAIL
+**LAYOUT AFTER ENTRY: rail | form column | preview** (handoff §2). Entry is a card menu - NO
+creation-step navigation, the rail's 216px goes to the menu - and the rail appears the moment
+a card is chosen. From then on, the steps are a 216px vertical RAIL
 (`.wz-rail`, still `.wz-dots`/`.wz-dot` so every spec still addresses them): number-or-green-
 tick, title, and a second line naming the decision the step asks for. The rail's foot reads the PROJECT
 FORMAT back for the whole walk while the control stays in the step that owns it (Browse, AI,
@@ -48,21 +44,21 @@ that read-back stands down (it needed ~212px the row lacks). The FOOTER belongs 
 column, so Next sits under the form it advances, not under the graphic beside it.
 
 Two measured constraints:
-- **After Entry, the rail's 216px leaves the row before either pane sees it.** Where the left pane is a
-  WORKING surface (`.wz-body-working`, the Import flow's Text step) the measure cap lifts and
-  the preview clamps, or the placement canvas drops under the 700px floor
-  `e2e/import-graphic.spec.ts` holds.
+- **After Entry, the rail's 216px leaves the row before either pane sees it.** A WORKING left
+  pane (`.wz-body-working`, the Import flow's Text step) lifts the measure cap and clamps the
+  preview, or the placement canvas drops under the 700px floor `e2e/import-graphic.spec.ts`
+  holds.
 - **The Entry step's HEIGHT budget still binds** (`e2e/wizard-entry-fit.spec.ts`, 1366x768):
-  cards share the column rather than wrapping the row, and the grid's 10px cost was taken off
-  the hero's title margin. Grow one, pay from another.
+  cards share the column, and the grid's 10px came off the hero's title margin. Grow one, pay
+  from another.
 
 **Deep-linked open** (`#/new/<variantId>`, docs/PRERENDER.md - a prerendered template page's
 CTA): the router's `design` param rides through `openGallery(designId)` into templateStore's
-`pendingDesignId`, which the wizard's open effect resolves via `variantById` and, on a hit,
-applies the SAME patch `BrowseStep`'s card click does before jumping straight to Fields (mode
-`'template'`, step 2) - never creating a project, since Finish is still the only door that does.
-An id that does not resolve (unknown, retired, or `imported-design`) falls through to the
-ordinary Entry-step open.
+`pendingDesignId`; the wizard's open effect resolves it via `variantById` and, on a hit,
+applies the SAME patch `BrowseStep`'s card click does, jumping straight to Fields (mode
+`'template'`, step 2) - never creating a project, Finish stays the only door that does. An
+unresolved id (unknown, retired, `imported-design`) falls through to the ordinary Entry-step
+open.
 
 **Finish** (steps/FinishStep.tsx - the last step of every catalog-shaped mode, design included)
 is the wizard's ONE branch. It carries the graphic's NAME (`draft.name`, applied inside
@@ -71,12 +67,11 @@ path; blank falls back to the design's catalog name), a read-back of what was ch
 doors:
 - **Open in the editor** - the classic ending. Creates and hands over; saving stays the
   user's move.
-- **Export it** - creates, SAVES to the library, and opens ExportWindow OVER the wizard
+- **Export it** - creates, SAVES to the library (not optional; reasoning on
+  `createAndExport`, CreationWizard.tsx), and opens ExportWindow OVER the wizard
   (`applyTemplate`'s `keepGalleryOpen`); closing the window returns to the last creation
-  step, so a follow-up tweak costs no re-walk. The editor is never revealed. The save is not
-  optional: a graphic that was configured, exported and dropped would cost every wizard
-  choice to reproduce. A FAILED save deliberately stays in the editor instead, where the
-  topbar's failed status is visible.
+  step, so a follow-up tweak costs no re-walk. The editor is never revealed. A FAILED save
+  deliberately stays in the editor instead, where the topbar's failed status is visible.
 Both doors go through `applyDraftProject`, which is what keeps them byte-identical - the
 editor path formats through Prettier (`applyGenerated`), so an export path skipping it would
 ship different HTML for the same choices. The footer's quiet "Create project" shortcut stands
@@ -84,16 +79,15 @@ down ON Finish and works from every step before it. The graphic's name slugs the
 the SPX and CasparCG targets, the template FOLDER inside it - the name the operator reads in
 the playout server. Pinned by e2e/wizard-finish.spec.ts.
 
-**A closed `<details>` needs an author rule here.** The UA hides a disclosure's non-summary
-children with `display: none`, which ANY author rule setting `display` on those children beats
-- and the Style step's disclosures wrap `.row`, which is `display: flex`, so they never
-collapsed at all until styles.css grew `details:not([open]) > *:not(summary) { display: none }`.
-`toBeVisible()` is blind to it, so specs assert measured HEIGHT is 0, never `open`.
+**A closed `<details>` needs an author rule here** - the UA's `display: none` on non-summary
+children loses to ANY author `display` (the Style step's disclosures wrap `.row`, a flex),
+hence styles.css's `details:not([open]) > *:not(summary) { display: none }`. `toBeVisible()`
+is blind to it, so specs assert measured HEIGHT is 0, never `open`.
 
 **Browse** (steps/BrowseStep.tsx, mode 'template' only) is the FACETED template storefront
 (docs/TEMPLATE_TAXONOMY_PROPOSAL.md §12 for the facets, §4c for the groups;
-re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as) replacing the
-old Category -> Template pair: search (alias-aware, src/templates/search.ts), optional
+re-design/handoff.md §2b and src/templates/AGENTS.md for what they are drawn as):
+search (alias-aware, src/templates/search.ts), optional
 programme family/format selects (RANKING — "Best for X" / "Also works" sections, never
 exclusion), ONE category-GROUP dropdown with live counts (ten shelves over the 27 graphic
 categories) whose selected group offers its member categories as chips (only when it has more
@@ -106,9 +100,8 @@ never overwrite each other). Zero results name no template dishonestly: the empt
 offers "remove the most limiting filter" (computed: the chip whose removal restores the most
 results) and a Create-with-AI hand-off. Cards carry the strict info budget (category ·
 subtype, top families, field summary from semantics, ≤3 capability badges, style family,
-complexity), with everything the budget excludes - the full field schema, all formats,
-structures, capabilities and motion - one ⓘ click away in the card's detail panel (a SIBLING
-button of the card button, never nested; one panel open at a time). The footer's brand
+complexity), with everything the budget excludes one ⓘ click away in the card's detail panel
+(a SIBLING button of the card button, never nested; one panel open at a time). The footer's brand
 toggle feeds `brandFamily` as browse CONTEXT, not a filter: the package's siblings rank
 first, no chip appears, Clear-all leaves it alone, and a genuine programme match always
 outranks it. MiniPreview mounts its iframe only when the card scrolls into view
@@ -119,13 +112,12 @@ and the step states both numbers — `Showing 12 of 82`, `data-testid="wz-browse
 rules: `browseTemplates` still returns the WHOLE result and gains no limit argument (the total
 is what the count line reports); the limit is spent on the RANKING then split into the two
 sections, so "Show more" walks "Best for" into "Also works"; and the page resets on any result
-change, derived during render off a signature rather than in an effect — an effect paints one
-frame of the old page against the new filter, a flash of the wrong designs on a grid of live
-iframes. For SPECS: search for a named design (`pickDesign`, `e2e/_browse.ts`) and assert
+change, derived during render off a signature, never in an effect (flash reasoning in
+BrowseStep.tsx). For SPECS: search for a named design (`pickDesign`, `e2e/_browse.ts`) and assert
 `resultTotal`, never a `.wz-variant` count.
 
-**THE KIT PATH — one door, at the top of Browse** (shape + the §18 reversal:
-docs/PACK_TAXONOMY.md, "The wizard surface"). `.wz-buildmode` (ONE GRAPHIC / A WHOLE KIT) swaps the step body between the design
+**THE KIT PATH — one door, at the top of Browse** (docs/PACK_TAXONOMY.md, "The wizard
+surface"). `.wz-buildmode` (ONE GRAPHIC / A WHOLE KIT) swaps the step body between the design
 grid and **KitPicker** (genre preset, then checkboxes over `templates/kit.ts` `kitChoices`);
 the format picker and the SEARCH sit above the branch — one box: designs on one side, shows and
 the graphics a kit can hold on the other (facets stand down).
@@ -135,8 +127,8 @@ a single graphic does (`mode` stays `'template'`; `KitPlan`, wizard/kitPlan.ts, 
 one graphic OF A SET) plus **KitTray**, **KitLookStep** and **KitFinishStep**. What
 they must not break: the tray is the second axis of progress, in the rail's vocabulary, its
 done chips MiniPreview in `lazy` mode (its one caller), not navigation; the
-look question is a bordered card, never a modal (it would cover the rail and tray, which are
-what make it answerable), and its yes is a deterministic transform over the `:root` contract and
+look question is a bordered card, never a modal (it would cover the rail and tray), and its
+yes is a deterministic transform over the `:root` contract and
 NOTHING else (`kitLookPatch` — the motion preset carries only where the target design DECLARES
 it, and the brand toggle reaches every graphic of the set); both Finish doors SAVE
 FIRST, every write claimed (see "Save + Home"), export asking the production page for its
@@ -145,23 +137,19 @@ packages, which is the whole pool; and the kit's last rail entry is not a jump
 target (the graphic in hand was BUILT), while re-finishing the tone-setter re-propagates.
 
 **ONE disclosure, EVERY width, closed by default** (`.wz-browse-drawer-btn` +
-`.wz-browse-filters`, handoff §2b) — two nested ones cost a desktop reader five rows of facets
-before the first design and a phone reader two clicks to reach one capability. LEADING the
-step: search, the type select, the style families. Behind the toggle: programme, field counts,
-structures, capabilities, motion — with the active count on it, so a narrowed catalog never
-reads as an empty one. The LEAD ROW is a GRID of two lines (select + Filters, then the chips),
-not one wrapping flex line: this step's column halves the moment a design is picked and the
-preview takes its half, and a flex row degrades there into a 230px vertical stack of chips
-beside a select in an empty half-row.
+`.wz-browse-filters`, handoff §2b; the cost of two is in BrowseStep.tsx's comments). LEADING
+the step: search, the type select, the style families. Behind the toggle: programme, field
+counts, structures, capabilities, motion — with the active count on it, so a narrowed catalog
+never reads as an empty one. The LEAD ROW is a GRID of two lines (select + Filters, then the
+chips), never one wrapping flex line - this step's column halves the moment a design is
+picked, and a flex row degrades there into a chip stack beside a lone select.
 
 The shared PROJECT FORMAT picker (`ProjectFormatPicker`, aspect / resolution / FPS,
 `.wz-browse-format`) is not a facet — `browseTemplates` never reads it — so it never sits
-inside the filter drawer, where it asked a phone user to open "Filters" to make a decision that
-filters nothing. On Browse it is three bare selects in ONE row, since the rail
-captions and reads back the format and the options say what they are; each label's text is
-hidden via `.project-format-label`, kept in the DOM for a screen reader. That span exists so a
-surface can hide the WORDING without hiding the control the label wraps — every other caller
-renders the picker unchanged. The same controlled picker appears before generation or
+inside the filter drawer. On Browse it is three bare selects in ONE row, since the rail
+captions and reads back the format; each label's text is hidden via `.project-format-label`,
+kept in the DOM for a screen reader — hide the WORDING, never the control, and every other
+caller renders the picker unchanged. The same controlled picker appears before generation or
 placement in AI/Lite, Import Graphic, blank, video AI, and the older import/catalog
 continuation; draft selection survives route switches. Blank is a setup step, never an
 immediate default-format create. The import-images
@@ -171,28 +159,26 @@ in every mode (`finishStep = animStep + 1`).
 
 **Import graphic** (mode 'design': ImportDesignStep + PrepareDesignStep + PlaceFieldsStep +
 the shared AnimationStep) is a SETUP flow, not a second editor:
-Start -> Design (choose project format, then drop the image - any raster format the browser
-decodes, rejecting only a file with no intrinsic pixel size, since every downstream number
-comes from that measurement; live preview from the moment it lands; Create is available from
-here on - every later step is an optional stop) -> Prepare -> Text -> Animation -> Create.
+Start -> Design (choose project format, then drop the image - any raster the browser decodes
+with an intrinsic pixel size, the measurement every downstream number comes from; live preview
+from the moment it lands; Create is available from here on - every later step is an optional
+stop) -> Prepare -> Text -> Animation -> Create.
 The **Text step** (PlaceFieldsStep) places editable fields ON the artwork: T = click point
 text, ⬚ = drag a wrapping area box, 🖼 = drag a picture SLOT (a filelist field, both
-dimensions the user's - a slot's shape is a design decision); move/resize/Delete; per-field name, preview text, and
-typography (family / size / weight / color / align / line-height / tracking) with a live
-styled render on the placement canvas. **It opens with the fields already placed** where the
+dimensions the user's); move/resize/Delete; per-field name, preview text, and full typography
+with a live styled render on the placement canvas. **It opens with the fields already placed** where the
 artwork has an empty panel (`assets/suggestFields.ts` - deterministic, no model call), ONCE
 and only into an empty step; `✨ Suggest fields` re-runs it. Artwork with no flat panel
 refuses out loud and the manual tools stand unchanged. Specs live in `draft.designFields` (DESIGN px) and
 become REAL placed fields at build - draft.ts `withDesignFieldSpecs` runs addPlacedLine +
 setLineTextStyle + setLineFit, so wizard placement, editor, preview, and export agree by
 construction (browser-verified pixel-exact). The **FontPicker** (wizard/FontPicker.tsx,
-searchable) offers the bundled OFL library, **the ~1,900 Google Fonts families**
-(model/googleFonts.ts - searched by name, fetched at DESIGN time and embedded; the emitted
-code never references Google, and the panel says a download shows the browser's IP to Google
-before it happens), upload (woff2/woff/ttf/otf -> CustomFont,
-embedded in template.assets + every export), and - Chromium only, permission-gated - Local
-Font Access, where a picked installed font is EMBEDDED exactly like an upload so playout
-never depends on the machine's fonts. The **Animation step** is the standard one.
+searchable): the bundled OFL library; **the ~1,900 Google Fonts families** (model/googleFonts.ts
+- fetched at DESIGN time and embedded, the emitted code never references Google, and the panel
+says a download shows the browser's IP to Google first); upload (woff2/woff/ttf/otf ->
+CustomFont, embedded in template.assets + every export); and Local Font Access (Chromium only,
+permission-gated), EMBEDDED exactly like an upload so playout never depends on the machine's
+fonts. The **Animation step** is the standard one.
 The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
 non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** -
@@ -200,7 +186,7 @@ non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** 
 the proposal is an OFFER (drag the box or its four grips, "Erase this", or dismiss to the
 manual tools), never applied pixels, it re-runs on the CLEANED artwork after every accepted
 erase, and under its confidence bar it proposes NOTHING and names the rule that refused
-(`erase-scan-refusal`) - a box on the wrong thing costs the student more than an empty canvas.
+(`erase-scan-refusal`; reasoning in eraseRegion.ts).
 Its overlay CSS is wizard-local (`prepProposal.css`), not styles.css. **"It's meant to be
 there / no baked text" is DRAFT state** (`designKeepBakedText`): Prepare stops re-proposing
 on return and the Text step's note stands down; "yes, mark it" clears it, a fresh drop
@@ -210,8 +196,7 @@ blocks, the fact travels. The pending non-flat fill offers hold-to-compare, its 
 says "keep the text", and an applied mark keeps `DesignEraseState.segments`.
 Marks ACCUMULATE into `draft.designErases`, each run
 against the artwork as it stands; removing one REPLAYS the survivors from
-draft.designOriginal, which is what keeps fills from compounding (a fill cannot be undone in
-place). The erase MEASURES the ink it removes, split into LINES, and every line seeds a real
+draft.designOriginal so fills never compound (a fill cannot be undone in place). The erase MEASURES the ink it removes, split into LINES, and every line seeds a real
 field at create from that line's own bounds, cap height, top, and the edge it was set from,
 never from the loose rectangle the user drew. The SCALING MODE is fixed default / horizontal
 9-slice stretch with draggable guides + a content-width demo slider that pushes sample text
@@ -243,14 +228,12 @@ the shared `fields/FieldControl` like every other editable field, and written to
 `setupFields` (templates/types/graphicType.ts) drops every field an operator event carries as
 its PAYLOAD, because in this model a pick IS payload - so live state (the contestant's answer,
 the highlighted row, the verdict) cannot be offered at build time, and image fields stay out
-because their value is an asset path. A design with none shows no section at all. Before this,
-the five lines of a quiz were editable and the one value deciding what the board MEANS was
-reachable only in the editor, which the student release exists to make optional. Its label is a
-word, so it gets `.wz-setup-label`'s own column - reusing `.wz-fid` clipped it into 24px, the
-same trap `.wz-file-chip` already exists to undo. Pinned by e2e/wizard-setup-fields.spec.ts,
+because their value is an asset path. A design with none shows no section at all. Its label is
+a word, so it gets `.wz-setup-label`'s own column, never `.wz-fid` (styles.css says why).
+Pinned by e2e/wizard-setup-fields.spec.ts,
 including a registry-wide check that a setup value lands on the field it NAMES (the write is
-positional, so a design emitting its fields out of declaration order would silently put the club
-colour in the period chip); the Style step has TWO size knobs (Graphic
+positional - out-of-order emission would silently put the club colour in the period chip);
+the Style step has TWO size knobs (Graphic
 size -> --scale, Text size -> --type-scale); the Animation step renders the slide family as ONE
 card with a direction-of-travel picker. WizardPreview cancels pending lifecycle-demo timers when
 a debounced srcdoc commits (a stale stop() must never blank the fresh document), pushes field
@@ -269,8 +252,8 @@ e2e/design-rules-product.spec.ts.
 
 **THE STYLE STEP WARNS WHEN THE PALETTE JUST ERASED THE LOGO** (`useMarkLegibility` ->
 `validation/markLegibility.ts`, owner's value-gate ballot 2026-08-14). It measures its OWN
-offscreen frame rather than the live preview, because WizardPreview's iframe deliberately carries
-no `allow-same-origin` and its pixels cannot be read from the app at all. Debounced past the
+offscreen frame - WizardPreview's iframe deliberately carries no `allow-same-origin`, so the
+live preview's pixels cannot be read from the app at all. Debounced past the
 preview's own 220ms and skipped entirely unless the draft carries a logo - a graphic with no mark
 cannot fail it and must not pay for the render. It reports; it never repairs (the two available
 repairs are dropping the customer's mark or pasting a plate over the design, both refused in
@@ -279,14 +262,14 @@ repairs are dropping the customer's mark or pasting a plate over the design, bot
 **Create with AI** (Entry card -> steps/AiStep, mode 'ai') is the MERGED describe/import step.
 One drop zone accepts images AND an existing .html/.zip template. A dropped template parses
 deterministically (model/importTemplate.ts) into a card with two actions: **"Open as code (no
-AI)"** — the byte-faithful import (applyTemplate + Export panel, exactly the old Import entry;
-it renders OUTSIDE the `needsSignIn` gate and must stay there — only the AI actions are an
-account feature) — or **Convert** (provider.convertImport, guided by the prompt). Each dropped
+AI)"** — the byte-faithful import (applyTemplate + Export panel; it renders OUTSIDE the
+`needsSignIn` gate and must stay there — only the AI actions are an account feature) — or
+**Convert** (provider.convertImport, guided by the prompt). Each dropped
 image becomes an **UploadCard** (steps/ai/UploadCard.tsx) carrying WHAT IT IS FOR - use it as
 it is / make one like this / take the look and feel / make it work over this
-(model/imagePurpose.ts, split into `images` + `references` by `splitByPurpose`). The purpose is
-a property of the PICTURE, not of the gesture, which is why it lives on the card rather than
-behind separate drop zones. `guessPurpose` preselects (visibly, one click to correct) and only
+(model/imagePurpose.ts, split into `images` + `references` by `splitByPurpose`). The purpose
+is a property of the PICTURE, not of the gesture, so it lives on the card, never behind
+separate drop zones. `guessPurpose` preselects (visibly, one click to correct) and only
 ever guesses mark-or-not. An as-is card adds the fixed/swappable choice; VIDEO passes
 `showBinding={false}`, since a composition reaches a picture through a declared image input.
 The as-is paths are handed to `productionSpxValidator` so the as-is screen rides the injected
@@ -315,11 +298,10 @@ one panel every tier can reach): **NoaCG Lite**, **NoaCG Pro** and **Bring your 
 (stored id `custom` - the label changed, the id never can). The default resolves to Lite when
 the server offers it, else BYO key. Lite and Pro are managed experiences of the SAME workflow -
 no model picking and NO mechanism named in their copy; BYO key is the deliberate advanced
-surface carrying `AiProviderSettings` with `allowManaged={false}`, since the managed route is
-not a thing a user chooses. A tier this build does not offer is ABSENT rather than greyed:
-**Pro renders only where it can run** - the server offers hosted Pro AND the deployment has the
-backend to meter it (see below). The tier contract, the price targets and the price-book rule
-behind each model row are src/ai/AGENTS.md's.
+surface carrying `AiProviderSettings` with `allowManaged={false}`. A tier this build does not
+offer is ABSENT rather than greyed: **Pro renders only where it can run** (see below). The
+tier contract, the price targets and the price-book rule behind each model row are
+src/ai/AGENTS.md's.
 
 The PIPELINES behind Lite and Pro are src/ai/AGENTS.md's contract (and docs/NOACG_PRO_PLAN.md
 §7); what belongs here is what each tier does to this STEP.
@@ -353,11 +335,10 @@ reachable only from here ships its regressions silently. Both are mutation-check
 (`src/ai/pro/language/pipeline.ts`; §15-16 of docs/NOACG_PRO_PLAN.md, and src/ai/AGENTS.md for the
 engine's rules). The result card reports that language - its name, its rationale, its palette, and
 every divergence the platform recorded - at `data-testid="pro-report"`, keyed to the template by
-WeakMap so a restored past result shows its own. **There is no concept image any more**: the
-graphic rendered above the card IS the answer, and the picture the retired engine displayed was
-the one thing it could not keep. **The tier is OFFERED only where it can actually run** - the server says
-hosted Pro is available to this visitor (`/api/ai/pro-status`) AND the deployment carries the
-backend that route is metered through (`proOffered = proHosted && isBackendConfigured()`). Where
+WeakMap so a restored past result shows its own. **There is no concept image**: the graphic
+rendered above the card IS the answer. **The tier is OFFERED only where it can actually run**
+(`proOffered = proHosted && isBackendConfigured()` - the `/api/ai/pro-status` answer AND the
+metering backend). Where
 that is false the tier is ABSENT, never a greyed row and never a key request: a NoaCG tier runs
 on NoaCG's own service or it is not offered (owner, 2026-08-14). Its settings are therefore one
 read-back with the remaining allowance (`ai-pro-hosted-note`) and no chooser of any kind - no
@@ -366,25 +347,23 @@ flag, no query parameter, no localStorage key - which is the property `e2e/pro.s
 answering the status endpoint and nothing else. A generation opens ONE reservation before the
 model call and reports its outcome after it (`src/ai/pro/session.ts`); the spend is
 recorded server-side and is never a number this step sends. **The outcome carries rule codes for
-the platform's own repairs, not just errors** (`proRuleCodes`) - a graphic the platform rescued
-used to write an empty `validation_rule_codes` beside a `usable` status. Categories
+the platform's own repairs, not just errors** (`proRuleCodes`; reasoning in
+ai/pro/language/gate.ts). Categories
 clamp to lower-third/auto, spec-field findings demote to warnings (`demoteSpecFields`: fixed
 contract, no repair loop), and refine/fix stand down because regenerate is the honest move.
-The step no longer carries a stub branch of its own - the tier is absent where a real
-generation cannot run - so `e2e/pro.spec.ts` is now only the DOOR (whether the tier is offered),
-what a Pro graphic IS is pinned offline by `e2e/pro-language.spec.ts` against the composer the
-product runs, and the LIVE walk is `e2e/configured/pro-wizard.spec.ts`, which pins the engine by
-what it spends (one call, forcing `emit_design_language`, and an image request fails the spec). The step MEASURES the first "use it as it is" upload with `probeMark` before
-generating: its shape and ink go into the brief in content-free words, and the same probe is what
-lets the composer give the mark's column a field when its ink cannot read on the panel the
-language chose.
+`e2e/pro.spec.ts` pins only the DOOR (whether the tier is offered), `e2e/pro-language.spec.ts`
+pins offline what a Pro graphic IS against the composer the product runs, and the LIVE walk
+`e2e/configured/pro-wizard.spec.ts` pins what the engine spends (one call, forcing
+`emit_design_language`; an image request fails the spec). The step MEASURES the first "use it
+as it is" upload with `probeMark` before generating: its shape and ink go into the brief in
+content-free words, and the same probe lets the composer give the mark's column a field when
+its ink cannot read on the chosen panel.
 
-The harness is ON BY DEFAULT, with the **"Use NoaCG harness (3 options)"** checkbox
-(`AiSettings.useHarness`, default true — the benchmark showed it a clean win) still able to
-turn it off. On → `generateAlternatives`: three directions rendered as `[data-alt]` PICKER
+The harness is ON BY DEFAULT (`AiSettings.useHarness`; the **"Use NoaCG harness (3 options)"**
+checkbox turns it off). On → `generateAlternatives`: three directions rendered as `[data-alt]` PICKER
 CARDS — a live **MiniPreview** of each built template plus its design words (density,
-heading weight, alignment, panel) and a pass/fail mark, because the three differ in real
-compositional decisions and a list of names showed none of them. Off → `generateRaw`
+heading weight, alignment, panel) and a pass/fail mark — a list of names showed none of the
+real compositional differences. Off → `generateRaw`
 (one-shot, static validation only, no bench). Conversion of an imported template always runs
 the validated conversion flow regardless of the checkbox. The default is pinned by
 e2e/ai.spec.ts ("the harness checkbox is on by default").
@@ -398,11 +377,9 @@ provider-scoped suggestions, not an application-wide allowlist.
 
 The ⚙ button carries a one-line read-back of what will actually run (the tier, plus the model
 on the tier where models are the user's own), so the common case needs no click. **The panel is
-NOT a popover**, though the reference draws one: it opens ITSELF whenever nothing is configured
-- which is exactly when Generate, Attach and More control are all live and waiting - so a
-floating sheet covers the controls it exists to make work. Measured, as two Pro specs
-deadlocking: Playwright will not dispatch a click through a covering element, so the press that
-would dismiss it never arrives. Making it float means restructuring the step around it.
+NOT a popover**, though the reference draws one: it opens ITSELF whenever nothing is
+configured, so a floating sheet would cover the controls it exists to make work (measured;
+reasoning at the settings sheet in AiStep.tsx).
 
 **The directions SURVIVE a refinement.** `alternatives` (the current state of each
 direction) and `originals` (each as first generated) are parallel arrays; a refine replaces
@@ -419,19 +396,17 @@ the card carries the design's name (`data-testid="ai-adapted-from"`) and, under 
 retrieved shortlist (`ai-shortlist`) as MiniPreview cards - the same card chassis as the three
 directions and a Browse tile, because all three are "pick a design". Picking another one
 REBUILDS on it deterministically: `assembleGroundedTemplate(spec, ctx, { keepChassisZone: true })`
-with the same spec, no model call and no cost, so the user can overrule the AI's choice without
-paying for a generation. No structural KIND check is needed on that swap - every design on the
+with the same spec, no model call and no cost - the user overrules the AI's choice free of
+charge. No structural KIND check is needed on that swap - every design on the
 shortlist satisfies the brief's anchor by construction (src/ai/retrieval.ts).
-The card's caption is the NAME ALONE: a style-family tag beside it clipped "Scripture Reading"
-on a 132px card to name something the live render above it already shows.
+The card's caption is the NAME ALONE (reasoning at the card in AiStep.tsx).
 
 A failing non-Lite result carries **⟳ Fix these** (`data-testid="ai-fix"`): the exact validator
 findings go back as the instruction, at CODE level (no spec — the findings are about emitted
 code). It is a button, not an automatic loop: a grounded assembly failing its own bench is a
 platform bug worth surfacing (src/ai/AGENTS.md), but leaving a non-technical user holding
 raw findings is not a resolution. The per-card verdict uses `.wz-alt-mark.ok/.bad`, NOT
-`.status-ok`/`.status-bad` — those name the verdict on the CURRENT result, and four
-elements answering to the same words broke a spec the moment cards appeared.
+`.status-ok`/`.status-bad` — those name the verdict on the CURRENT result.
 Lite instead labels the same failure as a NoaCG platform defect and spends no code-repair
 call.
 
@@ -471,15 +446,13 @@ measurement claim rather than the absence of one.
 first uploaded image — `src/assets/paletteExtract.ts`, deterministic arithmetic, no model call
 — and the install's saved looks (`loadLooks()`). Both write `spec.brandColors`, the lock
 `applySpecLocks` already honours over anything the AI picks. The pick stays the user's on
-purpose: nothing can tell whether the red in a crest is the identity or the shirt behind it. A
-filename chip uses **`.wz-file-chip`**, never `.wz-fid` — that one is the fixed 24px FIELD-ID
-badge, and borrowing it crushed every filename onto two lines.
+purpose (paletteExtract.ts says why). A filename chip uses **`.wz-file-chip`**, never
+`.wz-fid` (the fixed 24px field-id badge; styles.css says why).
 
 Two ordering rules the transcript depends on: **archive the current result BEFORE recording
 the new request** (it is chronological — the standing result happened first), and **record
 the request even when the box was empty** and the brief came from the talk, or a generation
-leaves no trace of what it was asked to make. Both were wrong first and caught by looking at
-the rendered thread, not by reading the code.
+leaves no trace of what it was asked to make.
 
 **Video mode** (Entry card "Video or animation with AI" -> steps/VideoStep): prompt + a
 GENERATION-ENGINE picker (the VIDEO_ENGINES cards: Remotion preselected, HyperFrames tagged

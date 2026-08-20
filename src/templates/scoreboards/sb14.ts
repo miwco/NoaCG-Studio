@@ -213,6 +213,9 @@ ${clipOneLineCss('.scoreboard-team', 270)}
 .scoreboard-final .scoreboard-pip { display: none; }
 .scoreboard-final .scoreboard-score { color: var(--accent); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 1030,
     fields: matchStatusFields({
       teamA: 'ARSENAL', scoreA: '3', teamB: 'CHELSEA', scoreB: '1',
       status: 'FULL TIME', note: 'PREMIER LEAGUE · MATCHDAY 24',

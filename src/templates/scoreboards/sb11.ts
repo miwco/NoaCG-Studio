@@ -258,6 +258,9 @@ ${clipOneLineCss('.scoreboard-team', 300)}
 .scoreboard-final .scoreboard-clock { opacity: 0.6; }
 .scoreboard-final .scoreboard-score { color: var(--text-color); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 700,
     fields: matchBoardFields({
       teamA: 'Świątek', scoreA: '2', teamB: 'Sabalenka', scoreB: '1',
       period: 'Set 3 · 5-5', clock: '2:14', periods: PERIODS,

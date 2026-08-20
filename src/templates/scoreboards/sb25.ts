@@ -312,6 +312,9 @@ ${clipOneLineCss('.scoreboard-clock', 240)}
 .scoreboard-final .scoreboard-accent { opacity: 0.35; }
 .scoreboard-final .scoreboard-clock { color: var(--text-dim); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 980,
     fields: matchBoardFields({
       teamA: 'TIGERS', scoreA: '98', teamB: 'FALCONS', scoreB: '101',
       period: 'Q4', clock: '01:32', periods: TALLIES,
