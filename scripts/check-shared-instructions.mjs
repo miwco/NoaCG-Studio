@@ -301,9 +301,19 @@ function checkInstructionChains(agentsFiles) {
     const chain = agentsFiles.filter((candidate) =>
       isDirectoryAncestor(path.dirname(candidate), leafDir),
     );
+    // MEASURED WITH LF LINE ENDINGS, whatever this checkout has on disk. With
+    // `core.autocrlf=true` - the Windows default, and what the maintainer's checkouts use -
+    // every line costs one extra byte, which on a ~120 KB budget is about 1.5 KB of pure
+    // punctuation. A chain sitting just under the cap therefore FAILED on Windows and passed
+    // in CI on the identical commit, so the gate was reporting the checkout's line endings
+    // rather than the size of the documentation. The budget itself is stated against the
+    // repository's own (LF) content, so normalize to that and the verdict is the same
+    // everywhere.
     const bytes =
-      chain.reduce((sum, file) => sum + Buffer.byteLength(text(file), 'utf8'), 0) +
-      Math.max(0, chain.length - 1) * 2;
+      chain.reduce(
+        (sum, file) => sum + Buffer.byteLength(text(file).replace(/\r\n/g, '\n'), 'utf8'),
+        0,
+      ) + Math.max(0, chain.length - 1) * 2;
     chainUsage.push({ leaf: rel(leaf), bytes, limit, headroom: limit - bytes });
     if (bytes > limit) {
       failures.push(
