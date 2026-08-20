@@ -169,6 +169,37 @@ exists for:
   `output/main.ts`), so every renderer computes the same one and a boot-time replay of the log
   reconstructs it exactly. There is no authority to elect.
 
+  **WHICH PLANE GETS WHICH HALF OF THE FIX — measured 2026-08-20, not assumed.** The origin is
+  attached by `output/main.ts`, so only the hosted `/output` renderer derives and PERSISTS one.
+  Everywhere else the runtime mints a local origin when `startMatchClock` runs. That splits the
+  three faults cleanly, and the split is deliberate rather than unfinished: the owner's direction
+  (2026-08-19) is that the web control panel and `/output` are the surface under investment and
+  the export door is the rehearsed backup, so that is where the durable half lives.
+
+  | | throttled tab | two renderers | reload / reboot |
+  |---|---|---|---|
+  | hosted `/output` | fixed | fixed (one derived stamp) | **fixed** |
+  | the dashboard's own PROGRAM monitor | fixed | within delivery skew | n/a — see below |
+  | exported package · local relay · standalone panel | fixed | within delivery skew | **still lost** |
+
+  - **Throttled tabs are fixed everywhere**, because painting from an origin is the runtime's
+    job and every plane runs the same runtime.
+  - **Drift is bounded everywhere**, which is the change that matters most off the hosted plane:
+    a locally minted origin is anchored to when that renderer received `clockStart`, so two
+    renderers differ by the delivery skew between them — sub-second in practice — and never by
+    more, where the old counter's error grew for the whole match.
+  - **A reload is recovered only on the hosted plane.** The in-app dashboard's PROGRAM monitor
+    follows the same log but does not run `clockRowEffect`, so it mints locally too; it is a
+    monitor and not air, and it cannot outlive the page it is in. The standalone control panel
+    DOES rebuild a rebooted graphic from its own in-memory log (`graphic-online` → data, snap,
+    data) — but the data it replays is the last value it SENT, which is a plain time, so the
+    clock returns to that value rather than to the match time. The exported production
+    controller has no `graphic-online` handling at all.
+  - **To close the export plane** the panel would have to stamp the clock field itself when it
+    sends `clockStart` and keep the stamped value in the log it replays. It ships dependency-free
+    vanilla JS, so that is a second implementation of `matchClockWire`'s few lines — worth doing
+    when the export door next gets attention, not worth a divergent copy before then.
+
   A tick now computes nothing and remembers nothing — it is a repaint — so a missed or late one
   costs a frame of freshness and never a second of match time.
 
