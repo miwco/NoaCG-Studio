@@ -181,6 +181,29 @@ iframe to call `update()/play()/stop()`; store state via `useTemplateStore.getSt
 template changes. A category whose contract differs from the standard one gets its own branch in
 the script rather than a waiver (audience and quiz each have one).
 
+## Visual acceptance is a PACK, and it is not a gate
+
+A gate answers "did this break". It cannot answer "is this any good", and a surface nobody has
+looked at is the failure mode green gates are blindest to. Where a change needs a person's eyes,
+the evidence is a **visual acceptance pack**: screenshots of the REAL running app, with the exact
+route and sequence written down so the read can be repeated by hand
+(`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Verification contract").
+
+Two artifact builders exist for that, and neither asserts anything - both are browser-driving
+work, both are in `SWEEP_SCRIPTS`, and the machine's one-job rule applies to them exactly as it
+applies to a sweep:
+
+- `node scripts/acceptance-shots.mjs <out-dir>` builds the SPX/CasparCG acceptance fixture end to
+  end and exports the packages for the manual playout test (`docs/ACCEPTANCE_SPX_CASPARCG.md`).
+- `node scripts/acceptance-pack.mjs` builds **`docs/acceptance/owner-pack/`** - the standing pack
+  for every read the repo records as OWED, one page, each frame captioned with the question it is
+  asking and nothing else. Its dashboard frames carry geometry read off the live document at
+  capture time. **A pack asks; it never answers**, and where a frame cannot answer the question
+  beside it (an offline checkout has no hosted control page and no published join page) it says
+  so on the frame rather than standing in for one. The pack is committed, unlike a sweep's
+  output: three docs point at it as the thing that settles a read, and a picture only this
+  machine can see settles nothing.
+
 ## The five catalog quality gates
 
 Run after any catalog-wide change:

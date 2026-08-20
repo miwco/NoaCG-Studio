@@ -85,6 +85,16 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   the two things it asks about are whether the capped monitors are now too small to judge a
   graphic by, and whether the space they free to the right of PROGRAM reads as sized or as
   unfinished.
+
+  **Where to do that read: `docs/acceptance/owner-pack/index.html` §2** (built 2026-08-20,
+  rebuilt by `node scripts/acceptance-pack.mjs`). It carries both questions verbatim over frames
+  of the real app at 1536×814, 1536×560 and 1920×1080, on TWO of the three surfaces — the in-app
+  production page and the exported controller. Each frame carries the geometry read off the live
+  document at capture time, which reproduces the table above and adds the number the second
+  question is actually about: the empty width beside the PROGRAM frame is **378px at 1536×814,
+  612px at 1536×560, 516px at 1920×1080**. The third surface, the hosted control page, needs
+  Supabase env plus a publish and is a labelled gap in the pack rather than a substitute frame.
+  Record the verdict here when it has been read.
 - **Monitors are 16:9, side by side, equal, and CAPPED near 30vh** — owner, same report: *"we
   should rather make the preview and program screens a bit smaller… you see what's out all the
   time"*. Uncapped they took 41% of the height (442px of 1080). The cap is expressed as a grid

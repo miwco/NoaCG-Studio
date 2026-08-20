@@ -383,6 +383,11 @@ before the contract widens.
    every existing rows runtime nests the figure inside a growing bar and so cannot express a
    second column at all (src/templates/AGENTS.md). The contents page and the two-column card
    are still absent.
+   **The owner's read of ig39 is owed and the frames for it exist:
+   `docs/acceptance/owner-pack/index.html` §1** — the design full-frame, the three stat panels it
+   shares a storefront shelf with (ig01, ig37, ig36), the ig38 its source argues against, and the
+   Browse row it actually lands in. One question: does it belong in the catalog as it stands?
+   Record the verdict here.
 8. **Type as the composition.** The catalog's display size tops out around 52 px for 21% of
    designs; 16 designs go over 110 px. There is no oversized-numeral scoreboard, no full-frame
    word, no type-that-bleeds-off-frame opener.

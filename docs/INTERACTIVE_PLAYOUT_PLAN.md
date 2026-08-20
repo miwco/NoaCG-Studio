@@ -564,6 +564,28 @@ risk: the production page's ⚡ GRAPHIC ACTIONS, the Data workspace and the vote
 driven as an operator drives them (a production carrying a quiz, a match board and a vote board)
 rather than as a spec drives them.
 
+> **THE OWNER'S OWN EYES ARE STILL OWED ON THIS, and the pack for it now exists:
+> `docs/acceptance/owner-pack/index.html` §3** (built 2026-08-20 from
+> `claude/e-owner-acceptance-pack`; rebuild with `node scripts/acceptance-pack.mjs`). Fourteen
+> frames of the real running app, one question each: the ⚡ actions off air, live, and a beat
+> later; the Data workspace empty, filled, and a row loaded into a cue; a vote opened, counted,
+> staged and aired; the presenter Now/Next pointers; and the audience join page in two modes,
+> rendered by `joinSurface.ts` itself. What it deliberately CANNOT show, and says so on the
+> frame rather than in a note somebody has to remember: the public `/join` page against a real
+> backend, the presenter's own tablet page (`presenterBySlug` is server work), and the Links
+> panel's four capability URLs — all three need a publish, and this checkout is offline by
+> design. That hosted walk stays owed on its own. Record the verdict here when the pack is read.
+>
+> **One divergence is visible in the pack and is recorded as an observation, not a verdict:**
+> with nothing on air the EXPORTED controller offers all five ⚡ actions and shows no state chip,
+> where the in-app production page at the same moment greys all five and says "not on air"
+> (frames `controller-1536x814.png` and `interactive-actions-offair.png`). `docs/PLAYOUT_DASHBOARD.md`
+> §7b says the ⚡ buttons fire beats "on the layer that is on air", and §7c states the greying rule
+> explicitly for the ± pair beside them ("a control that acts on air has nothing to act on until
+> the cue is taken") — but §7b's own parity sentence covers the two REACT surfaces, and the
+> exported controller is the third implementation. Nobody has yet decided which of the two frames
+> is the one the contract wants.
+
 **P0 — the first Take of a session aired the graphic and put it straight back off.** The boot
 recovery was keyed on `liveCue` MOVING, and `liveCue` also moves when this operator takes a cue -
 so the operator's own first Take was mistaken for a page opening onto a live production. It

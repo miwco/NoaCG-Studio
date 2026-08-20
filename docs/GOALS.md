@@ -135,7 +135,8 @@ render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
       pinned by a spec that waits first; two shared-control defects fixed with it. The Data
       workspace's empty state - a sentence over ~950px of nothing, with its ⬇ Blank CSV button
       orphaned on a row of its own - was rebuilt 2026-08-12 around the three doors and the column
-      names that would bind. **Still owed: the owner's own eyes**
+      names that would bind. **Still owed: the owner's own eyes** — and the pack to do it from is
+      `docs/acceptance/owner-pack/index.html` §3, built 2026-08-20
       (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08").
 - [x] **Which door the class runs on: DECIDED 2026-08-08 - CLOUD FIRST, EXPORT AS THE BACKUP.**
       The class publishes and drives the persistent output URL with phone control; the export route
