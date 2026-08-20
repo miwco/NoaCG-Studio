@@ -943,11 +943,18 @@ text. Four readings that are binding on anyone extending this:
   so a stage wider than its cells left a hairline hanging in empty space until the two club
   cells took `flex: 1 1 0`.
 
+**The gate is `e2e/catalog/footprint-stability.spec.ts`**, in the catalog suite. It selects its
+targets on the `--stage-width` marker `stageBoxCss` emits - never a list in the spec - so the next
+category to flip is covered the day it flips, and it measures `offsetWidth` rather than the painted
+rect, because sb21 leans its panel and a bounding box widens with HEIGHT. **A staged design that
+still moves fails here**; the sweep beside it is the diagnostic that says which element carries it.
+
 **Where it stands.** Scoreboards are flipped: all 25 declare a stage and the panel is
 width-stable on all 25 (was 23 of 25 moving, sb03 by 86%). Nine still grow in HEIGHT when a name
 wraps to a second row, and a handful move an inner name cell inside the fixed panel - both are
 the second half of the contract (reserved rows plus `fitPlacedText`, `shared/textFit.ts`, which
-today only imported designs use). The other fifteen board categories still hug.
+today only imported designs use), and the gate asserts WIDTH only until that mechanism exists.
+The other fifteen board categories still hug.
 
 ## The :root style contract
 
