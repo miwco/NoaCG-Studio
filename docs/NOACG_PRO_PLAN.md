@@ -3202,6 +3202,9 @@ quiet on twelve. The extras are not noise: every firing row is a SQUARE mark in 
 tile sized to its caption, and every quiet row carries a WIDE wordmark that fills that tile by
 fitting. One construction, one defect, named by the owner on the examples a blind read stops at.
 
+**FIXED 2026-08-20 - the composer centres the mark across the tile, and rule 1 goes to zero on
+every row the composer rebuilds. §25.8.1 has the numbers.**
+
 Two calibration decisions made this work, and the first version got both wrong:
 
 - **The axes are asked separately.** Measuring both axes of the smallest surface above the mark
@@ -3235,6 +3238,9 @@ that is a report, not an over-fire. Measured over the 28 shipped corner bugs, ro
 BESIDE the caption, and Pro stacks it above.** Silencing that with a per-type override would be
 moving a threshold to hide a design, which is the failure `PRO_GRAPHICS.countdown` already warns
 about. It goes in front of the owner as a question instead.
+
+**ANSWERED 2026-08-20 - the stack is legitimate, and the rule was rewritten around what is left of
+the question. §25.8.3 has the ruling and the numbers.**
 
 ### 25.4 Rule 6 - a package's mark is on every piece or none. Reproduced, on every row
 
@@ -3291,6 +3297,9 @@ countdown labels at weight 400 with contrast 6.74. Corpus-wide the weakest readi
 numbers a re-ratification needs whether or not a floor fired: `TasteReport.weakest` reports the
 frame's lightest and faintest informational text every time. A contrast floor the owner would
 accept sits above 3.04:1; a weight floor sits above 400 for text this size.
+
+**RATIFIED 2026-08-20 at 3.25:1 and 500, with 28px deciding which secondary lines the rule applies
+to at all. §25.8.2 has the decision and what it caught.**
 
 ### 25.7 Two blind spots worth stating
 
