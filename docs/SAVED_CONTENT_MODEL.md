@@ -81,7 +81,8 @@ Back/Forward are real history):
 | `#/control/<graphicId>` | The graphic's control panel (fields + entries + event buttons + live preview). |
 | `#/production/<id>` | One production's page (pool, cues, links, publish, operating). |
 | `#/video` | The video editor shell. |
-| `#/new` | The creation wizard over the editor. |
+| `#/new` (+`#/new/<designId>`) | The creation wizard's front page. A boot that LANDS here renders no under-surface at all — there is no Home to preserve, and mounting one under a full-screen opaque wizard can only ever flash. |
+| `#/new[/<designId>]/step/<name>` | ONE step of the wizard's walk: every step reached gets its own entry, so Back walks the walk and only the front page's Back leaves. NAMED, never numbered — import mode carries an extra step, so an index means a different step depending on which mode wrote the URL. |
 | `#/package/*` | RETIRED — old links land on Home. |
 
 `?control=<slug>` and `?chat=<slug>` query routes are untouched (hosted capability URLs).

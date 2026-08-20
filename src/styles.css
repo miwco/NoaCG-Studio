@@ -123,7 +123,7 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
   .topbar { gap: 6px; }
   .topbar .topbar-meta { display: none; }
   .topbar button { padding: 6px 9px; }
-  .topbar button.brand-home { padding: 3px 4px; }
+  .topbar .brand-home { padding: 2px 3px; }
 }
 /* The last step before the mobile layout takes over: at 1100 the bar was still 18px over with
    the save word already gone, so the spacing tightens rather than a control disappearing. It
@@ -168,8 +168,15 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 }
 .brand-lockup--stacked .brand-studio { margin-top: 0.15em; }
 
-/* Logo doubles as the "home / new project" affordance in the topbar. */
-.brand-home { background: transparent; border: none; padding: 3px 4px; border-radius: 8px; box-shadow: none; }
+/* The logo is the door to the PUBLIC FRONT PAGE from the editor shells and the wizard (Home is
+   its own button beside it there), so it is a real <a> — middle-click and ⌘-click open it like
+   any other logo. The Home-family surfaces, which carry no Home button of their own, keep the
+   lockup as their way up.
+   Its border is TRANSPARENT rather than none, with the padding paying for the two pixels, so
+   the box is exactly the size it always was and the lockup can still answer a hover with a
+   border colour like every other control (see the wizard-chrome hover rule). */
+.brand-home { background: transparent; border: 1px solid transparent; padding: 2px 3px; border-radius: 8px; box-shadow: none; }
+a.brand-home { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
 .brand-home:hover { background: rgba(255, 255, 255, 0.04); border-color: transparent; }
 
 /* Monospace utility for technical labels / data (Brand Manual §4). */
@@ -1262,6 +1269,11 @@ kbd {
 .wz-header > .fb-open { margin-left: auto; }
 .wz-header > .wz-stepcount ~ .fb-open { margin-left: 0; }
 .wz-header > .fb-open ~ .gallery-close { margin-left: 0; }
+/* The wizard header's Home door. Sized so the header's ROW HEIGHT is still set by the brand
+   lockup (30px) and not by this button - the Entry step's vertical budget at 1366x768 is
+   measured to the pixel (e2e/wizard-entry-fit.spec.ts), and a taller header spends it. */
+.wz-wizard .wz-home { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
+
 /* How far along, in the mono label voice. */
 .wz-stepcount {
   margin-left: auto;
@@ -1273,6 +1285,21 @@ kbd {
   white-space: nowrap;
 }
 .wz-stepcount b { color: var(--accent); font-weight: 500; }
+
+/* ── ONE AMBER ANSWER FOR THE WIZARD'S OWN CHROME ──
+   The entry CARDS answer a hover with an amber border (`.wz-entry-card:hover`). The shell
+   AROUND them — the logo, Home, Feedback, ✕, the step rail, ← Back — answered in grey, or with
+   nothing at all, so the controls framing the product's primary door read as less alive than
+   the cards inside it. Stated once over the shell's containers rather than per button, so a
+   control added to the header or the rail later inherits the answer instead of forgetting it.
+   `.wz-rail-change` is left out on purpose: it is a text link and already answers in amber. */
+.wz-wizard .wz-header button:hover:not(:disabled),
+.wz-wizard .wz-header .brand-home:hover,
+.wz-wizard .wz-dot:hover:not(:disabled),
+.wz-wizard .wz-footer .wz-back:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
 /* The subtitle yields before the ✕ ever moves: it truncates, the button does not shrink. */
 .wz-header .wz-header-sub {
   margin: 0;

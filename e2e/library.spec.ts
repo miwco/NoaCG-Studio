@@ -126,7 +126,7 @@ test('the wizard leads with the Home card once there is saved work, and it lands
   // opened the EDITOR (the demoted surface). Saved work continues from Home's rows.
   await createProject(page, 'Hairline');
   await saveAs(page, 'Presenter lower third');
-  await page.locator('.brand-home').click(); // → Home
+  await page.getByTestId('open-home').click(); // → Home (the logo is the front page now)
   await expect(page.getByTestId('home-page')).toBeVisible();
   await page.getByTestId('home-new-project').click(); // → the wizard route
   await expect(page.getByTestId('wz-continue')).toBeVisible();
@@ -138,15 +138,18 @@ test('the wizard leads with the Home card once there is saved work, and it lands
   await expect(page.getByTestId('home-search')).toBeVisible();
 });
 
-test('the wizard header brand is the Home door', async ({ page }) => {
-  // Acceptance feedback: the logo goes Home from EVERY surface — the wizard's included.
+test('the wizard header carries its own Home door', async ({ page }) => {
+  // Home is reachable from inside the wizard - it just is not the LOGO's job any more (the
+  // logo is the public front page; e2e/wizard-shell.spec.ts pins that pair). ✕ only rewinds
+  // to the front page, so without this button a reader three steps in could not get back to
+  // their own work.
   await createProject(page, 'Hairline');
   await saveAs(page, 'Presenter lower third');
-  await page.locator('.brand-home').click();
+  await page.getByTestId('open-home').click();
   await expect(page.getByTestId('home-page')).toBeVisible();
   await page.getByTestId('home-new-project').click();
   await expect(page.getByTestId('creation-wizard')).toBeVisible();
-  await page.getByTestId('creation-wizard').locator('.brand-home').click();
+  await page.getByTestId('wz-home').click();
   await expect(page.locator('.wz-modal')).toBeHidden();
   await expect(page.getByTestId('home-page')).toBeVisible();
 });
