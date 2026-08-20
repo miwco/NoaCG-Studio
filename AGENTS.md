@@ -246,18 +246,20 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    it is not blocked and not detected: the spike family was missed until 2026-08-15 and ran three
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
-4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in six to nine
+4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
    in, run `npm run test:e2e:integration:queued` (the affected plan from the FORK POINT, so it
-   covers BOTH sides' changes) before pushing or landing. **A job that stops AT its own
-   `timeout-minutes` is not a verdict** - re-run the unchanged SHA before bisecting: shards split
-   by spec FILE, so a healthy shard that drew the slow files reads exactly like a regression.
-   **A GREEN run is not one either until you read WHICH JOBS RAN** (`gh run view <id> --json jobs
-   -q '.jobs[] | "\(.conclusion)\t\(.name)"'`): the plan diffs against the PREVIOUS PUSH and a new
-   push cancels the run in flight, so a small second push plans only itself and skips every shard
-   while the run that covered the real change never finished. `gh workflow run ci.yml --ref
-   <branch>` asks for the full suite; details and the measurement in `docs/VERIFICATION.md`.
+   covers BOTH sides' changes) before pushing or landing; CI plans a merge commit from the fork
+   point too, so a forgotten local run is no longer a silent hole. **A job that stops AT its own
+   `timeout-minutes` is not a verdict** - re-run the unchanged SHA before bisecting: Playwright
+   splits shards by TEST COUNT, not by measured time, so a healthy shard that drew the slow tests
+   reads exactly like a regression. **A GREEN run is not one either until you read WHICH JOBS
+   RAN** (`gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`): an ordinary
+   push still plans from the PREVIOUS PUSH, and a new push cancels the run in flight - so a small
+   second push plans only itself and skips every shard while the run that covered the real change
+   never finished. `gh workflow run ci.yml --ref <branch>` asks for the full suite; the
+   measurement is in `docs/VERIFICATION.md`.
 5. **After a catalog change run the five catalog gates** (`type-floor`, `overflow-sweep
    --baseline`, `test:e2e:catalog`, `field-coverage`, `numerals`) plus `l3-sweep` for the affected
    category. They MEASURE the rendered graphic, because every source check would have passed a

@@ -87,18 +87,29 @@ from ~80 places in the tree, so it never changes.*
       declared field expansion - **6.** wizard → production → publish → output, complete - **7.**
       two coherent production-ready packs (newsroom, talk-show) - **8.** Home simplified around
       Productions - **9.** account essentials (reset, change, sign out, expiry recovery).
-- [ ] **10. Playout hardening + owner acceptance.** The agent half is done: the storage-full
-      drill, the dangling-reference walk over all six export targets, and the consolidated owner
-      checklist at **`docs/STUDENT_RELEASE_ACCEPTANCE.md`**. Round 1 (2026-08-04) failed the
-      export door; round 2 (2026-08-05) passed the CasparCG production package on real hardware.
-      All findings from both rounds are fixed and spec-pinned.
-      **Remaining, owner + real hardware:** re-run checklist §1-§6 against a build carrying those
-      fixes - CasparCG 2.3.x and OBS through both doors, including the launcher and exported
-      controller path - plus the soak, the live recovery drills, one live-suite run, and the timed
-      first-time-user walks. Run it against a production whose rundown includes a **scorebug cue**:
-      this doubles as the first hardware sighting of the interactive-playout contextual controls.
+- [ ] **10. Playout hardening + owner acceptance.** History in the archive; what stands today:
+      **the HARDWARE half is CLOSED, by the owner, on the school's CasparCG machine (2026-08-19)**
+      - *"The hardware is working, everything is working, and playout is working, so that is not a
+      concern."* Do not plan a night around re-proving CasparCG playout, and do not read the
+      archived "remaining, owner + real hardware" paragraph as owed work.
+      **Remaining is the PEOPLE half of `docs/STUDENT_RELEASE_ACCEPTANCE.md`:** the soak, one
+      live-suite run against the real project, and the timed first-time-user walks.
 
-### Two open risks for the deadline
+### The surface under investment: the WEB PLAYOUT CONTROL PANEL
+
+**Owner direction, 2026-08-19:** *"I'm not going to download any templates right now. I like our
+playout system; I don't want to work with the vanilla CasparCG client with these templates. I want
+to use our web playout system… The downloadable templates, of course, are going to stay, but we're
+going to be working on and concentrating on the online playout control panel."*
+
+The hosted control page and the `/output` browser source are the product's PRIMARY surface, not a
+cloud alternative to the export door. Export stays supported and is not where effort goes. This
+goes further than the cloud-first decision below: that one settled which door the CLASS runs on,
+this settles which door the PRODUCT invests in. Weigh any playout work by what it does for the web
+control panel first. The binding design is `docs/PLAYOUT_DASHBOARD.md`, and the three surfaces that
+render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
+
+### Open risks for the deadline
 - [ ] **Visual acceptance of the interactive playout plane.** Phases 0-6 of
       `docs/INTERACTIVE_PLAYOUT_PLAN.md` are merged - per-cue contextual controls, the shared data
       foundation, vote-to-air, presenter view, the audience join page - and **none of it has ever
@@ -122,10 +133,10 @@ from ~80 places in the tree, so it never changes.*
 - [x] **Which door the class runs on: DECIDED 2026-08-08 - CLOUD FIRST, EXPORT AS THE BACKUP.**
       The class publishes and drives the persistent output URL with phone control; the export route
       (files, local relay and controller on the playout machine - the one round 2 proved on real
-      hardware) is what a failing network falls back to. Two consequences, both now owed:
-      **the accounts exist before the class, not during it**; and the hardware re-test in step 10
-      must drive the CLOUD door first and the export door second, in that order, since the backup
-      is only a backup if it has been rehearsed. Third accepted limitation, unchanged: restyling
+      hardware) is what a failing network falls back to. One consequence still owed:
+      **the accounts exist before the class, not during it**. The other - rehearsing the cloud
+      door on real hardware before the export door - was **done by the owner 2026-08-19** and
+      closed the hardware half of step 10. Third accepted limitation, unchanged: restyling
       after save means recreating in the wizard or Advanced mode.
 - [ ] **What cloud-first pulls forward.** Named here rather than discovered during the class:
       the **hosted control page is now a primary surface** (it was covered by the maintainer's live

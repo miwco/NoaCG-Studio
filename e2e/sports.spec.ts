@@ -188,6 +188,64 @@ test('a score bump on air does not pull the running clock back', async ({ page }
   expect(r.corrected).toBe('43:12');         // a genuine correction is still obeyed
 });
 
+test('a clock value carries the instant it was true, so a fresh renderer opens at the real match time', async ({ page }) => {
+  test.setTimeout(60_000);
+  await toApp(page);
+  // THE LIVE FAULT THIS EXISTS FOR (2026-08-19). A match clock used to be a counter each
+  // renderer incremented once a second in its own memory, so the number existed nowhere else: a
+  // browser source RELOADED at 67 minutes came back at 0:00, on air, with nothing on the
+  // operator's screen saying so. Two renderers started a second apart also stayed a second
+  // apart for the whole match, and a background tab (Chromium throttles those timers to roughly
+  // one a minute) simply fell behind.
+  //
+  // The clock's value now carries the instant it was true — "45:00@<epoch ms>" — and every
+  // renderer paints value ± elapsed. A document that has never seen the match therefore opens
+  // at the right time from the value alone, and two documents fed the same string agree.
+  const result = await page.evaluate(`(async () => {
+    ${HARNESS}
+    const read = (d) => d.querySelector('.scoreboard-clock').textContent;
+    const stamp = (time, agoMs) => time + '@' + (Date.now() - agoMs);
+
+    // A renderer opening cold into the 67th minute: 45:00, true 22 minutes ago.
+    const rebooted = await boot('sb05');
+    const started = stamp('45:00', 22 * 60 * 1000);
+    rebooted.w.update(JSON.stringify({ f5: started }));
+    const recovered = read(rebooted.d);
+    await sleep(1300);
+    const kept = read(rebooted.d);          // and it is RUNNING, not a frozen recovered number
+
+    // A SECOND renderer, fed the same string a moment later, must read the same second.
+    const second = await boot('sb05');
+    second.w.update(JSON.stringify({ f5: started }));
+    const agree = read(second.d) === read(rebooted.d);
+
+    // Re-sending the identical stamped value is idempotent — the whole point of the syntax,
+    // since every Take and Update re-sends the cue's whole value set.
+    rebooted.w.update(JSON.stringify({ f1: '2', f5: started }));
+    const afterResend = read(rebooted.d);
+    const score = rebooted.d.querySelector('#f1').textContent;
+
+    // A counting-DOWN clock reads the other way from the same origin.
+    const down = await boot('sb06');
+    down.w.update(JSON.stringify({ f5: stamp('12:00', 90 * 1000) }));
+    const counted = read(down.d);
+
+    rebooted.frame.remove(); second.frame.remove(); down.frame.remove();
+    return { recovered, kept, agree, afterResend, counted, score };
+  })()`);
+  const r = result as Record<string, string | boolean>;
+  // 45:00 plus 22 minutes. Not 45:00, and emphatically not 0:00.
+  expect(r.recovered).toBe('67:00');
+  expect(r.kept).not.toBe('67:00');
+  expect(r.agree).toBe(true);
+  // The score bump did not pull the clock back to where the stamp says it started.
+  expect(String(r.afterResend).split(':')[0]).toBe('67');
+  expect(r.afterResend).not.toBe('45:00');
+  expect(r.score).toBe('2');                 // and the value that WAS edited still arrived
+  // Counting down: 12:00 less 90 seconds.
+  expect(r.counted).toBe('10:30');
+});
+
 test('a counting-down period stops itself at zero and says so', async ({ page }) => {
   test.setTimeout(60_000);
   await toApp(page);

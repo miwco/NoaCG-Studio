@@ -156,8 +156,13 @@ test('the rundown is the only list: the last cue takes its graphic with it', asy
 test('the production page fits one 1080p screen, and the preview takes only the room left over', async ({ page }) => {
   // Acceptance round 2, 2026-08-05: "the preview video is way too big — I want the whole page
   // to fit on one screen". Fitting the preview on WIDTH alone gave it 862px of a 1027px column
-  // on a full-HD screen, so the verbs and the cue editor sat below the fold. The page is a
-  // cockpit: the strips take their natural height and the preview takes what is left.
+  // on a full-HD screen, so the verbs and the cue editor sat below the fold.
+  //
+  // This is the SIMPLE case, and it stays the simple case: a two-field lower third fits one
+  // 1080p screen with nothing scrolling at all. It is NOT a rule that the page may never
+  // scroll — a graphic with many fields is allowed to make it long, and the monitor cap is
+  // what buys that room back (docs/PLAYOUT_DASHBOARD.md §2, and the scroll-model specs in
+  // production-controls.spec.ts). What this pins is that the simple case never has to.
   await page.setViewportSize({ width: 1920, height: 1080 });
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await page.getByTestId('dock-tab-control').click();
@@ -174,7 +179,7 @@ test('the production page fits one 1080p screen, and the preview takes only the 
     const frame = document.querySelector('.pd-pvw .pd-frame')!.getBoundingClientRect();
     const log = document.querySelector('[data-testid="action-log"]')!.getBoundingClientRect();
     return {
-      // Nothing scrolls: not the column, not the document.
+      // Nothing scrolls here: not the column (which is never a scroller now), not the document.
       columnOverflow: main.scrollHeight - main.clientHeight,
       documentOverflow: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       // The LAST thing on the page is above the fold — that is what "one screen" means.
@@ -189,9 +194,10 @@ test('the production page fits one 1080p screen, and the preview takes only the 
   expect(fit.documentOverflow).toBe(0);
   expect(fit.lastRowBottom).toBeLessThanOrEqual(fit.viewportHeight);
   expect(fit.frameRatio).toBe(1.78);
-  // Big enough to judge a graphic by, small enough to leave the operator's controls on screen.
+  // Big enough to judge a graphic by, small enough to leave the operator's controls on screen —
+  // and since 2026-08-19 that upper bound is the §2 monitor cap, not "whatever is left over".
   expect(fit.frameHeight).toBeGreaterThan(240);
-  expect(fit.frameHeight).toBeLessThan(fit.viewportHeight * 0.62);
+  expect(fit.frameHeight).toBeLessThanOrEqual(fit.viewportHeight * 0.27);
 });
 
 test('the /output page answers honestly offline and builds a stage from a payload', async ({ page }) => {
@@ -785,4 +791,143 @@ test('pictures upload straight into the rundown: one cue each, one layer, and th
   await page.getByTestId('delete-cue').click();
   await expect(rows).toHaveCount(0);
   await expect.poll(poolCount).toBe(0);
+});
+
+test('a match clock survives a renderer reboot: the wire carries the instant the value was true', async ({ page }) => {
+  // docs/CLOUD_PLAYOUT.md §3. A clock is the one value that keeps moving with nobody commanding
+  // it, so a snapshot of the commands cannot rebuild it — a browser source reloaded at 67
+  // minutes came back at 0:00, on air. `control/matchClockWire.ts` is the wire half of the fix:
+  // it reads the clock out of the published markup (no design declares anything) and stamps the
+  // value with the clockStart ROW's own server time, which every renderer sees identically and
+  // a boot-time replay of the log reconstructs exactly.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  // The markup is the scoreboard contract's own shape (`.<prefix>-clock` carrying a field id,
+  // `data-count`, `data-start`) written out here rather than taken from a catalog design: this
+  // asserts what the READER promises, and every clock-bearing design in the catalog is walked
+  // for real by e2e/sports.spec.ts.
+  const CLOCK_HTML =
+    '<div class="scoreboard"><span id="f0">HOME</span>'
+    + '<span class="scoreboard-clock" id="f5" data-count="down" data-start="12:00">12:00</span></div>';
+  const wire = await page.evaluate(async (html) => {
+    const w = await import('/src/control/matchClockWire.ts');
+    const spec = w.clockSpecFromHtml(html);
+    const T = 1_755_600_000_000;
+    return {
+      spec,
+      // A graphic with no clock says so rather than guessing a field.
+      noClock: w.clockSpecFromHtml('<div class="lower-third"><span id="f0">Name</span></div>'),
+      // Start stamps the value it reads AT that instant; 45:00 held is 45:00.
+      started: w.startedClockValue('45:00', false, T),
+      // …and 22 minutes later the same string still resolves to the right second.
+      derived: w.clockValueAt(`45:00@${T}`, false, T + 22 * 60_000),
+      down: w.clockValueAt(`12:00@${T}`, true, T + 90_000),
+      // A countdown never runs past zero, however long the outage was.
+      floor: w.clockValueAt(`0:30@${T}`, true, T + 10 * 60_000),
+      // Holding banks the derived time back as a plain value, so the snapshot holds a real time.
+      held: w.heldClockValue(`45:00@${T}`, false, T + 125_000),
+      // A stamp that is not a number degrades to a HELD clock reading the right time, never to
+      // a clock counting from 1970.
+      broken: w.clockValueAt('45:00@nonsense', false, T),
+      // The row's own server time is the anchor; a locally-authored row has none.
+      rowTime: w.rowInstant(new Date(T).toISOString(), 1),
+      localRow: w.rowInstant(undefined, T),
+    };
+  }, CLOCK_HTML);
+  // `seed` and `resetTo` differ only when the markup carries no data-start, which the scoreboard
+  // emitter never produces — they are separate because the RUNTIME reads different things for
+  // the two jobs, and a disagreement would recover a different time from the one on air.
+  expect(wire.spec).toEqual({ field: 'f5', countsDown: true, seed: '12:00', resetTo: '12:00' });
+  expect(wire.noClock).toBeNull();
+  expect(wire.started).toBe('45:00@1755600000000');
+  expect(wire.derived).toBe('67:00');
+  expect(wire.down).toBe('10:30');
+  expect(wire.floor).toBe('0:00');
+  expect(wire.held).toBe('47:05');
+  expect(wire.broken).toBe('45:00');
+  expect(wire.rowTime).toBe(1_755_600_000_000);
+  expect(wire.localRow).toBe(1_755_600_000_000);
+});
+
+test('the clock walks a whole match through the log: start, bump, stop, restart, reset', async ({ page }) => {
+  // `clockRowEffect` is the one place a control-log row is read as a clock move, and it is pure
+  // for exactly this reason: the renderer that uses it (src/output/main.ts) only ever runs
+  // against a live backend, so the decision it used to hold inside its boot closure could be
+  // driven by no offline spec at all. "Which event stamps what, in which order, and against
+  // which held value" is where a bug here would hide, and it airs.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const walk = await page.evaluate(async () => {
+    const w = await import('/src/control/matchClockWire.ts');
+    const clock = { field: 'f5', countsDown: false, seed: '0:00', resetTo: '0:00' };
+    const T = 1_755_600_000_000;
+    const at = (mins: number) => new Date(T + mins * 60_000).toISOString();
+
+    // The wire's own state, exactly as the renderer keeps it: one merged value per field.
+    let held: string | undefined;
+    const trace: { row: string; value: string | null; when: string | null }[] = [];
+    const step = (label: string, msg: unknown, createdAt?: string) => {
+      const effect = w.clockRowEffect({ msg, created_at: createdAt } as never, clock, held, T);
+      if (effect) held = effect.value;
+      trace.push({ row: label, value: effect?.value ?? null, when: effect?.when ?? null });
+    };
+
+    // A Take sends the cue's whole value set; the clock rides it as a plain (held) time.
+    step('take', { t: 'update', data: { f0: 'HOME', f5: '0:00' } }, at(0));
+    held = '0:00';
+    // Kick-off.
+    step('clockStart', { t: 'event', event: 'clockStart' }, at(0));
+    // A goal in the 12th minute: the whole value set goes again, clock field included. It must
+    // not move the clock, and the stamped value it re-sends still resolves to the right second.
+    step('update (goal)', { t: 'update', data: { f1: '1', f5: held! } }, at(12));
+    // Half time: the clock is HELD, and what is banked is the derived time, not the seed.
+    step('clockStop', { t: 'event', event: 'clockStop' }, at(45));
+    // Second half: it resumes from where it stood, not from 0:00.
+    step('clockStart', { t: 'event', event: 'clockStart' }, at(60));
+    // A row that is not about the clock at all.
+    step('event (final)', { t: 'event', event: 'final' }, at(105));
+    // Reset returns to the period's own start, held.
+    step('clockReset', { t: 'event', event: 'clockReset' }, at(106));
+
+    return {
+      trace,
+      // What a renderer BOOTING at each of two moments would paint, from the banked value alone.
+      atKickoffPlus22: w.clockValueAt(trace[1].value!, false, T + 22 * 60_000),
+      atHalfTime: w.clockValueAt(trace[3].value!, false, T + 50 * 60_000),
+      secondHalfPlus7: w.clockValueAt(trace[4].value!, false, T + 67 * 60_000),
+      // A locally-authored row (an offline production's own command) has no server time and
+      // falls back to the caller's clock — correct, because that log has one renderer.
+      localRow: w.clockRowEffect(
+        { msg: { t: 'event', event: 'clockStart' } } as never,
+        clock,
+        '30:00',
+        T,
+      ),
+    };
+  });
+
+  expect(walk.trace.map((t) => [t.row, t.when])).toEqual([
+    ['take', null],                        // an update never moves the clock
+    ['clockStart', 'before'],              // the origin must be in the document before the call
+    ['update (goal)', null],
+    ['clockStop', 'after'],                // the banked value follows the event that settled it
+    ['clockStart', 'before'],
+    ['event (final)', null],               // a non-clock event is not a clock move
+    ['clockReset', 'after'],
+  ]);
+  // Kick-off stamps 0:00 at T; 22 minutes later a renderer booting cold reads 22:00.
+  expect(walk.trace[1].value).toBe(`0:00@${1_755_600_000_000}`);
+  expect(walk.atKickoffPlus22).toBe('22:00');
+  // Half time banks the DERIVED 45:00 as a plain time — a held clock reads the same five
+  // minutes later, which is what "held" has to mean.
+  expect(walk.trace[3].value).toBe('45:00');
+  expect(walk.atHalfTime).toBe('45:00');
+  // The second half resumes FROM 45:00, stamped at kick-off of the half, so seven minutes in it
+  // reads 52:00 — not 7:00, and emphatically not 0:00.
+  expect(walk.trace[4].value).toBe(`45:00@${1_755_600_000_000 + 60 * 60_000}`);
+  expect(walk.secondHalfPlus7).toBe('52:00');
+  // Reset goes to the period's own start, held.
+  expect(walk.trace[6]).toEqual({ row: 'clockReset', value: '0:00', when: 'after' });
+  // No server time: the caller's instant, and the held value still leads.
+  expect(walk.localRow).toEqual({ value: `30:00@${1_755_600_000_000}`, when: 'before' });
 });

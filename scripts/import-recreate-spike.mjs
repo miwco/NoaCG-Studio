@@ -23,6 +23,22 @@
 // contract), and the shipped-control-page smoke. Feed findings + BOTH frames back. Stop when
 // deliverable - or stop dirty and say so (`deliverable: false` is a first-class result).
 //
+// THE ROUND THAT SHIPS IS THE BEST ONE, NOT THE LAST (2026-08-20, from the owner's read of the
+// v4-v7 archives: "round two looks better than round three"). `bestRoundIndex` picks fewest
+// findings, then closest to the reference, then earliest, and the importable file, the ledger's
+// similarity and the gallery's verdict all come off that one index. `stopAfterRound` additionally
+// stops paying once a round has answered a nearly-clean template with a worse one. Both are
+// replayable against any finished ledger for free:
+//
+//   node scripts/import-recreate-spike.mjs --replay=<a finished out-dir>
+//
+// Measured over the four archived runs: 3 of 66 rounds saved (~$0.15 of $3.33), the kept round
+// improves on 5 graphics, and no deliverable result is lost. The OBVIOUS stop - "the reference
+// score stopped moving" - was replayed too and is NOT safe; `stopAfterRound` says why.
+//
+// The gate's WARNINGS reach the ledger, the gallery and the model as advisories. They used to be
+// reduced to a count, which is how batch 1.4 shipped a round the gate had warned about by name.
+//
 // Records land results.json-compatible with the spike ledger (usage/costUsd/rounds), plus a
 // side-by-side gallery.html and, per graphic, a single-file import.html the wizard's file
 // door ingests directly.
@@ -54,6 +70,103 @@ const MAX_ITERATIONS = Number(value('max-iterations') ?? 4);
 // mutation; the owner's gallery read judges quality.
 const MIN_SIMILARITY = Number(value('min-similarity') ?? 0.4);
 const DECODING = path.resolve('benchmarks/pro/v1/spike/decoding.json');
+
+// ── WHICH ROUND TO KEEP, AND WHEN TO STOP PAYING FOR MORE ────────────────────────────────
+//
+// Both were read off the four archived rounds (v4-v7, 2026-08-19) and the owner's gallery read
+// of them, and both are replayable against any finished ledger with `--replay=<dir>`.
+//
+// THE OWNER'S TWO FINDINGS. "Round two looks better than round three" (batch 2.b) - the loop kept
+// the LAST round, and on five graphics across the four archives the last round is not the best
+// one. And "I could not distinguish the last two rounds" on seven graphics - rounds that cost
+// money and changed nothing the owner could see.
+
+/** The round a graphic should SHIP: fewest findings first, then the closest match to the
+ *  reference, then the earliest - so a later round has to actually beat an earlier one, and a
+ *  tie never costs the money the earlier round already paid for. */
+function bestRoundIndex(rounds) {
+  let best = 0;
+  for (let i = 1; i < rounds.length; i += 1) {
+    const a = rounds[best];
+    const b = rounds[i];
+    const better = b.findings.length < a.findings.length
+      || (b.findings.length === a.findings.length && b.similarity > a.similarity);
+    if (better) best = i;
+  }
+  return best;
+}
+
+/** How many findings a round may carry and still count as NEARLY CLEAN - the state a regression
+ *  away from is worth stopping on. Read off the archives: every regression that never recovered
+ *  came off a round with ONE finding (v4 batch-2-b 1f -> 12f, v6 batch-2-b 1f -> 13f -> 3f, v4
+ *  batch-1-2 1f -> 3f), and the one regression that DID recover came off a round with four
+ *  (v5 batch-2-b 4f -> 7f -> 1f). Two sits between them, on one reading each side. */
+const NEARLY_CLEAN_FINDINGS = 2;
+
+/**
+ * Should the loop stop after this round?
+ *
+ * ONLY ON A REGRESSION AWAY FROM A NEARLY-CLEAN ROUND. Once the model has been shown a template
+ * that is one finding from done and has answered with a worse one, the next round is fed the
+ * worse template - and across the archives it never got back to the earlier round's quality.
+ *
+ * THE OBVIOUS STOP - "the score stopped moving" - WAS MEASURED AND IS NOT SAFE, which is why it
+ * is not here. On the rounds the owner could not tell apart the reference score moves by 0.0-2.0
+ * points, so a flat-round stop looks perfectly separable; replayed, it costs v5 batch-2-e its
+ * DELIVERABLE result (a flat round at 48.3% was followed by a +5.5 point round that cleared the
+ * last finding) and v5 batch-2-b its best round. The rounds the owner cannot see are exactly the
+ * rounds that clear the last machine finding: cheap to the eye, and the whole verdict.
+ */
+function stopAfterRound(rounds) {
+  if (rounds.length < 2) return null;
+  const current = rounds[rounds.length - 1];
+  const prior = rounds.slice(0, -1);
+  const bestBefore = prior[bestRoundIndex(prior)];
+  if (bestBefore.findings.length > NEARLY_CLEAN_FINDINGS) return null;
+  if (current.findings.length <= bestBefore.findings.length) return null;
+  return `round ${current.round} answered a ${bestBefore.findings.length}-finding template with`
+    + ` ${current.findings.length} findings - stopping and keeping round ${bestBefore.round}`;
+}
+
+// ── --replay: what those two rules would have done to a finished round. FREE ──────────────
+if (value('replay')) {
+  const dir = path.resolve(value('replay'));
+  const ledger = JSON.parse(await readFile(path.join(dir, 'results.json'), 'utf8'));
+  let ranRounds = 0;
+  let savedRounds = 0;
+  let movedKeep = 0;
+  let lostDeliverable = 0;
+  for (const g of ledger.results ?? []) {
+    if (!g.rounds?.length) continue;
+    ranRounds += g.rounds.length;
+    // Replay the loop's own control flow: it breaks on a clean round, so only rounds it would
+    // actually have reached can be saved.
+    let stoppedAt = null;
+    for (let i = 0; i < g.rounds.length; i += 1) {
+      if (g.rounds[i].findings.length === 0) { stoppedAt = i; break; }
+      if (stopAfterRound(g.rounds.slice(0, i + 1))) { stoppedAt = i; break; }
+    }
+    const reached = stoppedAt === null ? g.rounds.length - 1 : stoppedAt;
+    const saved = g.rounds.length - 1 - reached;
+    savedRounds += saved;
+    const bestNow = bestRoundIndex(g.rounds.slice(0, reached + 1));
+    const wasDeliverable = g.deliverable;
+    const isDeliverable = g.rounds[bestNow].findings.length === 0;
+    if (wasDeliverable && !isDeliverable) lostDeliverable += 1;
+    if (bestNow !== g.rounds.length - 1) movedKeep += 1;
+    console.log(`  ${g.slug.padEnd(11)} ran ${g.rounds.length} rounds, would stop after ${reached}`
+      + ` (saves ${saved}), keeps round ${bestNow}`
+      + ` (${g.rounds[bestNow].findings.length}f, ${(g.rounds[bestNow].similarity * 100).toFixed(1)}%)`
+      + ` instead of ${g.rounds.length - 1}`
+      + ` (${g.rounds.at(-1).findings.length}f, ${(g.rounds.at(-1).similarity * 100).toFixed(1)}%)`);
+  }
+  const perRound = ledger.spentUsd && ranRounds ? ledger.spentUsd / ranRounds : 0;
+  console.log(`\n${path.basename(dir)}: ${ranRounds} rounds ran, ${savedRounds} would be saved`
+    + ` (${((savedRounds / ranRounds) * 100).toFixed(1)}%, about $${(savedRounds * perRound).toFixed(3)}`
+    + ` of $${(ledger.spentUsd ?? 0).toFixed(3)}); the kept round moves on ${movedKeep} graphic(s);`
+    + ` ${lostDeliverable} deliverable result(s) lost.`);
+  process.exit(0);
+}
 
 if (!control && !paid) {
   console.error('Pick a mode: --control (free, run this first) or --generate (PAID).');
@@ -839,9 +952,9 @@ async function runGraphic(slug, reference, emitRound) {
   const totals = { input: 0, output: 0, reasoning: 0 };
   let cost = 0;
   const rounds = [];
+  /** Every round's template, so the graphic can SHIP the best round rather than the last one. */
+  const templates = [];
   let previous = null;
-  let deliverable = false;
-  let final = null;
 
   for (let round = 0; round <= MAX_ITERATIONS; round += 1) {
     const emitRes = await emitRound(previous, round);
@@ -878,6 +991,18 @@ async function runGraphic(slug, reference, emitRound) {
     const advisories = (hold.readability?.findings ?? []).map(
       (f) => `advisory (matching the reference may justify it): ${f.detail}`,
     );
+    // THE GATE'S WARNINGS RIDE HERE, and until 2026-08-20 they went nowhere at all: the emit
+    // wrapper reduced `validation.warnings` to a COUNT, so no warning ever reached the ledger,
+    // the gallery, or the model's next round. Replayed against the archive, batch 1.4's final
+    // round finished `ok: true` carrying exactly one warning - `bench-stress: #f7 extends past
+    // .scorebug-clock-panel, the nearest thing painted behind it, once every text value is
+    // doubled in length` - which names the very element the owner rejected the graphic over.
+    // The loop called that round CLEAN and stopped. Advisory rather than a finding, for the
+    // reason the readability line above gives: a recreation answers to its reference, and a
+    // warning that blocked would deadlock the loop against its own ground truth.
+    advisories.push(...(emitRes.validation?.warnings ?? []).map(
+      (w) => `advisory (the gate warned but does not block): ${w}`,
+    ));
     findings.push(...reactionFindings(emitRes.template, hold.fields, stress.fields, data, stressed));
     if (sim.footprint) {
       findings.push(sim.footprint);
@@ -905,17 +1030,20 @@ async function runGraphic(slug, reference, emitRound) {
       model: emitRes.model ?? null,
       costUsd: emitRes.costUsd ?? 0,
     });
-    final = { template: emitRes.template, round, similarity: sim.score };
+    templates.push(emitRes.template);
     console.log(`  round ${round}: similarity ${(sim.score * 100).toFixed(1)}%`
-      + `${findings.length ? `, ${findings.length} finding(s)` : ' - CLEAN'}`);
+      + `${findings.length ? `, ${findings.length} finding(s)` : ' - CLEAN'}`
+      + `${advisories.length ? `, ${advisories.length} advisory(ies)` : ''}`);
 
-    if (findings.length === 0) {
-      deliverable = true;
-      break;
-    }
+    if (findings.length === 0) break;
     if (round === MAX_ITERATIONS) break;
     if (paid && spentUsd >= maxCost) {
       console.log(`  stopping dirty: the $${maxCost.toFixed(2)} ceiling is spent.`);
+      break;
+    }
+    const stop = stopAfterRound(rounds);
+    if (stop) {
+      console.log(`  ${stop}.`);
       break;
     }
     previous = {
@@ -926,23 +1054,39 @@ async function runGraphic(slug, reference, emitRound) {
     };
   }
 
-  // The importable single file: the wizard's file door parses inline <style>/<script>.
-  if (final) {
-    const t = final.template;
+  // THE ROUND THIS GRAPHIC SHIPS is the best one, not the last one - the owner's batch 2.b
+  // reading ("round two looks better than round three") measured across four archived runs, where
+  // the last round is not the best on five graphics. The importable file, the ledger's headline
+  // similarity and the gallery's verdict all come off the same index, so nothing downstream can
+  // disagree about which round was delivered.
+  const best = rounds.length ? bestRoundIndex(rounds) : null;
+  if (best !== null) {
+    const t = templates[best];
     const importable = t.html
       .replace(/<\/head>/i, `<style>\n${t.css}\n</style>\n</head>`)
       .replace(/<\/body>/i, `<script>\n${t.js}\n</script>\n</body>`);
     await writeFile(path.join(OUT, `${slug}.import.html`), importable);
+    if (best !== rounds.length - 1) {
+      console.log(`  keeping round ${best} (${rounds[best].findings.length} finding(s),`
+        + ` ${(rounds[best].similarity * 100).toFixed(1)}%) over the last round`
+        + ` (${rounds.at(-1).findings.length}, ${(rounds.at(-1).similarity * 100).toFixed(1)}%).`);
+    }
   }
 
   return {
     slug,
     kind: 'candidate',
     arm: 'recreate',
-    deliverable,
+    // Deliverable is a property of the round that SHIPS, not of any round that happened to run:
+    // a clean round followed by a regression still delivers, and a dirty kept round does not
+    // become deliverable because some other round was clean.
+    deliverable: best !== null && rounds[best].findings.length === 0,
     rounds,
-    finalRound: final?.round ?? null,
-    similarity: final?.similarity ?? 0,
+    // Kept for readers that predate best-round keeping; it now names the round that shipped.
+    finalRound: best,
+    keptRound: best,
+    lastRound: rounds.length ? rounds.at(-1).round : null,
+    similarity: best === null ? 0 : rounds[best].similarity,
     usage: totals,
     costUsd: cost,
     seconds: Math.round((Date.now() - started) / 1000),
@@ -1067,6 +1211,64 @@ if (control) {
       + `${mutated.rounds[0].worst.length} region(s) named - the diff cannot tell designs apart.`);
     process.exitCode = 1;
   }
+
+  // ── The KEEP and STOP rules, controlled from BOTH sides ────────────────────────────────
+  //
+  // Fixtures taken from the archived runs these rules were read off, plus the cases that must
+  // NOT fire. A rule verified only on the frames it was designed for is verified vacuously: the
+  // two "must not stop" cases below are the ones a flat-score stop gets wrong, and they are the
+  // reason `stopAfterRound` asks about findings rather than about the score.
+  console.log('\n── control:economics (the keep and stop rules, on archived fixtures) ──');
+  const round = (findings, similarity) => ({ round: 0, findings: Array(findings).fill('x'), similarity });
+  const economics = [
+    ['keeps the better earlier round (v4 batch-2-b: 8f, 2f, 1f, 12f)',
+      () => bestRoundIndex([round(8, 0.511), round(2, 0.502), round(1, 0.511), round(12, 0.504)]), 2],
+    ['breaks a findings tie on similarity, earliest first (v4 batch-1-2: 1f, 3f, 2f, 1f)',
+      () => bestRoundIndex([round(1, 0.561), round(3, 0.553), round(2, 0.524), round(1, 0.544)]), 0],
+    ['keeps the last round when it is genuinely the best (v4 batch-1-8)',
+      () => bestRoundIndex([round(10, 0.024), round(4, 0.416), round(1, 0.422), round(0, 0.422)]), 3],
+    ['stops on a regression away from one finding (v4 batch-1-2 after round 1)',
+      () => Boolean(stopAfterRound([round(1, 0.561), round(3, 0.553)])), true],
+    ['does NOT stop when the best so far was not nearly clean (v5 batch-2-b after round 2)',
+      () => Boolean(stopAfterRound([round(9, 0.510), round(4, 0.505), round(7, 0.501)])), false],
+    ['does NOT stop on a FLAT round - the case a score-based stop gets wrong (v5 batch-2-e)',
+      () => Boolean(stopAfterRound([round(8, 0.357), round(1, 0.488), round(1, 0.483)])), false],
+    ['has nothing to say about a first round',
+      () => stopAfterRound([round(3, 0.4)]), null],
+  ];
+  for (const [name, run, expected] of economics) {
+    const got = run();
+    if (got !== expected) {
+      console.error(`CONTROL FAILED: ${name} - expected ${expected}, got ${got}.`);
+      process.exitCode = 1;
+    } else {
+      console.log(`  ok · ${name}`);
+    }
+  }
+
+  // ── The gate's WARNINGS reach the ledger ──────────────────────────────────────────────
+  //
+  // The plumbing this proves is the one that was broken until 2026-08-20: a warning existed,
+  // named the element the owner rejected a graphic over, and was reduced to a count before
+  // anything could read it. A fixture emit carrying a warning must come out the other end as an
+  // advisory on the round - and must NOT become a finding, or the loop would deadlock against
+  // the reference it is copying.
+  const warned = await runGraphic(`control-${a.id}-warning`, { fittedBase64: refA.shotB64, checkerboard: false }, async () => ({
+    template: a.template,
+    validation: { ok: true, errors: [], warnings: ['bench-stress: a fixture warning the ledger must carry'] },
+    usage: { input: 0, output: 0, reasoning: 0 },
+    costUsd: 0,
+    model: 'control-fixture',
+  }));
+  results.push(warned);
+  const carried = (warned.rounds[0].advisories ?? []).some((x) => x.includes('a fixture warning the ledger must carry'));
+  const leaked = (warned.rounds[0].findings ?? []).some((x) => x.includes('a fixture warning the ledger must carry'));
+  if (!carried || leaked) {
+    console.error(`CONTROL FAILED: a gate warning ${carried ? 'leaked into findings' : 'never reached the ledger'}.`);
+    process.exitCode = 1;
+  } else {
+    console.log('  ok · a gate warning reaches the ledger as an advisory and gates nothing');
+  }
 } else {
   // ── PAID: every picture in the folder, cheapest-first by file size ─────────────────────
   const files = (await readdir(IMAGES, { recursive: true }))
@@ -1130,7 +1332,12 @@ if (control) {
             validation: {
               ok: result.validation.ok,
               errors: result.validation.errors.map((e) => `${e.rule}: ${e.message.slice(0, 200)}`),
-              warnings: result.validation.warnings.length,
+              // THE WARNINGS THEMSELVES, not a count of them. This was `.length`, which is how
+              // batch 1.4's final round shipped `ok: true` while the gate was naming
+              // `.scorebug-clock-panel` - the element the owner rejected the graphic over - in a
+              // `bench-stress` warning nobody could read. A pipeline's own findings living
+              // somewhere the gate does not look is the §16 hole, arriving here.
+              warnings: result.validation.warnings.map((w) => `${w.rule}: ${w.message.slice(0, 200)}`),
             },
             usage: result.usage,
             costUsd: result.costUsd,
@@ -1169,14 +1376,20 @@ await writeFile(path.join(OUT, 'results.json'), `${JSON.stringify({
 
 // ── The gallery: reference beside every round, verdict on the card ─────────────────────────
 const rows = results.filter((r) => r.rounds?.length).map((r) => {
-  const cells = r.rounds.map((round) =>
-    `<figure><img src="${r.slug}.round-${round.round}.hold.png" loading="lazy">`
+  // The KEPT round is marked on its own frame, because a page that shows four rounds and a
+  // verdict without saying which one shipped invites the reader to judge the last one.
+  const cells = r.rounds.map((round, i) =>
+    `<figure${i === r.keptRound ? ' class="kept"' : ''}>`
+    + `<img src="${r.slug}.round-${round.round}.hold.png" loading="lazy">`
     + `<figcaption>round ${round.round} · ${(round.similarity * 100).toFixed(1)}%`
-    + `${round.findings.length ? ` · ${round.findings.length} finding(s)` : ' · clean'}</figcaption></figure>`).join('');
+    + `${round.findings.length ? ` · ${round.findings.length} finding(s)` : ' · clean'}`
+    + `${i === r.keptRound ? ' · KEPT' : ''}</figcaption></figure>`).join('');
+  const kept = r.rounds[r.keptRound] ?? r.rounds.at(-1);
   return `<section class="${r.deliverable ? 'ok' : 'dirty'}">
-  <h2>${r.slug} — ${r.deliverable ? 'DELIVERABLE' : 'stopped dirty'} · ${(r.similarity * 100).toFixed(1)}% · $${(r.costUsd ?? 0).toFixed(3)}</h2>
-  <div class="row"><figure><img src="${r.slug.startsWith('control-') ? `${r.slug.replace(/-self$/, '')}.reference.png` : `${r.slug}.reference.png`}" loading="lazy"><figcaption>reference</figcaption></figure>${cells}</div>
-  <details><summary>last round's findings</summary><pre>${(r.rounds.at(-1).findings ?? []).join('\n') || '(none)'}</pre></details>
+  <h2>${r.slug} — ${r.deliverable ? 'DELIVERABLE' : 'stopped dirty'} · round ${kept.round} kept · ${(r.similarity * 100).toFixed(1)}% · $${(r.costUsd ?? 0).toFixed(3)}</h2>
+  <div class="row"><figure><img src="${r.slug.startsWith('control-') ? `${r.slug.replace(/-(?:self|warning)$/, '')}.reference.png` : `${r.slug}.reference.png`}" loading="lazy"><figcaption>reference</figcaption></figure>${cells}</div>
+  <details><summary>the kept round's findings</summary><pre>${(kept.findings ?? []).join('\n') || '(none)'}</pre></details>
+  <details><summary>the kept round's advisories (measured, never blocking)</summary><pre>${(kept.advisories ?? []).join('\n') || '(none)'}</pre></details>
 </section>`;
 }).join('\n');
 await writeFile(path.join(OUT, 'gallery.html'), `<!doctype html><meta charset="utf-8">
@@ -1188,6 +1401,8 @@ await writeFile(path.join(OUT, 'gallery.html'), `<!doctype html><meta charset="u
   figcaption { color: #9a958c; padding: 4px 0; }
   section { border-left: 3px solid #444; padding: 10px 16px; margin: 18px 0; }
   section.ok { border-color: #3a8f5f; } section.dirty { border-color: #a05252; }
+  figure.kept img { border-color: #d79a2b; border-width: 3px; }
+  figure.kept figcaption { color: #d79a2b; }
   pre { white-space: pre-wrap; color: #c9c4bb; }
 </style>
 <h1>recreate — reference vs rounds</h1>

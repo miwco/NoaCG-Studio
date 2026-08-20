@@ -6,9 +6,9 @@ import { settleDurableWrites, awaitDurableReady } from './_durable';
 // THE DESIGN RULES AS A PRODUCT PROPERTY (docs/DESIGN_RULES_PLAN.md §5 R4).
 //
 // What is pinned here, per the ratified severity policy (owner, 2026-08-19):
-//   · the wizard's viewing-target select and the two size-floor toggles PERSIST with the
+//   · the wizard's viewing-target select and the size-floor tri-state PERSIST with the
 //     project (additive optional - the default state serializes to nothing);
-//   · switching "Broadcast text sizes" OFF changes the AI REQUEST - the design-rules block
+//   · choosing "Allow denser, smaller type" changes the AI REQUEST - the design-rules block
 //     on the user message carries the relaxed-floors honesty line (no tokens: the gateway is
 //     mocked at the network level, the ai.spec pattern);
 //   · undersized text yields a plain-language WARNING in the editor's export panel and the
@@ -129,8 +129,10 @@ test('the wizard viewing settings persist with the project across a reload', asy
   await expect(page.getByTestId('wz-viewing')).toBeVisible();
 
   await page.getByTestId('wz-viewing-profile').selectOption('streaming');
-  // "Broadcast text sizes" OFF = the deliberate small-by-request act ('relaxed').
-  await page.getByTestId('wz-broadcast-sizes').uncheck();
+  // "Allow denser, smaller type" = the deliberate small-by-request act ('relaxed'). One
+  // tri-state, three radios: the control now says what each option permits instead of leaving
+  // two checkboxes to change each other's meaning.
+  await page.getByTestId('wz-floors-relaxed').check();
   await page.getByTestId('wz-skip-to-finish').click();
   await page.getByTestId('wz-finish-editor').click();
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
@@ -172,7 +174,7 @@ test('an untouched project serializes NO legibility key at all', async ({ page }
     .toBe(false);
 });
 
-test('switching Broadcast text sizes OFF changes the AI request to the relaxed mode', async ({ page }) => {
+test('choosing denser type changes the AI request to the relaxed mode', async ({ page }) => {
   await rawAiConfig(page);
   const requests: string[] = [];
   await page.route('/api/ai/generate', (route: Route) => {
@@ -182,7 +184,7 @@ test('switching Broadcast text sizes OFF changes the AI request to the relaxed m
   await openAiStep(page);
 
   await page.getByTestId('wz-viewing-profile').selectOption('streaming');
-  await page.getByTestId('wz-broadcast-sizes').uncheck();
+  await page.getByTestId('wz-floors-relaxed').check();
   await page.locator('.wz-step textarea').fill('A dense stats panel, small type is fine');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
@@ -346,4 +348,72 @@ test('the editor can change the viewing target of an already-saved project', asy
     return useTemplateStore.getState().legibility;
   });
   expect(restored).toEqual({ viewing: { profile: 'mobile' } });
+});
+
+test('the size floors are ONE choice with three answers, and each says what it permits', async ({ page }) => {
+  // They used to be two checkboxes over a single tri-state, which is a control that lies about
+  // its own shape: ticking "Guaranteed readable size" silently changed what "Broadcast text
+  // sizes" meant, un-ticking one could not say which of the other two states you landed in, and
+  // the pair could express a fourth combination the model does not have.
+  await createProject(page, 'Hairline');
+  await page.getByTestId('dock-tab-style').click();
+  const floors = page.getByTestId('wz-floors');
+  await expect(floors).toBeVisible();
+
+  // Three radios, one group: exactly one is on at any moment, and the DEFAULT is visible —
+  // which is the thing two checkboxes could not show ("neither ticked" looked like nothing).
+  await expect(floors.locator('input[type="radio"]')).toHaveCount(3);
+  await expect(page.getByTestId('wz-floors-standard')).toBeChecked();
+  // Each option states what it PERMITS, because a floor is a rule about what may ship.
+  await expect(floors).toContainText('Permits text below the broadcast sizes');
+  await expect(floors).toContainText('Permits any size at or above');
+  await expect(floors).toContainText('Permits only large type');
+
+  const stored = () =>
+    page.evaluate(async () => {
+      const { useTemplateStore } = await import('/src/store/templateStore.ts');
+      return useTemplateStore.getState().legibility?.floors ?? null;
+    });
+
+  await page.getByTestId('wz-floors-safe').check();
+  await expect.poll(stored).toBe('safe');
+  await expect(page.getByTestId('wz-floors-relaxed')).not.toBeChecked();
+
+  await page.getByTestId('wz-floors-relaxed').check();
+  await expect.poll(stored).toBe('relaxed');
+  await expect(page.getByTestId('wz-floors-safe')).not.toBeChecked();
+
+  // Back to the default, and the default serializes to NOTHING — the additive-optional rule.
+  await page.getByTestId('wz-floors-standard').check();
+  await expect.poll(stored).toBeNull();
+});
+
+test('supporting text has its own size rule, reported on the readiness row and never gating', async ({ page }) => {
+  // The three choices move the SECONDARY floors and barely touch the primary one (standard puts
+  // supporting text at 1.85% with a warning band to 2.2%; safe puts it at 5% with no band), so a
+  // person choosing between them is choosing about supporting text. One `legibility-size` rule
+  // could not say which of their findings the choice governs.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const read = await page.evaluate(async () => {
+    const { readinessRows, unclaimedFindings } = await import('/src/validation/readiness.ts');
+    const warnings = [
+      { rule: 'legibility-size', message: 'Primary text is small', severity: 'warn' },
+      { rule: 'legibility-secondary-size', message: 'Supporting text is small', severity: 'warn' },
+    ];
+    const validation = { ok: true, errors: [], warnings };
+    const rows = readinessRows(validation as never, true);
+    return {
+      legibility: rows.find((r) => r.id === 'legibility') ?? null,
+      // A findings id no row claims is surfaced raw rather than swallowed — the row set must
+      // claim this one, or it would read as an unexplained loose warning.
+      unclaimed: unclaimedFindings(validation as never).map((f) => f.rule),
+      // It is a WARNING, so the row warns; it can never make the row fail, because nothing on
+      // this row is ever an error (designRulesWarnings only ever pushes warnings).
+      state: rows.find((r) => r.id === 'legibility')?.state ?? null,
+    };
+  });
+  expect(read.state).toBe('warn');
+  expect(read.legibility?.messages).toEqual(['Primary text is small', 'Supporting text is small']);
+  expect(read.unclaimed).toEqual([]);
 });

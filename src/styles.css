@@ -1017,6 +1017,28 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
    narrow to that one heading; the wizard's own `.wz-step .panel-section > h3 .muted` rule is
    more specific and still wins on the wizard steps. */
 .viewing-section > h3 .muted { text-transform: none; letter-spacing: 0; }
+/* The size-floor tri-state (components/wizard/ViewingControls.tsx). A real <fieldset>, because
+   the three radios are ONE decision and a screen reader has to hear that; the browser's own
+   fieldset border and inline padding are dropped so it sits in the panel like every other
+   section, and the legend keeps the panel's small-caps label idiom. */
+.viewing-floors {
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.viewing-floors > legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
 
 .field-row { margin-bottom: 12px; }
 .field-row .field-meta { display: flex; justify-content: space-between; align-items: baseline; }
@@ -5543,9 +5565,38 @@ h2 + .lib-row,
    Binding design: docs/PLAYOUT_DASHBOARD.md. The hosted control page and the exported
    controller render the same surface; a change here that is not in that doc is a divergence.
 
-   NOTHING SCROLLS BUT THE TWO LISTS, and no scrollbar chrome ever shows (§3). A horizontal
-   scrollbar on this surface is a layout bug, never an affordance. */
-.playout-dashboard { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+   THE PAGE IS THE ONLY SCROLLER (§2, owner report 2026-08-19). This surface used to be locked
+   to the viewport - `height: 100vh; overflow: hidden` here, `overflow: hidden` on .pd-main -
+   so a graphic with many fields could not make the page longer and the EDITOR grew its own
+   scrollbar instead. Scrolling a small box to reach a score, mid-show, is the complaint.
+   Measured on a 1080p monitor at 125% scaling (1536x814 CSS px) with an eight-field quiz:
+   .pd-editor was 178px tall over 240px of content, .pd-activity 14 over 20, and the document
+   could not scroll by a single pixel.
+
+   The fix is the model the phone breakpoint already used: every block is CONTENT-SIZED and the
+   PAGE scrolls. Nothing is shrunk to fit - a complex graphic is allowed to make a long page
+   ("I don't mind scrolling the whole page… I also don't want it too small"). What keeps the
+   page usable while it scrolls is that the two things an operator must never lose - the
+   monitors and the rundown - are STICKY, not that the form was made small.
+
+   TWO deliberate exceptions, both because they have nowhere else to go:
+     - the cue list (a forty-cue rundown), inside the sticky rail;
+     - .pd-cue-menu / .pd-links popovers, which scroll themselves when tall.
+   No scrollbar chrome ever shows (§3), and a horizontal scrollbar is a layout bug. */
+.playout-dashboard {
+  display: flex;
+  flex-direction: column;
+  /* height/overflow are RESET, not merely omitted: `.app` (which this surface also wears)
+     pins both to the viewport, and only the later rule frees them. */
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+  /* One number for the sticky offsets below and the header's own height. */
+  --pd-header-h: 50px;
+  /* The monitor cap (§2). Picture height only; the block lands near the 30vh the owner asked
+     for once the label and the sticky padding are added. */
+  --pd-monitor-h: 26vh;
+}
 .playout-dashboard :where(.pd-cues, .pd-editor, .pd-activity, .pd-rail) { scrollbar-width: none; }
 .playout-dashboard :where(.pd-cues, .pd-editor, .pd-activity, .pd-rail)::-webkit-scrollbar { width: 0; height: 0; }
 
@@ -5555,10 +5606,16 @@ h2 + .lib-row,
   align-items: center;
   gap: 10px;
   flex: none;
-  height: 50px;
+  height: var(--pd-header-h, 50px);
   padding: 0 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2, #14161c);
+  /* Sticky because the page scrolls under it: ■ All out is the panic control and must be one
+     reach away from wherever the operator has scrolled to. Above the monitors, which stick
+     directly beneath it. */
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 .pd-header h1 {
   font-size: 14px;
@@ -5610,11 +5667,66 @@ h2 + .lib-row,
 }
 
 /* ── Body: the stage column + the cue rail ─────────────────────────────────── */
-.pd-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
-.pd-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; overflow: hidden; }
+/* `1 0 auto`, never `flex: 1`: the shorthand's `min-height: 0` + shrink is exactly what let the
+   body be squeezed under its own content and pushed the overflow into the panes. It grows to
+   fill a short page and is never smaller than what it holds. */
+.pd-body { flex: 1 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 380px; }
+/* The column divider lives on the STAGE column, not on the rail: the rail is sticky and only
+   ever a viewport tall, so a border on it would stop dead partway down a long page. */
+.pd-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+}
+/* A sub-page (Data, Audience) has no rail, so it takes the whole width rather than leaving a
+   380px column of nothing beside it. */
+.pd-data,
+.pd-audience { grid-column: 1 / -1; }
+/* The playout surface WAITING behind a sub-page. Hidden, never unmounted: unmounting destroys
+   the PROGRAM monitor's iframes, and reloading a graphic that is on air because someone opened
+   the Data tab is a live fault, not a layout choice. */
+.pd-offstage { display: none; }
 
-/* ── The monitors: PREVIEW beside PROGRAM, equal, 16:9, sized by the column ── */
-.pd-monitors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: none; }
+/* ── The monitors: PREVIEW beside PROGRAM, equal, 16:9, CAPPED and STICKY ────
+   Owner, 2026-08-19: "we should rather make the preview and program screens a bit smaller",
+   "you see what's out all the time". Both halves matter - a cap alone just moves the monitors
+   off the top of a scrolled page, and stickiness alone leaves them eating 41% of it (measured:
+   442px of 1080, and 334 of 814 on the same monitor at 125% scaling).
+
+   THE CAP IS EXPRESSED AS A WIDTH, on the grid rather than on the frames. A frame is
+   `width: 100%` with the graphic's own `aspect-ratio`, so its height follows its width and
+   clamping the height directly would break the ratio the iframe is scaled against - the
+   picture would letterbox against a box the component measured for something else. The two
+   columns are equal, so one width decides both heights, and the width that keeps BOTH under
+   the cap is `--pd-monitor-h * min(preview ratio, 16/9)`. `--pd-ar` is the preview graphic's
+   ratio as a bare number, set inline beside its `aspect-ratio` by the surface that owns it;
+   a surface whose preview is 16:9 (the hosted page) can leave the default.
+
+   The pair stays FLUSH LEFT in the width the cap frees, so PREVIEW's frame, the TAKE button
+   under it and the editor card below all share one left edge - centred, the monitors read as
+   floating loose above a column that is aligned without them. Block height lands near the 30vh
+   asked for: 26vh of picture plus the label row and this block's own bottom padding. */
+.pd-monitors {
+  display: grid;
+  /* The cap IS the track's growth limit, so the two columns stay equal, shrink freely on a
+     narrow window, and never grow past the height budget on a wide one. */
+  grid-template-columns: repeat(2, minmax(0, calc(var(--pd-monitor-h) * min(var(--pd-ar, 1.7778), 1.7778))));
+  justify-content: start;
+  gap: 12px;
+  flex: none;
+  position: sticky;
+  top: var(--pd-header-h);
+  z-index: 5;
+  /* The negative margins pull the sticky block out to the column's edges so nothing scrolls
+     through the 14px gutters beside it; the padding puts the same space back inside. The
+     -10px bottom cancels .pd-main's row gap, which the 10px bottom padding replaces. */
+  margin: -12px -14px -10px;
+  padding: 12px 14px 10px;
+  background: var(--bg);
+}
 .pd-monitor { display: flex; flex-direction: column; min-width: 0; }
 .pd-monitor h2 {
   margin: 0 0 5px;
@@ -5662,6 +5774,13 @@ h2 + .lib-row,
 }
 .pd-pvw .pd-frame { box-shadow: inset 0 0 0 2px rgba(246, 166, 35, 0.7); }
 .pd-pgm .pd-frame { box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 0.8); }
+/* A MONITOR IS A MONITOR: nothing inside it is operable, and a click that lands in the iframe
+   moves focus into a document that does not listen for the verb keys - so SPACE, N and 0 go
+   dead until the operator clicks something else, with nothing on screen saying why. The
+   exported controller has always set this on its own screens; the React surfaces had not,
+   which is a parity gap that only became reachable once the capped monitors stopped leaving a
+   gap under the pointer (docs/CONTROL_PANEL_PARITY.md §4). */
+.pd-frame iframe { pointer-events: none; }
 .pd-frame-empty { display: flex; align-items: center; justify-content: center; }
 .prod-monitor-stage { position: absolute; inset: 0; overflow: hidden; }
 .prod-monitor-note { position: absolute; left: 12px; top: 12px; margin: 0; }
@@ -5712,10 +5831,11 @@ h2 + .lib-row,
 .pd-onair { color: #ef4444; font-weight: 600; }
 
 /* ── The cue editor ────────────────────────────────────────────────────────── */
+/* CONTENT-SIZED, never a scroller: this is the pane the owner reported, and the whole point of
+   §2's scroll model is that a form with many fields makes the PAGE longer instead of hiding
+   its own bottom rows behind an inner scrollbar. */
 .pd-editor {
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow: auto;
+  flex: none;
   background: var(--bg-2, #14161c);
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -5872,7 +5992,9 @@ h2 + .lib-row,
 }
 
 /* The DATA workspace: the production's own tables. */
-.pd-data { flex: 1 1 auto; min-width: 0; overflow: auto; padding: 14px 16px; }
+/* Content-sized like every other block on this surface (§2): a production with twelve datasets
+   makes a long page, not a tall pane with its own bar. */
+.pd-data { min-width: 0; padding: 14px 16px 24px; }
 .pd-data-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .pd-data-head h2 { margin: 0; font-size: 16px; }
 .pd-data-head .hint { max-width: 560px; margin: 0; }
@@ -6145,12 +6267,24 @@ h2 + .lib-row,
 .pd-layer-clash button { font-size: 12px; padding: 4px 9px; }
 
 /* ── Activity: one collapsed line, expandable ──────────────────────────────── */
-.pd-activity { flex: 0 1 auto; min-height: 0; overflow: auto; font-size: 12.5px; }
+.pd-activity { flex: none; font-size: 12.5px; padding-bottom: 12px; }
 .pd-activity summary { cursor: pointer; color: var(--text-dim); padding: 2px 0; }
 .pd-activity summary::marker { color: var(--text-dim); }
 
 /* ── The cue rail ──────────────────────────────────────────────────────────── */
-.pd-rail { border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+/* THE ONE EXCEPTION to §2's content-sizing, and the reason it is an exception: a forty-cue
+   rundown has nowhere else to go, and an operator picking the next cue while reading a long
+   form must not have to scroll the page back to the top to reach it. So the rail is a
+   viewport-tall sticky column with its list scrolling inside - the divider between it and the
+   stage column is drawn by .pd-main's border-right, which runs the full page. */
+.pd-rail {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: var(--pd-header-h);
+  align-self: start;
+  height: calc(100vh - var(--pd-header-h));
+}
 .pd-rail-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px 7px; flex: none; }
 .pd-rail-head h2 { font-size: 13px; margin: 0; }
 .pd-rail-head .spacer { flex: 1; }
@@ -6230,14 +6364,22 @@ h2 + .lib-row,
    One column: header, the two monitors STILL SIDE BY SIDE (seeing preview and air together is
    the whole point of the surface), the cue list, the editor, and a fixed bottom verb bar. */
 @media (max-width: 900px) {
-  .playout-dashboard { height: 100dvh; }
+  /* The phone keeps a viewport-locked shell because its verb bar is PINNED to the bottom of
+     the screen; .pd-body is the scroller under it. Desktop's page-scroll model is the same
+     idea one level up, and the two must not be confused: the desktop rules above are undone
+     here rather than inherited. */
+  .playout-dashboard { height: 100dvh; min-height: 0; overflow: hidden; }
+  .pd-header { position: static; }
   /* ONE column in the reference's order: monitors → cue list → editor → activity, with the
      verbs pinned to the bottom. `display: contents` flattens .pd-main so its children can be
      ordered against the rail; each therefore carries its own inline padding. */
-  .pd-body { display: flex; flex-direction: column; overflow: auto; }
+  .pd-body { display: flex; flex-direction: column; overflow: auto; flex: 1 1 auto; min-height: 0; }
   .pd-main { display: contents; }
-  .pd-monitors { order: 1; padding: 10px 12px 0; }
-  .pd-rail { order: 2; border-left: none; border-top: 1px solid var(--border); margin-top: 10px; }
+  /* Not sticky at this width: the phone's scroller is .pd-body, and a block stuck to the top
+     of it would cover the cue list it sits above. The margin trick that squares the desktop
+     block with .pd-main's padding has no padding to square with here. */
+  .pd-monitors { order: 1; position: static; margin: 0; padding: 10px 12px 0; }
+  .pd-rail { order: 2; position: static; height: auto; border-top: 1px solid var(--border); margin-top: 10px; }
   .pd-editor { order: 3; margin: 10px 12px 0; }
   .pd-actions { order: 3; margin: 10px 12px 0; }
   .pd-activity { order: 4; padding: 8px 12px 0; }
@@ -6248,8 +6390,6 @@ h2 + .lib-row,
      itself so the editor is never pushed off the end of a nine-cue rundown. */
   .pd-body > * { flex: none; }
   .pd-cues { flex: none; max-height: 46vh; }
-  .pd-editor,
-  .pd-activity { overflow: visible; }
 
   /* The header is the operator's, not the author's: identity, mode, and the panic control.
      Export is an authoring action and stands down at this width. */

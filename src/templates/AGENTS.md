@@ -690,9 +690,17 @@ figure is the short final part, so the label is what may contain one). Say which
   types a correction - a live clock drifts from the stadium's, and one that cannot be corrected
   stops being trusted. **It re-seeds only on a CHANGED value**: the wire resends the cue's whole
   value set on every Take/Update/Snap, so an unguarded re-seed pulled a running clock back to
-  its typed time on every score bump. The element's text is the TICKED time and so differs from
+  its typed time on every score bump. The element's text is the PAINTED time and so differs from
   a resend every second - the discriminator is the last value RECEIVED, which the runtime
-  remembers. `markInPlay`/`markBreak`/`markFinal`/`markLive` are the state markers the
+  remembers.
+  **TICKING IS DISPLAY, NOT STATE** (2026-08-19, docs/SPORTS_PACK.md): the clock's truth is a
+  value plus the instant it was true, and a tick is a repaint of `value ± elapsed` rather than
+  an increment. The origin rides the clock FIELD as an `@<epoch ms>` suffix
+  (`"45:00@1755600000000"`), stamped from the `clockStart` row's own server time by
+  `src/control/matchClockWire.ts`, so every renderer agrees and a browser source reopened at 67
+  minutes comes back at 67 minutes instead of at the seed. A plain value with no `@` is a HELD
+  time - which is what every existing template, export and typed correction already sends.
+  `markInPlay`/`markBreak`/`markFinal`/`markLive` are the state markers the
 - **cornerBug/** - bug01…bug36, the IDENTITY family (prefix 'corner-bug', standard assembler,
   `dataRegion: true`, logo slot + placeholder mark). bug01-04 are the general logo bug; bug05-36
   are the eight identity types x four families (types/identityBugs.ts): station ident, live

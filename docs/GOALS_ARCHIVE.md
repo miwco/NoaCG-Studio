@@ -1426,6 +1426,13 @@ through the wizard or use Advanced mode; cloud publish requires an account (expo
       §1-§6 exercise the export and playout doors, which those phases do not change. It does
       mean the re-test now doubles as the first real-hardware sighting of the contextual
       controls, so run it against a production whose rundown includes a scorebug cue.
+      **THE HARDWARE HALF IS CLOSED (owner, 2026-08-19)**, on the school's CasparCG machine:
+      *"The hardware is working, everything is working, and playout is working, so that is not a
+      concern."* Everything above about a CasparCG/OBS re-test is therefore HISTORY, not owed
+      work; what is still owed of step 10 is the people half - the soak, one live-suite run, and
+      the timed first-time-user walks - and that is what `GOALS.md` now carries. The same session
+      set the product's direction: the WEB playout control panel is the surface under investment,
+      with downloadable templates kept but not grown (GOALS.md, "The surface under investment").
 
 - [x] **A wizard-only student cannot send feedback.** The beta Feedback button lives in the editor
       shell, which is Advanced mode now - so the people the release is FOR have no door to it,

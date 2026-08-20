@@ -3,14 +3,18 @@
 // component, because the catalog walk (Style step) and the AI step both offer the same three
 // decisions and two copies would drift.
 //
-// The two toggles are MIRRORS of one tri-state (model/designRules.ts LegibilityFloors):
-// "Broadcast text sizes" OFF = 'relaxed' (floors demote to warnings, the prompt says the
-// customer chose a denser scale - a deliberate act with a paper trail, never a silent
-// bypass); "Guaranteed readable size" ON = 'safe' (the AI designs FOR big type). They cannot
-// both be on, and the interlock lives here so no caller re-implements it.
+// THE SIZE FLOORS ARE ONE TRI-STATE AND ARE DRAWN AS ONE (model/designRules.ts
+// LegibilityFloors: 'relaxed' | undefined | 'safe'). They used to be two checkboxes over that
+// single value, which is a control that lies about its own shape: ticking "Guaranteed readable
+// size" silently changed what "Broadcast text sizes" meant, un-ticking one could not say which
+// of the other two states you would land in, and the pair could express a fourth combination
+// the model does not have. Three radios say what there is - and each one states what it
+// PERMITS, because that is the actual decision: a floor is a rule about what may ship, not a
+// feature to switch on.
 
 import {
   VIEWING_PROFILE_LABELS,
+  type LegibilityFloors,
   type ProjectLegibility,
   type ViewingProfileId,
 } from '../../model/designRules';
@@ -19,6 +23,40 @@ interface Props {
   value: ProjectLegibility;
   onChange: (next: ProjectLegibility) => void;
 }
+
+/** The three states, smallest type first, each phrased as what it lets through. `undefined` is
+ *  the default and is what an untouched project serializes to - nothing. */
+const FLOOR_CHOICES: ReadonlyArray<{
+  id: 'relaxed' | 'standard' | 'safe';
+  floors: LegibilityFloors | undefined;
+  title: string;
+  permits: string;
+}> = [
+  {
+    id: 'relaxed',
+    floors: 'relaxed',
+    title: 'Allow denser, smaller type',
+    permits:
+      'Permits text below the broadcast sizes. Nothing is hidden - the findings still appear, '
+      + 'as warnings - and the AI is told the smaller scale was your call.',
+  },
+  {
+    id: 'standard',
+    floors: undefined,
+    title: 'Broadcast text sizes',
+    permits:
+      'Permits any size at or above what we know reads on air at the distance above. '
+      + 'The default, and what the catalog is drawn to.',
+  },
+  {
+    id: 'safe',
+    floors: 'safe',
+    title: 'Guaranteed readable size',
+    permits:
+      'Permits only large type, and the AI designs FOR it from the start - fewer fields, a '
+      + 'simpler composition. It never inflates a small layout to get there.',
+  },
+];
 
 export default function ViewingControls({ value, onChange }: Props) {
   const profile: ViewingProfileId = value.viewing?.profile ?? 'tv';
@@ -64,38 +102,29 @@ export default function ViewingControls({ value, onChange }: Props) {
           style={{ marginTop: 6 }}
         />
       )}
-      <label className="dlg-check" style={{ marginTop: 10 }}>
-        <input
-          type="checkbox"
-          data-testid="wz-broadcast-sizes"
-          checked={floors !== 'relaxed'}
-          onChange={(e) =>
-            onChange({ ...value, floors: e.target.checked ? undefined : 'relaxed' })
-          }
-        />
-        <span className="dlg-check-text">
-          <span className="dlg-check-title">Broadcast text sizes</span>
-          <span className="dlg-check-desc">
-            Keep AI-generated text at the sizes we know read on air. Switch off only when you
-            deliberately want a denser, smaller composition — the AI is told it was your call.
-          </span>
-        </span>
-      </label>
-      <label className="dlg-check" style={{ marginTop: 6 }}>
-        <input
-          type="checkbox"
-          data-testid="wz-guaranteed-readable"
-          checked={floors === 'safe'}
-          onChange={(e) => onChange({ ...value, floors: e.target.checked ? 'safe' : undefined })}
-        />
-        <span className="dlg-check-text">
-          <span className="dlg-check-title">Guaranteed readable size</span>
-          <span className="dlg-check-desc">
-            The AI designs FOR big type from the start — fewer fields, a simpler composition.
-            It never inflates a small layout.
-          </span>
-        </span>
-      </label>
+      {/* One decision, three answers. A radio group also makes the DEFAULT visible, which two
+          checkboxes could not: "neither ticked" and "the standard floors" looked the same. */}
+      <fieldset className="viewing-floors" data-testid="wz-floors">
+        {/* "Minimum", not "Text size": the Style panel's own `Text size` heading is the global
+            `--type-scale` knob, and these three are a FLOOR - what may ship, not how big the
+            type is. Two controls a user meets side by side must not read as the same one. */}
+        <legend>Minimum text size</legend>
+        {FLOOR_CHOICES.map((choice) => (
+          <label className="dlg-check" key={choice.id}>
+            <input
+              type="radio"
+              name="wz-legibility-floors"
+              data-testid={`wz-floors-${choice.id}`}
+              checked={(floors ?? 'standard') === choice.id}
+              onChange={() => onChange({ ...value, floors: choice.floors })}
+            />
+            <span className="dlg-check-text">
+              <span className="dlg-check-title">{choice.title}</span>
+              <span className="dlg-check-desc">{choice.permits}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
     </div>
   );
 }

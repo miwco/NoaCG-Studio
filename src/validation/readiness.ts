@@ -44,7 +44,7 @@ const ROWS: { id: string; label: string; rules: string[]; live: boolean }[] = [
   {
     id: 'layout',
     label: 'Nothing collides or escapes the frame',
-    rules: ['bench-overlap', 'bench-overflow'],
+    rules: ['bench-overlap', 'bench-overflow', 'bench-occluded'],
     live: true,
   },
   {
@@ -56,6 +56,12 @@ const ROWS: { id: string; label: string; rules: string[]; live: boolean }[] = [
     label: 'Reads where it will be watched',
     rules: [
       'legibility-size',
+      // Supporting text and fine print have their own rule id (designRulesWarnings sizeRuleFor)
+      // because the three legibility choices move THOSE floors and barely touch the primary
+      // one. It is claimed HERE rather than given a row of its own: it is the same question -
+      // does this read where it will be watched - and an eighth row would split one verdict in
+      // two. Reporting only; nothing on this row has ever gated anything.
+      'legibility-secondary-size',
       'legibility-contrast',
       'legibility-protection',
       'legibility-safe-area',

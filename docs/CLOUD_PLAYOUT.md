@@ -208,6 +208,29 @@ The page:
   ordinary reopen still paints at once. The settle is fixed rather than "wait for quiet": a
   recovered state can legitimately keep moving (a ticker, a clock), so a quiet-period test would
   never fire.
+- **A MATCH CLOCK is the one value a snapshot cannot rebuild, so it carries its own origin.**
+  Everything else on the wire is a value somebody sent; a clock keeps moving with nobody
+  commanding it, and until 2026-08-19 the only copy of "67 minutes" was in the renderer's own
+  memory — so a browser source reloaded at 67 minutes came back at 0:00, on air, with nothing on
+  the operator's screen saying so. The clock's field value now carries the instant it was true
+  (`"45:00@1755600000000"`) and every renderer paints `value ± elapsed`, which also ends the
+  two-renderer drift and the background-tab throttle. The stamp is DERIVED, not invented: it is
+  the `clockStart` row's own `created_at`, so every renderer computes the same one and a
+  boot-time replay of the log reconstructs it exactly. `control/matchClockWire.ts` reads the
+  clock out of the published markup (no design declares anything) and decides what each row does
+  to it (`clockRowEffect`); `output/main.ts` writes that into `mergedData` — which is what the
+  report persists and what boot recovery replays, so the recovery is the ordinary one. Runtime
+  half: `templates/shared/matchClock.ts`.
+  **The decision is PURE and lives outside the renderer on purpose.** This page only ever runs
+  against a live backend, so anything decided inside its boot closure can be verified by no
+  offline spec — and "which event stamps what, in which order, against which held value" is
+  exactly where a bug here would hide, on air. `e2e/productions.spec.ts` walks a whole match
+  through it (kick-off, a goal re-sending the value set, half time, the second half resuming
+  from 45:00, a reset) and is mutation-tested against the ordering and both banked values.
+  **THIS PAGE IS THE ONLY PLANE THAT PERSISTS THE ORIGIN**, and that is a decision, not an
+  omission: everywhere else the runtime mints a local one, which bounds the drift and fixes the
+  throttled tab but does NOT survive a reload. `docs/SPORTS_PACK.md` carries the per-plane table
+  and what it would take to close the export door.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside

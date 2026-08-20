@@ -3161,3 +3161,318 @@ fixtures at 0.08 padding / 4.6 gap must still stop. Observed in passing, not act
 sweep reads `text-over-rule` on gt03/gt04 (clock digits over their own decorative ring) -
 a shipped-design instrument artifact to keep in mind if a collision ever stops an emitted
 ring timer.
+
+## 25. The owner's six taste rules as code, and the paid corpus re-judged - 2026-08-20
+
+The owner read four galleries on 2026-08-19 and, across roughly sixty individual comments, named
+the same small set of composition faults - a mark not centred in the square it sits in (ten of
+thirty-six rows, the single most-repeated complaint in the corpus), secondary text "unacceptably
+small", text "too thin" and "grey on black … unreadable", a mark eating a topic card's primary
+real estate, and a package carrying its wordmark on two pieces of three. Until those are numbers,
+the owner IS the gate and each verdict costs a human evening.
+
+`src/ai/spike/tasteCheck.ts` is those six rules as measurements of a rendered frame, driven by
+`scripts/pro-taste-rejudge.mjs`. It REPORTS and does not gate, like every instrument beside it,
+and two of the six carry no pass/fail at all and say so where they are measured: rule 2 because
+the owner stated it is conditional ("sometimes it can work, and that's kind of the problem"), and
+rule 3 because the ratified secondary floor already exists in `model/designRules.ts` and
+disagrees with the owner by a factor the owner has not re-ratified. An instrument that invents a
+threshold to settle a disagreement has replaced the measurement with the opinion.
+
+### 25.1 What the re-judge cost, and what it covered
+
+**Nothing.** Every round it reads is already paid for and its code is committed, so the whole
+corpus goes back through any instrument written afterwards for free - which is the only
+affordable way to ask "would this have caught what the owner caught?". Re-judged: the 36 package
+rows of `round-2026-08-16` + `round-2026-08-17` (the blind sets gallery the owner read), and the
+4 language sets of `round-2026-08-19-topiccard`.
+
+**One coverage hole was found by the first run and closed.** The 2026-08-16 round predates the
+package surface, so its set members exist on disk as PNG frames and never as code. Judging only
+what was on disk read 18 rows of three pieces against 18 rows of one and reported the older round
+as CLEAN - a corpus half of which was never measured. A missing member is now REBUILT from the
+saved `language.json` through the same `composeGraphic` the recompose path uses: deterministic,
+free, and both halves of the corpus now go through one composer.
+
+### 25.2 Rule 1 - the mark is centred in its container. REPRODUCED, 10 of 10
+
+**Perfect recall on the owner's own rows.** The instrument fires on all ten the owner named
+(S-01, S-02, S-05, S-06, S-07, S-11, S-17, S-19, S-20, S-33) and on fourteen more, and stays
+quiet on twelve. The extras are not noise: every firing row is a SQUARE mark in a sponsor-bug
+tile sized to its caption, and every quiet row carries a WIDE wordmark that fills that tile by
+fitting. One construction, one defect, named by the owner on the examples a blind read stops at.
+
+Two calibration decisions made this work, and the first version got both wrong:
+
+- **The axes are asked separately.** Measuring both axes of the smallest surface above the mark
+  read eight shipped catalog designs as 0.84-0.96 off centre, because a mark docked at one end of
+  a broadcast-width strap is off-centre IN THE STRAP by construction. Restricting the container
+  to one holding the mark ALONE then lost the owner's actual case, where the tile also carries
+  "ON AIR". Both readings are recovered by asking which axis the flow did NOT decide: a container
+  laying the mark beside its words leaves VERTICAL free, one stacking it over them leaves
+  HORIZONTAL free, a well holding no words leaves both.
+- **Disjointness is tested against painted TEXT only.** An accent bar down the tile's left edge is
+  disjoint from the mark horizontally and is decoration on the container, not a peer the flow
+  balanced against. Including it suppressed the one case the rule exists for.
+
+Thresholds read off `pro-taste-rejudge --control` over the 25 mark-capable lower thirds, twice
+(square crest, tall shield): on the axis the design chose, nine read 0.0, three read 0.03-0.04,
+one reads 0.14 (ls29, 21px over against 28px under). `MARK_CENTRE_OFFSET = 0.12` ANDed with
+`MARK_CENTRE_MIN_PX = 8` clears the whole shipped catalog with a pixel to spare, while the
+owner's own named case - 20px from one tile edge, 45px from the other - is 25px, three times
+above the floor.
+
+### 25.3 Rule 5 - a mark never eats primary real estate. Reproduced on the case named
+
+B27 is the row the owner named ("it takes valuable real estate - it should be on the same row as
+the text"), and both rules fire on it: the topic-card mark shares 0.0 of a row with the headline
+and sits 38px from the left edge against 400px from the right. All three mark-carrying topic
+cards in that round read the same way.
+
+It also fires on the SPONSOR BUG of 34 of the 36 set rows, which the owner did not name - and
+that is a report, not an over-fire. Measured over the 28 shipped corner bugs, row share runs
+0-1.0 with a median of 0.49 and the rule fires on two: **26 of 28 shipped bugs put the mark
+BESIDE the caption, and Pro stacks it above.** Silencing that with a per-type override would be
+moving a threshold to hide a design, which is the failure `PRO_GRAPHICS.countdown` already warns
+about. It goes in front of the owner as a question instead.
+
+### 25.4 Rule 6 - a package's mark is on every piece or none. Reproduced, on every row
+
+Fires on all 36 set rows and all 4 topic-card rows: the mark is on the lower third, the sponsor
+bug and the topic card, and never on the countdown, because `PRO_GRAPHICS.countdown` declares
+`takesMark: false`. The declaration is reported rather than treated as an exemption - the owner
+was looking at a rendered set, not at the registry, and "this doesn't work; if you skip the logo
+then it would fit" is a verdict on a platform decision, not on an accident.
+
+### 25.5 Rule 3 - the secondary floor, restated as the SMALLEST INFORMATIONAL LINE
+
+Read as "the second line's size", the measurement was null on **36 of 36 sponsor bugs** - a
+one-line graphic has no second line, and its single caption classes as PRIMARY. The owner's words
+for this rule are "ON AIR" and sponsor-bug wordmarks, so the rule could not see either of the
+frames it was stated about. Restated as the smallest INFORMATIONAL line whatever its role, and
+re-run: coverage goes from 72 of 108 pieces to **108 of 108**, and the corpus splits cleanly in
+two - which is the useful part, because the two halves need different fixes.
+
+**Half one: the sponsor bug is already measured, and ships anyway.** All 36 carry a single 24px
+line, classed primary, and **all 36 are already flagged** by the ratified 50px primary floor -
+the warning is on the round's own ledger. So "ON AIR is unacceptably small" is not an unmeasured
+defect. It is a warning the platform raises on every sponsor bug it composes and then ships past,
+which is a routing question (what does a warning that always fires actually do?) rather than a
+missing instrument. Worth saying plainly: nothing here needs a new floor.
+
+**Half two: the secondary line is measured and never flagged.** The other 72 pieces read 26px on
+every lower third and 38px on every countdown, and **0 of 72 are flagged**, because the ratified
+standard-mode secondary floor is 20px hard with a 22px warn band. The owner calls 24px "way too
+small".
+
+**So the re-ratification target is now a number rather than a range: a secondary floor that
+changes anything in this corpus has to sit above 26px**, because 26px is the smallest secondary
+reading anywhere in it. That is the decision to put in front of the owner - it flags the lower
+third's role line on every row, and leaves the countdown's 38px label alone.
+
+`SecondaryTypeReading` carries what the decision needs on every frame: `smallestPx`,
+`smallestRole`, `smallestSnippet`, `singleLine`, and `smallestFlaggedOnSize` - the last one being
+exactly the difference between the two halves above, and the reason the first version's summary
+read as one finding when it was two.
+
+### 25.6 Rule 4 - weight and contrast together. FRAMING RIGHT, FLOORS WRONG
+
+The joint framing is the one the owner asked for: report text that clears its SIZE floor and
+still fails on weight or contrast, because "a size-only legibility instrument passes text the
+owner cannot read". Implemented, it fires on 2 of 36 rows (a countdown label at 38px, weight 400)
+and on **none of the four rows the owner named** (S-03, S-14, S-20, S-33).
+
+Measured, those four read: S-03's supporting line at 26px, **contrast 3.04:1** - which clears the
+3:1 large-text floor by four hundredths; S-14's 54px name at **weight 400**; S-33's and S-20's
+countdown labels at weight 400 with contrast 6.74. Corpus-wide the weakest readings are contrast
+3.01:1 and weight 400.
+
+**So the miss is in the floors, not in the joint reading**, and the instrument now carries the
+numbers a re-ratification needs whether or not a floor fired: `TasteReport.weakest` reports the
+frame's lightest and faintest informational text every time. A contrast floor the owner would
+accept sits above 3.04:1; a weight floor sits above 400 for text this size.
+
+### 25.7 Two blind spots worth stating
+
+- **A panel-free design is invisible to rules 1 and 5.** The minimalist language (B-28, S-09,
+  S-10) resolves no surface at all, so `markCentre` and `markRow` are null on every piece of it -
+  the same blindness §17.2 recorded for the panel-less super's legibility.
+- **Rule 6 sees artwork, not wordmarks.** Presence is "the `filelist` field paints something",
+  which is how the composer places every mark it places; a wordmark set as TEXT would read as
+  absent.
+
+## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
+
+Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are
+measured against `recreate-round-v4`…`v7` with `--replay`, which spends nothing.
+
+### 26.1 The stress pass did not miss an overlap. There was none - and the one signal that
+existed was thrown away
+
+The owner rejected batch 1.4 for its right-hand clock box overlapping the score at three digits,
+and the note asked why the stress arm did not fire. Reproduced against the archived round-3
+template, mounted through the same `composeDocument` the round used:
+
+- **There is no geometric overlap.** At three digits the score `#f5` paints x 844-1031; the clock
+  panel's left edge is 1046 and the banner it sits on ends at 1048. At the stress value (four
+  digits) the score still ends at 1031, because the banner's own auto-fit shrinks the type. The
+  archived stress PNG and a fresh re-render agree to the pixel. What the owner is reading is a
+  15px gap closed by an italic numeral's drop shadow, against a panel drawn 2px OVER the banner
+  it abuts - a near-collision the composition reads as a collision, which no instrument here
+  measures and none claimed to.
+- **The bench's own overlap check could not have found one anyway.** `runtimeBench`'s
+  `overlapIssues` pairs LEAVES, and `collectLeaves` keeps only elements that own text or are
+  `<img>`. An opaque PANEL covering text is never in a pair. That is a real hole; it is simply
+  not the hole that produced this frame.
+- **THE DEFECT IS THAT THE LOOP DISCARDED THE WARNING.** Round 3 finished `ok: true` carrying
+  exactly one finding: `bench-stress: #f7 extends past .scorebug-clock-panel, the nearest thing
+  painted behind it, once every text value is doubled in length` - which names, by class, the
+  element the owner rejected the graphic over. It was a WARNING, and the emit wrapper reduced
+  `validation.warnings` to `.length`. No warning has ever reached the ledger, the gallery, or the
+  model's repair round. The loop called that round CLEAN and stopped.
+
+  Fixed: warnings are carried out of the wrapper and join the ADVISORY channel the readability
+  findings already use - visible to the ledger, the gallery and the model, blocking nothing, for
+  the reason that channel exists (a recreation answers to its reference, and a warning that
+  blocked would deadlock the loop against its own ground truth). This is §16's argument arriving
+  one directory over: a pipeline's own findings living somewhere the gate does not look.
+
+  Worth stating beside it: `reactionFindings` exempts any field whose default value is numeric,
+  which is right for "did the box grow" - a scoreboard's digit plate is supposed to be fixed -
+  and means the two score fields contributed nothing there either.
+
+### 26.2 The loop ships the BEST round now, not the last
+
+"Round two looks better than round three" (batch 2.b). `bestRoundIndex` picks fewest findings,
+then closest to the reference, then earliest - so a later round has to actually beat an earlier
+one and a tie never discards the money the earlier round already paid for. `deliverable` is a
+property of the round that SHIPS, and the importable file, the ledger's similarity and the
+gallery's verdict all come off that one index.
+
+Replayed over the four archives it moves the kept round on **five graphics**, every one of them in
+the owner's favour: v4 batch-2-b keeps round 2 (1 finding, 51.1%) over round 3 (12 findings,
+50.4%) - the owner's own case; v4 batch-1-2 keeps round 0 (56.1%) over round 3 (54.4%) at equal
+findings, and round 0 is the one the owner called "already good enough"; v4 batch-2-e keeps round
+2 over round 3; v5 batch-1-2 keeps round 2 (1 finding) over round 3 (2); v6 batch-2-b keeps round
+1 (1 finding) over round 3 (3).
+
+### 26.3 The convergence stop that IS safe, and the obvious one that is not
+
+`stopAfterRound` stops only when a round has answered a NEARLY-CLEAN template with a worse one.
+Once the model has been shown a template one finding from done and returns a worse one, the next
+round is fed the worse template, and across the archives it never recovered the earlier round's
+quality. The "nearly clean" cut is 2 findings, read off the corpus: every unrecovered regression
+came off a round with ONE finding (v4 batch-2-b 1→12, v6 batch-2-b 1→13→3, v4 batch-1-2 1→3), and
+the one regression that did recover came off a round with FOUR (v5 batch-2-b 4→7→1). One reading
+each side, and that is stated rather than dressed up.
+
+**Measured saving: 3 of 66 rounds across the four archives (4.5%, about $0.15 of $3.33), with no
+deliverable result lost.** Modest, and it is the honest number.
+
+The cut is mutation-controlled rather than asserted: raised to 10 findings the same replay saves
+twice as much (4 rounds on v4 alone) and **loses a deliverable result**, which is what a cut set
+too loose looks like. `--control` additionally runs both rules against archived fixtures from both
+sides, including the two "must not stop" cases a score-based stop gets wrong.
+
+**The obvious stop was replayed and is NOT safe, which is the more useful finding.** On every
+round the owner could not tell apart, the reference score moves by 0.0-2.0 points, so "stop when
+the score stops moving" looks perfectly separable. Replayed, it costs v5 batch-2-e its
+DELIVERABLE result - a flat round at 48.3% was followed by a +5.5 point round that cleared the
+last finding - and costs v5 batch-2-b its best round. **The rounds the owner cannot see are
+exactly the rounds that clear the last machine finding**: cheap to the eye, and the whole verdict.
+A frame-to-frame diff is no better: it reads two rounds the owner called identical at 51.5% and
+two others at 99.9-100%, so it cannot express the owner's own criterion either.
+
+### 26.4 The door's name
+
+Recorded in `docs/IMPORT_MVP.md`: the wizard door is **"inspired by this design"**, never
+"Recreate". Owner-decided on the evidence - the output is airable and is never the same graphic,
+and the name is what makes that a promise kept rather than a promise broken.
+
+## 27. Text painted over by a panel - the hole the overlap check cannot see - 2026-08-20
+
+Found while reproducing batch 1.4 (§26.1). That frame turned out to carry no occlusion at all,
+and the hole it sent me looking for was real anyway: **`overlapIssues` pairs LEAVES, and a leaf
+is an element that owns a text node.** A panel owns none, so a panel is never in a pair, and text
+can vanish under one completely while every geometry check in the bench passes. Nothing anywhere
+in the repo asked the question.
+
+`src/validation/occlusion.ts` asks it; `runtimeBench` wires it to `bench-occluded` in both the
+settled pass and the stress pass; `scripts/occlusion-sweep.mjs` is the calibration.
+
+### 27.1 Hit-testing, not geometry
+
+"Painted on top" is paint order, and paint order is stacking contexts, `z-index`, positioning and
+document order together. Re-deriving that from computed style is a well-known way to be subtly
+wrong. `elementsFromPoint` already knows it, so the probe samples points and reads the stack -
+with two consequences handled rather than hoped past:
+
+- **Hit testing skips `pointer-events: none`**, and a decorative overlay is exactly the kind of
+  element a design marks that way, so the probe would have been blind to the covers it is most
+  likely to meet. It forces pointer events on for its own duration and removes the style in a
+  `finally`, so a throw cannot leave the graphic's pointer behaviour rewritten.
+- **Hit testing does not care whether an element paints**, so the stack is walked DOWN to the
+  first element that actually does. Stopping at the top would report every graphic that wraps its
+  composition in a positioned div as fully covered.
+
+What is sampled is the TEXT, not its box: `Range.getClientRects()` gives the line boxes the
+glyphs occupy, so an element whose rect is wider than its words is not diluted into looking half
+visible.
+
+### 27.2 What the shipped catalog reads, and the two bugs the sweep found in the probe
+
+**Zero.** 502 designs at their own values: 0 with any covered text. 502 designs with every text
+value doubled: 0. The rule cannot fire on anything the house ships, which is what makes an ERROR
+band affordable at all. Bands mirror `OVERLAP_ERROR`/`OVERLAP_WARN` (0.5 and 0.05) so one defect
+family reads one way.
+
+Both readings are second readings. The first two runs each found a defect in the INSTRUMENT, and
+both are worth keeping because both are the same mistake in different clothes - measuring
+something other than what is on the screen:
+
+- **Ten shipped tickers, 13-100% "covered".** Every one was a crawling item passing under the
+  fixed label at the head of the crawl - the ticker idiom, and the same set `overlapIssues` and
+  `overflowIssues` already exempt as measured motion. `measureOcclusion` now takes the bench's
+  own `dynamicsRoots`, and `collectLeaves`/`dynamicsRoots` are exported so the calibration
+  measures the frame the gate measures rather than its own idea of one.
+- **es02, the one and only stress reading, at 16.3%.** `Range.getClientRects()` reports LAYOUT
+  rects, and layout does not stop at a clip: under doubled values es02 lays "TEAM LIQUID TEAM
+  LIQUID" out to x=974 while its own box ends at 698, and the glyphs past 698 are never painted.
+  The probe walked those phantom glyphs straight under the score chip at 714. A screenshot
+  settled it - the word is cut mid-letter at the box edge, and there is nothing under the chip at
+  all. Line boxes are now cut down by every ancestor that clips, the same reading
+  `spacingCheck.visualRect` takes one directory over.
+
+### 27.3 The two false positives it must not have
+
+A rule whose false positives are the good designs is one authors learn to ignore - this repo's
+own argument, twice. Both are pinned from both sides, in `occlusion-sweep --control` and again as
+fixtures in `e2e/bench.spec.ts`:
+
+- **A tint.** The same opaque panel at 0.3 opacity must stay quiet; text reads through it.
+- **A gradient scrim.** A scrim over the lower third of a frame is the commonest legitimate
+  construction in broadcast and is a gradient that is transparent exactly where the text is. A
+  raster `url()` background paints and counts; a gradient does not.
+
+The positive fixture additionally asserts that `bench-overlap` stays SILENT on the same frame -
+if that ever starts firing, the two checks have merged and one is redundant.
+Mutation-controlled: raising `COVER_OPACITY_FLOOR` past 1 fails the positive fixture and leaves
+the negative one passing.
+
+### 27.4 Honest limits
+
+- **A cover painted by a PSEUDO-ELEMENT is invisible to this.** `elementsFromPoint` returns
+  elements, never their `::before`/`::after`, so a `::after` panel over text reads as the parent
+  element - whose own background is checked, and is usually transparent. Checking the pseudo
+  would over-report in the other direction (its box is not measurable, so a motif beside the
+  words would read as a cover over them), and honest silence beats a finding the method cannot
+  support.
+- **`clip-path` is not consulted.** It cuts painted output with no overflow property anywhere;
+  the instrument that owns that question is the bench's own clip check.
+- **A `<canvas>` or inline `<svg>` cover with no background** is missed - only `<img>` with a
+  resolved source and a painted background count as paint.
+- **It runs in the settled pass and the stress pass, not after every operator event.** The
+  branch pass runs once per event and the probe costs a hit test every few pixels of every line
+  box, so wiring it there multiplies the bench's cost by the event count for a state the default
+  path already walks. A defect that appears only inside one branch is out of reach today; the
+  two passes that carry it are the ones the catalog gate measures.

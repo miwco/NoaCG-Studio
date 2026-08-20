@@ -31,7 +31,7 @@ the surface serves it.
 
 ## 2. Layout — desktop
 
-Two columns, full height, nothing scrolls but the two lists.
+Two columns. **The PAGE is the only scroller; every block on it is content-sized.**
 
 ```
 ┌ header ───────────────────────────────────────────────────────────────────────┐
@@ -52,8 +52,54 @@ Two columns, full height, nothing scrolls but the two lists.
 └─────────────────────────────────────────────────────────┴──────────────────────┘
 ```
 
-- **Monitors are 16:9 and sized by the column**, side by side, equal. PVW wears the amber frame,
-  PGM the red one. PGM's header carries the layer badge of what is up.
+- **THE SCROLL MODEL (owner report 2026-08-19).** The surface used to be locked to the viewport,
+  so a graphic with many fields could not make the page longer and the **editor** — the pane an
+  operator changes scores, names and texts in mid-show — grew its own scrollbar instead.
+  Measured on a 1080p monitor at 125% scaling (1536×814 CSS px) with an eight-field quiz:
+  `.pd-editor` was 178px tall over 240px of content, `.pd-activity` 14 over 20, and the document
+  could not scroll by a single pixel. Scrolling that little box during a show is the complaint.
+  The rule now, in the owner's own words — *"I don't mind scrolling the whole page… I also don't
+  want it too small"*:
+  - **Nothing is shrunk to fit.** A complex graphic is allowed to make a long page.
+  - **The page scrolls; no pane does.** `.pd-main`, `.pd-editor`, `.pd-actions`, `.pd-activity`,
+    `.pd-data` and `.pd-audience` are all content-sized, with no `overflow` of their own.
+  - **What must never leave the screen is STICKY**, not small: the header (■ All out is the
+    panic control), the monitors, and the cue rail.
+  - **Two exceptions, both because they have nowhere else to go:** the cue list inside the
+    sticky rail (a forty-cue rundown), and the `⋯` / links popovers.
+  - The phone breakpoint keeps its own viewport-locked shell, because its verb bar is pinned to
+    the bottom of the screen; `.pd-body` is the scroller under it. Same idea, one level down.
+
+  **Measured before and after**, same production and graphic, driven for the acceptance pack:
+
+  | | monitor block | the editor | the page |
+  |---|---|---|---|
+  | 1920×1080 | 442px (41%) → **323px (30%)** | fit either way | did not need to scroll |
+  | 1536×814 | 334px (41%) → **254px (31%)** | 62px hidden → **0** | could not scroll → did not need to |
+  | 1536×560 | 334px (60%) → **188px (34%)** | 62px hidden → **0** | could not scroll → **scrolls 165px** |
+
+  A VISUAL ACCEPTANCE PACK exists for this change (the contract is in
+  `docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Verification contract"): five before/after pairs from the
+  real app — the reported size, nominal 1080p, scrolled to the bottom of a short window, the Data
+  tab, and the phone — with the repeat-by-hand sequence. **The owner's read is still owed**, and
+  the two things it asks about are whether the capped monitors are now too small to judge a
+  graphic by, and whether the space they free to the right of PROGRAM reads as sized or as
+  unfinished.
+- **Monitors are 16:9, side by side, equal, and CAPPED near 30vh** — owner, same report: *"we
+  should rather make the preview and program screens a bit smaller… you see what's out all the
+  time"*. Uncapped they took 41% of the height (442px of 1080). The cap is expressed as a grid
+  TRACK WIDTH, not as a height: a frame is `width: 100%` with the graphic's own `aspect-ratio`,
+  so clamping its height directly would letterbox the picture inside a box the component
+  measured for something else. The track width that keeps both monitors under the cap is
+  `--pd-monitor-h * min(preview ratio, 16/9)`, where `--pd-ar` carries the preview graphic's own
+  ratio as a bare number. The pair stays flush LEFT, sharing an edge with the TAKE button and the
+  editor card below. PVW wears the amber frame, PGM the red one. PGM's header carries the layer
+  badge of what is up.
+- **A monitor is a monitor: `pointer-events: none` on its iframe.** A click that lands inside
+  moves focus into a document that does not listen for the verb keys, so SPACE, N and 0 go dead
+  with nothing on screen saying why. The exported controller always did this; the React surfaces
+  did not, and the capped monitors are what put a monitor under the pointer where a gap used to
+  be.
 - **The verb bar shows its keyboard shortcuts** as chips: Preview `P`, TAKE `SPACE`, Re-take `R`,
   Update `U`, Next `N`, Out `0`, and `↑`/`↓` walk the rundown. `■ All out` lives in the header,
   away from the others, because it is the panic control.
@@ -106,9 +152,9 @@ One column: header (name · mode · All out) → the two monitors side by side, 
 ■ Out**. The monitors stay side by side on a phone: seeing preview and air together is the whole
 point of the surface, and stacking them would put air below the fold.
 
-**No visible scrollbars anywhere, on any surface.** The lists scroll; the chrome does not show.
-No horizontal scrollbar may ever appear — a surface that scrolls sideways is a layout bug, not a
-scrolling affordance.
+**No visible scrollbar chrome on any pane, on any surface.** The page scrolls with the browser's
+own bar; the cue list scrolls without one. No horizontal scrollbar may ever appear — a surface
+that scrolls sideways is a layout bug, not a scrolling affordance.
 
 ## 4. The cue rundown
 

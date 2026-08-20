@@ -53,6 +53,23 @@ const ROLE_WORD: Record<TextRole, string> = {
   decorative: 'Decorative text',
 };
 
+/**
+ * WHICH SIZE RULE A FINDING BELONGS TO, by the role it was measured against.
+ *
+ * The three legibility choices move the SECONDARY floors and barely touch the primary one -
+ * standard puts supporting text and fine print at 1.85% with a warning band to 2.2%, safe puts
+ * them at 5% and 4% with no band at all, and relaxed demotes the lot. So a person choosing
+ * between those three is choosing about supporting text, and a single `legibility-size` rule
+ * could not tell them which of their findings their choice governs.
+ *
+ * It stays a WARNING on every product surface, exactly like its sibling: this splits a report,
+ * it does not add a gate. Both ids keep the `legibility-` prefix, which is the whole selector
+ * the custom lane's blocking set uses (ai/pro/custom/loop.ts), so nothing there changes either.
+ */
+function sizeRuleFor(role: TextRole | undefined): string {
+  return role === 'primary' ? 'legibility-size' : 'legibility-secondary-size';
+}
+
 /** The plain-language sentence for one measured finding, or null for the codes the product
  *  deliberately does not surface (weight, hairlines, the decorative-assumption note - loop
  *  instruments, not the ratified product set). */
@@ -63,7 +80,7 @@ function productMessage(f: ReadabilityFinding, legibility: ResolvedLegibility): 
     case 'text-under-size-floor': {
       if (f.fontPx === undefined || f.floorPx === undefined) return null;
       return {
-        rule: 'legibility-size',
+        rule: sizeRuleFor(f.role),
         message: `${ROLE_WORD[f.role ?? 'secondary']} ("${f.snippet}") is ${px(f.fontPx)} - smaller than the `
           + `~${px(f.floorPx)} we recommend for ${where}. Fine for close screens; may be hard to read from a couch.`,
       };
@@ -71,7 +88,7 @@ function productMessage(f: ReadabilityFinding, legibility: ResolvedLegibility): 
     case 'text-size-warning-band': {
       if (f.fontPx === undefined || f.warnPx === undefined) return null;
       return {
-        rule: 'legibility-size',
+        rule: sizeRuleFor(f.role),
         message: `${ROLE_WORD[f.role ?? 'secondary']} ("${f.snippet}") is ${px(f.fontPx)} - a little under the `
           + `~${px(f.warnPx)} we prefer for ${where}. Readable, but ${px(f.warnPx)}+ reads more comfortably.`,
       };

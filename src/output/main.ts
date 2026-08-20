@@ -18,6 +18,7 @@ import {
   followControlLog,
   type ControlEventRow,
 } from '../control/hostedControl';
+import { clockRowEffect, clockSpecFromHtml, type ClockSpec } from '../control/matchClockWire';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -151,6 +152,28 @@ async function boot(): Promise<void> {
   const liveGraphics = new Set<string>();
   setInterval(() => liveGraphics.forEach((g) => stage.requestState(g)), 1000);
 
+  // ── THE MATCH CLOCK'S TIME ORIGIN (control/matchClockWire.ts). A clock is the one value that
+  // keeps moving with nobody commanding it, so a snapshot of the commands cannot rebuild it: a
+  // browser source reloaded at 67 minutes used to come back at 0:00. The clock's own field value
+  // therefore carries the instant it was true (`"45:00@1755600000000"`), and this is where that
+  // stamp is attached — DERIVED from the clockStart row's own server time, so every renderer
+  // computes the same one and a boot-time replay of the log reconstructs it exactly. Stopping
+  // banks the derived time back as a plain value; resetting banks the period's own start. All
+  // three land in `mergedData`, which is what the report persists and what boot recovery
+  // replays — which is the whole recovery. ──
+  const clockSpecs = new Map<string, ClockSpec>();
+  for (const spec of resolved.output.graphics) {
+    const clock = clockSpecFromHtml(spec.html);
+    if (clock) clockSpecs.set(spec.key, clock);
+  }
+  // WHICH row moves the clock, to what, and in which order is `clockRowEffect` — pure, in
+  // control/matchClockWire.ts, so an offline spec can drive it. This page only ever runs against
+  // a live backend, and a decision left in this closure could be verified nowhere.
+  const applyClock = (graphic: string, clock: ClockSpec, value: string) => {
+    mergedData.set(graphic, { ...mergedData.get(graphic), [clock.field]: value });
+    stage.apply(graphic, { t: 'update', data: { [clock.field]: value } });
+  };
+
   const apply = (row: ControlEventRow) => {
     lastAppliedId = Math.max(lastAppliedId, row.id);
     const snapshot = snapshotAt.get(row.graphic);
@@ -166,7 +189,13 @@ async function boot(): Promise<void> {
     } else if (msg.t === 'stop') {
       liveGraphics.delete(row.graphic);
     }
+    const clock = clockSpecs.get(row.graphic);
+    const effect = clock
+      ? clockRowEffect(row, clock, mergedData.get(row.graphic)?.[clock.field], Date.now())
+      : null;
+    if (clock && effect?.when === 'before') applyClock(row.graphic, clock, effect.value);
     stage.apply(row.graphic, msg);
+    if (clock && effect?.when === 'after') applyClock(row.graphic, clock, effect.value);
     // Status rows ('cue'/'staged'/'live') are for the operator pages; the stage ignored them
     // and so does the report path.
     const forwarded = msg.t === 'update' || msg.t === 'play' || msg.t === 'stop' || msg.t === 'next' || msg.t === 'event' || msg.t === 'snap';
