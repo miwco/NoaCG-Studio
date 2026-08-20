@@ -24,13 +24,16 @@ description: >
 # commit that is fine. A full run does this eleven times over (nine shards plus the two gate
 # jobs), and with `fail-fast: false` and no retries, one hang out of eleven reds the whole gate.
 #
-# So the apt call is bounded and non-fatal here, and it is the ONLY thing that changed about
-# what gets installed. It is worth keeping rather than deleting: everything it installs today is
-# fonts (fonts-freefont-ttf, fonts-ipafont-gothic, fonts-tlwg-loma-otf, fonts-unifont,
-# fonts-wqy-zenhei, xfonts-*) - the runner image already carries every shared library Chromium
-# needs - and nothing in this repo renders non-Latin text at present, but a template that does
-# would want them, and the same call is the safety net if a future runner image ever does drop a
-# library. Bounded, it costs at most three minutes and can no longer end a run.
+# So the apt call is bounded and non-fatal here. It is worth keeping rather than deleting:
+# everything it installs today is fonts (fonts-freefont-ttf, fonts-ipafont-gothic,
+# fonts-tlwg-loma-otf, fonts-unifont, fonts-wqy-zenhei, xfonts-*) - the runner image already
+# carries every shared library Chromium needs - and nothing in this repo renders non-Latin text
+# at present, but a template that does would want them, and the same call is the safety net if a
+# future runner image ever does drop a library. Bounded, it can no longer end a run.
+#
+# What it must NOT do is cost three minutes on every job of every run for a set of fonts nothing
+# reads. Since 2026-08-19 it is tied to the browser cache miss below - the moment a new browser
+# could actually want a new library - and the step's own comment carries the measurement.
 
 runs:
   using: composite
@@ -56,15 +59,39 @@ runs:
       shell: bash
       run: npx playwright install chromium
 
-    # The cache holds the browser, never the runner's system packages - those come with the
-    # image and are reconciled here on every run, cache hit or miss.
+    # RECONCILED WITH THE BROWSER, NOT ON EVERY RUN - this step is tied to the same cache miss
+    # as the download above, and that is the single largest saving measured on this gate.
     #
-    # `timeout` + `|| true` rather than a step-level `timeout-minutes` / `continue-on-error`,
+    # It used to run cache hit or miss, on the argument that system packages come with the image
+    # and want reconciling every time. Measured over the 60 CI runs to 2026-08-19, that argument
+    # cost more than everything else on the critical path put together: on a cache HIT the whole
+    # composite took 3.15 min, of which the cache restore was 3 s and apt was the other 3.1 -
+    # and 3.1 min is what `timeout 180` cuts it off at, so the step was not even finishing. Nine
+    # shards plus the factory and catalog jobs pay it in parallel, so it sat ~3 min deep in the
+    # wall clock of every single run. Run 32281426013 is the control: apt happened to be fast
+    # there, the composite took 0.93 min, and that run's slowest shard was 9.5 min against 11.9
+    # and 12.0 on its neighbours.
+    #
+    # Skipping it on a cache hit is safe because of WHAT it installs, which the log names every
+    # time: fonts-freefont-ttf, fonts-ipafont-gothic, fonts-tlwg-loma-otf, fonts-unifont,
+    # fonts-wqy-zenhei and the xfonts-* set. Every shared library Chromium links against is
+    # already in the runner image (apt reports fonts-liberation and fonts-noto-color-emoji as
+    # "already the newest version"), nothing in this repo renders non-Latin text, and the 180 s
+    # bound meant a DIFFERENT subset of those fonts landed on each runner anyway - so no gate can
+    # have been depending on them without being flaky about it. The baselines they would move are
+    # recorded on a Windows laptop that has none of them.
+    #
+    # A cache miss is exactly the moment the argument still holds: a new Playwright version is
+    # being unpacked, and that is when a browser can want a library the image does not carry. So
+    # the reconciliation happens then, bounded exactly as before.
+    #
+    # `timeout` + a status check rather than a step-level `timeout-minutes` / `continue-on-error`,
     # because composite actions support neither on their own steps. The effect is the one that
     # matters: a stalled mirror costs three minutes and a warning in the log instead of the
     # job's entire budget and a red gate. If Chromium really is missing something, Playwright
     # says so by name when it launches - a far clearer failure than a silent 20-minute hang.
     - name: Install Playwright system dependencies (bounded)
+      if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         if timeout 180 npx playwright install-deps chromium; then

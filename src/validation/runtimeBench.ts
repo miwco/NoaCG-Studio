@@ -20,6 +20,7 @@ import type { ValidationIssue, ValidationResult } from './validateTemplate';
 import { unreachableFields } from './fieldPaint';
 import { markLegibilityFindings, markLegibilityMessage } from './markLegibility';
 import { designRulesWarnings } from './designRulesWarnings';
+import { measureOcclusion, OCCLUSION_ERROR, OCCLUSION_WARN } from './occlusion';
 import type { ProjectLegibility } from '../model/designRules';
 
 export interface RuntimeBenchOptions {
@@ -207,8 +208,12 @@ function isVisible(el: Element, win: Window): boolean {
  * The elements the layout checks measure: visible elements that OWN text (a non-empty direct
  * text node) plus content images. Panels/boxes without their own text are containers -
  * text deliberately sits on them, so they are not collected.
+ *
+ * Exported for `scripts/occlusion-sweep.mjs`, which calibrates a rule this bench runs: a
+ * calibration that collected its own idea of "a leaf" would be measuring a different frame than
+ * the gate it is meant to set a number for.
  */
-function collectLeaves(win: Window): Element[] {
+export function collectLeaves(win: Window): Element[] {
   const all = win.document.body.querySelectorAll<Element>('*');
   const leaves: Element[] = [];
   for (const el of all) {
@@ -223,8 +228,11 @@ function collectLeaves(win: Window): Element[] {
 }
 
 /** Roots of measured motion (NOACG_ANIM dynamics targets): they and their subtrees travel
- *  by data-derived magnitudes (marquees, rolls), so off-canvas positions are by design. */
-function dynamicsRoots(template: SpxTemplate, win: Window): Element[] {
+ *  by data-derived magnitudes (marquees, rolls), so off-canvas positions are by design - and,
+ *  since 2026-08-20, so are positions BEHIND something: a ticker's items crawl past a fixed
+ *  label and pass under it every lap, which is the construction, not a defect. Exported for the
+ *  occlusion calibration, same reason as `collectLeaves`. */
+export function dynamicsRoots(template: SpxTemplate, win: Window): Element[] {
   const data = parseAnimData(template.js);
   if (!data) return [];
   const roots: Element[] = [];
@@ -379,6 +387,37 @@ function isDeliberateLayer(a: Element, b: Element, ra: DOMRect, rb: DOMRect, int
   const dx = Math.abs((ra.left + ra.right) / 2 - (rb.left + rb.right) / 2);
   const dy = Math.abs((ra.top + ra.bottom) / 2 - (rb.top + rb.bottom) / 2);
   return iou > 0.8 && dx < 6 && dy < 6;
+}
+
+/**
+ * Text a PANEL is painted over - the defect `overlapIssues` is structurally unable to see.
+ *
+ * That check pairs LEAVES, and a leaf owns text. A panel owns none, so a panel is never in a
+ * pair, and text can disappear under one completely while every geometry check here passes.
+ * Found 2026-08-20 (docs/NOACG_PRO_PLAN.md §26.1). `occlusion.ts` carries the method and the
+ * two false positives it must not have; the bands here mirror `OVERLAP_ERROR`/`OVERLAP_WARN`
+ * so one defect family reads one way, and the shipped catalog reads ZERO under both of them -
+ * 502 designs at their own values and again with every text doubled
+ * (`scripts/occlusion-sweep.mjs`, ledgers beside it).
+ */
+function occlusionIssues(
+  win: Window,
+  leaves: Element[],
+  exempt: Element[],
+  phase: string,
+): { errors: ValidationIssue[]; warnings: ValidationIssue[] } {
+  const errors: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
+  for (const reading of measureOcclusion(win, leaves, exempt)) {
+    const pct = Math.round(reading.coveredShare * 100);
+    const message = `${reading.el} ("${reading.snippet}") is ${pct}% painted over by `
+      + `${reading.coveredBy.join(', ')} ${phase} - text hidden under a panel cannot be read at `
+      + 'all. Give the panel a row of its own, or move the text out from under it; a panel that '
+      + 'must sit on top belongs behind the text, not over it.';
+    if (reading.coveredShare >= OCCLUSION_ERROR) errors.push(issue('bench-occluded', message));
+    else if (reading.coveredShare >= OCCLUSION_WARN) warnings.push(issue('bench-occluded', message));
+  }
+  return { errors, warnings };
 }
 
 /** Pairwise overlap among leaves (ancestor/descendant pairs excluded - text on its own
@@ -900,6 +939,9 @@ export async function benchTemplateRuntime(
     const flow = overflowIssues(leaves, exempt, win, { width, height }, 'with the default field values');
     errors.push(...flow.errors);
     warnings.push(...flow.warnings);
+    const hidden = occlusionIssues(win, leaves, exempt, 'with the default field values');
+    errors.push(...hidden.errors);
+    warnings.push(...hidden.warnings);
 
     // ── The design rules, as plain-language warnings (R4: warn-first, never blocking) ──
     // Measured here, on the settled default look with the whole path walked - the frame
@@ -1028,6 +1070,13 @@ export async function benchTemplateRuntime(
     );
     errors.push(...stressFlow.errors.map((e) => ({ ...e, rule: 'bench-stress' })));
     warnings.push(...stressFlow.warnings.map((w) => ({ ...w, rule: 'bench-stress' })));
+    // A panel grown by long text is the likeliest way a graphic comes to cover its own line, so
+    // this belongs in the stress pass as much as in the settled one - remapped to `bench-stress`
+    // like its two neighbours, because what failed is the doubled value, not the design at rest.
+    const stressHidden = occlusionIssues(win, stressLeaves, exempt,
+      'once every text value is doubled in length');
+    errors.push(...stressHidden.errors.map((e) => ({ ...e, rule: 'bench-stress' })));
+    warnings.push(...stressHidden.warnings.map((w) => ({ ...w, rule: 'bench-stress' })));
 
     // Let any trailing async errors arrive before we detach.
     await wait(50);

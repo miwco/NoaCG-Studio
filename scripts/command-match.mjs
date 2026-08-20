@@ -61,6 +61,21 @@ export const SWEEP_SCRIPTS =
   // neither is named like its siblings - the same hole the `*spike*` family sat in until
   // 2026-08-15. `palette-freedom` renders 490 designs TWICE, which is the heaviest of the two.
   + '|catalog-sameness|palette-freedom'
+  // The TASTE re-judge (`pro-taste-rejudge.mjs`, docs/NOACG_PRO_PLAN.md §25). It mounts every
+  // piece of every row in a finished round at 1920x1080 through the app - 108 of them on the two
+  // checkpoint rounds, plus a catalog sweep in `--control` - so it is a job by every measure this
+  // module cares about, and it is named like none of the families above. Renaming it into one
+  // would make the name lie about what it does, so it is listed, which is the other half of the
+  // rule AGENTS.md states.
+  + '|pro-taste-rejudge'
+  // THE `-sweep` SCRIPTS THAT LAUNCH CHROMIUM THEMSELVES, listed one by one because the family
+  // is NOT safely name-shaped: of the nine scripts here whose name ends in `-sweep`, two
+  // (`reference-companion-sweep`, `spx-corpus-sweep`) open no browser at all, so a
+  // `[\w-]*-sweep` entry beside the `*bench*` and `*spike*` families would queue two scripts
+  // that cost nothing - the "too eager" failure this module exists to avoid. All three below
+  // render the catalog at 1920x1080 through the app: `occlusion-sweep` is the calibration the
+  // occlusion rule is read off, and the other two were already doing it unlisted.
+  + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep'
   + `|acceptance-shots|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 

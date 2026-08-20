@@ -13,11 +13,19 @@ The cost and capacity policy for the Pro account is
    lint + bundle) and the factory gates always run, while the E2E job runs only **the specs
    that cover the change**.
 
-   An `E2E plan` job answers that first, by running `scripts/e2e-affected.mjs --json` against
-   the diff base (the PR base, or the previous `main` tip on a push). Its output decides both
-   which specs run and how many runners they get - eight shards for a full run, one per ~4
-   spec files (max four) for a subset. It also raises the **catalog calibration gate** for
-   changes that can move catalog output or the bench.
+   An `E2E plan` job answers that first, by running `scripts/e2e-affected.mjs --json
+   --integration` against the diff base (the PR base, or the previous branch tip on a push).
+   Its output decides both which specs run and how many runners they get - about three measured
+   minutes of test execution per runner, capped at nine, from the durations table in
+   `scripts/e2e-durations.json`. It also raises the **catalog calibration gate** for changes
+   that can move catalog output or the bench.
+
+   `--integration` is what makes a MERGE COMMIT honest. Without it the base is the pre-merge
+   branch tip, so the diff is only what `main` brought in and the branch's own work goes
+   unplanned; replayed over the last 120 merge-of-main commits here, 71 would have been planned
+   differently, 17 of them skipping the catalog gate. On a branch that merged nothing the flag
+   changes nothing. See docs/VERIFICATION.md, "A clean merge is not proof the integration
+   worked".
 
    **`main` is the exception: a push there runs the FULL suite, whatever the diff says** (and
    the sprint's focus collapse does not apply - focus keeps BRANCH runs cheap, and `main` is
@@ -27,7 +35,7 @@ The cost and capacity policy for the Pro account is
    stay green indefinitely. On 2026-08-07 `e2e/public-service.spec.ts` was red on `main`
    through eight consecutive green `main` runs, and what surfaced it was an unrelated branch
    escalating to the full suite by accident. This buys **latency, not coverage** - the nightly
-   already ran everything - and costs about two minutes of wall clock, because the eight
+   already ran everything - and costs about two minutes of wall clock, because the nine
    shards run in parallel and the catalog gate (3 min) finishes inside them.
 
    **Scoping is only safe because the mapper fails toward running more:** an unmapped file, a
@@ -219,8 +227,8 @@ Vercel build for every non-`main` branch unless the head commit message contains
   on every branch push (not just `main`), so safe-merge's Phase 3 waits for the run whose head
   SHA is exactly the commit being promoted and cites it, falling back to the local
   `npm run build` + `npm run test:e2e:focus:queued` pair only when no such run exists. This is
-  more coverage, not less: CI adds the factory gates and runs the affected plan across eight
-  shards on a clean checkout, in six to nine minutes of somebody else's compute. The local
+  more coverage, not less: CI adds the factory gates and runs the affected plan across up to
+  nine shards on a clean checkout, in about ten minutes of somebody else's compute. The local
   pair was costing far longer than that and taking the machine out of service while it ran -
   measured on a Ryzen 7 5800H / 16 GB laptop at 59 concurrent browser shells and 35 MB of
   free RAM, which is a paging laptop, not a test run.

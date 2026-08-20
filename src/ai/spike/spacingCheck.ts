@@ -336,11 +336,16 @@ function paddingRatios(
  * a mark takes in the composition, and a padded well takes all of it - the border box is the right
  * answer there, and `MARK_SCALE_CEILING` is calibrated on it. Two questions, two boxes.
  *
+ * IT IS SHARED WITH `tasteCheck`, and by the same test: its rules 1, 2 and 5 all ask where the
+ * mark's INK sits - inside its well, beside an accent, across a row - which is this box's exact
+ * question. Exported rather than copied, because a second implementation of "where does the
+ * clear space end" is how two instruments come to disagree about one mark.
+ *
  * `getComputedStyle` is read while the document is still attached, which is the only time it
  * answers: a live `CSSStyleDeclaration` EMPTIES the moment its iframe leaves the DOM, and every
  * length silently parses as 0 - an inset of nothing, reported as a measurement.
  */
-function markContentRect(mark: Painted, win: Window): Painted['rect'] {
+export function markContentRect(mark: Painted, win: Window): Painted['rect'] {
   const style = win.getComputedStyle(mark.el);
   const inset = (side: 'left' | 'right' | 'top' | 'bottom'): number =>
     (parseFloat(style.getPropertyValue(`padding-${side}`)) || 0)

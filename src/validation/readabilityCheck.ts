@@ -352,6 +352,15 @@ export function measureReadability(doc: Document, options: ReadabilityOptions = 
           severity: 'advise',
           detail: `"${c.snippet}" renders at weight ${c.weight} (${describe(c.el)}) - informational`
             + ` text this ${overVideo ? 'exposed' : 'small'} needs ${floor}+ to survive broadcast`,
+          // The structured fields every finding beside this one already carries. They were
+          // missing on this one alone, which made it the single legibility failure no surface
+          // could pair with another: the taste instrument's rule 4 asks which text cleared its
+          // SIZE floor and STILL failed, and that question is answerable only when both
+          // findings name the same element in the same words.
+          snippet: c.snippet,
+          el: describe(c.el),
+          role,
+          fontPx: c.fontPx,
         });
       }
     }

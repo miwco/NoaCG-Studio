@@ -808,6 +808,45 @@ Five rules bind anyone editing it:
   design cannot dodge the gap floor by growing its mark - it hits that ceiling instead. The
   finding now carries all three raw numbers (`22px from 43px type, mark 135px`).
 
+## The TASTE instrument (`spike/tasteCheck.ts`) - the owner's six rules as numbers
+
+**EXPERIMENT, bench-only** (the same deletion condition as the four instruments beside it,
+`spike/exemplars.ts`). Driven by `scripts/pro-taste-rejudge.mjs`, which is FREE: it mounts saved
+code from finished rounds and measures it, so a rule written today can be tried against every
+round already paid for at zero cost. The full account, with the numbers, is
+`docs/NOACG_PRO_PLAN.md` §25.
+
+The six rules are the owner's own, from the 2026-08-19 galleries: (1) a mark inside a container is
+centred in it, (2) a mark between an accent line and text is optically balanced, (3) secondary
+text has a floor too - measured as the SMALLEST INFORMATIONAL line, because read as "the second
+line" it was null on every one-line graphic the owner used to state it, (4) weight and contrast
+are part of legibility rather than separate from it, (5) a mark never eats primary real estate,
+(6) a package's mark is on every piece or none.
+
+Three properties are the ones to keep in mind before touching it:
+
+- **It reports; two of the six additionally carry NO pass/fail.** Rule 2 because the owner stated
+  it is conditional ("sometimes it can work, and that's kind of the problem"), rule 3 because the
+  ratified secondary floor already exists in `model/designRules.ts` and disagrees with the owner
+  by a factor the owner has not re-ratified. Inventing a threshold to settle either would replace
+  the measurement with the opinion the instrument exists to remove.
+- **Rule 1 asks each axis separately, and that is not a refinement - it is the rule.** Measuring
+  both axes of the mark's smallest surface ancestor calls eight shipped catalog designs 0.84-0.96
+  off centre, because a mark docked at one end of a strap is off-centre in the strap by
+  construction; restricting the container to one holding the mark alone then loses the owner's
+  actual case, the sponsor-bug tile that also carries "ON AIR". What is measured is the axis the
+  FLOW did not decide, and flow peers are painted TEXT only - counting an accent bar as a peer
+  suppressed the exact case the rule exists for.
+- **A rule that fires on a shipped design is a question, not a threshold to move.** Rule 5 fires
+  on Pro's sponsor bug across nearly the whole corpus; measured, 26 of the 28 shipped corner bugs
+  put the mark BESIDE the caption where Pro stacks it above. That goes to the owner as a finding
+  rather than into a per-type override - the failure `PRO_GRAPHICS.countdown` already warns about.
+
+Rule 4 reads through `validation/readabilityCheck` rather than measuring weight or contrast again,
+and that instrument's `text-under-weight-floor` finding gained the structured `snippet`/`el`/
+`role`/`fontPx` fields every finding beside it already carried - without them the joint question
+("which text cleared its SIZE floor and STILL failed?") cannot pair two findings on one element.
+
 ## Phase-C creative pilot (`creative/`)
 
 **RETIRED 2026-08-09 (owner decision): Creative Mode is superseded by NoaCG Pro and is no longer carried

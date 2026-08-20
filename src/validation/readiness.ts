@@ -44,7 +44,7 @@ const ROWS: { id: string; label: string; rules: string[]; live: boolean }[] = [
   {
     id: 'layout',
     label: 'Nothing collides or escapes the frame',
-    rules: ['bench-overlap', 'bench-overflow'],
+    rules: ['bench-overlap', 'bench-overflow', 'bench-occluded'],
     live: true,
   },
   {
