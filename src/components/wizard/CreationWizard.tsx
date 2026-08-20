@@ -351,6 +351,12 @@ export default function CreationWizard() {
           setDraft((d) => mergeDraft(d, brandPatch(show.look!)));
         }
       }
+    } else {
+      // BACK TO STEP 0 ON CLOSE TOO. This component stays mounted and renders null when it is
+      // closed, so a closed wizard still holds the step its last walk ended on. The route sync
+      // above would read that stale step at the NEXT open and push it into the URL - so "+ New
+      // graphic" after finishing a walk reopened the wizard on Finish instead of on Entry.
+      setStep(0);
     }
   }, [open]);
 
