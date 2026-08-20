@@ -330,11 +330,22 @@ branch - it is never where conflicts get resolved.
 3. Verify the integrated branch. **CI is the primary gate; the local pair is the fallback.**
 
    `ci.yml` triggers on every branch push, and what it runs is strictly MORE than a laptop
-   can: `npm run build`, the same affected plan sharded across eight runners, the factory
+   can: `npm run build`, the same affected plan sharded across up to nine runners, the factory
    gates, and the catalog tripwire when the plan raises it - all on a clean checkout. It
-   finishes in six to nine minutes and costs nothing (the repo is public, so Actions minutes
+   finishes in about ten minutes and costs nothing (the repo is public, so Actions minutes
    are free). Running the same work locally instead buys no extra confidence and takes the
    machine out of service while it happens.
+
+   **Since 2026-08-19 that CI run answers the INTEGRATION question, which is the one this
+   phase is about.** The commit Route A verifies is the merge commit Phase 2 just made, and
+   the plan job used to base its diff at `github.event.before` - the pre-merge branch tip - so
+   it classified only the files `main` had brought in and the branch's own work went unplanned.
+   A green run then meant "main's changes are fine here", not "the combined tree holds".
+   Replayed over the last 120 merge-of-main commits in this repository, 71 (59%) would have
+   been planned differently, 17 of them skipping the catalog calibration gate. The plan job now
+   passes `--integration`, so the base is the fork point and the plan is the union of both
+   sides. Route A and Route B ask the same question again, which is what makes preferring
+   Route A safe.
 
    **Route A - CI (prefer this).** Push the integrated branch and let the gate run there:
 
