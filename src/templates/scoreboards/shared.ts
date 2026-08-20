@@ -46,8 +46,7 @@ import {
   resolveHeadingFont,
   rootVarsCss,
   setFieldValueJs,
-  stageJustifyCss,
-  stageWidthCss,
+  stageBoxCss,
   zoneCssText,
 } from '../shared/base';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
@@ -292,15 +291,12 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── ${design.stageWidth ? 'The stage: the bar keeps its own width and the names fit inside it.' : 'Auto-fit: the panel hugs its content and wraps instead of overflowing.'} ── */
 .scoreboard-box {
-  width: ${design.stageWidth ? stageWidthCss(o.resolution, design.stageWidth) : 'fit-content'};${design.stageWidth ? '' : '              /* the panel hugs the two team groups */'}
-  max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
 ${
     design.stageWidth
-      ? `  box-sizing: border-box;          /* the declared width includes the panel's own padding */
-  justify-content: ${stageJustifyCss(o.zone)};  /* short names leave the room where the anchor already reads (inert on a block box) */
-`
-      : ''
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this bar was drawn for')
+      : '  width: fit-content;              /* the panel hugs the two team groups */'
   }
+  max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
 .scoreboard-mask {

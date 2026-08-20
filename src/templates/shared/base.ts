@@ -101,45 +101,44 @@ export function maxTextWidthCss(res: Resolution, maxPx: number): string {
  * design declares is the number its author saw. It is emitted the same way the wrap cap is:
  * scale-aware, clamped to the horizontal safe area, and never past it.
  *
+ * THE `--stage-width` MARKER IS PART OF THE CONTRACT, not decoration. It is how a machine tells a
+ * staged panel from a hugging one: "declares some width" is not the same claim, and inferring the
+ * stage from that alone reads a credits column (cr09) as a board it is not.
+ * `e2e/catalog/footprint-stability.spec.ts` selects its targets on this property, so a design that
+ * is staged is asserted and a design that is not is left alone — and it is ordinary readable CSS
+ * in the user's own file either way, which is the house rule for anything we emit.
+ *
+ * WHERE THE SLACK GOES is emitted with it, because it is the other half of the same fix. A hugging
+ * panel has no slack: the box IS the content, and the anchor zone decides where that box sits.
+ * Give the same panel a stage and short content leaves room over — and if nothing says otherwise,
+ * all of it piles up on one side, moving the content that used to sit on the anchor. It would be a
+ * poor trade to stop the panel edges moving by moving the words instead. So the slack is
+ * distributed the way the ANCHOR already reads: a left zone keeps its content left with the room
+ * opening to its right, a right zone keeps it right, a centre zone splits the room evenly. At the
+ * design's own content everything is exactly where it already was. (`justify-content` is inert on
+ * a block box, which lays its children out by its own rules — harmless, and right the moment such
+ * a design becomes a flex row.)
+ *
  * WHY IT IS NOT SIMPLY THE CATEGORY'S WRAP CAP. The cap is a maximum for text, not a width for
  * furniture — every holding screen draws a panel, and handing all twenty the 70% cap as a stage
  * would repaint the category as a row of identical slabs. A design declares the width it was
  * drawn at; the cap only ever clamps it.
  */
-export function stageWidthCss(res: Resolution, stagePx: number): string {
+export function stageBoxCss(res: Resolution, stagePx: number, zone: Zone9, what: string): string {
   const resFactor = Math.min(res.width / 1920, res.height / 1080);
   const perScaleUnit = Math.round(stagePx / resFactor);
   const safeMax = Math.round(res.width - 2 * (res.width * 0.0625));
-  // TWO declarations, the same doctrine as `maxTextWidthCss` above and for the same reason:
+  const justify = zone.endsWith('-left') ? 'flex-start' : zone.endsWith('-right') ? 'flex-end' : 'center';
+  // TWO width declarations, the same doctrine as `maxTextWidthCss` above and for the same reason:
   // CSS `min()` is Chromium 79 and CasparCG's older LTS builds are behind it, where a lone
   // `min()` makes the browser drop the declaration entirely. Here that failure is worse than a
   // missing cap — the panel would fall back to `auto` and stretch — so the static width goes
   // first as the classic cascade fallback and a current engine takes the scaling line below.
-  return `${Math.min(perScaleUnit, safeMax)}px;  /* fallback: no CSS min() before Chromium 79 (older CasparCG) */
-  width: min(calc(${perScaleUnit}px * var(--scale)), ${safeMax}px)`;
-}
-
-/**
- * WHERE THE SLACK GOES when a stage is wider than what is in it.
- *
- * A hugging panel has no slack: the box IS the content, and the anchor zone decides where that
- * box sits. Give the same panel a stage and short content leaves room over — and if nothing says
- * otherwise, every bit of it piles up on one side, which moves the content that used to sit on
- * the anchor. The whole point of the stage is that the panel edges stop moving; it would be a
- * poor trade to buy that by moving the words instead.
- *
- * So the slack is distributed the way the ANCHOR already reads: content on a left zone stays
- * left and the room opens to its right, content on a right zone stays right, and a centre zone
- * keeps its lockup centred with the room split evenly. At the design's own content this is
- * exactly where everything already was.
- *
- * Only meaningful on a flex or grid box — a block box lays its children out by its own rules and
- * `justify-content` is inert there, which is why this is emitted beside a stage and never alone.
- */
-export function stageJustifyCss(zone: Zone9): string {
-  if (zone.endsWith('-left')) return 'flex-start';
-  if (zone.endsWith('-right')) return 'flex-end';
-  return 'center';
+  return `  --stage-width: ${perScaleUnit}px;      /* ${what} — this panel's width is the design's, never the text's */
+  width: ${Math.min(perScaleUnit, safeMax)}px;  /* fallback: no CSS min() before Chromium 79 (older CasparCG) */
+  width: min(calc(${perScaleUnit}px * var(--scale)), ${safeMax}px);
+  box-sizing: border-box;          /* the declared width includes the panel's own padding */
+  justify-content: ${justify};       /* short content leaves the room where the anchor already reads */`;
 }
 
 /**
