@@ -848,3 +848,86 @@ test('a match clock survives a renderer reboot: the wire carries the instant the
   expect(wire.rowTime).toBe(1_755_600_000_000);
   expect(wire.localRow).toBe(1_755_600_000_000);
 });
+
+test('the clock walks a whole match through the log: start, bump, stop, restart, reset', async ({ page }) => {
+  // `clockRowEffect` is the one place a control-log row is read as a clock move, and it is pure
+  // for exactly this reason: the renderer that uses it (src/output/main.ts) only ever runs
+  // against a live backend, so the decision it used to hold inside its boot closure could be
+  // driven by no offline spec at all. "Which event stamps what, in which order, and against
+  // which held value" is where a bug here would hide, and it airs.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const walk = await page.evaluate(async () => {
+    const w = await import('/src/control/matchClockWire.ts');
+    const clock = { field: 'f5', countsDown: false, seed: '0:00', resetTo: '0:00' };
+    const T = 1_755_600_000_000;
+    const at = (mins: number) => new Date(T + mins * 60_000).toISOString();
+
+    // The wire's own state, exactly as the renderer keeps it: one merged value per field.
+    let held: string | undefined;
+    const trace: { row: string; value: string | null; when: string | null }[] = [];
+    const step = (label: string, msg: unknown, createdAt?: string) => {
+      const effect = w.clockRowEffect({ msg, created_at: createdAt } as never, clock, held, T);
+      if (effect) held = effect.value;
+      trace.push({ row: label, value: effect?.value ?? null, when: effect?.when ?? null });
+    };
+
+    // A Take sends the cue's whole value set; the clock rides it as a plain (held) time.
+    step('take', { t: 'update', data: { f0: 'HOME', f5: '0:00' } }, at(0));
+    held = '0:00';
+    // Kick-off.
+    step('clockStart', { t: 'event', event: 'clockStart' }, at(0));
+    // A goal in the 12th minute: the whole value set goes again, clock field included. It must
+    // not move the clock, and the stamped value it re-sends still resolves to the right second.
+    step('update (goal)', { t: 'update', data: { f1: '1', f5: held! } }, at(12));
+    // Half time: the clock is HELD, and what is banked is the derived time, not the seed.
+    step('clockStop', { t: 'event', event: 'clockStop' }, at(45));
+    // Second half: it resumes from where it stood, not from 0:00.
+    step('clockStart', { t: 'event', event: 'clockStart' }, at(60));
+    // A row that is not about the clock at all.
+    step('event (final)', { t: 'event', event: 'final' }, at(105));
+    // Reset returns to the period's own start, held.
+    step('clockReset', { t: 'event', event: 'clockReset' }, at(106));
+
+    return {
+      trace,
+      // What a renderer BOOTING at each of two moments would paint, from the banked value alone.
+      atKickoffPlus22: w.clockValueAt(trace[1].value!, false, T + 22 * 60_000),
+      atHalfTime: w.clockValueAt(trace[3].value!, false, T + 50 * 60_000),
+      secondHalfPlus7: w.clockValueAt(trace[4].value!, false, T + 67 * 60_000),
+      // A locally-authored row (an offline production's own command) has no server time and
+      // falls back to the caller's clock — correct, because that log has one renderer.
+      localRow: w.clockRowEffect(
+        { msg: { t: 'event', event: 'clockStart' } } as never,
+        clock,
+        '30:00',
+        T,
+      ),
+    };
+  });
+
+  expect(walk.trace.map((t) => [t.row, t.when])).toEqual([
+    ['take', null],                        // an update never moves the clock
+    ['clockStart', 'before'],              // the origin must be in the document before the call
+    ['update (goal)', null],
+    ['clockStop', 'after'],                // the banked value follows the event that settled it
+    ['clockStart', 'before'],
+    ['event (final)', null],               // a non-clock event is not a clock move
+    ['clockReset', 'after'],
+  ]);
+  // Kick-off stamps 0:00 at T; 22 minutes later a renderer booting cold reads 22:00.
+  expect(walk.trace[1].value).toBe(`0:00@${1_755_600_000_000}`);
+  expect(walk.atKickoffPlus22).toBe('22:00');
+  // Half time banks the DERIVED 45:00 as a plain time — a held clock reads the same five
+  // minutes later, which is what "held" has to mean.
+  expect(walk.trace[3].value).toBe('45:00');
+  expect(walk.atHalfTime).toBe('45:00');
+  // The second half resumes FROM 45:00, stamped at kick-off of the half, so seven minutes in it
+  // reads 52:00 — not 7:00, and emphatically not 0:00.
+  expect(walk.trace[4].value).toBe(`45:00@${1_755_600_000_000 + 60 * 60_000}`);
+  expect(walk.secondHalfPlus7).toBe('52:00');
+  // Reset goes to the period's own start, held.
+  expect(walk.trace[6]).toEqual({ row: 'clockReset', value: '0:00', when: 'after' });
+  // No server time: the caller's instant, and the held value still leads.
+  expect(walk.localRow).toEqual({ value: `30:00@${1_755_600_000_000}`, when: 'before' });
+});

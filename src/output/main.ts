@@ -18,13 +18,7 @@ import {
   followControlLog,
   type ControlEventRow,
 } from '../control/hostedControl';
-import {
-  clockSpecFromHtml,
-  heldClockValue,
-  rowInstant,
-  startedClockValue,
-  type ClockSpec,
-} from '../control/matchClockWire';
+import { clockRowEffect, clockSpecFromHtml, type ClockSpec } from '../control/matchClockWire';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -172,22 +166,12 @@ async function boot(): Promise<void> {
     const clock = clockSpecFromHtml(spec.html);
     if (clock) clockSpecs.set(spec.key, clock);
   }
-  /** The clock value this row leaves behind, or null when the row does not move the clock. */
-  const clockAfter = (row: ControlEventRow, clock: ClockSpec): string | null => {
-    if (row.msg.t !== 'event') return null;
-    const at = rowInstant(row.created_at, Date.now());
-    const held = mergedData.get(row.graphic)?.[clock.field];
-    if (row.msg.event === 'clockStart') return startedClockValue(held ?? clock.seed, clock.countsDown, at);
-    if (row.msg.event === 'clockStop') return heldClockValue(held ?? clock.seed, clock.countsDown, at);
-    // Reset is a separate operation, and `resetTo` is what the RUNTIME returns to rather than
-    // what the element happens to read - the two must record the same number or a reboot after
-    // a reset would recover a different time from the one on air.
-    if (row.msg.event === 'clockReset') return clock.resetTo;
-    return null;
-  };
-  const applyClock = (row: ControlEventRow, clock: ClockSpec, value: string) => {
-    mergedData.set(row.graphic, { ...mergedData.get(row.graphic), [clock.field]: value });
-    stage.apply(row.graphic, { t: 'update', data: { [clock.field]: value } });
+  // WHICH row moves the clock, to what, and in which order is `clockRowEffect` — pure, in
+  // control/matchClockWire.ts, so an offline spec can drive it. This page only ever runs against
+  // a live backend, and a decision left in this closure could be verified nowhere.
+  const applyClock = (graphic: string, clock: ClockSpec, value: string) => {
+    mergedData.set(graphic, { ...mergedData.get(graphic), [clock.field]: value });
+    stage.apply(graphic, { t: 'update', data: { [clock.field]: value } });
   };
 
   const apply = (row: ControlEventRow) => {
@@ -205,17 +189,13 @@ async function boot(): Promise<void> {
     } else if (msg.t === 'stop') {
       liveGraphics.delete(row.graphic);
     }
-    // The clock's new value goes in BEFORE a start and AFTER a hold. Starting, the shared origin
-    // must already be in the document when `startMatchClock` runs, or the runtime mints a local
-    // one and this renderer's clock is anchored a network hop away from every other's. Holding,
-    // the banked value is what the graphic has just settled on, so it follows the event that
-    // settled it.
     const clock = clockSpecs.get(row.graphic);
-    const clockValue = clock ? clockAfter(row, clock) : null;
-    const starting = msg.t === 'event' && msg.event === 'clockStart';
-    if (clock && clockValue !== null && starting) applyClock(row, clock, clockValue);
+    const effect = clock
+      ? clockRowEffect(row, clock, mergedData.get(row.graphic)?.[clock.field], Date.now())
+      : null;
+    if (clock && effect?.when === 'before') applyClock(row.graphic, clock, effect.value);
     stage.apply(row.graphic, msg);
-    if (clock && clockValue !== null && !starting) applyClock(row, clock, clockValue);
+    if (clock && effect?.when === 'after') applyClock(row.graphic, clock, effect.value);
     // Status rows ('cue'/'staged'/'live') are for the operator pages; the stage ignored them
     // and so does the report path.
     const forwarded = msg.t === 'update' || msg.t === 'play' || msg.t === 'stop' || msg.t === 'next' || msg.t === 'event' || msg.t === 'snap';

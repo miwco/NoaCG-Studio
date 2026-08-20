@@ -217,9 +217,16 @@ The page:
   two-renderer drift and the background-tab throttle. The stamp is DERIVED, not invented: it is
   the `clockStart` row's own `created_at`, so every renderer computes the same one and a
   boot-time replay of the log reconstructs it exactly. `control/matchClockWire.ts` reads the
-  clock out of the published markup (no design declares anything) and `output/main.ts` attaches
-  the stamp into `mergedData` — which is what the report persists and what boot recovery replays,
-  so the recovery is the ordinary one. Runtime half: `templates/shared/matchClock.ts`.
+  clock out of the published markup (no design declares anything) and decides what each row does
+  to it (`clockRowEffect`); `output/main.ts` writes that into `mergedData` — which is what the
+  report persists and what boot recovery replays, so the recovery is the ordinary one. Runtime
+  half: `templates/shared/matchClock.ts`.
+  **The decision is PURE and lives outside the renderer on purpose.** This page only ever runs
+  against a live backend, so anything decided inside its boot closure can be verified by no
+  offline spec — and "which event stamps what, in which order, against which held value" is
+  exactly where a bug here would hide, on air. `e2e/productions.spec.ts` walks a whole match
+  through it (kick-off, a goal re-sending the value set, half time, the second half resuming
+  from 45:00, a reset) and is mutation-tested against the ordering and both banked values.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside

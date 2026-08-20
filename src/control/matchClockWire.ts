@@ -27,6 +27,8 @@
 // anything: the clock element is the one the template contract already names
 // (`.<prefix>-clock`), and its field id and count direction are read off it.
 
+import type { ControlEventRow } from './hostedControl';
+
 /** What a published graphic's clock IS, read from its own markup. */
 export interface ClockSpec {
   /** The field id the clock element carries (`f5`), i.e. the key its value rides under. */
@@ -128,4 +130,60 @@ export function rowInstant(createdAt: string | undefined, fallback: number): num
   if (!createdAt) return fallback;
   const at = Date.parse(createdAt);
   return Number.isFinite(at) ? at : fallback;
+}
+
+/** What one log row does to the clock. */
+export interface ClockEffect {
+  /** The clock field's value after this row. */
+  value: string;
+  /**
+   * WHEN the renderer must write it, relative to forwarding the row itself.
+   *
+   * `before` for a START: the shared origin has to be in the document by the time
+   * `startMatchClock` runs, or the runtime mints a LOCAL one and this renderer's clock ends up
+   * anchored a network hop away from every other renderer's — which is the drift the origin
+   * exists to remove.
+   *
+   * `after` for a hold or a reset: the value being banked is what the graphic has just settled
+   * on, so it follows the event that settled it.
+   */
+  when: 'before' | 'after';
+}
+
+/**
+ * THE ONE PLACE A LOG ROW IS READ AS A CLOCK MOVE. Pure on purpose: the renderer that uses it
+ * (`output/main.ts`) only runs against a live backend, so a decision left inside its boot
+ * closure could not be driven by any offline spec — and this is the live-broadcast half of the
+ * fix, where "which event stamps what, and in which order" is exactly where a bug would hide.
+ *
+ * `held` is the clock field's CURRENT value on the wire — normally whatever the last Take or ✎
+ * Update carried, which is why a start resumes from where the clock stands rather than from the
+ * design's seed. Absent (nothing has been sent for this graphic yet), the design's own seed
+ * stands in. `now` is only the fallback instant for a locally-authored row; a server row's own
+ * `created_at` always wins, because that is the value every renderer agrees on.
+ *
+ * Returns null for every row that does not move the clock — which is nearly all of them.
+ */
+export function clockRowEffect(
+  row: Pick<ControlEventRow, 'msg' | 'created_at'>,
+  clock: ClockSpec,
+  held: string | undefined,
+  now: number,
+): ClockEffect | null {
+  if (row.msg.t !== 'event') return null;
+  const at = rowInstant(row.created_at, now);
+  const from = held ?? clock.seed;
+  switch (row.msg.event) {
+    case 'clockStart':
+      return { value: startedClockValue(from, clock.countsDown, at), when: 'before' };
+    case 'clockStop':
+      return { value: heldClockValue(from, clock.countsDown, at), when: 'after' };
+    // Reset banks `resetTo` — what the RUNTIME returns to — rather than what the element happens
+    // to read, because the two must record the same number or a reboot after a reset would
+    // recover a different time from the one on air.
+    case 'clockReset':
+      return { value: clock.resetTo, when: 'after' };
+    default:
+      return null;
+  }
 }
