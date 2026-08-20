@@ -842,10 +842,15 @@ Three properties are the ones to keep in mind before touching it:
   put the mark BESIDE the caption where Pro stacks it above. That goes to the owner as a finding
   rather than into a per-type override - the failure `PRO_GRAPHICS.countdown` already warns about.
 
-Rule 4 reads through `validation/readabilityCheck` rather than measuring weight or contrast again,
-and that instrument's `text-under-weight-floor` finding gained the structured `snippet`/`el`/
-`role`/`fontPx` fields every finding beside it already carried - without them the joint question
-("which text cleared its SIZE floor and STILL failed?") cannot pair two findings on one element.
+Rule 4 reads its NUMBERS through `validation/readabilityCheck` rather than measuring weight or
+contrast again, and compares them against **its own three owner-ratified floors** (2026-08-20):
+contrast 3.25:1, weight 500, and 28px for a secondary line. It used to pair that instrument's
+`text-under-weight-floor` and `text-low-contrast` FINDINGS, which are the ratified table's
+verdicts - right while the table agreed with the owner, and silent on all four rows he named the
+moment it did not. **The 28px is an eligibility floor, never a third axis to fire on**: every lower
+third in the corpus sets its role line at 26px, so firing on it would light up all 36 rows, and a
+rule that fires on everything reports nothing. One measurement, one place; only the threshold is
+this file's.
 
 ## Phase-C creative pilot (`creative/`)
 

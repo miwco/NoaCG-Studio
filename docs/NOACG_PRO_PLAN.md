@@ -3361,6 +3361,47 @@ also why rule 2 carries no threshold.
 The topic-card round is unchanged on every rule (3 / 1 / 3 / 4 rows), as it must be: all four of
 its rows saved every piece as code.
 
+#### 25.8.2 Rule 4 - the floors the owner ratified
+
+**OWNER DECISION, 2026-08-20**, not read off a distribution and marked as such in the code: a text
+this instrument calls readable clears **contrast 3.25:1**, **weight 500**, and - if it is a
+SECONDARY line - **28px**. The owner explicitly declined 4.5:1, 600 and 32px: those stop being a
+taste guard and start being a design constraint. §25.6 had already shown the joint framing was
+right and the floors were the miss, so this is only the threshold moving.
+
+**The 28px is an ELIGIBILITY floor, not a third failure axis, and the corpus is what decides
+that.** Rule 4 asks which text was big enough and still could not be read. Measured on the
+baseline, every lower third in the corpus sets its role line at 26px and **0 of 72** secondary
+readings are flagged by the ratified table (20px hard, 22px warn). Read as an axis TO FIRE ON,
+28px therefore fires on all 36 lower thirds - all 36 rows - and a rule that fires on the whole
+corpus reports nothing, which is the exact complaint that sent rule 5 back to be rewritten one
+rule over. Read as the answer to "big enough", it keeps the 26px role line out of rule 4 (where it
+is a SIZE defect that rule 3 reports) and leaves the joint reading to say what it is for.
+
+The comparison also moved INTO this file. Rule 4 used to pair `readabilityCheck`'s
+`text-under-weight-floor` and `text-low-contrast` findings, which are the ratified table's
+verdicts - correct while the table agreed with the owner, and silent on all four named rows the
+moment it did not. The readings are still that instrument's; only the threshold is ours.
+
+| | after 25.8.1 | after the floors |
+|---|---|---|
+| rule 4 `legible-size-only` | 2 rows | **26 rows of 36** |
+| rules 1 / 5 / 6 | 12 / 34 / 36 | 12 / 34 / 36 (unmoved) |
+| topic-card round | 1 of 4 | 3 of 4 |
+
+**It catches all four rows the owner named** (§25.6), each on the axis measured there: S-03 on
+CONTRAST - its countdown label at 38px reads 3.04:1, the reading that clears the ratified 3:1
+large-text floor by four hundredths - and S-14, S-20 and S-33 on WEIGHT at 400. S-14 fires three
+times, including its 54px name.
+
+**And it names ONE construction rather than lighting up the corpus.** Of the 40 readings, **33 are
+the countdown's own label** at 38px weight 400, 7 are lower-third primaries, and **none is a
+sponsor bug** - the bug's 24px caption is already flagged on size by the ratified 50px primary
+floor, so it never reaches this rule. By axis: 37 weight alone, 1 contrast alone, 2 both. Ten rows
+stay quiet (S-04, S-05, S-06, S-12, S-13, S-15, S-18, S-21, S-35, S-36). **That is a finding with
+an address**: the composer's supporting/label weight on the countdown is where 33 of 40 readings
+live, and it is one number in `structure.ts` rather than 26 separate defects.
+
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 
 Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are

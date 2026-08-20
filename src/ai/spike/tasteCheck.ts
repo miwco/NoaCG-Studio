@@ -88,6 +88,40 @@ export const MARK_CENTRE_OFFSET = 0.12;
  */
 export const MARK_CENTRE_MIN_PX = 8;
 
+// ── Rule 4's floors: RATIFIED BY THE OWNER 2026-08-20, not read off the catalog ───────
+//
+// The three numbers below are the ONE place in this file where a threshold is a decision rather
+// than a distribution, and they say so. §25.6 measured the joint reading firing on 2 of 36 rows
+// and on NONE of the four the owner named, with those four reading contrast 3.04:1 and weight
+// 400 - so the framing was right and the floors were the miss. The owner set them, and
+// explicitly declined 32px / 4.5:1 / 600: those turn a taste guard into a design constraint.
+
+/** Contrast a text must clear to be called readable here. 3.25 rather than 3.04-and-a-bit: the
+ *  owner's own S-03 reads 3.04:1 and clears the ratified 3:1 large-text floor by four
+ *  hundredths, so a floor that depends on rounding settles nothing. */
+export const TASTE_CONTRAST_FLOOR = 3.25;
+/** Weight a text must carry. 500 is the next usable weight above the 400 the corpus's weakest
+ *  readings sit at - a step the type can actually take, where 600 would legislate the design. */
+export const TASTE_WEIGHT_FLOOR = 500;
+/**
+ * How big a SECONDARY line has to be before rule 4's question applies to it at all.
+ *
+ * THIS IS AN ELIGIBILITY FLOOR, NOT A FIRING AXIS, and the corpus is what decides that. Rule 4
+ * asks which text was BIG ENOUGH and still could not be read; the ratified table answers "big
+ * enough" with a 20px hard floor and a 22px warn band, and measured over the baseline that let
+ * every 26px lower-third role line through unflagged (0 of 72 secondary readings flagged, §25.5).
+ * 28px is the owner's own answer to the same question, a real type step above the 26px the corpus
+ * clusters at.
+ *
+ * Read as a THIRD FAILURE AXIS it would fire on all 36 lower thirds - every one of them sets its
+ * role line at 26px - which is all 36 rows, and a rule that fires on the whole corpus reports
+ * nothing. That is the exact complaint that sent rule 5 back to be rewritten, one rule over. So
+ * it is applied where it answers the question rule 4 actually asks: a secondary line under it is
+ * a SIZE defect, which rule 3 reports and `readabilityCheck` owns, and rule 4 stays the joint
+ * reading of text that cleared size and still fails.
+ */
+export const TASTE_SECONDARY_SIZE_PX = 28;
+
 /** A painted non-text element this thin, relative to its own length, is an ACCENT RULE rather
  *  than a panel - the shape rule 2 is about. The catalog's accents run 4-14px against panels
  *  hundreds of px long, so an aspect cut separates them without needing a pixel threshold. */
@@ -228,6 +262,11 @@ export interface TasteOptions {
   markCentreOffset?: number;
   markCentreMinPx?: number;
   rowShareFloor?: number;
+  /** Rule 4's three owner-ratified floors, overridable so a sweep can re-read the corpus at a
+   *  different setting without editing the ratified numbers. */
+  contrastFloor?: number;
+  weightFloor?: number;
+  secondarySizeFloorPx?: number;
 }
 
 function inner(el: Element, win: Window): Painted['rect'] {
@@ -344,6 +383,9 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
   const centreOffset = options.markCentreOffset ?? MARK_CENTRE_OFFSET;
   const centreMinPx = options.markCentreMinPx ?? MARK_CENTRE_MIN_PX;
   const rowFloor = options.rowShareFloor ?? ROW_SHARE_FLOOR;
+  const contrastFloor = options.contrastFloor ?? TASTE_CONTRAST_FLOOR;
+  const weightFloor = options.weightFloor ?? TASTE_WEIGHT_FLOOR;
+  const secondarySizeFloor = options.secondarySizeFloorPx ?? TASTE_SECONDARY_SIZE_PX;
 
   const items = collectPainted(doc);
   const primary = primaryTypeSize(items);
@@ -476,26 +518,33 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
     };
   }
 
-  // Rule 4, the judged half: WEIGHT AND CONTRAST TOGETHER. The class this names is text the SIZE floor passed -
-  // which is the owner's whole point, and is why it cannot be read off any one of the
-  // readability instrument's three findings. A text failing on size is already reported by the
-  // instrument that owns size; this one is about the text it waved through.
+  // Rule 4, the judged half: WEIGHT AND CONTRAST TOGETHER, against THE OWNER'S OWN FLOORS. The
+  // class this names is text the SIZE floor passed - which is the owner's whole point, and is why
+  // it cannot be read off any one of the readability instrument's three findings.
+  //
+  // WHAT IS BIG ENOUGH IS ASKED TWICE, and it has to be. The ratified table's own verdict comes
+  // first, because "the size-only instrument waved it through" is the definition of the class;
+  // then the owner's floor, because the ratified secondary floor (20px hard, 22px warn) waves
+  // through the 26px every lower third in the corpus sets its role line at, and a joint reading
+  // built on that would be answering about text the owner has already called too small. Both
+  // gates EXCLUDE - neither mints a finding - so rule 4 never becomes a second size rule.
+  //
+  // The COMPARISON is this file's, not `readabilityCheck`'s. Reading its `text-under-weight-floor`
+  // and `text-low-contrast` findings was right while the floors agreed with the owner and wrong
+  // the moment they did not: those findings are the ratified table's answers, and §25.6 measured
+  // them silent on all four rows the owner named. The readings are still that instrument's - one
+  // measurement, one place - and only the threshold moves here.
   const failedSize = new Set(
     readability.findings
       .filter((f) => (f.code === 'text-under-size-floor' || f.code === 'text-size-warning-band') && f.el)
       .map((f) => f.el),
   );
-  const weightFail = new Set(
-    readability.findings.filter((f) => f.code === 'text-under-weight-floor' && f.el).map((f) => f.el),
-  );
-  const contrastFail = new Set(
-    readability.findings.filter((f) => f.code === 'text-low-contrast' && f.el).map((f) => f.el),
-  );
   for (const reading of informational) {
     if (failedSize.has(reading.el)) continue;
+    if (reading.role === 'secondary' && reading.fontPx < secondarySizeFloor) continue;
     const failing: ('weight' | 'contrast')[] = [];
-    if (weightFail.has(reading.el)) failing.push('weight');
-    if (contrastFail.has(reading.el)) failing.push('contrast');
+    if (reading.weight < weightFloor) failing.push('weight');
+    if (reading.contrast !== null && reading.contrast < contrastFloor) failing.push('contrast');
     if (!failing.length) continue;
     report.sizeOnly.push({
       snippet: reading.snippet,
@@ -510,7 +559,8 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
       rule: 4,
       detail: `"${reading.snippet}" (${reading.el}) is big enough at ${round2(reading.fontPx)}px and`
         + ` still fails on ${failing.join(' and ')}`
-        + ` (weight ${reading.weight}${reading.contrast === null ? '' : `, contrast ${reading.contrast}:1`})`
+        + ` (weight ${reading.weight} against ${weightFloor}`
+        + `${reading.contrast === null ? '' : `, contrast ${reading.contrast}:1 against ${contrastFloor}`})`
         + ' - weight and contrast are part of legibility, not separate from it',
     });
   }
