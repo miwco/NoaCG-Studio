@@ -817,6 +817,16 @@ figure is the short final part, so the label is what may contain one). Say which
   (spxStarter cssForSubfolder; zip import strips the hop back). Contract + diagnosis:
   docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts + e2e/import-prepare.spec.ts +
   e2e/import-stretch.spec.ts.
+  **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md):
+  a layered SVG inlined VERBATIM into the HTML, its own `<text>`/`<tspan>` nodes bound as
+  `id="fN"` so the standard update() writes the designer's exact typography - no `#fwN`
+  placement rules, no erase, no stretch. The only markup edits are the bound ids and the
+  `-art` class on the root `<svg>`; sanitization happens at import (assets/svgImport.ts) and
+  the export gate re-checks it (validateTemplate rules 'svg' / 'svg-binding'). Its
+  overflow-only fit is a `fitPlacedText` applying `textLength` past the recorded original
+  width; its presets are the same box-only DESIGN_PRESETS. Fields are chosen in the wizard's
+  mapping step (mode 'svg'), never an open line list (`fieldPlan: fixed`). E2E:
+  e2e/import-svg.spec.ts.
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
   highlight, question queue, community/prayer request), 20 designs in five per-form files

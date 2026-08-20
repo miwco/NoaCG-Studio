@@ -216,7 +216,14 @@ with the Data tab revealed
 (setActivePanel('data') + the store's panelRevealNonce). Fields, styling, and motion all live
 in the editor: the Data tab's placed add, the canvas gestures, the Inspector's Style/Animations
 tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design mode never
-reaches them. **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
+reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'**, docs/SVG_IMPORT_PLAN.md): parsed,
+sanitized and inventoried at drop (assets/svgImport.ts), then ONE mapping step
+(MapSvgFieldsStep - checklist + hover-highlight on its own inline render, all detected text ON
+by default, per-family font resolution) and the shared Animation step. Zero text layers = the
+honest outlined-text answer, still creatable as a fixed graphic. A MODE like 'file', because
+Prepare/Text cannot apply. E2E: e2e/import-svg.spec.ts.
+
+**THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
 which switches the wizard to mode **'file'**: a two-stop rail (Template file -> Finish), the
 imported template as its own preview, and the ordinary Finish doors. A template declares its
 own fields, canvas and motion, so it skips Prepare/Text/Animation by having a MODE rather
