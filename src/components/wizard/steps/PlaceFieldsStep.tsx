@@ -5,12 +5,15 @@ import { uuid } from '../../../model/id';
 import FontPicker, { ensureAppFontFace } from '../FontPicker';
 import AnalyzeProposalPanel from './AnalyzeProposalPanel';
 import { suggestFieldsForArtwork } from '../../../assets/suggestFields';
+import { proposeEraseRect } from '../../../assets/eraseRegion';
 import type { DesignFieldSpec, DraftPatch, WizardDraft } from '../draft';
 
 interface Props {
   art: DesignArt;
   draft: WizardDraft;
   onDraft: (patch: DraftPatch) => void;
+  /** The still-baked note's door back to the Prepare step (the wizard owns navigation). */
+  onBackToPrepare: () => void;
 }
 
 type Tool = 'select' | 'text' | 'area' | 'image';
@@ -32,7 +35,7 @@ function sampleText(title: string): string {
  * (draft.ts withDesignFieldSpecs), so this canvas, the editor, and the export agree by
  * construction. The right-hand WizardPreview stays the ground truth of the created code.
  */
-export default function PlaceFieldsStep({ art, draft, onDraft }: Props) {
+export default function PlaceFieldsStep({ art, draft, onDraft, onBackToPrepare }: Props) {
   const [tool, setTool] = useState<Tool>('text');
   const [selectedId, setSelectedId] = useState<string | null>(draft.designFields[0]?.id ?? null);
   const [fontOpen, setFontOpen] = useState<'field' | 'design' | null>(null);
@@ -146,6 +149,24 @@ export default function PlaceFieldsStep({ art, draft, onDraft }: Props) {
    */
   const artworkUrl = typeof draft.importedImages[0]?.data === 'string' ? draft.importedImages[0].data : null;
   const [suggestNote, setSuggestNote] = useState<string | null>(null);
+
+  // STILL-BAKED TEXT, carried forward honestly: the Prepare step's scan is an offer the
+  // wizard never blocks on, so a user can walk past it - and fields placed here would then
+  // sit ON TOP of the baked words with nothing saying so (the Yle-demo "text is not being
+  // removed" walk). Re-scan the CURRENT artwork (an erased design comes back clean, so a
+  // completed erase never nags) and stand down for the standing "it's meant to be there"
+  // answer (draft.designKeepBakedText). Same one-scan-per-artwork guard as Prepare's.
+  const [bakedLines, setBakedLines] = useState<number | null>(null);
+  const bakedScanned = useRef<string | null>(null);
+  useEffect(() => {
+    if (!artworkUrl || bakedScanned.current === artworkUrl) return;
+    bakedScanned.current = artworkUrl;
+    void proposeEraseRect(artworkUrl).then((result) => {
+      if (bakedScanned.current !== artworkUrl) return;
+      setBakedLines(result.proposal ? result.proposal.lines : null);
+    });
+  }, [artworkUrl]);
+  const bakedNote = bakedLines !== null && !draft.designKeepBakedText;
   const [suggesting, setSuggesting] = useState(false);
   const suggest = useCallback(
     async (auto: boolean) => {
@@ -338,6 +359,27 @@ export default function PlaceFieldsStep({ art, draft, onDraft }: Props) {
       </div>
       {suggestNote && (
         <p className="hint" style={{ marginTop: -4, marginBottom: 8 }} data-testid="suggest-note">{suggestNote}</p>
+      )}
+      {bakedNote && (
+        <div className="wz-prep-verdict bad" data-testid="placefields-baked-note">
+          <p>
+            Baked-in text is still part of the artwork
+            {bakedLines !== null && bakedLines > 1 ? ` (${bakedLines} lines of it)` : ''} — it
+            cannot be edited on air, and fields placed here will sit on top of it. Erase it on
+            the Prepare step, or keep it if it is part of the design.
+          </p>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="primary" data-testid="placefields-baked-back" onClick={onBackToPrepare}>
+              ← Erase it on Prepare
+            </button>
+            <button
+              data-testid="placefields-baked-keep"
+              onClick={() => onDraft({ designKeepBakedText: true })}
+            >
+              It's meant to be there
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Optional, proposal-only AI assistance - renders nothing when the server task is

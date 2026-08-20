@@ -19,6 +19,7 @@ import { openGraphicById, useSaveUi } from './store/saveActions';
 import { raiseStorageAlert } from './store/storageAlert';
 import { isAdvancedMode, useAdvancedMode } from './components/useAdvancedMode';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
+import StorageHealthNotice from './components/StorageHealthNotice';
 
 export default function App() {
   // Which editor world is active: SPX live graphics or the AI video editor. Persisted;
@@ -221,6 +222,10 @@ export default function App() {
           defect). */}
       <StorageAlertDialog />
       <AnalyticsConsentBanner />
+      {/* A boot that could not use IndexedDB (blocked, wedged, or absent) says so once,
+          honestly - model/durableStore.ts durableStoreHealth. Renders null on the healthy
+          path, which is every ordinary browser. */}
+      <StorageHealthNotice />
     </>
   );
 }

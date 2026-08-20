@@ -270,6 +270,96 @@ test('erase: on a 2x export the seeded field maps to design pixels', async ({ pa
   expect(Math.abs((state.font!.value ?? 0) - font)).toBeLessThan(10);
 });
 
+test('erase: while a non-flat fill is pending, compare shows the original and discard keeps the text', async ({ page }) => {
+  await dropCard(page, framedCardPng(1000, 600, { background: 'noise' }));
+  await toEraseSurface(page);
+  await drawRect(page, MARK.x0, MARK.y0, MARK.x1, MARK.y1);
+  await expect(page.getByTestId('erase-warning')).toBeVisible();
+
+  // The decision is visual - the proposed fill is on the canvas - so the original must be
+  // one held press away WHILE deciding, not only after accepting.
+  const img = page.getByTestId('erase-surface').locator('img');
+  const pendingSrc = await img.getAttribute('src');
+  const compare = page.getByTestId('erase-compare-pending');
+  const box = (await compare.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect.poll(async () => (await img.getAttribute('src')) !== pendingSrc).toBe(true);
+  await page.mouse.up();
+  await expect.poll(async () => img.getAttribute('src')).toBe(pendingSrc);
+
+  // Discarding says what it means: the baked words stay in the artwork.
+  await page.getByRole('button', { name: 'Discard — keep the text' }).click();
+  await expect(page.getByTestId('erase-warning')).toHaveCount(0);
+  await expect(page.getByTestId('erase-done')).toHaveCount(0);
+});
+
+/** A card whose ONE marked region holds TWO LINES of real typeset text - one over the flat
+ *  card, one over a radial-gradient pool (smooth, so it is not mistaken for type; nonplanar,
+ *  so no fitted plane explains it). What a partly-decorated design looks like to the erase:
+ *  a PARTIAL success it must report per area, not as one verdict. */
+async function mixedCardPng(page: Page): Promise<Buffer> {
+  const base64 = await page.evaluate(async () => {
+    const face = new FontFace('Inter', 'url(/fonts/inter.woff2)');
+    await face.load();
+    document.fonts.add(face);
+    const c = document.createElement('canvas');
+    c.width = 1000;
+    c.height = 600;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#f2f3f5';
+    g.fillRect(0, 0, 1000, 600);
+    // The radial pool behind the SECOND line - a bowl no linear fit reconstructs.
+    const pool = g.createRadialGradient(680, 380, 0, 680, 380, 200);
+    pool.addColorStop(0, '#6a7284');
+    pool.addColorStop(1, '#f2f3f5');
+    g.fillStyle = pool;
+    g.fillRect(480, 180, 400, 400);
+    g.fillStyle = '#16181c';
+    g.textBaseline = 'top';
+    g.font = '700 44px Inter';
+    g.fillText('Alexandra Riva', 140, 230); // line 1: over the flat card
+    g.font = '400 40px Inter';
+    g.fillText('Correspondent', 520, 350); // line 2: over the pool
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  return Buffer.from(base64, 'base64');
+}
+
+test('erase: a mixed-background mark says WHICH text areas took the average fill, before and after', async ({ page }) => {
+  // ONE goto: the fixture typesets with the app's own bundled font, so it needs the page -
+  // and a second navigation would land on Home instead of the auto-opened wizard.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  const buffer = await mixedCardPng(page);
+  await page.locator('[data-entry="import-graphic"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({
+    name: 'mixed.png',
+    mimeType: 'image/png',
+    buffer,
+  });
+  await page.getByRole('button', { name: 'Next →' }).click();
+  await expect(page.getByTestId('erase-surface')).toBeVisible();
+  // Real typeset lines usually earn the scan's own box; this test draws its own mark over
+  // BOTH lines, so dismiss the offer when it is there and open the surface when it is not.
+  const dismiss = page.getByTestId('erase-proposal-dismiss');
+  const bakedYes = page.getByTestId('baked-yes');
+  await expect(dismiss.or(bakedYes)).toBeVisible();
+  if (await dismiss.count()) await dismiss.click();
+  else await bakedYes.click();
+  await drawRect(page, 0.1, 0.34, 0.86, 0.7);
+
+  // Before applying: the warning already counts areas (1 of 2 not flat).
+  await expect(page.getByTestId('erase-warning')).toContainText('1 of 2 text areas');
+  await page.getByTestId('erase-continue-anyway').click();
+
+  // After applying: the mark's own row keeps that truth instead of flattening it to
+  // "average fill" - the flat bar WAS rebuilt cleanly, and the row says which half was not.
+  await expect(page.getByTestId('erase-marks').locator('li')).toContainText(
+    'average fill in 1 of 2 areas',
+  );
+});
+
 test('erase: the cleaned PNG is downloadable', async ({ page }) => {
   await dropCard(page, framedCardPng(1000, 600), 'my-card.png');
   await toEraseSurface(page);

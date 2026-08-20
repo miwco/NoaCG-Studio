@@ -87,6 +87,27 @@ let db: IDBDatabase | null = null;
 let hydrated = false;
 let usingIndexedDb = false;
 
+/** Why this session is NOT on IndexedDB (null = it is). Read by the boot-health notice and
+ *  the connection check, so a restricted browser fails loudly instead of silently. */
+export type DurableDegradeReason = 'no-indexeddb' | 'open-failed' | 'read-failed' | 'timeout';
+let degradeReason: DurableDegradeReason | null = null;
+
+/**
+ * Hydration's outcome is FINAL the moment it is decided, whichever side decides it first.
+ * A wedged IndexedDB backend (an `open` that never fires any event - seen behind corporate
+ * site-data policies and AV interception, and the one failure mode `openDatabase` cannot turn
+ * into a rejection) would otherwise park the whole boot behind an await that never resolves.
+ * So hydration races a timeout, and this latch is what makes the race safe: if the timeout
+ * degrades the session to localStorage, a LATE open must be abandoned - were it committed, the
+ * app would have already booted from (empty) localStorage, and the first autosave through the
+ * suddenly-active mirror would overwrite the saved documents with a blank session.
+ */
+let settled = false;
+
+/** How long boot waits for IndexedDB before degrading to localStorage. Generous against a slow
+ *  disk, small against a person watching a stuck tab. */
+const HYDRATE_TIMEOUT_MS = 4000;
+
 /**
  * Writes that have been HANDED TO the database and not yet settled.
  *
@@ -260,25 +281,51 @@ let hydration: Promise<void> | null = null;
  * that cannot give us IndexedDB degrades to localStorage instead of failing to boot.
  */
 export function hydrateDurableStore(): Promise<void> {
-  if (!hydration) hydration = runHydration();
+  if (!hydration) {
+    hydration = (async () => {
+      // The race, not a rejection: `openDatabase` can only reject on an event IndexedDB
+      // actually fires, and a wedged backend fires none. See `settled` above for why the
+      // loser of this race must then stand down entirely.
+      await Promise.race([
+        runHydration(),
+        new Promise<void>((resolve) => setTimeout(resolve, HYDRATE_TIMEOUT_MS)),
+      ]);
+      if (!settled) finishDegraded('timeout');
+    })();
+  }
   return hydration;
 }
 
 async function runHydration(): Promise<void> {
   if (typeof indexedDB === 'undefined') {
-    finishDegraded();
+    finishDegraded('no-indexeddb');
     return;
   }
   let opened: IDBDatabase;
   try {
     opened = await openDatabase();
   } catch {
-    finishDegraded();
+    finishDegraded('open-failed');
+    return;
+  }
+  // Arriving second in the race: the session already runs on localStorage and the app has
+  // booted from it. Committing now would hand the mirror to autosave mid-session (see
+  // `settled`); abandoning keeps the database exactly as the next healthy boot expects it.
+  if (settled) {
+    try {
+      opened.close();
+    } catch {
+      // Nothing to release.
+    }
     return;
   }
   try {
     const stored = await idbReadAll(opened);
-    if (!stored.has(MIGRATED_KEY)) await migrateFromLocalStorage(opened, stored);
+    if (!settled && !stored.has(MIGRATED_KEY)) await migrateFromLocalStorage(opened, stored);
+    if (settled) {
+      opened.close();
+      return;
+    }
     for (const key of DURABLE_KEYS) {
       const value = stored.get(key);
       if (typeof value === 'string') mirror.set(key, value);
@@ -286,13 +333,14 @@ async function runHydration(): Promise<void> {
     db = opened;
     usingIndexedDb = true;
     hydrated = true;
+    settled = true;
   } catch {
     try {
       opened.close();
     } catch {
       // Closing a database that never opened cleanly is not worth reporting.
     }
-    finishDegraded();
+    finishDegraded('read-failed');
     return;
   }
   // Best-effort: ask the browser not to evict this origin under storage pressure. Ignored
@@ -305,7 +353,10 @@ async function runHydration(): Promise<void> {
 }
 
 /** IndexedDB is unusable here: keep reading and writing localStorage, ceiling and all. */
-function finishDegraded(): void {
+function finishDegraded(reason: DurableDegradeReason): void {
+  if (settled) return;
+  settled = true;
+  degradeReason = reason;
   db = null;
   usingIndexedDb = false;
   hydrated = true;
@@ -328,7 +379,16 @@ async function migrateFromLocalStorage(
     // it), and a stale localStorage leftover must never overwrite it.
     if (value !== null && !stored.has(key)) moving.push([key, value]);
   }
+  // Abandoned by the hydration timeout: this session runs on localStorage, so it must stay
+  // authoritative - no copy, no marker, and the next healthy boot migrates the then-current
+  // values instead of a snapshot from a session that kept editing after it.
+  if (settled) return;
   await idbWrite(target, [...moving, [MIGRATED_KEY, new Date().toISOString()]]);
+  // The narrow losing case: the timeout fired while the transaction was in flight. The copy
+  // and the marker are in the database now, but this session is on localStorage - keep the
+  // localStorage originals too (skip the removes), so the session keeps its data. The boot
+  // notice already tells the user this session's edits may not survive.
+  if (settled) return;
   stored.set(MIGRATED_KEY, 'done');
   for (const [key, value] of moving) {
     stored.set(key, value);
@@ -428,6 +488,16 @@ export async function flushDurableStore(): Promise<void> {
 /** True when the durable documents are actually in IndexedDB (false = the degraded fallback). */
 export function isDurableStoreActive(): boolean {
   return hydrated && usingIndexedDb;
+}
+
+/**
+ * The boot outcome, for the surfaces that say it out loud: the app-level storage notice and
+ * the connection check. `degraded` is null on the healthy path; 'timeout' is the one reason
+ * where saved documents EXIST but could not be shown (the others mean the browser never had
+ * them anywhere else than localStorage to begin with).
+ */
+export function durableStoreHealth(): { active: boolean; degraded: DurableDegradeReason | null } {
+  return { active: hydrated && usingIndexedDb, degraded: degradeReason };
 }
 
 /**

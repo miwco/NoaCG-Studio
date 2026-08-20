@@ -203,7 +203,14 @@ the proposal is an OFFER (drag the box or its four grips, "Erase this", or dismi
 manual tools), never applied pixels, it re-runs on the CLEANED artwork after every accepted
 erase, and under its confidence bar it proposes NOTHING and names the rule that refused
 (`erase-scan-refusal`) - a box on the wrong thing costs the student more than an empty canvas.
-Its overlay CSS is wizard-local (`prepProposal.css`), not styles.css. Marks ACCUMULATE into `draft.designErases`, each run
+Its overlay CSS is wizard-local (`prepProposal.css`), not styles.css. **"It's meant to be
+there / no baked text" is DRAFT state** (`designKeepBakedText`): Prepare stops re-proposing
+on return and the Text step's note stands down; "yes, mark it" clears it, a fresh drop
+resets it. **The Text step re-scans the artwork and says so when detected text remains
+un-erased** (`placefields-baked-note`: back-to-Prepare door + keep answer) - Next never
+blocks, the fact travels. The pending non-flat fill offers hold-to-compare, its discard
+says "keep the text", and an applied mark keeps `DesignEraseState.segments`.
+Marks ACCUMULATE into `draft.designErases`, each run
 against the artwork as it stands; removing one REPLAYS the survivors from
 draft.designOriginal, which is what keeps fills from compounding (a fill cannot be undone in
 place). The erase MEASURES the ink it removes, split into LINES, and every line seeds a real

@@ -4,6 +4,22 @@ NoaCG Studio exports any graphic as an **OGraf v1 Graphic** - the EBU's open sta
 web-based broadcast graphics. This page is for the engineer who has to load one of our packages
 into their renderer: what we emit, what maps to what, and where the limits are.
 
+## The free starters page (`/ograf`)
+
+**<https://noacg.studio/ograf>** hands out six curated catalog graphics as free OGraf starter
+packages - the shareable answer to "we want editable base templates to teach our staff on"
+(the Yle ask, 2026-08-20; `docs/GOALS.md` "the SVG road"). It is a public, indexable page
+(`ograf.html` + `src/ograf/`, vanilla TS): the card copy is static, and each download is built
+**by the real exporter at click time** - `ografTarget.build()` on `variant.create()` - so a
+starter can never drift from what the product ships, and every package passes the same
+schema gate below on its way out. The one addition over an ordinary export is **GUIDE.md**
+(`src/ograf/guide.ts`): the modification walkthrough - how to load it, drive its data, restyle
+the `:root` contract, and edit the `NOACG_ANIM` motion - generated from the template itself.
+The starters are exported with LIVE intent (the post-production gate rightly refuses
+content-driven motion such as the ticker's crawl). Pinned by `e2e/ograf-starters.spec.ts`,
+including that every named card still resolves against the catalog - a design rename must
+break that spec, not the page.
+
 - Specification: <https://ograf.ebu.io/v1/specification/docs/Specification.html>
 - Manifest schema: <https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json>
 - Spec version targeted: **v1**. There is no vendor dialect - a package is plain OGraf.

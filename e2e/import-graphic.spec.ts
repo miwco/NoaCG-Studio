@@ -1190,3 +1190,50 @@ test('artwork with no baked-in text is offered nothing, and names the rule that 
   await page.getByTestId('baked-yes').click();
   await expect(page.getByTestId('erase-surface')).toBeVisible();
 });
+
+test('detected text walked past unerased follows to the Text step as an honest note', async ({ page }) => {
+  // The wizard never blocks Next, so ignoring the proposal must not silently drop the fact:
+  // fields placed now would sit ON TOP of the baked words, and nothing said so (the Yle-demo
+  // complaint "the text is not being removed" was exactly this walk).
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  const art = await bakedStrap(page);
+  await toPrepare(page, art.base64);
+  await expect(page.getByTestId('erase-proposal')).toBeVisible();
+
+  await page.locator('.wz-next').click();
+  const note = page.getByTestId('placefields-baked-note');
+  await expect(note).toBeVisible();
+  await expect(note).toContainText('still part of the artwork');
+
+  // Its door goes back to Prepare, where the proposal still stands.
+  await page.getByTestId('placefields-baked-back').click();
+  await expect(page.getByTestId('erase-proposal')).toBeVisible();
+});
+
+test('"it is meant to be there" is an answer the wizard remembers', async ({ page }) => {
+  // A wordmark or a deliberate slogan LOOKS like baked text to the scan. Declaring it
+  // intentional must silence the note AND stop Prepare re-proposing on every return - an
+  // answer that lasts one render is a nag, not a question.
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  const art = await bakedStrap(page);
+  await toPrepare(page, art.base64);
+  await expect(page.getByTestId('erase-proposal')).toBeVisible();
+
+  await page.locator('.wz-next').click();
+  await page.getByTestId('placefields-baked-keep').click();
+  await expect(page.getByTestId('placefields-baked-note')).toHaveCount(0);
+
+  // Back on Prepare: no auto-reopened proposal - the quiet "nothing to erase" state, with
+  // its own way to change the answer.
+  await page.locator('.wz-back').click();
+  await expect(page.getByTestId('erase-surface')).toBeVisible();
+  await expect(page.getByTestId('erase-proposal')).toHaveCount(0);
+  await page.getByTestId('baked-yes').click();
+  await expect(page.getByTestId('erase-proposal')).toBeVisible();
+
+  // And forward again: changing the answer back re-arms the note.
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('placefields-baked-note')).toBeVisible();
+});

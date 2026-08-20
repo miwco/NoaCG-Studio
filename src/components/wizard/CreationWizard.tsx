@@ -1429,6 +1429,7 @@ export default function CreationWizard() {
                     // erase's source, and any erase from a previous artwork is meaningless.
                     designOriginal: importedImages[0] ?? null,
                     designErases: [],
+                    designKeepBakedText: false,
                     designFields: [],
                     category: 'imported-design',
                     // There is no design to choose — the artwork IS it — so the variant is
@@ -1514,7 +1515,12 @@ export default function CreationWizard() {
               />
             )}
             {step === 3 && mode === 'design' && draft.designArt && (
-              <PlaceFieldsStep art={draft.designArt} draft={draft} onDraft={patch} />
+              <PlaceFieldsStep
+                art={draft.designArt}
+                draft={draft}
+                onDraft={patch}
+                onBackToPrepare={() => setStep(2)}
+              />
             )}
             {step === 4 && mode === 'design' && variant && (
               <AnimationStep
@@ -1531,6 +1537,8 @@ export default function CreationWizard() {
                 images={draft.importedImages}
                 original={draft.designOriginal}
                 erases={draft.designErases}
+                keepBaked={draft.designKeepBakedText}
+                onKeepBaked={(keep) => patch({ designKeepBakedText: keep })}
                 onErases={(designErases, importedImages) =>
                   patch({
                     designErases,

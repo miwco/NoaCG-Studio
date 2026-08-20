@@ -71,6 +71,13 @@ customers, so their proven capabilities are our requirements list.
   playout.
 - **Loopic** - HTML broadcast graphics, the closest positioning to ours, with a real editor. Its
   timeline and canvas editing are what our Advanced mode has to beat.
+- **MXMZ** (mxmz.com, added 2026-08-20 - named by Yle as the working model) - Dutch cloud
+  broadcast-graphics SaaS out of Banijay/Southfields: design in Illustrator/Figma/Canva, import
+  the SVG with **every layer auto-exposed** for animation and JSON data binding, browser timeline,
+  operator playout with newsroom/sports-data integrations; 200+ channels, from ~$3k/yr. They prove
+  the "your own SVG, playable" workflow at broadcast scale, so our SVG import has to match it
+  (layers auto-exposed, no renaming ritual) - and beat it on what they lock away: free-forever,
+  self-host, export the files anywhere, a catalog and AI they don't have.
 
 ---
 
@@ -156,6 +163,32 @@ render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
       in at 1366px the topbar overflowed and hung the ACCOUNT AVATAR off the screen edge. The rest
       was rot from the student release - it only ever runs by hand, so nothing reported any of it.
       **Run it before the class, and again after any change to publish, output or the topbar.**
+
+---
+
+## NEXT - your own graphic, playable (the SVG road)
+
+**Owner direction, 2026-08-20, after the Yle demo - north-star material, wanted working in a few
+weeks.** People take pride in graphics they made themselves; the product must let them PLAY OUT
+their own work, not only our catalog's. The raster Import Graphic cannot deliver that promise -
+erase fails on textured art and AI recreation is "inspired by", never the exact graphic. **SVG is
+code**: a layered SVG from Illustrator/Figma imported verbatim, its text and image layers bound to
+data fields, IS the user's exact graphic as a playable template - exporting to SPX, CasparCG,
+OGraf, OBS like anything else. MXMZ proves this workflow commercially; we do it free and open.
+The binding plan is `docs/SVG_IMPORT_PLAN.md`.
+
+- [ ] **SVG import v1**: drop an SVG into the Import door, text layers auto-detected as bindable
+      fields (no renaming ritual; layer names prefill labels), map + preview, create - the exact
+      graphic becomes an ordinary NoaCG template. Acceptance: a student takes an Illustrator SVG
+      to air, unchanged pixels, inside one session.
+- [ ] **OGraf boilerplate story** (Yle's explicit ask): a curated, teaching-grade OGraf starter
+      set - our validated export packaged as free, hand-editable base templates an organization
+      modifies instead of starting from scratch. Study `SuperFlyTV/ograf-devtool` + the EBU
+      examples for what authors already get.
+- [ ] **Restricted-network resilience**: the Yle demo died inside the wizard on their corporate
+      network. No third-party host may ever block create/preview/export; diagnose, harden,
+      pin with an e2e spec that walks the wizard with all third-party hosts blocked, and give
+      failures a visible diagnosis instead of a silent stall.
 
 ---
 
