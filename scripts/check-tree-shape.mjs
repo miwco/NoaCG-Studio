@@ -34,7 +34,7 @@ export const ALLOWED_ROOT_ENTRIES = new Set([
   '.agent-workflows', '.agents', '.claude', '.codex', '.dependency-cruiser.cjs', '.env.bench',
   '.env.example', '.github', '.gitignore', '.nvmrc', 'AGENTS.md', 'CLAUDE.md', 'LICENSE',
   'NoaCG-Brand-Kit', 'README.md', 'admin.html', 'api', 'app.html', 'benchmarks', 'docs', 'e2e',
-  'eslint.config.js', 'index.html', 'join.html', 'output.html', 'package-lock.json',
+  'eslint.config.js', 'index.html', 'join.html', 'ograf.html', 'output.html', 'package-lock.json',
   'package.json', 'packs', 'player-host', 'playwright.catalog.config.ts', 'playwright.config.ts',
   'playwright.live.config.ts', 'privacy.html', 'public', 're-design', 'render-worker', 'scripts', 'src',
   'supabase', 'terms.html', 'tsconfig.api.json', 'tsconfig.json', 'vercel.json', 'vite.config.ts',

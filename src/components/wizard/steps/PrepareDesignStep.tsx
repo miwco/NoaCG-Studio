@@ -21,6 +21,10 @@ interface Props {
   original: AssetFile | null;
   /** Every applied erase, in the order it was marked. */
   erases: DesignEraseState[];
+  /** The user's standing answer that the baked text is intentional / absent (draft.ts
+   *  designKeepBakedText) — it must survive leaving the step, so it lives on the draft. */
+  keepBaked: boolean;
+  onKeepBaked: (keep: boolean) => void;
   /** Replace the whole erase list and the artwork it produced (one draft patch). */
   onErases: (erases: DesignEraseState[], images: AssetFile[]) => void;
   /** Set/clear the artwork's stretch mode (lands on draft.designArt.stretch). */
@@ -50,13 +54,19 @@ export default function PrepareDesignStep({
   images,
   original,
   erases,
+  keepBaked,
+  onKeepBaked,
   onErases,
   onStretch,
   onDemoText,
 }: Props) {
   // Has the user answered "does it have baked-in text?" — starts answered when an erase
-  // already exists (coming back to the step keeps the surface open).
-  const [marking, setMarking] = useState<boolean | null>(erases.length > 0 ? true : null);
+  // already exists (coming back to the step keeps the surface open), and answered NO when
+  // the draft carries the standing "it's meant to be there" answer, so returning to the
+  // step never re-proposes over a decision already made.
+  const [marking, setMarking] = useState<boolean | null>(
+    erases.length > 0 ? true : keepBaked ? false : null,
+  );
   // A run whose background was NOT flat, held for an explicit "use it anyway" instead of
   // silently applying a fill the samples disagreed on.
   const [pending, setPending] = useState<{ rect: EraseRect; result: EraseResult } | null>(null);
@@ -127,7 +137,16 @@ export default function PrepareDesignStep({
     gradient: result.sampling.gradient,
     fill: result.sampling.fill,
     ink: result.ink ?? undefined,
+    // Kept, not dropped: a mark holding several text areas records how many filled clean,
+    // so the applied mark's row can keep reporting the PARTIAL truth the warning showed.
+    segments: result.sampling.segments,
   });
+
+  /** The erase chain needs the untouched upload to re-run from; without it every erase
+   *  control would be a silent no-op, so the surface says so instead (unreachable through
+   *  the ordinary flow today — both are set by the same drop patch — but a dead button
+   *  must never be the failure mode). */
+  const canErase = !!original && typeof current?.data === 'string';
 
   /**
    * Mark ANOTHER region. Each erase runs against the artwork as it stands, so a design with a
@@ -220,15 +239,17 @@ export default function PrepareDesignStep({
     onDemoText(DEMO_NAME.slice(0, demoLen));
   };
 
-  // What the surface shows: the pending (unconfirmed) fill, the original while the user
-  // holds "compare", otherwise the current (possibly cleaned) artwork.
-  const shownSrc = pending
-    ? pending.result.dataUrl
-    : comparing && original && typeof original.data === 'string'
+  // What the surface shows: the original while the user holds "compare" (which must win even
+  // over a pending fill — the pending decision is exactly when the original is needed), then
+  // the pending (unconfirmed) fill, otherwise the current (possibly cleaned) artwork.
+  const shownSrc =
+    comparing && original && typeof original.data === 'string'
       ? original.data
-      : typeof current?.data === 'string'
-        ? current.data
-        : '';
+      : pending
+        ? pending.result.dataUrl
+        : typeof current?.data === 'string'
+          ? current.data
+          : '';
 
   return (
     <div>
@@ -238,7 +259,7 @@ export default function PrepareDesignStep({
         sourceHeight={sourceH}
         rects={pending ? [...erases.map((e) => e.rect), pending.rect] : erases.map((e) => e.rect)}
         onRect={(r) => void run(r)}
-        drawEnabled={marking === true && !busy}
+        drawEnabled={marking === true && !busy && canErase}
         proposed={marking === false || pending || busy ? null : proposedRect}
         onProposedChange={setProposedRect}
       >
@@ -295,7 +316,16 @@ export default function PrepareDesignStep({
             <button data-testid="erase-continue-anyway" onClick={applyPending}>
               Use it anyway
             </button>
-            <button onClick={() => setPending(null)}>Discard</button>
+            <button onClick={() => setPending(null)}>Discard — keep the text</button>
+            <button
+              data-testid="erase-compare-pending"
+              onPointerDown={() => setComparing(true)}
+              onPointerUp={() => setComparing(false)}
+              onPointerLeave={() => setComparing(false)}
+              title="Hold to see the original — the decision is visual, so compare while deciding"
+            >
+              Hold to compare
+            </button>
           </div>
         </div>
       )}
@@ -323,7 +353,15 @@ export default function PrepareDesignStep({
                     : e.ink
                       ? '1 line'
                       : 'no text found'}
-                  {e.uniform ? (e.gradient ? ' · gradient rebuilt' : '') : ' · average fill'}
+                  {e.uniform
+                    ? e.gradient
+                      ? ' · gradient rebuilt'
+                      : ''
+                    : // A mark holding several text areas keeps the per-area truth: the clean
+                      // ones WERE rebuilt, and the row says which share was not.
+                      e.segments && e.segments.clean > 0
+                      ? ` · average fill in ${e.segments.total - e.segments.clean} of ${e.segments.total} areas`
+                      : ' · average fill'}
                 </span>
                 <button
                   data-testid={`erase-remove-${i}`}
@@ -373,10 +411,23 @@ export default function PrepareDesignStep({
         )}
         {marking === null && (
           <div className="row" style={{ gap: 8, marginTop: 10 }}>
-            <button data-testid="baked-no" onClick={() => setMarking(false)}>
+            <button
+              data-testid="baked-no"
+              onClick={() => {
+                setMarking(false);
+                onKeepBaked(true);
+              }}
+            >
               No baked-in text
             </button>
-            <button className="primary" data-testid="baked-yes" onClick={() => setMarking(true)}>
+            <button
+              className="primary"
+              data-testid="baked-yes"
+              onClick={() => {
+                setMarking(true);
+                onKeepBaked(false);
+              }}
+            >
               Yes — mark it
             </button>
           </div>
@@ -384,12 +435,25 @@ export default function PrepareDesignStep({
         {marking === false && (
           <p className="hint" style={{ marginTop: 10 }}>
             Nothing to erase.{' '}
-            <button className="link-inline" data-testid="baked-yes" onClick={() => setMarking(true)}>
+            <button
+              className="link-inline"
+              data-testid="baked-yes"
+              onClick={() => {
+                setMarking(true);
+                onKeepBaked(false);
+              }}
+            >
               Actually, there is baked-in text
             </button>
           </p>
         )}
-        {marking && erases.length === 0 && !pending && (
+        {marking && !canErase && (
+          <p className="hint" style={{ marginTop: 10 }} data-testid="erase-unavailable">
+            Erasing is unavailable: the original upload is no longer part of this draft, so a
+            fill could not be undone or replayed. Drop the artwork again on the Design step.
+          </p>
+        )}
+        {marking && canErase && erases.length === 0 && !pending && (
           <p className="hint" style={{ marginTop: 10 }}>
             Drag a box over the baked-in text on the artwork above — one box per piece of text,
             so a name and a title each become their own field. Remove a box any time; the

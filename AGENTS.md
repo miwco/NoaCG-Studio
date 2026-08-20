@@ -69,7 +69,7 @@ Vite, both Playwright configs, the guard hooks and the dev scripts all read that
 never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details:
 **`docs/DEV_PORTS.md`**; `npm run test:ports` covers the allocator.
 
-**Seven pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
+**Eight pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
 Vercel `cleanUrls` in production.
 
 | URL | Entry | What it is |
@@ -81,6 +81,7 @@ Vercel `cleanUrls` in production.
 | `/join/<name>` | `join.html` | PUBLIC audience page (also `/join?p=<slug>`, `?pv=<slug>` for the presenter view) - vanilla TS, `noindex` (`docs/INTERACTIVE_PLAYOUT_PLAN.md` Phase 5) |
 | `/terms` | `terms.html` | PUBLIC terms for accounts and optional hosted services |
 | `/privacy` | `privacy.html` | PUBLIC privacy policy, including managed AI and Custom/BYO processing |
+| `/ograf` | `ograf.html` | PUBLIC free OGraf starters - built by the real exporter on click (`src/ograf/`, `docs/OGRAF.md`) |
 
 ## Non-negotiable principles (these override default behaviour)
 
@@ -271,6 +272,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
   matching `<meta name="color-scheme" content="dark">` into the preview srcdoc. **Keep them
   paired** - Chromium paints an iframe opaque (white stage) when the schemes disagree.
+- `/app` boots through app.html's inline BOOT WATCHDOG + connection check: `?diag=1` renders
+  the inline diagnostics (main.tsx stands down there), durable-store hydration times out to
+  localStorage after 4 s (`durableStoreHealth` -> StorageHealthNotice), and a boot that never
+  mounts paints a plain-HTML diagnosis. Pinned by `e2e/network-resilience.spec.ts`; ops view
+  in docs/DEPLOYMENT.md ("Where to look").
 - The e2e suite pins **offline mode** via `webServer.env`, but `reuseExistingServer: true` means a
   dev server already running on THIS checkout's port (started by hand, with the real `.env`) gets
   reused - backend-sensitive specs then fail confusingly. Kill any manual server on this

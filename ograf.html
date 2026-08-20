@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- FREE OGRAF STARTERS (docs/GOALS.md "the SVG road", the Yle ask): broadcasters adopting
+         the EBU's OGraf standard want editable BASE packages, not from-scratch authoring. This
+         page hands out curated NoaCG exports as exactly that. The card copy below is STATIC and
+         crawlable; src/ograf/main.ts enhances each [data-starter] card with a live preview and
+         a download built by the REAL exporter at click time - the packages can never drift from
+         the product, because they are the product. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Free OGraf starter templates — NoaCG Studio</title>
+    <meta
+      name="description"
+      content="Six free, open OGraf v1 starter graphics — lower third, corner bug, ticker, scoreboard, stat card, holding screen. EBU-schema-validated packages with readable, commented code and a modification guide. Download and make them yours."
+    />
+    <link rel="canonical" href="https://noacg.studio/ograf" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0c10" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content="Free OGraf starter templates" />
+    <meta property="og:description" content="EBU-OGraf-v1 starter graphics with readable code and a modification guide. Free, no account, made with NoaCG Studio." />
+    <meta property="og:type" content="website" />
+    <style>
+      :root {
+        --bg: #0a0c10;
+        --bg-panel: #12151c;
+        --border: #232833;
+        --text: #e8eaf0;
+        --text-dim: #aab0bf;
+        --accent: #f6a623;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+      body {
+        font-family: 'Space Grotesk', system-ui, sans-serif;
+        line-height: 1.6;
+        -webkit-text-size-adjust: 100%;
+      }
+      @font-face {
+        font-family: 'Space Grotesk';
+        src: url('/fonts/space-grotesk.woff2') format('woff2');
+        font-weight: 300 700;
+        font-display: swap;
+      }
+      a { color: var(--accent); }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+      header.site {
+        display: flex; align-items: center; gap: 10px;
+        padding: 18px 0;
+      }
+      header.site .mark { font-weight: 700; letter-spacing: .02em; color: var(--text); text-decoration: none; }
+      header.site .mark span { color: var(--accent); }
+      header.site nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; }
+      header.site nav a { color: var(--text-dim); text-decoration: none; }
+      header.site nav a:hover { color: var(--text); }
+      .hero { padding: 40px 0 10px; max-width: 720px; }
+      .hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.15; margin: 0 0 14px; }
+      .hero h1 em { color: var(--accent); font-style: normal; }
+      .hero p { color: var(--text-dim); margin: 0 0 10px; }
+      .badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; font-size: 12.5px; }
+      .badges li { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; color: var(--text-dim); }
+      .grid {
+        display: grid; gap: 18px; margin: 34px 0 10px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      }
+      article.starter {
+        border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel);
+        display: flex; flex-direction: column; overflow: hidden;
+      }
+      .preview {
+        aspect-ratio: 16 / 9; background:
+          repeating-conic-gradient(#0e1117 0% 25%, #0b0e13 0% 50%) 0 0 / 24px 24px;
+        position: relative; overflow: hidden;
+      }
+      /* Anchored at the centre for preview/frameGraphic's transform (the MiniPreview rule):
+         pull back by half the iframe's own size, scale, slide the graphic's box to the middle. */
+      .preview iframe { position: absolute; top: 50%; left: 50%; border: 0; transform-origin: center; }
+      .starter .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .starter h2 { margin: 0; font-size: 17px; }
+      .starter .cat { color: var(--accent); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; }
+      .starter p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
+      .starter p.teaches { font-size: 12.5px; }
+      .starter p.teaches strong { color: var(--text); font-weight: 600; }
+      .starter .row { display: flex; gap: 10px; margin-top: auto; padding-top: 10px; align-items: center; }
+      button.dl {
+        font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+        background: var(--accent); color: #16130a; border: 0; border-radius: 8px; padding: 9px 14px;
+      }
+      button.dl:disabled { opacity: .55; cursor: default; }
+      .starter .row a { font-size: 13px; }
+      .note { font-size: 12px; color: var(--text-dim); min-height: 16px; }
+      section.about { border-top: 1px solid var(--border); margin-top: 44px; padding: 30px 0 10px; }
+      section.about h2 { font-size: 20px; }
+      section.about .cols { display: grid; gap: 26px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+      section.about p, section.about li { color: var(--text-dim); font-size: 14px; }
+      footer.site { border-top: 1px solid var(--border); margin-top: 40px; padding: 22px 0 40px; font-size: 13px; color: var(--text-dim); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="site">
+        <a class="mark" href="/">Noa<span>CG</span> Studio</a>
+        <nav>
+          <a href="/app">Open the studio</a>
+          <a href="https://ograf.ebu.io/" rel="noreferrer">OGraf spec</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <h1>Free <em>OGraf</em> starter templates</h1>
+        <p>
+          Six broadcast graphics in the EBU's open OGraf v1 format — ready to load into any
+          OGraf renderer, and built to be <strong>modified</strong>: readable, commented code, a
+          field reference, and a guide that says where the data, the look and the motion live.
+        </p>
+        <p>
+          No account, no lock-in. Every package is generated by NoaCG Studio's exporter and
+          validated against the EBU's published schema before it downloads.
+        </p>
+        <ul class="badges">
+          <li>OGraf v1 · EBU schema validated</li>
+          <li>Self-contained — no CDN, fonts bundled</li>
+          <li>Commented source + modification guide</li>
+          <li>Free · also exports to SPX, CasparCG, OBS, vMix</li>
+        </ul>
+      </section>
+
+      <div class="grid" id="starters">
+        <article class="starter" data-starter="Hairline" data-category="Lower third">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Lower third</span>
+            <h2>Hairline</h2>
+            <p>A minimal name-and-title strap — the first graphic every production needs.</p>
+            <p class="teaches"><strong>Good first read:</strong> two data fields, one entrance, the cleanest possible <code>graphic.mjs</code>.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+
+        <article class="starter" data-starter="Glass Mark" data-category="Corner bug">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Corner bug</span>
+            <h2>Glass Mark</h2>
+            <p>A persistent glass corner ident that stays up through the whole show.</p>
+            <p class="teaches"><strong>Teaches:</strong> a long-running graphic — play once, leave it on air, stop at the end.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+
+        <article class="starter" data-starter="News Strip" data-category="Ticker">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Ticker</span>
+            <h2>News Strip</h2>
+            <p>A scrolling news ticker with a kicker tab and a continuous crawl.</p>
+            <p class="teaches"><strong>Teaches:</strong> content-driven motion — the crawl measures the operator's text at play time.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+
+        <article class="starter" data-starter="Match Strip" data-category="Scoreboard">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Scoreboard</span>
+            <h2>Match Strip</h2>
+            <p>A compact scorebug — two teams, a score, built for live updates.</p>
+            <p class="teaches"><strong>Teaches:</strong> <code>updateAction</code> during playout — data changes without replaying the graphic.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+
+        <article class="starter" data-starter="Big Stat" data-category="Infographic">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Infographic</span>
+            <h2>Big Stat</h2>
+            <p>One number, told big — a stat card for the moment that needs weight.</p>
+            <p class="teaches"><strong>Teaches:</strong> typography-led design in the <code>:root</code> style contract — restyle without touching layout.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+
+        <article class="starter" data-starter="House Hold" data-category="Holding screen">
+          <div class="preview" data-preview></div>
+          <div class="body">
+            <span class="cat">Holding screen</span>
+            <h2>House Hold</h2>
+            <p>A full-frame starting-soon / break screen that carries the wait.</p>
+            <p class="teaches"><strong>Teaches:</strong> a full-frame graphic — steps as states, and an exit that clears to the programme.</p>
+            <div class="row">
+              <button class="dl" data-download disabled>⬇ OGraf package</button>
+              <a data-customize href="/app">Customize in NoaCG</a>
+            </div>
+            <p class="note" data-note></p>
+          </div>
+        </article>
+      </div>
+
+      <section class="about">
+        <div class="cols">
+          <div>
+            <h2>What's in a package</h2>
+            <ul>
+              <li><code>&lt;name&gt;.ograf.json</code> — the OGraf v1 manifest (the entry point)</li>
+              <li><code>graphic.mjs</code> — the Graphic Web Component, commented for reading</li>
+              <li><code>GUIDE.md</code> — where the fields, the look and the motion live</li>
+              <li><code>FIELDS.md</code> — the data contract: every field, type and default</li>
+              <li><code>lib/gsap.min.js</code> + <code>fonts/*.woff2</code> — self-contained, no network</li>
+            </ul>
+          </div>
+          <div>
+            <h2>What is OGraf?</h2>
+            <p>
+              <a href="https://ograf.ebu.io/" rel="noreferrer">OGraf</a> is the EBU's open
+              specification for HTML broadcast graphics — one graphic format any compliant
+              renderer can load. Try a package in the community
+              <a href="https://ograf-devtool.superfly.tv" rel="noreferrer">OGraf DevTool</a>, or
+              serve it with an OGraf-compatible playout system.
+            </p>
+            <p>
+              These starters are validated against the EBU's published JSON schema on every
+              download, and the same graphics exist for SPX, CasparCG, OBS and vMix —
+              <a href="/app">open the studio</a> to customize one and export it anywhere.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer class="site">
+        Made with <a href="/">NoaCG Studio</a> — free broadcast graphics: create, control, and
+        put them on air from your browser. The starters are free to use and modify in your
+        productions.
+      </footer>
+    </div>
+    <script type="module" src="/src/ograf/main.ts"></script>
+  </body>
+</html>

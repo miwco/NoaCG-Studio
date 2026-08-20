@@ -107,6 +107,10 @@ const MAP = [
   // OGraf conformance is checked over the whole CATALOG, so a template change can break it as
   // surely as an exporter change can (a new field type, a new machine shape).
   [/^src\/(export\/targets\/ograf|templates)\//, ['ograf-conformance.spec.ts']],
+  // The free OGraf starters page (/ograf, docs/OGRAF.md): its own files, and it rides on the
+  // OGraf target (the download IS that target's build) and on src/templates (a catalog RENAME
+  // must fail the card-resolution test, not strand a dead card on a public page).
+  [/^(ograf\.html|src\/ograf\/|src\/export\/targets\/ograf|src\/templates\/)/, ['ograf-starters.spec.ts']],
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],
@@ -228,7 +232,16 @@ const MAP = [
   // is not. That gap wants a spec, not a wider mapping.
   [/^src\/components\/(ExportSurface|PlayoutCompatibility)/, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts', 'design-rules-product.spec.ts']],
   [/^src\/components\/auth\//, ['auth.spec.ts', 'sync.spec.ts']],
-  [/^src\/backend\//, ['auth.spec.ts', 'sync.spec.ts', 'offline.spec.ts']],
+  [/^src\/backend\//, ['auth.spec.ts', 'sync.spec.ts', 'offline.spec.ts', 'network-resilience.spec.ts']],
+  // Restricted-network resilience (docs/GOALS.md "the SVG road"): the boot watchdog and the
+  // inline connection check live in app.html, the hydration timeout in the durable store, and
+  // the app-level notice in its own component - a change to any of them must run the spec
+  // that boots with the network or the storage broken. src/model and src/main are CORE, so
+  // for them this line documents the pairing; for app.html (otherwise unmapped, so it
+  // escalated by accident) and the notice component it IS the mapping. flows rides along on
+  // app.html because that file frames every /app load.
+  [/^(app\.html|src\/model\/durableStore\.ts|src\/main\.tsx|src\/components\/StorageHealthNotice\.tsx)$/, ['network-resilience.spec.ts']],
+  [/^app\.html$/, ['flows.spec.ts']],
   [/^src\/community\//, ['community.spec.ts']],
   [/^src\/showchat\//, ['community.spec.ts']],
   [/^src\/landing\//, ['landing.spec.ts']],

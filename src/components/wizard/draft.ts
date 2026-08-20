@@ -55,6 +55,10 @@ export interface DesignEraseState {
    *  field is built from this rather than from the loose rectangle the user drew. Absent on
    *  a region that held only background — and on drafts made before it was measured. */
   ink?: RegionInk;
+  /** Per-text-area verdicts when the region held several (assets/eraseRegion): how many of
+   *  them had a clean background model. Carried so a PARTIAL success stays reported per area
+   *  after the fill is applied, not flattened into one "average fill". */
+  segments?: { clean: number; total: number };
 }
 
 /**
@@ -202,6 +206,12 @@ export interface WizardDraft {
    *  A design usually has more than one piece of baked text — a name AND a title, a scoreline
    *  AND a clock — so each marked region is its own erase, and each seeds its own field(s). */
   designErases: DesignEraseState[];
+  /** The user's declared answer that the artwork's baked text is INTENTIONAL (a wordmark, a
+   *  deliberate slogan) — or that there is none. It lives on the draft rather than in the
+   *  Prepare step's state so the answer survives leaving the step: Prepare stops re-proposing
+   *  and the Text step's still-baked note stands down. Cleared by a fresh drop and by
+   *  answering "yes, mark it". */
+  designKeepBakedText: boolean;
   /** The Text step's placed fields (Import Graphic). Ordered; each becomes a real placed
    *  field at build, AFTER the erase-seeded ones. */
   designFields: DesignFieldSpec[];
@@ -269,6 +279,7 @@ export function initialDraft(): WizardDraft {
     designArt: null,
     designOriginal: null,
     designErases: [],
+    designKeepBakedText: false,
     designFields: [],
     designSvg: null,
     svgFields: [],

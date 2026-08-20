@@ -52,6 +52,7 @@ thin `CLAUDE.md` import.
 | 3 app | `admin/` | the PRIVATE admin page: its own MPA entry (`admin.html` -> `/admin`), the wire types, the authorized fetch client (docs/ADMIN.md) | (top of the graph - nothing imports these) |
 | 3 app | `output/` | the browser-output RENDERER: its own MPA entry (`output.html` -> `/output`), a capability URL loaded by CasparCG/OBS/vMix (docs/CLOUD_PLAYOUT.md) | (top of the graph - nothing imports these) |
 | 3 app | `join/` | the public AUDIENCE page: its own MPA entry (`join.html` -> `/join`), the capability URL a viewer's phone opens. It reads the slug off the URL and mounts `audience/joinSurface` - every decision about what a viewer may see lives in `audience/` and in migration 0035 | (top of the graph - nothing imports these) |
+| 3 app | `ograf/` | the free OGraf STARTERS page: its own MPA entry (`ograf.html` -> `/ograf`, docs/OGRAF.md) - curated catalog graphics as downloadable OGraf packages, built by the real exporter at click time | (top of the graph - nothing imports these) |
 
 ## 3. Allowed edges (the ratchet)
 
@@ -91,6 +92,10 @@ here and not in §6 are wrong - fix the code, not the table.
 - `join` -> audience, backend (the join page mounts the shared join surface over the Supabase
   audience provider and feature-detects the backend; it reads no store, no components, no
   templates, and no control module - a viewer's page must not even be able to name the command log)
+- `ograf` -> templates, model, preview, export (the free OGraf starters page, docs/OGRAF.md:
+  it builds real catalog templates, previews them through `preview/composeDocument` +
+  `frameGraphic`, and packages them through the OGraf export target - the page's downloads ARE
+  the exporter; it reads no store, no components, no backend)
 - `app` -> (nothing)
 - `components` -> any lower domain, **through its seam column in §2**
 
