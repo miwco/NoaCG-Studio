@@ -273,7 +273,26 @@ behind an unpublished production.
 
 One consequence worth knowing: a readable join name stays reserved by the production that held it
 even while that production is unpublished, so claiming it from another production is refused as
-taken. That is the same promise seen from the other side.
+taken. That is the same promise seen from the other side. The refusal reaches the operator as the
+ordinary "already taken" message and not as a raw database error: the unique index that stops it
+is the one on `control_show_identity`, it is violated inside the AFTER trigger, and a unique
+violation raised in a trigger still propagates as SQLSTATE 23505 - which is the code
+`claimJoinName` (`control/hostedControl.ts`) already translates.
+
+**Applied on production 2026-08-12, and confirmed by CALLING it on 2026-08-20.** Worth writing down
+because the obvious check is the one that cannot answer the question: `supabase migration list
+--linked` reports a version number, so a `0040` in the remote ledger says only that *something*
+numbered 0040 ran - the duplicate-number trap, where two branches mint the same number and `db push`
+silently skips the loser while still reporting success. Reading the catalog is no better: finding
+the table, the two triggers and the RLS state proves shape, not behaviour. What was actually
+measured, as `authenticated`, inside a transaction deliberately aborted so production kept nothing:
+publish a throwaway production, unpublish it the way the app does, publish it again, and compare all
+four addresses - control, output, join and presenter all came back identical, and the identity row
+survived the delete. A second walk claimed a readable name on a production, unpublished it, and had
+another production try to take the name: refused, 23505, as the paragraph above promises. The
+back-fill ran over the 29 productions published at the time and no published production is missing
+its identity row today. Re-run either walk the same way if the question ever comes up again; the
+follow-up that closed the two functions' EXECUTE grants is migration 0042.
 
 ## 4. The operator surfaces
 
