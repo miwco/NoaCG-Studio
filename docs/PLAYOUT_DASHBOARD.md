@@ -69,6 +69,22 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
     sticky rail (a forty-cue rundown), and the `⋯` / links popovers.
   - The phone breakpoint keeps its own viewport-locked shell, because its verb bar is pinned to
     the bottom of the screen; `.pd-body` is the scroller under it. Same idea, one level down.
+
+  **Measured before and after**, same production and graphic, driven for the acceptance pack:
+
+  | | monitor block | the editor | the page |
+  |---|---|---|---|
+  | 1920×1080 | 442px (41%) → **323px (30%)** | fit either way | did not need to scroll |
+  | 1536×814 | 334px (41%) → **254px (31%)** | 62px hidden → **0** | could not scroll → did not need to |
+  | 1536×560 | 334px (60%) → **188px (34%)** | 62px hidden → **0** | could not scroll → **scrolls 165px** |
+
+  A VISUAL ACCEPTANCE PACK exists for this change (the contract is in
+  `docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Verification contract"): five before/after pairs from the
+  real app — the reported size, nominal 1080p, scrolled to the bottom of a short window, the Data
+  tab, and the phone — with the repeat-by-hand sequence. **The owner's read is still owed**, and
+  the two things it asks about are whether the capped monitors are now too small to judge a
+  graphic by, and whether the space they free to the right of PROGRAM reads as sized or as
+  unfinished.
 - **Monitors are 16:9, side by side, equal, and CAPPED near 30vh** — owner, same report: *"we
   should rather make the preview and program screens a bit smaller… you see what's out all the
   time"*. Uncapped they took 41% of the height (442px of 1080). The cap is expressed as a grid
