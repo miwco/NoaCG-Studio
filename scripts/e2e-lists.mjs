@@ -30,6 +30,7 @@ export const FOCUS = [
   'network-resilience.spec.ts',
   'offline.spec.ts',
   'ograf-conformance.spec.ts',
+  'ograf-starters.spec.ts',
   'package.spec.ts',
   'playout-drills.spec.ts',
   'production-audience.spec.ts',

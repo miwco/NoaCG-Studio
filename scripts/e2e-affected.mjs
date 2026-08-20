@@ -107,6 +107,10 @@ const MAP = [
   // OGraf conformance is checked over the whole CATALOG, so a template change can break it as
   // surely as an exporter change can (a new field type, a new machine shape).
   [/^src\/(export\/targets\/ograf|templates)\//, ['ograf-conformance.spec.ts']],
+  // The free OGraf starters page (/ograf, docs/OGRAF.md): its own files, and it rides on the
+  // OGraf target (the download IS that target's build) and on src/templates (a catalog RENAME
+  // must fail the card-resolution test, not strand a dead card on a public page).
+  [/^(ograf\.html|src\/ograf\/|src\/export\/targets\/ograf|src\/templates\/)/, ['ograf-starters.spec.ts']],
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],
