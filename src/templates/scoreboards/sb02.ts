@@ -113,6 +113,9 @@ export const sb02: TemplateVariant = defineScoreboardVariant(
   color: var(--text-color);        /* primary text color */
 }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 430,
     tokens: { labelTracking: '0.1em' },
   }),
 );

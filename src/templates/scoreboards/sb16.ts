@@ -177,6 +177,9 @@ ${clampTwoLinesCss('.scoreboard-team')}
 .scoreboard-final .scoreboard-pip { display: none; }
 .scoreboard-final .scoreboard-score { color: var(--text-color); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 600,
     fields: matchStatusFields({
       teamA: 'Ashton United', scoreA: '2', teamB: 'Marske Town', scoreB: '2',
       status: 'Full time', note: 'Northern League Division One',

@@ -197,6 +197,9 @@ ${clipOneLineCss('.scoreboard-team', 280)}
 .scoreboard-final .scoreboard-statusrow { background: color-mix(in srgb, var(--accent) 30%, transparent); }
 .scoreboard-final .scoreboard-status { color: var(--text-color); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 630,
     fields: matchStatusFields({
       teamA: 'Adesanya', scoreA: '48', teamB: 'Pereira', scoreB: '47',
       status: 'DECISION', note: 'Middleweight title · 5 rounds',

@@ -176,6 +176,9 @@ ${clipOneLineCss('.scoreboard-club', 340)}
 
 ${clipOneLineCss('.scoreboard-name', 330)}`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 580,
     fields: matchEventFields({
       event: 'SUBSTITUTION', minute: "67'", team: 'ARSENAL',
       detail: 'M. ØDEGAARD', player: 'K. HAVERTZ', colour: '#ef0107',

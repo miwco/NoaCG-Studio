@@ -267,6 +267,9 @@ ${clipOneLineCss('.scoreboard-team', 260)}
 .scoreboard-final .scoreboard-score { color: var(--text-color); }
 .scoreboard-final .scoreboard-clock { color: var(--text-dim); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 960,
     fields: matchBoardFields({
       teamA: 'HOME', scoreA: '88', teamB: 'AWAY', scoreB: '84',
       period: 'Q4', clock: '10:00', periods: PERIODS,

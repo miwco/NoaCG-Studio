@@ -179,5 +179,8 @@ ${clipOneLineCss('.scoreboard-team', 420)}
   color: var(--accent);            /* ties the slab to the chips */
 }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 1080,
   }),
 );

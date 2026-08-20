@@ -182,6 +182,9 @@ ${clipOneLineCss('.scoreboard-event', 228)}
 
 ${clipOneLineCss('.scoreboard-name', 360)}`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 900,
     fields: matchEventFields({
       event: 'PENALTY', minute: "34'", team: 'TAMPA BAY',
       detail: 'TRIPPING · 2 MIN', player: 'V. HEDMAN', colour: '#002868',

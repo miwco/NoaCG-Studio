@@ -187,6 +187,9 @@ ${clipOneLineCss('.scoreboard-clock', 150)}
 .scoreboard-final .scoreboard-score { color: var(--text-color); }
 .scoreboard-final .scoreboard-clock { color: var(--text-dim); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 990,
     fields: scorebugFields(),
     popFields: ['f1', 'f3'],
     lineCount: 6, // f0 team · f1 score · f2 team · f3 score · f4 period · f5 clock

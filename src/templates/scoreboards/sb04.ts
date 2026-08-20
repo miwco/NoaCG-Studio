@@ -146,5 +146,8 @@ export const sb04: TemplateVariant = defineScoreboardVariant(
   color: var(--text-color);        /* at full time the scores settle to white — the match is decided */
 }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 960,
   }),
 );

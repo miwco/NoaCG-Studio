@@ -208,6 +208,9 @@ ${clipOneLineCss('.scoreboard-team', 240)}
 .scoreboard-final .scoreboard-score { color: var(--text-color); }
 .scoreboard-final .scoreboard-status { color: var(--text-color); }`,
     hasAccent: true,
+    // The stage: the width this board holds a full match at (two long club names, two-digit
+    // scores) without giving any of them up. Short names leave the room where the anchor is.
+    stageWidth: 880,
     fields: matchStatusFields({
       teamA: 'HOME', scoreA: '1', teamB: 'AWAY', scoreB: '0',
       status: 'HALF TIME', note: 'Emirates Stadium · Matchday 24',

@@ -141,6 +141,7 @@ await page.evaluate(
     window.__fieldText = (sample, end) => {
       const t = String(sample || '').trim();
       if (!t) return t;
+      if (end === 'default') return t; // the design's own calibrated content, untouched
       if (end === 'short') {
         const words = t.split(/\s+/);
         return words.slice(0, Math.max(1, Math.round(words.length * 0.4))).join(' ');
@@ -262,6 +263,30 @@ async function pass(end, label) {
   }
   process.stderr.write('\n');
   return byId;
+}
+
+// `--stage` answers the question the FIX asks rather than the one the report asks: what is each
+// design's box at its OWN calibrated content? That number is the stage width a board should
+// declare, because freezing a design at the size its author drew it removes the wobble without
+// changing how it looks at the content it was designed for.
+if (args.includes('--stage')) {
+  const at = await pass('default', 'stage');
+  await browser.close();
+  console.log(`\nSTAGE WIDTHS — settled box at each design's own sample content${only ? ` (${only})` : ''}`);
+  console.log(`  ${'id'.padEnd(10)} ${'category'.padEnd(16)} ${'box w x h'.padEnd(16)} ${'bbox w x h'.padEnd(16)} name`);
+  const stageRows = targets.map((t) => ({ ...t, ...(at.get(t.id) || {}) }));
+  for (const r of stageRows) {
+    const dim = (b) => (b ? `${Math.round(b.w)} x ${Math.round(b.h)}` : '-');
+    console.log(
+      `  ${r.id.padEnd(10)} ${r.cat.padEnd(16)} ${dim(r.box).padEnd(16)} ${dim(r.bbox).padEnd(16)} ${r.name}`,
+    );
+  }
+  if (jsonOut) {
+    writeFileSync(jsonOut, JSON.stringify(stageRows, null, 1));
+    console.log(`\nWrote ${stageRows.length} rows to ${jsonOut}`);
+  }
+  console.log('');
+  process.exit(0);
 }
 
 const shortPass = await pass('short', 'short');
