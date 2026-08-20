@@ -3301,6 +3301,66 @@ accept sits above 3.04:1; a weight floor sits above 400 for text this size.
   which is how the composer places every mark it places; a wordmark set as TEXT would read as
   absent.
 
+### 25.8 Acting on the rules - three changes, each measured (2026-08-20)
+
+The instrument had reported for a day; this is what was done with it. Every number below is a
+re-judge of the SAME archived corpus - the 36 package rows of `round-2026-08-16` +
+`round-2026-08-17`, plus the 4 rows of `round-2026-08-19-topiccard` - and it cost nothing, because
+those rounds are paid for and their code is committed (§25.1).
+
+**All of it was measured on ONE tree.** The branch started from a pre-merge `main` and was
+fast-forwarded mid-session; that merge touched `preview/composeDocument.ts` and
+`validation/validateTemplate.ts`, both of which the re-judge mounts through. The baseline was
+therefore re-taken afterwards and compared reading by reading: **identical on every finding and
+every gap in all 108 pieces**, so the merge is inert for this measurement and the before/after
+below spans no tree change. Stating that is cheaper than trusting it - a comparison across two
+trees is the failure AGENTS.md names about merges.
+
+The corpus baseline, which reproduces §25.2-25.6 exactly:
+
+| rule | baseline rows (of 36) |
+|---|---|
+| 1 `mark-off-centre` | 24 |
+| 4 `legible-size-only` | 2 |
+| 5 `mark-owns-a-row` | 34 |
+| 6 `package-mark-mixed` | 36 |
+
+#### 25.8.1 Rule 1 - the mark is centred in its tile
+
+`composeBug.ts` gives the shared mark slot `align-self: center` inside the bug's tile. The tile is
+`fit-content` around the WIDER of the mark and the caption, so a square crest under a longer
+caption sat flush against the leading edge with all of the slack on the other side - the one
+construction every firing row shared (§25.2).
+
+**The MARK is centred, not the whole stack**, and both halves of that matter: the caption keeps the
+reading edge the rest of the package is set to, and a wide wordmark that already fills the tile
+does not move at all - which is exactly the twelve rows the rule was already quiet on.
+
+| | baseline | after |
+|---|---|---|
+| rule 1, whole corpus | 24 rows | **12 rows** |
+| rule 1, `round-2026-08-16` (members RECOMPOSED) | 12 of 18 | **0 of 18** |
+| rule 1, `round-2026-08-17` (members SAVED AS CODE) | 12 of 18 | 12 of 18 |
+
+**The split is the result, not the headline.** A composer change cannot reach a round whose package
+members were saved as CODE - the re-judge mounts the artefact the money bought. On every row the
+composer actually rebuilds, rule 1 goes to zero: each recomposed bug now reads offset `0.0` on its
+free axis, with equal gaps to two decimal places (S-01: 21px against 47.94px, now 34.47/34.47).
+The twelve that remain are August artefacts, unchanged by construction.
+
+**Nothing was traded for it.** Rules 4, 5 and 6 are unmoved (2 / 34 / 36 rows, before and after),
+and rule 2 - which is reported and never judged - moved from p50 0.80 to 0.79 with its min (0.33),
+p90 and max unchanged. The direction is the part worth keeping: across all 72 pieces carrying an
+accent, **no piece's gap to its accent got SMALLER** (6 grew, 66 unchanged). Rule 2's defect is
+CROWDING - "if it's too close to the accent line, it feels like it's some mistake" - and a mark
+that only ever moves away from the accent cannot commit it. The largest single balance move,
+S-05's 0.95 → 0.59, is that gap growing from 21px to 34px against an unchanged 20px to the
+caption; the ratio falls because the two numbers are a horizontal gap and a vertical one, which is
+also why rule 2 carries no threshold.
+
+The topic-card round is unchanged on every rule (3 / 1 / 3 / 4 rows), as it must be: all four of
+its rows saved every piece as code.
+
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 
 Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are

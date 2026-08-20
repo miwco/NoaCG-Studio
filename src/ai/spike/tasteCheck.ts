@@ -184,6 +184,17 @@ export interface MarkRowReading {
   /** The share of the panel's height the mark's own band occupies, when a panel resolves. */
   bandOfPanel: number | null;
   insidePanel: boolean;
+  /** THE HORIZONTAL HALF, which is where the defect actually is. A mark that takes a band of its
+   *  own is only eating real estate if the band it took has width to spare - a tile drawn around
+   *  the mark has none, and stacking there is a composition rather than a fault. */
+  markWidthPx: number;
+  panelWidthPx: number | null;
+  /** The share of the panel's inner width the mark's ink fills. 1 is a band the mark uses whole. */
+  bandFill: number | null;
+  /** Room left over if the mark and the primary line were laid side by side in the width the
+   *  panel already has, one mark clear space apart. Positive means the design could have put
+   *  them on one row without growing, which is what "it should be on the same row" asks for. */
+  besideSlackPx: number | null;
 }
 
 /** Rule 4's other half: the frame's weakest informational text on each of the two axes,
@@ -518,11 +529,24 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
       const rowShare = shorter > 0 ? round2(Math.max(0, overlapY) / shorter) : 0;
       const inside = Boolean(panel && panelMembers(items, panel).some((p) => p.el === mark.el));
       const panelH = panel ? panel.rect.bottom - panel.rect.top : 0;
+      const panelBox = panel ? inner(panel.el, win) : null;
+      const panelW = panelBox ? panelBox.right - panelBox.left : 0;
+      const markW = ink.right - ink.left;
+      const textW = primaryText.rect.right - primaryText.rect.left;
       report.markRow = {
         primary: primaryText.desc,
         rowShare,
         bandOfPanel: panelH > 0 ? round2((ink.bottom - ink.top) / panelH) : null,
         insidePanel: inside,
+        markWidthPx: round2(markW),
+        panelWidthPx: panelW > 0 ? round2(panelW) : null,
+        bandFill: panelW > 0 ? round2(markW / panelW) : null,
+        // The clear space is the mark's own quarter-height, the brand manual's figure for a
+        // free-standing mark and the one `measureRenderedMark` already gates on - so "would they
+        // fit beside each other" is asked with the room the platform would actually insist on.
+        besideSlackPx: panelW > 0
+          ? round2(panelW - (markW + textW + (ink.bottom - ink.top) * 0.25))
+          : null,
       };
       // Only INSIDE the panel is this rule's defect. A mark parked beside the graphic takes no
       // real estate from it; B27's took a band across the top of the card the headline then had

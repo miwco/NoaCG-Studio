@@ -129,7 +129,10 @@ function accentCssFor(language: DesignLanguage, palette: LanguagePalette, s: Res
                                        read named exactly that on the strap). */
   max-width: 100%;                  /* …but never wider than the tile it sits in */
   border-radius: ${px(Math.min(s.cornerPx, 8))};  /* the package's corner language, kept tight */
-  /* NO INSET ON THE LEADING EDGE, so the block's edge and the mark above it sit on ONE axis. */
+  /* NO INSET ON THE LEADING EDGE, so the badge starts on the tile's own reading edge rather than
+     a padding-width inside it. It used to share that axis with the mark; since the mark is
+     centred across the tile the badge holds the reading edge alone, which is the axis the rest of
+     the package is set to. */
   padding: ${px(padV)} ${px(padH)} ${px(padV)} 0;
 }
 /* The block's INK is measured, not designed: white or black, whichever reads on this accent. */
@@ -199,6 +202,22 @@ ${form === 'underline' ? accentEl : ''}    </div>`;
   ${form === 'edge-bar' ? `margin-left: ${px(s.accentPx)};  /* starts where the accent bar ends */\n  ` : ''}padding: ${px(padV)} ${px(padH)};
   background: var(--panel-bg);      /* the language's surface */
   border-radius: ${px(s.cornerPx)};${form === 'edge-bar' ? `\n  border-top-left-radius: 0;        /* the accent bar carries this corner */\n  border-bottom-left-radius: 0;` : ''}${surface.blur ? '\n  backdrop-filter: blur(18px);      /* the surface softens the picture behind it */\n  -webkit-backdrop-filter: blur(18px);  /* Safari spelling of the same effect */' : ''}
+}
+
+/* The mark — CENTRED ACROSS THE TILE. The tile is \`fit-content\` around the WIDER of the mark and
+   the caption, so a square crest under a longer caption sat flush against the leading edge with
+   every pixel of the slack on the other side. That is the owner's single most-repeated note on
+   the 2026-08-19 blind read — "if you have a square somewhere, I want the logo to be in the
+   middle of the square, or at least some kind of balance" — and it fired on 24 of the 36 rows,
+   every one of them this construction (docs/NOACG_PRO_PLAN.md §25.2).
+
+   The MARK is centred rather than the whole stack, and the difference matters twice: the caption
+   keeps the reading edge the rest of the package aligns to, and a wide wordmark that already
+   fills the tile does not move at all — which is exactly the twelve rows the rule stayed quiet
+   on. Nothing here is a threshold; a mark centred in its container is 0 off centre by
+   construction, which is what \`tasteCheck\`'s rule 1 measures. */
+.corner-bug-logo {
+  align-self: center;               /* centred across the tile, whichever of the two is wider */
 }
 
 /* The caption — the package's LABEL voice, at the bug's own size. It is the graphic's only line,
