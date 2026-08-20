@@ -1625,6 +1625,13 @@ export default function AiStep({
             />
           )}
 
+          {/* An in-flow sheet, NOT a popover, though the reference draws one: it opens
+              ITSELF whenever nothing is configured - which is exactly when Generate, Attach
+              and More control are all live and waiting - so a floating sheet would cover the
+              controls it exists to make work. Measured, as two Pro specs deadlocking:
+              Playwright will not dispatch a click through a covering element, so the press
+              that would dismiss it never arrives. Making it float means restructuring the
+              step around it. */}
           {showSettings && (
             <div
               className="panel-section ai-settings-sheet"
