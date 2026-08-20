@@ -96,9 +96,9 @@ exactly the commit being promoted and falls back to the local pair only when the
 
 **The shard count follows measured minutes, not a file count** (`shardsFor` in
 `scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about three minutes of test
-execution per runner, capped at nine. A full plan is 69.5 measured minutes and the cap holds it at
+execution per runner, capped at nine. A full plan is 70.5 measured minutes and the cap holds it at
 nine. What that replaced was a subset cap of four runners however big the subset was - and under
-sprint focus plus the curated map a subset is routinely 70-100 of the 130 spec files, so run
+sprint focus plus the curated map a subset is routinely 70-100 of the 131 spec files, so run
 32174589727 put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it
 did 66.9 on nine (7.4 min each). Three minutes is set from what a shard now COSTS to add - about
 one minute all in, against 3.5 before the browser-setup change below - so the target is a
