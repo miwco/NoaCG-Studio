@@ -1,0 +1,61 @@
+/* The SVG mapping step (MapSvgFieldsStep.tsx) — wizard-local, like prepProposal.css:
+   these classes exist on exactly one surface, so they do not belong in styles.css. */
+
+/* The artwork, rendered inline so hover-highlight can reach its nodes (the preview iframe
+   deliberately cannot be reached — no allow-same-origin). Checker background so a
+   transparent design reads as transparent, not as broken. */
+.map-svg-stage-wrap {
+  position: relative;
+  border: 1px solid var(--edge, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  background:
+    repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%)
+    0 0 / 20px 20px;
+}
+.map-svg-stage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The hover highlight: an amber box over the exact text a checklist row binds. */
+.map-svg-highlight {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid var(--accent, #f6a623);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+/* One checklist row: checkbox, label, sample — cap-aligned like a .dlg-check row. */
+.map-svg-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 6px 0;
+}
+.map-svg-row input[type='checkbox'] {
+  width: auto;
+  margin-bottom: 9px;
+}
+.map-svg-row.off .save-field {
+  opacity: 0.55;
+}
+
+/* One typeface row: the family, its status, and the two resolution actions. */
+.map-svg-font {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 5px 0;
+}
+.map-svg-font-name {
+  min-width: 120px;
+}
+.map-svg-font-actions {
+  display: flex;
+  gap: 6px;
+}

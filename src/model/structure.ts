@@ -6,6 +6,7 @@
 // single source of truth.
 
 import type { SpxField } from './types';
+import { svgLayerLabel } from '../assets/svgImport';
 
 /**
  * The structure contract's spine: the token before `-box` on the first element carrying a
@@ -115,6 +116,28 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
     if (unique(`.${prefix}-art`)) {
       parts.push({ selector: `.${prefix}-art`, kind: 'image', label: 'Artwork', channel: 'rise' });
     }
+    // An imported SVG's TOP-LEVEL NAMED GROUPS (docs/SVG_IMPORT_PLAN.md P2): the layers the
+    // designer made — a backplate, a text group — each its own part, so per-layer motion
+    // (the entrance stagger) has real targets. Direct children only: deeper structure is the
+    // design's internals, and offering every nested group would bury the layers that matter
+    // under dozens of anonymous ones. Labelled with the same words the mapping step showed
+    // (svgLayerLabel — data-name over the decoded id). Ids are the designer's own, so only a
+    // CSS-safe one becomes a selector (the single-token contract above), and only a unique
+    // one becomes an identity, same as every other part.
+    const art = unique(`.${prefix}-art`);
+    if (art && art.tagName.toLowerCase() === 'svg') {
+      for (const child of Array.from(art.children)) {
+        if (child.tagName.toLowerCase() !== 'g') continue;
+        const id = child.getAttribute('id');
+        if (!id || /^f\d+$/.test(id) || !/^[A-Za-z_][\w-]*$/.test(id) || !unique(`#${id}`)) continue;
+        parts.push({
+          selector: `#${id}`,
+          kind: 'block',
+          label: svgLayerLabel(child) || id,
+          channel: 'rise',
+        });
+      }
+    }
   }
 
   // Field elements, in document order: masked text lines and image slots. A line is masked
@@ -131,8 +154,26 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
       parts.push({ selector: `#${id}`, kind: 'image', label: fieldTitle(id) ?? 'Image', channel: 'rise', ...flag });
     } else if (maskedBy && el.parentElement?.classList.contains(`${maskedBy}-mask`)) {
       parts.push({ selector: `#${id}`, kind: 'line', label: fieldTitle(id) ?? `#${id}`, channel: 'mask', ...flag });
+    } else if (
+      // A bound layer of an imported SVG (docs/SVG_IMPORT_PLAN.md): the field element IS one
+      // of the artwork's own <text>/<tspan>/<image> nodes, so it is fully visual and
+      // animatable — GSAP tweens SVG elements like any other. There is no overflow-hidden
+      // mask around SVG text (it does not clip), so the reveal channel is 'rise', never
+      // 'mask'; a bound <image> is a picture slot exactly like an <img> field.
+      maskedBy &&
+      el.closest(`.${maskedBy}-art`) &&
+      ['text', 'tspan', 'image'].includes(el.tagName.toLowerCase())
+    ) {
+      const isPicture = el.tagName.toLowerCase() === 'image';
+      parts.push({
+        selector: `#${id}`,
+        kind: isPicture ? 'image' : 'line',
+        label: fieldTitle(id) ?? (isPicture ? 'Picture' : `#${id}`),
+        channel: 'rise',
+        ...flag,
+      });
     }
-    // Unmasked fN elements (hidden data sources, free-standing value fields) are not
+    // Other unmasked fN elements (hidden data sources, free-standing value fields) are not
     // registry parts — they are either not visual or not reveal-capable yet.
   }
 
