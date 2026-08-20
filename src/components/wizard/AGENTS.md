@@ -16,8 +16,8 @@ preview), draft.ts, WizardPreview, MiniPreview, steps/. Creating calls `variant.
 which generates the complete, commented template. THREE entry cards (template, Create with AI,
 Import graphic) in a two-column grid, plus the separated video strip; Advanced mode adds blank.
 An ODD LAST CARD spans the row (`.wz-entry-card:last-child:nth-child(odd)`) and sizes to its
-OWN copy — the equal rows and the three-line hint reserve align cards SIDE BY SIDE, and a card
-with no row-mate wearing them is two empty lines of padding. Create with AI is the ONE AI
+OWN copy — the row-alignment reserves are two empty lines on a card with no row-mate.
+Create with AI is the ONE AI
 door - NoaCG Pro is an execution TIER inside it, never a second card; there is no kit card
 either — see the kit path below.
 
@@ -32,8 +32,7 @@ is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both 
 kit card, cards act on CLICK not radio-plus-Continue, Blank stays behind Advanced mode.
 
 **THE FEEDBACK DOOR IS ON THE WIZARD HEADER** (`BetaFeedbackButton area="wizard"`; Home carries
-`area="home"`). It existed only in the editor shell — the surface the student release demotes —
-so the release's own user could not send anything. Two dependencies: the header's push is a
+`area="home"`). Two dependencies: the header's push is a
 CHAIN (`.wz-stepcount ~ .fb-open`, `.fb-open ~ .gallery-close`), since the step counter is
 absent on Entry and the button absent offline and whichever exists first takes the auto margin;
 and the shell behind the wizard mounts a SECOND button, so a locator says which via `data-area`.
@@ -42,8 +41,7 @@ and the shell behind the wizard mounts a SECOND button, so a locator says which 
 renders NO creation-step navigation and uses the rail's 216px for the menu. The rail appears
 immediately after a card is chosen. From then on, the steps are a 216px vertical RAIL
 (`.wz-rail`, still `.wz-dots`/`.wz-dot` so every spec still addresses them): number-or-green-
-tick, title, and a second line naming the decision the step asks for. As header pills they had
-room for six words and wrapped to four rows on a phone. The rail's foot reads the PROJECT
+tick, title, and a second line naming the decision the step asks for. The rail's foot reads the PROJECT
 FORMAT back for the whole walk while the control stays in the step that owns it (Browse, AI,
 blank) - one decision, one home. Under 768px the rail lies down as a scrolling chip strip and
 that read-back stands down (it needed ~212px the row lacks). The FOOTER belongs to the form
@@ -223,12 +221,9 @@ with the Data tab revealed
 (setActivePanel('data') + the store's panelRevealNonce). Fields, styling, and motion all live
 in the editor: the Data tab's placed add, the canvas gestures, the Inspector's Style/Animations
 tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design mode never
-reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'**, docs/SVG_IMPORT_PLAN.md): parsed,
-sanitized and inventoried at drop (assets/svgImport.ts), then ONE mapping step
-(MapSvgFieldsStep - checklist + hover-highlight on its own inline render, all detected text ON
-by default, per-family font resolution) and the shared Animation step. Zero text layers = the
-honest outlined-text answer, still creatable as a fixed graphic. A MODE like 'file', because
-Prepare/Text cannot apply. E2E: e2e/import-svg.spec.ts.
+reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 'file', Prepare/Text
+cannot apply): ONE mapping step, MapSvgFieldsStep. Contract + reasoning:
+docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
 which switches the wizard to mode **'file'**: a two-stop rail (Template file -> Finish), the
