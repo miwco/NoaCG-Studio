@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-19T21:09:05.370Z",
+  "capturedAt": "2026-08-20T04:22:44.446Z",
   "rounds": [
     {
       "dir": "benchmarks/pro/evidence/round-2026-08-16",
@@ -58,6 +58,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -117,7 +121,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -169,6 +182,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -256,6 +273,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Match Analyst",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -315,7 +336,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -362,6 +392,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -449,6 +483,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -508,7 +546,16 @@
               "toTextPx": 20,
               "balance": 0.95
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -560,6 +607,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -647,6 +698,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Executive Officer",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -706,7 +761,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -758,6 +822,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -828,6 +896,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Director",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -865,7 +937,16 @@
               "toTextPx": 20,
               "balance": 0.33
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -901,6 +982,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [
@@ -1000,6 +1085,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Consumer Affairs",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1059,7 +1148,16 @@
               "toTextPx": 20,
               "balance": 0.95
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -1111,6 +1209,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1198,6 +1300,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Senior European Economics Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1257,7 +1363,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -1304,6 +1419,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1391,6 +1510,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Professor of Computational Linguistics, ",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1450,7 +1573,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -1502,6 +1634,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1589,6 +1725,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1648,7 +1788,16 @@
               "toTextPx": 20,
               "balance": 0.95
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -1700,6 +1849,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1787,6 +1940,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "特派員 · 東京支局",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1846,7 +2003,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -1898,6 +2064,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -1985,6 +2155,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Emergency Coordinator",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2044,7 +2218,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -2096,6 +2279,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2183,6 +2370,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Polling Analyst",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2242,7 +2433,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -2289,6 +2489,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2376,6 +2580,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2435,7 +2643,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -2482,6 +2699,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2569,6 +2790,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2628,7 +2853,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -2680,6 +2914,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2767,6 +3005,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2826,7 +3068,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -2878,6 +3129,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -2965,6 +3220,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3024,7 +3283,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -3071,6 +3339,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3158,6 +3430,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3217,7 +3493,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -3269,6 +3554,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3356,6 +3645,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3415,7 +3708,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "ON AIR",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -3467,6 +3769,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3554,6 +3860,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3613,7 +3923,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Aldervale Institute",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -3665,6 +3984,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3752,6 +4075,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Match Analyst",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3811,7 +4138,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Kestrel Athletic",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -3858,6 +4194,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -3945,6 +4285,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4004,7 +4348,16 @@
               "toTextPx": 20,
               "balance": 0.95
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Sunbeam",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4056,6 +4409,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4143,6 +4500,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Executive Officer",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4202,7 +4563,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Aldervale Institute",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4254,6 +4624,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4324,6 +4698,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Director",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4361,7 +4739,16 @@
               "toTextPx": 20,
               "balance": 0.33
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Ledger",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4397,6 +4784,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [
@@ -4496,6 +4887,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Consumer Affairs",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4555,7 +4950,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Sunbeam",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4607,6 +5011,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4694,6 +5102,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Senior European Economics Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4753,7 +5165,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Kestrel Athletic",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4800,6 +5221,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4887,6 +5312,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Professor of Computational Linguistics, ",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -4946,7 +5375,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Ledger",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -4998,6 +5436,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5085,6 +5527,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5144,7 +5590,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Sunbeam",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -5196,6 +5651,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5283,6 +5742,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "特派員 · 東京支局",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5342,7 +5805,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Aldervale Institute",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -5394,6 +5866,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5481,6 +5957,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Emergency Coordinator",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5540,7 +6020,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Ledger",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -5592,6 +6081,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5679,6 +6172,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Polling Analyst",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5738,7 +6235,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Kestrel Athletic",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -5785,6 +6291,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5872,6 +6382,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -5931,7 +6445,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Kestrel Athletic",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -5978,6 +6501,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6065,6 +6592,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6124,7 +6655,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Sunbeam",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -6176,6 +6716,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6263,6 +6807,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Chief Political Correspondent",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6322,7 +6870,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Ledger",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -6374,6 +6931,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6461,6 +7022,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6520,7 +7085,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "Kestrel Athletic",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -6567,6 +7141,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6654,6 +7232,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6713,7 +7295,16 @@
               "toTextPx": 20,
               "balance": 0.8
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Aldervale Institute",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -6765,6 +7356,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6852,6 +7447,10 @@
                 26
               ],
               "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Host",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],
@@ -6911,7 +7510,16 @@
               "toTextPx": 20,
               "balance": 0.55
             },
-            "secondaryType": null,
+            "secondaryType": {
+              "primaryPx": 24,
+              "secondaryPx": [],
+              "smallestPx": 24,
+              "smallestRole": "primary",
+              "smallestSnippet": "The Ledger",
+              "singleLine": true,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 49.68
+            },
             "sizeOnly": [],
             "weakest": {
               "byWeight": {
@@ -6963,6 +7571,10 @@
                 38
               ],
               "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
             "sizeOnly": [],

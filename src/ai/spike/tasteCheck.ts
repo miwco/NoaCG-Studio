@@ -18,8 +18,9 @@
 //      I want the logo to be in the middle of the square, or at least some kind of balance."
 //   2. Between an accent line and text, a mark is optically BALANCED, not crowded. "If it's too
 //      close to the accent line, it feels like it's some mistake."
-//   3. SECONDARY text has a floor too - the second line, which the 50px primary floor never
-//      covered.
+//   3. SECONDARY text has a floor too. Measured as the SMALLEST INFORMATIONAL line rather than
+//      as "the second line" - see `measureTaste`, where reading it as the second line was blind
+//      on every one-line graphic the owner used to state the rule.
 //   4. WEIGHT and CONTRAST are part of legibility, not separate from it. "A size-only
 //      legibility instrument passes text the owner cannot read."
 //   5. A mark never eats PRIMARY real estate - B27 put the logo on top of the topic card:
@@ -138,14 +139,28 @@ export interface MarkBalanceReading {
 /** Rule 3 - the second line's size, beside the floor that is actually ratified for it. */
 export interface SecondaryTypeReading {
   primaryPx: number;
-  /** Every informational reading below the primary, smallest first - the "second line" and
-   *  whatever sits under it. */
+  /** Every reading the classifier called SECONDARY, smallest first. Empty on a one-line
+   *  graphic, which is exactly why it is not the headline number - see `smallestPx`. */
   secondaryPx: number[];
-  /** The smallest of them, which is what the owner's eye lands on. */
+  /** THE SMALLEST INFORMATIONAL LINE IN THE FRAME, whatever role it was given. This is the
+   *  number the owner's eye lands on, and reading it off the SECOND line was the first
+   *  version's blind spot: a sponsor bug has one line, so it had no second, so the rule the
+   *  owner stated with the words "ON AIR" could not see a sponsor bug at all. */
   smallestPx: number;
-  /** The ratified hard floor for the secondary role at this frame size and mode, from
+  /** What the classifier called that smallest line, and its own words - because the role is
+   *  what decides which floor applies to it, and on a one-line graphic the answer is
+   *  `primary`, which is a 50px floor rather than a 20px one. */
+  smallestRole: string;
+  smallestSnippet: string;
+  /** True when the frame carries a single informational size, so the smallest IS the primary. */
+  singleLine: boolean;
+  /** Whether the readability instrument ALREADY flagged that smallest line on size alone. This
+   *  is the difference between "nobody is measuring this" and "it is measured and the floor
+   *  disagrees with the owner", and the two need different fixes. */
+  smallestFlaggedOnSize: boolean;
+  /** The ratified hard floor the readability instrument named for that smallest line, from
    *  `model/designRules.ts`. Reported so the gap between the table and the owner is visible;
-   *  this file does not judge against it. */
+   *  this file does not judge against it, and it is absent when nothing flagged that line. */
   ratifiedFloorPx: number | null;
 }
 
@@ -399,26 +414,38 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
     markFieldId: options.markFieldId ?? null,
   });
 
-  // Rule 3: the SECOND line's size. Informational readings only - a decorative flourish set at
-  // 12px is not the role line the owner is complaining about, and the classifier already
-  // separates the two.
+  // Rule 3: THE SMALLEST INFORMATIONAL LINE, not "the second line".
+  //
+  // The restatement is the finding this rule produced. Read as "the second line's size", the
+  // measurement was null on 36 of 36 sponsor bugs - a one-line graphic has no second line, and
+  // its single caption classes as PRIMARY - so the rule the owner stated with the words "ON AIR"
+  // and "sponsor-bug wordmarks" could not see either of the frames it was stated about.
+  //
+  // Informational readings only, both roles: a decorative flourish set at 12px is not the line
+  // the owner is complaining about, and the classifier already separates the two.
   const informational = readability.readings.filter((r) => r.role === 'primary' || r.role === 'secondary');
   const secondary = informational.filter((r) => r.role === 'secondary').map((r) => r.fontPx);
   const primaryPx = primary
     ?? Math.max(0, ...informational.filter((r) => r.role === 'primary').map((r) => r.fontPx));
-  if (secondary.length && primaryPx > 0) {
-    // The ratified floor is READ OFF the findings the readability instrument already produced,
-    // never recomputed here: `designRules` composes it from role, mode, profile and frame size,
-    // and a second composition of the same number is how two files come to disagree about one
-    // table. Absent when nothing in this frame tripped a size finding - the honest answer, since
-    // the floor is then simply not stated by anything that ran.
+  const smallest = [...informational].sort((a, b) => a.fontPx - b.fontPx)[0];
+  if (smallest && primaryPx > 0) {
+    // The ratified floor and the "already flagged" answer are both READ OFF the findings the
+    // readability instrument produced for THAT ELEMENT, never recomputed here: `designRules`
+    // composes the floor from role, mode, profile and frame size, and a second composition of the
+    // same number is how two files come to disagree about one table. Absent when nothing flagged
+    // that line - the honest answer, since the floor is then stated by nothing that ran.
     const sizeFinding = readability.findings.find(
-      (f) => f.role === 'secondary' && typeof f.floorPx === 'number',
+      (f) => (f.code === 'text-under-size-floor' || f.code === 'text-size-warning-band')
+        && f.el === smallest.el && typeof f.floorPx === 'number',
     );
     report.secondaryType = {
       primaryPx: round2(primaryPx),
       secondaryPx: [...secondary].sort((a, b) => a - b).map(round2),
-      smallestPx: round2(Math.min(...secondary)),
+      smallestPx: round2(smallest.fontPx),
+      smallestRole: smallest.role,
+      smallestSnippet: smallest.snippet,
+      singleLine: new Set(informational.map((r) => Math.round(r.fontPx * 10))).size === 1,
+      smallestFlaggedOnSize: Boolean(sizeFinding),
       ratifiedFloorPx: sizeFinding?.floorPx ?? null,
     };
   }

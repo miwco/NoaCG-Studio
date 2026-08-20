@@ -448,8 +448,22 @@ console.log(`  rule 5 mark-owns-a-row    ${count('mark-owns-a-row')} rows`);
 console.log(`  rule 6 package-mark-mixed ${report.rows.filter((r) => r.packageMark && !r.packageMark.consistent).length} rows`);
 console.log('  rule 2 balance (reported, never judged) ',
   JSON.stringify(spread(allPieces.map((p) => p.taste?.markBalance?.balance).filter((n) => n != null))));
-console.log('  rule 3 smallest secondary px (reported, never judged) ',
-  JSON.stringify(spread(allPieces.map((p) => p.taste?.secondaryType?.smallestPx).filter((n) => n != null))));
+// Rule 3 reports and never judges, so what a reader needs is the DISTRIBUTION plus the one fact
+// that decides whether this is a missing measurement or a disagreeing floor: was that smallest
+// line already flagged on size alone?
+const smallestReadings = allPieces.map((p) => p.taste?.secondaryType).filter(Boolean);
+console.log('  rule 3 smallest informational px (reported, never judged) ',
+  JSON.stringify(spread(smallestReadings.map((s) => s.smallestPx))));
+console.log(`  rule 3 read on ${smallestReadings.length} of ${allPieces.length} pieces;`
+  + ` ${smallestReadings.filter((s) => s.singleLine).length} carry a single informational size;`
+  + ` ${smallestReadings.filter((s) => s.smallestFlaggedOnSize).length} already flagged on size alone`);
+for (const role of ['primary', 'secondary']) {
+  const rows = smallestReadings.filter((s) => s.smallestRole === role);
+  if (!rows.length) continue;
+  console.log(`    smallest line classed ${role}: ${rows.length} piece(s), `
+    + JSON.stringify(spread(rows.map((s) => s.smallestPx)))
+    + `, ${rows.filter((s) => s.smallestFlaggedOnSize).length} flagged`);
+}
 const broken = allPieces.filter((p) => p.unresolvedAssets?.length);
 if (broken.length) console.log(`  ${broken.length} piece(s) had unresolvable artwork - mark rules under-report there.`);
 const rebuilt = allPieces.filter((p) => p.source === 'recomposed').length;

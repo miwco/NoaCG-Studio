@@ -818,8 +818,10 @@ round already paid for at zero cost. The full account, with the numbers, is
 
 The six rules are the owner's own, from the 2026-08-19 galleries: (1) a mark inside a container is
 centred in it, (2) a mark between an accent line and text is optically balanced, (3) secondary
-text has a floor too, (4) weight and contrast are part of legibility rather than separate from it,
-(5) a mark never eats primary real estate, (6) a package's mark is on every piece or none.
+text has a floor too - measured as the SMALLEST INFORMATIONAL line, because read as "the second
+line" it was null on every one-line graphic the owner used to state it, (4) weight and contrast
+are part of legibility rather than separate from it, (5) a mark never eats primary real estate,
+(6) a package's mark is on every piece or none.
 
 Three properties are the ones to keep in mind before touching it:
 

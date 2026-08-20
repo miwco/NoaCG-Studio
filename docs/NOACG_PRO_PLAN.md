@@ -3244,18 +3244,36 @@ bug and the topic card, and never on the countdown, because `PRO_GRAPHICS.countd
 was looking at a rendered set, not at the registry, and "this doesn't work; if you skip the logo
 then it would fit" is a verdict on a platform decision, not on an accident.
 
-### 25.5 Rule 3 - the secondary floor. THE INSTRUMENT MISSES THE CASE THE OWNER USED TO STATE IT
+### 25.5 Rule 3 - the secondary floor, restated as the SMALLEST INFORMATIONAL LINE
 
-Reported and never judged, as designed - but the reading is blind exactly where the complaint
-came from. `secondaryType` is null on **36 of 36 sponsor bugs**, because a one-line graphic has
-no second line and its single caption classes as PRIMARY. The owner's words for this rule are
-"ON AIR" and sponsor-bug wordmarks; those are the frames the rule cannot see.
+Read as "the second line's size", the measurement was null on **36 of 36 sponsor bugs** - a
+one-line graphic has no second line, and its single caption classes as PRIMARY. The owner's words
+for this rule are "ON AIR" and sponsor-bug wordmarks, so the rule could not see either of the
+frames it was stated about. Restated as the smallest INFORMATIONAL line whatever its role, and
+re-run: coverage goes from 72 of 108 pieces to **108 of 108**, and the corpus splits cleanly in
+two - which is the useful part, because the two halves need different fixes.
 
-Where it does read, the corpus sits at 26px on every lower third and 38px on every countdown,
-against a ratified standard-mode secondary floor of 20px hard / 22px warn. The owner calls 24px
-"way too small". **The gap to re-ratify is between 22px and something above 26px**, and the
-number to settle it against is the sponsor bug's 24px caption - which needs the rule restated as
-"the smallest informational line has a floor", not "the second line does".
+**Half one: the sponsor bug is already measured, and ships anyway.** All 36 carry a single 24px
+line, classed primary, and **all 36 are already flagged** by the ratified 50px primary floor -
+the warning is on the round's own ledger. So "ON AIR is unacceptably small" is not an unmeasured
+defect. It is a warning the platform raises on every sponsor bug it composes and then ships past,
+which is a routing question (what does a warning that always fires actually do?) rather than a
+missing instrument. Worth saying plainly: nothing here needs a new floor.
+
+**Half two: the secondary line is measured and never flagged.** The other 72 pieces read 26px on
+every lower third and 38px on every countdown, and **0 of 72 are flagged**, because the ratified
+standard-mode secondary floor is 20px hard with a 22px warn band. The owner calls 24px "way too
+small".
+
+**So the re-ratification target is now a number rather than a range: a secondary floor that
+changes anything in this corpus has to sit above 26px**, because 26px is the smallest secondary
+reading anywhere in it. That is the decision to put in front of the owner - it flags the lower
+third's role line on every row, and leaves the countdown's 38px label alone.
+
+`SecondaryTypeReading` carries what the decision needs on every frame: `smallestPx`,
+`smallestRole`, `smallestSnippet`, `singleLine`, and `smallestFlaggedOnSize` - the last one being
+exactly the difference between the two halves above, and the reason the first version's summary
+read as one finding when it was two.
 
 ### 25.6 Rule 4 - weight and contrast together. FRAMING RIGHT, FLOORS WRONG
 
