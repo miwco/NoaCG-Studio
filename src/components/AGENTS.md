@@ -20,13 +20,11 @@ dialogs each invent a header and a checkbox row.
   does. `.wz-header`/`.gallery-header` push it with `margin-left: auto`, cancelled when a
   cluster before it (the wizard's step counter, a gallery's settings) already took the space -
   two auto margins SPLIT it. The subtitle truncates; the button never shrinks. Never
-  absolutely-position it: out of flow it overlaps whatever grows under it, which is why the
-  auth cards grew a real `.auth-head` row.
+  absolutely-position it: out of flow it overlaps whatever grows under it.
 - **CHECKBOX ROW** (`.dlg-check`) - box first, title over description, whole label clickable,
   cap-aligned to the first line. Checkboxes and radios are sized GLOBALLY: the "inputs are
-  100% wide" rule was written for fields you type into and caught them too, which is how
-  Settings' "Advanced mode" got its box mid-dialog and its label wrapped against the far edge.
-  Do not re-add a per-dialog `style={{ width: 'auto' }}`.
+  100% wide" rule was written for fields you type into and caught them too. Do not re-add a
+  per-dialog `style={{ width: 'auto' }}`.
 - **FORM ROW** (`.dlg-row`) - `110px label | 1fr control`; an input+button pair nests a
   `.dlg-pair` grid so the button never wraps under the field, and a hint indents to the
   control column because it belongs to the control.
@@ -34,7 +32,7 @@ dialogs each invent a header and a checkbox row.
 
 **A `.spacer` div is not a push.** There is no global `.spacer { flex: 1 }`, only scoped ones,
 so a header pushing its ✕ with a bare `<div className="spacer" />` pushes nothing and the button
-sits one gap after the title - the §6 defect exactly, as the beta feedback sheet shipped it.
+sits one gap after the title - the §6 defect exactly.
 Use `.gallery-close`; `.wz-header` already parks it.
 
 Settings is the worked example: 820x620, a section nav that JUMPS rather than switches, so
@@ -88,8 +86,7 @@ every section stays mounted and no preference is reachable only by clicking the 
   off-screen render) is a separate step — it needs the iframe to render past the canvas bounds.
   **pasteboard.ts owns HOW MUCH** margin: derived from the graphic's own authored motion (the
   largest px `x`/`y` keyframe), rounded up in steps so authoring doesn't re-fit the stage on
-  every commit. Margin is not free — the stage fits the PADDED document, so a flat third of a
-  frame on every side shrank the working canvas for the many templates that never leave it.
+  every commit. Margin is not free (pasteboard.ts says why).
   Where the reach is unknowable the old flat pad stands: a legacy/unparsable region, MEASURED
   motion, or PERCENT travel (the data carries no size to resolve it against). Pinned by
   e2e/pasteboard.spec.ts.
@@ -145,10 +142,8 @@ every section stays mounted and no preference is reachable only by clicking the 
   around the layer's transform-origin. The root keeps its own --scale corner handle.
   THROUGH THE LENS: this file keyframes at the PLAYHEAD, and the playhead belongs to whichever
   timeline is open - so its `dataModel` is `lensRead(…, timelineTarget)` and every write folds
-  back through `projectedJs` (blocks/timelineLens.ts), never raw `parseAnimData`/`writeAnimData`.
-  Reading the raw document meant that, with a branch state's timeline on screen, a canvas drag
-  wrote its x/y into the default path's step: the strip showed the branch, the keyframe landed
-  on the walk, and nothing said so.
+  back through `projectedJs` (blocks/timelineLens.ts), never raw `parseAnimData`/`writeAnimData`
+  (the drift a raw read caused is described at the lens read in CanvasInteraction.tsx).
   CANVAS POSITION KEYFRAMING (docs/TIMELINE_INTERACTION_MODEL.md, amendment 3): on a
   data-block template, dragging any SELECTED non-root layer moves the WHOLE selection (layers
   contained in another dragged layer are excluded - the parent's transform carries them) and,
@@ -290,9 +285,8 @@ every section stays mounted and no preference is reachable only by clicking the 
   diagram); `.mg-viewport` inside it scrolls the `.mg-canvas`, and the OVERLAYS — the detail
   card, the foot chips, and the "+ state" menu (placed in frame coordinates by `framePoint`)
   — are siblings of the viewport, so they size against the dock and panning can't drag them
-  away from what they describe. That is not cosmetic: while the diagram sized the surface, a
-  two-state lower third made the card 104px around 211px of content, hiding the whole Cut/Fade
-  picker below an invisible fold.
+  away from what they describe. That is not cosmetic (the measured failure is at the frame in
+  MachineGraph.tsx).
   PROBLEM MARKS: a box whose state `validateMachine` has something to say about (animMachine
   `stateProblems` — unreachable, or a timer on a timeline that never ends) wears a coloured
   dot, and its card carries the finding phrased as the NEXT MOVE rather than the export
@@ -454,17 +448,14 @@ e2e/layout.spec.ts.
 - **HostedControlPage** - the `?control=<slug>` operator page (routed in App.tsx like ?chat=).
   It renders **THE PLAYOUT DASHBOARD** (docs/PLAYOUT_DASHBOARD.md), the one design the in-app
   production page and the exported controller also render: PVW + PGM monitors, the verb bar,
-  the selected-cue editor, the cue rundown with its layer badges. It was a FORM
-  before - no monitors at all, one tall card per graphic down a narrow column - so an operator
-  could see neither what they were about to air nor what was on it, and a student who learned
-  the exported controller could not operate this.
+  the selected-cue editor, the cue rundown with its layer badges.
   **Both monitors are real and cost the backend nothing**: the published payload already
   carries every graphic's code, so PREVIEW is a local `PayloadStage` this page drives itself
   and PROGRAM is a second one driven by the shared LOG - which is what makes it show a take
   from somebody else's device. On boot it replays each live layer's last REPORTED data into
   the PROGRAM stage, or a production that has been on air all afternoon opens with an empty
   monitor beside a row marked ON AIR. That replay is safe HERE and was not in an exported
-  package (the round-1 "flashes in and disappears"): this stage drives nothing but itself.
+  package: this stage drives nothing but itself.
   **PARITY IS THE POINT HERE** (docs/CONTROL_PANEL_PARITY.md §4): this page and the in-app one
   render the same dashboard, so a control added to either belongs on both in the same commit.
   Since 2026-08-19 it also carries the ⚡ block whole (section grouping via `controlSections`,
@@ -473,11 +464,9 @@ e2e/layout.spec.ts.
   clears it - and the production DATA-ROW picker, whose rows are published by `buildPanelSpec`
   from the shared `control/cueData.ts` matcher.
   **The VERB KEYS come from `components/playoutKeys.ts`**, the one keymap the in-app page reads
-  too (the exported controller keeps its own copy - it ships without React). This page had NONE
-  until 2026-08-18 and its TAKE re-took a live cue instead of taking it off, so the surface a
-  class operates from was the only one where ↑/↓ and SPACE did nothing. A key belongs in that
-  module, never in a surface; the bar is `HostedVerbs`, a component of its own only because the
-  hooks rule forbids binding a key while the page is still resolving its show.
+  too (the exported controller keeps its own copy - it ships without React). A key belongs in
+  that module, never in a surface; the bar is `HostedVerbs`, a component of its own only because
+  the hooks rule forbids binding a key while the page is still resolving its show.
   Field edits still go to the SHARED staging buffer (local echo + debounced control_stage) and
   air only on an explicit take; event buttons still grey by structural guard; the graphic's
   saved ENTRIES stay a READ-ONLY picker in the editor head (authoring stays in
@@ -489,14 +478,11 @@ e2e/layout.spec.ts.
   the same two functions the published output URL is built from, fed the same
   `ControlSendItem[]` the verbs send. Both monitors on both surfaces are one of these, which
   is what makes a monitor unable to disagree with air without the renderer itself being wrong.
-  **It RE-ASKS for machine state once a second**, as `/output` always has (src/output/main.ts).
-  The stage posts one `{cmd:'state'}` per applied command, so a host's picture of the machine
-  was otherwise only as fresh as its OWN last command: a timer arrow firing in the runtime,
-  another device driving the shared log, or a reply that lost the race with the entrance it
-  asked about all left it stale indefinitely - and the ⚡ buttons grey against that state
-  (`isEventLegal`), so the dashboard offered the wrong moves until something else was pressed.
-  The guard is the SUBSCRIBER (`onState`), not mount-time config, so a preview monitor nobody
-  reads state from costs one boolean per second. Pinned by e2e/production-controls.spec.ts.
+  **It RE-ASKS for machine state once a second**, as `/output` always has (src/output/main.ts;
+  the staleness it prevents is in PayloadStage.tsx's own comments - the ⚡ buttons grey against
+  this state via `isEventLegal`). The guard is the SUBSCRIBER (`onState`), not mount-time
+  config, so a preview monitor nobody reads state from costs one boolean per second. Pinned by
+  e2e/production-controls.spec.ts.
   **home/ProgramStage** is the app-side wrapper that builds the payload from the local show
   first (it was the rehearsal stage; rehearsal is retired - docs/PLAYOUT_DASHBOARD.md §6).
 - **StylePanel** - reads/writes the :root style contract (src/templates/AGENTS.md): colours,
@@ -561,9 +547,7 @@ A surface that tells the user anything about the outcome must `await commitDurab
 first; it resolves to the failure message, or null, and CLAIMING it is what puts this
 surface's own wording in front of the user instead of the generic app-level dialog. An e2e
 SEED that reloads after writing owes the same await. Every surface that reports one does it
-today (grep
-`commitDurableWrites`), and every one of them was first written trusting the synchronous
-answer and reporting success for a write that was refused. Two rules follow from it: a flow
+today (grep `commitDurableWrites`). Two rules follow from it: a flow
 that CONTINUES on success (create the graphic,
 then the production, then navigate) must await BEFORE the next step, or it builds half a thing
 on a save that did not happen; and a background autosave that reports nothing may skip the

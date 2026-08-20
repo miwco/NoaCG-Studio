@@ -705,6 +705,11 @@ export default function MachineGraph({ iframeRef, data, onOpenStep, onOpenStateT
   const menuLane = addMenu ? model_.lanes.find((l) => l.group.id === addMenu.laneId) ?? null : null;
 
   return (
+    // The FRAME fills the dock and the viewport scrolls the canvas inside it; the overlays
+    // (detail card, foot chips, "+ state" menu) are siblings of the viewport so they size
+    // against the dock. While the DIAGRAM sized the surface instead, a two-state lower third
+    // made the detail card 104px tall around 211px of content, hiding the whole Cut/Fade
+    // picker below an invisible fold.
     <div className="machine-graph" ref={frameRef} data-testid="machine-graph">
       <div
         className="mg-viewport"
