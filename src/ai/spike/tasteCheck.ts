@@ -24,7 +24,11 @@
 //   4. WEIGHT and CONTRAST are part of legibility, not separate from it. "A size-only
 //      legibility instrument passes text the owner cannot read."
 //   5. A mark never eats PRIMARY real estate - B27 put the logo on top of the topic card:
-//      "it takes valuable real estate - it should be on the same row as the text."
+//      "it takes valuable real estate - it should be on the same row as the text." NARROWED BY
+//      THE OWNER 2026-08-20, after this rule fired on 34 of 36 archived rows: a mark deliberately
+//      stacked ABOVE its caption is a different composition, not a fault. What survives is the
+//      HORIZONTAL question inside his own sentence - could it have been on that row? A stack the
+//      panel's width never allowed is the composition; a stack with room to spare is the defect.
 //   6. A package's mark is present on EVERY piece or none.
 //
 // IT REPORTS AND DOES NOT GATE, like every instrument beside it (docs/DESIGN_PRINCIPLES.md and
@@ -37,9 +41,14 @@
 //
 // WHAT IT DOES NOT DUPLICATE. `spacingCheck` already measures the mark's GAP to the nearest
 // text and `proportionCheck` its HEIGHT against the type; neither asks where the mark sits
-// INSIDE something, which is rules 1, 2 and 5. `readabilityCheck` already measures size, weight
-// and contrast separately; rule 4 is the JOINT reading - text that clears its size floor and
-// still cannot be read - which is a question none of its three findings asks.
+// INSIDE something, which is rules 1, 2 and 5. Rule 5 in particular does NOT re-ask the gap
+// question - it asks whether the panel's WIDTH left room for an arrangement the design did not
+// take, and the one version of it that measured crowding instead re-flagged `ls18`, the design
+// `spacingCheck`'s own recalibration had just cleared (see MARK_BESIDE_GAP_RATIO).
+// `readabilityCheck` already measures size, weight and contrast separately; rule 4 is the JOINT
+// reading - text that clears its size floor and still cannot be read - which is a question none
+// of its three findings asks, and since 2026-08-20 it is judged against the owner's own floors
+// rather than that instrument's.
 
 import {
   collectPainted,
@@ -48,6 +57,7 @@ import {
   panelMembers,
   primaryTypeSize,
   round2,
+  MARK_GAP_FLOOR_RATIO,
   type Painted,
 } from './spacingCheck';
 import { measureReadability, type ReadabilityReport } from '../../validation/readabilityCheck';
@@ -128,15 +138,33 @@ export const TASTE_SECONDARY_SIZE_PX = 28;
 export const ACCENT_ASPECT = 0.2;
 
 /** A mark and a text line share a ROW when their vertical spans overlap by at least this share
- *  of the shorter one. Below it the mark has taken a band of its own - rule 5.
+ *  of the shorter one. Below it the mark is STACKED over the line instead - which rule 5 reports
+ *  and, since 2026-08-20, does not judge.
  *
  *  READ OFF THE CATALOG (`--control`): all 25 mark-capable lower thirds share a row with their
- *  primary line, the tightest at 0.53, and none of them fires at this floor. A shipped design
- *  that stacked its mark above the headline would be the counter-example; there isn't one. */
+ *  primary line, the tightest at 0.53, so the floor separates the two arrangements with room. */
 export const ROW_SHARE_FLOOR = 0.25;
 
+/**
+ * The air rule 5 budgets between a mark and the line it would stand beside, in PRIMARY TYPE
+ * SIZES - `spacingCheck.MARK_GAP_FLOOR_RATIO`, re-used rather than restated.
+ *
+ * THE UNIT IS NOT A DETAIL HERE, AND THE FIRST VERSION OF THIS RULE PROVED IT. Measured in the
+ * mark's OWN height (the brand manual's 0.25 for a free-standing mark), a crowding form of rule 5
+ * fired on `ls18` in the shipped catalog - the exact design `spacingCheck`'s 2026-08-15
+ * recalibration cleared, because ls18 stretches an institution's mark to the height of the card
+ * and was being divided by its own generosity. An instrument whose false positives are the
+ * designs that carry a mark best is one authors learn to ignore, and re-importing a unit this
+ * repo has already measured and dropped would do it twice.
+ *
+ * So rule 5 does not re-ask the crowding question at all: `spacingCheck` owns it, in the ratified
+ * unit, and a second opinion here is either a duplicate or a regression. What rule 5 asks is the
+ * one thing no instrument beside it does - see the finding below.
+ */
+export const MARK_BESIDE_GAP_RATIO = MARK_GAP_FLOOR_RATIO;
+
 export interface TasteFinding {
-  /** The vocabulary: mark-off-centre, mark-owns-a-row, legible-size-only. The two
+  /** The vocabulary: mark-off-centre, mark-stacked-with-room, legible-size-only. The two
    *  deliberately-thresholdless rules (2 and 3) mint no findings - they report numbers. */
   code: string;
   /** The owner rule this answers, 1-6, so a reader can go straight to the words behind it. */
@@ -210,7 +238,8 @@ export interface SizeOnlyReading {
   failing: ('weight' | 'contrast')[];
 }
 
-/** Rule 5 - whether the mark shares a row with the graphic's primary text, or took its own. */
+/** Rule 5 - whether the mark stands BESIDE the graphic's primary line or is stacked over it, and
+ *  in the first case how much air it left itself. Only the first is judged. */
 export interface MarkRowReading {
   primary: string;
   /** Vertical overlap as a share of the shorter of the two spans. */
@@ -226,8 +255,10 @@ export interface MarkRowReading {
   /** The share of the panel's inner width the mark's ink fills. 1 is a band the mark uses whole. */
   bandFill: number | null;
   /** Room left over if the mark and the primary line were laid side by side in the width the
-   *  panel already has, one mark clear space apart. Positive means the design could have put
-   *  them on one row without growing, which is what "it should be on the same row" asks for. */
+   *  panel already has, the ratified gap apart. Positive means the design could have put them on
+   *  one row without growing the panel - RULE 5'S JUDGED NUMBER, and only while the mark is
+   *  stacked. Negative means the width never allowed it, which is a composition rather than a
+   *  choice. */
   besideSlackPx: number | null;
 }
 
@@ -262,6 +293,7 @@ export interface TasteOptions {
   markCentreOffset?: number;
   markCentreMinPx?: number;
   rowShareFloor?: number;
+  besideGapRatio?: number;
   /** Rule 4's three owner-ratified floors, overridable so a sweep can re-read the corpus at a
    *  different setting without editing the ratified numbers. */
   contrastFloor?: number;
@@ -383,6 +415,7 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
   const centreOffset = options.markCentreOffset ?? MARK_CENTRE_OFFSET;
   const centreMinPx = options.markCentreMinPx ?? MARK_CENTRE_MIN_PX;
   const rowFloor = options.rowShareFloor ?? ROW_SHARE_FLOOR;
+  const besideGapRatio = options.besideGapRatio ?? MARK_BESIDE_GAP_RATIO;
   const contrastFloor = options.contrastFloor ?? TASTE_CONTRAST_FLOOR;
   const weightFloor = options.weightFloor ?? TASTE_WEIGHT_FLOOR;
   const secondarySizeFloor = options.secondarySizeFloorPx ?? TASTE_SECONDARY_SIZE_PX;
@@ -591,23 +624,42 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
         markWidthPx: round2(markW),
         panelWidthPx: panelW > 0 ? round2(panelW) : null,
         bandFill: panelW > 0 ? round2(markW / panelW) : null,
-        // The clear space is the mark's own quarter-height, the brand manual's figure for a
-        // free-standing mark and the one `measureRenderedMark` already gates on - so "would they
-        // fit beside each other" is asked with the room the platform would actually insist on.
+        // "Would they fit beside each other" is asked with the gap the platform would actually
+        // insist on between them - the ratified 0.35 primary type sizes, never a number of this
+        // rule's own (see MARK_BESIDE_GAP_RATIO).
         besideSlackPx: panelW > 0
-          ? round2(panelW - (markW + textW + (ink.bottom - ink.top) * 0.25))
+          ? round2(panelW - (markW + textW + primary * besideGapRatio))
           : null,
       };
-      // Only INSIDE the panel is this rule's defect. A mark parked beside the graphic takes no
-      // real estate from it; B27's took a band across the top of the card the headline then had
-      // to fit under, which is what "it should be on the same row as the text" is asking for.
-      if (inside && rowShare < rowFloor) {
+      // THE DEFECT IS HORIZONTAL ROOM, and that is the owner's own ruling of 2026-08-20 (§25.8.3).
+      //
+      // This rule used to fire on any mark that took a band of its own, and that read 34 of the
+      // 36 archived rows - because Pro's sponsor bug stacks its mark over its caption on every
+      // one of them. The owner's answer: a mark deliberately stacked ABOVE its caption is a
+      // different COMPOSITION, not a fault. A rule firing on almost everything reports nothing.
+      //
+      // What survives is his own words about B27 - "it should be on the SAME ROW as the text" -
+      // read as the question it actually is: **could it have been?** A stack the panel's width
+      // never allowed is the composition the design was forced into; a stack with room to spare
+      // beside it is the mark taking a row it did not need, which is what eating real estate
+      // means. Both sides of that are measured on the rendered frame, in the panel's own width,
+      // and the gap budgeted between them is the ratified one.
+      //
+      // NO PER-TYPE OVERRIDE, and none is needed - the geometry answers for itself, which is the
+      // point. The bug's tile is `fit-content` around the wider of the mark and its caption, so
+      // side by side never fits and the tile is quiet by construction rather than by exemption.
+      //
+      // Crowding is deliberately NOT re-asked here: `spacingCheck` owns the mark-to-text gap in
+      // the ratified unit, and a second opinion in the mark's own height re-flags `ls18` - see
+      // MARK_BESIDE_GAP_RATIO for the measurement that settled it.
+      if (inside && rowShare < rowFloor && (report.markRow.besideSlackPx ?? -1) >= 0) {
         report.findings.push({
-          code: 'mark-owns-a-row',
+          code: 'mark-stacked-with-room',
           rule: 5,
-          detail: `the mark shares ${rowShare} of a row with ${primaryText.desc} and takes a band`
-            + `${report.markRow.bandOfPanel === null ? '' : ` of ${Math.round(report.markRow.bandOfPanel * 100)}% of the panel's height`}`
-            + ' to itself - it should sit on the same row as the text rather than above it',
+          detail: `the mark is stacked over ${primaryText.desc} (sharing ${rowShare} of a row) although`
+            + ` ${report.markRow.besideSlackPx}px would have been left over standing them side by side`
+            + ` in the panel's own ${report.markRow.panelWidthPx}px`
+            + ' - a mark takes a row of its own only when the width leaves it no choice',
         });
       }
     }

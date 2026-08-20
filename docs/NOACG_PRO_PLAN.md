@@ -3402,6 +3402,77 @@ stay quiet (S-04, S-05, S-06, S-12, S-13, S-15, S-18, S-21, S-35, S-36). **That 
 an address**: the composer's supporting/label weight on the countdown is where 33 of 40 readings
 live, and it is one number in `structure.ts` rather than 26 separate defects.
 
+#### 25.8.3 Rule 5 - the real-estate rule, narrowed to the question inside it
+
+**OWNER DECISION, 2026-08-20**, on the question §25.3 put to him: **a mark deliberately stacked
+ABOVE its caption is a different composition, not a defect.** Rule 5 was firing on 34 of the 36
+rows for that arrangement alone, and a rule that fires on almost everything reports nothing.
+
+What survives is the HORIZONTAL question inside his own sentence about B27 - "it should be on the
+same row as the text" - read as: **could it have been?** A stack the panel's width never allowed is
+the composition the design was forced into. A stack with room to spare beside it is a mark taking a
+row it did not need, which is what eating real estate means. Both sides are measured on the
+rendered frame in the panel's own width, and the gap budgeted between mark and line is the ratified
+0.35 primary type sizes rather than a number of this rule's own.
+
+| | after 25.8.1 | after the rewrite |
+|---|---|---|
+| rule 5, corpus | 34 rows | **0 of 36** |
+| rule 5, topic-card round | 3 rows | **0 of 4** |
+| rule 5, shipped lower thirds (`--control`) | 1 of 25 (`ls18`) | **0 of 25** |
+| rule 5, shipped corner bugs (`--control --category=corner-bug`) | 0 of 28 | **1 of 28** (`bug17`) |
+
+**THE UNIT WAS THE WHOLE ARGUMENT, and the first version of this rewrite got it wrong in a way the
+repo has already paid for.** Written as CROWDING - the gap between mark and line, measured in the
+mark's own height, the brand manual's 0.25 - it fired on `ls18` in the shipped catalog: the exact
+design `spacingCheck`'s 2026-08-15 recalibration cleared, because ls18 stretches an institution's
+mark to the height of the card and was being divided by its own generosity (src/ai/AGENTS.md, "the
+mark-gap unit is the primary type size"). An instrument whose false positives are the designs that
+carry a mark best is one authors learn to ignore. So rule 5 does not re-ask crowding at all -
+`spacingCheck` owns it in the ratified unit, and a second opinion here is either a duplicate or a
+regression.
+
+**Zero firings is not a vacuous rule, and it was checked rather than assumed**
+(`scripts/spike-taste-rule5-mutation.mjs`, free, one page). Same stack, two panel widths: at 948px
+with 502px of room left over beside the line it FIRES; at 288px, where the arrangement is 512px
+short of fitting, it is QUIET. And it fires on a real shipped design - **`bug17`**, whose 96px mark
+sits alone in a 424px tile, 30px from one edge against 298px from the other, with 143px to spare
+beside its caption. That is a row anyone can look at.
+
+**The reported half carries what a re-ratification would need.** Of the 72 pieces in the corpus
+that resolve a mark row, 36 are stacked, and **none of them would have fitted beside its line** in
+the width its panel already had (band fill min 0.17, p50 0.48, max 0.89). The topic-card round says
+the same: 8 of 12 stacked, 0 that would have fitted. **So the owner's ruling is not only a taste
+call - the geometry never offered the alternative anywhere in this corpus**, which is why the rule
+now agrees with him by measuring rather than by exemption. There is no per-type override; the bug's
+tile is `fit-content` around the wider of the mark and its caption, so side by side never fits and
+the tile is quiet by construction.
+
+**B27 is still caught, by rule 1.** Its topic-card mark sits 38px from one edge against 400px from
+the other, which is `mark-off-centre` - and all three mark-carrying topic cards still fire it. The
+orphaned mark the owner saw is reported where an orphaned mark belongs, once instead of twice.
+
+**The blind spot is unchanged and worth restating**: 6 of the 8 stacked shipped corner bugs resolve
+no panel at all, so rule 5 cannot apply to them - the same panel-free blindness §25.7 records for
+rules 1 and 5 on the minimalist language.
+
+#### 25.8.4 Where the corpus stands after all three
+
+| rule | baseline | after |
+|---|---|---|
+| 1 `mark-off-centre` | 24 rows | 12 (0 of the 18 rows the composer rebuilds) |
+| 4 `legible-size-only` | 2 rows | 26 |
+| 5 real estate | 34 rows | 0 |
+| 6 `package-mark-mixed` | 36 rows | 36 |
+
+Rule 6 is untouched and still fires on every row: the mark is on the lower third, the sponsor bug
+and the topic card and never on the countdown, because `PRO_GRAPHICS.countdown` declares
+`takesMark: false` (§25.4). That is the next decision to put in front of the owner, and it is a
+registry decision rather than a composer one. Rules 2 and 3 still carry no pass/fail, and rule 3's
+ratified floor still disagrees with the owner - §25.5's re-ratification target (a secondary floor
+above 26px) is unchanged by anything here, because rule 4's 28px is an eligibility gate and not a
+floor rule 3 judges against.
+
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 
 Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are

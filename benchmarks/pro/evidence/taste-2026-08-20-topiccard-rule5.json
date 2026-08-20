@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-20T20:29:58.258Z",
+  "capturedAt": "2026-08-20T21:27:25.832Z",
   "rounds": [
     {
       "dir": "benchmarks/pro/evidence/round-2026-08-19-topiccard",
@@ -82,7 +82,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 663.16,
               "bandFill": 0.13,
-              "besideSlackPx": 200.02
+              "besideSlackPx": 202.12
             },
             "findings": []
           },
@@ -153,18 +153,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 376.02,
               "bandFill": 0.17,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.87 of the free space off centre horizontally in div.corner-bug-box (21px against 291.02px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -191,7 +186,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -207,7 +213,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -279,18 +291,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 508.88,
               "bandFill": 0.13,
-              "besideSlackPx": -3.02
+              "besideSlackPx": -2.42
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.83 of the free space off centre horizontally in div.info-card-box (38px against 406.88px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.info-card-name and takes a band of 22% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -391,7 +398,7 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 716.09,
               "bandFill": 0.36,
-              "besideSlackPx": 60.45
+              "besideSlackPx": 57.15
             },
             "findings": []
           },
@@ -462,15 +469,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -161.83
+              "besideSlackPx": -154.23
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -583,18 +584,13 @@
               "markWidthPx": 260,
               "panelWidthPx": 416.03,
               "bandFill": 0.62,
-              "besideSlackPx": -236
+              "besideSlackPx": -235.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.74 of the free space off centre horizontally in div.info-card-box (20px against 136.03px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.info-card-name and takes a band of 28% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -695,7 +691,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 521.98,
               "bandFill": 0.16,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -766,18 +762,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 155.75,
               "bandFill": 0.41,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.54 of the free space off centre horizontally in div.corner-bug-box (21px against 70.75px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -804,7 +795,19 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 3.11,
+                "failing": [
+                  "weight",
+                  "contrast"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -820,22 +823,104 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight and contrast (weight 400 against 500, contrast 3.11:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
         },
         {
           "graphic": "topic-card",
+          "playError": null,
+          "markFieldId": "f3",
+          "markPresent": true,
+          "taste": {
+            "markCentre": {
+              "container": "div.info-card-box",
+              "containerKind": "ancestor",
+              "gaps": {
+                "left": 38,
+                "right": 399.95,
+                "top": 27,
+                "bottom": 178.08
+              },
+              "offset": {
+                "x": -0.83,
+                "y": -0.74
+              },
+              "free": {
+                "x": true,
+                "y": false
+              }
+            },
+            "markBalance": {
+              "accent": "div.info-card-accent",
+              "text": "span#f0.info-card-name",
+              "toAccentPx": 38,
+              "toTextPx": 20,
+              "balance": 0.53
+            },
+            "secondaryType": {
+              "primaryPx": 44,
+              "secondaryPx": [
+                21,
+                21
+              ],
+              "smallestPx": 21,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Renewables grew 28% this year",
+              "singleLine": false,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 19.98
+            },
+            "sizeOnly": [],
+            "weakest": {
+              "byWeight": {
+                "snippet": "Renewables grew 28% this year",
+                "el": "span#f1.info-card-title",
+                "fontPx": 21,
+                "weight": 500
+              },
+              "byContrast": {
+                "snippet": "Renewables grew 28% this year",
+                "el": "span#f1.info-card-title",
+                "fontPx": 21,
+                "contrast": 3.11
+              }
+            },
+            "markRow": {
+              "primary": "span#f0.info-card-name",
+              "rowShare": 0,
+              "bandOfPanel": 0.24,
+              "insidePanel": true,
+              "markWidthPx": 64,
+              "panelWidthPx": 501.95,
+              "bandFill": 0.13,
+              "besideSlackPx": -3.4
+            },
+            "findings": [
+              {
+                "code": "mark-off-centre",
+                "rule": 1,
+                "detail": "the mark sits 0.83 of the free space off centre horizontally in div.info-card-box (38px against 399.95px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
+              }
+            ]
+          },
           "source": "saved",
-          "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation."
+          "unresolvedAssets": []
         }
       ],
       "packageMark": {
         "consistent": false,
         "present": [
           "lower-third",
-          "sponsor-bug"
+          "sponsor-bug",
+          "topic-card"
         ],
         "absent": [
           "countdown"
@@ -844,7 +929,7 @@
           {
             "code": "package-mark-mixed",
             "rule": 6,
-            "detail": "the mark is on lower-third, sponsor-bug but not on countdown - a package carries its mark on every piece or on none"
+            "detail": "the mark is on lower-third, sponsor-bug, topic-card but not on countdown - a package carries its mark on every piece or on none"
           }
         ]
       }
@@ -859,8 +944,54 @@
       "pieces": [
         {
           "graphic": "lower-third",
+          "playError": null,
+          "markFieldId": "f2",
+          "markPresent": true,
+          "taste": {
+            "markCentre": null,
+            "markBalance": {
+              "accent": "div.lower-third-accent",
+              "text": "span#f0.lower-third-name",
+              "toAccentPx": 26,
+              "toTextPx": 26,
+              "balance": 1
+            },
+            "secondaryType": {
+              "primaryPx": 54,
+              "secondaryPx": [
+                26
+              ],
+              "smallestPx": 26,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Director",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
+              "ratifiedFloorPx": null
+            },
+            "sizeOnly": [],
+            "weakest": {
+              "byWeight": {
+                "snippet": "Director",
+                "el": "span#f1.lower-third-title",
+                "fontPx": 26,
+                "weight": 500
+              },
+              "byContrast": null
+            },
+            "markRow": {
+              "primary": "span#f0.lower-third-name",
+              "rowShare": 0.59,
+              "bandOfPanel": null,
+              "insidePanel": false,
+              "markWidthPx": 67.19,
+              "panelWidthPx": null,
+              "bandFill": null,
+              "besideSlackPx": null
+            },
+            "findings": []
+          },
           "source": "saved",
-          "error": "page.evaluate: ReferenceError: weightFloor is not defined\n    at measureTaste (http://localhost:5294/src/ai/spike/tasteCheck.ts?t=1787257820037:399:24)\n    at eval (eval at evaluate (:303:30), <anonym"
+          "unresolvedAssets": []
         },
         {
           "graphic": "sponsor-bug",
@@ -913,16 +1044,128 @@
         },
         {
           "graphic": "countdown",
+          "playError": null,
+          "markFieldId": null,
+          "markPresent": false,
+          "taste": {
+            "markCentre": null,
+            "markBalance": null,
+            "secondaryType": {
+              "primaryPx": 80,
+              "secondaryPx": [
+                38
+              ],
+              "smallestPx": 38,
+              "smallestRole": "secondary",
+              "smallestSnippet": "STARTING IN",
+              "singleLine": false,
+              "smallestFlaggedOnSize": false,
+              "ratifiedFloorPx": null
+            },
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": null,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
+            "weakest": {
+              "byWeight": {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400
+              },
+              "byContrast": null
+            },
+            "markRow": null,
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
+          },
           "source": "saved",
-          "error": "page.evaluate: ReferenceError: secondarySizeFloor is not defined\n    at measureTaste (http://localhost:5294/src/ai/spike/tasteCheck.ts?t=1787257824759:397:56)\n    at eval (eval at evaluate (:303:30), "
+          "unresolvedAssets": []
         },
         {
           "graphic": "topic-card",
+          "playError": null,
+          "markFieldId": "f3",
+          "markPresent": true,
+          "taste": {
+            "markCentre": null,
+            "markBalance": {
+              "accent": "div.info-card-accent",
+              "text": "span#f0.info-card-name",
+              "toAccentPx": 157.08,
+              "toTextPx": 20,
+              "balance": 0.13
+            },
+            "secondaryType": {
+              "primaryPx": 44,
+              "secondaryPx": [
+                21,
+                21
+              ],
+              "smallestPx": 21,
+              "smallestRole": "secondary",
+              "smallestSnippet": "Renewables grew 28% this year",
+              "singleLine": false,
+              "smallestFlaggedOnSize": true,
+              "ratifiedFloorPx": 19.98
+            },
+            "sizeOnly": [],
+            "weakest": {
+              "byWeight": {
+                "snippet": "Renewables grew 28% this year",
+                "el": "span#f1.info-card-title",
+                "fontPx": 21,
+                "weight": 500
+              },
+              "byContrast": null
+            },
+            "markRow": {
+              "primary": "span#f0.info-card-name",
+              "rowShare": 0,
+              "bandOfPanel": null,
+              "insidePanel": false,
+              "markWidthPx": 51.19,
+              "panelWidthPx": null,
+              "bandFill": null,
+              "besideSlackPx": null
+            },
+            "findings": []
+          },
           "source": "saved",
-          "error": "page.evaluate: Execution context was destroyed, most likely because of a navigation."
+          "unresolvedAssets": []
         }
       ],
-      "packageMark": null
+      "packageMark": {
+        "consistent": false,
+        "present": [
+          "lower-third",
+          "sponsor-bug",
+          "topic-card"
+        ],
+        "absent": [
+          "countdown"
+        ],
+        "findings": [
+          {
+            "code": "package-mark-mixed",
+            "rule": 6,
+            "detail": "the mark is on lower-third, sponsor-bug, topic-card but not on countdown - a package carries its mark on every piece or on none"
+          }
+        ]
+      }
     }
   ]
 }

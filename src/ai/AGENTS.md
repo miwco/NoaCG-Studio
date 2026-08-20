@@ -837,10 +837,20 @@ Three properties are the ones to keep in mind before touching it:
   actual case, the sponsor-bug tile that also carries "ON AIR". What is measured is the axis the
   FLOW did not decide, and flow peers are painted TEXT only - counting an accent bar as a peer
   suppressed the exact case the rule exists for.
-- **A rule that fires on a shipped design is a question, not a threshold to move.** Rule 5 fires
-  on Pro's sponsor bug across nearly the whole corpus; measured, 26 of the 28 shipped corner bugs
-  put the mark BESIDE the caption where Pro stacks it above. That goes to the owner as a finding
-  rather than into a per-type override - the failure `PRO_GRAPHICS.countdown` already warns about.
+- **A rule that fires on a shipped design is a question, not a threshold to move - and the owner
+  answers it.** Rule 5 fired on Pro's sponsor bug across nearly the whole corpus, so it went to
+  him rather than into a per-type override, and on 2026-08-20 he ruled the STACK legitimate: a
+  mark deliberately above its caption is a different composition. What the rule asks now is the
+  horizontal question inside "it should be on the same row as the text" - **could it have been?**
+  A stack the panel's width never allowed is the composition; a stack with room to spare beside it
+  is the defect. No per-type override was needed in the end: the bug's tile is `fit-content` around
+  the wider of mark and caption, so side by side never fits and it is quiet by construction.
+- **Rule 5 does NOT re-ask crowding, and the first attempt at this rewrite is why.** Measured in
+  the mark's own height it re-flagged `ls18` - the design `spacingCheck`'s own mark-gap
+  recalibration had just cleared. `spacingCheck` owns the gap in the ratified unit; a second
+  opinion here is a duplicate or a regression. **A rule that fires nowhere is checked, not
+  assumed**: `scripts/spike-taste-rule5-mutation.mjs` (free, one page) proves it fires with room
+  beside the line and is quiet without it, and it does fire on shipped `bug17`.
 
 Rule 4 reads its NUMBERS through `validation/readabilityCheck` rather than measuring weight or
 contrast again, and compares them against **its own three owner-ratified floors** (2026-08-20):

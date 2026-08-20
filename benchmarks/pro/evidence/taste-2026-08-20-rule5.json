@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-08-20T20:26:35.976Z",
+  "capturedAt": "2026-08-20T21:24:03.098Z",
   "rounds": [
     {
       "dir": "benchmarks/pro/evidence/round-2026-08-16",
@@ -87,7 +87,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 628.83,
               "bandFill": 0.13,
-              "besideSlackPx": 172.72
+              "besideSlackPx": 174.82
             },
             "findings": []
           },
@@ -158,15 +158,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 132.94,
               "bandFill": 0.48,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -191,7 +185,19 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 3.01,
+                "failing": [
+                  "weight",
+                  "contrast"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -207,7 +213,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight and contrast (weight 400 against 500, contrast 3.01:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -305,7 +317,7 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 716.09,
               "bandFill": 0.36,
-              "besideSlackPx": 60.45
+              "besideSlackPx": 57.15
             },
             "findings": []
           },
@@ -376,15 +388,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -53.3
+              "besideSlackPx": -45.7
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -409,7 +415,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 700,
+                "contrast": 3.04,
+                "failing": [
+                  "contrast"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -425,7 +442,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on contrast (weight 700 against 500, contrast 3.04:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -523,7 +546,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 609.36,
               "bandFill": 0.14,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -594,15 +617,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 132.06,
               "bandFill": 0.48,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -741,7 +758,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 536.22,
               "bandFill": 0.16,
-              "besideSlackPx": 55
+              "besideSlackPx": 57.1
             },
             "findings": []
           },
@@ -812,15 +829,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 117.17,
               "bandFill": 0.55,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -845,7 +856,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -861,7 +883,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1039,7 +1067,7 @@
               {
                 "code": "legible-size-only",
                 "rule": 4,
-                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400) - weight and contrast are part of legibility, not separate from it"
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500) - weight and contrast are part of legibility, not separate from it"
               }
             ]
           },
@@ -1139,7 +1167,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 539.23,
               "bandFill": 0.16,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -1210,15 +1238,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 132.06,
               "bandFill": 0.48,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1243,7 +1265,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 11.81,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -1259,7 +1292,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 11.81:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1357,7 +1396,7 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 1092,
               "bandFill": 0.24,
-              "besideSlackPx": 60.45
+              "besideSlackPx": 57.15
             },
             "findings": []
           },
@@ -1428,15 +1467,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -47.55
+              "besideSlackPx": -39.95
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1575,7 +1608,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 1064.69,
               "bandFill": 0.06,
-              "besideSlackPx": 283.63
+              "besideSlackPx": 285.73
             },
             "findings": []
           },
@@ -1646,15 +1679,9 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 127.03,
               "bandFill": 0.4,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1793,7 +1820,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 649.34,
               "bandFill": 0.13,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -1864,15 +1891,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 132.06,
               "bandFill": 0.48,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -1897,7 +1918,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 7.32,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -1913,7 +1945,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 7.32:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2011,7 +2049,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 980.53,
               "bandFill": 0.09,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -2082,15 +2120,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 122.94,
               "bandFill": 0.52,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2115,7 +2147,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -2131,7 +2174,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2229,7 +2278,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 601.72,
               "bandFill": 0.11,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -2300,15 +2349,9 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 127.03,
               "bandFill": 0.4,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2424,7 +2467,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Ingrid Bakker",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Ingrid Bakker",
@@ -2447,9 +2501,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 645.58,
               "bandFill": 0.4,
-              "besideSlackPx": 76.45
+              "besideSlackPx": 73.15
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Ingrid Bakker\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -2518,15 +2578,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -53.3
+              "besideSlackPx": -45.7
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2551,7 +2605,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 12.55,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -2567,7 +2642,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 12.55:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2642,7 +2728,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Alexandra Riva",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Alexandra Riva",
@@ -2665,9 +2762,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 740.05,
               "bandFill": 0.35,
-              "besideSlackPx": 135.71
+              "besideSlackPx": 132.41
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Alexandra Riva\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -2736,15 +2839,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 302,
               "bandFill": 0.86,
-              "besideSlackPx": -43.3
+              "besideSlackPx": -35.7
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2769,7 +2866,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 8.92,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -2785,7 +2903,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 8.92:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2883,7 +3012,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 657.48,
               "bandFill": 0.13,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -2954,15 +3083,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 132.06,
               "bandFill": 0.48,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -2987,7 +3110,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 10.34,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -3003,7 +3137,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 10.34:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3101,7 +3241,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 672.39,
               "bandFill": 0.1,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -3172,15 +3312,9 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 137.03,
               "bandFill": 0.37,
-              "besideSlackPx": -25.19
+              "besideSlackPx": -17.59
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3205,7 +3339,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 3.32,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -3221,7 +3366,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 3.32:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3296,7 +3447,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Bianca Solari",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Bianca Solari",
@@ -3319,9 +3481,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 658.52,
               "bandFill": 0.39,
-              "besideSlackPx": 76.45
+              "besideSlackPx": 73.15
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Bianca Solari\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -3390,15 +3558,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -64.83
+              "besideSlackPx": -57.23
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3423,7 +3585,29 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 3.04,
+                "failing": [
+                  "weight",
+                  "contrast"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -3439,7 +3623,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight and contrast (weight 400 against 500, contrast 3.04:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3537,7 +3732,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 472.48,
               "bandFill": 0.18,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -3608,15 +3803,9 @@
               "markWidthPx": 64,
               "panelWidthPx": 122.94,
               "bandFill": 0.52,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3641,7 +3830,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -3657,7 +3857,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3755,7 +3961,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 577.98,
               "bandFill": 0.12,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -3826,15 +4032,9 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 125.58,
               "bandFill": 0.41,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "recomposed",
           "unresolvedAssets": []
@@ -3973,7 +4173,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 602.83,
               "bandFill": 0.14,
-              "besideSlackPx": 154.8
+              "besideSlackPx": 156.9
             },
             "findings": []
           },
@@ -4044,18 +4244,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 331.86,
               "bandFill": 0.19,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.84 of the free space off centre horizontally in div.corner-bug-box (21px against 246.86px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -4082,7 +4277,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 5.57,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -4098,7 +4304,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 5.57:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -4196,7 +4408,7 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 699.89,
               "bandFill": 0.37,
-              "besideSlackPx": 60.45
+              "besideSlackPx": 57.15
             },
             "findings": []
           },
@@ -4267,15 +4479,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -156.17
+              "besideSlackPx": -148.57
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -4414,7 +4620,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 528,
               "bandFill": 0.16,
-              "besideSlackPx": 97
+              "besideSlackPx": 99.1
             },
             "findings": []
           },
@@ -4485,18 +4691,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 170.5,
               "bandFill": 0.38,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.61 of the free space off centre horizontally in div.corner-bug-box (21px against 85.5px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -4637,7 +4838,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 552.22,
               "bandFill": 0.15,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -4708,18 +4909,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 299.78,
               "bandFill": 0.21,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.86 of the free space off centre horizontally in div.corner-bug-box (16px against 219.78px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -4746,7 +4942,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -4762,7 +4969,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -4940,7 +5153,7 @@
               {
                 "code": "legible-size-only",
                 "rule": 4,
-                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400) - weight and contrast are part of legibility, not separate from it"
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500) - weight and contrast are part of legibility, not separate from it"
               }
             ]
           },
@@ -5040,7 +5253,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 518.53,
               "bandFill": 0.16,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -5111,18 +5324,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 145.75,
               "bandFill": 0.44,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.61 of the free space off centre horizontally in div.corner-bug-box (16px against 65.75px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -5240,7 +5448,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Alexandra Konstantopoulos-Vandermeulen",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Alexandra Konstantopoulos-Vandermeulen",
@@ -5263,9 +5482,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 1092,
               "bandFill": 0.24,
-              "besideSlackPx": 60.45
+              "besideSlackPx": 57.15
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Alexandra Konstantopoulos-Vandermeulen\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -5334,15 +5559,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -171.53
+              "besideSlackPx": -163.93
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -5367,7 +5586,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 7.95,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -5383,7 +5623,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 7.95:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -5481,7 +5732,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 1064.69,
               "bandFill": 0.06,
-              "besideSlackPx": 424.98
+              "besideSlackPx": 427.08
             },
             "findings": []
           },
@@ -5552,18 +5803,13 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 180.16,
               "bandFill": 0.28,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.75 of the free space off centre horizontally in div.corner-bug-box (16px against 112.97px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -5590,7 +5836,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 5.44,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -5606,7 +5863,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 5.44:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -5704,7 +5967,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 540.56,
               "bandFill": 0.16,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -5775,18 +6038,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 145.75,
               "bandFill": 0.44,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.61 of the free space off centre horizontally in div.corner-bug-box (16px against 65.75px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -5927,7 +6185,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 980.86,
               "bandFill": 0.09,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -5998,18 +6256,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 321.86,
               "bandFill": 0.2,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.88 of the free space off centre horizontally in div.corner-bug-box (16px against 241.86px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -6036,7 +6289,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -6052,7 +6316,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6150,7 +6420,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 568.34,
               "bandFill": 0.12,
-              "besideSlackPx": 115.38
+              "besideSlackPx": 117.48
             },
             "findings": []
           },
@@ -6221,18 +6491,13 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 202.5,
               "bandFill": 0.25,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.79 of the free space off centre horizontally in div.corner-bug-box (16px against 135.31px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -6259,7 +6524,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 5.44,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -6275,7 +6551,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 5.44:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6350,7 +6632,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Ingrid Bakker",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Ingrid Bakker",
@@ -6373,9 +6666,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 645.58,
               "bandFill": 0.4,
-              "besideSlackPx": 76.45
+              "besideSlackPx": 73.15
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Ingrid Bakker\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6444,15 +6743,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -161.83
+              "besideSlackPx": -154.23
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6477,7 +6770,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.76,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -6493,7 +6807,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.76:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6568,7 +6893,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Alexandra Riva",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Alexandra Riva",
@@ -6591,9 +6927,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 680.3,
               "bandFill": 0.38,
-              "besideSlackPx": 91.09
+              "besideSlackPx": 87.79
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Alexandra Riva\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6662,15 +7004,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -156.17
+              "besideSlackPx": -148.57
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6695,7 +7031,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.62,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -6711,7 +7068,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.62:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -6809,7 +7177,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 601.11,
               "bandFill": 0.14,
-              "besideSlackPx": 123.13
+              "besideSlackPx": 125.23
             },
             "findings": []
           },
@@ -6880,18 +7248,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 155.75,
               "bandFill": 0.41,
-              "besideSlackPx": -38
+              "besideSlackPx": -30.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.54 of the free space off centre horizontally in div.corner-bug-box (21px against 70.75px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -6918,7 +7281,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 8.82,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -6934,7 +7308,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 8.82:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7032,7 +7412,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 604.61,
               "bandFill": 0.11,
-              "besideSlackPx": 127.06
+              "besideSlackPx": 129.16
             },
             "findings": []
           },
@@ -7103,18 +7483,13 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 190.16,
               "bandFill": 0.27,
-              "besideSlackPx": -25.19
+              "besideSlackPx": -17.59
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.7 of the free space off centre horizontally in div.corner-bug-box (21px against 117.97px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -7141,7 +7516,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 5.44,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -7157,7 +7543,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 5.44:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7232,7 +7624,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "Bianca Solari",
+                "el": "span#f0.lower-third-name",
+                "fontPx": 54,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "Bianca Solari",
@@ -7255,9 +7658,15 @@
               "markWidthPx": 259.95,
               "panelWidthPx": 644.47,
               "bandFill": 0.4,
-              "besideSlackPx": 76.45
+              "besideSlackPx": 73.15
             },
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"Bianca Solari\" (span#f0.lower-third-name) is big enough at 54px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7326,15 +7735,9 @@
               "markWidthPx": 260,
               "panelWidthPx": 292,
               "bandFill": 0.89,
-              "besideSlackPx": -171.53
+              "besideSlackPx": -163.93
             },
-            "findings": [
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 44% of the panel's height to itself - it should sit on the same row as the text rather than above it"
-              }
-            ]
+            "findings": []
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7359,7 +7762,28 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 10.56,
+                "failing": [
+                  "weight"
+                ]
+              },
+              {
+                "snippet": "2:59",
+                "el": "div.game-timer-clock",
+                "fontPx": 80,
+                "weight": 400,
+                "contrast": 17.8,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -7375,7 +7799,18 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 10.56:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              },
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"2:59\" (div.game-timer-clock) is big enough at 80px and still fails on weight (weight 400 against 500, contrast 17.8:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7473,7 +7908,7 @@
               "markWidthPx": 84,
               "panelWidthPx": 480.02,
               "bandFill": 0.17,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -7544,18 +7979,13 @@
               "markWidthPx": 64,
               "panelWidthPx": 384,
               "bandFill": 0.17,
-              "besideSlackPx": -48
+              "besideSlackPx": -40.4
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.9 of the free space off centre horizontally in div.corner-bug-box (16px against 304px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 36% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
@@ -7582,7 +8012,18 @@
               "smallestFlaggedOnSize": false,
               "ratifiedFloorPx": null
             },
-            "sizeOnly": [],
+            "sizeOnly": [
+              {
+                "snippet": "STARTING IN",
+                "el": "span#f0.game-timer-label",
+                "fontPx": 38,
+                "weight": 400,
+                "contrast": 6.74,
+                "failing": [
+                  "weight"
+                ]
+              }
+            ],
             "weakest": {
               "byWeight": {
                 "snippet": "STARTING IN",
@@ -7598,7 +8039,13 @@
               }
             },
             "markRow": null,
-            "findings": []
+            "findings": [
+              {
+                "code": "legible-size-only",
+                "rule": 4,
+                "detail": "\"STARTING IN\" (span#f0.game-timer-label) is big enough at 38px and still fails on weight (weight 400 against 500, contrast 6.74:1 against 3.25) - weight and contrast are part of legibility, not separate from it"
+              }
+            ]
           },
           "source": "saved",
           "unresolvedAssets": []
@@ -7696,7 +8143,7 @@
               "markWidthPx": 67.19,
               "panelWidthPx": 497.39,
               "bandFill": 0.14,
-              "besideSlackPx": 71
+              "besideSlackPx": 73.1
             },
             "findings": []
           },
@@ -7767,18 +8214,13 @@
               "markWidthPx": 51.19,
               "panelWidthPx": 202.5,
               "bandFill": 0.25,
-              "besideSlackPx": -35.19
+              "besideSlackPx": -27.59
             },
             "findings": [
               {
                 "code": "mark-off-centre",
                 "rule": 1,
                 "detail": "the mark sits 0.79 of the free space off centre horizontally in div.corner-bug-box (16px against 135.31px; band 0.12) - a mark inside a container is centred in it, or at least balanced"
-              },
-              {
-                "code": "mark-owns-a-row",
-                "rule": 5,
-                "detail": "the mark shares 0 of a row with span#f0.corner-bug-name and takes a band of 40% of the panel's height to itself - it should sit on the same row as the text rather than above it"
               }
             ]
           },
