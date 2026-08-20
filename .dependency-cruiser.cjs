@@ -192,6 +192,16 @@ module.exports = {
       to: { path: '^src/(audience|backend)/' },
     },
     {
+      comment:
+        '§3: the /ograf STARTERS page entry (docs/OGRAF.md). It builds real catalog templates ' +
+        '(templates + the model types they carry), previews them through preview/composeDocument ' +
+        '+ frameGraphic, and packages them through the OGraf export target - the point of the ' +
+        'page is that its downloads ARE the exporter. It reads no store, no components, no ' +
+        'backend: a static marketing surface with a build button.',
+      from: { path: '^src/ograf/' },
+      to: { path: '^src/(templates|model|preview|export)/' },
+    },
+    {
       comment: '§3: community -> backend, validation',
       from: { path: '^src/community/' },
       to: { path: '^src/(backend|validation)/' },
