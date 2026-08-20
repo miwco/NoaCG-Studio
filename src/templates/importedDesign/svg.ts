@@ -52,6 +52,7 @@ const NO_SVG: DesignSvg = {
   width: 960,
   height: 270,
   fields: [],
+  images: [],
   fonts: [],
 };
 
@@ -73,7 +74,7 @@ function bindSvgMarkup(svg: DesignSvg): string {
 
   // Field ids are ours: a layer Illustrator happened to name "f0" would collide with the
   // binding, so any such id moves aside (references to it inside the file move with it).
-  const taken = new Set(svg.fields.map((_, i) => `f${i}`));
+  const taken = new Set([...svg.fields, ...svg.images].map((_, i) => `f${i}`));
   for (const el of Array.from(root.querySelectorAll('[id]'))) {
     const id = el.getAttribute('id')!;
     if (!taken.has(id)) continue;
@@ -85,7 +86,7 @@ function bindSvgMarkup(svg: DesignSvg): string {
     }
   }
 
-  svg.fields.forEach((field, i) => {
+  [...svg.fields, ...svg.images].forEach((field, i) => {
     const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${field.candidateId}"]`);
     el?.setAttribute('id', `f${i}`);
   });
@@ -95,14 +96,27 @@ function bindSvgMarkup(svg: DesignSvg): string {
   return new XMLSerializer().serializeToString(root);
 }
 
-/** The SPX DataFields: one per bound layer, numeric samples as real number fields. */
+/** The SPX DataFields: one per bound text layer (numeric samples as real number fields),
+ *  then one filelist per bound picture layer — update() swaps that node's href, and an
+ *  empty value keeps the picture the designer drew. */
 function svgFields(svg: DesignSvg): SpxField[] {
-  return svg.fields.map((f, i) => ({
-    field: `f${i}`,
-    ftype: f.numeric ? ('number' as const) : ('textfield' as const),
-    title: f.title,
-    value: f.sample,
-  }));
+  return [
+    ...svg.fields.map((f, i): SpxField => ({
+      field: `f${i}`,
+      ftype: f.numeric ? 'number' : 'textfield',
+      title: f.title,
+      value: f.sample,
+    })),
+    ...svg.images.map((f, i): SpxField => ({
+      field: `f${svg.fields.length + i}`,
+      ftype: 'filelist',
+      title: f.title,
+      value: '',
+      // The SPX picker lists the project's images/ folder, like every image field.
+      assetfolder: './images/',
+      extension: 'png',
+    })),
+  ];
 }
 
 /**

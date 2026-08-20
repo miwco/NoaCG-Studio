@@ -1436,6 +1436,13 @@ export default function CreationWizard() {
                       sample: c.sample,
                       numeric: c.numeric,
                     })),
+                    // Pictures start OFF — inside a design they are usually the artwork
+                    // itself — unless the layer opted in by name (`f:`).
+                    svgImages: result.images.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                    })),
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
@@ -1464,7 +1471,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1497,6 +1504,7 @@ export default function CreationWizard() {
                     // A raster drop replaces any SVG from this walk (and vice versa above).
                     designSvg: null,
                     svgFields: [],
+                    svgImages: [],
                     svgFonts: [],
                     designArt,
                     importedImages,

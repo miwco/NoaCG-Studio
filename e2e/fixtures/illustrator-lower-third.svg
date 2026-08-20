@@ -25,4 +25,5 @@
       <tspan x="220" y="200">22:40</tspan>
     </text>
   </g>
+  <image id="Crest" x="850" y="80" width="48" height="48" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="/>
 </svg>

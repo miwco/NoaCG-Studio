@@ -318,10 +318,21 @@ export interface DesignSvg {
   /** Design-space size in px — the viewBox size, fitted to the frame when larger. */
   width: number;
   height: number;
-  /** The layers becoming operator fields, in field order (index i binds as fN). */
+  /** The text layers becoming operator fields, in field order (index i binds as fN). */
   fields: DesignSvgField[];
+  /** The `<image>` layers becoming picture fields (filelist), numbered after the text
+   *  fields. update() swaps the node's href; an empty value restores the drawn picture. */
+  images: DesignSvgImage[];
   /** Every font family the SVG references, with how each one was resolved. */
   fonts: DesignSvgFont[];
+}
+
+/** One SVG picture layer bound as a filelist field. */
+export interface DesignSvgImage {
+  /** The node's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+  /** Operator-facing field label. */
+  title: string;
 }
 
 /** One SVG text layer bound as an operator field. */

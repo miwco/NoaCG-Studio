@@ -107,6 +107,14 @@ export interface SvgFieldDraft {
   numeric: boolean;
 }
 
+/** One `<image>` layer offered as a swappable picture field (docs/SVG_IMPORT_PLAN.md P2). */
+export interface SvgImageDraft {
+  candidateId: string;
+  /** OFF by default — a picture is usually the artwork, not a slot. */
+  on: boolean;
+  title: string;
+}
+
 /** How one font family the SVG references resolves (plan §4). */
 export interface SvgFontDraft {
   family: string;
@@ -204,6 +212,10 @@ export interface WizardDraft {
    *  operator fields, and their edited labels/samples. Initialized from the inventory
    *  (all ON — or only the `f:`-prefixed ones when any layer opted in by name). */
   svgFields: SvgFieldDraft[];
+  /** The mapping step's picture rows, one per `<image>` layer: OFF by default (most
+   *  pictures inside a design are the artwork, not a slot), ON = a filelist field whose
+   *  value swaps the node's href. */
+  svgImages: SvgImageDraft[];
   /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
    *  the mapping step offers the Google fetch or an upload for the rest. An entry with
    *  neither source is UNRESOLVED — created anyway, with a warning. */
@@ -260,6 +272,7 @@ export function initialDraft(): WizardDraft {
     designFields: [],
     designSvg: null,
     svgFields: [],
+    svgImages: [],
     svgFonts: [],
     legibility: {},
   };
@@ -353,6 +366,9 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
               sample: f.sample,
               numeric: f.numeric,
             })),
+          images: draft.svgImages
+            .filter((f) => f.on)
+            .map((f) => ({ candidateId: f.candidateId, title: f.title.trim() || 'Picture' })),
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,

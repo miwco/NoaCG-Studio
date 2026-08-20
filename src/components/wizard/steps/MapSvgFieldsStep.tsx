@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DraftPatch, SvgFieldDraft, SvgFontDraft, WizardDraft } from '../draft';
+import type { DraftPatch, SvgFieldDraft, SvgFontDraft, SvgImageDraft, WizardDraft } from '../draft';
 import { SVG_CANDIDATE_ATTR } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
@@ -63,6 +63,11 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
   const patchField = (candidateId: string, patch: Partial<SvgFieldDraft>) =>
     onDraft({
       svgFields: draft.svgFields.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
+    });
+
+  const patchImage = (candidateId: string, patch: Partial<SvgImageDraft>) =>
+    onDraft({
+      svgImages: draft.svgImages.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
     });
 
   const patchFont = (family: string, patch: Partial<SvgFontDraft>) =>
@@ -196,6 +201,46 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   disabled={!f.on}
                   onChange={(e) => patchField(f.candidateId, { sample: e.target.value })}
                   data-testid={`map-svg-sample-${f.candidateId}`}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {draft.svgImages.length > 0 && (
+        <div className="panel-section" data-testid="map-svg-images">
+          <h3>
+            Pictures{' '}
+            <span className="muted">
+              {draft.svgImages.filter((f) => f.on).length} of {draft.svgImages.length} swappable on air
+            </span>
+          </h3>
+          <p className="hint">
+            A ticked picture becomes a field the operator can swap — leaving it empty keeps
+            the picture you drew. Untouched pictures stay part of the artwork.
+          </p>
+          {draft.svgImages.map((f) => (
+            <div
+              key={f.candidateId}
+              className={`map-svg-row ${f.on ? '' : 'off'}`}
+              onMouseEnter={() => setHoverId(f.candidateId)}
+              onMouseLeave={() => setHoverId((h) => (h === f.candidateId ? null : h))}
+              data-testid={`map-svg-image-${f.candidateId}`}
+            >
+              <input
+                type="checkbox"
+                checked={f.on}
+                onChange={(e) => patchImage(f.candidateId, { on: e.target.checked })}
+                title={f.on ? 'On — the operator can swap this picture' : 'Off — this picture stays as drawn'}
+              />
+              <label className="save-field grow">
+                <span>Field name</span>
+                <input
+                  value={f.title}
+                  disabled={!f.on}
+                  onChange={(e) => patchImage(f.candidateId, { title: e.target.value })}
+                  data-testid={`map-svg-image-title-${f.candidateId}`}
                 />
               </label>
             </div>

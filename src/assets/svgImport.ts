@@ -31,6 +31,18 @@ export interface SvgTextCandidate {
   numeric: boolean;
 }
 
+/** One bindable picture layer: an SVG `<image>` element the operator could swap by field
+ *  (update() rewrites its href; empty restores the drawn picture). Offered OFF by default —
+ *  most pictures inside a design are the artwork itself, not a slot. */
+export interface SvgImageCandidate {
+  /** Stable marker id ("i0", "i1", …) — the value of data-noacg-candidate on the node. */
+  id: string;
+  /** Operator-facing label, prefilled from the layer name like a text candidate's. */
+  label: string;
+  /** True when the layer name carried the `f:` / `field:` prefix. */
+  marked: boolean;
+}
+
 /** One font family the SVG references, as written in its own markup. */
 export interface SvgFontRef {
   family: string;
@@ -45,6 +57,8 @@ export interface SvgImportResult {
   height: number;
   /** Bindable text candidates, in document order. */
   candidates: SvgTextCandidate[];
+  /** Bindable picture candidates (`<image>` layers), in document order. */
+  images: SvgImageCandidate[];
   /** Every font family the markup references, in first-seen order. */
   fonts: SvgFontRef[];
   /** What sanitization removed, in user-facing words. Empty for a clean file. */
@@ -313,11 +327,23 @@ export function importSvgMarkup(source: string): SvgImportResult {
     };
   });
 
+  // Picture layers: every surviving <image> (the sanitizer already dropped external ones).
+  // A placeholder with no picture at all has nothing to restore on empty, so it is skipped.
+  const images: SvgImageCandidate[] = Array.from(svg.querySelectorAll('image'))
+    .filter((el) => el.getAttribute('href') || el.getAttribute('xlink:href'))
+    .map((el, i) => {
+      const id = `i${i}`;
+      el.setAttribute(SVG_CANDIDATE_ATTR, id);
+      const { label, marked } = stripFieldPrefix(candidateName(el, svg));
+      return { id, label: label || `Picture ${i + 1}`, marked };
+    });
+
   return {
     markup: new XMLSerializer().serializeToString(svg),
     width: size.width,
     height: size.height,
     candidates,
+    images,
     fonts: fontInventory(svg),
     notices,
   };

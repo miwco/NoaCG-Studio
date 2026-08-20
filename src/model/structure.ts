@@ -155,15 +155,23 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
     } else if (maskedBy && el.parentElement?.classList.contains(`${maskedBy}-mask`)) {
       parts.push({ selector: `#${id}`, kind: 'line', label: fieldTitle(id) ?? `#${id}`, channel: 'mask', ...flag });
     } else if (
-      // A bound text layer of an imported SVG (docs/SVG_IMPORT_PLAN.md): the field element IS
-      // one of the artwork's own <text>/<tspan> nodes, so it is fully visual and animatable —
-      // GSAP tweens SVG elements like any other. There is no overflow-hidden mask around it
-      // (SVG text does not clip), so its reveal channel is 'rise', never 'mask'.
+      // A bound layer of an imported SVG (docs/SVG_IMPORT_PLAN.md): the field element IS one
+      // of the artwork's own <text>/<tspan>/<image> nodes, so it is fully visual and
+      // animatable — GSAP tweens SVG elements like any other. There is no overflow-hidden
+      // mask around SVG text (it does not clip), so the reveal channel is 'rise', never
+      // 'mask'; a bound <image> is a picture slot exactly like an <img> field.
       maskedBy &&
       el.closest(`.${maskedBy}-art`) &&
-      ['text', 'tspan'].includes(el.tagName.toLowerCase())
+      ['text', 'tspan', 'image'].includes(el.tagName.toLowerCase())
     ) {
-      parts.push({ selector: `#${id}`, kind: 'line', label: fieldTitle(id) ?? `#${id}`, channel: 'rise', ...flag });
+      const isPicture = el.tagName.toLowerCase() === 'image';
+      parts.push({
+        selector: `#${id}`,
+        kind: isPicture ? 'image' : 'line',
+        label: fieldTitle(id) ?? (isPicture ? 'Picture' : `#${id}`),
+        channel: 'rise',
+        ...flag,
+      });
     }
     // Other unmasked fN elements (hidden data sources, free-standing value fields) are not
     // registry parts — they are either not visual or not reveal-capable yet.

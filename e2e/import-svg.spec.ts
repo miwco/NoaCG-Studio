@@ -258,6 +258,42 @@ test('svg import: bound text and top-level groups are registry parts — selecta
   await expect(page.locator('.tlv2-labels .timeline-label[data-part="#f0"]')).toBeVisible();
 });
 
+test('svg import: a picture layer binds as a filelist field — swap by value, empty restores the artwork', async ({ page }) => {
+  await dropSvg(page);
+  await page.locator('.wz-next').click();
+
+  // Pictures are offered OFF by default — inside a design they are usually the artwork.
+  const row = page.getByTestId('map-svg-image-i0');
+  await expect(page.getByTestId('map-svg-image-title-i0')).toHaveValue('Crest');
+  await expect(row.locator('input[type=checkbox]')).not.toBeChecked();
+  await row.locator('input[type=checkbox]').check();
+
+  await createProject(page);
+
+  // The picture field lands AFTER the text fields, as a real SPX filelist.
+  const field = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const t = useTemplateStore.getState().template;
+    const f = t.fields[4];
+    return { ...f, bound: /<image[^>]*id="f4"/.test(t.html) };
+  });
+  expect(field.ftype).toBe('filelist');
+  expect(field.title).toBe('Crest');
+  expect(field.bound).toBe(true);
+
+  // update() swaps the node's href; an empty value restores the picture the designer drew.
+  const frame = previewFrame(page);
+  const RED = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  await frame.locator('body').evaluate((_, red) => {
+    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f4: red }));
+  }, RED);
+  await expect(frame.locator('#f4')).toHaveAttribute('href', RED);
+  await frame.locator('body').evaluate(() => {
+    (window as unknown as { update: (d: string) => void }).update(JSON.stringify({ f4: '' }));
+  });
+  await expect(frame.locator('#f4')).toHaveAttribute('href', /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/);
+});
+
 test('svg import: the f: layer-name prefix opts the file into an explicit field set', async ({ page }) => {
   await dropSvgMarkup(
     page,
