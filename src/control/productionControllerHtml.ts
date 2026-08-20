@@ -18,6 +18,7 @@
 // disagree about a graphic's controls.
 
 import type { EmittedGraphic } from './controlPanelHtml';
+import { MATCH_CLOCK_PAGE_JS } from './matchClockPageJs';
 
 /** One cue as the controller ships it: prepared data for one graphic of the pool. */
 export interface EmittedCue {
@@ -322,6 +323,28 @@ function send(items) {
     body: JSON.stringify({ items: items }) }).catch(function () {});
 }
 
+${MATCH_CLOCK_PAGE_JS}
+
+// clockEffectFor(): what one clock verb does to the graphic's clock field, and WHEN relative to
+// the event row itself — this page's copy of matchClockWire.ts's clockRowEffect, against the
+// cue's own resolved values. Same decision as the standalone panel makes, because the two ship
+// in the same package and an operator switching surfaces must not switch behaviour.
+//
+// 'before' for a START: the origin has to be in the document by the time startMatchClock runs,
+// or the runtime mints a local one instead. 'after' for a hold or a reset: the value banked is
+// what the graphic has just settled on. Reset banks the spec's resetTo — what the RUNTIME
+// returns to — never what the element happens to read, which by then is the running time.
+function clockEffectFor(g, cue, event, at) {
+  var clock = g && g.clock;
+  if (!clock) return null;
+  var values = cueValues(cue);
+  var from = values[clock.field] !== undefined ? values[clock.field] : clock.seed;
+  if (event === 'clockStart') return { field: clock.field, value: clockValueAt(from, clock.countsDown, at) + '@' + at, when: 'before' };
+  if (event === 'clockStop') return { field: clock.field, value: clockValueAt(from, clock.countsDown, at), when: 'after' };
+  if (event === 'clockReset') return { field: clock.field, value: clock.resetTo, when: 'after' };
+  return null;
+}
+
 // ── Monitors: every pool graphic stacked by its LAYER number, per stream. The iframes are
 // ordinary package graphics addressed with ?stream=, so what PREVIEW shows is the real
 // runtime, not a simulation. ──
@@ -569,6 +592,9 @@ var editorCueId = null;
 // The −/+ pairs of the fields currently built, so the tally poll can grey them without
 // rebuilding the inputs (which is what would eat a half-typed value).
 var stepButtons = [];
+// The clock field's box, for the same reason: a clock verb repaints the banked time into it
+// rather than rebuilding the editor around it.
+var clockBox = null;
 
 // THE ± LIVE NUMBERS AFFORDANCE (docs/PLAYOUT_DASHBOARD.md §7c): the pair acts on air, so it
 // enables only while the edited cue is the one on air.
@@ -620,6 +646,7 @@ function paintEditor() {
   var fields = document.getElementById('editor-fields');
   fields.innerHTML = '';
   stepButtons = [];
+  clockBox = null;
   var values = cueValues(cue);
   (g ? g.controls : []).forEach(function (c) {
     var box = document.createElement('div');
@@ -749,7 +776,13 @@ function paintEditor() {
       input = document.createElement('input');
       input.type = 'text';
     }
-    input.value = values[c.key] !== undefined ? values[c.key] : '';
+    // THE CLOCK FIELD HOLDS THE WIRE VALUE, which while the clock runs carries its origin stamp
+    // ("45:00@1755600000000"). An operator reads and types the time alone, so the box shows the
+    // plain half; typing replaces the whole value, which is right — a typed time is a
+    // correction, and a correction has no origin but the moment it lands.
+    var raw = values[c.key] !== undefined ? values[c.key] : '';
+    if (g && g.clock && c.key === g.clock.field) { clockBox = input; raw = clockPlain(raw); }
+    input.value = raw;
     input.oninput = function () { stage(input.value); };
     box.appendChild(input);
     fields.appendChild(box);
@@ -796,7 +829,28 @@ function paintEditor() {
         var v = cueValues(cue)[key];
         if (v !== undefined) { payload = payload || {}; payload[key] = v; }
       });
-      send([{ graphic: cue.graphic, stream: 'program', msg: payload ? { t: 'event', event: e.event, payload: payload } : { t: 'event', event: e.event } }]);
+      var eventRow = { graphic: cue.graphic, stream: 'program', msg: payload ? { t: 'event', event: e.event, payload: payload } : { t: 'event', event: e.event } };
+      // A CLOCK VERB writes the clock's own value around its event row, in one batch so the
+      // relay's order is the order the renderer applies. The value is also STAGED into the cue's
+      // draft, which is what puts it on every later ⟳ TAKE and ✎ Update: a stamped value is
+      // idempotent, so re-sending it a minute later still resolves to the right second, where a
+      // plain snapshot dragged a running clock back to it on every score bump.
+      var effect = clockEffectFor(g, cue, e.event, Date.now());
+      var items = [];
+      if (effect) {
+        if (!drafts[cue.id]) drafts[cue.id] = {};
+        drafts[cue.id][effect.field] = effect.value;
+        var cd = {};
+        cd[effect.field] = effect.value;
+        var clockRow = { graphic: cue.graphic, stream: 'program', msg: { t: 'update', data: cd } };
+        if (effect.when === 'before') items.push(clockRow);
+        items.push(eventRow);
+        if (effect.when === 'after') items.push(clockRow);
+        if (clockBox) clockBox.value = clockPlain(effect.value);
+      } else {
+        items.push(eventRow);
+      }
+      send(items);
       feed('⚡ ' + e.label + ': ' + cue.graphic);
     };
     return btn;
