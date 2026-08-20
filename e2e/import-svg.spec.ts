@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { awaitPreviewRebuild } from './_preview';
+import { elementPoint } from './_canvas';
 import { previewFrame } from './_frame';
 
 // The SVG import road, door to export (docs/SVG_IMPORT_PLAN.md P1): a layered
@@ -221,6 +222,40 @@ test('svg import: outlined text gets the honest answer, and still imports as a f
     return useTemplateStore.getState().template.fields.length;
   });
   expect(fields).toBe(0);
+});
+
+test('svg import: bound text and top-level groups are registry parts — selectable and animatable', async ({ page }) => {
+  await dropSvg(page);
+  await createProject(page);
+
+  // The part registry (model/structure.ts) names the SVG's own layers: the bound text nodes
+  // as lines (channel 'rise' — SVG text has no mask to slide in), and the top-level named
+  // groups as blocks, labelled with the same words the mapping step used (data-name over the
+  // decoded id — both "Text Layer" groups carry their duplicated design name honestly).
+  const parts = await page.evaluate(async () => {
+    const [{ getTemplateParts }, { useTemplateStore }] = await Promise.all([
+      import('/src/model/structure.ts'),
+      import('/src/store/templateStore.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    return getTemplateParts(t.html, t.fields).map((p) => `${p.selector}|${p.kind}|${p.label}|${p.channel}`);
+  });
+  expect(parts).toContain('#f0|line|Name|rise');
+  expect(parts).toContain('#f2|line|Location|rise');
+  expect(parts).toContain('#Backplate|block|Backplate|rise');
+  expect(parts).toContain('#Details|block|Text Layer|rise');
+  // The whole-unit parts are still there — the design presets animate the box, as before.
+  expect(parts).toContain('.imported-design-box|panel|Design|rise');
+  expect(parts).toContain('.imported-design-art|image|Artwork|rise');
+
+  // A canvas click on the text selects THAT layer (the innermost part wins over the groups
+  // and the artwork around it), and the chip speaks the field's name.
+  const point = await elementPoint(page, '#f0');
+  await page.mouse.click(point.x, point.y);
+  await expect(page.getByTestId('selection-chip')).toContainText('Name');
+
+  // Its timeline row exists too — per-layer motion (the P2 stagger) has a real target.
+  await expect(page.locator('.tlv2-labels .timeline-label[data-part="#f0"]')).toBeVisible();
 });
 
 test('svg import: the f: layer-name prefix opts the file into an explicit field set', async ({ page }) => {

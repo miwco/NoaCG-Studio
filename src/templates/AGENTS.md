@@ -825,8 +825,10 @@ figure is the short final part, so the label is what may contain one). Say which
   the export gate re-checks it (validateTemplate rules 'svg' / 'svg-binding'). Its
   overflow-only fit is a `fitPlacedText` applying `textLength` past the recorded original
   width; its presets are the same box-only DESIGN_PRESETS. Fields are chosen in the wizard's
-  mapping step (mode 'svg'), never an open line list (`fieldPlan: fixed`). E2E:
-  e2e/import-svg.spec.ts.
+  mapping step (mode 'svg'), never an open line list (`fieldPlan: fixed`). The bound text
+  nodes and the SVG's top-level named `<g>` layers are REGISTRY PARTS (model/structure.ts:
+  lines channel 'rise' - SVG text has no mask - and blocks labelled by layer name), so
+  per-layer motion has real targets. E2E: e2e/import-svg.spec.ts.
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
   highlight, question queue, community/prayer request), 20 designs in five per-form files

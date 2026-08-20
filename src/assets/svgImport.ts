@@ -76,7 +76,13 @@ function decodeLayerName(id: string): string {
 }
 
 /** The layer name of one element: its data-name (verbatim — Illustrator keeps the original
- *  spelling there when it uniquifies the id), else its decoded id. Empty when unnamed. */
+ *  spelling there when it uniquifies the id), else its decoded id. Empty when unnamed.
+ *  Exported for model/structure.ts, which labels an imported SVG's top-level groups with the
+ *  same words the mapping step used — two spellings of one layer would read as two layers. */
+export function svgLayerLabel(el: Element): string {
+  return layerName(el);
+}
+
 function layerName(el: Element): string {
   const dataName = el.getAttribute('data-name');
   if (dataName?.trim()) return dataName.trim();
