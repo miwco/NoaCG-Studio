@@ -3388,3 +3388,91 @@ two others at 99.9-100%, so it cannot express the owner's own criterion either.
 Recorded in `docs/IMPORT_MVP.md`: the wizard door is **"inspired by this design"**, never
 "Recreate". Owner-decided on the evidence - the output is airable and is never the same graphic,
 and the name is what makes that a promise kept rather than a promise broken.
+
+## 27. Text painted over by a panel - the hole the overlap check cannot see - 2026-08-20
+
+Found while reproducing batch 1.4 (§26.1). That frame turned out to carry no occlusion at all,
+and the hole it sent me looking for was real anyway: **`overlapIssues` pairs LEAVES, and a leaf
+is an element that owns a text node.** A panel owns none, so a panel is never in a pair, and text
+can vanish under one completely while every geometry check in the bench passes. Nothing anywhere
+in the repo asked the question.
+
+`src/validation/occlusion.ts` asks it; `runtimeBench` wires it to `bench-occluded` in both the
+settled pass and the stress pass; `scripts/occlusion-sweep.mjs` is the calibration.
+
+### 27.1 Hit-testing, not geometry
+
+"Painted on top" is paint order, and paint order is stacking contexts, `z-index`, positioning and
+document order together. Re-deriving that from computed style is a well-known way to be subtly
+wrong. `elementsFromPoint` already knows it, so the probe samples points and reads the stack -
+with two consequences handled rather than hoped past:
+
+- **Hit testing skips `pointer-events: none`**, and a decorative overlay is exactly the kind of
+  element a design marks that way, so the probe would have been blind to the covers it is most
+  likely to meet. It forces pointer events on for its own duration and removes the style in a
+  `finally`, so a throw cannot leave the graphic's pointer behaviour rewritten.
+- **Hit testing does not care whether an element paints**, so the stack is walked DOWN to the
+  first element that actually does. Stopping at the top would report every graphic that wraps its
+  composition in a positioned div as fully covered.
+
+What is sampled is the TEXT, not its box: `Range.getClientRects()` gives the line boxes the
+glyphs occupy, so an element whose rect is wider than its words is not diluted into looking half
+visible.
+
+### 27.2 What the shipped catalog reads, and the two bugs the sweep found in the probe
+
+**Zero.** 502 designs at their own values: 0 with any covered text. 502 designs with every text
+value doubled: 0. The rule cannot fire on anything the house ships, which is what makes an ERROR
+band affordable at all. Bands mirror `OVERLAP_ERROR`/`OVERLAP_WARN` (0.5 and 0.05) so one defect
+family reads one way.
+
+Both readings are second readings. The first two runs each found a defect in the INSTRUMENT, and
+both are worth keeping because both are the same mistake in different clothes - measuring
+something other than what is on the screen:
+
+- **Ten shipped tickers, 13-100% "covered".** Every one was a crawling item passing under the
+  fixed label at the head of the crawl - the ticker idiom, and the same set `overlapIssues` and
+  `overflowIssues` already exempt as measured motion. `measureOcclusion` now takes the bench's
+  own `dynamicsRoots`, and `collectLeaves`/`dynamicsRoots` are exported so the calibration
+  measures the frame the gate measures rather than its own idea of one.
+- **es02, the one and only stress reading, at 16.3%.** `Range.getClientRects()` reports LAYOUT
+  rects, and layout does not stop at a clip: under doubled values es02 lays "TEAM LIQUID TEAM
+  LIQUID" out to x=974 while its own box ends at 698, and the glyphs past 698 are never painted.
+  The probe walked those phantom glyphs straight under the score chip at 714. A screenshot
+  settled it - the word is cut mid-letter at the box edge, and there is nothing under the chip at
+  all. Line boxes are now cut down by every ancestor that clips, the same reading
+  `spacingCheck.visualRect` takes one directory over.
+
+### 27.3 The two false positives it must not have
+
+A rule whose false positives are the good designs is one authors learn to ignore - this repo's
+own argument, twice. Both are pinned from both sides, in `occlusion-sweep --control` and again as
+fixtures in `e2e/bench.spec.ts`:
+
+- **A tint.** The same opaque panel at 0.3 opacity must stay quiet; text reads through it.
+- **A gradient scrim.** A scrim over the lower third of a frame is the commonest legitimate
+  construction in broadcast and is a gradient that is transparent exactly where the text is. A
+  raster `url()` background paints and counts; a gradient does not.
+
+The positive fixture additionally asserts that `bench-overlap` stays SILENT on the same frame -
+if that ever starts firing, the two checks have merged and one is redundant.
+Mutation-controlled: raising `COVER_OPACITY_FLOOR` past 1 fails the positive fixture and leaves
+the negative one passing.
+
+### 27.4 Honest limits
+
+- **A cover painted by a PSEUDO-ELEMENT is invisible to this.** `elementsFromPoint` returns
+  elements, never their `::before`/`::after`, so a `::after` panel over text reads as the parent
+  element - whose own background is checked, and is usually transparent. Checking the pseudo
+  would over-report in the other direction (its box is not measurable, so a motif beside the
+  words would read as a cover over them), and honest silence beats a finding the method cannot
+  support.
+- **`clip-path` is not consulted.** It cuts painted output with no overflow property anywhere;
+  the instrument that owns that question is the bench's own clip check.
+- **A `<canvas>` or inline `<svg>` cover with no background** is missed - only `<img>` with a
+  resolved source and a painted background count as paint.
+- **It runs in the settled pass and the stress pass, not after every operator event.** The
+  branch pass runs once per event and the probe costs a hit test every few pixels of every line
+  box, so wiring it there multiplies the bench's cost by the event count for a state the default
+  path already walks. A defect that appears only inside one branch is out of reach today; the
+  two passes that carry it are the ones the catalog gate measures.

@@ -186,6 +186,15 @@ test('a change to the catalog gate\'s own specs raises the catalog flag', () => 
   assert.equal(planFor(['src/landing/motion.ts']).catalog, false);
 });
 
+// THE SAME RULE ONE STEP OUT: the bench is the catalog gate's measurement, and a bench rule that
+// keeps its measurement in its own module would otherwise be editable without ever running the
+// gate that proves it stays quiet on 502 shipped designs.
+test('the modules the runtime bench measures through raise the catalog flag', () => {
+  for (const file of ['src/validation/runtimeBench.ts', 'src/validation/occlusion.ts']) {
+    assert.equal(planFor([file]).catalog, true, `${file} must raise the catalog flag`);
+  }
+});
+
 test('public legal pages select their clean-URL and responsive-layout spec', () => {
   for (const file of ['terms.html', 'privacy.html', 'src/legal.css']) {
     const { mode, specs } = planFor([file]);

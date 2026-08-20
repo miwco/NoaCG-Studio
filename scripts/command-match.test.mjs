@@ -86,6 +86,25 @@ test('the TASTE re-judge counts - it is named like no family and mounts more fra
   }
 });
 
+test('the CHROMIUM-launching -sweep scripts count, and the ones that open no browser do not', () => {
+  // The family is not safely name-shaped: three of these render the catalog through the app and
+  // two others named the same way open no browser, so the split is listed rather than matched.
+  for (const cmd of [
+    'node scripts/occlusion-sweep.mjs',
+    'node scripts/occlusion-sweep.mjs --category=lower-third --stress',
+    'node scripts/design-rules-audit-sweep.mjs',
+    'node scripts/plate-legibility-sweep.mjs',
+  ]) {
+    assert.ok(invokesSweep(cmd), cmd);
+  }
+  for (const cmd of [
+    'node scripts/reference-companion-sweep.mjs',
+    'node scripts/spx-corpus-sweep.mjs',
+  ]) {
+    assert.ok(!invokesSweep(cmd), cmd);
+  }
+});
+
 test('MENTIONING a command is not running one', () => {
   // The regression that motivated positional matching. Each of these contains the text of an
   // invocation and starts nothing; denying any of them is a bug.

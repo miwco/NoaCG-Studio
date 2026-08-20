@@ -50,6 +50,48 @@ test.describe('runtime bench detection fixtures', () => {
     expect(rules(misaligned.errors)).toContain('bench-overlap');
   });
 
+  // A PANEL OWNS NO TEXT, so it is not a leaf, so `bench-overlap` can never pair it with the
+  // text it covers however completely the text disappears (docs/NOACG_PRO_PLAN.md §26.1). Each
+  // fixture below covers the SAME line with the SAME box and differs only in what that box
+  // paints - the two quiet cases are the constructions this rule would be unusable without.
+  const coverFixture = (style: string) => `(async () => { ${HELPERS}
+    const tpl = fixture({
+      html: doc('<div class="fx">' +
+        '<div id="f0" style="position:absolute;left:200px;top:400px;font-size:48px;color:#fff;">Covered headline text</div>' +
+        '<div class="cover" style="position:absolute;left:200px;top:400px;width:700px;height:70px;${style}"></div>' +
+        '</div>'),
+      js: FIXTURE_JS,
+      fields: [{ field: 'f0', ftype: 'textfield', title: 'Name', value: 'Covered headline text' }],
+    });
+    return bench(tpl, { houseContract: false });
+  })()`;
+
+  test('an opaque panel painted over text trips bench-occluded', async ({ page }) => {
+    await toApp(page);
+    const res = await page.evaluate(coverFixture('background:#101418;'));
+    const { ok, errors } = res as { ok: boolean; errors: { rule: string }[] };
+    expect(rules(errors)).toContain('bench-occluded');
+    expect(ok).toBe(false);
+    // The panel owns no text, so the check that already existed cannot see this at all - which
+    // is the whole reason the rule exists. If this ever starts passing, the two checks have
+    // merged and one of them is redundant.
+    expect(rules(errors)).not.toContain('bench-overlap');
+  });
+
+  test('a tint and a gradient scrim over text do NOT trip bench-occluded', async ({ page }) => {
+    await toApp(page);
+    // A scrim laid over the lower third of a frame is the commonest legitimate construction in
+    // broadcast, and it is a gradient that is transparent exactly where the text is. A rule that
+    // called it a defect would be one authors learn to ignore.
+    const tint = await page.evaluate(coverFixture('background:#101418;opacity:0.3;'));
+    const scrim = await page.evaluate(coverFixture('background:linear-gradient(to top, rgba(0,0,0,.9), transparent);'));
+    for (const res of [tint, scrim]) {
+      const { errors, warnings } = res as { errors: { rule: string }[]; warnings: { rule: string }[] };
+      expect(rules(errors)).not.toContain('bench-occluded');
+      expect(rules(warnings)).not.toContain('bench-occluded');
+    }
+  });
+
   test('text escaping the canvas trips bench-overflow', async ({ page }) => {
     await toApp(page);
     const res = await page.evaluate(`(async () => { ${HELPERS}

@@ -374,6 +374,12 @@ const CATALOG_TRIGGERS = [
   /^src\/model\/fonts\.ts$/,
   /^src\/model\/themeTokens\.ts$/,
   /^src\/validation\/runtimeBench\.ts$/,
+  // The modules the bench MEASURES THROUGH, for the same reason as the line above: the catalog
+  // gate is what says a bench rule does not fire on the house's own 502 designs, and a rule
+  // whose measurement lives in its own file would otherwise be edited without ever running that
+  // gate. `occlusion.ts` is the first of those; anything the bench comes to import for a
+  // catalog-visible finding belongs here beside it.
+  /^src\/validation\/occlusion\.ts$/,
 ];
 
 /**
