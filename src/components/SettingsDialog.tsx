@@ -310,6 +310,13 @@ export default function SettingsDialog({ onClose }: Props) {
                   </p>
                 </div>
               </div>
+              <p className="dlg-hint">
+                On a school or corporate network that blocks parts of the app, the{' '}
+                <a href="/app?diag=1" target="_blank" rel="noreferrer" data-testid="settings-diag-link">
+                  connection check
+                </a>{' '}
+                shows what is blocked — screenshot it when reporting a problem.
+              </p>
             </section>
 
             <section data-section="brand">

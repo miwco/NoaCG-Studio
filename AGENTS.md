@@ -271,6 +271,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
   matching `<meta name="color-scheme" content="dark">` into the preview srcdoc. **Keep them
   paired** - Chromium paints an iframe opaque (white stage) when the schemes disagree.
+- `/app` boots through app.html's inline BOOT WATCHDOG + connection check: `?diag=1` renders
+  the inline diagnostics (main.tsx stands down on that URL), durable-store hydration times out
+  to localStorage after 4 s (`durableStoreHealth` -> the app-level StorageHealthNotice), and a
+  boot that never mounts paints a plain-HTML diagnosis. Restricted-network behaviour is pinned
+  by `e2e/network-resilience.spec.ts`; the ops view is docs/DEPLOYMENT.md ("Where to look").
 - The e2e suite pins **offline mode** via `webServer.env`, but `reuseExistingServer: true` means a
   dev server already running on THIS checkout's port (started by hand, with the real `.env`) gets
   reused - backend-sensitive specs then fail confusingly. Kill any manual server on this

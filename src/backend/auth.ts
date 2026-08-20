@@ -4,7 +4,7 @@
 // supabase/migrations/0002_auth_allowlist.sql); this module just surfaces the resulting 403 to the
 // user. The UI gate is UX only — RLS + the hook are the real security boundary.
 
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 import { resetSyncBookmark } from './sync';
 
@@ -13,6 +13,31 @@ export type AuthStatus = 'loading' | 'signed-out' | 'signed-in';
 export interface AuthState {
   status: AuthStatus;
   user: User | null;
+}
+
+/**
+ * `getSession()` is not the local read it looks like: for a returning user whose access token
+ * has expired, supabase-js refreshes it OVER THE NETWORK inside the call, with no timeout of
+ * its own. On a network that silently black-holes `*.supabase.co` (corporate filtering - the
+ * Yle-demo failure class) that promise hangs for the browser's own connect timeout, and
+ * everything chained on it (sync status, entitlement, AI status) sits in 'loading' meanwhile.
+ * So every boot-path read goes through this bounded wrapper: on timeout the caller proceeds
+ * signed-out, and if the refresh does land later, onAuthStateChange corrects the state - the
+ * subscription is already how every later change arrives.
+ */
+const SESSION_READ_TIMEOUT_MS = 6000;
+async function readSessionBounded(
+  sb: NonNullable<Awaited<ReturnType<typeof getSupabase>>>,
+): Promise<Session | null> {
+  try {
+    const result = await Promise.race([
+      sb.auth.getSession(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), SESSION_READ_TIMEOUT_MS)),
+    ]);
+    return result ? result.data.session : null;
+  } catch {
+    return null;
+  }
 }
 
 // Return to wherever the app itself is served from (/app hosted, /app.html raw self-host) —
@@ -124,8 +149,8 @@ export function onPasswordRecovery(cb: () => void): () => void {
 export async function getAccessToken(): Promise<string | null> {
   const sb = await getSupabase();
   if (!sb) return null;
-  const { data } = await sb.auth.getSession();
-  return data.session?.access_token ?? null;
+  const session = await readSessionBounded(sb);
+  return session?.access_token ?? null;
 }
 
 /**
@@ -143,9 +168,9 @@ export function subscribeAuth(cb: (state: AuthState) => void): () => void {
       cb({ status: 'signed-in', user: null });
       return;
     }
-    const { data } = await sb.auth.getSession();
+    const session = await readSessionBounded(sb);
     if (cancelled) return;
-    cb(data.session ? { status: 'signed-in', user: data.session.user } : { status: 'signed-out', user: null });
+    cb(session ? { status: 'signed-in', user: session.user } : { status: 'signed-out', user: null });
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       cb(session ? { status: 'signed-in', user: session.user } : { status: 'signed-out', user: null });
     });

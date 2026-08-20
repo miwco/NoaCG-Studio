@@ -210,6 +210,15 @@ Vercel build for every non-`main` branch unless the head commit message contains
 6. E2E-red-without-a-code-fault has four known non-code causes (stale dev server, parallel
    sessions on one checkout, HMR ghost modules, offline pin vs a manual server) - reproduce
    locally with `npm run test:e2e -- <spec>` before assuming the code broke.
+7. **A user on a school/corporate network who "can't use the site": have them open
+   `https://noacg.studio/app?diag=1`** and send a screenshot. That is the CONNECTION CHECK -
+   an inline script in `app.html`, so it runs even when a filtering proxy blocks the app's
+   JS chunks - and it names what the network or browser policy is blocking (app files,
+   fonts, /api, IndexedDB, the sandboxed preview frame, third-party internet). The same
+   inline script is the boot watchdog: a boot that never mounts paints a plain-HTML
+   diagnosis pointing there instead of a white screen. Pinned by
+   `e2e/network-resilience.spec.ts`; born from the 2026-08-20 Yle demo failing inside the
+   wizard on Yle's restricted network with nothing recorded anywhere.
 
 ## Known limits (deliberate, revisit when they hurt)
 

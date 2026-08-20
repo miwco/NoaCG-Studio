@@ -27,6 +27,7 @@ export const FOCUS = [
   'library.spec.ts',
   'library-bulk.spec.ts',
   'local-relay.spec.ts',
+  'network-resilience.spec.ts',
   'offline.spec.ts',
   'ograf-conformance.spec.ts',
   'package.spec.ts',
