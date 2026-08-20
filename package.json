@@ -24,6 +24,7 @@
     "check:advisors": "node scripts/supabase-advisors.mjs",
     "check:freshness": "node scripts/check-vendored-versions.mjs && node scripts/check-model-ids.mjs && node scripts/e2e-durations.mjs --check",
     "check:e2e-durations": "node scripts/e2e-durations.mjs --check",
+    "record:e2e-durations": "node scripts/e2e-durations.mjs --record",
     "lint": "eslint . --max-warnings 0",
     "depcruise": "depcruise --config .dependency-cruiser.cjs src",
     "preview": "vite preview",
