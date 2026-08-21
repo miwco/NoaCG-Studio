@@ -102,6 +102,24 @@ export function catalogSummaryRows(variant: TemplateVariant, draft: WizardDraft)
       value: parts.length > 0 ? parts.join(' · ') : 'None — a fixed graphic',
       step: 'fields',
     });
+    // TYPEFACES, and the one thing about them that can differ ON AIR. An unresolved family is
+    // never a blocker (the designer may know the playout machine has it), but it is the only
+    // way a pixel-exact import stops being pixel-exact, and until now it was stated on the
+    // mapping step alone — a step "Next" walks straight past. The last screen before Create is
+    // where it has to be readable.
+    if (draft.svgFonts.length > 0) {
+      const missing = draft.svgFonts.filter((f) => !f.fontId && !f.customFont);
+      rows.push({
+        label: 'Typefaces',
+        value:
+          missing.length === 0
+            ? `${draft.svgFonts.length} embedded — the graphic looks the same on every machine`
+            : `${draft.svgFonts.length - missing.length} embedded · ${missing.length} not embedded (${missing
+                .map((f) => f.family)
+                .join(', ')}) — playout falls back unless the machine has ${missing.length === 1 ? 'it' : 'them'}`,
+        step: 'fields',
+      });
+    }
   }
   // An imported SVG carries its own look — the palette/typeface read-back would describe
   // knobs the artwork does not read.

@@ -411,6 +411,28 @@ test('svg import: a PostScript font name finds the bundled face, and ships under
   expect(css).not.toContain('UNRESOLVED');
 });
 
+test('svg import: the last screen before Create names a typeface that will not travel', async ({ page }) => {
+  // The one way a pixel-exact import stops being pixel-exact is a family that ships with
+  // nothing. It is never a blocker - the designer may know the playout machine has it - but it
+  // was stated only on the mapping step, which "Next" walks straight past.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Name" x="20" y="90" font-size="34" font-family="Archivo" fill="#fff">Alexandra Riva</text>
+      <text id="Role" x="20" y="140" font-size="20" font-family="Gotham-Book" fill="#b7bcc4">Correspondent</text>
+    </svg>`,
+    'one-missing-font.svg',
+  );
+  await page.locator('.wz-next').click();
+  await page.locator('.wz-next').click();
+  await page.locator('.wz-next').click();
+
+  const summary = page.locator('.wz-finish-summary');
+  await expect(summary).toContainText('Typefaces');
+  await expect(summary).toContainText('1 embedded');
+  await expect(summary).toContainText('Gotham-Book');
+});
+
 test('svg import: outline rows are ranked — a word of glyphs leads, an icon is badged artwork', async ({ page }) => {
   // "A group of paths" describes outlined copy AND every icon in the file, so a Figma export
   // can bury the one row that is the headline under a dozen crests. The measured shapes tell

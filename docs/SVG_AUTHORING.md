@@ -85,7 +85,15 @@ An SVG names its fonts (`font-family="Gotham"`); if the playout machine lacks th
 "exact" graphic silently isn't. So the import inventories every family it finds and, per family,
 either matches a bundled face, offers the Google Fonts library (fetched at design time and
 **embedded** - the exported code never reaches the network), or takes a font file you upload for
-a licensed face. An unresolved family **warns and continues** - you may know the renderer has it.
+a licensed face. An unresolved family **warns and continues** - you may know the renderer has it -
+and the Finish step repeats the warning by name, since that is the last screen before the graphic
+is made.
+
+**PostScript names are understood.** Illustrator writes the face, not the family
+(`font-family="Archivo-Bold"`, `"JetBrainsMono-Regular"`, `"HelveticaNeue-CondensedBold"`), and
+the import reads them: the style suffix names the weight, the rest names the family, and the
+match ignores spelling, so `JetBrainsMono` finds JetBrains Mono. The `@font-face` that ships is
+still declared under the exact name your artwork asks for.
 
 Two consequences worth designing around:
 
