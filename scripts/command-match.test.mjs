@@ -45,6 +45,7 @@ test('sweeps and benches are recognised - they cost the same memory as a suite',
     'node scripts/render-smoke-video.mjs',
     'node scripts/creative-pilot-bench.mjs',
     'node C:/claude/NoaCG-Studio/scripts/l3-sweep.mjs shots quiz',
+    'node scripts/text-containment-sweep.mjs --baseline',
     'npm run bench:lite',
     'npm run video:bench:run',
   ]) {

@@ -78,7 +78,11 @@ export const SWEEP_SCRIPTS =
   // already doing it unlisted, and `footprint-stability-sweep` was listed the day it was written.
   // `footprint-stability-sweep` renders the whole registry TWICE (short text, then long), so it
   // is the heaviest of the four and the one that would hurt most sitting beside a live suite.
+  // `text-containment-sweep` renders the whole registry once, drives every text field to a long
+  // value and freezes the motion before reading, so it holds the machine for as long as its
+  // siblings and belongs here for the same reason they do.
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
+  + '|text-containment-sweep'
   + `|acceptance-shots|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 
