@@ -289,11 +289,98 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
 
   results.sort((a, b) => b.score - a.score);
   const ranking = filters.format !== null || filters.family !== null;
+  const ordered = hasQuery || ranking ? results : spreadFirstPage(results);
   return {
-    best: ranking ? results.filter((r) => r.bestFor) : results,
+    best: ranking ? results.filter((r) => r.bestFor) : ordered,
     also: ranking ? results.filter((r) => !r.bestFor) : [],
     total: results.length,
   };
+}
+
+/**
+ * The Browse step's page size. Duplicated from the component on purpose: this module has to know
+ * how many cards the fold holds to make that many of them different, and a wrong number here
+ * spreads the wrong slice rather than breaking anything.
+ */
+const FIRST_PAGE = 12;
+
+/**
+ * MAKE THE FIRST PAGE LOOK LIKE THE CATEGORY, not like its first twelve entries.
+ *
+ * Browse renders a PAGE of twelve, so for most people the first twelve ARE the category. With no
+ * query and no ranking facet the only tiebreak is catalog position, so the fold showed whatever
+ * happened to be written first - and designs get written in batches, which means the fold showed
+ * one batch. Measured 2026-08-21 on the lower thirds: the first twelve were 10 dark and 10 orange
+ * out of a shelf carrying nine accent hues, 31 designs with no coloured accent and 7 light
+ * backdrops. The owner read that page and said the graphics "all look the same". They do; the
+ * category does not.
+ *
+ * THE AXES ARE THE ONES THAT VERIFIED. `scripts/card-look-sweep.mjs` measures what an eye reads
+ * off a rendered card - backdrop, accent hue, footprint - and `spike-declared-vs-measured.mjs`
+ * checked those against what a design DECLARES, because ordering cannot afford a render. The
+ * palette's accent hue predicted the measured hue 72/72. The palette's panel predicted the
+ * measured backdrop only 60/80, so backdrop is deliberately NOT used here: a 75% signal would be
+ * guessing at the one job this function has. Style family stands in for panel treatment, which
+ * is the axis it genuinely explains (docs/CATALOG_VARIETY.md §1.2).
+ *
+ * Greedy, and score still decides everything else: walk the page, and for each slot take the
+ * highest-scoring design whose (hue, family) pair is least represented so far. Everything past
+ * the fold keeps its score order untouched, so this changes what is SEEN FIRST and never what is
+ * ranked highest. There is deliberately no house design pinned to slot one - owner, 2026-08-21:
+ * "no one wants to use a design that other people also use."
+ */
+function spreadFirstPage(results: BrowseResult[]): BrowseResult[] {
+  if (results.length <= 2) return results;
+  const hueOf = (r: BrowseResult) => accentHueBucket(r.variant.defaultPalette?.accent);
+  const famOf = (r: BrowseResult) => r.variant.styleTag ?? '';
+  const hueSeen = new Map<string, number>();
+  const famSeen = new Map<string, number>();
+  const pool = [...results];
+  const page: BrowseResult[] = [];
+  while (page.length < Math.min(FIRST_PAGE, results.length) && pool.length > 0) {
+    let pick = 0;
+    let best: [number, number] = [Infinity, Infinity];
+    for (let i = 0; i < pool.length; i += 1) {
+      // HUE FIRST, family only to break a tie within it. Weighing the two equally made a
+      // COMPOUND key, and `none` is a hue bucket like any other - so a colourless design in each
+      // family read as four different pairs and no-accent took 7 of the 12 slots against a 30%
+      // share of the shelf. Lexicographic is what "spread the colour, then the treatment" means.
+      const rank: [number, number] = [hueSeen.get(hueOf(pool[i])) ?? 0, famSeen.get(famOf(pool[i])) ?? 0];
+      // `<` not `<=` throughout: the pool is already in score order, so the first index reaching
+      // a rank is the best-scoring design holding it.
+      if (rank[0] < best[0] || (rank[0] === best[0] && rank[1] < best[1])) {
+        best = rank;
+        pick = i;
+        if (rank[0] === 0 && rank[1] === 0) break; // nothing can beat an unseen hue AND family
+      }
+    }
+    const [chosen] = pool.splice(pick, 1);
+    hueSeen.set(hueOf(chosen), (hueSeen.get(hueOf(chosen)) ?? 0) + 1);
+    famSeen.set(famOf(chosen), (famSeen.get(famOf(chosen)) ?? 0) + 1);
+    page.push(chosen);
+  }
+  return [...page, ...pool];
+}
+
+/** Twelve 30-degree buckets, or `none` for a neutral accent - the same buckets the card-look
+ *  sweep reports in, so a claim made from one can be checked against the other. */
+export function accentHueBucket(hex: string | undefined): string {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!match) return 'none';
+  const n = parseInt(match[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  // A grey or near-grey accent has no hue to bucket, and calling it "red" would make two
+  // colourless designs look like a deliberate pair.
+  if (max === min || (max - min) / max < 0.15) return 'none';
+  let h;
+  if (max === r) h = ((g - b) / (max - min) + 6) % 6;
+  else if (max === g) h = (b - r) / (max - min) + 2;
+  else h = (r - g) / (max - min) + 4;
+  return String(Math.floor((h * 60) / 30) % 12);
 }
 
 /** The chip whose removal restores the largest result count — the zero-result escape

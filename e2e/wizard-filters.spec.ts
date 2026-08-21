@@ -350,3 +350,37 @@ test('field plan: a quiz board is a fixed contract - fields edit, structure does
   await expect(page.locator('.wz-line-row button', { hasText: '✕' })).toHaveCount(0);
   await expect(page.getByTestId('field-plan-hint')).toContainText('fixed set');
 });
+
+test('the first page shows the CATEGORY, not its first twelve entries', async ({ page }) => {
+  // Browse renders a PAGE of twelve, so for most people the first twelve ARE the category. With
+  // no query and no ranking facet the only tiebreak was catalog position, and designs get written
+  // in batches - so the fold showed one batch. Measured 2026-08-21 on the lower thirds: the first
+  // twelve were 10 dark and 10 orange, out of a shelf carrying nine accent hues and 7 light
+  // backdrops. The owner read that page and said the graphics "all look the same". They did; the
+  // category does not (docs/CATALOG_VARIETY.md).
+  //
+  // Asserted on the ENGINE rather than the cards, because what is being pinned is the ordering
+  // rule. The axes are the ones that verified against the rendered pixels: the palette's accent
+  // hue predicted the measured hue 72/72, so it is what the spread is keyed on.
+  await toBrowseStep(page);
+  const spread = await page.evaluate(async () => {
+    const { browseTemplates, NO_BROWSE_FILTERS, accentHueBucket } = await import('/src/templates/search.ts');
+    const read = (category: string) => {
+      const out = browseTemplates({ ...NO_BROWSE_FILTERS, category: category as never });
+      const page12 = [...(out.best ?? []), ...(out.also ?? [])].slice(0, 12);
+      return {
+        hues: new Set(page12.map((r) => accentHueBucket(r.variant.defaultPalette?.accent))).size,
+        families: new Set(page12.map((r) => r.variant.styleTag)).size,
+        shown: page12.length,
+      };
+    };
+    return { lowerThird: read('lower-third') };
+  });
+
+  // Twelve cards off a 95-design shelf have no excuse for one or two accents. Registry order gave
+  // TWO distinct hue buckets here; the floors are set below what the spread achieves so a future
+  // design landing in the catalog cannot make this brittle, and far above what it replaced.
+  expect(spread.lowerThird.shown).toBe(12);
+  expect(spread.lowerThird.hues).toBeGreaterThanOrEqual(4);
+  expect(spread.lowerThird.families).toBeGreaterThanOrEqual(4);
+});
