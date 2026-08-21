@@ -181,14 +181,6 @@ The binding plan is `docs/SVG_IMPORT_PLAN.md`.
       fields (no renaming ritual; layer names prefill labels), map + preview, create - the exact
       graphic becomes an ordinary NoaCG template. Acceptance: a student takes an Illustrator SVG
       to air, unchanged pixels, inside one session.
-- [ ] **OGraf boilerplate story** (Yle's explicit ask): a curated, teaching-grade OGraf starter
-      set - our validated export packaged as free, hand-editable base templates an organization
-      modifies instead of starting from scratch. Study `SuperFlyTV/ograf-devtool` + the EBU
-      examples for what authors already get.
-- [ ] **Restricted-network resilience**: the Yle demo died inside the wizard on their corporate
-      network. No third-party host may ever block create/preview/export; diagnose, harden,
-      pin with an e2e spec that walks the wizard with all third-party hosts blocked, and give
-      failures a visible diagnosis instead of a silent stall.
 
 ---
 
