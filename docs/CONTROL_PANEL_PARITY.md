@@ -149,6 +149,8 @@ the other way round:
 | Load a production DATA row | – | – | – | in-app: matched LIVE; hosted: the same matcher's rows, resolved at PUBLISH time (`control/cueData.ts`) |
 | Verb keys (P · SPACE · R · U · N · 0 · ↑↓) | – | – | yes | yes on both since 2026-08-18 - one keymap, `components/playoutKeys.ts` (the hosted page had none at all before, and its TAKE re-took a live cue instead of taking it off) |
 | Page-scroll model + capped sticky monitors | – | – | yes | **yes on all three** since 2026-08-19 - the page is the only scroller, the monitors cap near 30vh and stick, the cue rail sticks; `pointer-events: none` on every monitor iframe, which only the exported controller had |
+| The STAGE HEAD: monitors + verb bar sticky together, bar beside PROGRAM ≥1366px | – | – | yes | **yes on all three** since 2026-08-21 (owner read, `docs/PLAYOUT_DASHBOARD.md` §2) - the bar used to scroll away under the sticky monitors on every one of them. Two verbs across with TAKE spanning; below 1366 it returns underneath. The monitor cap grows with the window from the 768px floor instead of a flat 26vh |
+| The monitors' aspect ratio | – | – | the PRODUCTION's, baked at export | **the production's on both** since 2026-08-21 - the React surfaces used the PREVIEWED cue's, so selecting a differently shaped cue resized both monitors. The exported controller was right all along; this is the other two catching up to it |
 | A match clock’s TIME ORIGIN | – | – | stamped by the page | stamped by the page (in-app) / derived from the row (`/output`) |
 | Entries | authored here | – | baked in, read-only | read-only picker |
 | Staged vs aired | Update/Play only | Live toggle | staged + ⟳ Take | staged + ⟳ Take |

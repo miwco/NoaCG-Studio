@@ -105,14 +105,42 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
   .rail { display:flex; flex-direction:column; position:sticky; top:50px; align-self:start;
     height:calc(100vh - 50px); }
 
-  /* Monitors: PREVIEW beside PROGRAM, equal, CAPPED near 30vh and STICKY - you see what is out
-     all the time, and the options below it get the rest of the page. The cap is a track WIDTH
-     because each screen takes its height from its width through aspect-ratio; the number below
-     is this production's own ratio, capped at 16/9 so neither screen exceeds the budget. */
-  .monitors { display:grid; justify-content:start; gap:12px; flex:none;
-    grid-template-columns: repeat(2, minmax(0, calc(26vh * ${Math.min(payload.width / payload.height, 16 / 9).toFixed(4)})));
+  /* THE STAGE HEAD: the monitors AND the verbs that act on them, as one STICKY block - what
+     must never leave the screen is sticky, not small, and the verb bar carries TAKE and Out.
+     It used to scroll away under the monitors, which the owner called out on 2026-08-21
+     ("a bit scary that you scroll the monitors on top of the take buttons").
+     At and above the minimum supported window (1366px) the bar moves into the empty column
+     beside PROGRAM: it spends width that was doing nothing and hands the monitors back the
+     height it was using, which is the same read's 1080p complaint. Below it, the bar returns
+     underneath. docs/PLAYOUT_DASHBOARD.md §2; the parity contract is CONTROL_PANEL_PARITY.md. */
+  .stagehead { display:flex; flex-direction:column; gap:10px; flex:none;
     position:sticky; top:50px; z-index:5; background:var(--bg);
     margin:-12px -14px -10px; padding:12px 14px 10px; }
+  @media (min-width:1366px) {
+    /* STRETCH, not \`end\`: the monitors set the row height and the verb column takes exactly it,
+       so the buttons share that height instead of each claiming 44px and making the sticky head
+       taller than the monitors it exists to keep on screen. */
+    .stagehead { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:stretch; gap:14px; }
+    /* TWO ACROSS, not a single stack: six verbs in one column are taller than the monitors at
+       1536x814, and the stack would then set the sticky head's height instead of the picture. */
+    .stagehead .verbs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+      align-content:stretch; gap:6px; max-width:300px; }
+    /* TAKE spans the pair on the first row: the loudest control on the surface, and the only
+       red one - auto-placement would drop it wherever its DOM position landed. */
+    .stagehead .verbs .take { grid-area:1 / 1 / 2 / 3; }
+    .stagehead .verbs button { min-height:40px; justify-content:center; gap:6px; }
+    .stagehead .onair-line { grid-column:1 / -1; margin-left:0; margin-top:2px; white-space:normal;
+      text-align:center; }
+  }
+
+  /* Monitors: PREVIEW beside PROGRAM, equal, CAPPED and STICKY (through the stage head above) -
+     you see what is out all the time, and the options below get the rest of the page. The cap is
+     a track WIDTH because each screen takes its height from its width through aspect-ratio; the
+     number below is this production's own ratio, capped at 16/9 so neither screen exceeds the
+     budget. The height is the same clamp the React surfaces use: a flat 26vh was tuned on a
+     1536x814 window and left a 1080p one with the monitors too small under a page of nothing. */
+  .monitors { display:grid; justify-content:start; gap:12px; flex:none;
+    grid-template-columns: repeat(2, minmax(0, calc(clamp(170px, calc(26vh + (100vh - 768px) * 0.28), 38vh) * ${Math.min(payload.width / payload.height, 16 / 9).toFixed(4)}))); }
   .monitor { display:flex; flex-direction:column; min-width:0; }
   .monitor h2 { margin:0 0 5px; font-size:10.5px; letter-spacing:.16em; font-weight:700;
     display:flex; align-items:center; gap:7px; min-width:0; }
@@ -234,7 +262,9 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
     main { display:flex; flex-direction:column; min-height:0; }
     .stage { border-right:none; }
     /* Not sticky at this width: the verbs are pinned to the bottom of the screen instead, and
-       a monitor block stuck to the top would cover the cue list it sits above. */
+       a monitor block stuck to the top would cover the cue list it sits above. The stage head
+       is what carries the stickiness now, so it is the one that has to stand down. */
+    .stagehead { position:static; margin:0; padding:0; display:contents; }
     .monitors { position:static; margin:0; padding:0; }
     .rail { position:static; height:auto; align-self:auto; border-top:1px solid var(--line); }
     .cues { max-height:46vh; flex:none; }
@@ -265,6 +295,7 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
 </div>
 <main>
   <section class="stage">
+    <div class="stagehead">
     <div class="monitors">
       <div class="monitor mon-pvw">
         <h2><span class="dot"></span>PREVIEW <span class="what" id="pvw-label"></span></h2>
@@ -285,6 +316,7 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
       <button id="v-next" title="Advance the on-air graphic one step (SPX Continue)">» Next <kbd>N</kbd></button>
       <button id="v-out" title="Play the selected cue's layer off air">■ Out <kbd>0</kbd></button>
       <span class="onair-line" id="live-line"></span>
+    </div>
     </div>
 
     <div class="editor" id="editor" style="display:none">

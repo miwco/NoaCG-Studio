@@ -196,8 +196,15 @@ test('the production page fits one 1080p screen, and the preview takes only the 
   expect(fit.frameRatio).toBe(1.78);
   // Big enough to judge a graphic by, small enough to leave the operator's controls on screen —
   // and since 2026-08-19 that upper bound is the §2 monitor cap, not "whatever is left over".
-  expect(fit.frameHeight).toBeGreaterThan(240);
-  expect(fit.frameHeight).toBeLessThanOrEqual(fit.viewportHeight * 0.27);
+  //
+  // THE BOUNDS MOVED UP ON 2026-08-21, because the owner read this exact size and rejected what
+  // they pinned: at 1920x1080 a flat 26vh left "too much empty room at the bottom and the
+  // monitors are unnecessarily small". The cap now grows with the window from the 768px floor of
+  // the minimum supported one, so a full-HD screen gets about a third more picture. The LOWER
+  // bound is what pins that fix — 27% of 1080 is 292px, and anything at or under it is the old
+  // cap back again.
+  expect(fit.frameHeight).toBeGreaterThan(300);
+  expect(fit.frameHeight).toBeLessThanOrEqual(fit.viewportHeight * 0.36);
 });
 
 test('the /output page answers honestly offline and builds a stage from a payload', async ({ page }) => {

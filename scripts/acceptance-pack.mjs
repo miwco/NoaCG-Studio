@@ -144,7 +144,11 @@ async function addGraphicToOpenProduction(page, variantId, label) {
 async function measureDashboard(page) {
   return page.evaluate(() => {
     const px = (el) => (el ? Math.round(el.getBoundingClientRect().height) : null);
-    const monitors = document.querySelector('.pd-monitors');
+    // THE STICKY HEAD is what "how much of the screen do the monitors eat" now means: since
+    // 2026-08-21 it holds the verb bar as well, and the monitors' own grid box stretches to
+    // whichever of the two is taller. Measuring `.pd-monitors` alone reported that stretch as
+    // if it were picture, which is why the PVW frame is measured separately below.
+    const monitors = document.querySelector('.pd-stagehead') ?? document.querySelector('.pd-monitors');
     const main = document.querySelector('.pd-main');
     const editor = document.querySelector('.pd-editor');
     const mrect = monitors?.getBoundingClientRect();
@@ -153,11 +157,16 @@ async function measureDashboard(page) {
     // grid whose TRACKS carry the cap, so its right edge is the column's right edge and
     // measuring against it reports the empty space as one pixel wide - which is the opposite
     // of what the picture shows and exactly the number the owner is being asked about.
-    const pgm = monitors?.lastElementChild?.getBoundingClientRect();
+    const grid = document.querySelector('.pd-monitors');
+    const pgm = grid?.lastElementChild?.getBoundingClientRect();
     return {
       viewport: `${window.innerWidth}x${window.innerHeight}`,
       monitorBlock: px(monitors),
       monitorShareOfHeight: mrect ? `${Math.round((mrect.height / window.innerHeight) * 100)}%` : null,
+      // The PICTURE itself - what an operator actually judges a graphic by, and the number the
+      // owner's first question is about. Distinct from the block, which also carries the labels,
+      // the sticky padding and (since the verb bar moved) whichever column is taller.
+      pictureHeight: px(document.querySelector('.pd-pvw .pd-frame')),
       // The question the owner is asked about the empty column: how wide is it, really.
       spaceRightOfProgram: pgm && mainRect ? Math.round(mainRect.right - pgm.right) : null,
       editorHeight: px(editor),
@@ -308,9 +317,9 @@ async function sectionScroll(browser) {
       file: 'scroll-1536x814-top.png',
       title: 'The reported window — 1536×814 (a 1080p monitor at 125% scaling)',
       question:
-        'Are the capped monitors too small to judge a graphic by?',
+        'You accepted this size on 2026-08-21 (“the gap and monitors are not too small”). It is here to prove the re-lay did not spend that acceptance: does it still read the way it did?',
       note:
-        'The two questions this pack exists to ask are the two the contract records as owed (docs/PLAYOUT_DASHBOARD.md §2). This is the size the complaint was measured at; a nominal 1920×1080 does not reproduce it.',
+        'What moved: the picture went 212px → 225px and the sticky head 254px → 267px, so 13px each. The verb bar is now INSIDE that head, beside PROGRAM, instead of below the monitors.',
     },
     {
       viewport: REPORTED,
@@ -318,18 +327,18 @@ async function sectionScroll(browser) {
       scrollToBottom: true,
       title: 'The same window, scrolled to the bottom of the page',
       question:
-        'Does the space beside PROGRAM read as SIZED or as UNFINISHED?',
+        'The empty column beside PROGRAM now holds the verbs. Is that what you meant by “could the buttons be placed to the right”, and does TAKE still read as the loudest control on the page from over there?',
       note:
-        'The page is the only scroller; the header, the monitors and the cue rail are sticky rather than small. Nothing on this screen is shrunk to fit.',
+        'Two across with TAKE spanning the pair, not a single stack: six verbs in one column are taller than the monitors at this size, and the stack would then set the head’s height instead of the picture.',
     },
     {
       viewport: SHORT,
       file: 'scroll-1536x560-top.png',
-      title: 'A short window — 1536×560',
+      title: 'A short window — 1536×560, BELOW the supported minimum',
       question:
-        'At the size where the page genuinely has to scroll: are the monitors still big enough to check a graphic before you air it?',
+        '1366×768 is the floor you set, so this window owes degrading without breaking rather than fitting. Does it degrade acceptably?',
       note:
-        'The measured row the contract records for this size: the monitor block went 334px (60%) → 188px (34%), the editor stopped hiding 62px, and the page went from “could not scroll” to scrolling.',
+        'The head takes a bigger share here than it used to (34% → 40%) precisely BECAUSE it now carries the verb bar. The picture is 170px, its clamp floor.',
     },
     {
       viewport: SHORT,
@@ -337,16 +346,17 @@ async function sectionScroll(browser) {
       scrollToBottom: true,
       title: 'The short window, scrolled to the bottom',
       question:
-        'Scrolling the whole page to reach the editor — is that the trade you asked for, or does it cost more than the small editor did?',
-      note: 'The owner’s words the rule was written from: “I don’t mind scrolling the whole page… I also don’t want it too small.”',
+        'This is the frame you called scary — the monitors used to scroll over the take buttons. TAKE, Preview, Re-take, Update, Next and Out are all still on screen. Is the hazard gone?',
+      note: 'The stage head sticks as one block now, so the bar cannot be scrolled under the monitors on any of the three surfaces.',
     },
     {
       viewport: NOMINAL,
       file: 'scroll-1920x1080.png',
-      title: 'Nominal 1080p — 1920×1080, for reference only',
+      title: 'Nominal 1080p — 1920×1080, the size you rejected',
       question:
-        'On a full 1080p screen the page never needed to scroll, before or after. Does the monitor cap earn itself here too, or does this screen now look empty?',
-      note: 'Included because it is the size everything else gets judged at, and it is NOT the size the defect appeared at.',
+        'Your words were “too much empty room at the bottom and the monitors are unnecessarily small”. The picture is a third bigger and the verbs have moved into the width beside PROGRAM. Is there still too much empty room?',
+      note:
+        'Picture 281px → 368px; sticky head 323px (30%) → 410px (38%). The cap grows with the window now instead of being a flat 26vh, from the 768px floor of the minimum supported one. It is deliberately viewport-derived and not content-derived: sizing it from what the editor leaves over would resize the monitors whenever a cue with a different field count was selected — the same twitch in another costume.',
     },
   ];
 
@@ -531,7 +541,7 @@ async function sectionHosted(browser) {
       file: 'scroll-hosted-1536x814.png',
       title: 'The HOSTED control page at 1536×814 — the third surface, opened onto a live show',
       question:
-        'Same two questions as the frames above, on the surface an operator drives from a phone or a laptop across the building: are the capped monitors too small to judge a graphic by, and does the space beside PROGRAM read as sized or as unfinished?',
+        'The re-lay reached this surface too. It measures IDENTICALLY to the in-app page — 225px of picture in a 267px head, 33% of the window — so the three still have not diverged. Does it read the same to you?',
       note:
         'The real built bundle — nothing about it differs from a deployed one except which URL its Supabase env points at. What it renders is this production’s own `buildPanelSpec` and `buildOutputPayload`, computed by the app itself, and migration 0008’s RPCs answered from memory. It is captured OPENING onto a production already on air, which is the hosted page’s own case (an operator joining mid-show): the resolve reports which layer is up and what it last applied, and the boot recovery plays that onto PROGRAM from those two fields alone. WHAT THIS FRAME CANNOT SHOW: anything that happens AFTER the open. The log follower tail-fills only when Supabase Realtime reports SUBSCRIBED, and this rig has no socket — so the buttons here would not move the picture. It proves the LAYOUT, which is all the two questions are about; the server side (RLS, the slug capability, the log’s ordering) belongs to the live checklist.',
     },
@@ -541,7 +551,7 @@ async function sectionHosted(browser) {
       scrollToBottom: true,
       title: 'The hosted page in a short window — 1536×560, scrolled down',
       question:
-        'Third surface, same short window. Do all three behave the same way at the size that forces a choice?',
+        'Third surface, below the supported minimum. Same question as the in-app frame: does it degrade acceptably rather than break?',
       note:
         'The header, the monitors and the cue rail stay put; the page is what moves. One thing to look at while you are here, recorded as an observation and not a verdict: the ⚡ block is offered for the cue being EDITED, whose layer (L21) is not the one on air — the same undecided question the exported-controller frame below raises, which §7b and §7c of docs/PLAYOUT_DASHBOARD.md are the two places the rule would live.',
     },
@@ -631,7 +641,7 @@ async function sectionController(browser) {
     file: 'controller-1536x814.png',
     title: 'The EXPORTED controller at 1536×814 — the same dashboard, shipped in the package',
     question:
-      'Same two questions, on the surface a dead network drops to: are the monitors too small to judge a graphic by, and does the space beside PROGRAM read as sized or as unfinished?',
+      'The surface a dead network drops to, carrying the same re-lay: verbs beside PROGRAM, the bar inside the sticky head, the monitor cap growing with the window. Is the package still the same product as the app that generated it?',
     note:
       'Driven through the bundled local relay, a cue selected onto PREVIEW. Three surfaces render this dashboard and the contract says they must not diverge — this one and the in-app page above are two of the three. ONE DIFFERENCE IS VISIBLE HERE, stated as an observation and not as a verdict: with nothing on air this surface offers all five ⚡ actions and carries no state chip, where the in-app page at the same moment (frame “Contextual cue controls — OFF AIR”) greys all five and says “not on air”.',
   });
@@ -646,7 +656,7 @@ async function sectionController(browser) {
     file: 'controller-1536x560.png',
     title: 'The exported controller in a short window — 1536×560, scrolled down',
     question:
-      'Does the exported surface behave like the in-app one at the size that forces a choice, or do the two diverge here?',
+      'The exported surface at the same short window. Do all three still behave alike where the room runs out?',
     note: 'Same package, same relay, viewport shortened and the page scrolled to its end.',
   });
 
@@ -933,7 +943,8 @@ function buildIndex(manifest) {
       ? ''
       : `<dl class="measured">
         <div><dt>viewport</dt><dd>${esc(m.viewport)}</dd></div>
-        <div><dt>monitor block</dt><dd>${esc(m.monitorBlock)}px (${esc(m.monitorShareOfHeight)} of the window)</dd></div>
+        <div><dt>PREVIEW picture</dt><dd>${esc(m.pictureHeight)}px tall</dd></div>
+        <div><dt>sticky head</dt><dd>${esc(m.monitorBlock)}px (${esc(m.monitorShareOfHeight)} of the window)</dd></div>
         <div><dt>space right of PROGRAM</dt><dd>${esc(m.spaceRightOfProgram)}px</dd></div>
         <div><dt>editor</dt><dd>${esc(m.editorHeight)}px, ${esc(m.editorHidden)}px hidden</dd></div>
         <div><dt>page scrolls</dt><dd>${esc(m.pageScrollable)}px</dd></div>

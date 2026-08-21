@@ -5657,9 +5657,19 @@ h2 + .lib-row,
   overflow: visible;
   /* One number for the sticky offsets below and the header's own height. */
   --pd-header-h: 50px;
-  /* The monitor cap (§2). Picture height only; the block lands near the 30vh the owner asked
-     for once the label and the sticky padding are added. */
-  --pd-monitor-h: 26vh;
+  /* The monitor cap (§2). Picture height only; the label row and the sticky padding sit on top.
+     NOT a flat fraction of the viewport any more (owner read 2026-08-21): 26vh answered the
+     1536×814 window it was tuned on and wasted the 1080p one - "too much empty room at the
+     bottom and the monitors are unnecessarily small" - because on a tall screen everything
+     below the monitors keeps its content height and the slack all lands at the end of the page.
+     So the cap grows with the room a taller window actually has, from the 768px floor of the
+     minimum supported window, and is clamped at both ends: the floor keeps a short window
+     usable, the 38vh ceiling stops the monitors going back to eating the page, which is the
+     complaint the cap was introduced for in the first place.
+     It is deliberately VIEWPORT-derived and not content-derived: sizing it from what the editor
+     leaves over would resize the monitors every time an operator selected a cue with a
+     different number of fields, which is the same twitch as the aspect-ratio one below. */
+  --pd-monitor-h: clamp(170px, calc(26vh + (100vh - 768px) * 0.28), 38vh);
 }
 .playout-dashboard :where(.pd-cues, .pd-editor, .pd-activity, .pd-rail) { scrollbar-width: none; }
 .playout-dashboard :where(.pd-cues, .pd-editor, .pd-activity, .pd-rail)::-webkit-scrollbar { width: 0; height: 0; }
@@ -5773,13 +5783,20 @@ h2 + .lib-row,
    under it and the editor card below all share one left edge - centred, the monitors read as
    floating loose above a column that is aligned without them. Block height lands near the 30vh
    asked for: 26vh of picture plus the label row and this block's own bottom padding. */
-.pd-monitors {
-  display: grid;
-  /* The cap IS the track's growth limit, so the two columns stay equal, shrink freely on a
-     narrow window, and never grow past the height budget on a wide one. */
-  grid-template-columns: repeat(2, minmax(0, calc(var(--pd-monitor-h) * min(var(--pd-ar, 1.7778), 1.7778))));
-  justify-content: start;
-  gap: 12px;
+/* THE STAGE HEAD holds the monitors AND the verbs, and IT is what sticks (owner read
+   2026-08-21, §2). Before this the monitors stuck alone and the verb bar scrolled away under
+   them - "a bit scary that you scroll the monitors on top of the take buttons" - which breaks
+   §2's own rule that what must never leave the screen is STICKY, not small. TAKE and Out are
+   exactly that.
+
+   At and above the minimum supported window (1366px) the bar sits in the empty column right of
+   PROGRAM: it spends
+   width that was doing nothing, and it hands the monitors back the height the bar was taking,
+   which is the 1080p complaint in the same read. Below it, the bar returns underneath. */
+.pd-stagehead {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   flex: none;
   position: sticky;
   top: var(--pd-header-h);
@@ -5790,6 +5807,63 @@ h2 + .lib-row,
   margin: -12px -14px -10px;
   padding: 12px 14px 10px;
   background: var(--bg);
+}
+.pd-monitors {
+  display: grid;
+  /* The cap IS the track's growth limit, so the two columns stay equal, shrink freely on a
+     narrow window, and never grow past the height budget on a wide one. */
+  grid-template-columns: repeat(2, minmax(0, calc(var(--pd-monitor-h) * min(var(--pd-ar, 1.7778), 1.7778))));
+  justify-content: start;
+  gap: 12px;
+  flex: none;
+}
+/* THE VERBS BESIDE PROGRAM. One breakpoint, and it is the MINIMUM SUPPORTED WINDOW (1366×768,
+   owner 2026-08-21): at or above it the empty column is wide enough for a verb stack, below it
+   the bar goes back under the monitors where it has always been. The stage head becomes a row
+   whose second track takes the leftover width; `align-items: end` sits the stack on the same
+   baseline as the monitors' bottom edge rather than floating it against their labels. */
+@media (min-width: 1366px) {
+  .pd-stagehead {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    /* STRETCH, not `end`: the monitors set the row's height and the verb column takes exactly
+       that. Left to its own height the stack ran TALLER than the monitors (six 44px buttons
+       plus the chip is 310px against 245px of monitor at 1536×814), which made the sticky head
+       taller than the block it exists to keep on screen - and put a 10px scrollbar on a window
+       that had none. */
+    align-items: stretch;
+    gap: 14px;
+  }
+  /* TWO ACROSS, not a single stack. Six verbs in one column need ~294px, which is TALLER than
+     the monitors at 1536×814 - so the stack, not the picture, would set the sticky head's
+     height and the head would grow at the one size the owner had already accepted. Two-up it
+     is ~218px, comfortably under, so the MONITORS drive the row again and the buttons grow into
+     whatever the tall window leaves over. */
+  .pd-stagehead .pd-verbs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: stretch;
+    gap: 6px;
+    /* A verb block that grew with the window would put TAKE a hand-span from PREVIEW. */
+    max-width: 300px;
+  }
+  /* TAKE spans the pair and takes the first row on its own: it is the loudest control on the
+     surface and the only red one, and auto-placement would otherwise drop it wherever its DOM
+     position landed. The rest flow around it in their own order. */
+  .pd-stagehead .pd-verb-take { grid-area: 1 / 1 / 2 / 3; }
+  /* The buttons SHARE whatever height the monitors leave rather than each claiming 44px. On a
+     tall window that makes them bigger, which is the owner's own tie-breaker when the two
+     compete: "I would rather have the controls big than the monitors too big" (2026-08-21). */
+  .pd-stagehead .pd-verb { min-height: 40px; justify-content: center; gap: 6px; }
+  /* `margin-left: auto` pushed it to the right of a ROW; in a grid it does nothing, and the
+     chip belongs under the buttons it describes either way. */
+  .pd-stagehead .pd-onair-line {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    margin-top: 2px;
+    white-space: normal;
+    text-align: center;
+  }
 }
 .pd-monitor { display: flex; flex-direction: column; min-width: 0; }
 .pd-monitor h2 {
@@ -6439,6 +6513,13 @@ h2 + .lib-row,
      ordered against the rail; each therefore carries its own inline padding. */
   .pd-body { display: flex; flex-direction: column; overflow: auto; flex: 1 1 auto; min-height: 0; }
   .pd-main { display: contents; }
+  /* The stage head stands down HERE TOO, for the same reason .pd-main does: this breakpoint
+     orders the monitors, the rail, the editor and the verb bar as siblings of one scrolling
+     column, and a wrapper around two of them would take them out of that ordering - the verbs
+     would ride with the monitors at the top instead of being pinned to the bottom of the
+     screen, which is the whole phone layout. `display: contents` also drops its sticky
+     positioning and its desktop margins, so neither needs unsetting. */
+  .pd-stagehead { display: contents; }
   /* Not sticky at this width: the phone's scroller is .pd-body, and a block stuck to the top
      of it would cover the cue list it sits above. The margin trick that squares the desktop
      block with .pd-main's padding has no padding to square with here. */

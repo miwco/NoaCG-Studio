@@ -40,17 +40,27 @@ frame, the editor's height and how much of it is hidden, how far the page scroll
 panes have grown a scrollbar of their own. They are measured, never assumed, and they reproduce
 the before/after table `docs/PLAYOUT_DASHBOARD.md` §2 records:
 
-| | monitor block | editor hidden | page scrolls | empty beside PROGRAM |
-|---|---|---|---|---|
-| 1920×1080 | 323px (30%) | 0 | 0 | 516px |
-| 1536×814 | 254px (31%) | 0 | 0 | 378px |
-| 1536×560 | 188px (33%) | 0 | 165px | 612px |
+**Re-laid 2026-08-21 after the read.** §2 asks a NEW question now: whether the change the read
+asked for lands. What it measures, before → after:
 
-No pane on any of the three has a scrollbar of its own. The page is the only scroller.
+| | PREVIEW picture | sticky head | page scrolls |
+|---|---|---|---|
+| 1920×1080 | 281px → **368px** | 323px (30%) → **410px (38%)** | 0 → 0 |
+| 1536×814 | 212px → **225px** | 254px (31%) → **267px (33%)** | 0 → 0 |
+| 1536×560 | 188px → **170px** | 188px (34%) → **224px (40%)** | 165px → **148px** |
 
-**The hosted page measures identically to the in-app one** — 254px / 31% / 378px at 1536×814,
-188px / 33% / 612px at 1536×560. The contract says the three surfaces must not diverge; on the
-scroll model that is now measured rather than argued from shared CSS.
+The **sticky head** is the number that matters now: it holds the verb bar as well as the
+monitors, so it is what the surface permanently spends. The **picture** is what an operator
+actually judges a graphic by, and it is a third bigger at 1080p — the size the owner rejected.
+1536×814, the size that was accepted, moves 13px either way. 1536×560 is below the supported
+minimum (1366×768) and takes a bigger share by design, because the bar is inside the head now.
+
+No pane on any of the three surfaces has a scrollbar of its own. The page is the only scroller.
+
+**The hosted page measures identically to the in-app one** — 225px / 267px / 33% at 1536×814,
+170px / 224px / 40% at 1536×560. The contract says the three surfaces must not diverge; on the
+scroll model that is measured rather than argued from shared CSS, and it stayed true across a
+change that touched all three.
 
 ## How the hosted frames exist at all
 
@@ -129,7 +139,7 @@ this is only the map to them.
 | § | Verdict | Written down in |
 |---|---|---|
 | 1 | **Accepted.** ig39 ships; ig37, ig36, ig38 good; ig01 usable but not a substitute for ig39. | `docs/CATALOG_VARIETY.md` §7 |
-| 2 | **Split.** 1536×814 accepted — the cap and the empty column are fine. 1920×1080 rejected: too much empty at the bottom, monitors unnecessarily small. 1536×560: the verb bar scrolling under the sticky monitors is a hazard. | `docs/PLAYOUT_DASHBOARD.md` §2 |
+| 2 | **Split, and ACTED ON the same day.** 1536×814 accepted. 1920×1080 rejected: too much empty at the bottom, monitors unnecessarily small. 1536×560: the verb bar scrolling under the sticky monitors is a hazard. All three answered by the re-lay below; §2's frames now ask whether it landed. | `docs/PLAYOUT_DASHBOARD.md` §2 |
 | 3 | **Accepted.** *"I think these screens look good."* | `docs/INTERACTIVE_PLAYOUT_PLAN.md`, acceptance pass |
 
 **What the read produced that the frames did not ask for** — the part worth the sitting:
