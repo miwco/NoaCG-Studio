@@ -119,11 +119,28 @@ export function svgLayerLabel(el: Element): string {
   return layerName(el);
 }
 
+/** The Inkscape namespace, whose `inkscape:label` holds the name the designer typed — Inkscape
+ *  puts an auto id ("layer1", "text123") in `id` and the real name here. */
+const INKSCAPE_NS = 'http://www.inkscape.org/namespaces/inkscape';
+
+/** An id an editor GENERATED, which names nothing: a tag name plus a number ("text123",
+ *  "tspan124", "path1867", "layer1", "g4"). Illustrator and Figma write the layer's name into
+ *  `id`, so an id is normally the best label there is — but Inkscape's are serial numbers, and
+ *  a candidate labelled "text123" beat the named layer ABOVE it, hiding the one word the
+ *  designer actually chose. Treated as unnamed, so `candidateName` keeps climbing. */
+function isGeneratedId(id: string): boolean {
+  return /^(?:svg|g|layer|text|tspan|flowRoot|flowPara|path|rect|circle|ellipse|line|polyline|polygon|use|image|clipPath|mask|defs|marker|linearGradient|radialGradient|stop|filter)[-_]?\d+$/i.test(
+    id.trim(),
+  );
+}
+
 function layerName(el: Element): string {
   const dataName = el.getAttribute('data-name');
   if (dataName?.trim()) return dataName.trim();
+  const inkscapeLabel = el.getAttributeNS(INKSCAPE_NS, 'label') ?? el.getAttribute('inkscape:label');
+  if (inkscapeLabel?.trim()) return inkscapeLabel.trim();
   const id = el.getAttribute('id');
-  if (id?.trim()) return decodeLayerName(id);
+  if (id?.trim() && !isGeneratedId(id)) return decodeLayerName(id);
   return '';
 }
 
@@ -277,6 +294,37 @@ function measureSvg(svg: Element): { width: number; height: number } | null {
   return null;
 }
 
+/** Elements whose contents are a DEFINITION, not a drawing: nothing inside them paints where it
+ *  stands, and a `<symbol>` painted through `<use>` paints a COPY, so binding the original by id
+ *  is not a promise this import can keep. A designer's unused symbol library would otherwise
+ *  become a screenful of operator fields for text nobody can see. */
+const NON_RENDERED_TAGS = new Set(['defs', 'symbol', 'clippath', 'mask', 'pattern', 'marker']);
+
+/** Hidden here means hidden AS EXPORTED — a layer the designer switched off (Illustrator and
+ *  Figma both write `display:none` for one) or an explicitly invisible node. Its text is a draft
+ *  the operator must never be handed a field for. The markup itself is untouched: hiding is the
+ *  designer's decision, and it rides into the template exactly as drawn. */
+function isHiddenNode(el: Element): boolean {
+  if ((el.getAttribute('display') ?? '').trim().toLowerCase() === 'none') return true;
+  if ((el.getAttribute('visibility') ?? '').trim().toLowerCase() === 'hidden') return true;
+  const style = el.getAttribute('style');
+  if (!style) return false;
+  return /(?:^|;)\s*display\s*:\s*none/i.test(style) || /(?:^|;)\s*visibility\s*:\s*hidden/i.test(style);
+}
+
+/** Is this node offered as a candidate at all? False inside a definition block or a hidden
+ *  subtree — both are in the file on purpose and neither is something an operator can type into.
+ *  Walks to the root, because either fact is usually stated on an ANCESTOR layer. */
+function isOffered(el: Element, root: Element): boolean {
+  let node: Element | null = el;
+  while (node && node !== root) {
+    if (NON_RENDERED_TAGS.has(node.tagName.toLowerCase())) return false;
+    if (isHiddenNode(node)) return false;
+    node = node.parentElement;
+  }
+  return node ? !isHiddenNode(node) : true;
+}
+
 /**
  * The bindable text nodes, in document order. A <text> whose lines are positioned <tspan>s
  * (Illustrator's multi-line idiom) offers EACH tspan as its own candidate — ids are legal on
@@ -285,7 +333,7 @@ function measureSvg(svg: Element): { width: number; height: number } | null {
  */
 function textCandidates(svg: Element): Element[] {
   const out: Element[] = [];
-  for (const text of Array.from(svg.querySelectorAll('text'))) {
+  for (const text of Array.from(svg.querySelectorAll('text')).filter((el) => isOffered(el, svg))) {
     const tspans = Array.from(text.querySelectorAll('tspan')).filter(
       // Only LEAF tspans hold bindable runs; a wrapper tspan around more tspans does not.
       (t) => !t.querySelector('tspan'),
@@ -314,6 +362,7 @@ const MAX_OUTLINE_CANDIDATES = 24;
  */
 function outlineCandidates(svg: Element): Element[] {
   const groups = Array.from(svg.querySelectorAll('g')).filter((g) => {
+    if (!isOffered(g, svg)) return false;
     const children = Array.from(g.children);
     return children.length >= 2 && children.every((c) => GLYPH_TAGS.has(c.tagName.toLowerCase()));
   });
@@ -377,6 +426,17 @@ export function importSvgMarkup(source: string): SvgImportResult {
 
   const notices = sanitize(svg);
 
+  // Inkscape's FLOWED text (`<flowRoot>`) is an SVG 1.2 draft element no browser ever shipped:
+  // it draws nothing in Chrome, so the graphic is already missing that copy before we look at
+  // it, and there is no node to bind either. Said out loud with the fix, rather than leaving a
+  // designer to wonder where their paragraph went. Kept in the markup — removing it would edit
+  // someone's file over a rendering opinion.
+  if (svg.querySelector('flowRoot')) {
+    notices.push(
+      'This file uses Inkscape flowed text, which no browser draws — that copy is invisible here and cannot become a field. In Inkscape, select it and use Text > Convert to Text, then export again.',
+    );
+  }
+
   // Tag the candidates AFTER sanitizing, so a candidate can never sit inside removed markup.
   const nodes = textCandidates(svg);
   const candidates: SvgTextCandidate[] = nodes.map((el, i) => {
@@ -400,6 +460,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
   // Picture layers: every surviving <image> (the sanitizer already dropped external ones).
   // A placeholder with no picture at all has nothing to restore on empty, so it is skipped.
   const images: SvgImageCandidate[] = Array.from(svg.querySelectorAll('image'))
+    .filter((el) => isOffered(el, svg))
     .filter((el) => el.getAttribute('href') || el.getAttribute('xlink:href'))
     .map((el, i) => {
       const id = `i${i}`;

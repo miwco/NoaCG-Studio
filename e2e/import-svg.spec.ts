@@ -312,6 +312,66 @@ test('svg import: the f: layer-name prefix opts the file into an explicit field 
   await expect(page.getByTestId('map-svg-row-t1').locator('input[type=checkbox]')).not.toBeChecked();
 });
 
+test('svg import: an Inkscape file is labelled by its layer names, not its serial ids', async ({ page }) => {
+  // Illustrator and Figma write the layer's NAME into `id`; Inkscape writes a serial number
+  // there ("text123") and keeps the name in `inkscape:label`. Read the id first and every row
+  // reads "text123" — the one word the designer chose, on the layer ABOVE, never surfaces.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" viewBox="0 0 400 200">
+      <g inkscape:groupmode="layer" id="layer1" inkscape:label="Presenter name">
+        <text id="text123" x="20" y="80" font-size="30" fill="#fff"><tspan id="tspan124" x="20" y="80">Alexandra Riva</tspan></text>
+      </g>
+      <g inkscape:groupmode="layer" id="layer2" inkscape:label="Role">
+        <text id="text125" x="20" y="140" font-size="18" fill="#b7bcc4">Chief Correspondent</text>
+      </g>
+    </svg>`,
+    'inkscape.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Presenter name');
+  await expect(page.getByTestId('map-svg-title-t1')).toHaveValue('Role');
+});
+
+test('svg import: text a designer switched off, or parked in a symbol, is never offered as a field', async ({ page }) => {
+  // Two ways a file carries copy nobody can see: a HIDDEN layer (a draft the designer turned
+  // off, exported as display:none) and a DEFINITION (<symbol>/<defs>, which paints only where
+  // a <use> copies it — so binding the original by id is not a promise this import can keep).
+  // Both used to arrive as operator fields for invisible text.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <defs><symbol id="Badge"><text id="In_x20_symbol" x="0" y="0">Never shown</text></symbol></defs>
+      <g id="Old_x20_draft" style="display:none"><text id="Draft_x20_copy" x="20" y="40">Draft copy</text></g>
+      <g id="Retired" display="none"><text id="Retired_x20_line" x="20" y="60">Retired line</text></g>
+      <text id="Headline" x="20" y="120" font-size="30" fill="#fff">Alexandra Riva</text>
+    </svg>`,
+    'hidden-layers.svg',
+  );
+
+  await expect(page.getByTestId('import-svg-layers')).toContainText('1 text layer');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Headline');
+  await expect(page.getByTestId('map-svg-row-t1')).toHaveCount(0);
+});
+
+test('svg import: Inkscape flowed text is called out, since no browser draws it', async ({ page }) => {
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <flowRoot id="flowRoot10"><flowRegion><rect x="20" y="20" width="200" height="60"/></flowRegion><flowPara id="flowPara12">Paragraph copy</flowPara></flowRoot>
+      <text id="Headline" x="20" y="120" font-size="30" fill="#fff">Alexandra Riva</text>
+    </svg>`,
+    'flowed.svg',
+  );
+
+  // The copy is already missing from the picture before we look at it, so the card says so and
+  // names the fix rather than leaving a designer hunting for a lost paragraph.
+  await expect(page.getByTestId('import-svg-card')).toContainText('flowed text');
+  await expect(page.getByTestId('import-svg-card')).toContainText('Convert to Text');
+});
+
 test('svg import: the export door ships the bound SVG unchanged through the gate', async ({ page }) => {
   await dropSvg(page);
   // Straight to Finish (Next through mapping and animation — the defaults are the promise).

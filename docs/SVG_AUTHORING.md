@@ -61,7 +61,17 @@ your back.
 
 **Labels** come from the nearest named thing: the layer's own name, otherwise the closest named
 group around it. Illustrator's escaping is decoded, so a layer named `Home team` arrives as
-"Home team" and not as `Home_x20_team`.
+"Home team" and not as `Home_x20_team`; Inkscape's layer labels are read as well, and an
+editor-generated serial id (`text123`, `layer1`) counts as unnamed so the named layer above it
+wins.
+
+**Two kinds of layer are deliberately NOT offered**, though both ride into the graphic exactly as
+you drew them:
+
+- **A layer you switched off.** Hidden copy is a draft, and an operator field for text nobody can
+  see is worse than no field.
+- **Text inside a symbol or `<defs>`.** It paints only where a `<use>` copies it, so binding the
+  original is a promise the import cannot keep. Put the text you want editable on the artboard.
 
 **Optional sugar:** prefix a layer name with `f:` or `field:` (`f:Competition`) to mark it
 editable by name; the prefix is stripped from the label. Useful for an organisation that wants
@@ -118,8 +128,13 @@ Name the layers, select the frame, then *Export > SVG* with:
 
 ### Inkscape
 *File > Save As… > Plain SVG* (or Optimized SVG with **Embed raster images** on and ID-shortening
-off). Label your layers and objects. Do not run *Path > Object to Path* on the text you want to
-be editable.
+off). Label your layers and objects - Inkscape keeps the label separately from the id, and the
+import reads it. Do not run *Path > Object to Path* on the text you want to be editable.
+
+**Do not use flowed text** (a text box dragged out with the text tool). It exports as `<flowRoot>`,
+an SVG draft element no browser ever implemented, so it is invisible in every browser-based
+renderer - including NoaCG's preview and every export target. The import says so when it sees one.
+Select it and use *Text > Convert to Text* before exporting.
 
 ## 7. A checklist before you drop the file
 
