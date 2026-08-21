@@ -26,6 +26,17 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
   deadlocks exactly the write that would clear it. A browser with no IndexedDB, or one holding
   a database written by a NEWER build, degrades to localStorage with the old ceiling rather
   than crashing or downgrading anybody's data.
+  **The mirror is PER TAB, so a landed write ANNOUNCES its key** (`BroadcastChannel`) and the
+  other tabs re-read that one key and dispatch `spx-data-changed`. Without it two tabs on one
+  production ate each other's work, and it needed no second person: every mutator in this
+  directory is a read-modify-WHOLE-RECORD write (`patchShow` = loadAllShows -> mutate -> save the
+  lot), so a tab holding a mirror from before another tab's write put that old record straight
+  back. Reproduced 2026-08-21 - a table authored in a second tab was gone from the database after
+  any cue edit in the first. It CLOSES the hazard rather than eliminating it: the re-read is
+  async, so a write in the milliseconds before it lands can still win. Removing that last window
+  means writing through the DATABASE rather than the mirror, which every synchronous reader here
+  is built against. `e2e/cross-tab.spec.ts` pins it, and reads back from a THIRD, fresh tab -
+  reading in the first proves nothing, since its mirror never saw the write either way.
 - **types.ts** - SpxTemplate (html/css/js + parsed definition - the canonical unit), AssetFile,
   DEFAULT_SETTINGS, plus compatibility re-exports from projectFormat.ts.
 - **projectFormat.ts** - the ONE authored-format registry: stable resolution preset IDs,
