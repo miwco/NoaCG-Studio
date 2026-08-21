@@ -26,11 +26,14 @@ import type { ResolvedOptions, TemplateVariant } from '../../../model/wizard';
 import { countdownType } from '../../../templates/types/clocks';
 import type { DesignLanguage, LanguagePalette } from './contract';
 import {
+  markKnockCss,
+  markTreatmentFor,
   panelSurface,
   platformNotes,
   readableInkOn,
   resolvePalette,
   wizardPalette,
+  type MarkTreatment,
 } from './paint';
 import { accentPlan, resolveSpacing, type ResolvedSpacing } from './structure';
 import type { ComposeOptions, ComposedGraphic } from './compose';
@@ -115,6 +118,7 @@ function buildDesign(
   palette: LanguagePalette,
   s: ResolvedSpacing,
   o: ResolvedOptions,
+  markField: string,
 ): GameTimerDesign {
   const plan = accentPlan(language.accent.form);
   const surface = panelSurface(language, palette);
@@ -149,6 +153,16 @@ ${form === 'underline' ? accentEl : ''}    </div>`;
   ${form === 'edge-bar' ? `margin-left: ${px(s.accentPx)};  /* starts where the accent bar ends */\n  ` : ''}padding: ${px(s.padVPx)} ${px(s.padHPx)};
   background: var(--panel-bg);      /* the language's surface */
   border-radius: ${px(s.cornerPx)};${form === 'edge-bar' ? `\n  border-top-left-radius: 0;        /* the accent bar carries this corner */\n  border-bottom-left-radius: 0;` : ''}${surface.blur ? '\n  backdrop-filter: blur(18px);      /* the surface softens the picture behind it */\n  -webkit-backdrop-filter: blur(18px);  /* Safari spelling of the same effect */' : ''}
+}
+
+/* The mark — CENTRED ACROSS THE PANEL, the same arrangement the sponsor bug takes, for the same
+   reason: the panel is \`fit-content\` around whichever of its children is widest, so a mark left
+   flush in a panel sized by its clock reads as an accident (the owner's most-repeated note on the
+   2026-08-19 read; docs/NOACG_PRO_PLAN.md §25.2). The mark leads the panel, the label and the
+   clock follow - a channel mark above "STARTING IN" above the digits, which is how a countdown is
+   drawn on air. */
+.game-timer-logo {
+  align-self: center;               /* centred across the panel, whatever sizes it */
 }
 
 /* The label — the package's LABEL voice, ${Math.round((s.supportingPx / s.headingPx) * 100)}% of the clock's size. Exactly the step a
@@ -189,7 +203,7 @@ ${form === 'underline' ? accentEl : ''}    </div>`;
   22%, 66% { opacity: 0.25; }       /* …off — two quick blinks, then settle */
 }`;
 
-  return { html, css, hasAccent: plan.element };
+  return { html, css: css + markField, hasAccent: plan.element };
 }
 
 /**
@@ -198,6 +212,7 @@ ${form === 'underline' ? accentEl : ''}    </div>`;
  */
 export function timerVariantForLanguage(
   language: DesignLanguage,
+  markField = '',
   brandPalette?: LanguagePalette | null,
 ): TemplateVariant {
   const s = resolveSpacing(language, 'countdown');
@@ -208,6 +223,11 @@ export function timerVariantForLanguage(
     name: language.name,
     description: language.rationale,
     styleTag: 'noacg',
+    // THIS design opts IN. The type permits a mark and the four catalog timers decline it - none
+    // was drawn with a place for one - so a Pro countdown says so for itself, which is what keeps
+    // "the package carries its mark on every piece" a property of the package rather than a flag
+    // flipped on everybody's browse grid (docs/MARK_CAPABILITY_AUDIT.md).
+    logo: 'optional',
     palette: wizardPalette(language, palette, surface.value),
     fontId: language.typography.fontId,
     // The category draws exactly two entrances; the language's character picks which leads.
@@ -224,7 +244,7 @@ export function timerVariantForLanguage(
         description: language.rationale,
         maxLines: 1,
         suggestedLines: [{ title: 'Label', sample: 'ROUND 1' }],
-        logo: 'none',
+        logo: 'optional',
         animationPresets: s.preset === 'timer-run'
           ? ['timer-run', 'timer-line-reveal']
           : ['timer-line-reveal', 'timer-run'],
@@ -233,7 +253,7 @@ export function timerVariantForLanguage(
         defaultZone: 'top-center',
       },
       { name: language.name, description: language.rationale, uicolor: '4' },
-      (o) => buildDesign(language, palette, s, o),
+      (o) => buildDesign(language, palette, s, o, markField),
     ).create(options),
   });
 }
@@ -241,26 +261,45 @@ export function timerVariantForLanguage(
 /**
  * Render a COUNTDOWN in this language.
  *
- * `options.logo` is accepted and ignored on purpose rather than refused: the countdown type
- * declares `logo: 'none'`, so there is no slot to fill, and a caller composing a whole package
- * from one set of options must not have to special-case which member takes a mark.
+ * IT TAKES THE PACKAGE'S MARK, since 2026-08-21. `options.logo` used to be accepted and ignored
+ * because the type declared `logo: 'none'` - and that declaration turned out to be an authoring
+ * accident rather than a property of a clock, which is what made every Pro package inconsistent
+ * (the owner's sixth rule, §25.4). The mark is treated exactly as the strap's and the bug's are:
+ * knocked to the one ink that reads when the panel defeats it, left alone otherwise.
  */
 export function composeTimerFromLanguage(
   language: DesignLanguage,
   options: ComposeOptions & { minutes?: string },
 ): ComposedGraphic {
   const s = resolveSpacing(language, 'countdown');
-  const { palette, adjustments } = resolvePalette(language, options.brandPalette);
+  const { palette, adjustments: paletteAdjustments } = resolvePalette(language, options.brandPalette);
   const surface = panelSurface(language, palette);
-  const variant = timerVariantForLanguage(language, options.brandPalette);
+  const markField = options.markField ?? true;
+  const mark: MarkTreatment = markField && options.logo
+    ? markTreatmentFor(surface.value, options.logo)
+    : { kind: 'none', reason: null };
+  const variant = timerVariantForLanguage(
+    language,
+    mark.kind === 'knock' ? markKnockCss('game-timer', mark) : '',
+    options.brandPalette,
+  );
+  const adjustments = [...paletteAdjustments, ...(mark.kind === 'knock' ? ['mark_ink_knocked'] : [])];
   const notes = platformNotes({
-    language, spacing: s, surface, prefix: 'game-timer', adjustments, mark: { kind: 'none', reason: null },
+    language, spacing: s, surface, prefix: 'game-timer', adjustments, mark,
   });
   const template = variant.create({
     lines: options.lines,
     ...(options.resolution ? { resolution: options.resolution } : {}),
     ...(options.fps ? { fps: options.fps } : {}),
     animation: { presetId: s.preset, speed: s.speed, easing: 'auto', steps: false },
+    ...(options.logo
+      ? {
+        logoEnabled: true,
+        logoAssetPath: options.logo.assetPath,
+        importedImages: options.logo.images,
+        ...(mark.kind === 'knock' ? { logoInkKnocked: true } : {}),
+      }
+      : {}),
     // Through the TYPE's own content channel, keyed by its logical field name, so an illegal
     // value is dropped against the field's declaration rather than written (`withContentValues`).
     content: { minutes: options.minutes ?? DEFAULT_MINUTES },

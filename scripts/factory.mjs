@@ -19,6 +19,12 @@
 // against the REAL registry and the REAL assemblers rather than a re-implementation of them —
 // which is the only way a factory gate can be trusted.
 //
+// NO BACKTICKS BELOW, NOT EVEN IN A COMMENT. Everything from `const PROBE =` to its closing
+// backtick is ONE template literal, so a backtick written inside it - around an identifier, in
+// prose, anywhere - ends the string there and the rest of the probe is parsed as code. The error
+// eslint reports for that points at the identifier AFTER the backtick and says nothing about
+// strings, which is a long way from the cause.
+//
 // ── Why the matrix is derived in a browser and not parsed ────────────────────────────────
 //
 // A type's `structure.category` is KEBAB-CASE ('corner-bug', 'info-card', 'lower-third'). An
@@ -191,10 +197,17 @@ const PROBE = `(async (onlyIds) => {
       }
 
       // ── capabilities ─────────────────────────────────────────────────────────────────
-      // A compiled variant takes its TYPE's capabilities, not the design's. When the design
-      // is a PROMOTED hand-written variant, the pre-merge entry still carries what the design
-      // was actually built for — so the two can be compared. This is the card04 check: it
-      // widened a 3-line design to 5 and broke nothing, so no test objected.
+      // A compiled variant takes its TYPE's capabilities EXCEPT where the design overrides one.
+      // When the design is a PROMOTED hand-written variant, the pre-merge entry still carries
+      // what the design was actually built for — so the two can be compared. This is the card04
+      // check: it widened a 3-line design to 5 and broke nothing, so no test objected.
+      //
+      // WHAT IS COMPARED IS THE EFFECTIVE CAPABILITY, not the type's raw one, and the difference
+      // is the whole point of the override. TypeDesign.logo exists so a design can decline a
+      // mark its type permits (2026-08-21, docs/MARK_CAPABILITY_AUDIT.md): the countdown type
+      // says a clock CAN carry one, and gt01/gt02/gt05/gt06 were drawn without a place for it.
+      // Comparing against type.capabilities.logo failed all four for declining — which is the
+      // gate reporting the override as the very drift the override exists to prevent.
       const own = handWrittenById[design.id];
       if (own) {
         if (own.maxLines !== type.capabilities.maxLines) {
@@ -202,9 +215,10 @@ const PROBE = `(async (onlyIds) => {
             'the design is built for ' + own.maxLines + ' line(s), the type offers ' + type.capabilities.maxLines,
           );
         }
-        if (own.logo !== type.capabilities.logo) {
+        const compiledLogo = design.logo ?? type.capabilities.logo;
+        if (own.logo !== compiledLogo) {
           rec.gates.capabilities.push(
-            'the design declares logo "' + own.logo + '", the type declares "' + type.capabilities.logo + '"',
+            'the design declares logo "' + own.logo + '", it compiles to "' + compiledLogo + '"',
           );
         }
         // MOTION AND POSITION ARE GATES, NOT WARNINGS — and getting this wrong once is why

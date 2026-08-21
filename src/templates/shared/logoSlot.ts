@@ -267,13 +267,26 @@ function sideBySideSizeCss(prefix: string, o: ResolvedOptions): string {
  *     not as wasted height - the review rule was about straps, and widening it uninvited
  *     would redesign 70+ cards on a lower-third finding.
  */
-export function applyLogoSlot(design: StandardDesign, prefix: string, o: ResolvedOptions): StandardDesign {
+export function applyLogoSlot(
+  design: StandardDesign,
+  prefix: string,
+  o: ResolvedOptions,
+  /** The field id to give the mark, when the CATEGORY numbers its fields itself.
+   *
+   *  The default arithmetic below counts the lines and the extra fields, which is right for every
+   *  category whose SPX definition is built from exactly those. `game-timer` is not one: its
+   *  assembler hard-codes `f1` for the duration, so the count would hand the mark an id the
+   *  duration already owns - two entries for one id, and the later one wins the `getElementById`
+   *  write. The caller that knows its own numbering passes it. */
+  fieldId?: string,
+): StandardDesign {
   const boxOpen = `<div class="${prefix}-box">`;
   const at = design.html.indexOf(boxOpen);
   if (at < 0) return design;
 
   const beside = prefix === 'lower-third';
-  const logoField = `f${o.lines.length + o.extraFields.length + (design.extraFields?.length ?? 0)}`;
+  const logoField = fieldId
+    ?? `f${o.lines.length + o.extraFields.length + (design.extraFields?.length ?? 0)}`;
   const logoPath = o.logoAssetPath ?? '';
 
   const markHtml = (indent: string): string =>
