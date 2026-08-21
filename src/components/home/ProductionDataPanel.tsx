@@ -44,6 +44,8 @@ export default function ProductionDataPanel({
   const [rawText, setRawText] = useState('');
   const [rawError, setRawError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  /** The one ✕ whose second click deletes, or null. One slot, so arming a row disarms any other. */
+  const [armed, setArmed] = useState<string | null>(null);
 
   const leaves = useMemo(() => flattenLeaves(liveData), [liveData]);
   const seed = show.data;
@@ -210,13 +212,26 @@ export default function ProductionDataPanel({
                 </button>
               </span>
             )}
+            {/* ARMED, like the entry delete on the graphic control page. This is typed-in data
+                with no undo behind it, on a row someone drives live, and a stray click took it
+                with no way back - "if I close one of those, how can I reopen it?" (owner,
+                2026-08-21). The answer used to be: retype the path and the value from memory. */}
             <button
-              className="pd-live-del"
-              title="Delete this value"
-              onClick={() => write(deletePath(liveData, leaf.path))}
+              className={`pd-live-del${armed === `leaf:${leaf.path}` ? ' reset-armed' : ''}`}
+              title={armed === `leaf:${leaf.path}` ? `Click again to delete ${leaf.path}` : 'Delete this value'}
+              onClick={() => {
+                if (armed === `leaf:${leaf.path}`) {
+                  setArmed(null);
+                  write(deletePath(liveData, leaf.path));
+                } else setArmed(`leaf:${leaf.path}`);
+              }}
               data-testid={`data-delete-${leaf.path}`}
             >
-              ✕
+              {/* A GLYPH, not the word the other armed buttons use: this row's last grid column
+                  is a fixed 28px, so "Delete?" would overflow its own track - the defect §2d of
+                  docs/PLAYOUT_DASHBOARD.md is about, one panel over. The amber and the tooltip
+                  carry the meaning instead. */}
+              {armed === `leaf:${leaf.path}` ? '✓' : '✕'}
             </button>
           </div>
         ))}
@@ -272,6 +287,8 @@ function BindingTable({
 }) {
   const leaves = useMemo(() => flattenLeaves(liveData), [liveData]);
   const bindings = show.bindings ?? {};
+  /** The one ✕ whose second click unbinds, or null — the same one-slot arming as above. */
+  const [armed, setArmed] = useState<string | null>(null);
 
   return (
     <div className="pd-bindings" data-testid="production-bindings">
@@ -321,13 +338,25 @@ function BindingTable({
                     </span>
                   )}
                   {path && (
+                    // ARMED for the same reason as the value delete above, and more so: unbinding
+                    // CHANGES WHAT AIRS - the field goes back to the cue's own value the next time
+                    // it is sent - and the path it forgets was only ever typed here.
                     <button
-                      className="pd-live-del"
-                      title="Unbind — the field goes back to the cue's own value"
-                      onClick={() => setShows(setFieldBinding(show.id, g.name, d.key, null))}
+                      className={`pd-live-del${armed === `bind:${g.name}:${d.key}` ? ' reset-armed' : ''}`}
+                      title={
+                        armed === `bind:${g.name}:${d.key}`
+                          ? `Click again to unbind ${d.key} from ${path}`
+                          : "Unbind — the field goes back to the cue's own value"
+                      }
+                      onClick={() => {
+                        if (armed === `bind:${g.name}:${d.key}`) {
+                          setArmed(null);
+                          setShows(setFieldBinding(show.id, g.name, d.key, null));
+                        } else setArmed(`bind:${g.name}:${d.key}`);
+                      }}
                       data-testid={`unbind-${g.name}-${d.key}`}
                     >
-                      ✕
+                      {armed === `bind:${g.name}:${d.key}` ? '✓' : '✕'}
                     </button>
                   )}
                 </div>

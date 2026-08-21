@@ -98,8 +98,12 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 .topbar .topbar-meta { font-size: 11px; margin-left: 6px; white-space: nowrap; }
 .topbar .divider-dot { color: #3d4756; margin: 0 -2px; user-select: none; }
 .topbar .spacer { flex: 1; }
-/* Armed Reset — the amber on-air accent signals the pending confirm (Brand Manual §5). */
-.topbar button.reset-armed {
+/* Armed Reset — the amber on-air accent signals the pending confirm (Brand Manual §5).
+   NOT scoped to the topbar: three surfaces now arm a destructive button the same way (the
+   topbar's Reset, an entry's ✕ on the graphic control page, and a value's or a binding's ✕ on
+   the production Data tab), and the two off the topbar were setting a class that styled nothing.
+   The label change carried them, which is exactly how it went unnoticed. */
+button.reset-armed {
   color: var(--amber);
   border-color: rgba(246, 166, 35, 0.55);
   background: rgba(246, 166, 35, 0.12);
@@ -5663,6 +5667,13 @@ h2 + .lib-row,
   overflow: visible;
   /* One number for the sticky offsets below and the header's own height. */
   --pd-header-h: 50px;
+  /* THE CUE EDITOR'S FIELD TRACK (§2d). The floor is the widest CONTROL's measured min-content -
+     a number control is 245px - and a track that is smaller does not shrink the control, it lets
+     it overflow onto the field beside it. The ceiling stops three fields being flung across a
+     2560px band. Both are named here rather than written into the rule so the next person to
+     add a control can see what they have to fit, and can measure it against one number. */
+  --pd-field-min: 250px;
+  --pd-field-max: 340px;
   /* The monitor cap (§2). Picture height only; the label row and the sticky padding sit on top.
      NOT a flat fraction of the viewport any more (owner read 2026-08-21): 26vh answered the
      1536×814 window it was tuned on and wasted the 1080p one - "too much empty room at the

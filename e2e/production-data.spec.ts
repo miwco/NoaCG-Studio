@@ -502,7 +502,13 @@ test('the seed is the reset target, and unbinding hands the field back to the cu
   await data.getByTestId(`bind-${graphicName}-f0`).fill('counter');
   await settleDurableWrites(data);
   await expect(page.getByTestId('cue-bound-f0')).toBeVisible();
-  await data.getByTestId(`unbind-${graphicName}-f0`).click();
+  // ARMED: typed-in data on a live surface, so the first click asks and the second acts (the
+  // same two-step an entry's delete uses). Unbinding CHANGES WHAT AIRS, which is why it asks.
+  const unbind = data.getByTestId(`unbind-${graphicName}-f0`);
+  await unbind.click();
+  await expect(unbind, 'the first click should only arm the unbind').toHaveText('✓');
+  await expect(page.getByTestId('cue-bound-f0'), 'nothing may change on the arming click').toBeVisible();
+  await unbind.click();
   await settleDurableWrites(data);
   await expect(page.getByTestId('cue-field-f0')).toBeVisible();
   await expect(page.getByTestId('cue-bound-f0')).toHaveCount(0);
@@ -548,7 +554,11 @@ test('nested trees, arrays and a missing path each behave as the contract says',
   await expect(preview.locator('#f0')).not.toHaveText('');
 
   // Deleting a value leaves the rest of the tree alone.
-  await data.getByTestId('data-delete-poll.open').click();
+  const del = data.getByTestId('data-delete-poll.open');
+  await del.click();
+  await expect(del, 'the first click should only arm the delete').toHaveText('✓');
+  await expect(data.getByTestId('data-row-poll.open'), 'nothing may go on the arming click').toBeVisible();
+  await del.click();
   await expect(data.getByTestId('data-row-poll.open')).toHaveCount(0);
   await expect(data.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
 });
