@@ -3,7 +3,9 @@
 // shard count from, and the command that refreshes it.
 //
 //   node scripts/e2e-durations.mjs --check                 # report drift, change nothing
-//   node scripts/e2e-durations.mjs <merged-report.json>    # rewrite the table from a real run
+//   npm run record:e2e-durations                           # re-record from the newest green full run
+//   npm run record:e2e-durations -- <run-id>               # ...or from one you name
+//   node scripts/e2e-durations.mjs <merged-report.json>    # rewrite the table from a report you merged
 //
 // WHY A TABLE AND NOT A FILE COUNT. Until 2026-08-19 CI sized its shards off the NUMBER of spec
 // files in the plan: nine shards for a full run, and `min(4, floor(files / 4))` for a subset.
@@ -25,18 +27,20 @@
 // deliberately not a gate and lives under `scripts/` (ignored by the affected-spec map: nothing
 // a spec can observe changes when it does).
 //
-// HOW TO REFRESH IT. The numbers come from a real CI run's shard reports, because that is the
-// hardware they are used on - a laptop's timings are a different machine's. Pick a green FULL
-// run (main always runs full), then:
+// HOW TO REFRESH IT. `npm run record:e2e-durations` does the whole thing. The numbers come from a
+// real CI run's shard reports, because that is the hardware they are used on - a laptop's timings
+// are a different machine's - so the command picks the newest GREEN FULL run of ci.yml on `main`
+// (main always runs full), downloads its blob reports, merges them and rewrites the table,
+// stamping which run it came from. Name a run id to use that one instead.
 //
-//   gh run download <run-id> --pattern 'blob-report-*' --dir blobs
-//   cp blobs/*/*.zip flat/
-//   npx playwright merge-reports --reporter=json flat > merged.json
-//   node scripts/e2e-durations.mjs merged.json
-//
-// Blob artifacts are kept for 7 days, so refresh from a recent run or from the nightly.
-import { readFileSync, writeFileSync } from 'node:fs';
+// A HALF-RUN IS REFUSED, not silently recorded: a run whose E2E jobs are not all `(full)`, or that
+// is missing a shard, measures a SUBSET, and writing that would drop every unmeasured spec back to
+// the median. Blob artifacts are kept for 7 days, so re-record from a recent run.
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, copyFileSync, mkdirSync } from 'node:fs';
 import { readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const TABLE = fileURLToPath(new URL('./e2e-durations.json', import.meta.url));
@@ -92,6 +96,115 @@ function specFilesOnDisk() {
   return readdirSync(E2E_DIR).filter((f) => f.endsWith('.spec.ts')).sort();
 }
 
+/** Rewrite the table, refusing a report that measured nothing. Returns the spec count, or 0. */
+function writeTable(minutes, source) {
+  if (Object.keys(minutes).length === 0) return 0;
+  const written = {
+    $comment: 'GENERATED - do not hand-edit. See scripts/e2e-durations.mjs for how to refresh it and why it exists.',
+    source: {
+      run: source.run,
+      workflow: 'ci.yml',
+      branch: source.branch,
+      sha: source.sha,
+      mode: 'full',
+      recordedAt: new Date().toISOString().slice(0, 10),
+    },
+    minutes,
+  };
+  writeFileSync(TABLE, `${JSON.stringify(written, null, 2)}\n`);
+  const total = Object.values(minutes).reduce((a, b) => a + b, 0);
+  console.log(`e2e-durations: wrote ${Object.keys(minutes).length} specs, ${total.toFixed(1)} min total.`);
+  return Object.keys(minutes).length;
+}
+
+function run(cmd, cmdArgs, opts = {}) {
+  return execFileSync(cmd, cmdArgs, { encoding: 'utf8', shell: process.platform === 'win32', ...opts });
+}
+
+/**
+ * Why this run's shard jobs are not a whole full suite, or `null` if they are.
+ *
+ * The names CI gives them (`E2E 3/9 (full)`) carry both facts the table needs: that every shard
+ * measured the FULL plan rather than an affected subset, and that none of them is missing.
+ */
+export function fullRunRefusal(jobs) {
+  const shards = [];
+  for (const job of jobs) {
+    const m = /^E2E (\d+)\/(\d+) \((\w+)\)$/.exec(job.name ?? '');
+    if (m) shards.push({ index: Number(m[1]), of: Number(m[2]), mode: m[3], conclusion: job.conclusion });
+  }
+  if (shards.length === 0) return 'it ran no E2E shards';
+  const subset = shards.filter((s) => s.mode !== 'full');
+  if (subset.length > 0) return `it ran mode "${subset[0].mode}", not the full suite`;
+  const expected = shards[0].of;
+  if (shards.length !== expected) return `only ${shards.length} of its ${expected} shards reported`;
+  const failed = shards.filter((s) => s.conclusion !== 'success');
+  if (failed.length > 0) return `shard ${failed[0].index}/${expected} concluded "${failed[0].conclusion}"`;
+  return null;
+}
+
+/** The newest green FULL ci.yml run on `main`, as `{ id, sha }`. Throws if none is in reach. */
+function newestFullRun() {
+  const candidates = JSON.parse(
+    run('gh', ['run', 'list', '--workflow', 'ci.yml', '--branch', 'main', '--limit', '20',
+      '--json', 'databaseId,conclusion,headSha']),
+  ).filter((r) => r.conclusion === 'success');
+  for (const candidate of candidates) {
+    const { jobs } = JSON.parse(run('gh', ['run', 'view', String(candidate.databaseId), '--json', 'jobs']));
+    const refusal = fullRunRefusal(jobs);
+    if (refusal) {
+      console.log(`e2e-durations: skipping run ${candidate.databaseId} - ${refusal}.`);
+      continue;
+    }
+    return { id: String(candidate.databaseId), sha: candidate.headSha };
+  }
+  throw new Error('no green FULL ci.yml run on main in the last 20 - name a run id, or push one.');
+}
+
+/** Download a run's shard reports, merge them, and rewrite the table from what they measured. */
+function record(runId) {
+  let target;
+  if (runId) {
+    const view = JSON.parse(run('gh', ['run', 'view', String(runId), '--json', 'jobs,headSha']));
+    const refusal = fullRunRefusal(view.jobs);
+    if (refusal) {
+      console.error(`e2e-durations: run ${runId} is not a whole full suite - ${refusal}. Refusing to record it.`);
+      return 1;
+    }
+    target = { id: String(runId), sha: view.headSha };
+  } else {
+    target = newestFullRun();
+  }
+  console.log(`e2e-durations: recording from run ${target.id} (${target.sha.slice(0, 8)}).`);
+
+  const work = mkdtempSync(join(tmpdir(), 'e2e-durations-'));
+  try {
+    const blobs = join(work, 'blobs');
+    const flat = join(work, 'flat');
+    mkdirSync(flat, { recursive: true });
+    run('gh', ['run', 'download', target.id, '--pattern', 'blob-report-*', '--dir', blobs], { stdio: 'inherit' });
+    // merge-reports wants every zip in ONE directory; `gh` gives each artifact its own.
+    let zips = 0;
+    for (const dir of readdirSync(blobs)) {
+      for (const file of readdirSync(join(blobs, dir))) {
+        if (!file.endsWith('.zip')) continue;
+        copyFileSync(join(blobs, dir, file), join(flat, `${dir}-${file}`));
+        zips += 1;
+      }
+    }
+    if (zips === 0) throw new Error(`run ${target.id} has no blob reports left - they expire after 7 days.`);
+    const merged = run('npx', ['playwright', 'merge-reports', '--reporter=json', flat], { maxBuffer: 256 * 1024 * 1024 });
+    const minutes = minutesByFile(JSON.parse(merged));
+    if (writeTable(minutes, { run: target.id, branch: 'main', sha: target.sha }) === 0) {
+      console.error(`e2e-durations: run ${target.id} merged to no test results - refusing to write an empty table.`);
+      return 1;
+    }
+    return 0;
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+
 function main() {
   const args = process.argv.slice(2);
   const table = readTable();
@@ -117,32 +230,25 @@ function main() {
     return 0;
   }
 
-  const reportPath = args.find((a) => !a.startsWith('--'));
-  if (!reportPath) {
-    console.error('usage: node scripts/e2e-durations.mjs [--check | <merged-report.json>]');
+  const positional = args.find((a) => !a.startsWith('--'));
+
+  if (args.includes('--record')) return record(positional);
+
+  if (!positional) {
+    console.error('usage: node scripts/e2e-durations.mjs [--check | --record [run-id] | <merged-report.json>]');
     return 1;
   }
-  const report = JSON.parse(readFileSync(reportPath, 'utf8'));
-  const minutes = minutesByFile(report);
-  if (Object.keys(minutes).length === 0) {
-    console.error(`e2e-durations: ${reportPath} contained no test results - refusing to write an empty table.`);
-    return 1;
-  }
-  const written = {
-    $comment: 'GENERATED - do not hand-edit. See scripts/e2e-durations.mjs for how to refresh it and why it exists.',
-    source: {
+  const minutes = minutesByFile(JSON.parse(readFileSync(positional, 'utf8')));
+  if (
+    writeTable(minutes, {
       run: process.env.E2E_DURATIONS_RUN ?? table.source.run ?? 'unknown',
-      workflow: 'ci.yml',
       branch: process.env.E2E_DURATIONS_BRANCH ?? 'main',
       sha: process.env.E2E_DURATIONS_SHA ?? 'unknown',
-      mode: 'full',
-      recordedAt: new Date().toISOString().slice(0, 10),
-    },
-    minutes,
-  };
-  writeFileSync(TABLE, `${JSON.stringify(written, null, 2)}\n`);
-  const total = Object.values(minutes).reduce((a, b) => a + b, 0);
-  console.log(`e2e-durations: wrote ${Object.keys(minutes).length} specs, ${total.toFixed(1)} min total.`);
+    }) === 0
+  ) {
+    console.error(`e2e-durations: ${positional} contained no test results - refusing to write an empty table.`);
+    return 1;
+  }
   return 0;
 }
 

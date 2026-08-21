@@ -105,6 +105,30 @@ export function formatClock(total: number): string {
   return `${Math.floor(safe / 60)}:${s < 10 ? `0${s}` : s}`;
 }
 
+/**
+ * What the clock field's held value becomes when an `update` row writes it.
+ *
+ * THE ORIGIN MUST SURVIVE A RESEND. Every Take and ✎ Update sends the cue's WHOLE value set, and
+ * a cue stores a PLAIN time — so five minutes into a match, a score bump re-sends `"10:00"` over
+ * a held `"10:00@1755600000000"`. Merging that blindly threw the origin away: the next clockStop
+ * banked the seed instead of the running time, and a renderer booting from the report came back
+ * at the seed too — both of them the very things the origin was added to prevent.
+ *
+ * The rule is the one the runtime already states: what distinguishes a CORRECTION from a resend
+ * is that the value the wire carries CHANGED. It is compared against the held value's plain half
+ * precisely because the origin write is ours, not the operator's — the operator's `"10:00"` has
+ * not changed just because we stamped it.
+ *
+ * The honest limit, unchanged from the runtime's: an operator cannot re-apply the time the clock
+ * already started from. No control surface can express that anyway (the field holds that text, so
+ * there is no edit to send), and returning to a known value is `clockReset`'s job.
+ */
+export function clockValueAfterUpdate(held: string | undefined, incoming: string): string {
+  if (clockOriginOf(incoming) !== null) return incoming;         // a stamped value always wins
+  if (held === undefined || clockOriginOf(held) === null) return incoming;
+  return plainClockValue(held) === plainClockValue(incoming) ? held : incoming;
+}
+
 /** What a clock reads at `now`: the held value, or the origin value plus the seconds since. */
 export function clockValueAt(raw: string | undefined | null, countsDown: boolean, now: number): string {
   const origin = clockOriginOf(raw);

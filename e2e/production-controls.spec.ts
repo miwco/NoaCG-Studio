@@ -1,5 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 import JSZip from 'jszip';
+import { readFileSync } from 'node:fs';
 import { createProject } from './_create';
 import { relayServe, routeOrigin } from './_relay';
 
@@ -465,6 +466,166 @@ test('± LIVE NUMBERS on the EXPORTED controller: the bump is a partial, carryin
   expect(last.f1).toBe('ZO');
   expect(Object.keys(last).length).toBeGreaterThan(1);
   expect(last.f2).toBe('1');   // the bump survived the full publish rather than being undone
+
+  await ctl.close();
+  await air.close();
+});
+
+// ── THE MATCH CLOCK ACROSS A RENDERER RELOAD (docs/SPORTS_PACK.md) ────────────────────────────
+// A clock is the one value that keeps moving with nobody commanding it, so a log of what was
+// SENT cannot rebuild it. The hosted /output renderer has attached a time origin since
+// 2026-08-19; the EXPORT door — the rehearsed backup when the network fails — did not, so a
+// browser source reloaded mid-match came back at whatever the last Take carried and re-ran from
+// there. Visibly wrong, on air, at the moment something has already gone wrong.
+//
+// These two cover the two exported operator surfaces a package ships. Both assert against REAL
+// ELAPSED TIME or the WIRE rather than a fixed string: the clock is supposed to have kept
+// running, so the only honest assertion is that it did.
+
+/** Seconds behind the sb09 board's 10:00 start, from its rendered "M:SS". */
+function behindStart(text: string): number {
+  const [m, s] = text.trim().split(':');
+  return 10 * 60 - ((parseInt(m, 10) || 0) * 60 + (parseInt(s, 10) || 0));
+}
+
+test('an exported package recovers a running match clock when the renderer reloads', async ({ page, context }) => {
+  test.setTimeout(120_000);
+  await createProject(page, { name: 'House Match Board' });
+  await page.getByTestId('dock-tab-export').click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Validate & download/ }).click(),
+  ]);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+  const files = new Map<string, string>();
+  let root = '';
+  for (const name of Object.keys(zip.files)) {
+    if (zip.files[name].dir) continue;
+    if (!root) root = `${name.split('/')[0]}/`;
+    files.set(name.replace(root, ''), await zip.file(name)!.async('string'));
+  }
+  const graphicFile = [...files.keys()].find((n) => n.endsWith('.html') && n !== 'controlpanel.html')!;
+  // A plain static host, NOT the relay: this is the BroadcastChannel pairing (the panel and the
+  // graphic in one browser), which is the transport that carries the recovery replay.
+  const serve = (route: Route) => {
+    const path = new URL(route.request().url()).pathname.replace(/^\//, '') || graphicFile;
+    const body = files.get(path);
+    if (body == null) return route.fulfill({ status: 404, body: 'nf' });
+    const ct = path.endsWith('.css') ? 'text/css' : path.endsWith('.js') ? 'application/javascript' : 'text/html';
+    return route.fulfill({ status: 200, contentType: ct, body });
+  };
+  const origin = 'http://clock-recovery.local';
+
+  const graphic = await context.newPage();
+  await graphic.route(`${origin}/**`, serve);
+  await graphic.goto(`${origin}/${graphicFile}`, { waitUntil: 'load' });
+  const panel = await context.newPage();
+  await panel.route(`${origin}/**`, serve);
+  await panel.goto(`${origin}/controlpanel.html`, { waitUntil: 'load' });
+  await expect(panel.locator('.state-chip')).toBeVisible();
+
+  // Kick off: the board airs at 10:00 and the clock starts counting down.
+  await panel.getByRole('button', { name: '▶ Play' }).click();
+  await expect(graphic.locator('#f5')).toHaveText('10:00');
+  await panel.getByRole('button', { name: '⚡ Start clock' }).click();
+  await expect(graphic.locator('#f5')).toHaveText('9:55', { timeout: 20_000 });
+
+  // THE WIRE IS THE CONTRACT. What makes recovery possible is that the value the panel logged
+  // carries the instant it was true — a plain "10:00" is a HELD time and rebuilds nothing.
+  const logged = await panel.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)!;
+      if (key.startsWith('noacg-log-')) return JSON.parse(localStorage.getItem(key)!) as { data: Record<string, string> };
+    }
+    return null;
+  });
+  expect(logged?.data.f5, 'the logged clock value must carry its time origin').toMatch(/^10:00@\d{13}$/);
+
+  // THE RELOAD. The graphic announces itself, the panel rebuilds it from that log, and what
+  // comes back must be the MATCH time — not the value the last Take carried.
+  const beforeAt = Date.now();
+  const before = behindStart((await graphic.locator('#f5').textContent())!);
+  await graphic.reload({ waitUntil: 'load' });
+  await expect(graphic.locator('#f5')).not.toHaveText('', { timeout: 10_000 });
+  await page.waitForTimeout(3_000);
+  const elapsed = (Date.now() - beforeAt) / 1000;
+  const after = behindStart((await graphic.locator('#f5').textContent())!);
+  // It kept running across the reload: the clock advanced by the wall time that passed, ±1.5 s
+  // for the second boundary and the reload itself. Before the fix it came back at 10:00, so
+  // `after` went BACKWARDS — the assertion fails by a wide margin rather than by a rounding.
+  expect(
+    after - before,
+    `clock went ${before}s -> ${after}s behind the start over ${elapsed}s of real time`,
+  ).toBeGreaterThan(elapsed - 1.5);
+  expect(after - before).toBeLessThan(elapsed + 1.5);
+
+  await panel.close();
+  await graphic.close();
+});
+
+test('the EXPORTED CONTROLLER stamps the clock too: the origin rides the wire before the event', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // The same package ships two operator surfaces, and an operator who switches between them must
+  // not switch behaviour (docs/CONTROL_PANEL_PARITY.md). The controller drives OBS/vMix through
+  // the local relay, so the assertion is the WIRE: a screen that looks right can still be
+  // shipping a plain value that rebuilds nothing.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const b64 = await page.evaluate(async () => {
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { createGraphic } = await import('/src/model/library.ts');
+    const shows = await import('/src/model/shows.ts');
+    const { buildShowZipFor } = await import('/src/export/showExport.ts');
+    const tpl = variantById('sb09')!.create({});          // House Match Board: f5 counts down from 10:00
+    const { doc } = createGraphic(tpl, { name: 'House Match Board' });
+    const show = shows.createShowNamed('Cup Tie');
+    shows.addGraphicToShow(show.id, tpl, { graphicId: doc!.id });
+    const fresh0 = shows.loadShows().find((s) => s.id === show.id)!;
+    shows.updateShowCue(show.id, fresh0.cues![0].id, { label: 'Kick-off' });
+    const fresh = shows.loadShows().find((s) => s.id === show.id)!;
+    return (await buildShowZipFor(fresh, 'html-overlay')).generateAsync({ type: 'base64' });
+  });
+
+  const zip = await JSZip.loadAsync(b64, { base64: true });
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir && /\.(html|json)$/.test(n)) files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+  }
+  const manifest = JSON.parse(files.get('payload.json')!) as { graphics: { file: string }[] };
+  const { serve, rows } = relayServe(files);
+  const origin = 'http://clock-controller.local';
+
+  const air = await context.newPage();
+  await routeOrigin(air, origin, serve);
+  await air.goto(`${origin}/${manifest.graphics[0].file}?stream=program`, { waitUntil: 'load' });
+  const ctl = await context.newPage();
+  await routeOrigin(ctl, origin, serve);
+  await ctl.goto(`${origin}/controller.html`, { waitUntil: 'load' });
+  await expect(ctl.locator('#mode')).toContainText('SHOW');
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+
+  const before = rows.length;
+  await ctl.locator('#editor-events').getByRole('button', { name: '⚡ Start clock' }).click();
+  await expect.poll(() => rows.length).toBeGreaterThan(before + 1);
+  const sent = rows.slice(before).map((r) => r.msg as { t: string; event?: string; data?: Record<string, string> });
+  // ORDER MATTERS: the origin has to be in the document by the time startMatchClock runs, or the
+  // runtime mints a local one and the wire's origin is never the one on air.
+  expect(sent[0].t).toBe('update');
+  expect(sent[0].data!.f5, 'the controller must stamp the clock field').toMatch(/^10:00@\d{13}$/);
+  expect(sent[1]).toMatchObject({ t: 'event', event: 'clockStart' });
+
+  // …and it is STAGED into the cue, so the whole value set a later ⟳ TAKE or ✎ Update sends
+  // carries the stamped value rather than dragging the running clock back to 10:00.
+  const stamped = sent[0].data!.f5;
+  const afterEvent = rows.length;
+  await ctl.locator('#v-update').click();
+  await expect.poll(() => rows.length).toBeGreaterThan(afterEvent);
+  const update = rows[rows.length - 1].msg as { t: string; data: Record<string, string> };
+  expect(update.data.f5).toBe(stamped);
+  // The operator still reads a plain time — the stamp is wire syntax, never something to type past.
+  await expect(ctl.locator('.field', { hasText: /^F5 · / }).locator('input[type="text"]')).toHaveValue('10:00');
 
   await ctl.close();
   await air.close();

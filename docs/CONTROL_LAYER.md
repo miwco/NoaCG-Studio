@@ -121,6 +121,12 @@ page stages into the shared buffer - in both, nothing reaches air because it was
   half (snap — timers arm). A rebooted graphic announces `graphic-online` and is rebuilt; a
   reloaded panel seeds fields/chip/legality from the log.
 - An accepted event's payload merges into the log's latest data — recovery must replay it.
+- **A MATCH CLOCK is written into that log by the panel itself**, because it is the one value
+  that keeps moving with nobody commanding it: a log of what was SENT would rebuild a clock at
+  the value the last Take carried. A clock verb therefore writes the clock field around its own
+  event — the time origin before a start, the banked time after a hold or a reset — so the log's
+  latest data holds `"10:00@1787257289761"` and the rebuild lands on the real match time
+  (`control/matchClockPageJs.ts`, `docs/SPORTS_PACK.md` for the per-plane truth).
 
 ## Shows (the rundown level)
 

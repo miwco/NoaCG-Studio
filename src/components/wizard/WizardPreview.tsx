@@ -165,7 +165,17 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
           it will air in. The aspect comes from the template because the format is the user's
           choice — CSS cannot know it (re-design/handoff.md §2). */}
       <div className="wz-stage" ref={stageRef} style={{ aspectRatio: `${width} / ${height}` }}>
-        <iframe
+        {/* A NEW IFRAME PER DOCUMENT, never a new `srcdoc` on the same one. Replacing an
+            existing frame's srcdoc is a NAVIGATION, and a subframe navigation joins the page's
+            session history — so every rebuild (every keystroke on the Fields step, every colour
+            on Style) quietly added an entry, and the reader's Back button filled up with
+            presses that did nothing. A frame that is INSERTED with its document already set
+            loads it as its initial document instead, which costs no entry at all. That is what
+            makes browser Back walk the wizard's steps rather than its rebuilds.
+            Keyed on the same generation counter the commit bumps, and not rendered until there
+            is a document to give it, so `srcdoc` is never assigned to a live frame. */}
+        {srcdoc && <iframe
+          key={docGenRef.current}
           ref={frameRef}
           title="Wizard live preview"
           sandbox="allow-scripts"
@@ -177,7 +187,7 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
             }, 60);
           }}
           style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
-        />
+        />}
       </div>
       <div className="wz-preview-bar">
         <span className="muted">

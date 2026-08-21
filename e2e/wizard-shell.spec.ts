@@ -1,4 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
+import { settleDurableWrites } from './_durable';
+
+/** One sample per animation frame: what `#root` held, and whether the wizard was in it. */
+interface WizardFrame {
+  root: string;
+  wizard: boolean;
+}
+declare global {
+  interface Window {
+    __wzFrames?: WizardFrame[];
+  }
+}
 
 // The wizard's SHELL — the header row, and the two ways out of it.
 //
@@ -124,15 +136,153 @@ test('✕ on the Entry step still leaves the wizard', async ({ page }) => {
   await expect(page.getByTestId('home-page')).toBeVisible();
 });
 
-test('the brand lockup is the Home door from inside the wizard', async ({ page }) => {
+test('Home is one press from any step, and the logo is the front page', async ({ page }) => {
   await wizard(page);
   await page.locator('[data-entry="template"]').click();
   await page.locator('.wz-variant').first().click();
   await expect(counter(page)).toBeVisible();
 
-  // ✕ rewinds within the wizard, so Home has to stay reachable from every step — it is the
-  // same lockup that is the Home door on every other topbar in the product.
-  await page.locator('.wz-header .brand-home').click();
+  // TWO DOORS, TWO DESTINATIONS. The logo means the site's front page, as it does on the
+  // editor's topbar and as a logo does everywhere else — before this there was no way back
+  // to the public page from inside the studio at all. Home keeps its own button, because ✕
+  // only rewinds to the wizard's front page and a reader mid-walk still needs their work.
+  await expect(page.locator('.wz-header .brand-home')).toHaveAttribute('href', '/');
+
+  await page.getByTestId('wz-home').click();
   await expect(page.getByTestId('home-page')).toBeVisible();
   await expect(page.getByTestId('creation-wizard')).toHaveCount(0);
+});
+
+test('the wizard shell answers a hover in amber, exactly as the entry cards do', async ({ page }) => {
+  await wizard(page);
+
+  // The owner's report: the cards inside the wizard light up and the chrome framing them
+  // stays grey, so the controls on the product's primary door read as less alive than its
+  // contents. No literal colour is written down here — the brand token is resolved at run
+  // time and the CARDS are asserted against it first, so this stays a test of "the shell
+  // answers like the cards" and survives a repaint of the palette.
+  const border = (sel: string) =>
+    page.evaluate((s) => getComputedStyle(document.querySelector(s)!).borderColor, sel);
+
+  // The border COLOUR the amber token resolves to, read off a throwaway element - the border
+  // is transitioned, so reading a real control the instant it is hovered catches it mid-fade.
+  const amber = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.borderColor = 'var(--accent)';
+    document.body.append(probe);
+    const value = getComputedStyle(probe).borderColor;
+    probe.remove();
+    return value;
+  });
+
+  // The reference: this is the answer the cards already gave, stated here so the assertions
+  // below are pinned to the CARDS' behaviour and not merely to a token.
+  await page.hover('.wz-entry-card');
+  await expect.poll(() => border('.wz-entry-card')).toBe(amber);
+
+  for (const sel of ['.wz-header .brand-home', '.wz-header .gallery-close', '.wz-header .wz-home']) {
+    await page.hover(sel);
+    await expect.poll(() => border(sel), { message: `${sel} should answer like an entry card` }).toBe(amber);
+  }
+
+  // The rail's steps are shell too, and they only exist once a mode is chosen.
+  await page.locator('[data-entry="template"]').click();
+  await expect(page.locator('.wz-dot').first()).toBeVisible();
+  await page.hover('.wz-dot:not(:disabled)');
+  await expect.poll(() => border('.wz-dot:not(:disabled)')).toBe(amber);
+});
+
+test('a cold entry from the landing page paints nothing under the wizard', async ({ page }) => {
+  // THE DEFECT, on every single entry into the app from the landing page: `#/new` rendered the
+  // HOME dashboard under the full-screen wizard, and the wizard could not be in the frame that
+  // painted — a store write made from an effect is scheduled, not flushed — so Home appeared
+  // for a frame and was covered. It only reproduces for a RETURNING user (an autosaved project
+  // is what leaves the wizard closed at first render), so the spec makes one first.
+  await page.goto('/app');
+  await expect(page.getByTestId('creation-wizard')).toBeVisible();
+  await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const { saveProject } = await import('/src/model/project.ts');
+    const s = useTemplateStore.getState();
+    saveProject(s.template, s.baseline, { graphicId: null, dirty: false });
+  });
+  await settleDurableWrites(page);
+
+  // Sample every painted frame of the next document, from before the app boots.
+  await page.addInitScript(() => {
+    const frames: WizardFrame[] = [];
+    window.__wzFrames = frames;
+    const sample = () => {
+      frames.push({
+        root: [...(document.getElementById('root')?.children ?? [])]
+          .map((el) => el.className || el.tagName)
+          .join(' | '),
+        wizard: !!document.querySelector('[data-testid="creation-wizard"]'),
+      });
+      if (performance.now() < 15000) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+
+  await page.goto('/');
+  await page.getByRole('link', { name: /Start creating/i }).first().click();
+  await expect(page.getByTestId('creation-wizard')).toBeVisible();
+
+  // There is no Home to preserve on a boot that LANDED here, so none is mounted at all.
+  await expect(page.locator('.home-page')).toHaveCount(0);
+
+  // And the wizard is in the FIRST frame the app paints - not the second.
+  const frames = await page.evaluate(() => window.__wzFrames ?? []);
+  const firstPaint = frames.findIndex((f) => f.root !== '');
+  const firstWizard = frames.findIndex((f) => f.wizard);
+  expect(firstPaint, 'the app never painted').toBeGreaterThanOrEqual(0);
+  expect(
+    firstWizard - firstPaint,
+    `frames painted before the wizard existed: ${JSON.stringify(frames.slice(firstPaint, firstWizard + 1))}`,
+  ).toBe(0);
+});
+
+test('every step is its own history entry, and step 0 still leaves', async ({ page }) => {
+  // THE DEFECT: the whole wizard was ONE history entry, so browser Back from step four of six
+  // left for the landing page and threw the walk away — on the product's primary door.
+  await wizard(page);
+  await expect(page).toHaveURL(/#\/new$/);
+
+  await page.locator('[data-entry="template"]').click();
+  await expect(page).toHaveURL(/#\/new\/step\/browse$/);
+  await page.locator('.wz-variant').first().click();
+  await page.getByRole('button', { name: 'Next →' }).click();
+  await expect(page).toHaveURL(/#\/new\/step\/fields$/);
+  await expect(counter(page)).toHaveText(/Step\s*3\s*\/\s*6/);
+
+  // Back walks the walk, one step per press — never a dead press. (The live preview used to
+  // add a history entry of its own on every rebuild; WizardPreview mounts a fresh frame per
+  // document now precisely so these presses stay one-to-one.)
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/new\/step\/browse$/);
+  await expect(counter(page)).toHaveText(/Step\s*2\s*\/\s*6/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/new$/);
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+  await expect(counter(page)).toHaveCount(0);
+
+  // Forward is the same walk in the other direction.
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/new\/step\/browse$/);
+  await expect(counter(page)).toHaveText(/Step\s*2\s*\/\s*6/);
+});
+
+test('a step URL is NAMED, so it survives a reload and an extra step cannot shift it', async ({ page }) => {
+  // Named, never numbered: import mode carries an extra step, so index 3 is Fields on one walk
+  // and Style on another. A reload has to land on the step the URL says.
+  await page.goto('/app#/new/step/style');
+  await expect(page.getByTestId('creation-wizard')).toBeVisible();
+  await expect(counter(page)).toHaveText(/Step\s*4\s*\/\s*6/);
+
+  // A name this walk does not have degrades to the front page rather than to whatever step
+  // happens to sit at some index.
+  await page.goto('/app#/new/step/not-a-step');
+  await expect(page.locator('[data-entry="template"]')).toBeVisible();
+  await expect(counter(page)).toHaveCount(0);
 });

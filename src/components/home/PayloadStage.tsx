@@ -46,6 +46,21 @@ const PayloadStage = forwardRef<
 >(function PayloadStage({ payload, error, emptyLabel, testId, onState, onReady }, ref) {
   const host = useRef<HTMLDivElement>(null);
   const stage = useRef<OutputStage | null>(null);
+  /**
+   * HOW MANY ENTRANCES THIS STAGE HAS PLAYED, published on the element as `data-plays`.
+   *
+   * A monitor saying what it has applied, in the spirit of `/output?debug=1`. It exists because
+   * a DUPLICATE command is the one renderer fault that leaves no trace: replaying `play` on a
+   * graphic already up re-runs an animation and settles on exactly the picture that was already
+   * there, so the surface after the bug is pixel-identical to the surface without it. That is
+   * how a boot replay firing twice on the operator's own first take survived review, and why
+   * asserting on the picture could not have caught it (e2e/configured/hosted-control-recovery).
+   *
+   * Counted only when a stage actually took the command, so the number never claims more than
+   * happened, and reset per stage build - a rebuilt stage is a blank renderer the host replays
+   * into, so "plays since this renderer came up" is the figure that stays comparable.
+   */
+  const plays = useRef(0);
   // The stage is rebuilt per payload; the callback identity must not force that, so the
   // subscription reads through a ref.
   const onStateRef = useRef(onState);
@@ -61,6 +76,8 @@ const PayloadStage = forwardRef<
       fit: () => ({ width: root.clientWidth, height: root.clientHeight }),
     });
     stage.current = built;
+    plays.current = 0;
+    root.setAttribute('data-plays', '0');
     built.onState((graphic, state) => onStateRef.current?.(graphic, state));
 
     // RE-ASK FOR MACHINE STATE, once a second, exactly as the published /output renderer has
@@ -102,7 +119,15 @@ const PayloadStage = forwardRef<
       apply(items: ControlSendItem[]) {
         // Status rows ('cue') are not renderer commands; the stage ignores them by contract,
         // so the whole batch can be handed over untouched.
-        for (const item of items) stage.current?.apply(item.graphic, item.msg);
+        const built = stage.current;
+        if (!built) return;
+        for (const item of items) {
+          built.apply(item.graphic, item.msg);
+          if (item.msg.t === 'play') {
+            plays.current += 1;
+            host.current?.setAttribute('data-plays', String(plays.current));
+          }
+        }
       },
     }),
     [],

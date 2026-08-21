@@ -177,7 +177,12 @@ const MAP = [
   // specs" failure mode the wizard-finish line above records, and it has already bitten twice:
   // auto-placement broke import-analysis, and the erase's opening proposal changes the very
   // step import-prepare and import-canvas walk through.
-  [/^src\/components\/wizard\//, ['wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'wizard-entry-fit.spec.ts', 'wizard-finish.spec.ts', 'wizard-kit.spec.ts', 'wizard-shell.spec.ts', 'flows.spec.ts', 'ux.spec.ts', 'import.spec.ts', 'import-graphic.spec.ts', 'import-prepare.spec.ts', 'import-canvas.spec.ts', 'import-stretch.spec.ts', 'import-analysis.spec.ts', 'import-svg.spec.ts', 'text-tools.spec.ts', 'project.spec.ts', 'video-project.spec.ts', 'video-hyperframes.spec.ts', 'pro.spec.ts', 'storage-full.spec.ts', 'wizard-setup-fields.spec.ts', 'google-fonts.spec.ts', 'design-rules-product.spec.ts']],
+  // library rides along because the wizard HEADER is a door out of the wizard, and where its
+  // controls land is asserted over there: library.spec.ts walks Home -> wizard -> Home through
+  // the header. Splitting the logo and Home into two controls changed both of its walks while
+  // every spec named after the wizard stayed green, which is this list's own failure mode
+  // again - a header change running nothing that leaves the header.
+  [/^src\/components\/wizard\//, ['wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'wizard-entry-fit.spec.ts', 'wizard-finish.spec.ts', 'wizard-kit.spec.ts', 'wizard-shell.spec.ts', 'library.spec.ts', 'flows.spec.ts', 'ux.spec.ts', 'import.spec.ts', 'import-graphic.spec.ts', 'import-prepare.spec.ts', 'import-canvas.spec.ts', 'import-stretch.spec.ts', 'import-analysis.spec.ts', 'import-svg.spec.ts', 'text-tools.spec.ts', 'project.spec.ts', 'video-project.spec.ts', 'video-hyperframes.spec.ts', 'pro.spec.ts', 'storage-full.spec.ts', 'wizard-setup-fields.spec.ts', 'google-fonts.spec.ts', 'design-rules-product.spec.ts']],
   // WHAT HAPPENS WHEN A WRITE FAILS is its own contract (e2e/storage-full.spec.ts) and it cuts
   // across the storage layer, the two save paths over it, and the surface that announces the
   // failure. It is mapped separately because the failure mode it guards - a door that saves
@@ -291,6 +296,11 @@ const CORE = [
   /^src\/validation\//,
   /^src\/components\/(AppShell|PreviewFrame|WorkspaceDock|CodeEditor|App\.)/,
   /^src\/(App|main)\./,
+  // The hash router. Every surface in /app is reached through it and browser Back/Forward are
+  // part of what it promises, so a route-shape change fans out to every flow that navigates -
+  // which is all of them. It reached the full suite anyway, as the unmapped fallback; naming it
+  // here records that the escalation is DELIBERATE rather than a file nobody got round to.
+  /^src\/app\/router\./,
   /^src\/styles/,
   // The bundled GSAP build is a shared foundation that happens to live under src/assets/, and
   // the `src/assets/` MAP entry below is written for asset HELPERS (eraseRegion, assetInfo,
