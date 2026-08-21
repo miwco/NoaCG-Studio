@@ -151,6 +151,19 @@ gate - not the importer - is authoritative.
   runtime rides outside the region, and the data gains `startClock`/`stopClock` step calls (a
   `convertToDataRegion` refine - the design presets know nothing of clocks). One countdown per
   graphic (one shared runtime, one display). **Open:** the org boilerplate story.
+- **Detection hardening (2026-08-21/22)**, measured against files shaped the way Illustrator,
+  Figma and Inkscape really export - every item below was a wrong answer the importer gave, and
+  each one now has its own case in `e2e/import-svg.spec.ts` (mutation-tested):
+  a `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`,
+  with `fontSizeResolver` reading attribute / inline style / class rules, CSS-initial 16 when
+  nothing says); Inkscape's `inkscape:label` is read and an editor-generated serial id
+  ("text123", "layer1") counts as unnamed; hidden layers and `<defs>`/`<symbol>` text are not
+  offered (and a PAINTED symbol says why); `<flowRoot>` is called out as invisible; outline rows
+  are RANKED by whether the measured shapes read as a line of type, never filtered; a PostScript
+  font name resolves to its family and weight (`fontLookup`) and the bundled or fetched face is
+  declared under the name the artwork asks for; `<textPath>` binds the path run, not the `<text>`
+  around it; samples collapse source whitespace unless `xml:space="preserve"`; repeated layer
+  names are numbered. The designer-facing half of all of it is `docs/SVG_AUTHORING.md`.
 - **P3 (opt-in):** AI label proposals; Figma-specific niceties; SVG *export* of a NoaCG graphic
   is explicitly out of scope.
 

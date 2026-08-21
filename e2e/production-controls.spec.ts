@@ -2,6 +2,7 @@ import { test, expect, type Page, type Route } from '@playwright/test';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 import { createProject } from './_create';
+import { settleDurableWrites } from './_durable';
 import { relayServe, routeOrigin } from './_relay';
 
 // The production page's GRAPHIC ACTIONS block (docs/PLAYOUT_DASHBOARD.md §8): the machine's
@@ -766,6 +767,11 @@ test.describe('the production page scrolls as one page', () => {
       const fresh = shows.loadShows().find((s) => s.id === show.id)!;
       shows.updateShowCue(show.id, fresh.cues![fresh.cues!.length - 1].id, { label: 'Portrait strap' });
     });
+    // The two writes above are ACCEPTED synchronously and land a moment later
+    // (model/durableStore.ts), so reloading straight after them aborts what has not committed
+    // and the portrait cue is missing from the page under test. Measured 2026-08-22: without
+    // this the test fails 3 of 3 runs and passes 3 of 3 with it.
+    await settleDurableWrites(page);
     await page.reload();
     await expect(page.getByTestId('production-page')).toBeVisible();
 

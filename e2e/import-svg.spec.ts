@@ -419,14 +419,23 @@ test('svg import: text on a path binds the path run, and keeps its curve when an
   // it on the <text> would REPLACE the textPath element — the first typed word would straighten
   // the curve the designer drew. The check is the live document, after an update.
   const shape = await page.evaluate(async () => {
-    const { useTemplateStore } = await import('/src/store/templateStore.ts');
-    const html = useTemplateStore.getState().template.html;
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const [{ useTemplateStore }, { validateTemplate }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/validation/validateTemplate.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    const doc = new DOMParser().parseFromString(t.html, 'text/html');
     const bound = doc.getElementById('f0');
-    return { tag: bound?.tagName.toLowerCase() ?? null, href: bound?.getAttribute('href') ?? null };
+    return {
+      tag: bound?.tagName.toLowerCase() ?? null,
+      href: bound?.getAttribute('href') ?? null,
+      errors: validateTemplate(t).errors.map((e) => e.rule),
+    };
   });
   expect(shape.tag).toBe('textpath');
   expect(shape.href).toBe('#curve');
+  // …and the export gate reads that binding as bound (rule 'svg-binding' checks the id exists).
+  expect(shape.errors).toEqual([]);
 });
 
 test('svg import: a wrapped source line becomes one clean sample, unless the file preserved it', async ({ page }) => {

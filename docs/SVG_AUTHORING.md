@@ -54,6 +54,8 @@ your back.
 | `<text>` with several positioned `<tspan>` lines | **one field per line** - each is separately editable |
 | two labels placed apart on one baseline | two fields - the gap between them is what says so |
 | a line broken into runs by kerning or tracking | **one** field - the runs are one line, not three |
+| text set on a path | one field, and it keeps its curve when the operator types |
+| text inside a reusable symbol | drawn, but **not** editable - every copy shows the same words |
 | a plain figure as the sample (`84`, `2`) | proposes a **number** field |
 | a clock-shaped sample (`12:00`, `1:05:00`) | the row asks: ordinary text, or a **countdown** whose operator field is its length in minutes. One countdown per graphic |
 | `2 – 1`, `10 pts` | stays a text field - an SPX number input cannot hold the furniture |
@@ -61,8 +63,9 @@ your back.
 | a group of two or more glyph shapes | offered as **outlined text** (§5), off by default |
 | everything else (panels, rules, gradients, masks, filters) | rides along verbatim as the look |
 
-**Labels** come from the nearest named thing: the layer's own name, otherwise the closest named
-group around it. Illustrator's escaping is decoded, so a layer named `Home team` arrives as
+**Labels** are what an operator will read, so name your layers for them, not for you: two layers
+called "Name" arrive as "Name" and "Name 2", which is legible but says nothing. Labels come from
+the nearest named thing: the layer's own name, otherwise the closest named group around it. Illustrator's escaping is decoded, so a layer named `Home team` arrives as
 "Home team" and not as `Home_x20_team`; Inkscape's layer labels are read as well, and an
 editor-generated serial id (`text123`, `layer1`) counts as unnamed so the named layer above it
 wins.
@@ -155,7 +158,8 @@ Select it and use *Text > Convert to Text* before exporting.
 - [ ] The artboard is the size you want (1920×1080 for a frame-exact graphic).
 - [ ] The background is transparent unless the graphic really is full-screen.
 - [ ] Every editable headline is live text, not outlines.
-- [ ] Layers are named the way an operator would say them ("Home team", not "Group 12").
+- [ ] Layers are named the way an operator would say them ("Home team", not "Group 12"), and no
+      two editable layers share a name.
 - [ ] Pictures are embedded; nothing links out to the internet.
 - [ ] No SVG-native animation.
 - [ ] The fonts are ones you can supply, or bundled/Google families.
