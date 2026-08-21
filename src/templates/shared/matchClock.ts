@@ -97,6 +97,14 @@ function matchClockOriginOf(text) {
   return isFinite(stamp) && stamp > 0 ? stamp : null;
 }
 
+// matchClockPlain(): the value without its origin stamp — what a person reads, and what the
+// operator's own field holds. It is what a resend is judged against; see matchClockUpdate().
+function matchClockPlain(text) {
+  var raw = String(text == null ? '' : text).trim();
+  var at = raw.indexOf('@');
+  return at === -1 ? raw : raw.slice(0, at).trim();
+}
+
 // matchClockValue(): what the clock reads RIGHT NOW. Held, that is the base; running, it is the
 // base plus (or minus) the seconds since the origin — recomputed from the wall clock every
 // time, which is what makes a throttled tab catch up instead of falling behind.
@@ -210,19 +218,25 @@ function resetMatchClock() {
 //                           time instead of at the seed.
 //
 // A STAMPED value is safe to adopt every single time, because it is time-relative: re-sending
-// it a minute later still resolves to the right second. A PLAIN one is not, and that is why the
-// "not already received" guard below survives the redesign unchanged. Every Take, ✎ Update and
-// Snap sends the cue's WHOLE value set (control/hostedControl.ts), so a score bump in the 64th
-// minute resends the clock field carrying whatever was last TYPED into it — adopting that would
-// pull a running clock back to its typed value on every goal. Comparing against the element's
-// own text cannot tell a resend from a correction: the element holds the RUNNING time, so a
-// resend differs from it every second. What distinguishes a correction is that the value the
-// wire carries CHANGED.
+// it a minute later still resolves to the right second. A PLAIN one is not, which is what the
+// guard below is for. Every Take, ✎ Update and Snap sends the cue's WHOLE value set
+// (control/hostedControl.ts), so a score bump in the 64th minute resends the clock field
+// carrying whatever was last TYPED into it — adopting that would pull a running clock back to
+// its typed value on every goal. Comparing against the element's own text cannot tell a resend
+// from a correction either: the element holds the RUNNING time, so a resend differs from it
+// every second. What distinguishes a correction is that the value the wire carries CHANGED.
+//
+// IT IS THE PLAIN HALF THAT MUST BE COMPARED (fixed 2026-08-21, measured on air). The guard used
+// to compare against the whole of the last value received, and once a control surface began
+// stamping the origin that was no longer the operator's value: the wire had delivered
+// "20:00@1755600000000", the cue still stored "20:00", and the two differ — so a goal in the
+// 5th minute read as a correction and re-anchored a running clock back to 20:00. The stamp is
+// OURS, not the operator's, and the operator's value had not changed at all.
 //
 // The honest limit, unchanged: re-sending a plain value identical to the last one received is a
-// no-op, so an operator cannot re-apply the same time twice. No control surface can express that
-// anyway (the field already holds that text, so there is no edit to send), and returning to a
-// known value is what resetMatchClock() is for.
+// no-op, so an operator cannot re-apply the time the clock already holds. No control surface can
+// express that anyway (the field already holds that text, so there is no edit to send), and
+// returning to a known value is what resetMatchClock() is for.
 var matchClockSent = null;       // the last clock value the wire delivered, not the painted time
 
 function matchClockUpdate(key, value) {
@@ -230,7 +244,7 @@ function matchClockUpdate(key, value) {
   if (!el || el.id !== key) return;
   var incoming = String(value == null ? '' : value);
   var stamp = matchClockOriginOf(incoming);
-  if (stamp === null && matchClockSent !== null && incoming === matchClockSent) {
+  if (stamp === null && matchClockSent !== null && incoming === matchClockPlain(matchClockSent)) {
     // A resend of a plain value, not an edit. update() has ALREADY written that stale text into
     // the element (setFieldValue runs first, for every field alike), so returning quietly would
     // leave the typed time on air until the next repaint — a visible jump backwards on a
