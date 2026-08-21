@@ -493,6 +493,26 @@ test('svg import: a PostScript font name finds the bundled face, and ships under
   expect(css).not.toContain('UNRESOLVED');
 });
 
+test('svg import: the Google door is offered only for a family Google actually has', async ({ page }) => {
+  // A licensed face is not on Google, so the button's only outcome there is an error — which
+  // reads as the product being broken rather than as the font being private. The family list is
+  // a local module, so the step can answer before anyone clicks.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Name" x="20" y="90" font-size="34" font-family="Gotham" fill="#fff">Alexandra Riva</text>
+      <text id="Role" x="20" y="140" font-size="20" font-family="Lato" fill="#b7bcc4">Correspondent</text>
+    </svg>`,
+    'licensed-font.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  await expect(page.getByTestId('map-svg-font-nogoogle-Gotham')).toBeVisible();
+  await expect(page.getByTestId('map-svg-font-google-Gotham')).toHaveCount(0);
+  // Lato IS on Google, so its row keeps the door.
+  await expect(page.getByTestId('map-svg-font-google-Lato')).toBeVisible();
+});
+
 test('svg import: the last screen before Create names a typeface that will not travel', async ({ page }) => {
   // The one way a pixel-exact import stops being pixel-exact is a family that ships with
   // nothing. It is never a blocker - the designer may know the playout machine has it - but it

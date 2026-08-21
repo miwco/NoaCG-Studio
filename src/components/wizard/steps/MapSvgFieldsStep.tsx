@@ -164,6 +164,24 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     setHighlight({ x: box.x - frame.x, y: box.y - frame.y, w: box.width, h: box.height });
   }, [hoverId]);
 
+  // WHICH FAMILIES GOOGLE ACTUALLY HAS. The index is a local module (no network), so the step
+  // can answer this before anyone clicks: offering "Get from Google Fonts" for a licensed face
+  // like Gotham is offering a button whose only outcome is an error. Loaded once, lazily, and
+  // only for a file that names an unresolved family — a graphic whose fonts all matched pays
+  // nothing for a 50 KB list of names.
+  const [googleFamilies, setGoogleFamilies] = useState<Set<string> | null>(null);
+  const needsGoogleIndex = draft.svgFonts.some((f) => !f.fontId && !f.customFont);
+  useEffect(() => {
+    if (!needsGoogleIndex || googleFamilies) return;
+    let live = true;
+    void loadGoogleFontIndex().then((all) => {
+      if (live) setGoogleFamilies(new Set(all.map((g) => fontNameKey(g.family))));
+    });
+    return () => {
+      live = false;
+    };
+  }, [needsGoogleIndex, googleFamilies]);
+
   // Measure every outlined-text suspect once the artwork is rendered (the draft keeps the
   // boxes, so a return visit measures nothing — and the create path reads them from there,
   // where no layout exists). The whole batch lands in ONE patch.
@@ -538,14 +556,24 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                     playout machine has it installed.
                   </span>
                   <span className="map-svg-font-actions">
-                    <button
-                      disabled={fontBusy !== null}
-                      onClick={() => void fetchFont(f)}
-                      title="Downloads the family from Google Fonts and embeds it in the template. The download shows your IP address to Google."
-                      data-testid={`map-svg-font-google-${f.family}`}
-                    >
-                      {fontBusy === f.family ? 'Fetching…' : 'Get from Google Fonts'}
-                    </button>
+                    {/* The Google door is offered only for a family Google HAS. A licensed face
+                        (Gotham, a foundry's own) is not on that list, and a button whose only
+                        outcome is an error reads as the product being broken rather than as the
+                        font being private. Until the index has loaded the button stands. */}
+                    {googleFamilies && !googleFamilies.has(fontNameKey(f.lookup)) ? (
+                      <span className="muted" data-testid={`map-svg-font-nogoogle-${f.family}`}>
+                        Not on Google Fonts — upload the file
+                      </span>
+                    ) : (
+                      <button
+                        disabled={fontBusy !== null}
+                        onClick={() => void fetchFont(f)}
+                        title="Downloads the family from Google Fonts and embeds it in the template. The download shows your IP address to Google."
+                        data-testid={`map-svg-font-google-${f.family}`}
+                      >
+                        {fontBusy === f.family ? 'Fetching…' : 'Get from Google Fonts'}
+                      </button>
+                    )}
                     <button
                       disabled={fontBusy !== null}
                       onClick={() => {
