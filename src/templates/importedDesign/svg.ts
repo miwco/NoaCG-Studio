@@ -17,7 +17,7 @@
 import type { SpxTemplate } from '../../model/types';
 import { definitionScriptBlock } from '../../model/spxDefinition';
 import { resolveEasing } from '../../model/easings';
-import { customFontFaceCss, fontFaceCss, FONTS } from '../../model/fonts';
+import { customFontFaceCss, fontFaceCss, FONTS, type BundledFont } from '../../model/fonts';
 import {
   paletteById,
   resolveOptions,
@@ -172,13 +172,33 @@ function svgFields(svg: DesignSvg): SpxField[] {
  * family is stated in a comment — never blocked, because the designer may know the playout
  * machine has the face installed; the wizard already warned out loud.
  */
+/** A bundled face declared under the name the artwork asks for — same file, second name. The
+ *  comment says which face it really is, so the emitted CSS is readable rather than mysterious. */
+function aliasFontFaceCss(font: BundledFont, family: string): string {
+  return `/* Bundled open-source font (the file ships with the export — no internet at playout).
+   Declared as "${family}" because that is the name this artwork's own CSS asks for; the file is ${font.family}. */
+@font-face {
+  font-family: "${family}";
+  src: url("fonts/${font.file}") format("woff2");
+  font-weight: ${font.weights[0]} ${font.weights[1]};  /* variable font: covers this weight range */
+  font-display: swap;          /* show fallback text until the font loads */
+}`;
+}
+
 function svgFontCss(svg: DesignSvg): string {
   const blocks: string[] = [];
   const unresolved: string[] = [];
   for (const font of svg.fonts) {
     const bundled = font.fontId ? FONTS.find((f) => f.id === font.fontId) : undefined;
-    if (bundled) blocks.push(fontFaceCss(bundled));
-    else if (font.customFont) blocks.push(customFontFaceCss(font.customFont));
+    if (bundled) {
+      // A face is declared under the name the ARTWORK asks for. Illustrator writes PostScript
+      // names ("Archivo-Bold"), which the import matches to the bundled family they plainly are
+      // — but a `@font-face` declared as "Archivo" answers nothing in an SVG whose own CSS says
+      // `font-family: Archivo-Bold`, so the alias is the whole point of the match.
+      blocks.push(
+        bundled.family === font.family ? fontFaceCss(bundled) : aliasFontFaceCss(bundled, font.family),
+      );
+    } else if (font.customFont) blocks.push(customFontFaceCss(font.customFont));
     else unresolved.push(font.family);
   }
   if (unresolved.length > 0) {

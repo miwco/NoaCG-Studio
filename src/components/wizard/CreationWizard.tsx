@@ -15,7 +15,7 @@ import {
   type WizardDraft,
 } from './draft';
 import { loadBrand, saveBrand, type ProjectBrand } from '../../model/brand';
-import { FONTS } from '../../model/fonts';
+import { FONTS, fontNameKey } from '../../model/fonts';
 import { commitStagedSelection } from '../../ai/preferences';
 import { formatTemplate } from '../../format/formatCode';
 import { paletteById } from '../../model/wizard';
@@ -1542,8 +1542,13 @@ export default function CreationWizard() {
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
                       family: f.family,
+                      lookup: f.lookup,
+                      weight: f.weight,
+                      // Matched on the LOOKUP name, so Illustrator's "Archivo-Bold" finds the
+                      // bundled Archivo it plainly is. The template still declares the face
+                      // under `family` — the name the artwork's own CSS asks for.
                       fontId:
-                        FONTS.find((b) => b.family.toLowerCase() === f.family.toLowerCase())?.id ?? null,
+                        FONTS.find((b) => fontNameKey(b.family) === fontNameKey(f.lookup))?.id ?? null,
                       customFont: null,
                     })),
                     // A fresh drop replaces any raster state from this walk.

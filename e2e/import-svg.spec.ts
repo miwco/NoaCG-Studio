@@ -378,6 +378,39 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   await expect(page.getByTestId('map-svg-row-t3')).toHaveCount(0);
 });
 
+test('svg import: a PostScript font name finds the bundled face, and ships under its own name', async ({ page }) => {
+  // Illustrator writes PostScript names, so a file set in Archivo Bold asks for "Archivo-Bold".
+  // Matched literally that finds nothing, and the graphic goes to air in a substitute face.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Name" x="20" y="90" font-size="34" font-family="Archivo-Bold" fill="#fff">Alexandra Riva</text>
+      <text id="Role" x="20" y="140" font-size="20" font-family="JetBrainsMono-Regular" fill="#b7bcc4">Correspondent</text>
+    </svg>`,
+    'postscript-fonts.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  // Both rows resolve, and each says WHICH bundled face it is — the design never mentions
+  // "Archivo" anywhere, so a bare tick would be a claim the reader cannot check.
+  await expect(page.getByTestId('map-svg-font-ok-Archivo-Bold')).toContainText('(Archivo)');
+  await expect(page.getByTestId('map-svg-font-ok-JetBrainsMono-Regular')).toContainText('(JetBrains Mono)');
+  await expect(page.getByTestId('map-svg-font-warn-Archivo-Bold')).toHaveCount(0);
+
+  await createProject(page);
+
+  // The @font-face is declared under the name the ARTWORK asks for, over the bundled file: a
+  // face declared as "Archivo" answers nothing in an SVG whose own CSS says "Archivo-Bold".
+  const css = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.css;
+  });
+  expect(css).toContain('font-family: "Archivo-Bold"');
+  expect(css).toContain('fonts/archivo.woff2');
+  expect(css).toContain('font-family: "JetBrainsMono-Regular"');
+  expect(css).not.toContain('UNRESOLVED');
+});
+
 test('svg import: outline rows are ranked — a word of glyphs leads, an icon is badged artwork', async ({ page }) => {
   // "A group of paths" describes outlined copy AND every icon in the file, so a Figma export
   // can bury the one row that is the headline under a dozen crests. The measured shapes tell

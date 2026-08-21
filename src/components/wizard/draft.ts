@@ -152,7 +152,14 @@ export interface SvgOutlineDraft {
 
 /** How one font family the SVG references resolves (plan §4). */
 export interface SvgFontDraft {
+  /** The family name the artwork asks for, verbatim — what every emitted `@font-face` is
+   *  declared as, whatever file ends up behind it. */
   family: string;
+  /** The same face as a real family name, for the bundled library and Google Fonts
+   *  (assets/svgImport.ts `fontLookup`: "Archivo-Bold" looks up as "Archivo" at 700). */
+  lookup: string;
+  /** The weight the name implied, or null. Used when fetching, never when declaring. */
+  weight: number | null;
   /** A bundled face whose family name matches. */
   fontId: string | null;
   /** A fetched (Google) or uploaded face — embedded like any custom font. */

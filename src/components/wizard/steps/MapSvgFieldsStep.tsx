@@ -10,17 +10,29 @@ import type {
 import { SVG_CANDIDATE_ATTR } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
+  FONTS,
+  fontNameKey,
   fontAssetPath,
   fontFormatForExt,
   registerAndMeasureFont,
   type CustomFont,
 } from '../../../model/fonts';
-import { fetchGoogleFont } from '../../../model/googleFonts';
+import { fetchGoogleFont, loadGoogleFontIndex } from '../../../model/googleFonts';
 import './mapSvgFields.css';
 
 interface Props {
   draft: WizardDraft;
   onDraft: (patch: DraftPatch) => void;
+}
+
+/** The published weight closest to the one the file's own name asked for. */
+function nearestWeight(weights: number[], want: number): number {
+  return weights.reduce((best, w) => (Math.abs(w - want) < Math.abs(best - want) ? w : best), weights[0] ?? want);
+}
+
+/** The bundled face's own family name, for a row that matched one under a different spelling. */
+function bundledName(fontId: string): string {
+  return FONTS.find((b) => b.id === fontId)?.family ?? fontId;
 }
 
 /** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
@@ -208,13 +220,24 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     });
 
   /** Fetch one family from Google Fonts, embedded like an upload (model/googleFonts.ts).
-   *  The @font-face must declare the family name the SVG references, so a fetch whose
-   *  declared spelling differs is re-labelled to the SVG's own. */
-  const fetchFont = async (family: string) => {
+   *  Google is asked for the LOOKUP name and the weight the file's own name implied — asking
+   *  it for Illustrator's "Archivo-Bold" only ever returns "no such family". The @font-face
+   *  must then declare the name the SVG references, so the fetched face is re-labelled to it. */
+  const fetchFont = async (row: SvgFontDraft) => {
+    const family = row.family;
     setFontBusy(family);
     setFontError(null);
     try {
-      const font = await fetchGoogleFont(family);
+      // Ask the local family index for the LIBRARY'S OWN spelling first: the lookup name is
+      // reconstructed from a PostScript name, and no rule can know that "JetBrainsMono" is
+      // "JetBrains Mono" rather than "Jet Brains Mono". Compared on identity alone
+      // (model/fonts.ts fontNameKey), so every spelling of one family lands on it. The weight is
+      // then clamped to one the family actually publishes — Google answers 400 for a weight it
+      // does not have, which would quietly return the wrong cut of the right face.
+      const index = await loadGoogleFontIndex();
+      const known = index.find((g) => fontNameKey(g.family) === fontNameKey(row.lookup));
+      const weight = row.weight !== null && known ? nearestWeight(known.weights, row.weight) : row.weight;
+      const font = await fetchGoogleFont(known?.family ?? row.lookup, weight ?? undefined);
       patchFont(family, { customFont: font.family === family ? font : { ...font, family } });
     } catch (e) {
       setFontError(e instanceof Error ? e.message : String(e));
@@ -499,7 +522,13 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
             <div className="map-svg-font" key={f.family} data-testid={`map-svg-font-${f.family}`}>
               <strong className="map-svg-font-name">{f.family}</strong>
               {f.fontId ? (
-                <span className="status-ok">✓ Bundled with NoaCG</span>
+                <span className="status-ok" data-testid={`map-svg-font-ok-${f.family}`}>
+                  {/* When the file asks for a PostScript name ("Archivo-Bold"), name the face it
+                      actually matched — otherwise the row claims a match for a family the reader
+                      cannot see anywhere in their design. */}
+                  ✓ Bundled with NoaCG
+                  {bundledName(f.fontId) !== f.family ? ` (${bundledName(f.fontId)})` : ''}
+                </span>
               ) : f.customFont ? (
                 <span className="status-ok">✓ Embedded in the template</span>
               ) : (
@@ -511,7 +540,7 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   <span className="map-svg-font-actions">
                     <button
                       disabled={fontBusy !== null}
-                      onClick={() => void fetchFont(f.family)}
+                      onClick={() => void fetchFont(f)}
                       title="Downloads the family from Google Fonts and embeds it in the template. The download shows your IP address to Google."
                       data-testid={`map-svg-font-google-${f.family}`}
                     >

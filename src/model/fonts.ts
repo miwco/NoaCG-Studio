@@ -112,6 +112,17 @@ export function numericFaceFor(font: NumericSource): BundledFont | null {
  * Call this EVERYWHERE `--font-heading` is written. A look or a typeface swap applied after
  * creation that updates one without the other silently reverts the numerals.
  */
+/**
+ * A family name reduced to what it IDENTIFIES — lowercase letters and digits only. Two spellings
+ * of one family have to compare equal: a design app writes "JetBrainsMono" where the library says
+ * "JetBrains Mono", and no amount of word-splitting can know that "JetBrains" is one word. Use it
+ * for LOOKING UP a face, never for declaring one — an `@font-face` still has to carry the exact
+ * name the CSS asking for it wrote.
+ */
+export function fontNameKey(family: string): string {
+  return family.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export function numericFontStack(font: NumericSource): string {
   if (font.tabularFigures) return 'var(--font-heading)';
   const face = numericFaceFor(font);

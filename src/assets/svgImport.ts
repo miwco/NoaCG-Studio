@@ -65,7 +65,15 @@ export interface SvgOutlineCandidate {
 
 /** One font family the SVG references, as written in its own markup. */
 export interface SvgFontRef {
+  /** VERBATIM, as the markup asks for it ("ArchivoBlack-Bold"). Every `@font-face` the
+   *  template emits is declared under this name — it is what the artwork's own CSS asks for,
+   *  so a face declared under any other name simply does not apply. */
   family: string;
+  /** The same face as a real family NAME ("Archivo Black"), for looking it up in the bundled
+   *  library or on Google Fonts. Equal to `family` for a file that already names it plainly. */
+  lookup: string;
+  /** The weight the name's style suffix implied ("-Bold" → 700), or null when it named none. */
+  weight: number | null;
 }
 
 export interface SvgImportResult {
@@ -532,6 +540,64 @@ function outlineCandidates(svg: Element): Element[] {
   return groups.filter((g) => kept.has(g));
 }
 
+/** Weight words a PostScript face name ends with, and what each one weighs. Order matters only
+ *  for reading; the parser takes the heaviest word it finds. */
+const STYLE_WEIGHTS: Record<string, number> = {
+  thin: 100, hairline: 100,
+  extralight: 200, ultralight: 200,
+  light: 300,
+  regular: 400, normal: 400, book: 400, roman: 400,
+  medium: 500,
+  semibold: 600, demibold: 600,
+  bold: 700,
+  extrabold: 800, ultrabold: 800,
+  black: 900, heavy: 900,
+};
+
+/** Words that describe a CUT rather than a weight. A face name may end in them, and they must
+ *  not stop the suffix from being recognised as a style. */
+const STYLE_WORDS = new Set(['italic', 'oblique', 'condensed', 'narrow', 'compressed', 'extended', 'expanded']);
+
+/** Split a PostScript-ish run of words apart: "ArchivoBlack" → "Archivo Black", "PTSans" →
+ *  "PT Sans". Only applied to a name that carries no spaces of its own. */
+function splitCamel(name: string): string {
+  return name.includes(' ')
+    ? name
+    : name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
+}
+
+/**
+ * A font name as the LIBRARY knows it, plus the weight the name implied.
+ *
+ * Illustrator's SVG export writes POSTSCRIPT names — `font-family="Archivo-Bold"`,
+ * `"ArchivoBlack-Regular"`, `"HelveticaNeue-CondensedBold"` — where a designer's file names one
+ * family. Matched literally, none of those ever finds the bundled face it plainly is, and "Get
+ * from Google Fonts" asks Google for a family that does not exist. So the name is read: the part
+ * AFTER the last hyphen is the style when every word of it is a style word (which is what keeps
+ * "ArchivoBlack-Regular" as the family *Archivo Black* at weight 400, while "Archivo-Black" is
+ * *Archivo* at 900), and the family part is split back into words.
+ *
+ * The verbatim name is never touched — it is what the artwork's own CSS asks for. This is only
+ * how the face is looked UP.
+ */
+function fontLookup(raw: string): { lookup: string; weight: number | null } {
+  const name = raw.replace(/_/g, ' ').trim();
+  const cut = name.lastIndexOf('-');
+  let base = name;
+  let weight: number | null = null;
+  if (cut > 0) {
+    const words = splitCamel(name.slice(cut + 1)).toLowerCase().split(/\s+/).filter(Boolean);
+    const isStyle = words.length > 0 && words.every((w) => w in STYLE_WEIGHTS || STYLE_WORDS.has(w));
+    if (isStyle) {
+      base = name.slice(0, cut);
+      const weights = words.map((w) => STYLE_WEIGHTS[w]).filter((n): n is number => typeof n === 'number');
+      weight = weights.length > 0 ? Math.max(...weights) : null;
+    }
+  }
+  const lookup = splitCamel(base).replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+  return { lookup: lookup || name, weight };
+}
+
 /** Every font family the markup references: font-family attributes, inline styles, and the
  *  <style> blocks. First-seen order; quotes and fallbacks stripped ("'MyFont', sans-serif"
  *  inventories as MyFont). */
@@ -545,7 +611,7 @@ function fontInventory(svg: Element): SvgFontRef[] {
     const key = first.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    out.push({ family: first });
+    out.push({ family: first, ...fontLookup(first) });
   };
   for (const el of [svg, ...Array.from(svg.querySelectorAll('*'))]) {
     const attr = el.getAttribute('font-family');
