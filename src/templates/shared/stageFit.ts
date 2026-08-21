@@ -147,15 +147,100 @@ function holdStageHeight() {
   box.style.minHeight = room + 'px';
 }
 
+// THE BOX A LINE IS DRAWN IN, if it has one: the nearest ancestor that actually paints - a tile,
+// a chip, a coloured severity square. That box is FURNITURE, and furniture does not stretch to fit
+// a longer word; the words fit the furniture. Found by walking up rather than by class name, so it
+// works on any design without being told which of its elements are boxes.
+function drawnBoxOf(el) {
+  for (var p = el.parentNode; p && p.nodeType === 1 && p !== document.body; p = p.parentNode) {
+    var cs = window.getComputedStyle(p);
+    var bg = cs.backgroundColor;
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') return p;
+    if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return p;
+    if (parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderLeftWidth) > 0) return p;
+  }
+  return null;
+}
+
 function fitOneStagedLine(el) {
   el.style.fontSize = '';                       // back to the design size before measuring
+  el.style.maxWidth = '';
   var cs = window.getComputedStyle(el);
   var design = parseFloat(cs.fontSize);
   if (!design) return;
 
+  // A LINE INSIDE A DRAWN BOX IS GOVERNED BY THAT BOX, not by its own calibrated reserve. The
+  // reserve says "this line had one row when the design was drawn", which is the right rule for a
+  // line standing on its own and the wrong one inside a tile: the tile has its own width and
+  // height, and a label that outgrows them runs straight out of the colour. The owner caught
+  // exactly this on the alert strip, where "ADVISORY" became "ADVISORY WISNIEWSKA" and left the
+  // blue square on both sides - a defect every gate here missed, because they all measured
+  // whether the PANEL moved and none asked whether the text stayed inside its own box.
+  var box = drawnBoxOf(el);
+  var limitW = 0;
+  var room = 0;
+
+  // THE LINE MAY BE ITS OWN BOX. On the alert strip the severity tile IS the label element - the
+  // blue square is that element's own background - so looking at ANCESTORS finds only the panel,
+  // which the label sits happily inside while spilling out of the colour it is painted on. The
+  // element's own scrollWidth against its own clientWidth is the honest test, and it is also the
+  // discriminator that leaves an auto-width chip alone: a box that grows with its text never
+  // reports an overflow, so only a box with a width of its own is ever touched here.
+  if (el.clientWidth && el.scrollWidth > el.clientWidth + 2) {
+    var ecs = window.getComputedStyle(el);
+    limitW = el.clientWidth - (parseFloat(ecs.paddingLeft) || 0) - (parseFloat(ecs.paddingRight) || 0);
+    // BOTH AXES COME FROM THE BOX AS DRAWN, and the height has to be the one measured at
+    // calibration rather than the one it happens to have now: an auto-height element grows as it
+    // wraps, so reading it live gives a ceiling that keeps rising and the line just keeps
+    // wrapping. al03 then wrapped its way straight through the bottom of the alert panel and the
+    // runtime bench caught it clipped mid-line. A tall tile still affords two rows; a one-row
+    // slot still has to shrink. The box as drawn decides which.
+    room = parseFloat(el.getAttribute('data-stage-selfh') || '');
+    if (!room) {
+      room = el.clientHeight - (parseFloat(ecs.paddingTop) || 0) - (parseFloat(ecs.paddingBottom) || 0);
+      if (room > 0) el.setAttribute('data-stage-selfh', room);
+    }
+    if (!(room > 0)) room = 0;
+    if (limitW > 0) {
+      el.style.whiteSpace = 'normal';
+      el.style.overflowWrap = 'break-word';
+      el.style.height = '';
+      box = el;                                 // it governs itself; centring below still applies
+    }
+  }
+
+  if (!limitW && box) {
+    // ONLY WHEN IT ACTUALLY ESCAPES. The first version wrapped every line that merely SAT in a
+    // drawn box, which is most of them, and a label set nowrap inside a 248px column promptly
+    // stacked itself 1181px tall. What matters is not where a line lives but whether it is
+    // outside the paint: measure the overhang, and leave a line that is already inside alone.
+    var br = box.getBoundingClientRect();
+    var bcs = window.getComputedStyle(box);
+    var padL = parseFloat(bcs.paddingLeft) || 0;
+    var padR = parseFloat(bcs.paddingRight) || 0;
+    var er = el.getBoundingClientRect();
+    var overhang = Math.max(br.left + padL - er.left, er.right - (br.right - padR));
+    if (overhang > 2) {
+      limitW = br.width - padL - padR;
+      room = br.height - (parseFloat(bcs.paddingTop) || 0) - (parseFloat(bcs.paddingBottom) || 0);
+      if (!(room > 0)) room = 0;
+      if (limitW > 0) {
+        // MORE LINES BEFORE SMALLER TYPE. Wrapping keeps the type at the size the design chose,
+        // so it is the cheaper answer; shrinking is what happens when even wrapped it will not
+        // fit. A design that set nowrap did so against a box that used to grow with the words.
+        el.style.whiteSpace = 'normal';
+        el.style.overflowWrap = 'break-word';
+        el.style.maxWidth = limitW + 'px';
+        el.style.height = '';                   // the box governs now, not the calibrated reserve
+      }
+    } else {
+      box = null;                               // inside its paint: nothing for the box to govern
+    }
+  }
+
   // The reserve, remembered from the first measurement - the design's own sample decides it.
-  var room = parseFloat(el.getAttribute('data-stage-room') || '');
-  if (!room) {
+  if (!limitW) room = parseFloat(el.getAttribute('data-stage-room') || '');
+  if (!limitW && !room) {
     if (stageCalibrated) {
       // A line the design never showed us: it was BUILT by the design's own runtime after load
       // (a poll's options, a standings row, a queue entry), so a rebuild wipes the reserve every
@@ -192,13 +277,18 @@ function fitOneStagedLine(el) {
   // The bigger of the two floors wins: a design already at the floor never shrinks at all.
   var floor = Math.max(design * STAGE_FIT_MIN, Math.min(design, STAGE_FIT_FLOOR_PX));
   for (var pass = 0; pass < 4; pass++) {
-    var tallBy = el.scrollHeight / room;
+    var tallBy = room > 0 ? (el.scrollHeight / room) : 1;
     // Sideways too: a line inside a HELD chip cannot reflow, so it runs out of the box's side
     // rather than off its bottom. Same lever, same floor - only the axis differs.
     // Sideways too: a line inside a fixed row cannot reflow, so it runs out of the box's side
     // rather than off its bottom. Same lever, same floor - only the axis differs.
-    var wideBy = el.clientWidth ? (el.scrollWidth / el.clientWidth) : 1;
-    if (tallBy <= 1.005 && wideBy <= 1.005) return;   // it fits - leave the size alone
+    // Against the BOX when there is one - a line whose own width is free grows with its text, so
+    // its scrollWidth and clientWidth agree forever and it never reports the overflow that is
+    // plainly there on screen. What it has to fit inside is the furniture around it.
+    var wideBy = 1;
+    if (limitW > 0) wideBy = (box === el ? el.scrollWidth : el.getBoundingClientRect().width) / limitW;
+    else if (el.clientWidth) wideBy = el.scrollWidth / el.clientWidth;
+    if (tallBy <= 1.005 && wideBy <= 1.005) break;    // it fits - leave the size alone
     var current = parseFloat(window.getComputedStyle(el).fontSize);
     // A wrapped block's height falls with the SQUARE of the size (shorter text, shorter rows),
     // so the linear ratio overshoots; the square root converges in about two passes. Width is
@@ -206,9 +296,19 @@ function fitOneStagedLine(el) {
     var byHeight = tallBy > 1 ? Math.sqrt(1 / tallBy) : 1;
     var byWidth = wideBy > 1 ? (1 / wideBy) : 1;
     var next = Math.max(floor, current * Math.min(byHeight, byWidth));
-    if (next >= current) return;                // no progress left to make
+    if (next >= current) break;                 // no progress left to make
     el.style.fontSize = next + 'px';
-    if (next === floor) return;                 // at the floor: as small as it may go
+    if (next === floor) break;                  // at the floor: as small as it may go
+  }
+
+  // ONCE IT HAS WRAPPED, CENTRE IT. A label that took two rows inside a tile was drawn as one,
+  // and a ragged left edge in a coloured square reads as a mistake rather than a choice; centred,
+  // two short rows read as the label they are. Only inside a drawn box, and only once the line
+  // actually occupies more rows than the design gave it - a single row keeps the alignment its
+  // designer chose.
+  if (box) {
+    var lh = stageLineHeight(el, window.getComputedStyle(el), design);
+    if (lh > 0 && el.scrollHeight > lh * 1.5) el.style.textAlign = 'center';
   }
 }
 
