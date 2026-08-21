@@ -125,6 +125,15 @@ from ~80 places in the tree, so it never changes.*
       variety of palette and silhouette WITHIN a category**, which is design work rather than
       ordering work; the next step is an axis measured off the RENDERED card.
       `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves to compare.
+      **RATIFIED BY THE OWNER 2026-08-21 - "lower thirds need real variety" - and then MEASURED
+      on the right axis** (`scripts/card-look-sweep.mjs`, which reads the rendered pixels:
+      backdrop, accent hue, footprint). **The ask splits, and only half of it is drawing work.**
+      *Colour variety is BURIED, not absent:* the shelf carries nine accent hues and 7 light
+      backdrops across 103 designs, and the first twelve are 10 dark + 10 orange. Ordering the
+      first page across this axis is cheap and would show what the category already has.
+      *Shape variety is genuinely ABSENT:* **99 of 103 designs are `strap/thin` - 96%** - with no
+      full-width band, no tall panel, no side column, no corner block. That is the design work,
+      and it cannot be ordered into existence. Numbers in `docs/CATALOG_VARIETY.md`.
 
 ### The surface under investment: the WEB PLAYOUT CONTROL PANEL
 
