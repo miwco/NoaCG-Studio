@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { saveAs } from 'file-saver';
-import { useRouter, type ProductionSub } from '../../app/router';
+import { routeHash, useRouter, type ProductionSub } from '../../app/router';
 import { useTemplateStore } from '../../store/templateStore';
 import {
   addGraphicToShow,
@@ -30,7 +30,7 @@ import {
   type JsonObject,
   type ResolvedValues,
 } from '../../model/productionData';
-import { loadLiveData, saveLiveData } from '../../model/productionState';
+import { loadLiveData, saveLiveData, PRODUCTION_DATA_KEY } from '../../model/productionState';
 import { fetchProductionData, patchProductionData, productionDataKey } from '../../control/productionDataApi';
 import { DEFAULT_GRAPHICS_RESOLUTION } from '../../model/projectFormat';
 import { outputEmbedFileName, outputEmbedHtml } from '../../export/outputEmbed';
@@ -145,6 +145,26 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   // The mutators return the fresh list — holding it in state (the ControlPanel pattern) keeps
   // an edit from re-parsing every store on every render.
   const [shows, setShows] = useState<Show[]>(() => loadShows());
+
+  /**
+   * ANOTHER TAB CHANGED THIS PRODUCTION - re-read it.
+   *
+   * The workspaces open in their own browser tab, so the ordinary case is now two tabs on one
+   * production: the bank is typed on Data over there and loaded into a cue over here. The
+   * durable store keeps their MIRRORS honest across tabs (model/durableStore.ts announces every
+   * landed write), but a mirror nobody re-reads changes nothing on screen - this surface seeded
+   * `shows` once and would go on offering a rundown with no data rows in it.
+   *
+   * Deliberately a RE-READ of the record and nothing else. The cue DRAFT, the selection and the
+   * playhead are this tab's own state and are untouched, so a table appearing in the other tab
+   * cannot move what this operator is holding. Re-reading after this tab's OWN write is
+   * harmless: it reads back what it just wrote.
+   */
+  useEffect(() => {
+    const onDataChanged = () => setShows(loadShows());
+    window.addEventListener('spx-data-changed', onDataChanged);
+    return () => window.removeEventListener('spx-data-changed', onDataChanged);
+  }, []);
   const library = useMemo(() => loadGraphics(), []);
   const show: Show | null = shows.find((s) => s.id === id) ?? null;
 
@@ -374,6 +394,30 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
     // A different production is a different tree AND a different baseline, so the next dispatch
     // reconciles the new production from scratch rather than against the old one's values.
     lastResolved.current = {};
+  }, [id, hostedSlug]);
+
+  /**
+   * THE LIVE TREE, WRITTEN IN ANOTHER TAB.
+   *
+   * The Data workspace opens in its own browser tab, and an UNPUBLISHED production's tree lives
+   * in localStorage (model/productionState.ts - deliberately not on the synced Show record).
+   * This page is the ONE sender: it holds the tree, resolves the bindings and dispatches the
+   * changes, precisely because the workspace has no route to air of its own. Split across tabs,
+   * a value typed on Data reached storage and stopped there - the operator watched PROGRAM keep
+   * the old score.
+   *
+   * `storage` fires in the OTHER tabs only, which is exactly the ones that need telling, and it
+   * carries the key so an unrelated write costs nothing. Published productions are untouched:
+   * there the server's copy is the authority and the API answer is what this page holds.
+   */
+  useEffect(() => {
+    if (!id || hostedSlug) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== PRODUCTION_DATA_KEY) return;
+      setLiveDataState(loadLiveData(id));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, [id, hostedSlug]);
 
   /**
@@ -715,6 +759,23 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
     [poolResolutionKey, library],
   );
   const stageAspect = `${stage.width} / ${stage.height}`;
+
+  /**
+   * DOES THIS BROWSER TAB OWN A PLAYOUT SURFACE?
+   *
+   * The workspaces open in their own tab now, so "am I on a sub-route" stopped being the same
+   * question as "should the playout column exist". A tab that STARTED on Playout keeps it
+   * mounted behind Data forever, because unmounting restarts every live graphic. A tab that
+   * OPENED onto Data never had one, and building it there would put a SECOND renderer on a
+   * production that already has one - the same log followed twice, every asset re-inlined, and
+   * a PROGRAM monitor nobody is looking at.
+   *
+   * A ref rather than state: it only ever latches ON, and re-rendering when it does would be a
+   * render for a value this same render already read.
+   */
+  const ownsPlayout = useRef(sub === null);
+  if (sub === null) ownsPlayout.current = true;
+  const keepPlayout = ownsPlayout.current;
   // CONTAIN, not width-fill (`Math.min`, the same arithmetic as src/output/stage.ts): the frame
   // is the production's shape now, so a cue of another shape has to fit inside it rather than
   // overflow its height.
@@ -1296,7 +1357,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         }
       }}
       sub={sub ?? null}
-      onTab={(tab) => navigate(tab === 'playout' ? { view: 'production', id: show.id } : { view: 'production', id: show.id, sub: tab })}
+      onTab={() => navigate({ view: 'production', id: show.id })}
       links={
         <ProductionLinks
           show={show}
@@ -1338,6 +1399,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           else with runtime state came back from the top. Nothing on this page is a reason to
           restart a graphic that is on air. `display: none` costs the monitors their measured
           width while they are away, which the ResizeObserver hands straight back. */}
+      {keepPlayout && (<>
       <section className={`pd-main${sub ? ' pd-offstage' : ''}`}>
         {/* `--pd-ar` is the PREVIEW graphic's aspect ratio as a bare number. The monitor cap is
             a height and CSS cannot derive a width from `aspect-ratio`, so the grid turns the cap
@@ -2156,6 +2218,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           />
         </div>
       </aside>
+      </>)}
       {exportOpen && <ProductionExportDialog show={show} onClose={() => setExportOpen(false)} />}
     </ProductionShell>
   );
@@ -2189,7 +2252,8 @@ function ProductionShell({
   outputSeenAt: string | null;
   liveLayers: { layer: number }[];
   sub: ProductionSub | null;
-  onTab: (tab: 'playout' | ProductionSub) => void;
+  /** Back to Playout IN THIS TAB. The workspaces are links now, never calls into here. */
+  onTab: () => void;
   onHome: () => void;
   onBack: () => void;
   onAllOut: () => void;
@@ -2222,21 +2286,43 @@ function ProductionShell({
         <span className="pd-clock mono">{elapsed(now - openedAt)}</span>
         {/* The workspaces (docs/INTERACTIVE_PLAYOUT_PLAN.md D6): Playout is the operating
             surface, Data the production's own tables. One shared record underneath — a row
-            typed on the Data tab is loadable into a cue the moment you switch back. */}
+            typed on the Data tab is loadable into a cue the moment you switch back.
+
+            THEY OPEN IN THEIR OWN BROWSER TAB, so Playout never leaves the screen. Owner,
+            2026-08-21: "the buttons that we have and the side pages we have feel a bit
+            dangerous to swap between. I think the playout should always be open." Data and
+            Audience are AUTHORING surfaces, and authoring while the thing you are steering is
+            off-screen is how a live mistake happens.
+            This needed the durable store's CROSS-TAB INVALIDATION first (model/durableStore.ts):
+            two tabs on one production used to overwrite each other, so shipping this before that
+            would have made the losing path the default rather than an unlucky one.
+            They are real routes with real history, so these are real links - middle-click and
+            Ctrl-click start working, which they never did as buttons. The one already open is a
+            plain marker rather than a link to itself, and Playout stays a button because it
+            returns IN THIS TAB, where the monitors already are. */}
         <nav className="pd-tabs" aria-label="Production workspaces">
-          <button className={sub === null ? 'on' : undefined} onClick={() => onTab('playout')} data-testid="tab-playout">
+          <button className={sub === null ? 'on' : undefined} onClick={onTab} data-testid="tab-playout">
             Playout
           </button>
-          <button className={sub === 'data' ? 'on' : undefined} onClick={() => onTab('data')} data-testid="tab-data">
-            Data
-          </button>
-          <button
-            className={sub === 'audience' ? 'on' : undefined}
-            onClick={() => onTab('audience')}
-            data-testid="tab-audience"
-          >
-            Audience
-          </button>
+          {(['data', 'audience'] as const).map((tab) => {
+            const label = tab === 'data' ? 'Data' : 'Audience';
+            return sub === tab ? (
+              <span key={tab} className="on" aria-current="page" data-testid={`tab-${tab}`}>
+                {label}
+              </span>
+            ) : (
+              <a
+                key={tab}
+                href={routeHash({ view: 'production', id: show.id, sub: tab })}
+                target="_blank"
+                rel="noopener"
+                title={`Open ${label} in a new tab — this one keeps Playout on screen`}
+                data-testid={`tab-${tab}`}
+              >
+                {label}
+              </a>
+            );
+          })}
         </nav>
         <div className="spacer" />
         {/* The renderer heartbeat — only once published. Unpublished, the mode chip already

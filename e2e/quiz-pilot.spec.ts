@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createProject } from './_create';
 import { expectMachineState } from './_stage';
+import { openWorkspace } from './_workspace';
+import { settleDurableWrites } from './_durable';
 
 // THE QUIZ PILOT (docs/INTERACTIVE_PLAYOUT_PLAN.md Phase 3): the controlled sequence a student
 // production runs — question on air, a HIDDEN contestant pick locked without showing, the
@@ -24,18 +26,23 @@ test('the hidden-pick quiz sequence: seal, reveal choice, verdict, audience resu
   await createProject(page, { name: 'Arena Quiz' });
   await productionFor(page, 'Quiz Night');
 
-  // ── The question bank, authored on the Data tab. ──
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('add-dataset').click();
-  const dataset = page.locator('.pd-dataset');
+  // ── The question bank, authored on the Data tab - which opens in its OWN browser tab now,
+  //    so Playout stays up on `page` while the bank is typed on `data`. ──
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('add-dataset').click();
+  const dataset = data.locator('.pd-dataset');
   const fill = async (rowIndex: number, cells: string[]) => {
     const row = dataset.locator('tbody tr').nth(rowIndex);
     for (let i = 0; i < cells.length; i++) await row.locator('td input').nth(i).fill(cells[i]);
   };
   await fill(0, ['Which planet is known as the Red Planet?', 'Venus', 'Mars', 'Pluto', 'Titan', 'B']);
-  await page.getByTestId('add-row').click();
+  await data.getByTestId('add-row').click();
   await fill(1, ['Which ocean is the largest?', 'Atlantic', 'Indian', 'Pacific', 'Arctic', 'C']);
-  await page.getByTestId('tab-playout').click();
+  // The bank has to be DURABLE before the Playout tab reads it: the workspace tab writes, the
+  // durable store announces, and only then does this tab's mirror hold the rows.
+  await settleDurableWrites(data);
+  await data.close();
+  await expect(page.getByTestId('production-verbs')).toBeVisible();
 
   const chip = page.getByTestId('machine-state-chip');
   const program = page.frameLocator('[data-testid="program-stage"] iframe');
