@@ -138,15 +138,21 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
     });
   }
 
-  // 3. Each data field maps to a matching DOM id.
+  // 3. Each data field maps to a matching DOM id. On an imported SVG design this is an
+  //    ERROR, not a warning: the field was bound to one of the artwork's own text nodes at
+  //    import (docs/SVG_IMPORT_PLAN.md), so a missing id means the operator's value silently
+  //    goes nowhere in a graphic whose whole point is being exactly the designer's.
+  const svgBound = template.type === 'imported-design' && /<svg\b/i.test(template.html);
   if (parsed) {
     const ids = htmlIds(template.html);
     for (const field of parsed.fields) {
       if (!DATA_FTYPES.includes(field.ftype)) continue;
       if (!ids.has(field.field)) {
-        warnings.push({
-          rule: 'field-mapping',
-          message: `Field "${field.field}" (${field.title}) has no matching element id in the HTML.`,
+        (svgBound ? errors : warnings).push({
+          rule: svgBound ? 'svg-binding' : 'field-mapping',
+          message: svgBound
+            ? `Field "${field.field}" (${field.title}) is no longer bound — no element in the SVG carries id="${field.field}", so the operator's value would go nowhere. Restore the id or remove the field.`
+            : `Field "${field.field}" (${field.title}) has no matching element id in the HTML.`,
         });
       }
     }
@@ -354,6 +360,40 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
             }
           }
         }
+      }
+    }
+  }
+
+  // 5e. Inline SVG artwork (the SVG import road, docs/SVG_IMPORT_PLAN.md §5). The importer
+  //     sanitizes on the way in, but the GATE is authoritative — a hand edit or an older file
+  //     can reintroduce what the importer strips, and these ship straight into srcdoc
+  //     previews and playout. Errors, not warnings: each is either script running inside a
+  //     graphic or a network reference an exported package cannot satisfy.
+  for (const svgMarkup of template.html.match(/<svg[\s\S]*?<\/svg>/gi) ?? []) {
+    if (/<script\b/i.test(svgMarkup)) {
+      errors.push({
+        rule: 'svg',
+        message: 'The inline SVG contains a <script> element — a graphic must not carry scripts inside its artwork. Remove it (the template JS is where behaviour lives).',
+      });
+    }
+    if (/<foreignObject\b/i.test(svgMarkup)) {
+      errors.push({
+        rule: 'svg',
+        message: 'The inline SVG contains a <foreignObject> block — embedded HTML cannot ride into playout. Remove it.',
+      });
+    }
+    if (/\son[a-z]+\s*=/i.test(svgMarkup)) {
+      errors.push({
+        rule: 'svg',
+        message: 'The inline SVG carries an event-handler attribute (onload/onclick/…) — script must not run from artwork. Remove it.',
+      });
+    }
+    for (const m of svgMarkup.matchAll(/(?:xlink:)?href=["']((?:https?:)?\/\/[^"']+)["']/gi)) {
+      if (!isAllowedExternal(m[1])) {
+        errors.push({
+          rule: 'svg',
+          message: `The inline SVG references "${m[1]}" on the network — an exported graphic must play out offline. Embed the file into the SVG or add it as an asset.`,
+        });
       }
     }
   }

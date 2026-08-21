@@ -96,16 +96,22 @@ exactly the commit being promoted and falls back to the local pair only when the
 
 **The shard count follows measured minutes, not a file count** (`shardsFor` in
 `scripts/e2e-affected.mjs`, table in `scripts/e2e-durations.json`): about three minutes of test
-execution per runner, capped at nine. A full plan is 66.9 measured minutes and the cap holds it at
+execution per runner, capped at nine. A full plan is 70.5 measured minutes and the cap holds it at
 nine. What that replaced was a subset cap of four runners however big the subset was - and under
-sprint focus plus the curated map a subset is routinely 70-100 of the 128 spec files, so run
+sprint focus plus the curated map a subset is routinely 70-100 of the 131 spec files, so run
 32174589727 put 58.3 minutes of tests on four shards (14.6 min each) while the full run beside it
 did 66.9 on nine (7.4 min each). Three minutes is set from what a shard now COSTS to add - about
 one minute all in, against 3.5 before the browser-setup change below - so the target is a
 consequence of that fix, not an independent guess. The table only decides how many runners
 `--shard` spreads the plan across, so a stale entry costs wall clock and never coverage;
-`npm run check:e2e-durations` reports drift and the script's header says how to refresh it from a
-real run's blob reports.
+`npm run check:e2e-durations` reports drift, and **`npm run record:e2e-durations` re-records the
+whole table** - it picks the newest green FULL run of ci.yml on `main`, downloads its shard blob
+reports, merges them and rewrites the file, stamping which run it came from. Pass a run id
+(`npm run record:e2e-durations -- <run-id>`) to use a particular one. A run whose shards are not all
+`(full)`, or that is missing a shard, is REFUSED rather than recorded: it measured a subset, and
+writing that would drop every spec it skipped back to the median. Blob artifacts expire after seven
+days, so re-record from a recent run. Re-record whenever `check:e2e-durations` reports unmeasured
+specs - an unmeasured spec counts as the median, so the table decays as the suite grows.
 
 A shard that stops AT its 20-minute `timeout-minutes` is not a verdict on the change. Playwright
 shards by test COUNT, not by measured time, so the spread between the fastest and slowest shard is
@@ -161,6 +167,14 @@ sees tool calls, never your terminal. Use the **`:queued`** form of any e2e scri
 than fail, `node scripts/e2e-runs.mjs --all` to see what is running, and `--orphans` /
 `--kill-orphans` to reap browsers a killed run left behind. `NOACG_ALLOW_PARALLEL_E2E=1` in the
 command overrides.
+
+**Two runs that start in the same second do not both wait.** A run sitting in its globalSetup is
+indistinguishable in the process table from one driving a browser, so each used to queue behind
+the other and both sat out the 30-minute cap - two worktrees, both idle at ~2 s of CPU sixteen
+minutes in, and killing either one released the other within seconds (2026-08-21). `blockingRuns`
+(`scripts/e2e-runs.mjs`) now orders runs by start time, ties broken by pid, and a run yields only
+to those ahead of it: one starts, the rest queue behind it in a stable FIFO. A SWEEP is always
+yielded to - it has no globalSetup and never waits for anyone, so it can only be work in progress.
 
 Anything the named list misses is absorbed by the worker ladder (`scripts/e2e-workers.mjs`): it
 reads FREE MEMORY at start and takes fewer workers when something heavy is already resident, which

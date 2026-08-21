@@ -27,6 +27,7 @@ import ImportStep from './steps/ImportStep';
 import ImportDesignStep from './steps/ImportDesignStep';
 import PrepareDesignStep from './steps/PrepareDesignStep';
 import PlaceFieldsStep from './steps/PlaceFieldsStep';
+import MapSvgFieldsStep from './steps/MapSvgFieldsStep';
 import TemplateStep from './steps/TemplateStep';
 import BrowseStep, { type BuildMode } from './steps/BrowseStep';
 import { defaultFamilyFor, defaultSelectionFor } from './steps/KitPicker';
@@ -106,6 +107,11 @@ const STEP_TITLES_BLANK = ['Start', 'Blank project'];
 // works. Text and Animation are optional stops: Create is available from the Design step on
 // (docs/IMPORT_MVP.md).
 const STEP_TITLES_DESIGN = ['Start', 'Design', 'Prepare', 'Text', 'Animation', 'Finish'];
+// A layered SVG dropped on that same zone has nothing to erase and nothing to place — its
+// text layers are already exactly where the designer set them — so its walk swaps
+// Prepare/Text for ONE mapping step: which layers the operator can edit
+// (docs/SVG_IMPORT_PLAN.md §2). A MODE, not a branch, for the same reason 'file' is one.
+const STEP_TITLES_SVG = ['Start', 'Design', 'Fields', 'Animation', 'Finish'];
 // A finished template (.html / .zip) dropped on that same zone has nothing to prepare, place
 // or animate — it already declares all three — so its walk is two stops: the file, then where
 // it goes. A MODE rather than a branch inside design mode, so the rail never offers four steps
@@ -123,6 +129,7 @@ const STEP_SUBS: Record<string, string[]> = {
   video: ['Choose mode', 'Brief & format'],
   blank: ['Choose mode', 'Format & name'],
   design: ['Choose mode', 'Your artwork', 'Erase & scale', 'Place fields', 'In & out motion', 'Name & save'],
+  svg: ['Choose mode', 'Your artwork', 'Map text layers', 'In & out motion', 'Name & save'],
   file: ['Choose mode', 'Your graphic', 'Name & save'],
 };
 
@@ -151,7 +158,7 @@ export default function CreationWizard() {
 
   const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<'template' | 'import' | 'design' | 'file' | 'ai' | 'video' | 'blank'>('template');
+  const [mode, setMode] = useState<'template' | 'import' | 'design' | 'svg' | 'file' | 'ai' | 'video' | 'blank'>('template');
   /** A finished template file dropped on the Import graphic step — parsed, never rebuilt. */
   const [importedFile, setImportedFile] = useState<ImportedTemplateResult | null>(null);
   const [importedFileError, setImportedFileError] = useState<string | null>(null);
@@ -362,7 +369,7 @@ export default function CreationWizard() {
 
   // The Animation step's index per mode: the one-step Browse flow ends at 4, the import
   // continuation keeps the old six-step shape. Finish always follows it.
-  const animStep = mode === 'import' ? 5 : 4;
+  const animStep = mode === 'import' ? 5 : mode === 'svg' ? 3 : 4;
   // AI has no configuring steps of its own — the result IS the configuration — so its
   // Finish sits right after the working step (index 2), not after an animation step it
   // never shows.
@@ -992,7 +999,7 @@ export default function CreationWizard() {
     (mode === 'ai' ? (step === 1 || step === finishStep) && !!aiResult
     : mode === 'video' ? false
     : mode === 'blank' ? step === 1
-    : mode === 'design' ? step >= 1 && !!previewTemplate
+    : mode === 'design' || mode === 'svg' ? step >= 1 && !!previewTemplate
     // A dropped template is previewed as itself: it is the graphic, already finished.
     : mode === 'file' ? step >= 1 && !!importedFile
     : mode === 'template' ? (kit ? step >= 2 && step < finishStep : step >= 1) && !!previewTemplate
@@ -1002,6 +1009,7 @@ export default function CreationWizard() {
     : mode === 'video' ? STEP_TITLES_VIDEO
     : mode === 'blank' ? STEP_TITLES_BLANK
     : mode === 'design' ? STEP_TITLES_DESIGN
+    : mode === 'svg' ? STEP_TITLES_SVG
     : mode === 'file' ? STEP_TITLES_FILE
     : mode === 'import' ? STEP_TITLES_IMPORT
     : kit || buildMode === 'kit' ? STEP_TITLES_KIT
@@ -1040,6 +1048,12 @@ export default function CreationWizard() {
      The row names its decision, not a step NUMBER, because import mode carries an extra
      Images step and every later index shifts by one (animStep above says the same thing). */
   const editSummaryStep = (key: SummaryStepKey) => {
+    // SVG mode: the artwork and its format live on step 1, the field mapping on step 2;
+    // there is no Look step (the SVG carries its own look).
+    if (mode === 'svg') {
+      setStep({ design: 1, format: 1, fields: 2, look: 2, motion: animStep }[key]);
+      return;
+    }
     const browse = mode === 'import' ? 2 : 1;
     setStep({ design: browse, format: browse, fields: browse + 1, look: browse + 2, motion: animStep }[key]);
   };
@@ -1117,12 +1131,12 @@ export default function CreationWizard() {
           Skip ahead
         </button>
       )}
-      {(mode === 'design' || mode === 'import') && step < finishStep && (mode === 'import' ? step >= 2 : step >= 1) && (
+      {(mode === 'design' || mode === 'svg' || mode === 'import') && step < finishStep && (mode === 'import' ? step >= 2 : step >= 1) && (
         <button
           disabled={!previewTemplate}
           onClick={create}
           title={
-            mode === 'design'
+            mode === 'design' || mode === 'svg'
               ? 'Create the project with everything chosen so far — refine anything later in the editor'
               : 'Create the project now — remaining steps keep their defaults'
           }
@@ -1199,7 +1213,7 @@ export default function CreationWizard() {
             <span className="wz-title-step">
               {mode === 'ai' ? 'Create with AI'
                 : mode === 'video' ? 'Video with AI'
-                : mode === 'design' || mode === 'file' ? 'Import graphic'
+                : mode === 'design' || mode === 'svg' || mode === 'file' ? 'Import graphic'
                 : kit ? `${kit.pack.name} kit`
                 : 'New graphic'}
             </span>
@@ -1241,7 +1255,7 @@ export default function CreationWizard() {
             step splits evenly. */}
         <div
           className={`wz-body ${showPreview ? 'with-preview' : ''}${
-            mode === 'design' && step === 3 ? ' wz-body-working' : ''
+            (mode === 'design' && step === 3) || (mode === 'svg' && step === 2) ? ' wz-body-working' : ''
           }`}
         >
           {/* The entry is a MENU, not the first committed step of every possible walk. Until
@@ -1394,8 +1408,72 @@ export default function CreationWizard() {
                 />
               </div>
             )}
-            {step === 1 && (mode === 'design' || mode === 'file') && (
+            {step === 1 && (mode === 'design' || mode === 'svg' || mode === 'file') && (
               <ImportDesignStep
+                svg={draft.designSvg}
+                onSvg={(result) => {
+                  // Fit-to-frame like the raster path: a larger canvas scales DOWN to the
+                  // frame (vector — nothing is lost); the viewBox in the markup is untouched,
+                  // only the design-space size the box is sized by changes.
+                  const res = draftResolution(draft);
+                  const fit =
+                    result.width > res.width || result.height > res.height
+                      ? Math.min(res.width / result.width, res.height / result.height)
+                      : 1;
+                  // The `f:` prefix rule (plan §2): when ANY layer opted in by name, only
+                  // those default ON; otherwise every detected text is ON — zero clicks.
+                  const anyMarked = result.candidates.some((c) => c.marked);
+                  patch({
+                    designSvg: {
+                      ...result,
+                      width: Math.round(result.width * fit),
+                      height: Math.round(result.height * fit),
+                    },
+                    svgFields: result.candidates.map((c) => ({
+                      candidateId: c.id,
+                      on: anyMarked ? c.marked : true,
+                      title: c.label,
+                      sample: c.sample,
+                      numeric: c.numeric,
+                    })),
+                    // Pictures start OFF — inside a design they are usually the artwork
+                    // itself — unless the layer opted in by name (`f:`).
+                    svgImages: result.images.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                    })),
+                    // Bundled faces auto-match by family name; the mapping step offers the
+                    // Google fetch or an upload for the rest (plan §4).
+                    svgFonts: result.fonts.map((f) => ({
+                      family: f.family,
+                      fontId:
+                        FONTS.find((b) => b.family.toLowerCase() === f.family.toLowerCase())?.id ?? null,
+                      customFont: null,
+                    })),
+                    // A fresh drop replaces any raster state from this walk.
+                    designArt: null,
+                    importedImages: [],
+                    designOriginal: null,
+                    designErases: [],
+                    designFields: [],
+                    category: 'imported-design',
+                    variantId: 'svg01',
+                    lines: [],
+                    zone: null,
+                    animation: { presetId: null, outPresetId: null },
+                    ...(matchBrand && brand
+                      ? brandPatch(brand)
+                      : { paletteId: null, customPalette: null, fontId: null }),
+                  });
+                  // The walk changes shape the moment the file is read: an SVG has nothing
+                  // to erase and nothing to place — its one setup step is the mapping.
+                  setMode('svg');
+                }}
+                onClearSvg={() => {
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgFonts: [], variantId: null, category: null });
+                  setMode('design');
+                }}
                 templateFile={importedFile}
                 onTemplateFile={(file) => {
                   setImportedFileError(null);
@@ -1423,6 +1501,11 @@ export default function CreationWizard() {
                 onFormat={(selection) => patch(formatDraftPatch(selection))}
                 onArt={(designArt, importedImages) => {
                   patch({
+                    // A raster drop replaces any SVG from this walk (and vice versa above).
+                    designSvg: null,
+                    svgFields: [],
+                    svgImages: [],
+                    svgFonts: [],
                     designArt,
                     importedImages,
                     // A fresh drop resets the Prepare step: the pristine pixels become the
@@ -1443,6 +1526,9 @@ export default function CreationWizard() {
                       ? brandPatch(brand)
                       : { paletteId: null, customPalette: null, fontId: null }),
                   });
+                  // A raster drop is the classic prepare/place walk — also the way back from
+                  // an SVG drop replaced by a picture.
+                  setMode('design');
                 }}
                 onClear={() =>
                   patch({
@@ -1523,6 +1609,18 @@ export default function CreationWizard() {
               />
             )}
             {step === 4 && mode === 'design' && variant && (
+              <AnimationStep
+                variant={variant}
+                draft={draft}
+                onDraft={patch}
+                onReplay={() => setReplayKey((k) => k + 1)}
+              />
+            )}
+            {/* The SVG walk's one setup step: which text layers the operator can edit. */}
+            {step === 2 && mode === 'svg' && draft.designSvg && (
+              <MapSvgFieldsStep draft={draft} onDraft={patch} />
+            )}
+            {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
                 variant={variant}
                 draft={draft}

@@ -64,6 +64,22 @@ a primary long-term differentiator, not a nice-to-have.
 
 ## Milestones
 
+### The SVG road (the two halves that landed first)
+- [x] **OGraf boilerplate story** (Yle's explicit ask): a curated, teaching-grade OGraf starter
+      set - our validated export packaged as free, hand-editable base templates an organization
+      modifies instead of starting from scratch. Study `SuperFlyTV/ograf-devtool` + the EBU
+      examples for what authors already get.
+      *(2026-08-20) Shipped as the public `/ograf` starters page - `ograf.html` + `src/ograf/`,
+      built by the real exporter on click; see `docs/OGRAF.md` "The free starters page"
+      (354addb0, 56d7853c, 5fc812bb).*
+- [x] **Restricted-network resilience**: the Yle demo died inside the wizard on their corporate
+      network. No third-party host may ever block create/preview/export; diagnose, harden,
+      pin with an e2e spec that walks the wizard with all third-party hosts blocked, and give
+      failures a visible diagnosis instead of a silent stall.
+      *(2026-08-20) Shipped as the boot watchdog + durable-store timeout + the `/app?diag=1`
+      connection check (d2c75e36), pinned by `e2e/network-resilience.spec.ts`, with the ops
+      entry in `docs/DEPLOYMENT.md` "Where to look" item 7.*
+
 ### AI tiers
 - [x] **Bring your own key, always** (2026-08-14) - the paid surface buys convenience, never
       capability. The Create-with-AI door offers it as its own tier: OpenAI, Anthropic, Google or

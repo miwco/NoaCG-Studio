@@ -227,10 +227,12 @@ The page:
   exactly where a bug here would hide, on air. `e2e/productions.spec.ts` walks a whole match
   through it (kick-off, a goal re-sending the value set, half time, the second half resuming
   from 45:00, a reset) and is mutation-tested against the ordering and both banked values.
-  **THIS PAGE IS THE ONLY PLANE THAT PERSISTS THE ORIGIN**, and that is a decision, not an
-  omission: everywhere else the runtime mints a local one, which bounds the drift and fixes the
-  throttled tab but does NOT survive a reload. `docs/SPORTS_PACK.md` carries the per-plane table
-  and what it would take to close the export door.
+  **THIS PAGE IS THE ONLY PLANE THAT DERIVES THE ORIGIN FROM THE ROW**, which is the one way
+  several renderers agree EXACTLY rather than within delivery skew. Since 2026-08-20 the
+  exported operator pages stamp one too (`control/matchClockPageJs.ts`, the dependency-free
+  copy of this module's arithmetic), so a reload is recovered off the hosted plane as well.
+  `docs/SPORTS_PACK.md` carries the per-plane table and the one gap left — a relay-driven
+  browser source, which boots at the log head and so recovers nothing until an operator acts.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside
