@@ -23,6 +23,13 @@ bug and never on the countdown, so the owner's sixth taste rule - *a package's m
 piece or on none* - fired on **all 36 archived rows and all 4 topic-card rows**
 (`docs/NOACG_PRO_PLAN.md` §25.4).
 
+## Done so far
+
+| type | shipped | what it needed |
+|---|---|---|
+| `countdown` | 2026-08-21 | type capability + the `game-timer` assembler taught the slot (`f2`) + `TypeDesign.logo`. The Pro countdown opts in; the four catalog timers decline. |
+| `holding-screen` | 2026-08-21 | the same, in `starting-soon` (`f{next}`). `ss04` (house) opts in and draws the mark above its title; `ss01`-`ss03` decline. |
+
 ## "Can this graphic take a mark?" is THREE questions, not one
 
 This is the finding of the countdown work, and it is why "flip the other 47" was never one change.
@@ -108,9 +115,28 @@ cannot hold a mark" is already false in our own code.
 
 **13 are contradicted by their own category.** `social-bug`, `holding-screen`, `scoreboard`,
 `call-to-action`, `listing-card`, `live-bug`, `match-event`, `match-status`, `offer-card`,
-`podium-score`, `product-card`, `qr-card`, `scorebug`, `status-chip`. `holding-screen` is the exact
-shape of the countdown: `ss14`-`ss17` sit in the same category shipping an optional slot with CSS
-that collapses it when empty.
+`podium-score`, `product-card`, `qr-card`, `scorebug`, `status-chip`.
+
+**THE SIBLING COLUMN RANKS BADLY, AND `holding-screen` IS THE PROOF.** This audit first called it
+the cheapest of the high-frequency types - "a capability plus an opt-in, no assembler change" -
+because `ss14`-`ss17` ship a slot in the same category. Done, it needed **exactly the countdown's
+work**: those four are SIGN-OFF designs that hand-author their slot in `signOffShared.ts`, and the
+holding-screen assembler had no slot path at all. A sibling proves the CATEGORY can hold a mark; it
+says nothing about whether the ASSEMBLER can inject one, which is where the cost is.
+
+**The column that actually ranks these is "can this category's assembler inject a slot?"** Swept
+2026-08-21 over every category assembler:
+
+| assembler | via `assembleStandard` | slot today | what a mark costs here |
+|---|---|---|---|
+| `lower-third`, `info-card`, `corner-bug`, `alert`, `public-info` | yes | inherited | **a capability + a per-design opt-in.** The shared assembler already injects the slot on `logoEnabled`. |
+| `game-timer`, `starting-soon` | bespoke | **wired 2026-08-21** | done - and each needed the assembler taught, plus an explicit field id because both number their own fields. |
+| `audience`, `credits`, `esports-score`, `frame`, `infographic`, `matchup`, `poll`, `quiz`, `results-board`, `reveal`, `scoreboard`, `stream-notification`, `ticker`, `transition`, `versus` | bespoke | none | **the countdown's work**: teach the assembler the slot, decide the field id, then opt designs in. |
+
+So of the 46 types left, the ones whose category already routes through `assembleStandard` are the
+cheap ones, and the sibling column had nothing to do with it. **Fifteen bespoke assemblers have no
+slot path at all** - that, not the type declarations, is the real size of "anything can have a
+logo".
 
 **34 have no sibling evidence either way.** Silence is not a constraint; it means nobody has drawn
 one yet.
@@ -146,6 +172,13 @@ behaved like: permission.
 `role: 'logo'` field is one the template ALWAYS emits (`signOffType` has one because its designs
 draw the slot unconditionally), so declaring one on an optional type reads `field count: type
 declares 3, template emits 2` on every design in it. `lowerThirdType` declares none either.
+
+**AND A THIRD, FOUND ON `ss04`: A CATALOG DESIGN MUST SAY `optional` ON BOTH SIDES.**
+`resolveOptions` reads the HAND-WRITTEN variant's own meta (`startingSoon/ss04.ts`), while the
+registry reads `TypeDesign.logo`. Opted in on the type side only, `ss04` compiled as `optional`,
+offered the wizard a mark - and emitted no slot, because the assembler asked the other meta. The
+factory gate is what compares them, which is why it reports "the design declares logo X, it
+compiles to Y" rather than checking one side.
 
 **The placement half is still open.** A `TypeDesign.markPlacement` would follow the same seam, but
 nothing reads one yet.

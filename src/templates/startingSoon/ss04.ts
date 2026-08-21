@@ -20,7 +20,16 @@ export const ss04: TemplateVariant = defineStartingSoonVariant(
       { title: 'Title', sample: 'STARTING SOON' },
       { title: 'Show name', sample: 'The Late Line' },
     ],
-    logo: 'none',
+    // THE HOUSE HOLDING SCREEN DRAWS A MARK (2026-08-21). It sits above the title, which is this
+    // category's own shipped composition - ss14-ss17 place it there - rather than a rule about
+    // where marks go: `docs/MARK_CAPABILITY_AUDIT.md` records that placement is a property of the
+    // design. An empty slot renders nothing, so the default build is unchanged.
+    //
+    // BOTH SIDES HAVE TO SAY IT. `resolveOptions` reads THIS meta, and the type registry reads
+    // `holdingScreenType`'s own `TypeDesign.logo` - a design opted in on one side only compiles to
+    // a mark the wizard offers and the assembler never draws (measured, exactly that). The factory
+    // gate compares the two, which is what catches the half-opt-in.
+    logo: 'optional',
     animationPresets: ['hold-loop'],
     defaultPalette: paletteById('noacg'),
     defaultFontId: 'space-grotesk',

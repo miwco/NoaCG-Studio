@@ -206,7 +206,15 @@ export const holdingScreenType: GraphicType = {
   controls: CLOCK_CONTROLS,
   capabilities: {
     maxLines: 2,
-    logo: 'none',
+    // A HOLDING SCREEN TAKES A MARK, and of all the graphics that declined one this is the least
+    // defensible: it is what a channel sits on longest, and the only thing on screen while an
+    // audience waits. The sign-off screens beside it in this very category have carried a slot
+    // all along (`signOffShared.ts`), so the category was never the obstacle - the assembler was
+    // (docs/MARK_CAPABILITY_AUDIT.md, 2026-08-21).
+    //
+    // The type PERMITS; each design says whether it draws one. All four decline today for the
+    // honest reason: nobody has placed a mark in them yet.
+    logo: 'optional',
     animationPresets: ['hold-loop'],
     defaultZone: 'mid-center',
   },
@@ -215,6 +223,11 @@ export const holdingScreenType: GraphicType = {
       // Designed FOR this cell: no noacg holding screen existed. The house void panel as a
       // pre-show front door — sibling of lt11 House Strap and card05 House Title.
       id: 'ss04',
+      // THE ONE HOLDING SCREEN THAT DRAWS A MARK, so the path is exercised rather than merely
+      // offered. The placement follows this category's own shipped composition - ss14-ss17 put
+      // the mark above the words - rather than any rule: it is a drawing decision, and moving it
+      // is one line here plus the CSS the design already owns.
+      logo: 'optional',
       name: 'House Hold',
       description: 'The house holding screen: mono kicker, display show name, a breathing void clock chip.',
       styleTag: 'noacg',
@@ -224,6 +237,8 @@ export const holdingScreenType: GraphicType = {
     },
     {
       id: 'ss01',
+      // AUTHORED WITHOUT A MARK. The type permits one; nobody has placed one in this design yet.
+      logo: 'none',
       name: 'Quiet Hold',
       description: 'A breathing hold screen: the show name, a countdown, and room to wait.',
       styleTag: 'minimal',
@@ -233,6 +248,8 @@ export const holdingScreenType: GraphicType = {
     },
     {
       id: 'ss02',
+      // AUTHORED WITHOUT A MARK. The type permits one; nobody has placed one in this design yet.
+      logo: 'none',
       name: 'Volt Hold',
       description: 'Centered sport stack — accent chip, huge condensed show name, slab-mounted countdown.',
       styleTag: 'sport',
@@ -243,6 +260,8 @@ export const holdingScreenType: GraphicType = {
     },
     {
       id: 'ss03',
+      // AUTHORED WITHOUT A MARK. The type permits one; nobody has placed one in this design yet.
+      logo: 'none',
       name: 'Frost Hold',
       description: 'A centered frosted card with the countdown breathing inside a soft glass pill.',
       styleTag: 'glass',
