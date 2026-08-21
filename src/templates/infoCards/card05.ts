@@ -106,6 +106,12 @@ ${kicker}${mask(0)}${subtitle}
 }`,
 
       hasAccent: false, // the accent moments are the kicker and the glow, not a bar element
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 1200,
       tokens: {
         labelTracking: '0.28em',
         displayTracking: '-0.02em',

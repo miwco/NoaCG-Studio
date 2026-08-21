@@ -355,6 +355,9 @@ function glassDesign(_o: ResolvedOptions): StreamNotificationDesign {
 
 export const sn01 = defineStreamNotification({
   id: 'sn01',
+  // The stage: the width this card holds a full-length event at, so the panel stops
+  // re-sizing itself between one notification and the next.
+  stageWidth: 890,
   name: 'House Signal',
   description: 'A NoaCG control-room notification with a radar portrait, amber signal rail and compact telemetry hierarchy.',
   styleTag: 'noacg',
@@ -367,6 +370,9 @@ export const sn01 = defineStreamNotification({
 
 export const sn02 = defineStreamNotification({
   id: 'sn02',
+  // The stage: the width this card holds a full-length event at, so the panel stops
+  // re-sizing itself between one notification and the next.
+  stageWidth: 800,
   name: 'Quiet Activity',
   description: 'A minimal type-led notification with open space, one hairline and the optional image parked at the far edge.',
   styleTag: 'minimal',
@@ -379,6 +385,9 @@ export const sn02 = defineStreamNotification({
 
 export const sn03 = defineStreamNotification({
   id: 'sn03',
+  // The stage: the width this card holds a full-length event at, so the panel stops
+  // re-sizing itself between one notification and the next.
+  stageWidth: 890,
   name: 'Arena Event',
   description: 'A sport and gaming event slab with an offset badge, angular silhouette, filled metadata chips and hard depth.',
   styleTag: 'sport',
@@ -391,6 +400,9 @@ export const sn03 = defineStreamNotification({
 
 export const sn04 = defineStreamNotification({
   id: 'sn04',
+  // The stage: the width this card holds a full-length event at, so the panel stops
+  // re-sizing itself between one notification and the next.
+  stageWidth: 890,
   name: 'Glass Bloom',
   description: 'A floating glass notification with a halo portrait, luminous edge and layered translucent pills.',
   styleTag: 'glass',

@@ -122,5 +122,8 @@ ${ALERT_LEVEL_CSS}
   color: var(--label-color);       /* the accent, in the glass family */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1100,
   }),
 );

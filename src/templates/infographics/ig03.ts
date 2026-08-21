@@ -45,6 +45,12 @@ export const ig03: TemplateVariant = defineInfographicVariant(
     const titleText = o.lines[1]?.sample || 'LIVE TIMING';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 660,
       // Structure: .infographic-box holds the caps title and the tower; #infographic-rows is rebuilt from
       // the hidden #f0 source by rebuildInfographic() — exactly like a ticker's track.
       html: `    <!-- Gap Stack: caps title with an accent dash, then one leaning slab row per driver. -->

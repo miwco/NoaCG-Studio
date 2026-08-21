@@ -44,6 +44,9 @@ export const ig22: TemplateVariant = defineInfographicVariant(
     const raisedText = o.lines[0]?.sample || '124213';
     const goalText = o.lines[1]?.sample || '250000';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 910,
       html: `    <!-- House Goal: [amber bar] | [void panel: label / figure + share / track / caption]. -->
     <div class="infographic-accent"></div>
     <div class="infographic-box">

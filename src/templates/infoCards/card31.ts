@@ -33,5 +33,10 @@ export const card31: TemplateVariant = defineCardVariant(
       'its own accent rule. Calm by default, escalatable on air.',
     uicolor: '3',
   },
-  (o) => buildNoticeCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNoticeCard(FROST, o),
+    stageWidth: 810,
+  }),
 );

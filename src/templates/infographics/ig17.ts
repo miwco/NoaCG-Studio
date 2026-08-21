@@ -32,5 +32,10 @@ export const ig17: TemplateVariant = defineInfographicVariant(
       'fact itself. For product streams, tutorials and pitches.',
     uicolor: '4',
   },
-  (o) => buildFactsBoard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildFactsBoard(HOUSE, o),
+    stageWidth: 1060,
+  }),
 );

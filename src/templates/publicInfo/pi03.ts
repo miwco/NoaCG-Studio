@@ -69,5 +69,8 @@ ${piMasks(o, [[0, 'public-info-source-main'], [1, 'public-info-source-note']])}
   color: var(--text-dim);          /* secondary text color */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 780,
   }),
 );

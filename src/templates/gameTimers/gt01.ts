@@ -93,6 +93,9 @@ export const gt01: TemplateVariant = defineGameTimerVariant(
   22%, 66% { opacity: 0.2; }       /* …off — two quick blinks, then settle */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 250,
     tokens: {
       accentWeight: 'calc(2px * var(--scale))',
       labelTracking: '0.06em',

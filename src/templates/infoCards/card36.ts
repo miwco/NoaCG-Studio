@@ -33,5 +33,10 @@ export const card36: TemplateVariant = defineCardVariant(
       'rule, and the speaker underneath. For post-match interviews aired in two languages.',
     uicolor: '5',
   },
-  (o) => buildStatementCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildStatementCard(VOLT, o),
+    stageWidth: 890,
+  }),
 );

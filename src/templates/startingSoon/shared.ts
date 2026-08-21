@@ -37,6 +37,7 @@ import {
   documentHtml,
   maskImageCss,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -46,6 +47,7 @@ import {
 import { clockRuntimeJs } from '../shared/clock';
 import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
+import { stageExtraJs } from '../shared/stageFit';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { ssPresetById } from './ssPresets';
 import { resolveTokens, type ThemeTokens, type TokenOverrides } from '../../model/themeTokens';
@@ -69,6 +71,17 @@ export interface SsLineDefault {
 }
 
 export interface StartingSoonDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /**
    * Inner HTML of .starting-soon — must contain .starting-soon-box with mask-wrapped #f0…
    * spans, a .starting-soon-clock element when the design has a clock, and exactly one
@@ -222,6 +235,8 @@ function update(data) {
     var el = document.getElementById(key);
     if (el) setFieldValue(el, fields[key]);
   }${idleRepaint}
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // play(): take the holding screen on air${opts.clockJs ? ' — the entrance also starts the countdown' : ''}.
@@ -352,7 +367,11 @@ ${resetCanvasCss(o.resolution)}
 .starting-soon-box {
   position: absolute;              /* content still honours the chosen safe-area zone */
 ${zoneCssText(o.zone, o.nudge, o.resolution)}
-  width: fit-content;              /* the panel hugs the text */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this screen was drawn for')
+      : "  width: fit-content;              /* the panel hugs the text */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -387,7 +406,7 @@ ${dataSourceCss}
 
   const js = ssRuntimeJs(meta.name, preset.emit(cfg), {
     clockJs: clock === 'none' ? null : clockRuntimeJs('starting-soon', minutesId, clock === 'start-time' ? startTimeId : undefined),
-    extraJs: design.runtimeExtraJs?.trim() || undefined,
+    extraJs: stageExtraJs(design.stageWidth, 'starting-soon', design.runtimeExtraJs).trim() || undefined,
   });
 
   const template: SpxTemplate = {

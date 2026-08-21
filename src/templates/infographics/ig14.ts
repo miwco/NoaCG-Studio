@@ -33,5 +33,10 @@ export const ig14: TemplateVariant = defineInfographicVariant(
       'with no term, and still renders. The cascade is one step per row you type.',
     uicolor: '1',
   },
-  (o) => buildFactsBoard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildFactsBoard(CLEAN, o),
+    stageWidth: 960,
+  }),
 );

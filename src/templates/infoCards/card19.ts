@@ -33,5 +33,10 @@ export const card19: TemplateVariant = defineCardVariant(
       'and the interval or next act under a hairline.',
     uicolor: '3',
   },
-  (o) => buildNowNext(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNowNext(FROST, o),
+    stageWidth: 870,
+  }),
 );

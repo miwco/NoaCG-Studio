@@ -200,6 +200,26 @@ await page.evaluate(
             (fd) => fd.ftype === 'textfield' || fd.ftype === 'textarea',
           ).length;
           const px = (n) => Math.round(n * 100) / 100;
+          // A rect CUT BY EVERY CLIPPING ANCESTOR. `getBoundingClientRect` reports layout, not
+          // paint: a row inside an `overflow: hidden` panel still returns its full box after the
+          // panel has clipped it, so a union built from raw rects grows by content the viewer
+          // cannot see - and a staged panel that is holding its height perfectly then reads as
+          // still growing. Same rule as the occlusion work in src/ai/spike.
+          const visibleRect = (el) => {
+            let r = el.getBoundingClientRect();
+            let l = r.left; let t = r.top; let rt = r.right; let b = r.bottom;
+            for (let p = el.parentElement; p; p = p.parentElement) {
+              const pcs = w.getComputedStyle(p);
+              const clipsX = pcs.overflowX === 'hidden' || pcs.overflowX === 'clip';
+              const clipsY = pcs.overflowY === 'hidden' || pcs.overflowY === 'clip';
+              if (!clipsX && !clipsY) continue;
+              const pr = p.getBoundingClientRect();
+              if (clipsX) { l = Math.max(l, pr.left); rt = Math.min(rt, pr.right); }
+              if (clipsY) { t = Math.max(t, pr.top); b = Math.min(b, pr.bottom); }
+            }
+            return { left: l, top: t, right: rt, bottom: b, width: rt - l, height: b - t };
+          };
+
           let minL = Infinity;
           let maxR = -Infinity;
           let minT = Infinity;
@@ -209,8 +229,8 @@ await page.evaluate(
             const cs = w.getComputedStyle(el);
             if (cs.display === 'none' || cs.visibility === 'hidden') continue;
             if (!(parseFloat(cs.opacity) > 0.03)) continue;
-            const r = el.getBoundingClientRect();
-            if (r.width < 1 && r.height < 1) continue; // a zero-box paints nothing
+            const r = visibleRect(el);
+            if (r.width < 1 || r.height < 1) continue; // clipped away entirely, or a zero box
 
             minL = Math.min(minL, r.left);
             maxR = Math.max(maxR, r.right);

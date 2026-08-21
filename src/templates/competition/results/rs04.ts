@@ -56,5 +56,10 @@ export const rs04: TemplateVariant = defineResultsVariant(
       'note, and an operator-controlled current turn.',
     uicolor: '7',
   },
-  (o) => cleanRosterDesign(o, INITIATIVE_FIELDS),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...cleanRosterDesign(o, INITIATIVE_FIELDS),
+    stageWidth: 1080,
+  }),
 );

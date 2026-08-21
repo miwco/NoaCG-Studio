@@ -36,6 +36,9 @@ export const ss04: TemplateVariant = defineStartingSoonVariant(
     uicolor: '4',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 920,
     // Panel = kicker mask + show mask + the clock chip. The chip carries starting-soon-pulse,
     // the hold-loop breath target; #f2 (minutes) is the hidden source appended by the assembler.
     html: `    <!-- House Hold: void panel — mono kicker, display show name, breathing clock chip. -->

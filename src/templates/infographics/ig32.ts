@@ -41,6 +41,9 @@ export const ig32: TemplateVariant = defineInfographicVariant(
     const milestonesText = o.lines[0]?.sample || SAMPLE;
     const currentText = o.lines[1]?.sample || '3200';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 1040,
       html: `    <!-- Clean Milestones: heading / evenly spaced rail and nodes. -->
     <div class="infographic-box"><div class="infographic-head"><div class="infographic-head-left"><span class="infographic-kicker" id="f2">MILESTONES</span><span class="infographic-current" id="infographic-current"></span></div><span class="infographic-reached" id="infographic-reached"></span></div>
       <div class="infographic-rail"><div class="infographic-milestone-track"><div class="infographic-milestone-fill" data-value="0"></div></div><div class="infographic-nodes" id="infographic-nodes"></div></div>

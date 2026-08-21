@@ -138,5 +138,8 @@ ${piMasks(o, [[4, 'public-info-source']])}
   color: var(--label-color);       /* the family's label colour */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1020,
   }),
 );

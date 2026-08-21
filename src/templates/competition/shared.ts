@@ -51,6 +51,7 @@ import {
   dataSourceCss,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -58,6 +59,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { composeRefine, convertToDataRegion } from '../shared/standard';
+import { stageExtraJs } from '../shared/stageFit';
 import type { AnimData, AnimStep } from '../../blocks/animData';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { typeFieldsToSpx, type TypeField } from '../types/graphicType';
@@ -110,6 +112,17 @@ export interface CompDesign {
   fields: SpxField[];
   /** Whether the design carries a .<prefix>-accent element (presets animate it when it does). */
   hasAccent: boolean;
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this board was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * Every category on this assembler is a BOARD - a standings table, a head-to-head, a
+   * nominee list, a series scorebug - and a board is on air with different content all
+   * evening. Hugging makes it re-size itself between one competitor and the next. The
+   * declared width holds a realistic worst case; short content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /**
    * Runtime JS the design owns: row rebuilds, the winner paint, the phase marks. Emitted
    * BEFORE the marked ANIMATION region, so the Motion panel never rewrites it. Any load-time
@@ -177,6 +190,8 @@ function update(data) {
   }
   if (typeof compRebuild === 'function') compRebuild();
   if (typeof compRepaint === 'function') compRepaint();
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // The timeline currently on air. play()/stop() kill it before starting a new one —
@@ -273,10 +288,14 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
   opacity: 0;                      /* hidden until play() runs the entrance */
 }
 
-/* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
+/* ── ${design.stageWidth ? 'The stage: the board keeps its own width and the content fits inside it.' : 'Auto-fit: the panel hugs its content and wraps instead of overflowing.'} ── */
 .${cat.prefix}-box {
   position: relative;              /* anchors the accent and any absolute chrome */
-  width: fit-content;              /* the panel hugs what the design puts in it */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this board was drawn for')
+      : '  width: fit-content;              /* the panel hugs what the design puts in it */'
+  }
   max-width: ${maxTextWidthCss(o.resolution, Math.round(o.resolution.width * (cat.widthFraction ?? 0.5)))};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }`;
@@ -320,7 +339,7 @@ ${design.css}
     easeOut: ease.easeOut,
   };
 
-  const js = compRuntimeJs(meta.name, design.runtimeExtraJs ?? '', preset.emit(cfg));
+  const js = compRuntimeJs(meta.name, stageExtraJs(design.stageWidth || cat.fullFrame, cat.prefix, design.runtimeExtraJs), preset.emit(cfg));
 
   // Timeline v2: the pack creates as animation data blocks. Only the marked region converts —
   // the design's runtime around it stays byte-identical.

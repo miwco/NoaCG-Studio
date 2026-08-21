@@ -33,5 +33,10 @@ export const card22: TemplateVariant = defineCardVariant(
       'type, and a byline in tracked caps. Turn steps on for a newsroom reveal, one press a line.',
     uicolor: '1',
   },
-  (o) => buildHeadlineCard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildHeadlineCard(CLEAN, o),
+    stageWidth: 850,
+  }),
 );

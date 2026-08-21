@@ -49,6 +49,9 @@ export const ig25: TemplateVariant = defineInfographicVariant(
     const milestonesText = o.lines[0]?.sample || MILESTONES_SAMPLE;
     const currentText = o.lines[1]?.sample || '3120';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 1080,
       html: `    <!-- Volt Milestones: [accent edge] | [leaning slab: heading row / rail with markers]. -->
     <div class="infographic-accent"></div>
     <div class="infographic-box">

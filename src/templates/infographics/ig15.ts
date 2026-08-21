@@ -32,5 +32,10 @@ export const ig15: TemplateVariant = defineInfographicVariant(
       'information, course notes and event practicalities.',
     uicolor: '3',
   },
-  (o) => buildFactsBoard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildFactsBoard(FROST, o),
+    stageWidth: 960,
+  }),
 );

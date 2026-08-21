@@ -49,6 +49,12 @@ export const ig27: TemplateVariant = defineInfographicVariant(
     const noteText = o.lines[2]?.sample || 'WEEK 12';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 960,
       html: listBoardHtml({
         note: 'Volt Fixtures: sport slab — accent heading bar, then one row per match.',
         heading: headingText,

@@ -41,6 +41,12 @@ export const ig09: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'TONIGHT';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 860,
       html: `    <!-- Frost Schedule: frosted panel — caps heading, keyline, time/show rows. -->
     <div class="infographic-box">
       <!-- Heading — the panel's soft accent caps kicker (SPX writes field f1 here). -->

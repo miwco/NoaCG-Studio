@@ -33,6 +33,9 @@ export const ss03: TemplateVariant = defineStartingSoonVariant(
     uicolor: '2',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     // Card = kicker mask + headline mask + the clock capsule. The capsule carries
     // starting-soon-pulse, so the hold-loop preset breathes it while the clock ticks inside.
     html: `    <!-- Frost Hold: one frosted card — title caps, show name, clock in a glass pill. -->

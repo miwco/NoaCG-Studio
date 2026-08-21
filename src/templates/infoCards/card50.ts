@@ -94,6 +94,9 @@ ${cardLineMasks(o)}
   color: var(--text-dim);            /* secondary text color */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     tokens: {
       accentWeight: 'calc(2px * var(--scale))',
       labelTracking: '0.2em',

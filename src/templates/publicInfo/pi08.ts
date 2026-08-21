@@ -121,6 +121,9 @@ ${PI_LANG_STACK_CSS}
   color: var(--label-color);       /* the accent, in the house family */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1180,
     // The house label tracking opens too far for a full heading word; tightened like tk05's.
     tokens: { labelTracking: '0.16em' },
   };

@@ -49,6 +49,9 @@ export const es03: TemplateVariant = defineEsportsVariant(
     html: scoreMarkup(o, MARKUP),
     fields: compFieldsFor(SCORE_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1130,
     runtimeExtraJs: SCORE_RUNTIME_JS,
     css: `${scoreStructureCss(MARKUP)}
 

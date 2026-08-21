@@ -45,6 +45,9 @@ export const st02: TemplateVariant = defineResultsVariant(
     html: standingsMarkup(o),
     fields: compFieldsFor(STANDINGS_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1000,
     runtimeExtraJs: STANDINGS_RUNTIME_JS,
     css: `${labelFontFaceCss(fontById('jetbrains-mono'))}
 

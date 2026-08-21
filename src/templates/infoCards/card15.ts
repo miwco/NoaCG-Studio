@@ -32,5 +32,10 @@ export const card15: TemplateVariant = defineCardVariant(
       'Turn steps on and each point arrives on its own SPX Continue.',
     uicolor: '3',
   },
-  (o) => buildTopicCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTopicCard(FROST, o),
+    stageWidth: 1040,
+  }),
 );

@@ -56,6 +56,12 @@ export const ig36: TemplateVariant = defineInfographicVariant(
     const compareText = o.lines[3]?.sample || 'VS 2022';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 650,
       html: `    <!-- Turnout Dial: [printed rule] / [heading] / [dial + the swing beside it]. -->
     <div class="infographic-box">
       <!-- The masthead rule - the printed line the sheet hangs from. -->

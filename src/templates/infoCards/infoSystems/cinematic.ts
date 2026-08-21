@@ -108,6 +108,9 @@ ${emptySystemLines([
   '.info-card-chapter-support',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -250,6 +253,9 @@ ${emptySystemLines([
   '.info-card-next-title',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -366,6 +372,9 @@ ${emptySystemLines([
   '.info-card-quote-source',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -462,6 +471,9 @@ ${emptySystemLines([
   '.info-card-location-context',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 800,
   }),
 );
 
@@ -557,5 +569,8 @@ ${CINEMATIC_MASK_ROOM_CSS}
 
 ${emptySystemLines(['.info-card-lyric-current', '.info-card-lyric-next', '.info-card-lyric-cue'])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1500,
   }),
 );

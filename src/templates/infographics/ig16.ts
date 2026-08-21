@@ -32,5 +32,10 @@ export const ig16: TemplateVariant = defineInfographicVariant(
       'build-up, head-to-head records and any set of numbers a studio talks over.',
     uicolor: '5',
   },
-  (o) => buildFactsBoard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildFactsBoard(VOLT, o),
+    stageWidth: 950,
+  }),
 );

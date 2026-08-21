@@ -40,6 +40,12 @@ export const ig12: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'POSSESSION';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 560,
       html: `    <!-- Volt Poll: solid slab — heavy caps heading on top, the bar rows below. -->
     <div class="infographic-box">
       <!-- Heading — the slab's heavy accent caps kicker (SPX writes field f1 here). -->

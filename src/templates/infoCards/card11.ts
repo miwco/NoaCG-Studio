@@ -33,5 +33,10 @@ export const card11: TemplateVariant = defineCardVariant(
       'underneath. Centred by default, because a keynote card owns the frame.',
     uicolor: '3',
   },
-  (o) => buildTitleCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTitleCard(FROST, o),
+    stageWidth: 960,
+  }),
 );

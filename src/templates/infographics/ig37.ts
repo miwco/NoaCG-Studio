@@ -83,6 +83,12 @@ export const ig37: TemplateVariant = defineInfographicVariant(
     };
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 1060,
       html: `    <!-- House Forecast: [void panel: mono heading over three cascading day columns]. -->
     <div class="infographic-box">
       <div class="infographic-heading" id="f0">3-DAY FORECAST</div>

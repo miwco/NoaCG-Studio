@@ -37,6 +37,9 @@ export const ig01: TemplateVariant = defineInfographicVariant(
     const valueText = o.lines[0]?.sample || '87%';
     const labelText = o.lines[1]?.sample || 'Audience share';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 1070,
       html: `    <!-- Big Stat: [enormous figure] over [short accent rule] over [caps label]. -->
     <div class="infographic-box">
       <!-- The figure — the count-up preset tweens this element's text from 0. -->

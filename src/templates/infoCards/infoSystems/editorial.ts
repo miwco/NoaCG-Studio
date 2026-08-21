@@ -101,6 +101,9 @@ ${systemMasks(o, [
 
 ${emptySystemLines(['.info-card-kicker', '.info-card-display', '.info-card-support'])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -221,6 +224,9 @@ ${emptySystemLines([
   '.info-card-next',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 890,
   }),
 );
 
@@ -323,6 +329,9 @@ ${systemMasks(o, [
 
 ${emptySystemLines(['.info-card-kicker', '.info-card-claim', '.info-card-finding', '.info-card-source'])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -430,6 +439,9 @@ ${systemMasks(o, [
 
 ${emptySystemLines(['.info-card-kicker', '.info-card-heading', '.info-card-body', '.info-card-source'])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 860,
   }),
 );
 
@@ -564,6 +576,9 @@ ${emptySystemLines([
   '.info-card-contact',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
   }),
 );
 
@@ -666,6 +681,9 @@ ${emptySystemLines([
   '.info-card-ledger-source',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1040,
   }),
 );
 
@@ -768,6 +786,9 @@ ${emptySystemLines([
   '.info-card-sponsor-link',
 ])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
 );
 
@@ -857,5 +878,8 @@ ${systemMasks(o, [
 
 ${emptySystemLines(['.info-card-caption-cue', '.info-card-caption-text', '.info-card-caption-source'])}`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1500,
   }),
 );

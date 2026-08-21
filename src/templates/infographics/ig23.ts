@@ -43,6 +43,9 @@ export const ig23: TemplateVariant = defineInfographicVariant(
     const raisedText = o.lines[0]?.sample || '8420';
     const goalText = o.lines[1]?.sample || '15000';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 450,
       html: `    <!-- Frost Goal: one frosted panel — [label] over [ring around the total] over [caption]. -->
     <div class="infographic-box">
       <!-- The label — what is being counted (field f2). -->

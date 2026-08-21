@@ -53,6 +53,7 @@ import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
 import { matchClockJs } from '../shared/matchClock';
 import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
+import { stageExtraJs } from '../shared/stageFit';
 import { resolveTokens, type ThemeTokens, type TokenOverrides } from '../../model/themeTokens';
 
 export interface SbDesign {
@@ -174,6 +175,8 @@ function update(data) {
   // source; a plain scorebug defines no rebuild, so it is only called when it exists.
   if (typeof rebuildScoreboard === 'function') rebuildScoreboard();
   paintMatchState();
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // paintMatchState(): make the board's LOOK agree with the machine's state.
@@ -334,7 +337,7 @@ ${design.css}
     meta.name,
     preset.emit(cfg),
     design.popFields ?? ['f1', 'f3'],
-    (design.runtimeExtraJs ?? '').trim(),
+    stageExtraJs(design.stageWidth, 'scoreboard', design.runtimeExtraJs).trim(),
   );
 
   // Timeline v2: scoreboards create as animation data blocks. Only the marked region

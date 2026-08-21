@@ -117,5 +117,8 @@ export const gt06: TemplateVariant = defineGameTimerVariant(
   50% { opacity: 0.2; }            /* dip mid-blink; settles back at full */
 }`,
     hasAccent: false, // the accent moment is the pill's ring, not a drawn accent element
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 320,
   }),
 );

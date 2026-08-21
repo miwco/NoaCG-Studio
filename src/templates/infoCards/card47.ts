@@ -148,5 +148,8 @@ ${maskLines([
   color: var(--text-dim);           /* dimmed — the third voice on the slab */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
   }),
 );

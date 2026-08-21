@@ -122,5 +122,10 @@ export const mr04: TemplateVariant = defineEsportsVariant(
       'cursor advances atomically through the draft and the completed state closes the board.',
     uicolor: '5',
   },
-  (o) => sportMapDesign(o, VETO_FIELDS, VETO_RUNTIME_JS),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...sportMapDesign(o, VETO_FIELDS, VETO_RUNTIME_JS),
+    stageWidth: 610,
+  }),
 );

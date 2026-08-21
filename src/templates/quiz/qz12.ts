@@ -161,6 +161,9 @@ export const qz12: TemplateVariant = defineQuizVariant(
   color: #e57a7d;                  /* the losing letter carries the down-colour */
 }`,
     hasAccent: false, // the accent moments are the letter rings and the reveal, not a .quiz-accent element
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
   undefined,
   THREE_ANSWER_CONTENT,

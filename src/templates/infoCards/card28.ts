@@ -34,5 +34,10 @@ export const card28: TemplateVariant = defineCardVariant(
       'schedules and orders of play, walked one SPX Continue at a time.',
     uicolor: '5',
   },
-  (o) => buildProcessCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildProcessCard(VOLT, o),
+    stageWidth: 940,
+  }),
 );

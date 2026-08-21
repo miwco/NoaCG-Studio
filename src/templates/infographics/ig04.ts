@@ -41,6 +41,9 @@ export const ig04: TemplateVariant = defineInfographicVariant(
     const valueText = o.lines[0]?.sample || '68';
     const answerText = o.lines[1]?.sample || 'YES';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 640,
       html: `    <!-- Poll Ring: one frosted panel — [question] over [ring around figure + answer]. -->
     <div class="infographic-box">
       <!-- The question — the poll being answered (SPX writes field f2 here). -->

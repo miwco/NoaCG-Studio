@@ -33,5 +33,10 @@ export const card29: TemplateVariant = defineCardVariant(
       'label face. For show runbooks, workflows and teaching a process live.',
     uicolor: '4',
   },
-  (o) => buildProcessCard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildProcessCard(HOUSE, o),
+    stageWidth: 920,
+  }),
 );

@@ -180,6 +180,9 @@ export const qz10: TemplateVariant = defineQuizVariant(
   color: var(--panel-bg);          /* dark ink on the down-colour block */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
   undefined,
   THREE_ANSWER_CONTENT,

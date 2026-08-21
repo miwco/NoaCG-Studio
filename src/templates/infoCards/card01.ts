@@ -78,5 +78,8 @@ ${cardLineMasks(o)}
   margin-top: calc(14px * var(--scale));  /* heading → body: a slightly larger break */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 920,
   }),
 );

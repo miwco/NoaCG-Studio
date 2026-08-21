@@ -33,5 +33,10 @@ export const card32: TemplateVariant = defineCardVariant(
       'its own rule. For stadium announcements, closures and crowd direction.',
     uicolor: '6',
   },
-  (o) => buildNoticeCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNoticeCard(VOLT, o),
+    stageWidth: 890,
+  }),
 );

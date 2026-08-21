@@ -141,6 +141,9 @@ ${Array.from(
   display: block;                   /* no inline baseline gap under the image */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     // Four real SPX image fields — one per partner, numbered after the label line.
     extraFields: Array.from({ length: SLOTS }, (_, i) => ({
       field: designFieldId(o, i),
