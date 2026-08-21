@@ -11,7 +11,7 @@
 //     difference between checking the right tree and checking a stranger's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyMainSync, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
+import { classifyCiRun, classifyMainSync, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -110,4 +110,86 @@ test('merge-tree failing for any other reason is not reported as clean', () => {
     throw error;
   };
   assert.equal(previewConflicts('some-branch', runner).clean, false);
+});
+
+// What a CI run PROVES, as opposed to what its green tick suggests. Both halves below cost real
+// time on 2026-08-21: a run whose E2E shards were skipped had to be reasoned about by hand twice,
+// and `gh run list` handed back a deploy-verify run for the same commit, which has no CI gate at
+// all. Neither can be allowed to read as ordinary evidence.
+const SHA = 'c80225b7e258b85cad92e5c39b16cb5f56762402';
+const shardJobs = (n, mode) =>
+  Array.from({ length: n }, (_, i) => ({ name: `E2E ${i + 1}/${n} (${mode})`, conclusion: 'success' }));
+const GATE = { name: 'CI gate', conclusion: 'success' };
+
+test('a green full-suite run on the right commit is accepted with no warnings', () => {
+  const verdict = classifyCiRun({ headSha: SHA, conclusion: 'success', jobs: [GATE, ...shardJobs(9, 'full')] }, SHA);
+  assert.equal(verdict.ok, true);
+  assert.deepEqual(verdict.warnings, []);
+  assert.equal(verdict.shardsRan, 9);
+  assert.equal(verdict.mode, 'full');
+});
+
+test('a run for a DIFFERENT commit is refused even when green', () => {
+  const verdict = classifyCiRun({ headSha: 'f'.repeat(40), conclusion: 'success', jobs: [GATE, ...shardJobs(9, 'full')] }, SHA);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.blocking.join(' '), /not the commit being promoted/);
+});
+
+test('a green run whose E2E shards were SKIPPED passes but says what it does not prove', () => {
+  const verdict = classifyCiRun(
+    { headSha: SHA, conclusion: 'success', jobs: [GATE, { name: 'E2E ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} (none)', conclusion: 'skipped' }] },
+    SHA,
+  );
+  assert.equal(verdict.ok, true, 'not a blocker - a scripts-only change legitimately plans mode: none');
+  assert.equal(verdict.shardsRan, 0);
+  assert.match(verdict.warnings.join(' '), /proves the build, NOT behaviour/);
+});
+
+test('a missing CI gate job is never a pass', () => {
+  const verdict = classifyCiRun({ headSha: SHA, conclusion: 'success', jobs: shardJobs(9, 'full') }, SHA);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.blocking.join(' '), /no "CI gate" job/);
+});
+
+test('a red gate blocks even when the run itself says success', () => {
+  const verdict = classifyCiRun(
+    { headSha: SHA, conclusion: 'success', jobs: [{ name: 'CI gate', conclusion: 'failure' }, ...shardJobs(9, 'full')] },
+    SHA,
+  );
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.blocking.join(' '), /"CI gate" concluded "failure"/);
+});
+
+test('a job killed while queued is reported as DAMAGED, not as a verdict', () => {
+  const verdict = classifyCiRun(
+    { headSha: SHA, conclusion: 'failure', jobs: [{ name: 'CI gate', conclusion: 'failure', steps: [] }, ...shardJobs(9, 'full')] },
+    SHA,
+  );
+  assert.match(verdict.warnings.join(' '), /DAMAGED rather than failing/);
+});
+
+test('a job whose only failed step is "Set up job" is damaged too', () => {
+  const jobs = [
+    { name: 'CI gate', conclusion: 'failure', steps: [{ name: 'Set up job', conclusion: 'failure' }] },
+    ...shardJobs(9, 'full'),
+  ];
+  assert.match(classifyCiRun({ headSha: SHA, conclusion: 'failure', jobs }, SHA).warnings.join(' '), /DAMAGED/);
+});
+
+test('an ordinary red job is NOT excused as damaged', () => {
+  const jobs = [
+    { name: 'CI gate', conclusion: 'failure', steps: [{ name: 'Set up job', conclusion: 'success' }, { name: 'Build', conclusion: 'failure' }] },
+    ...shardJobs(9, 'full'),
+  ];
+  const verdict = classifyCiRun({ headSha: SHA, conclusion: 'failure', jobs }, SHA);
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.warnings.join(' ').includes('DAMAGED'), false);
+});
+
+test('a cancelled run is refused even if its gate job somehow reads success', () => {
+  // A cancelled or skipped run is not a pass, and the run-level conclusion is the only place
+  // that says so - the gate job alone cannot be trusted to carry it.
+  const verdict = classifyCiRun({ headSha: SHA, conclusion: 'cancelled', jobs: [GATE, ...shardJobs(9, 'full')] }, SHA);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.blocking.join(' '), /concluded "cancelled"/);
 });

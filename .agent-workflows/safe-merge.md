@@ -362,6 +362,17 @@ branch - it is never where conflicts get resolved.
    sides. Route A and Route B ask the same question again, which is what makes preferring
    Route A safe.
 
+   **Have the preflight read the run rather than eyeballing it** - once the run has finished:
+
+       node scripts/safe-merge-preflight.mjs --branch <branch> --phase 3 --verified-sha <VERIFIED_SHA>
+
+   It finds the ci.yml run for that exact commit and applies the three acceptance conditions
+   below, plus the two that decide whether a green tick is EVIDENCE: whether the E2E shards
+   actually ran (a `scripts/`- or `docs/`-only change plans `mode: none` and skips every shard -
+   green, and silent about behaviour), and whether any job is damaged rather than failing. The
+   skipped-shard case warns instead of blocking, because it is often legitimate - but it must be
+   SAID, and the report must then cite the full-suite run it is leaning on.
+
    **Route A - CI (prefer this).** Push the integrated branch and let the gate run there:
 
        git push origin <branch>

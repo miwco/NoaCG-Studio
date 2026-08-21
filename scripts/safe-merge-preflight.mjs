@@ -115,6 +115,73 @@ export function previewConflicts(branch, runner = git) {
   }
 }
 
+/**
+ * What a CI run actually PROVES about the commit being promoted.
+ *
+ * The three acceptance conditions are mechanical - head SHA, conclusion, the `CI gate` job - and
+ * two further things decide whether a green run is evidence at all:
+ *
+ * 1. WHICH SHARDS RAN. The affected map ignores `scripts/` and `docs/`, so a change confined to
+ *    them plans `mode: none` and every E2E shard is SKIPPED. That run is green and proves the
+ *    build; it proves nothing about behaviour. It happened twice on 2026-08-21, and each time the
+ *    reasoning ("the previous commit ran the full suite and the delta is inert") lived only in
+ *    prose. Stating it is fine - assuming it silently is not - so this WARNS rather than blocks,
+ *    and names what has to be cited instead.
+ * 2. WHETHER THE RUN WAS DAMAGED. A job killed while queued, or one whose only failed step is
+ *    `Set up job`, is a runner failure and not a verdict on the code (docs/VERIFICATION.md, and
+ *    the 2026-08-06 Actions incident). A damaged run must never read as a clean red OR a clean
+ *    green.
+ */
+export function classifyCiRun(run, verifiedSha) {
+  const jobs = run.jobs ?? [];
+  const blocking = [];
+  const warnings = [];
+
+  if (run.headSha !== verifiedSha) {
+    blocking.push(`run is for ${String(run.headSha).slice(0, 8)}, not the commit being promoted (${verifiedSha.slice(0, 8)})`);
+  }
+  if (run.conclusion !== 'success') blocking.push(`run concluded "${run.conclusion}"`);
+
+  const gate = jobs.find((j) => j.name === 'CI gate');
+  if (!gate) blocking.push('no "CI gate" job - that job requires every other, so its absence is not a pass');
+  else if (gate.conclusion !== 'success') blocking.push(`"CI gate" concluded "${gate.conclusion}"`);
+
+  const shards = jobs.filter((j) => /^E2E \d+\/\d+ /.test(j.name ?? ''));
+  const ranShards = shards.filter((j) => j.conclusion === 'success');
+  const skippedShardMatrix = jobs.some(
+    (j) => j.conclusion === 'skipped' && /^E2E .*(matrix\.shardIndex|\d+\/\d+)/.test(j.name ?? ''),
+  );
+  if (ranShards.length === 0) {
+    warnings.push(
+      skippedShardMatrix || shards.length === 0
+        ? 'E2E shards were SKIPPED (mode: none) - this run proves the build, NOT behaviour. Cite the full-suite run on the nearest commit and show the delta is inert, or force one: gh workflow run ci.yml --ref <branch>'
+        : 'no E2E shard reported success',
+    );
+  }
+
+  const damaged = jobs.filter((j) => {
+    if (j.conclusion === 'success' || j.conclusion === 'skipped') return false;
+    const steps = j.steps ?? [];
+    // No steps at all: the job was killed while queued and never executed a line of this repo.
+    if (steps.length === 0) return true;
+    // Otherwise it is damaged only if something DID fail and the only thing that failed was
+    // runner acquisition. `every` on an empty list is vacuously true, so the emptiness check
+    // above must stay separate - without the length guard here, a job with no failed steps at
+    // all would be excused as damaged.
+    const failedSteps = steps.filter((s) => s.conclusion === 'failure');
+    return failedSteps.length > 0 && failedSteps.every((s) => s.name === 'Set up job');
+  });
+  if (damaged.length > 0) {
+    warnings.push(
+      `${damaged.length} job(s) look DAMAGED rather than failing (${damaged.map((j) => j.name).join(', ')}) - ` +
+        'a runner that never started is not a verdict; re-run before concluding anything',
+    );
+  }
+
+  const mode = /\((\w+)\)\s*$/.exec(shards[0]?.name ?? '')?.[1] ?? (ranShards.length ? 'unknown' : 'none');
+  return { ok: blocking.length === 0, blocking, warnings, shardsRan: ranShards.length, mode };
+}
+
 const results = [];
 function check(label, ok, detail = '', { fatal = true } = {}) {
   results.push({ label, ok, detail, fatal });
@@ -224,6 +291,51 @@ function phase1(args) {
   return 0;
 }
 
+/** Phase 3 - is there a CI run that actually verifies VERIFIED_SHA, and what does it prove? */
+function phase3(args) {
+  const { branch, verifiedSha } = args;
+  console.log(`safe-merge preflight - PHASE 3 (what CI proves) for ${branch}\n`);
+  if (!check('--verified-sha given', Boolean(verifiedSha))) return 1;
+
+  let run;
+  try {
+    const id = execFileSync(
+      'gh',
+      // --workflow matters: a commit also carries deploy-verify runs, and `gh run list` returns
+      // the NEWEST of any workflow. Judging one of those would ask a deployment check for a
+      // verdict it never had - it has no `CI gate` job and runs no shards.
+      ['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--commit', verifiedSha,
+        '--limit', '1', '--json', 'databaseId', '--jq', '.[0].databaseId'],
+      { cwd: ROOT, encoding: 'utf8' },
+    ).trim();
+    if (!id) {
+      check(`a CI run exists for ${verifiedSha.slice(0, 8)}`, false, 'none - push the branch, or use the local fallback (Route B)');
+      return 1;
+    }
+    run = JSON.parse(
+      execFileSync('gh', ['run', 'view', id, '--json', 'headSha,conclusion,status,jobs'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    );
+    info('run', `${id} (${run.status})`);
+  } catch (error) {
+    check('could read the CI run from gh', false, error.message.split('\n')[0]);
+    return 1;
+  }
+
+  const verdict = classifyCiRun(run, verifiedSha);
+  check('CI run verifies exactly this commit, green, gate included', verdict.ok, verdict.blocking.join('; '));
+  check(
+    `E2E shards ran (${verdict.shardsRan} shard(s), mode ${verdict.mode})`,
+    verdict.shardsRan > 0,
+    verdict.warnings.join(' | '),
+    { fatal: false },
+  );
+  return 0;
+}
+
 function phase4(args) {
   const { branch, verifiedSha, integratedMainSha } = args;
   console.log(`safe-merge preflight - PHASE 4 (re-check before promoting) for ${branch}\n`);
@@ -255,7 +367,8 @@ function main() {
       '[--verified-sha <sha>] [--integrated-main-sha <sha>] [--no-fetch] [--skip-order]');
     return 2;
   }
-  const early = args.phase === 4 ? phase4(args) : phase1(args);
+  const phases = { 1: phase1, 3: phase3, 4: phase4 };
+  const early = (phases[args.phase] ?? phase1)(args);
   const failed = results.filter((r) => !r.ok && r.fatal);
   console.log(
     `\n${failed.length === 0 ? 'PREFLIGHT OK' : 'PREFLIGHT BLOCKED'} - ` +
