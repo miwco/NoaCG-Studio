@@ -25,7 +25,7 @@
 
 import { chromium } from '@playwright/test';
 import { devPort } from '../scripts/dev-port.mjs';
-import { activeRuns, describeRuns, selfAndAncestors } from '../scripts/e2e-runs.mjs';
+import { activeRuns, blockingRuns, describeRuns, selfAndAncestors, selfRun } from '../scripts/e2e-runs.mjs';
 import { resolve } from 'node:path';
 
 /** Keys playwright.config.ts pins EMPTY. A non-empty value means the pin did not apply. */
@@ -70,9 +70,15 @@ async function waitForOtherRuns(): Promise<void> {
   // waits out its whole 30-minute cap behind this very process. Excluding our own process
   // chain as well is the identity that path-matching cannot supply.
   const mine = selfAndAncestors();
+  // WHO GOES FIRST when two runs start together. A run waiting here is indistinguishable in the
+  // process table from one driving a browser, so before `blockingRuns` existed two simultaneous
+  // starts each queued behind the other and both sat out the full cap below. `blockingRuns`
+  // yields only to work that is AHEAD of this run in a total order both sides compute the same
+  // way; scripts/e2e-runs.mjs carries the reasoning.
+  const self = selfRun(mine);
   const deadline = Date.now() + QUEUE_TIMEOUT_MS;
   let announced = false;
-  const others = () => activeRuns({ exclude: me, excludePids: mine });
+  const others = () => blockingRuns(activeRuns({ exclude: me, excludePids: mine }), self);
 
   for (let runs = others(); runs.length > 0; runs = others()) {
     if (Date.now() > deadline) {

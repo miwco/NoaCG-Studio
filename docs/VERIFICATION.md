@@ -162,6 +162,14 @@ than fail, `node scripts/e2e-runs.mjs --all` to see what is running, and `--orph
 `--kill-orphans` to reap browsers a killed run left behind. `NOACG_ALLOW_PARALLEL_E2E=1` in the
 command overrides.
 
+**Two runs that start in the same second do not both wait.** A run sitting in its globalSetup is
+indistinguishable in the process table from one driving a browser, so each used to queue behind
+the other and both sat out the 30-minute cap - two worktrees, both idle at ~2 s of CPU sixteen
+minutes in, and killing either one released the other within seconds (2026-08-21). `blockingRuns`
+(`scripts/e2e-runs.mjs`) now orders runs by start time, ties broken by pid, and a run yields only
+to those ahead of it: one starts, the rest queue behind it in a stable FIFO. A SWEEP is always
+yielded to - it has no globalSetup and never waits for anyone, so it can only be work in progress.
+
 Anything the named list misses is absorbed by the worker ladder (`scripts/e2e-workers.mjs`): it
 reads FREE MEMORY at start and takes fewer workers when something heavy is already resident, which
 is why the local worker count is not a constant.
