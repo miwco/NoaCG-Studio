@@ -89,6 +89,9 @@ export const SWEEP_SCRIPTS =
   // over its own build, an exported package and a catalog category at three viewport sizes,
   // which is a job by every measure this module cares about.
   + '|acceptance-shots|acceptance-pack'
+  // The PLAYOUT DASHBOARD frames, for the same reason as the two above and named like neither
+  // family: it builds a production through the app and photographs it at four window sizes.
+  + '|playout-dashboard-shots'
   + `|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 

@@ -3,6 +3,7 @@ import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
 import { createProject } from './_create';
 import { relayServe, routeOrigin } from './_relay';
+import { settleDurableWrites } from './_durable';
 
 // The production page's GRAPHIC ACTIONS block (docs/PLAYOUT_DASHBOARD.md §8): the machine's
 // ⚡ buttons rendered from the metadata that travels inside the template, greyed by the
@@ -766,6 +767,11 @@ test.describe('the production page scrolls as one page', () => {
       const fresh = shows.loadShows().find((s) => s.id === show.id)!;
       shows.updateShowCue(show.id, fresh.cues![fresh.cues!.length - 1].id, { label: 'Portrait strap' });
     });
+    // A durable write is ACCEPTED synchronously and lands a moment later, so the reload below
+    // was aborting it - intermittently, and only the LAST write, which is the rename this test
+    // then waits sixty seconds for. Every spec that saves off the UI and reloads owes this
+    // (e2e/_durable.ts); this one predates the helper.
+    await settleDurableWrites(page);
     await page.reload();
     await expect(page.getByTestId('production-page')).toBeVisible();
 
@@ -808,7 +814,7 @@ test.describe('the production page scrolls as one page', () => {
       await page.setViewportSize({ width, height: 900 });
       const grid = page.locator('.pd-fields');
       const spills = await grid.evaluate((el) =>
-        [...el.children]
+        [...el.querySelectorAll('.pd-band-fields > *')]
           .filter((f) => f.scrollWidth > f.clientWidth + 1)
           .map((f) => `${f.textContent?.slice(0, 24)} (${f.scrollWidth} > ${f.clientWidth})`),
       );
@@ -868,5 +874,99 @@ test.describe('the production page scrolls as one page', () => {
     const head = await page.locator('.pd-stagehead').boundingBox();
     const monitors = await page.locator('.pd-monitors').boundingBox();
     expect(head!.height).toBeLessThanOrEqual(monitors!.height + 30);
+  });
+});
+
+/**
+ * THE CUE EDITOR GROUPS A TWO-SIDED BOARD BY SIDE — and leaves everything else alone.
+ *
+ * Owner, 2026-08-21: "if we have a scoring system then everything that fits one team should be
+ * on one row or one column and the other team is in the next row." The grouping is DERIVED from
+ * the field titles (control/cueFieldGroups.ts) - the same side tokens the data-row loader
+ * already reads - because the owner's next sentence is the constraint: "we have no idea what
+ * kinds of graphics we will have in the future."
+ *
+ * So this spec has two halves, and the second is the one that matters: a graphic the rule is not
+ * confident about must render EXACTLY as it always did. A wrong grouping tells an operator two
+ * fields are related when they are not, which is worse than no grouping at all.
+ */
+test.describe('the cue editor groups fields by what they belong to', () => {
+  test('a scoreboard reads one team per band, headed by that team’s own name', async ({ page }) => {
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+
+    // Three bands: a side each, then what both sides share.
+    await expect(editor.locator('.pd-band')).toHaveCount(3);
+    const band = (id: string) => editor.getByTestId(`cue-band-${id}`);
+    for (const [id, fields] of [
+      ['side-A', ['F0 · Team A', 'F1 · Score A', 'F6 · Team A colour']],
+      ['side-B', ['F2 · Team B', 'F3 · Score B', 'F7 · Team B colour']],
+      ['shared', ['F4 · Period', 'F5 · Clock']],
+    ] as const) {
+      await expect(band(id).locator('.pd-band-fields > *')).toHaveCount(fields.length);
+      for (const f of fields) await expect(band(id)).toContainText(f);
+    }
+
+    // THE HEADING IS THE OPERATOR'S OWN WORD for that side - the value of the side's first
+    // field - because "ARC" says which half of the board you are editing and "Side A" only says
+    // that a split exists. Typing a new name re-heads the band live.
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('HOME');
+    await page.getByTestId('cue-field-f0').fill('ARC');
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('ARC');
+    // Emptied, it falls back rather than showing a blank heading.
+    await page.getByTestId('cue-field-f0').fill('');
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('Side A');
+
+    // The cue's SETTINGS are not content: out of the field grid, under their own rule. This is
+    // what stopped "Playout layer" flowing in as a tenth field and landing alone on a second row.
+    const meta = page.getByTestId('cue-meta');
+    await expect(meta.getByTestId('cue-note')).toBeVisible();
+    await expect(meta.getByTestId('graphic-layer')).toBeVisible();
+    await expect(editor.locator('.pd-fields').getByTestId('graphic-layer')).toHaveCount(0);
+  });
+
+  test('a quiz is NOT grouped: A and B there are a lettered list, not two sides', async ({ page }) => {
+    // The trap this pins. A quiz titles its fields "Answer A", "Answer B", "Answer C", "Answer
+    // D" - the same tokens a scoreboard uses for two teams. Grouped, it would put Answer A in
+    // one band, Answer B in another, and C and D in a third called "Both".
+    await createProject(page, { name: 'Arena Quiz' });
+    await productionFor(page, 'Quiz Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+
+    await expect(editor.locator('.pd-band')).toHaveCount(1);
+    await expect(editor.getByTestId('cue-band-all')).toHaveClass(/pd-band-plain/);
+    await expect(editor.locator('.pd-band-label')).toHaveCount(0);
+    // Every field is still there, in field order - the flat flow, untouched.
+    await expect(editor.getByTestId('cue-band-all').locator('.pd-band-fields > *')).toHaveCount(
+      await editor.locator('.pd-band-fields > *').count(),
+    );
+
+    // WHICH GUARD ACTUALLY REFUSED. The shipped quizzes carry one "Answer A" and one "Answer B",
+    // so the two-fields-a-side threshold turns them away before the lettered-list rule is even
+    // consulted - and a rule nothing reaches is a rule nobody has tested. This asks the module
+    // directly, with the shape that gets PAST the threshold: a poll whose options each carry a
+    // colour. Without the lettered-list rule it groups A against B and hides C in "Both".
+    const decided = await page.evaluate(async () => {
+      const { groupCueFields } = await import('/src/control/cueFieldGroups.ts');
+      const lettered = ['Option A', 'Option A colour', 'Option B', 'Option B colour', 'Option C', 'Option C colour']
+        .map((label, i) => ({ key: `f${i}`, label }));
+      const sided = ['Team A', 'Score A', 'Team B', 'Score B', 'Period'].map((label, i) => ({ key: `f${i}`, label }));
+      // Two fields a side, and nothing in common: an A and a B that are not two halves of one
+      // thing. The sides of a real board are described by the SAME words.
+      const unmirrored = ['Camera A', 'Camera A note', 'Sponsor B', 'Sponsor B url', 'Title']
+        .map((label, i) => ({ key: `f${i}`, label }));
+      return {
+        lettered: groupCueFields(lettered).length,
+        sided: groupCueFields(sided).length,
+        unmirrored: groupCueFields(unmirrored).length,
+      };
+    });
+    expect(decided.lettered, 'a lettered list must not be split into two sides').toBe(1);
+    expect(decided.unmirrored, 'an unrelated A and B must not be drawn as two sides').toBe(1);
+    // …and the same call still groups a real board, so this is a rule and not a switched-off one.
+    expect(decided.sided).toBe(3);
   });
 });

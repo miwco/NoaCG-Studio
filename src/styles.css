@@ -6072,17 +6072,60 @@ h2 + .lib-row,
    size(77) + three 6px gaps = 245px against a 210px floor, so every number field on the surface
    was 35px into its neighbour. Measured, not guessed - `.ctl-*` widths are a few lines up, and
    `.pd-fields .row` below is the structural backstop for the control this arithmetic misses. */
-.pd-fields {
+/* THE EDITOR IS A STACK OF BANDS, and the grid above is what a band's FIELDS lay out in
+   (control/cueFieldGroups.ts). One band per side on a two-sided board, one for what both sides
+   share, one unlabelled band on everything the grouping rule is not confident about - which is
+   byte-for-byte the flat flow this used to be, because that band holds every field.
+
+   The heading sits in a LEFT GUTTER rather than above the fields, so the bands line up as rows
+   an operator reads across: "ARC · Team, Score, Colour" over "YLE12 · Team, Score, Colour" is
+   the shape the owner asked for ("everything that fits one team should be on one row"). Below
+   the gutter's width the heading goes back on top of its band, where a 92px column would leave
+   a field 150px wide. */
+.pd-fields { display: flex; flex-direction: column; gap: 10px; }
+.pd-band { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: start; gap: 4px 12px; }
+/* No heading, no gutter: the ungrouped band must not indent itself past a column that is empty. */
+.pd-band-plain { grid-template-columns: minmax(0, 1fr); }
+.pd-band-label {
+  /* Cap-aligned with the first field's own label rather than with its input, which is what
+     makes a band read as a heading over a row instead of a stray value beside one. */
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A CAP, NOT `1fr`. Stretching three fields across a 2560px band gave a team NAME a 663px box -
+   a text input wider than the monitor above it, and three of them so far apart the band stopped
+   reading as one thing. The leftover width is left over on purpose: the point of a band is that
+   its fields sit TOGETHER. */
+.pd-band-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--pd-field-min, 250px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(var(--pd-field-min, 250px), var(--pd-field-max, 340px)));
   gap: 8px 14px;
+  min-width: 0;
 }
 /* THE BACKSTOP. A future control wider than the floor above WRAPS inside its own field instead
    of painting over the field beside it: an overlap is unreadable and silent, a wrapped row is
    merely taller. Never the everyday layout - at or above the floor nothing here wraps. */
 .pd-fields .field-row > .row,
 .pd-fields .pd-field > .row { flex-wrap: wrap; }
-.pd-fields > * { min-width: 0; }
+.pd-band-fields > * { min-width: 0; }
+/* CUE SETTINGS: the note and the layer, under a hairline and OUT of the content grid. They are
+   not things the graphic shows, and flowing them in beside the fields is what left the layer
+   alone on a second row reading like a field nobody finished. */
+.pd-cue-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  max-width: 640px;
+}
 .pd-field { display: flex; flex-direction: column; gap: 3px; }
 .pd-field > span {
   font-size: 10px;
@@ -6092,6 +6135,14 @@ h2 + .lib-row,
 }
 .pd-field input { width: 100%; }
 .pd-field-layer { max-width: 130px; }
+/* THE GUTTER GOES AWAY BEFORE THE FIELDS DO. A band heading in a 92px left column is worth its
+   width only while the fields beside it still have room; below this the heading sits on top of
+   its own band and the fields keep the full width. The number is where one 250px field plus the
+   gutter plus the editor's padding stops fitting a phone-to-tablet window. */
+@media (max-width: 620px) {
+  .pd-band { grid-template-columns: minmax(0, 1fr); }
+  .pd-cue-meta { grid-template-columns: minmax(0, 1fr); }
+}
 .pd-editor-events { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .pd-editor-events button { font-size: 12.5px; padding: 6px 11px; }
 
@@ -6169,20 +6220,37 @@ h2 + .lib-row,
 }
 
 /* The production workspaces: Playout | Data (docs/INTERACTIVE_PLAYOUT_PLAN.md D6). */
+/* THE SEGMENTED CONTROL IS ADDRESSED BY POSITION, NOT BY TAG. Playout is a `<button>` (it
+   returns in THIS tab), Data and Audience are `<a target=_blank>` (they open in their own), and
+   whichever one you are standing on is a plain `<span>`. Selecting only `button` dressed exactly
+   one of the three: the other two rendered as bare inline text with no padding and no border, so
+   the header read "Playout DataAudience" - two workspaces run together into one word. */
 .pd-tabs { display: inline-flex; margin-left: 10px; }
-.pd-tabs button {
+.pd-tabs > * {
+  display: inline-flex;
+  align-items: center;
   font-size: 12.5px;
   padding: 5px 14px;
-  border-radius: 0;
+  border: 1px solid var(--border);
   border-right-width: 0;
+  border-radius: 0;
+  background: var(--bg-2);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.pd-tabs button:first-child { border-radius: 6px 0 0 6px; }
-.pd-tabs button:last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
-.pd-tabs button.on {
+.pd-tabs > a:hover { background: var(--bg-3); }
+.pd-tabs > :first-child { border-radius: 6px 0 0 6px; }
+.pd-tabs > :last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
+/* The one you are on: amber, and NOT a control - it is a span precisely because there is nowhere
+   for it to take you. */
+.pd-tabs > .on {
   background: var(--accent);
   border-color: var(--accent);
   color: #14161a;
   font-weight: 600;
+  cursor: default;
 }
 
 /* The DATA workspace: the production's own tables. */
@@ -6405,10 +6473,11 @@ h2 + .lib-row,
 .pd-dataset-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .pd-dataset-foot input { max-width: 200px; }
 .pd-field-load select { width: 100%; }
-/* The A|B side picker sits in the "Load data row" label. The row must span the whole editor
-   grid (.pd-fields is repeat(auto-fit, minmax(210px, 1fr))), or the picker and the row select
-   get squeezed into one 210px cell beside F0. */
-.pd-field-load { grid-column: 1 / -1; }
+/* The A|B side picker sits in the "Load data row" label, which is a direct child of `.pd-fields`
+   - a BAND-height stack now, not the field grid - so the row already spans the editor and needs
+   no span of its own. It is capped instead, or a full-width select for a five-row question bank
+   stretches across a 2560px window. */
+.pd-field-load { max-width: 640px; }
 .pd-side-pick {
   display: inline-flex;
   margin-left: 8px;

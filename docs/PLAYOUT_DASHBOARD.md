@@ -286,25 +286,58 @@ to stretch inflates the pitch instead, which is what put six 40px buttons on a 7
 1920×1000. Below the threshold the two-up grid stands, because six 44px verbs are taller than the
 monitors on a short window.
 
-**The open question — grouping (owner, 2026-08-21, NOT DONE).** The fields flow in field order
-into whatever number of columns the window affords, so a scoreboard reads as one long undifferentiated
-row: Team A, Score A, Team B, Score B, Period, Clock, colours, note, layer, with the layer left
-alone on a second row on a wide monitor. *"If we have a scoring system then everything that fits
-one team should be on one row or one column and the other team is in the next row. There would be
-some logic in how we build up the dashboard."* The owner's own caveat is why nothing here has been
-built: **we do not know what graphics exist yet**, so no hard per-graphic layout rule can be
-written, and the surface must keep scaling to every resolution.
+### 2e. Grouping — the editor is a stack of BANDS
 
-What a solution would have to be, when it is taken up: **grouping derived from the fields
-themselves, never a per-template layout**. The candidates, cheapest first — (1) the A/B SIDE
-split the surface already computes for the data-row loader (`hasSides`, `control/cueData.ts`): a
-field whose title ends in "A"/"B" or "Home"/"Away" belongs to that side, and one side is one row;
-(2) a shared title PREFIX ("Team …", "Score …") as a weaker grouping for everything the side rule
-misses; (3) CUE METADATA — the operator note and the playout layer are not content and probably
-belong in their own strip rather than as two more cells in the content grid, which is also what
-makes the layer stop reading as an orphan. All three are derivable from what a template already
-carries, which is the test any candidate has to pass. Until then the flow is deliberate, and the
-bug the flow used to have (overlap) is fixed and pinned.
+Owner, 2026-08-21: *"If we have a scoring system then everything that fits one team should be on
+one row or one column and the other team is in the next row. There would be some logic in how we
+build up the dashboard."* Before this the fields flowed in field order into whatever number of
+columns the window afforded, so a scoreboard read as one long undifferentiated row — Team A,
+Score A, Team B, Score B, Period, Clock, two colours, the note — with the playout layer left alone
+on a second row.
+
+**The rule, and it is the whole rule: grouping is DERIVED from the template, never authored.**
+`control/cueFieldGroups.ts` knows about no graphic type, and the constraint is the owner's own next
+sentence — *"we have no idea what kinds of graphics we will have in the future"*. It reads the same
+A/B side tokens `control/cueData.ts` already reads to load a teams table into one half of a board:
+if that rule is good enough to decide which fields a data row fills, it is good enough to decide
+which fields belong beside each other. When it is not confident it returns ONE unlabelled band
+holding every field, which renders byte-for-byte as the flat flow always did. **A wrong grouping is
+worse than none** — it tells an operator two fields are related when they are not — so every guard
+fails toward the flat flow:
+
+- **Two fields a side, on both sides.** One "Team A" among eight unrelated fields is a coincidence.
+- **The sides must MIRROR each other**: their titles with the side token removed have to overlap.
+  "Camera A / Camera A note" against "Sponsor B / Sponsor B url" is an A and a B, not two halves.
+- **A lettered LIST is not a board.** A quiz titles its fields "Answer A", "Answer B", "Answer C",
+  "Answer D" — the same shape with the same first two letters. A single capital letter standing as
+  its own word past B is the tell, and a two-sided board never has one.
+
+Measured over the whole catalog on the day it shipped: **33 of 504 designs group** — every
+scoreboard, match board, series bug, match-up and head-to-head — and 21 more carry side tokens and
+are refused, every one of them a quiz or a bracket whose sides are a data column rather than a pair
+of field sets. No false positive, no false negative.
+
+**A band's heading is the operator's own word for that side** — the value of its first field, which
+on every two-sided board we ship is the name. "ARC" over "YLE12" says which half of the board you
+are editing in the language of the show; "Side A" over "Side B" only says that a split exists. It
+falls back to `Side A` on an empty value or one longer than 20 characters (a heading is a glance,
+and a wrapped one is worse than a generic one). The shared band is headed `Both`.
+
+The heading sits in a 92px LEFT GUTTER so the bands read as rows across, and drops above its band
+below 620px. A band's fields keep the auto-fit grid from §2d, **capped rather than `1fr`**: three
+fields stretched across a 2560px band gave a team name a 663px box and pushed the three so far
+apart the band stopped reading as one thing.
+
+**Cue SETTINGS are not content.** The operator note (the cue's) and the playout layer (the
+graphic's) sit under a hairline in their own strip, out of the field grid — neither is something
+the graphic shows, and flowing them in beside the content fields is exactly what left the layer
+alone on a second row looking like a field nobody finished.
+
+Both React surfaces render this: the in-app editor and the hosted control page, one module,
+docs/CONTROL_PANEL_PARITY.md §4.
+
+**Still open**: a shared title PREFIX ("Team …", "Score …") as a weaker grouping for what the side
+rule refuses. Nothing in the catalog needs it today, which is why it is not written.
 
 ## 3. Layout — phone
 
