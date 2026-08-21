@@ -729,6 +729,21 @@ export function importSvgMarkup(source: string): SvgImportResult {
     return { id, label: label || `Shapes ${i + 1}`, marked };
   });
 
+  // A layer name is a designer's private note ("Name" on three different straps) and becomes an
+  // OPERATOR'S label. Three rows reading "Name", and a control page with three identical inputs,
+  // is a file the reader has to decode by clicking. Numbered in document order, and only where
+  // the name actually repeats — the common file numbers nothing.
+  numberRepeats([...candidates, ...images, ...outlines]);
+
+  // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
+  // not in the rows above. Said out loud only when a <use> actually paints one: an unused symbol
+  // library is invisible, and nobody wonders where its text went.
+  if (svg.querySelector('use') && Array.from(svg.querySelectorAll('symbol, defs')).some((d) => d.querySelector('text'))) {
+    notices.push(
+      'Text inside a reusable symbol is drawn but cannot become an operator field — every copy of a symbol shows the same words. Move that text onto the artboard if it should be editable.',
+    );
+  }
+
   return {
     markup: new XMLSerializer().serializeToString(svg),
     width: size.width,
@@ -739,4 +754,18 @@ export function importSvgMarkup(source: string): SvgImportResult {
     fonts: fontInventory(svg),
     notices,
   };
+}
+
+/** Number the labels that REPEAT, in place: "Name", "Name 2", "Name 3". A label that appears
+ *  once is left exactly as the designer wrote it. */
+function numberRepeats(rows: { label: string }[]): void {
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(row.label, (counts.get(row.label) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  for (const row of rows) {
+    if ((counts.get(row.label) ?? 0) < 2) continue;
+    const n = (seen.get(row.label) ?? 0) + 1;
+    seen.set(row.label, n);
+    if (n > 1) row.label = `${row.label} ${n}`;
+  }
 }

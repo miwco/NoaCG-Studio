@@ -345,12 +345,16 @@ test('svg import: text a designer switched off, or parked in a symbol, is never 
       <defs><symbol id="Badge"><text id="In_x20_symbol" x="0" y="0">Never shown</text></symbol></defs>
       <g id="Old_x20_draft" style="display:none"><text id="Draft_x20_copy" x="20" y="40">Draft copy</text></g>
       <g id="Retired" display="none"><text id="Retired_x20_line" x="20" y="60">Retired line</text></g>
+      <use href="#Badge" x="300" y="20"/>
       <text id="Headline" x="20" y="120" font-size="30" fill="#fff">Alexandra Riva</text>
     </svg>`,
     'hidden-layers.svg',
   );
 
   await expect(page.getByTestId('import-svg-layers')).toContainText('1 text layer');
+  // The symbol's text is DRAWN by the <use> below it, so the file says why it is not a field —
+  // silence there reads as a layer the import simply missed.
+  await expect(page.getByTestId('import-svg-card')).toContainText('reusable symbol');
   await page.locator('.wz-next').click();
   await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Headline');
   await expect(page.getByTestId('map-svg-row-t1')).toHaveCount(0);
@@ -376,6 +380,26 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   await expect(page.getByTestId('map-svg-sample-t1')).toHaveValue('Helsinki');
   await expect(page.getByTestId('map-svg-sample-t2')).toHaveValue('Live');
   await expect(page.getByTestId('map-svg-row-t3')).toHaveCount(0);
+});
+
+test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
+  // A layer name is a designer's private note; it becomes an OPERATOR'S label. Three rows
+  // reading "Name" is a control page nobody can use without clicking each one.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240">
+      <g id="Name"><text x="20" y="60" font-size="24" fill="#fff">Alexandra Riva</text></g>
+      <g id="Name" data-name="Name"><text x="20" y="110" font-size="24" fill="#fff">Jonas Berg</text></g>
+      <g id="Role"><text x="20" y="160" font-size="18" fill="#b7bcc4">Correspondent</text></g>
+    </svg>`,
+    'repeated-names.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Name');
+  await expect(page.getByTestId('map-svg-title-t1')).toHaveValue('Name 2');
+  // A name that appears once is left exactly as the designer wrote it.
+  await expect(page.getByTestId('map-svg-title-t2')).toHaveValue('Role');
 });
 
 test('svg import: text on a path binds the path run, and keeps its curve when an operator types', async ({ page }) => {
