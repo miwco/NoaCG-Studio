@@ -107,6 +107,13 @@ function stagedLines() {
     // icon sits inside a fixed circular frame that was never ours to resize.
     if (text.length < 3) continue;
     if (el.className && String(el.className).indexOf('noacg-data-source') >= 0) continue;
+    // A DESIGN THAT ALREADY BOUNDS ITS OWN LINE IS LEFT ALONE. \`-webkit-line-clamp\` is the
+    // author saying how many rows this line may have; imposing a reserve on top of that fights
+    // a decision already made, and the audience pack's own gate caught it - a clamped question
+    // ended up taller than the clamp allows. The rule is the one the stage follows everywhere:
+    // where the design has stated the room, the runtime does not restate it.
+    var clamp = window.getComputedStyle(el).webkitLineClamp;
+    if (clamp && clamp !== 'none') continue;
     out.push(el);
   }
   return out;
@@ -209,34 +216,13 @@ function fitOneStagedLine(el) {
     }
   }
 
-  if (!limitW && box) {
-    // ONLY WHEN IT ACTUALLY ESCAPES. The first version wrapped every line that merely SAT in a
-    // drawn box, which is most of them, and a label set nowrap inside a 248px column promptly
-    // stacked itself 1181px tall. What matters is not where a line lives but whether it is
-    // outside the paint: measure the overhang, and leave a line that is already inside alone.
-    var br = box.getBoundingClientRect();
-    var bcs = window.getComputedStyle(box);
-    var padL = parseFloat(bcs.paddingLeft) || 0;
-    var padR = parseFloat(bcs.paddingRight) || 0;
-    var er = el.getBoundingClientRect();
-    var overhang = Math.max(br.left + padL - er.left, er.right - (br.right - padR));
-    if (overhang > 2) {
-      limitW = br.width - padL - padR;
-      room = br.height - (parseFloat(bcs.paddingTop) || 0) - (parseFloat(bcs.paddingBottom) || 0);
-      if (!(room > 0)) room = 0;
-      if (limitW > 0) {
-        // MORE LINES BEFORE SMALLER TYPE. Wrapping keeps the type at the size the design chose,
-        // so it is the cheaper answer; shrinking is what happens when even wrapped it will not
-        // fit. A design that set nowrap did so against a box that used to grow with the words.
-        el.style.whiteSpace = 'normal';
-        el.style.overflowWrap = 'break-word';
-        el.style.maxWidth = limitW + 'px';
-        el.style.height = '';                   // the box governs now, not the calibrated reserve
-      }
-    } else {
-      box = null;                               // inside its paint: nothing for the box to govern
-    }
-  }
+  // ONLY THE SELF-BOX CASE INTERVENES. A line overflowing an ANCESTOR that paints is real and the
+  // sweep reports it, but the runtime does not touch it: the box is somebody else's layout, and
+  // wrapping a line inside it moved panels the catalogue has its own contracts about - the sports
+  // gate caught .scoreboard-event wrapping into ten rows and taking sb19 210px past what a card
+  // may grow. The defect the owner found was the other kind: the alert tile IS the label element,
+  // and that one the line can fix without reaching into a layout it does not own.
+  if (box && box !== el) box = null;
 
   // The reserve, remembered from the first measurement - the design's own sample decides it.
   if (!limitW) room = parseFloat(el.getAttribute('data-stage-room') || '');
