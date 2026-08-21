@@ -427,6 +427,10 @@ export interface ResolvedOptions {
   logoAssetPath: string | null;
   logoEnabled: boolean;
   logoInkKnocked: boolean;
+  /** The design's own placement for the shared mark slot, or null to keep the category answer.
+   *  Carried rather than resolved here: the default lives with the code that draws the slot,
+   *  so this layer never has to know which categories place a mark beside their words. */
+  markPlacement: MarkPlacement | null;
   designArt: DesignArt | null;
   designSvg: DesignSvg | null;
 }
@@ -437,6 +441,11 @@ export interface ResolvedOptions {
  *  (corner bugs, credits), 'optional' = the wizard offers a logo toggle (+ upload),
  *  'none' = the design has no sensible place for one. */
 export type LogoSupport = 'none' | 'optional' | 'built-in';
+
+/** Where the shared mark slot sits: a leading column beside the design's stack (costs width,
+ *  never height - the strap rule), or a header band above the words (costs height, which a card
+ *  can afford and a strap cannot). See `TemplateVariant.markPlacement`. */
+export type MarkPlacement = 'beside' | 'band';
 
 /**
  * What FIELD-STRUCTURE changes a design supports - the wizard offers EXACTLY this, nothing
@@ -522,6 +531,26 @@ export interface TemplateVariant {
    * is about SAVED formats).
    */
   imageSlot?: 'mark' | 'picture';
+  /**
+   * WHERE this design puts the shared mark slot, when the category's own answer is wrong for it.
+   *
+   * PLACEMENT IS A PROPERTY OF THE DESIGN, NOT OF THE CATEGORY (owner, 2026-08-21: *"I cannot
+   * give you hard rules on where to place a logo. It depends on the design."*). It had been one
+   * line in `logoSlot.ts` - `beside = prefix === 'lower-third'` - so every design in a category
+   * inherited the same answer and no design could disagree. That was fine while only lower
+   * thirds carried marks and became a real limit the moment other types opted in
+   * (`docs/MARK_CAPABILITY_AUDIT.md`).
+   *
+   * `beside` puts the mark in a leading column, vertically centred on the design's whole stack -
+   * which costs the graphic WIDTH and no height, the rule a strap lives by. `band` puts it above
+   * the words as a header row, which is what a card or a full-frame screen usually wants.
+   *
+   * ADDITIVE OPTIONAL, and absent keeps the category's answer, so every existing design emits
+   * exactly what it emitted before. Choosing one is a drawing decision: a design that asks for
+   * `beside` in a narrow panel spends width it may not have, and one that asks for `band` on a
+   * strap spends height, which `e2e/catalog/mark-height.spec.ts` will refuse.
+   */
+  markPlacement?: MarkPlacement;
   /** Animation presets that suit this design (first = default). */
   animationPresets: AnimPresetId[];
   /**
@@ -606,6 +635,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
       variant.logo === 'built-in' ||
       (variant.logo === 'optional' && (options.logoEnabled ?? !!options.logoAssetPath)),
     logoInkKnocked: options.logoInkKnocked ?? false,
+    markPlacement: variant.markPlacement ?? null,
     designArt: options.designArt ?? null,
     designSvg: options.designSvg ?? null,
   };

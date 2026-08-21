@@ -284,7 +284,16 @@ export function applyLogoSlot(
   const at = design.html.indexOf(boxOpen);
   if (at < 0) return design;
 
-  const beside = prefix === 'lower-third';
+  // WHERE THE MARK GOES IS THE DESIGN'S ANSWER, and the category's only when the design has
+  // none. This read `prefix === 'lower-third'` until 2026-08-21 - one line that decided
+  // placement for every design in every category, which is exactly the hard rule the owner says
+  // does not exist: *"I cannot give you hard rules on where to place a logo. It depends on the
+  // design."* (docs/MARK_CAPABILITY_AUDIT.md).
+  //
+  // The category default stays HERE rather than being resolved by the caller, because it is a
+  // fact about how these designs are drawn: a strap must not spend height, and a card can. So a
+  // design says nothing and gets its family's answer, exactly as before.
+  const beside = (o.markPlacement ?? (prefix === 'lower-third' ? 'beside' : 'band')) === 'beside';
   const logoField = fieldId
     ?? `f${o.lines.length + o.extraFields.length + (design.extraFields?.length ?? 0)}`;
   const logoPath = o.logoAssetPath ?? '';

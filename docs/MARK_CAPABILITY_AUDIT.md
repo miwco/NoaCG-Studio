@@ -1,8 +1,13 @@
 # Where a brand mark is allowed, and where it only looks forbidden
 
-**Status: OPEN AUDIT, 2026-08-21.** One type has been acted on (`countdown`); the other 47 are
-listed here with the evidence, and nothing about them has been changed. Read this before flipping
-any `logo: 'none'`.
+**Status: OPEN AUDIT, 2026-08-21.** Three types acted on (`countdown`, `holding-screen`,
+`social-bug`) and all three levels of the mechanism now exist - a type PERMITS, a design
+IMPLEMENTS, a design PLACES. The other 44 are listed below with their evidence and are unchanged.
+Read this before flipping any `logo: 'none'`.
+
+**The one number to plan from: 15 bespoke assemblers have no slot path at all.** That, not the
+count of type declarations, is the size of "anything can have a logo" - see the assembler table
+below, which replaced a ranking column that got `holding-screen` wrong.
 
 ## The ruling this exists to serve
 
@@ -59,7 +64,7 @@ Measured 2026-08-21 by composing a Pro countdown and reading its emitted definit
 |---|---|---|---|
 | **permits** | `GraphicType.capabilities.logo` | whether the wizard OFFERS a mark | inject anything - `resolveOptions` turns it into `logoEnabled`, and `standard.ts` gates the slot on that |
 | **implements** | the CATEGORY assembler | whether a slot exists to fill | apply per design - it is one branch per assembler |
-| **places** | `logoSlot.ts`, `beside = prefix === 'lower-third'` | beside the words vs a band above them | vary per design - it is one hard-coded line |
+| **places** | `TypeDesign.markPlacement` -> `applyLogoSlot` | beside the words vs a band above them | decide whether it FITS - only a rendered measurement says that |
 
 **The countdown needed all three, and the capability alone measured as a no-op.** With
 `capabilities.logo: 'optional'` already set, a Pro countdown still compiled `f0:textfield,
@@ -200,8 +205,29 @@ offered the wizard a mark - and emitted no slot, because the assembler asked the
 factory gate is what compares them, which is why it reports "the design declares logo X, it
 compiles to Y" rather than checking one side.
 
-**The placement half is still open.** A `TypeDesign.markPlacement` would follow the same seam, but
-nothing reads one yet.
+**The placement half is built too (2026-08-21).** `TypeDesign.markPlacement` →
+`TemplateVariant.markPlacement` → `ResolvedOptions.markPlacement` → `applyLogoSlot`, replacing the
+line that decided it for everyone:
+
+```diff
+- const beside = prefix === 'lower-third';
++ const beside = (o.markPlacement ?? (prefix === 'lower-third' ? 'beside' : 'band')) === 'beside';
+```
+
+`beside` puts the mark in a leading column centred on the design's whole stack - width, never
+height, the strap rule. `band` puts it above the words as a header row. **The category default
+stays INSIDE the slot** rather than being resolved by the caller: which way a family draws is a
+fact about those designs, not something the model layer should carry, and keeping it there means a
+design that says nothing emits exactly what it emitted before.
+
+Choosing one is a drawing decision with a measurable consequence either way: `beside` in a narrow
+panel spends width it may not have, and `band` on a strap spends height, which
+`e2e/catalog/mark-height.spec.ts` refuses (that is how `lt14` was caught).
+
+**Mutation-checked.** Restoring the old one-liner fails the placement spec in `wizard-logo.spec.ts`
+and leaves the other six green. The spec drives `resolveOptions` then `applyLogoSlot` rather than a
+template build, because placement is declared on the VARIANT and `create` closes over its own meta -
+spreading a copy of the record proves nothing, which the first version of the test did silently.
 
 **The placement half is the one with no home today.** `beside = prefix === 'lower-third'` is a
 category rule with a design-shaped question behind it, and every remaining type inherits it by
