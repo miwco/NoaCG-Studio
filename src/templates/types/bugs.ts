@@ -127,13 +127,25 @@ export const socialBugType: GraphicType = {
   controls: [],
   capabilities: {
     maxLines: 2,
-    logo: 'none',
+    // A SOCIAL BUG TAKES A MARK - and of all the types that declined one this is the oddest,
+    // because the graphic's whole job is to say WHOSE handle this is. It is drawn on the
+    // lower-third chassis, so the shared assembler already injects the slot BESIDE the words on
+    // `logoEnabled` (the strap rule: a strap spends width, never height) - nothing to teach here,
+    // unlike the countdown and the holding screen (docs/MARK_CAPABILITY_AUDIT.md, 2026-08-21).
+    //
+    // The type PERMITS; each design says whether it draws one. All four decline today, for the
+    // honest reason: they are compact strips authored around two lines, and placing a mark in one
+    // is a drawing decision nobody has made.
+    logo: 'optional',
     animationPresets: ['slide-up', 'fade', 'line-reveal', 'mask-wipe', 'blur-in'],
     defaultZone: 'bottom-right',
   },
   designs: [
     {
       id: 'lt14',
+      // DECLINES, measured: a mark makes this strip 6% taller and a strap may not spend height.
+      // See lt14.ts for the numbers and what opting in would take.
+      logo: 'none',
       name: 'House Handle',
       description: 'The house social mark: compact void strip, amber bar, mono platform label.',
       styleTag: 'noacg',
@@ -151,6 +163,9 @@ export const socialBugType: GraphicType = {
       // handles are DESIGNED as compact handle strips instead — small siblings of the lower
       // thirds in each family, each carrying a real accent element this type requires.
       id: 'lt16',
+      // AUTHORED WITHOUT A MARK. The type permits one and the strap chassis would place it
+      // beside the words; nobody has drawn it into this compact strip yet.
+      logo: 'none',
       name: 'Frost Handle',
       description: 'A compact frosted social strip: a handle over its platform, led by an accent dot.',
       styleTag: 'glass',
@@ -162,6 +177,9 @@ export const socialBugType: GraphicType = {
     },
     {
       id: 'lt17',
+      // AUTHORED WITHOUT A MARK. The type permits one and the strap chassis would place it
+      // beside the words; nobody has drawn it into this compact strip yet.
+      logo: 'none',
       name: 'Volt Handle',
       description: 'A compact sport strip with an accent edge — a handle in heavy caps over its platform.',
       styleTag: 'sport',
@@ -173,6 +191,9 @@ export const socialBugType: GraphicType = {
     },
     {
       id: 'lt18',
+      // AUTHORED WITHOUT A MARK. The type permits one and the strap chassis would place it
+      // beside the words; nobody has drawn it into this compact strip yet.
+      logo: 'none',
       name: 'Line Handle',
       description: 'A panel-free social mark: a handle over its platform beside a thin accent hairline.',
       styleTag: 'minimal',

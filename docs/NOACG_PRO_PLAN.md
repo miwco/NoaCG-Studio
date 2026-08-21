@@ -3415,6 +3415,10 @@ live, and it is one number in `structure.ts` rather than 26 separate defects.
 
 #### 25.8.3 Rule 5 - the real-estate rule, narrowed to the question inside it
 
+**SUPERSEDED THE NEXT DAY - the threshold this section describes was WITHDRAWN on 2026-08-21 and
+rule 5 now mints no finding at all. §25.8.7 has the ruling and why a calibrated threshold was still
+the wrong thing to have. Kept because the calibration below is still what the rule MEASURES.**
+
 **OWNER DECISION, 2026-08-20**, on the question §25.3 put to him: **a mark deliberately stacked
 ABOVE its caption is a different composition, not a defect.** Rule 5 was firing on 34 of the 36
 rows for that arrangement alone, and a rule that fires on almost everything reports nothing.
@@ -3552,6 +3556,50 @@ recomposed, not re-judged.
 `e2e/pro-language.spec.ts` pins the SEPARATION rather than the number: a tone found in the band
 between the two floors comes back repaired for Pro and untouched for Lite, so collapsing the two
 back into one constant fails there.
+
+#### 25.8.7 Rule 5 withdraws its threshold - placement has no rule (2026-08-21)
+
+§25.8.3 rewrote rule 5 around the horizontal question inside the owner's own sentence, and it read
+0 of 36 on the corpus. Then the countdown gained a mark (§25.9) and it fired on **12 of the 18**
+recomposed countdowns: a clock's panel is sized for its digits, so the mark had room beside the
+label and the composer stacked it above.
+
+Put to the owner as "is the placement wrong, or is the floor?", the answer was neither:
+
+> **I cannot give you hard rules on where to place a logo. It depends on the design.**
+
+**So rule 5 now mints no finding at all** - the third of the six to carry no pass/fail, beside rule
+2 (the owner called it conditional) and rule 3 (a ratified floor he has not re-ratified). It still
+measures the arrangement on every frame and judges none of it: `stacked` (which arrangement the
+design chose), `besideSlackPx` (whether the width allowed the other one), `bandFill` (how much of
+its band the mark uses).
+
+**The withdrawn version is the one worth remembering, because nothing was wrong with its
+measurement.** It was calibrated off the catalog, quiet on the whole corpus, mutation-checked, and
+it re-flagged nothing it should not have. It was wrong because *"a mark takes a row of its own only
+when the width leaves it no choice"* is a placement rule, and the owner does not hold one. **A
+threshold can be perfectly calibrated and still assert something its author does not believe** -
+which is a different failure from the ones this file already records, and the reason rules 2 and 3
+were thresholdless from the start.
+
+| | after 25.8.3 | after the withdrawal |
+|---|---|---|
+| rule 5 findings, corpus | 0 of 36 rows (12 of 18 once the countdown carried a mark) | **none, by construction** |
+| rule 5 readings | the same | the same, on 90 of 108 pieces |
+| rules 1 / 4 / 6 | 12 / 16 / 18 | 12 / 16 / 18 (unmoved) |
+
+Corpus arrangement, now reported rather than judged: **54 of 90 pieces stack the mark over the
+line, 36 stand it beside, and 12 of the stacked ones had room beside.**
+
+`scripts/spike-taste-rule5-reading.mjs` (was `-mutation`) changed with it: a check that a
+withdrawn finding FIRES is meaningless, so it now proves the GEOMETRY discriminates - the same two
+frames, the same stack, +502px of room beside against -512px, and no rule-5 finding on either.
+
+**Where the measurement belongs next.** Pro generates its designs, so "the design decides" needs
+something deciding per graphic, and here the platform owns layout rather than the model. *Does the
+mark fit beside this line in this panel's width?* is exactly what a composer needs in order to
+PLACE one - and used that way it is not a rule, it is each graphic's geometry answering for itself.
+Not started; it is a build, not a demotion.
 
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 

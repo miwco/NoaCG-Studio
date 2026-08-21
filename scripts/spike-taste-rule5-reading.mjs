@@ -1,6 +1,10 @@
-// Mutation check for rule 5: prove the rewritten finding can FIRE, and that the one thing that
-// silences it is the geometry it is about. Two synthetic frames, same stack, different panel
-// width. Free; needs the dev server on this checkout's port.
+// Discrimination check for rule 5s READING. Rule 5 mints no finding (owner, 2026-08-21:
+// placement has no rule, it is a property of each design), so what has to be trusted is the
+// GEOMETRY it reports - the numbers a placement decision will read. Two synthetic frames, the
+// same stack, different panel width: the arrangement is identical and the room beside it is not.
+//
+// It was a mutation check on the finding until the finding was withdrawn; the frames are the
+// same, the assertion moved from the verdict to the measurement. Free; needs the dev server.
 import { chromium } from 'playwright';
 import { devPort } from './dev-port.mjs';
 
@@ -47,16 +51,20 @@ const tight = await measure(frame(240, 'Election Night Results Desk'));
 
 const show = (label, r) => {
   const m = r.markRow ?? {};
-  console.log(`${label}: panel ${m.panelWidthPx}px, mark ${m.markWidthPx}px, rowShare ${m.rowShare}, `
-    + `besideSlack ${m.besideSlackPx}px -> [${r.codes.join(', ') || 'clean'}]`);
-  for (const f of r.findings.filter((x) => x.rule === 5)) console.log(`    ${f.detail}`);
+  console.log(label + ": panel " + m.panelWidthPx + "px, mark " + m.markWidthPx + "px, stacked "
+    + m.stacked + ", besideSlack " + m.besideSlackPx + "px -> [" + (r.codes.join(", ") || "no findings") + "]");
 };
-show('WIDE  panel (room beside the line)', wide);
-show('TIGHT panel (no room beside it)  ', tight);
+show("WIDE  panel (room beside the line)", wide);
+show("TIGHT panel (no room beside it)  ", tight);
 
-const firesWide = wide.codes.includes('mark-stacked-with-room');
-const quietTight = !tight.codes.includes('mark-stacked-with-room');
-console.log(`\nfires when there is room: ${firesWide}; quiet when there is not: ${quietTight}`);
-console.log(firesWide && quietTight ? 'MUTATION CHECK PASSED' : 'MUTATION CHECK FAILED');
+// Both frames STACK - that is the arrangement, and neither is a defect. What must differ is the
+// room the width left, and neither may mint a rule-5 finding any more.
+const bothStacked = wide.markRow?.stacked === true && tight.markRow?.stacked === true;
+const roomDiffers = (wide.markRow?.besideSlackPx ?? -1) > 0 && (tight.markRow?.besideSlackPx ?? 1) < 0;
+const silent = !wide.findings.some((f) => f.rule === 5) && !tight.findings.some((f) => f.rule === 5);
+console.log("\nboth stacked: " + bothStacked + "; room differs by width: " + roomDiffers
+  + "; rule 5 mints nothing: " + silent);
+const ok = bothStacked && roomDiffers && silent;
+console.log(ok ? "READING CHECK PASSED" : "READING CHECK FAILED");
 await browser.close();
-process.exit(firesWide && quietTight ? 0 : 1);
+process.exit(ok ? 0 : 1);
