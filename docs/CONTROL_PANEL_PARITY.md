@@ -149,6 +149,7 @@ the other way round:
 | Load a production DATA row | – | – | – | in-app: matched LIVE; hosted: the same matcher's rows, resolved at PUBLISH time (`control/cueData.ts`) |
 | Verb keys (P · SPACE · R · U · N · 0 · ↑↓) | – | – | yes | yes on both since 2026-08-18 - one keymap, `components/playoutKeys.ts` (the hosted page had none at all before, and its TAKE re-took a live cue instead of taking it off) |
 | Page-scroll model + capped sticky monitors | – | – | yes | **yes on all three** since 2026-08-19 - the page is the only scroller, the monitors cap near 30vh and stick, the cue rail sticks; `pointer-events: none` on every monitor iframe, which only the exported controller had |
+| A match clock’s TIME ORIGIN | – | – | stamped by the page | stamped by the page (in-app) / derived from the row (`/output`) |
 | Entries | authored here | – | baked in, read-only | read-only picker |
 | Staged vs aired | Update/Play only | Live toggle | staged + ⟳ Take | staged + ⟳ Take |
 

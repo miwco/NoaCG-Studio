@@ -15,7 +15,7 @@
 // The ARGUMENT-SPLITTING cases, which are the actual logic, are platform-neutral and always run.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rootOfCommand, sameRoot, selfAndAncestors } from './e2e-runs.mjs';
+import { blockingRuns, rootOfCommand, sameRoot, selfAndAncestors } from './e2e-runs.mjs';
 
 const onlyWindows = { skip: process.platform !== 'win32' };
 const onlyPosix = { skip: process.platform === 'win32' };
@@ -124,4 +124,82 @@ test('roots compare case-insensitively and across slash spellings', onlyWindows,
   // launchers; if these did not compare equal, a run would never be recognised as its own.
   assert.ok(sameRoot('C:\\claude\\NoaCG-Studio', 'c:/claude/noacg-studio'));
   assert.ok(!sameRoot('C:/claude/NoaCG-Studio', 'C:/claude/NoaCG-Studio/.claude/worktrees/x'));
+});
+
+// ── WHO GOES FIRST when two runs start together ──
+// A Playwright CLI sitting in its globalSetup WAITING looks exactly like one driving a browser,
+// so before `blockingRuns` two simultaneous starts each queued behind the other and both sat out
+// the 30-minute cap. The property every case below defends is the same one: whatever the pair,
+// the two runs must reach OPPOSITE verdicts, computed independently from the same table.
+
+/** Both sides of a pair, judged the way each one's own globalSetup would. */
+function verdicts(runs) {
+  return runs.map((self) => blockingRuns(runs, self).length === 0);
+}
+
+test('two runs started in the same second: exactly one proceeds', () => {
+  const t = 1_700_000_000_000;
+  const runs = [
+    { pid: 200, kind: 'run', startedAt: t },
+    { pid: 100, kind: 'run', startedAt: t },
+  ];
+  assert.deepEqual(verdicts(runs), [false, true], 'the lower pid goes first, the other waits');
+});
+
+test('an earlier run is yielded to whatever the pids say', () => {
+  const t = 1_700_000_000_000;
+  // The lower pid started LATER here, so a pid-only rule would let the newcomer barge in front
+  // of work already under way.
+  const runs = [
+    { pid: 100, kind: 'run', startedAt: t + 60_000 },
+    { pid: 200, kind: 'run', startedAt: t },
+  ];
+  assert.deepEqual(verdicts(runs), [false, true]);
+});
+
+test('starts within the POSIX rounding window count as simultaneous', () => {
+  // `ps -o etimes` reports whole elapsed SECONDS, so the same process yields a startedAt that
+  // wobbles by up to a second depending on when the table was read. Without the slack the two
+  // sides could disagree about who started first and stall again.
+  const t = 1_700_000_000_000;
+  const runs = [
+    { pid: 300, kind: 'run', startedAt: t + 1_400 },
+    { pid: 150, kind: 'run', startedAt: t },
+  ];
+  assert.deepEqual(verdicts(runs), [false, true], 'settled by pid, not by the wobbling clock');
+});
+
+test('an unreadable start time still yields a decision, and the same one on both sides', () => {
+  const runs = [
+    { pid: 900, kind: 'run', startedAt: null },
+    { pid: 800, kind: 'run', startedAt: 1_700_000_000_000 },
+  ];
+  assert.deepEqual(verdicts(runs), [false, true]);
+});
+
+test('a sweep is always yielded to, however late it started', () => {
+  // A sweep has no globalSetup and never waits for anyone, so it can only ever be real work in
+  // progress - ordering it against a run would starve the run for no reason.
+  const t = 1_700_000_000_000;
+  const sweep = { pid: 999, kind: 'sweep', startedAt: t + 600_000 };
+  const self = { pid: 1, startedAt: t };
+  assert.deepEqual(blockingRuns([sweep], self), [sweep]);
+});
+
+test('three simultaneous runs queue in a stable order rather than all proceeding', () => {
+  const t = 1_700_000_000_000;
+  const runs = [
+    { pid: 30, kind: 'run', startedAt: t },
+    { pid: 10, kind: 'run', startedAt: t },
+    { pid: 20, kind: 'run', startedAt: t },
+  ];
+  assert.deepEqual(verdicts(runs), [false, true, false], 'exactly one proceeds');
+  // And the queue behind it is FIFO by the same order, so nobody is starved.
+  assert.equal(blockingRuns(runs, runs[0]).length, 2, 'pid 30 waits for both');
+  assert.equal(blockingRuns(runs, runs[2]).length, 1, 'pid 20 waits only for pid 10');
+});
+
+test('a run never blocks on itself', () => {
+  const self = { pid: 42, kind: 'run', startedAt: 1_700_000_000_000 };
+  assert.deepEqual(blockingRuns([self], self), []);
 });
