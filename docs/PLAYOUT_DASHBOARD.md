@@ -154,6 +154,22 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   1536×560, below the supported minimum, the head takes a larger share BY DESIGN: it now holds
   the verb bar, which is the point. No pane on any surface has a scrollbar of its own.
 
+  **THE MONITORS ARE WIDTH-LIMITED, NOT HEIGHT-LIMITED — do not re-open this without new
+  numbers.** 257px of the 1080p page is still empty below the last row, and the owner asked the
+  obvious question: spend it on the monitors. It cannot be spent. Measured at 1920×1080, the
+  stage column is 1540px and it is full — 1321px of monitor grid (two 655px frames), a 176px verb
+  column, and the 380px cue rail beside it. A frame is `width: 100%` with the stage's
+  `aspect-ratio`, so **every extra pixel of picture HEIGHT costs 3.56px of WIDTH** (two monitors
+  at 16:9). With ~26px of width to spare before the verb buttons stop being readable, that is
+  about seven pixels of picture. The same holds wider: at 2560×1440 the picture is 547px where
+  the width would allow 559, so the 38vh ceiling binds by twelve pixels.
+
+  The empty room is BELOW the page and the monitors cannot reach it. Growing them means taking
+  width from the cue rail, from the verb column, or putting the verb bar back underneath — and
+  the best of those is worth about 9%. **Owner decision 2026-08-21: leave it.** The pack measures
+  `slackBelowLastRow` on every dashboard frame so the next person asking this question starts
+  from the number rather than from the impression.
+
   **The cue's aspect ratio no longer sizes the monitors.** `--pd-ar` is the PRODUCTION's stage,
   derived exactly as `buildOutputPayload` derives it and as the exported controller already baked
   it, so all three surfaces agree on one canvas. Both frames wear that ratio and a differently

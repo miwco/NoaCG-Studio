@@ -65,6 +65,7 @@
       "editorHeight": 242,
       "editorHidden": 0,
       "pageScrollable": 0,
+      "slackBelowLastRow": 76,
       "panesThatScroll": []
     }
   },
@@ -88,6 +89,7 @@
       "editorHeight": 242,
       "editorHidden": 0,
       "pageScrollable": 0,
+      "slackBelowLastRow": 76,
       "panesThatScroll": []
     }
   },
@@ -110,6 +112,7 @@
       "editorHeight": 242,
       "editorHidden": 0,
       "pageScrollable": 148,
+      "slackBelowLastRow": 0,
       "panesThatScroll": []
     }
   },
@@ -133,6 +136,7 @@
       "editorHeight": 242,
       "editorHidden": 0,
       "pageScrollable": 148,
+      "slackBelowLastRow": 13,
       "panesThatScroll": []
     }
   },
@@ -155,6 +159,7 @@
       "editorHeight": 183,
       "editorHidden": 0,
       "pageScrollable": 0,
+      "slackBelowLastRow": 257,
       "panesThatScroll": []
     }
   },
@@ -177,6 +182,7 @@
       "editorHeight": 333,
       "editorHidden": 0,
       "pageScrollable": 0,
+      "slackBelowLastRow": 123,
       "panesThatScroll": []
     }
   },
@@ -200,6 +206,7 @@
       "editorHeight": 333,
       "editorHidden": 0,
       "pageScrollable": 101,
+      "slackBelowLastRow": 13,
       "panesThatScroll": []
     }
   },

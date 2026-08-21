@@ -172,6 +172,15 @@ async function measureDashboard(page) {
       editorHeight: px(editor),
       editorHidden: editor ? Math.max(0, editor.scrollHeight - editor.clientHeight) : null,
       pageScrollable: Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+      // THE SLACK: the room below the last thing on the page. This is the number the owner's
+      // 1080p complaint is actually about - "too much empty room at the bottom" - and the one
+      // that says whether the monitors have anywhere left to grow. Zero on a page that scrolls.
+      slackBelowLastRow: (() => {
+        const rows = main ? [...main.children] : [];
+        const last = rows[rows.length - 1];
+        if (!last) return null;
+        return Math.max(0, Math.round(window.innerHeight - last.getBoundingClientRect().bottom));
+      })(),
       panesThatScroll: ['.pd-main', '.pd-editor', '.pd-actions', '.pd-activity', '.pd-data', '.pd-audience']
         .filter((sel) => {
           const el = document.querySelector(sel);
@@ -948,6 +957,7 @@ function buildIndex(manifest) {
         <div><dt>space right of PROGRAM</dt><dd>${esc(m.spaceRightOfProgram)}px</dd></div>
         <div><dt>editor</dt><dd>${esc(m.editorHeight)}px, ${esc(m.editorHidden)}px hidden</dd></div>
         <div><dt>page scrolls</dt><dd>${esc(m.pageScrollable)}px</dd></div>
+        <div><dt>empty below the last row</dt><dd>${esc(m.slackBelowLastRow)}px</dd></div>
         <div><dt>panes with their own scrollbar</dt><dd>${m.panesThatScroll.length ? esc(m.panesThatScroll.join(', ')) : 'none'}</dd></div>
       </dl>`;
 
