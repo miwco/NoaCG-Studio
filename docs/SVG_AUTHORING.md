@@ -8,13 +8,14 @@ this page is for whoever is holding the design app.
 your text layers become operator fields; the pixel-exact graphic goes on air. Nothing is redrawn -
 the typography that ships is the one you drew.
 
-**Try it in 30 seconds:** the three files in `docs/svg-samples/` are ready to drop.
+**Try it in 30 seconds:** the four files in `docs/svg-samples/` are ready to drop.
 
 | File | What it exercises |
 |---|---|
 | `lower-third.svg` | the plain happy path - three live text layers, named |
 | `scorebug.svg` | number fields, a countdown clock, a picture layer, `f:` prefix, stacked tspan lines |
 | `outlined-title.svg` | text converted to outlines (the fallback road) beside one live text layer |
+| `illustrator-export.svg` | the exporter's own habits - PostScript font names, a kerned headline, two labels on one baseline, a repeated layer name, a switched-off draft |
 
 Drop one at `/app` → **New graphic** → **Import graphic** → the drop zone.
 
