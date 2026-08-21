@@ -38,6 +38,9 @@ export const gt04: TemplateVariant = defineGameTimerVariant(
     uicolor: '5',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 480,
     // Stack = badge (dots + dark face + track/drain rings + clock) over the pill plate,
     // all centered under the mid-center anchor. The hidden #f1 minutes source is
     // appended by the assembler; the drain-ring painter is design-owned runtimeExtraJs.

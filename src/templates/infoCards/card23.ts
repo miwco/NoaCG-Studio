@@ -33,5 +33,10 @@ export const card23: TemplateVariant = defineCardVariant(
       'act on it. For venues, box offices, member updates and community broadcasts.',
     uicolor: '3',
   },
-  (o) => buildHeadlineCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildHeadlineCard(FROST, o),
+    stageWidth: 810,
+  }),
 );

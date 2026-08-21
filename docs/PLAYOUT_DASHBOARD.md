@@ -124,9 +124,59 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
     resized browser, and what it owes is degrading without breaking, not fitting. The verb bar
     sits beside PROGRAM down to 1366 and returns underneath below it.
 
-  None of this is built. It is a layout change to `ProductionPage.tsx`, `HostedControlPage.tsx`,
-  `productionControllerHtml.ts` and the `.pd-*` rules — all three surfaces, in one session, with
-  the pack's `scroll`/`hosted`/`controller` sections re-run as its evidence.
+  **BUILT 2026-08-21, all three surfaces, and measured.** Three changes, each answering one of
+  the findings above:
+
+  1. **THE STAGE HEAD.** `.pd-stagehead` wraps the monitors AND the verb bar, and IT is what
+     sticks. The bar can no longer scroll away under the monitors, which is §2's own rule applied
+     to the one block carrying TAKE and Out.
+  2. **The bar sits BESIDE PROGRAM at and above 1366px** — the minimum supported window, so the
+     breakpoint and the floor are one number. It is two verbs across with TAKE spanning the pair
+     on the first row, not a single column: six verbs stacked need ~294px, which is TALLER than
+     the monitors at 1536×814, and the stack would then set the head's height instead of the
+     picture. Below 1366 the bar returns underneath, unchanged.
+  3. **The monitor cap grows with the window** —
+     `clamp(170px, calc(26vh + (100vh - 768px) * 0.28), 38vh)` in place of a flat `26vh`, from
+     the 768px floor of the minimum supported window. Viewport-derived on purpose: sizing it from
+     what the editor leaves over would resize the monitors whenever a cue with a different field
+     count was selected, which is the same twitch in another costume.
+
+  **Measured, same production and graphic, before → after:**
+
+  | | PREVIEW picture | sticky head | page scrolls |
+  |---|---|---|---|
+  | 1920×1080 | 281px → **368px** | 323px (30%) → **410px (38%)** | 0 → 0 |
+  | 1536×814 | 212px → **225px** | 254px (31%) → **267px (33%)** | 0 → 0 |
+  | 1536×560 | 188px → **170px** | 188px (34%) → **224px (40%)** | 165px → **148px** |
+
+  The 1080p picture is a third bigger, which is the complaint. 1536×814 — the size the owner
+  ACCEPTED — moves by 13px of picture and 13px of head, so what was accepted stays accepted. At
+  1536×560, below the supported minimum, the head takes a larger share BY DESIGN: it now holds
+  the verb bar, which is the point. No pane on any surface has a scrollbar of its own.
+
+  **THE MONITORS ARE WIDTH-LIMITED, NOT HEIGHT-LIMITED — do not re-open this without new
+  numbers.** 257px of the 1080p page is still empty below the last row, and the owner asked the
+  obvious question: spend it on the monitors. It cannot be spent. Measured at 1920×1080, the
+  stage column is 1540px and it is full — 1321px of monitor grid (two 655px frames), a 176px verb
+  column, and the 380px cue rail beside it. A frame is `width: 100%` with the stage's
+  `aspect-ratio`, so **every extra pixel of picture HEIGHT costs 3.56px of WIDTH** (two monitors
+  at 16:9). With ~26px of width to spare before the verb buttons stop being readable, that is
+  about seven pixels of picture. The same holds wider: at 2560×1440 the picture is 547px where
+  the width would allow 559, so the 38vh ceiling binds by twelve pixels.
+
+  The empty room is BELOW the page and the monitors cannot reach it. Growing them means taking
+  width from the cue rail, from the verb column, or putting the verb bar back underneath — and
+  the best of those is worth about 9%. **Owner decision 2026-08-21: leave it.** The pack measures
+  `slackBelowLastRow` on every dashboard frame so the next person asking this question starts
+  from the number rather than from the impression.
+
+  **The cue's aspect ratio no longer sizes the monitors.** `--pd-ar` is the PRODUCTION's stage,
+  derived exactly as `buildOutputPayload` derives it and as the exported controller already baked
+  it, so all three surfaces agree on one canvas. Both frames wear that ratio and a differently
+  shaped cue is LETTERBOXED into it — `Math.min` contain-fit, the arithmetic `src/output/stage.ts`
+  has always used, so PREVIEW now behaves like the renderer it is previewing. PROGRAM's frame was
+  hard-coded `16 / 9` and follows the same stage now, which is what a 9:16 production always
+  needed.
 
   **Where that read was done: `docs/acceptance/owner-pack/index.html` §2** (rebuilt 2026-08-21 by
   `node scripts/acceptance-pack.mjs`). It carries both questions verbatim over frames of the real
@@ -151,14 +201,16 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   TRACK WIDTH, not as a height: a frame is `width: 100%` with the graphic's own `aspect-ratio`,
   so clamping its height directly would letterbox the picture inside a box the component
   measured for something else. The track width that keeps both monitors under the cap is
-  `--pd-monitor-h * min(preview ratio, 16/9)`, where `--pd-ar` carries the preview graphic's own
-  ratio as a bare number. The pair stays flush LEFT, sharing an edge with the TAKE button and the
-  editor card below.
-  **KNOWN DEFECT, found in the 2026-08-21 owner read (§2 above), not yet fixed:** because
-  `--pd-ar` is the PREVIEWED cue's ratio and not the production's, selecting a non-16:9 cue
-  narrows BOTH monitors — the "monitors don't jump between scales depending on what graphic we
-  are looking at" rule, broken by the mechanism that enforces the cap. The cap has to be derived
-  from the production's own worst case, not from whatever is on preview this second. PVW wears the amber frame, PGM the red one. PGM's header carries the layer
+  `--pd-monitor-h * min(stage ratio, 16/9)`, where `--pd-ar` carries the production's own ratio
+  as a bare number. The pair stays flush LEFT, sharing an edge with the editor card below; above
+  1366px the verb bar occupies the width the cap frees to their right, and below it the bar sits
+  under them and shares that same left edge.
+  **`--pd-ar` IS THE PRODUCTION'S STAGE, never the previewed cue's** (fixed 2026-08-21; it was
+  the cue's, so selecting a non-16:9 cue narrowed both monitors — the "monitors don't jump between
+  scales depending on what graphic we are looking at" rule, broken by the mechanism enforcing the
+  cap). It is derived the way `buildOutputPayload` derives it, which is also what the exported
+  controller has always baked in, so the three surfaces agree on one canvas. A cue of another
+  shape is letterboxed into that stage rather than resizing it. PVW wears the amber frame, PGM the red one. PGM's header carries the layer
   badge of what is up.
 - **A monitor is a monitor: `pointer-events: none` on its iframe.** A click that lands inside
   moves focus into a document that does not listen for the verb keys, so SPACE, N and 0 go dead

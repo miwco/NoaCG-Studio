@@ -30,6 +30,7 @@ import {
   dataSourceCss,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -40,11 +41,23 @@ import { clockRuntimeJs } from '../shared/clock';
 import { applyLogoSlot, designHasLogoSlot } from '../shared/logoSlot';
 import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
+import { stageExtraJs } from '../shared/stageFit';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { gameTimerPresetById } from './gtPresets';
 import { resolveTokens, type ThemeTokens, type TokenOverrides } from '../../model/themeTokens';
 
 export interface GameTimerDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /** Inner HTML of .game-timer — must contain .game-timer-box > .game-timer-mask > #f0 and a .game-timer-clock element. */
   html: string;
   /** Variant CSS (panel, label, clock — and the .game-timer-done "time's up" state). */
@@ -96,6 +109,8 @@ function update(data) {
     clockSecondsLeft = clockDurationSeconds();
     renderClock();
   }
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // play(): take the graphic on air — the entrance timeline also starts the countdown.
@@ -207,7 +222,11 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Auto-fit: the panel hugs its text and wraps instead of overflowing. ── */
 .game-timer-box {
-  width: fit-content;              /* the panel hugs the text */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this timer was drawn for')
+      : "  width: fit-content;              /* the panel hugs the text */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -243,7 +262,8 @@ ${dataSourceCss}
   // Clock runtime, then any design-owned runtime, then the marked ANIMATION region —
   // everything before the region is playout logic the Animation panel never touches.
   const runtimeBlocks = [clockRuntimeJs('game-timer', 'f1')];
-  if (design.runtimeExtraJs) runtimeBlocks.push(design.runtimeExtraJs);
+  const gtExtra = stageExtraJs(design.stageWidth, 'game-timer', design.runtimeExtraJs);
+  if (gtExtra) runtimeBlocks.push(gtExtra);
   runtimeBlocks.push(preset.emit(cfg));
   const js = gameTimerRuntimeJs(meta.name, runtimeBlocks.join('\n\n'));
 

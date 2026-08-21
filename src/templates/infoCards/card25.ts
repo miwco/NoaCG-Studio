@@ -33,5 +33,10 @@ export const card25: TemplateVariant = defineCardVariant(
       'under it, and a closing link line. For launches, release notes and product streams.',
     uicolor: '4',
   },
-  (o) => buildHeadlineCard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildHeadlineCard(HOUSE, o),
+    stageWidth: 810,
+  }),
 );

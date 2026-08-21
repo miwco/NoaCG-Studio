@@ -105,5 +105,8 @@ ${cardLineMasks(o)}
   margin-top: calc(4px * var(--scale));   /* stat lines read as one list */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 670,
   }),
 );

@@ -185,6 +185,9 @@ export const qz06: TemplateVariant = defineQuizVariant(
   color: var(--panel-bg);          /* dark ink on the down-colour chip */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
   undefined,
   TWO_ANSWER_CONTENT,

@@ -22,6 +22,7 @@ import {
   computeScale,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -29,6 +30,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { convertToDataRegion } from '../shared/standard';
+import { stageFitRuntimeJs } from '../shared/stageFit';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
 
 export const EVENT_LINES = [
@@ -39,6 +41,17 @@ export const EVENT_LINES = [
 ];
 
 export interface StreamNotificationDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   html: string;
   css: string;
   hasAccent: boolean;
@@ -53,6 +66,8 @@ interface StreamNotificationSpec {
   fontId: string;
   uicolor: string;
   animationPresets: TemplateVariant['animationPresets'];
+  /** The room this card was drawn for, in px at 1080p - see StreamNotificationDesign. */
+  stageWidth?: number;
   build(o: ResolvedOptions): StreamNotificationDesign;
 }
 
@@ -113,6 +128,8 @@ function update(data) {
     var el = document.getElementById(key);
     if (el) setFieldValue(el, fields[key]);
   }
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // notificationQueue holds complete snapshots, not references to mutable provider payloads.
@@ -223,7 +240,11 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 }
 
 .stream-notification-box {
-  width: fit-content;              /* hug short labels and names */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this card was drawn for')
+      : "  width: fit-content;              /* hug short labels and names */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, Math.round(o.resolution.width * 0.46))}; /* wrap before the safe edge */
   text-align: left;                /* event cards always read left-to-right */
   will-change: transform, opacity; /* the panel is the animated surface */
@@ -285,6 +306,10 @@ ${design.css}
     easeOut: ease.easeOut,
   };
   const js = notificationRuntime(spec.name, preset.emit(cfg));
+  // A staged card holds its lines to the rows it was drawn for; a hugging one emits nothing.
+  const jsWithStage = design.stageWidth
+    ? `${js}\n\n${stageFitRuntimeJs('stream-notification')}`
+    : js;
 
   const template: SpxTemplate = {
     name: spec.name,
@@ -293,7 +318,7 @@ ${design.css}
     fps: o.fps,
     html,
     css,
-    js,
+    js: jsWithStage,
     fields,
     settings,
     assets: [...o.importedImages, ...(o.customFont ? [o.customFont.asset] : [])],
@@ -328,7 +353,9 @@ export function defineStreamNotification(spec: StreamNotificationSpec): Template
     defaultZone: 'bottom-left',
     create(options?: WizardOptions) {
       const o = resolveOptions(variant, options);
-      return assembleNotification(spec, spec.build(o), o);
+      // The spec carries the stage, because the shared builders behind `build` draw four
+      // different cards and each was drawn for a different width.
+      return assembleNotification(spec, { ...spec.build(o), stageWidth: spec.stageWidth }, o);
     },
   };
   return variant;

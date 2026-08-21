@@ -42,6 +42,12 @@ export const ig02: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'HOW WE WATCH';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 660,
       // Structure: .infographic-box is the frosted panel; #infographic-bars is rebuilt from the hidden
       // #f0 source by rebuildInfographic() — exactly like a ticker rebuilds its track.
       html: `    <!-- Glass Bars: one frosted panel — caps heading on top, the bar rows below. -->

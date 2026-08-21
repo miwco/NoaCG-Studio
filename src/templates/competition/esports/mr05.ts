@@ -39,6 +39,9 @@ export const mr05: TemplateVariant = defineEsportsVariant(
     html: mapMarkup(o),
     fields: compFieldsFor(MAP_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 600,
     runtimeExtraJs: MAP_RUNTIME_JS,
     css: `${mapStructureCss()}
 

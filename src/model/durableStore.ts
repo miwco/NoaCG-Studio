@@ -213,6 +213,17 @@ function openDatabase(): Promise<IDBDatabase> {
   });
 }
 
+/** One key's current value, straight from the database - what another tab's write left there. */
+function idbReadKey(target: IDBDatabase, key: string): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const tx = target.transaction(STORE, 'readonly');
+    const request = tx.objectStore(STORE).get(key);
+    tx.oncomplete = () => resolve(typeof request.result === 'string' ? request.result : null);
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB read failed'));
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB read was aborted'));
+  });
+}
+
 function idbReadAll(target: IDBDatabase): Promise<Map<string, string>> {
   return new Promise((resolve, reject) => {
     const out = new Map<string, string>();
@@ -334,6 +345,9 @@ async function runHydration(): Promise<void> {
     usingIndexedDb = true;
     hydrated = true;
     settled = true;
+    // Only on the IndexedDB path: the degraded fallback is localStorage, where the browser's own
+    // `storage` event already tells the other tabs, and where there is no mirror to invalidate.
+    startCrossTabInvalidation();
   } catch {
     try {
       opened.close();
@@ -471,7 +485,62 @@ function queueWrite(key: string, value: string | null, previous: string | null):
     }
   });
   pending.add(write);
-  void write.finally(() => pending.delete(write));
+  void write.finally(() => {
+    pending.delete(write);
+    // Tell the other tabs. AFTER the put has settled, so a tab that re-reads on this message
+    // cannot read the value the write was replacing.
+    if (latestWrite.get(key) === seq) announceWrite(key);
+  });
+}
+
+// ── CROSS-TAB INVALIDATION ────────────────────────────────────────────────────
+//
+// The mirror is PER TAB, and IndexedDB is shared. Without this, a second tab on the same
+// production silently loses work: every model mutator here is a read-modify-WHOLE-RECORD write
+// (`patchShow` = loadAllShows → mutate → save the lot), so a tab holding a mirror from before
+// another tab's write puts that old array straight back. Reproduced 2026-08-21: a table created
+// in a second tab was gone from the database after any cue edit in the first, read back from a
+// third, fresh tab. Nothing about it was theoretical, and nothing about it needed two PEOPLE -
+// one person with two tabs open is enough.
+//
+// So a landed write ANNOUNCES its key and the other tabs re-read exactly that key. It closes
+// the hazard rather than narrowing it to zero: the re-read is asynchronous, so a tab that
+// writes in the milliseconds between the message and the re-read landing can still overwrite.
+// Removing that last window means writing through the DATABASE rather than the mirror, which
+// every synchronous model reader in the app is built against - a much larger change, and a
+// separate one. This is the ordinary case, which is a person editing in one tab at a time.
+//
+// `spx-data-changed` is dispatched after the re-read, because a refreshed mirror nobody re-reads
+// leaves every mounted surface showing the value it already had.
+const CHANNEL_NAME = 'noacg-durable-writes';
+let channel: BroadcastChannel | null = null;
+
+function announceWrite(key: string): void {
+  channel?.postMessage({ key });
+}
+
+/** Adopt another tab's write. Best-effort by nature: a failed re-read leaves the mirror as it
+ *  was, which is exactly where this module started, so it is never worse for having tried. */
+async function adoptWrite(key: string): Promise<void> {
+  const target = db;
+  if (!target || !durableKeySet.has(key)) return;
+  try {
+    const value = await idbReadKey(target, key);
+    if (value === null) mirror.delete(key);
+    else mirror.set(key, value);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('spx-data-changed'));
+  } catch {
+    /* the mirror keeps what it had */
+  }
+}
+
+function startCrossTabInvalidation(): void {
+  if (channel || typeof BroadcastChannel === 'undefined') return;
+  channel = new BroadcastChannel(CHANNEL_NAME);
+  channel.onmessage = (event: MessageEvent<{ key?: unknown }>) => {
+    const key = event.data?.key;
+    if (typeof key === 'string') void adoptWrite(key);
+  };
 }
 
 /**

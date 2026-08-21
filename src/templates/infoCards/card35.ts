@@ -32,5 +32,10 @@ export const card35: TemplateVariant = defineCardVariant(
       'behind its own accent rule, and the reference underneath.',
     uicolor: '3',
   },
-  (o) => buildStatementCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildStatementCard(FROST, o),
+    stageWidth: 850,
+  }),
 );

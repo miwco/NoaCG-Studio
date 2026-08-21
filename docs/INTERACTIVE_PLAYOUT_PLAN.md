@@ -591,6 +591,28 @@ rather than as a spec drives them.
 >    tab controls can become anchors that open a second browser tab while Playout stays put. The
 >    danger being named is real — Data and Audience are authoring surfaces, and authoring while
 >    the thing you are steering is off-screen is how a live mistake happens.
+>
+>    **NOT cheap, and BLOCKED — attempted 2026-08-21 and reverted.** Two browser tabs on one
+>    production LOSE EACH OTHER'S WORK today, and making the workspaces open in their own tab
+>    would turn that from something a user has to go out of their way to do into the default
+>    path. `patchShow` (`src/model/shows.ts`) is a whole-array read-modify-write:
+>    `loadAllShows()` → mutate → `saveAll(all)`. It reads the SYNCHRONOUS MIRROR in
+>    `model/durableStore.ts`, which is per-tab and has no cross-tab invalidation — no
+>    `BroadcastChannel`, no `storage` listener. So a tab that has not seen another tab's write
+>    still holds the old array, and its next write puts that array back.
+>
+>    Reproduced, not reasoned: open a production in tab A, open `#/production/<id>/data` in tab
+>    B, add a table there, then make any cue edit in tab A. A THIRD, fresh tab then reports
+>    `datasets: 0` with tab A's edit intact — the table is gone from the durable store, not
+>    merely absent from tab A's view. (Reading it in tab A proves nothing: its mirror never saw
+>    the table. That is what the first attempt at this probe got wrong.)
+>
+>    **The fix is cross-tab safety, and it comes first:** invalidate the mirror when another tab
+>    writes (a `BroadcastChannel` message from `durableStore.setItem`, other tabs dropping the
+>    affected key), or move off whole-array writes to per-record ones. Until then the workspaces
+>    stay in-tab. This is ALSO a live defect on its own — anyone with two tabs on one production
+>    is exposed right now, without any of this — and it is the same hazard class as
+>    [teams](#) above: the moment two people hold one production, whole-record writes lose.
 > 4. **The offline audience page needs a better answer than a sentence.** *"I don't really know
 >    how the audience participation screen should look if the build is run offline."* Options are
 >    in "The offline audience plane" below.

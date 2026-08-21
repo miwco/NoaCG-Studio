@@ -36,5 +36,10 @@ export const card26: TemplateVariant = defineCardVariant(
       'each step, so clearing one renumbers the rest instead of leaving a gap.',
     uicolor: '1',
   },
-  (o) => buildProcessCard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildProcessCard(CLEAN, o),
+    stageWidth: 1080,
+  }),
 );

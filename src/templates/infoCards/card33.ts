@@ -33,5 +33,10 @@ export const card33: TemplateVariant = defineCardVariant(
       'the instruction under its own rule. For outages, delays and status updates.',
     uicolor: '4',
   },
-  (o) => buildNoticeCard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNoticeCard(HOUSE, o),
+    stageWidth: 810,
+  }),
 );

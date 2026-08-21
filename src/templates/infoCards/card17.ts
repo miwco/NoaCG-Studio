@@ -33,5 +33,10 @@ export const card17: TemplateVariant = defineCardVariant(
       'streams, tech shows and anywhere a word needs defining on air.',
     uicolor: '4',
   },
-  (o) => buildTopicCard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTopicCard(HOUSE, o),
+    stageWidth: 980,
+  }),
 );

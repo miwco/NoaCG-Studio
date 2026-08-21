@@ -33,5 +33,10 @@ export const card24: TemplateVariant = defineCardVariant(
       'sentence case. For results, transfers and any story that needs more than a scoreline.',
     uicolor: '5',
   },
-  (o) => buildHeadlineCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildHeadlineCard(VOLT, o),
+    stageWidth: 890,
+  }),
 );

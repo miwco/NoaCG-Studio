@@ -32,5 +32,10 @@ export const card16: TemplateVariant = defineCardVariant(
       'and for the talking points a studio walks through one press at a time.',
     uicolor: '5',
   },
-  (o) => buildTopicCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTopicCard(VOLT, o),
+    stageWidth: 1080,
+  }),
 );

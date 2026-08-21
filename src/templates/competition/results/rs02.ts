@@ -44,6 +44,9 @@ export const rs02: TemplateVariant = defineResultsVariant(
     html: rosterMarkup(o),
     fields: compFieldsFor(ROSTER_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
     runtimeExtraJs: ROSTER_RUNTIME_JS,
     css: `${labelFontFaceCss(fontById('jetbrains-mono'))}
 

@@ -41,6 +41,9 @@ export const ig05: TemplateVariant = defineInfographicVariant(
     const totalText = o.lines[0]?.sample || '124213';
     const goalText = o.lines[1]?.sample || '250000';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 660,
       html: `    <!-- Rising Total: [caps kicker] / [currency mark + huge total] / [track] / [footer]. -->
     <div class="infographic-box">
       <!-- The kicker — small tracking-wide caps in the accent color (field f2). -->

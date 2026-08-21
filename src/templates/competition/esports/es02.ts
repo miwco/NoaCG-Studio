@@ -50,6 +50,9 @@ export const es02: TemplateVariant = defineEsportsVariant(
     html: scoreMarkup(o, MARKUP),
     fields: compFieldsFor(SCORE_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1150,
     runtimeExtraJs: SCORE_RUNTIME_JS,
     css: `${labelFontFaceCss(fontById('jetbrains-mono'))}
 

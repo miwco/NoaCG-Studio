@@ -39,6 +39,9 @@ export const gt03: TemplateVariant = defineGameTimerVariant(
     uicolor: '3',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 720,
     // Stack = badge (dots + face + drain ring + clock) over the sticker heading, all
     // centered under the mid-center anchor. The hidden #f1 minutes source is appended
     // by the assembler; the drain-ring painter is design-owned runtime (runtimeExtraJs).

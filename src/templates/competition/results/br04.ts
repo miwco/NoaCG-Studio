@@ -40,6 +40,9 @@ export const br04: TemplateVariant = defineResultsVariant(
     html: bracketMarkup(o),
     fields: compFieldsFor(BRACKET_FIELDS, o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1000,
     runtimeExtraJs: BRACKET_RUNTIME_JS,
     css: `${boardStructureCss()}
 

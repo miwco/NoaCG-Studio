@@ -67,6 +67,12 @@ export const ig38: TemplateVariant = defineInfographicVariant(
     const unit = o.lines[4]?.sample || '% OF VOTE COUNTED';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 560,
       html: `    <!-- Results Rail: [kicker] / [heading] / [standfirst] / one washed row per district. -->
     <div class="infographic-box">
       <!-- The kicker chip - what this rail IS, in the house label face. -->

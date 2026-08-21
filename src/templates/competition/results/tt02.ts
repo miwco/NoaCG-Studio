@@ -53,6 +53,9 @@ export const tt02: TemplateVariant = defineResultsVariant(
     html: timingMarkup(o, ORDER),
     fields: compFieldsFor(timingFields(ORDER), o),
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 520,
     runtimeExtraJs: TIMING_RUNTIME_JS,
     css: `${labelFontFaceCss(fontById('jetbrains-mono'))}
 

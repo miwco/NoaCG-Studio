@@ -64,6 +64,12 @@ export const ig34: TemplateVariant = defineInfographicVariant(
     const statusText = o.lines[2]?.sample || '94% COUNTED';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 1020,
       html: `    <!-- Seat Board: [printed rule] / [chamber + status] / one bar row per party. -->
     <div class="infographic-box">
       <!-- The masthead rule - the printed line the whole sheet hangs from. -->

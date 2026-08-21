@@ -32,5 +32,10 @@ export const ig19: TemplateVariant = defineInfographicVariant(
       'handovers and the "before we resume" moment.',
     uicolor: '3',
   },
-  (o) => buildRecapBoard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildRecapBoard(FROST, o),
+    stageWidth: 960,
+  }),
 );

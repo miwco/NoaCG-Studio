@@ -31,6 +31,7 @@ import {
   dataSourceCss,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -40,11 +41,23 @@ import {
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import type { AnimData } from '../../blocks/animData';
 import { convertToDataRegion } from '../shared/standard';
+import { stageExtraJs } from '../shared/stageFit';
 import { igPresetById } from './igPresets';
 import { IG_MOTION_JS } from './igMotion';
 import { resolveTokens, type ThemeTokens, type TokenOverrides } from '../../model/themeTokens';
 
 export interface IgDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /** Inner HTML of .infographic — must contain .infographic-box (stat markup or #infographic-bars rows). */
   html: string;
   /** Variant CSS (panel, value, labels, bars). Colors via :root vars only. */
@@ -90,6 +103,8 @@ function update(data) {
     }
   }
   if (typeof rebuildInfographic === 'function') rebuildInfographic();
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // The timeline currently on air. play()/stop() kill it before starting a new one —
@@ -167,7 +182,11 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
 .infographic-box {
-  width: fit-content;              /* the panel hugs the stat / chart */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this graphic was drawn for')
+      : "  width: fit-content;              /* the panel hugs the stat / chart */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -205,7 +224,7 @@ ${design.html.includes(DATA_SOURCE_CLASS) ? `\n${dataSourceCss}\n` : ''}`;
   // ANIMATION region — before it — so the timeline can never rewrite them. The region references
   // the builders by name; every infographic ships all of them, so swapping the motion preset is
   // a pure data edit (docs/DYNAMIC_MOTION_SCOPE.md).
-  const extra = design.runtimeExtraJs.trim();
+  const extra = stageExtraJs(design.stageWidth, 'infographic', design.runtimeExtraJs).trim();
   const js = igRuntimeJs(
     meta.name,
     [extra, IG_MOTION_JS, preset.emit(cfg)].filter((part) => part !== '').join('\n\n'),

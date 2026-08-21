@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createProject } from './_create';
+import { parkFocusOffControls } from './_keys';
 
 // The production DATA workspace (docs/INTERACTIVE_PLAYOUT_PLAN.md D3/D6): the show's own
 // tables, edited on the Data tab, loaded into CUES on the Playout tab by deliberate operator
@@ -602,4 +603,45 @@ test('production data is scoped to its production, never shared between two', as
   await expect(page.getByTestId('production-page')).toBeVisible();
   await page.getByTestId('tab-data').click();
   await expect(page.getByTestId('data-value-shared.value')).toHaveValue('one');
+});
+
+test('SPACE on the Data tab cannot put a graphic on air', async ({ page }) => {
+  // THE VERB KEYS BELONG TO THE PLAYOUT SURFACE, and only while it is the surface on screen.
+  //
+  // `usePlayoutVerbKeys` binds in the SHELL, which renders on Data and Audience too - so
+  // standing on the Data tab with focus anywhere but an input, SPACE ran Take. No monitors are
+  // visible there, so a cue went to air with nothing on screen saying it had. That is the
+  // hazard behind the owner's read of the workspaces (2026-08-21): "the buttons that we have
+  // and the side pages we have feel a bit dangerous to swap between."
+  //
+  // THE PROBE IS THE ACTIVITY FEED, and getting here took two wrong ones worth naming, because
+  // both are the shape of guard test that cannot fail:
+  //   1. Reading `Show.liveCue` - a LOCAL take never writes that field, so the assertion was
+  //      green with the guard removed.
+  //   2. Pressing every verb key in a row and then asserting nothing aired. `0` is Out, so the
+  //      sequence took the cue and took it straight back off. The test cancelled itself.
+  // The feed counts what actually reached the wire, one row per command, and it cannot be
+  // undone by a later key in the same press sequence.
+  await createProject(page, { name: 'Arena Quiz' });
+  await productionFor(page, 'Quiz Night');
+  const rows = page.getByTestId('action-log-row');
+  await expect(rows).toHaveCount(0);
+
+  await page.getByTestId('tab-data').click();
+  await expect(page.getByTestId('production-data')).toBeVisible();
+
+  // Space belongs to a focused button by design, so say where focus is rather than inherit it.
+  await parkFocusOffControls(page);
+  for (const key of ['Space', 'n', 'r', '0', 'u']) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(150);
+  }
+  await expect(rows, 'a verb key pressed on the Data tab reached the wire').toHaveCount(0);
+
+  // …and back on Playout the same key works, so this is a scoping rule and not a dead keymap.
+  await page.getByTestId('tab-playout').click();
+  await parkFocusOffControls(page);
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');
+  await expect(rows).not.toHaveCount(0);
 });

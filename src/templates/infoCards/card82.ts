@@ -70,7 +70,9 @@ ${maskLines([maskLine('info-card', o, 2, 'info-card-detail', '        ')])}
   grid-template-columns: auto minmax(0, 1fr);  /* the index hugs its digits; the words take what is left */
   align-items: center;  /* index and billing share one centre line */
   column-gap: calc(38px * var(--scale));  /* the gutter between the marker and the words */
-  width: fit-content;  /* the slab hugs the bill - a poster is trimmed to its words */
+  width: fit-content;  /* the slab hugs the bill - a poster is trimmed to its words, so this
+                          design declares NO stageWidth: it is a hug inside a board category,
+                          and claiming a stage it overrides here would only lie to the gate */
   max-width: calc(1160px * var(--scale));  /* overrides the category cap: a long topic may run this wide */
   padding: calc(40px * var(--scale)) calc(48px * var(--scale));  /* the poster's printed margins */
   text-align: left;  /* the bill is set off the index, which sits on the left */

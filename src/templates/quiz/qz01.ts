@@ -232,6 +232,9 @@ export const qz01: TemplateVariant = defineQuizVariant(
   color: #e57a7d;                  /* the losing row's leading edge carries the colour */
 }`,
     hasAccent: false, // the accent edge is a painted ::after layer, not a .quiz-accent element
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1110,
     tokens: {
       displayTracking: '0.01em',
     },

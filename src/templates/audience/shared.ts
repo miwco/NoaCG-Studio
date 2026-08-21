@@ -50,6 +50,7 @@ import {
   dataSourceCss,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -57,6 +58,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { composeRefine, convertToDataRegion } from '../shared/standard';
+import { stageFitRuntimeJs } from '../shared/stageFit';
 import type { AnimData, AnimStep } from '../../blocks/animData';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { audiencePresetById } from './audiencePresets';
@@ -198,6 +200,17 @@ export const REQUEST_FORM: AudienceForm = {
 // ── The assembler ────────────────────────────────────────────────────────────
 
 export interface AudienceDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /** Inner HTML of .audience — must contain .audience-box and the parts the form needs. */
   html: string;
   /** Variant CSS. Colors via the :root vars, sizes via calc(* var(--scale)). */
@@ -291,6 +304,8 @@ function update(data) {
     if (el) setFieldValue(el, fields[key]);
   }${rebuild}
   audienceAttribution();
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // play(): take the graphic on air — run the entrance timeline.
@@ -381,7 +396,11 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Auto-fit: the panel hugs its text and wraps instead of overflowing. ── */
 .audience-box {
-  width: fit-content;              /* the panel hugs the message */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this panel was drawn for')
+      : "  width: fit-content;              /* the panel hugs the message */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -412,6 +431,11 @@ ${design.css}
     .filter(Boolean)
     .join('\n\n');
   const js = audienceRuntimeJs(meta.name, form, `${extraJs}\n\n${preset.emit(cfg)}`);
+  const jsWithStage = design.stageWidth
+    ? `${js}
+
+${stageFitRuntimeJs('audience')}`
+    : js;
 
   const template: SpxTemplate = {
     name: meta.name,
@@ -420,7 +444,7 @@ ${design.css}
     fps: o.fps,
     html,
     css,
-    js,
+    js: jsWithStage,
     fields,
     settings,
     assets: [...o.importedImages, ...(o.customFont ? [o.customFont.asset] : [])],

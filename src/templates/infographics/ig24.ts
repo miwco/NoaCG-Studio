@@ -52,6 +52,9 @@ export const ig24: TemplateVariant = defineInfographicVariant(
     const milestonesText = o.lines[0]?.sample || MILESTONES_SAMPLE;
     const currentText = o.lines[1]?.sample || '18400';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 1060,
       html: `    <!-- House Milestones: [amber bar] | [void panel: heading row / rail with nodes]. -->
     <div class="infographic-accent"></div>
     <div class="infographic-box">

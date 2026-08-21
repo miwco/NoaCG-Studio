@@ -33,5 +33,10 @@ export const card18: TemplateVariant = defineCardVariant(
       'type. Both labels are fields, so "NOW PLAYING" can say whatever the show says.',
     uicolor: '1',
   },
-  (o) => buildNowNext(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNowNext(CLEAN, o),
+    stageWidth: 990,
+  }),
 );

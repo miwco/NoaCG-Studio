@@ -245,7 +245,10 @@ const MAP = [
   // for them this line documents the pairing; for app.html (otherwise unmapped, so it
   // escalated by accident) and the notice component it IS the mapping. flows rides along on
   // app.html because that file frames every /app load.
-  [/^(app\.html|src\/model\/durableStore\.ts|src\/main\.tsx|src\/components\/StorageHealthNotice\.tsx)$/, ['network-resilience.spec.ts']],
+  // durableStore also owns CROSS-TAB safety: its mirror is per-tab and every model mutator is a
+  // read-modify-WHOLE-RECORD write, so a change here can silently reintroduce one tab eating
+  // another tab's work (docs/INTERACTIVE_PLAYOUT_PLAN.md, and cross-tab.spec.ts's own header).
+  [/^(app\.html|src\/model\/durableStore\.ts|src\/main\.tsx|src\/components\/StorageHealthNotice\.tsx)$/, ['network-resilience.spec.ts', 'cross-tab.spec.ts']],
   [/^app\.html$/, ['flows.spec.ts']],
   [/^src\/community\//, ['community.spec.ts']],
   [/^src\/showchat\//, ['community.spec.ts']],

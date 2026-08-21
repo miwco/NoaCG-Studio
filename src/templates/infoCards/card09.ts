@@ -86,6 +86,9 @@ ${kicker}${mask(0)}${subtitle}
   margin-top: calc(18px * var(--scale));  /* clear break under the title */
 }`,
       hasAccent: false, // the accent moment is the kicker color, not a drawn element
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 960,
     };
   },
 );

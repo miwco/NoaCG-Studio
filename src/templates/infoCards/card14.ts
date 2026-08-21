@@ -33,5 +33,10 @@ export const card14: TemplateVariant = defineCardVariant(
       'up to five points if the chapter needs them.',
     uicolor: '1',
   },
-  (o) => buildTopicCard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTopicCard(CLEAN, o),
+    stageWidth: 1080,
+  }),
 );

@@ -36,6 +36,9 @@ export const gt02: TemplateVariant = defineGameTimerVariant(
     uicolor: '6',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 410,
     // Structure contract: .game-timer-box > .game-timer-mask > #f0 (the label) + .game-timer-clock (JS paints M:SS).
     html: `    <!-- Power Clock: dimmed caps label over the big clock, on one leaning dark slab. -->
     <div class="game-timer-box">

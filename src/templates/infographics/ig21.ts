@@ -32,5 +32,10 @@ export const ig21: TemplateVariant = defineInfographicVariant(
       'against the action. For the end of a production call, a class or a community stream.',
     uicolor: '4',
   },
-  (o) => buildRecapBoard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildRecapBoard(HOUSE, o),
+    stageWidth: 1060,
+  }),
 );

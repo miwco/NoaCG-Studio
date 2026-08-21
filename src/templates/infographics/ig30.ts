@@ -34,6 +34,9 @@ export const ig30: TemplateVariant = defineInfographicVariant(
     const raisedText = o.lines[0]?.sample || '18400';
     const goalText = o.lines[1]?.sample || '30000';
     return {
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 750,
       html: `    <!-- Clean Goal: label / total + share / hairline meter / target. -->
     <div class="infographic-box"><div class="infographic-accent"></div>
       <div class="infographic-kicker" id="f2">TOTAL RAISED</div>
