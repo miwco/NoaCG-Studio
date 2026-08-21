@@ -1,4 +1,4 @@
-import { test, expect, type Route } from '@playwright/test';
+import { test, expect, type Route, type Page, type BrowserContext } from '@playwright/test';
 import { createProject } from './_create';
 import JSZip from 'jszip';
 import { readFileSync } from 'node:fs';
@@ -218,6 +218,120 @@ test('the production controller: preview shows the cue without airing it, Take a
     .poll(async () => air.locator('.lower-third').evaluate((el) => getComputedStyle(el).opacity), { timeout: 6000 })
     .toBe('0');
   await expect(ctl.locator('#live-line')).toContainText('nothing on air');
+
+  await ctl.close();
+  await air.close();
+});
+
+// ── BOOT RECOVERY over the relay (docs/CLOUD_PLAYOUT.md's recovery discipline, local half) ──
+// A browser source reloads: OBS restarts, a machine wakes, someone refreshes the wrong window.
+// The graphic used to boot at the log HEAD and come back BLANK - off air, every field at the
+// design's own defaults - and stay that way until an operator happened to press something.
+// Measured before the fix on this exact walk: a board aired at 89 with its clock at 9:55 came
+// back invisible, reading 88 and 10:00, with nine rows sitting unread in the log.
+//
+// The log IS the history, so the fix is a BOUNDED replay rather than a new report channel:
+// start at the last `play` for this graphic and stream, run it off air, settle, come back.
+
+/** Build the Cup Tie package once and serve it over an in-spec relay. */
+async function cupTiePackage(page: Page, context: BrowserContext, origin: string) {
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const b64 = await page.evaluate(async () => {
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { createGraphic } = await import('/src/model/library.ts');
+    const shows = await import('/src/model/shows.ts');
+    const { buildShowZipFor } = await import('/src/export/showExport.ts');
+    const tpl = variantById('sb09')!.create({});      // House Match Board: 88-84, clock from 10:00
+    const { doc } = createGraphic(tpl, { name: 'House Match Board' });
+    const show = shows.createShowNamed('Cup Tie');
+    shows.addGraphicToShow(show.id, tpl, { graphicId: doc!.id });
+    const fresh0 = shows.loadShows().find((s) => s.id === show.id)!;
+    shows.updateShowCue(show.id, fresh0.cues![0].id, { label: 'Kick-off' });
+    const fresh = shows.loadShows().find((s) => s.id === show.id)!;
+    return (await buildShowZipFor(fresh, 'html-overlay')).generateAsync({ type: 'base64' });
+  });
+  const zip = await JSZip.loadAsync(b64, { base64: true });
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir && /\.(html|json)$/.test(n)) files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+  }
+  const manifest = JSON.parse(files.get('payload.json')!) as { graphics: { file: string }[] };
+  const { serve, rows } = relayServe(files);
+  const air = await context.newPage();
+  await routeOrigin(air, origin, serve);
+  await air.goto(`${origin}/${manifest.graphics[0].file}?stream=program`, { waitUntil: 'load' });
+  const ctl = await context.newPage();
+  await routeOrigin(ctl, origin, serve);
+  await ctl.goto(`${origin}/controller.html`, { waitUntil: 'load' });
+  await expect(ctl.locator('#mode')).toContainText('SHOW');
+  return { air, ctl, rows };
+}
+
+/** What the reloaded source is showing: whether it is on air, and the two live values. */
+const airState = (air: Page) =>
+  air.evaluate(() => ({
+    opacity: getComputedStyle(document.documentElement).opacity,
+    score: document.querySelector('#f1')?.textContent ?? null,
+    clock: document.querySelector('#f5')?.textContent ?? null,
+  }));
+
+test('a relay browser source reloaded mid-show comes back on air, with the score and the real match time', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  const { air, ctl } = await cupTiePackage(page, context, 'http://relay-recover.local');
+
+  // A show happens: the board airs, a goal is bumped on air, the clock starts.
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+  await ctl.locator('.field', { hasText: /^F1 · / }).locator('button.step', { hasText: '+' }).click();
+  await expect(air.locator('#f1')).toHaveText('89', { timeout: 10_000 });
+  await ctl.locator('#editor-events').getByRole('button', { name: '⚡ Start clock' }).click();
+  await expect(air.locator('#f5')).toHaveText('9:55', { timeout: 20_000 });
+
+  // THE RELOAD - and nothing else. No operator touches anything after this point.
+  const at = Date.now();
+  await air.reload({ waitUntil: 'load' });
+  await expect.poll(() => airState(air).then((s) => s.opacity), { timeout: 15_000 }).toBe('1');
+  const back = await airState(air);
+
+  expect(back.score, 'the goal must survive the reload').toBe('89');
+  // The clock kept running: it reads later than it did before the reload, by about the wall
+  // time that passed. Asserting a fixed string here would be asserting the clock had STOPPED.
+  const elapsed = (Date.now() - at) / 1000;
+  const behind = (t: string) => 10 * 60 - ((parseInt(t.split(':')[0], 10) || 0) * 60 + (parseInt(t.split(':')[1], 10) || 0));
+  expect(behind(back.clock!)).toBeGreaterThanOrEqual(5);          // never back at the 10:00 seed
+  expect(behind(back.clock!)).toBeLessThanOrEqual(5 + elapsed + 2);
+
+  await ctl.close();
+  await air.close();
+});
+
+test('relay recovery is never watchable, and a graphic that was never on air stays off', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  const { air, ctl } = await cupTiePackage(page, context, 'http://relay-quiet.local');
+
+  // NOTHING has aired yet. A reload here must recover NOTHING - a graphic that was never
+  // played is supposed to be blank, and replaying a show nobody started is worse than blank.
+  await air.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(3_000);
+  expect((await airState(air)).opacity).toBe('1');       // not left hidden by a replay that never ran
+  await expect(air.locator('.scoreboard')).toHaveCSS('opacity', '0');
+
+  // Now air it, then take it OFF air, then reload: still blank, because that is the picture
+  // the log describes. Recovery restores what was on, never what once was.
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+  // The take button IS the off switch once its cue is live - the controller relabels it.
+  await expect(ctl.locator('#v-take')).toContainText('TAKE OFF', { timeout: 10_000 });
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('.scoreboard')).toHaveCSS('opacity', '0', { timeout: 10_000 });
+
+  await air.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(3_000);
+  await expect(air.locator('.scoreboard')).toHaveCSS('opacity', '0');
+  expect((await airState(air)).opacity).toBe('1');
 
   await ctl.close();
   await air.close();

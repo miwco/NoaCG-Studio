@@ -151,6 +151,9 @@ if (invokesE2e(command)) {
         `whatever env it was started with, and the ${live ? 'configured-mode' : 'offline-pinned'} specs ` +
         'fail confusingly (see AGENTS.md "Verifying changes" gotchas).\n' +
         'Stop that server first (preview_stop if it was started with the preview tools), then re-run. ' +
+        'If a killed run left it behind, nothing owns it and there is nothing to stop it FROM - ' +
+        '`node scripts/e2e-runs.mjs --orphans` says whether that is the case, and `--kill-orphans` ' +
+        'closes it.\n' +
         "Servers in other worktrees are harmless - they live on their own ports.",
     );
   }

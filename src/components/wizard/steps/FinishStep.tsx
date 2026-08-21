@@ -90,9 +90,16 @@ export function catalogSummaryRows(variant: TemplateVariant, draft: WizardDraft)
   // An imported SVG's fields are its own text layers, chosen on the mapping step.
   if (draft.designSvg) {
     const on = draft.svgFields.filter((f) => f.on).length;
+    // An outlined-text stand-in is a field too (plan §1.A) — a graphic with only those is
+    // editable, not fixed.
+    const replaced = draft.svgOutlines.filter((f) => f.on && f.box).length;
+    const parts = [
+      on > 0 ? `${on} editable text layer${on === 1 ? '' : 's'}` : '',
+      replaced > 0 ? `${replaced} outlined text replaced by live text` : '',
+    ].filter(Boolean);
     rows.push({
       label: 'Fields',
-      value: on > 0 ? `${on} editable text layer${on === 1 ? '' : 's'}` : 'None — a fixed graphic',
+      value: parts.length > 0 ? parts.join(' · ') : 'None — a fixed graphic',
       step: 'fields',
     });
   }

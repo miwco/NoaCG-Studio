@@ -135,7 +135,7 @@ test('finish: the export door saves the graphic and opens the export window over
   await win.locator('.gallery-close').click();
   await expect(win).toBeHidden();
   await expect(page.getByTestId('creation-wizard')).toBeVisible();
-  await page.locator('.wz-header .brand-home').click();
+  await page.getByTestId('wz-home').click();
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
 
   await page.locator('.home-nav button', { hasText: 'Graphics' }).click();
@@ -168,7 +168,7 @@ test('finish: the name reaches the exported package folder', async ({ page }) =>
   await expect(page.getByTestId('creation-wizard')).toBeVisible();
 
   // Close the wizard to reveal the home page and library
-  await page.locator('.wz-header .brand-home').click();
+  await page.getByTestId('wz-home').click();
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
 
   await page.locator('.home-nav button', { hasText: 'Graphics' }).click();
@@ -187,7 +187,7 @@ test('export window: a saved graphic exports from the wizard without opening the
   await expect(page.getByTestId('wz-finish-name')).toBeVisible();
 
   // Now manually close the wizard to return to the home page and verify the graphic is in the library.
-  await page.locator('.wz-header .brand-home').click();
+  await page.getByTestId('wz-home').click();
   await expect(page.getByTestId('creation-wizard')).toBeHidden();
 
   // The home dashboard is a shelf now, not a table; open the Graphics section to see the full row.

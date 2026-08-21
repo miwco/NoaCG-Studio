@@ -35,7 +35,7 @@ import { PALETTES, paletteById } from '../../model/wizard';
 import type { EasingId } from '../../model/easings';
 import { ensureFontFace, fontByStack, type CustomFont } from '../../model/fonts';
 import type { EraseRect, RegionInk } from '../../assets/eraseRegion';
-import type { SvgImportResult } from '../../assets/svgImport';
+import { looksNumeric, type SvgImportResult } from '../../assets/svgImport';
 import type { ProjectLegibility } from '../../model/designRules';
 
 /** ONE applied baked-text erase: the marked rectangle (in the artwork's SOURCE pixels) and
@@ -109,6 +109,12 @@ export interface SvgFieldDraft {
   sample: string;
   /** A numeric-looking sample emits ftype "number". */
   numeric: boolean;
+  /** A clock-shaped sample ("10:00") — the row then offers the countdown kind. */
+  clock: boolean;
+  /** How the layer binds: plain text (the default), or a COUNTDOWN — the node becomes the
+   *  clock display and the operator field its length in minutes (plan P2 "clock ftype").
+   *  One countdown per graphic: the shared clock runtime drives one display. */
+  kind: 'text' | 'countdown';
 }
 
 /** One `<image>` layer offered as a swappable picture field (docs/SVG_IMPORT_PLAN.md P2). */
@@ -117,6 +123,27 @@ export interface SvgImageDraft {
   /** OFF by default — a picture is usually the artwork, not a slot. */
   on: boolean;
   title: string;
+}
+
+/** One group of glyph shapes offered as OUTLINED TEXT (docs/SVG_IMPORT_PLAN.md §1.A): ON
+ *  hides the group and places an HTML field over its measured box — the raster flow's
+ *  recovery, because outlines carry no type to bind. */
+export interface SvgOutlineDraft {
+  candidateId: string;
+  /** OFF by default — a logo is also a group of paths; only the user can tell. */
+  on: boolean;
+  title: string;
+  /** The field's starting text. Outlines carry no text, so it starts as the label. */
+  sample: string;
+  /** The shapes' box in DESIGN px (the artwork's own space), measured by the mapping step
+   *  on its rendered artwork — DOMParser has no layout. `capHeight` is the cap-top-to-
+   *  baseline run read off the glyph shapes (most glyph bottoms sit on the baseline; the
+   *  tallest top is the cap/ascender line), which is what a font size is derived from.
+   *  null until the step has measured it. */
+  box: { x: number; y: number; width: number; height: number; capHeight: number } | null;
+  /** The shapes' own fill colour, read off the rendered group — so the replacement text
+   *  arrives in the colour the outlined text was. null = the design default. */
+  color: string | null;
 }
 
 /** How one font family the SVG references resolves (plan §4). */
@@ -226,6 +253,9 @@ export interface WizardDraft {
    *  pictures inside a design are the artwork, not a slot), ON = a filelist field whose
    *  value swaps the node's href. */
   svgImages: SvgImageDraft[];
+  /** The mapping step's outlined-text rows, one per glyph-shaped group: OFF by default,
+   *  ON = the group is hidden and a placed HTML field stands in for it (plan §1.A). */
+  svgOutlines: SvgOutlineDraft[];
   /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
    *  the mapping step offers the Google fetch or an upload for the rest. An entry with
    *  neither source is UNRESOLVED — created anyway, with a warning. */
@@ -284,6 +314,7 @@ export function initialDraft(): WizardDraft {
     designSvg: null,
     svgFields: [],
     svgImages: [],
+    svgOutlines: [],
     svgFonts: [],
     legibility: {},
   };
@@ -376,10 +407,16 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
               title: f.title.trim() || 'Text',
               sample: f.sample,
               numeric: f.numeric,
+              countdown: f.kind === 'countdown',
             })),
           images: draft.svgImages
             .filter((f) => f.on)
             .map((f) => ({ candidateId: f.candidateId, title: f.title.trim() || 'Picture' })),
+          // Only a MEASURED outline can be replaced: its field needs the box, and hiding the
+          // shapes without a stand-in would simply lose the designer's text.
+          outlines: draft.svgOutlines
+            .filter((f) => f.on && f.box)
+            .map((f) => ({ candidateId: f.candidateId })),
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,
@@ -542,6 +579,66 @@ function withDesignFieldSpecs(template: SpxTemplate, draft: WizardDraft): SpxTem
   return applyPlacedFieldSpecs(template, draft.designFields);
 }
 
+/**
+ * The outlined-text stand-ins of an imported SVG (docs/SVG_IMPORT_PLAN.md §1.A). The
+ * generator has already hidden each chosen group; here the HTML field that replaces it is
+ * placed over the group's measured box through the SAME addPlacedLine transform the erase
+ * seeds and the Data tab use — so the field is an ordinary placed line (draggable, restylable,
+ * fit-capped) and the preview, the editor and every export agree on it by construction.
+ *
+ * The measurements are the mapping step's (SvgOutlineDraft.box): the glyph shapes' bounds,
+ * cap height and fill. Nothing reconstructs the typeface — outlines carry none — so the
+ * text arrives in the project's heading face, at the size, place, colour and alignment the
+ * shapes had. The sizing rules are withEraseSeedFields's, for the same reasons it states.
+ */
+function withSvgOutlineFields(template: SpxTemplate, draft: WizardDraft): SpxTemplate {
+  const svg = draft.designSvg;
+  if (!svg) return template;
+  let next = template;
+  for (const row of draft.svgOutlines) {
+    if (!row.on || !row.box) continue;
+    const box = row.box;
+    const title = row.title.trim() || 'Text';
+    const sample = row.sample.trim() || title;
+    // Cap-top to baseline is ~0.72 em; bounded by the width (a logo-shaped group would seed
+    // type its slot could never hold) and by half the artwork's height. The width bound is
+    // judged against the short field NAME, as the raster seed does — never the sample: a
+    // long sample is the shrink runtime's business at play time, and sizing the design down
+    // for it would make every real outlined title arrive small.
+    const fits = box.width / (0.55 * Math.max(4, title.length));
+    const fontSize = Math.max(
+      10,
+      Math.min(Math.round(box.capHeight / 0.72), Math.round(fits), Math.round(svg.height * 0.5)),
+    );
+    // Centred text drifts the moment a name of another length arrives unless it is anchored
+    // at its middle — the centre rule withEraseSeedFields uses, against the artwork's width.
+    const centre = box.x + box.width / 2;
+    const align =
+      Math.abs(centre - svg.width / 2) <= svg.width * 0.045 ? 'center' as const
+      : centre < svg.width / 2 ? 'left' as const
+      : 'right' as const;
+    const anchorX = align === 'center' ? centre : align === 'right' ? box.x + box.width : box.x;
+    const added = addPlacedLine(next, {
+      title,
+      // A sample the user typed as a plain figure (a score, a year) becomes a number field,
+      // the same proposal a bound text layer gets from its own content.
+      ftype: looksNumeric(sample) ? 'number' : 'textfield',
+      text: sample,
+      ...(row.color ? { color: row.color } : {}),
+      // line-height 1 makes the box exactly one em tall; the ink starts ~0.1 em below its top.
+      lineHeight: 1,
+      at: { x: Math.round(anchorX), y: Math.round(box.y - fontSize * 0.1) },
+      fontSize,
+      align,
+      // The slot is the room the outlined text had, from its own anchor, plus the side
+      // bearings — type occupies a hair more than it paints.
+      maxWidth: Math.max(64, Math.round((align === 'center' ? box.width * 2 : box.width) + fontSize * 0.12)),
+    });
+    if (added) next = added.template;
+  }
+  return next;
+}
+
 /** The graphic's name: what the Finish step was given, else the design's own catalog name
  *  (which is what a project was called before that step existed). */
 export function draftName(variant: TemplateVariant, draft: WizardDraft): string {
@@ -591,6 +688,7 @@ export function buildDraftTemplate(
   }
   if (variant.category === 'imported-design') {
     template = withEraseSeedFields(template, draft);
+    template = withSvgOutlineFields(template, draft);
     template = withDesignFieldSpecs(template, draft);
     if (opts.stretchDemo) template = withStretchDemoLine(template, draft);
   }

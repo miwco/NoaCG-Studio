@@ -25,7 +25,9 @@
 //   node scripts/e2e-runs.mjs            list active runs; exit 1 if any, 0 if none
 //   node scripts/e2e-runs.mjs --json     the same as one machine-readable object
 //   node scripts/e2e-runs.mjs --wait     block until no run is active, then exit 0
-//   node scripts/e2e-runs.mjs --orphans  list browser/worker processes with no live CLI parent
+//   node scripts/e2e-runs.mjs --orphans  list browser/worker processes and DEV SERVERS with no
+//                                        live CLI to belong to
+//   node scripts/e2e-runs.mjs --kill-orphans   close them, freeing the RAM and the e2e port
 
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
@@ -103,6 +105,43 @@ function posixNodeProcesses() {
       command: args,
       startedAt: Date.now() - Number(etimes) * 1000,
     }));
+}
+
+/**
+ * EVERY process on this machine, as `{ pid, ppid, name, command }` - not only node ones.
+ *
+ * `nodeProcesses` is enough to find runs, because a run IS a node process. Finding whether a dev
+ * server still has an OWNER is not: its chain runs through `cmd.exe` shims, so a node-only table
+ * shows a broken chain for a perfectly healthy server. Only the orphan check needs this, and it
+ * is a rare manual command, so the heavier query costs nothing that matters.
+ *
+ * Windows only, like `browserShells` - and for the same reason. On POSIX an orphaned process is
+ * REPARENTED to init rather than left with a dead parent, so "the chain ended in a dead parent"
+ * never fires there and would quietly report nothing. Returning an empty table says that
+ * honestly instead of guessing.
+ */
+export function allProcesses() {
+  if (process.platform !== 'win32') return [];
+  const script =
+    '@(Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine) | ' +
+    'ConvertTo-Json -Depth 3 -Compress';
+  const res = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    encoding: 'utf8',
+    windowsHide: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (res.status !== 0 || !res.stdout?.trim()) return [];
+  try {
+    const rows = JSON.parse(res.stdout);
+    return (Array.isArray(rows) ? rows : [rows]).map((r) => ({
+      pid: Number(r.ProcessId),
+      ppid: Number(r.ParentProcessId),
+      name: String(r.Name ?? ''),
+      command: typeof r.CommandLine === 'string' ? r.CommandLine : '',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /** The top-level Playwright test CLI - one process per run, whatever config it was handed. */
@@ -234,11 +273,77 @@ export function activeRuns({ exclude, excludePids, unattributableRoot = '<unknow
       pid: p.pid,
       root: RUNNER.test(p.command) ? rootOfCommand(p.command) : rootOfSweep(p.command, unattributableRoot),
       label: labelOf(p.command),
+      // A SWEEP never queues behind anything; only a Playwright run has a globalSetup that
+      // waits. `blockingRuns` needs to tell the two apart, and `startedAt` is how two runs
+      // that can both be waiting decide which of them goes first.
+      kind: RUNNER.test(p.command) ? 'run' : 'sweep',
+      startedAt: p.startedAt ?? null,
       elapsedMin: p.startedAt ? Math.round(((Date.now() - p.startedAt) / 60_000) * 10) / 10 : null,
     }))
     .filter((r) => !excludePids?.has(r.pid))
     .filter((r) => r.root && !(exclude && sameRoot(r.root, exclude)))
     .sort((a, b) => (b.elapsedMin ?? 0) - (a.elapsedMin ?? 0));
+}
+
+/**
+ * Two Playwright runs started within this many milliseconds count as having started TOGETHER,
+ * and the tie is settled by pid instead of by clock.
+ *
+ * The slack is not cosmetic. On POSIX `startedAt` is derived from `ps -o etimes`, which reports
+ * ELAPSED WHOLE SECONDS - so the same process yields a value that wobbles by up to a second
+ * depending on when the table was read, and two runs comparing each other a few seconds apart
+ * must still reach the SAME verdict or they both stall again. Pid is stable, unique, and
+ * available on every platform, which is all a tiebreak has to be.
+ */
+const SIMULTANEOUS_MS = 2_000;
+
+/**
+ * Which of `runs` a WAITING run must actually yield to.
+ *
+ * THE STALL THIS EXISTS TO PREVENT. A Playwright CLI that is sitting in its globalSetup waiting
+ * looks exactly like one that is driving a browser - same process, same command line - because
+ * this module reads the OS process table rather than any state a run publishes about itself. So
+ * two runs started in the same second each saw the other as active work and queued behind it,
+ * and neither could ever be the one that finished: both sat there until the 30-minute cap in
+ * e2e/_offline-guard.ts let them through. Measured on 2026-08-21 - two worktrees, both idle at
+ * ~2 s of CPU sixteen minutes in, and killing either one released the other within seconds.
+ *
+ * THE RULE. Runs are ordered by when they started, ties broken by pid, and a run yields only to
+ * those AHEAD of it. That is a total order every run computes identically from the same process
+ * table, so exactly one of any simultaneous set proceeds and the rest queue behind it in a
+ * stable FIFO - no lock file, nothing to release, nothing to go stale, which is the property
+ * this module is built on (see the header).
+ *
+ * A SWEEP is always yielded to, whenever it started: a sweep has no globalSetup and never waits
+ * for anybody, so it can only ever be real work in progress.
+ */
+export function blockingRuns(runs, self) {
+  return runs.filter((r) => {
+    if (r.kind !== 'run') return true; // a sweep or bench: always real work
+    if (r.pid === self.pid) return false;
+    const known = typeof r.startedAt === 'number' && typeof self.startedAt === 'number';
+    // An unreadable start time on either side falls back to the pid order alone. Both runs see
+    // the same pair of values, so they still agree on who goes first - which is the only
+    // property that matters here.
+    if (!known || Math.abs(r.startedAt - self.startedAt) <= SIMULTANEOUS_MS) return r.pid < self.pid;
+    return r.startedAt < self.startedAt;
+  });
+}
+
+/**
+ * This run's own identity for `blockingRuns`: the pid and start time of the Playwright CLI in
+ * our own process chain.
+ *
+ * globalSetup does not necessarily run IN the CLI process, so `process.pid` is not reliably the
+ * one other checkouts can see. The CLI is whichever of our ancestors the runner pattern matches;
+ * failing that we fall back to this process, which still gives a stable, unique pid - the part
+ * the tiebreak actually depends on.
+ */
+export function selfRun(pids = selfAndAncestors(), processes = nodeProcesses()) {
+  const cli = processes.find((p) => pids.has(p.pid) && RUNNER.test(p.command));
+  if (cli) return { pid: cli.pid, startedAt: cli.startedAt ?? null };
+  const own = processes.find((p) => p.pid === process.pid);
+  return { pid: process.pid, startedAt: own?.startedAt ?? null };
 }
 
 /** One human-readable line per active run. */
@@ -248,15 +353,76 @@ export function describeRuns(runs) {
     .join('\n');
 }
 
+/** The Vite dev server, however it was launched (`npx vite`, the `.bin` shim, a direct node call). */
+const DEV_SERVER = /node_modules[/\\]+(?:\.bin[/\\]+\.{2}[/\\]+)?vite[/\\]+bin[/\\]+vite\.js/;
+
 /**
- * Playwright workers and browser shells with no live CLI to belong to - what a killed or
- * crashed run leaves behind. They hold real RAM and nothing will ever reap them.
+ * A process that can only ever be part of a dev server's LAUNCH CHAIN, never its owner: the
+ * `npm run dev` supervisor and the `cmd /c vite` shim git-bash and npm put in between. Anything
+ * else the chain reaches - a terminal, explorer.exe, a service - is a real owner.
+ */
+const LAUNCH_CHAIN = /^(node|npm|cmd|bash|sh)(\.exe)?$/i;
+
+/**
+ * Is this dev server's launch chain ORPHANED - has it no living owner outside itself?
+ *
+ * Playwright starts the dev server as a child of its own CLI (playwright.config.ts `webServer`),
+ * through `npm run dev` and a `cmd /c` shim. Killing the CLI - which is what a session does to a
+ * stuck run - leaves that whole chain alive and listening, so `taskkill /PID <cli>` frees nothing.
+ * Walking UP from the server tells the two cases apart, measured on this machine with one of each
+ * running side by side: the leftover's chain broke three hops up AT ITS OWN `npm run dev`, whose
+ * parent (the killed CLI) was gone, while a live session's server ran six hops up to
+ * `explorer.exe`. So the test is not a hop count - it is whether the walk ever reaches a process
+ * that is not itself part of the launch chain.
+ */
+function chainIsOrphaned(server, byPid) {
+  const seen = new Set([server.pid]);
+  for (let at = byPid.get(server.ppid); ; ) {
+    if (!at) return { orphaned: true, chain: [...seen] }; // ended in a dead parent: nothing owns it
+    if (!LAUNCH_CHAIN.test(at.name)) return { orphaned: false, chain: [] }; // terminal/desktop/service
+    if (seen.has(at.pid)) return { orphaned: true, chain: [...seen] }; // recycled pid made a loop
+    seen.add(at.pid);
+    at = byPid.get(at.ppid);
+  }
+}
+
+/**
+ * Dev servers belonging to THIS repository - the main checkout or any worktree under it - whose
+ * launch chain has no living owner. Pure over an injected process table so it can be tested
+ * against real tables captured from both cases.
+ */
+export function orphanedDevServers(processes, root = repoRoot) {
+  const byPid = new Map(processes.map((p) => [p.pid, p]));
+  const repo = normalize(root).toLowerCase();
+  return processes
+    .filter((p) => DEV_SERVER.test(p.command))
+    .map((p) => ({ ...p, root: rootOfCommand(p.command) }))
+    // Only ever this repo's own checkouts. An unrelated Vite project on the same machine is
+    // nobody's business here, and a worktree lives UNDER the repo root.
+    .filter((p) => {
+      const at = p.root?.toLowerCase();
+      return !!at && (at === repo || at.startsWith(`${repo}/`));
+    })
+    // `chain` is the server and the launch-chain processes above it, children first. Killing the
+    // server alone frees the port but leaves its `npm run dev` and `cmd /c` shims resident, and
+    // those are exactly as unowned as the server was.
+    .map((p) => ({ pid: p.pid, root: p.root, ...chainIsOrphaned(p, byPid) }))
+    .filter((p) => p.orphaned)
+    .map((p) => ({ pid: p.pid, root: p.root, chain: p.chain }));
+}
+
+/**
+ * Playwright workers, browser shells, and DEV SERVERS with no live CLI to belong to - what a
+ * killed or crashed run leaves behind. The workers and shells hold real RAM; the dev server
+ * holds this checkout's e2e PORT, which is worse than wasteful - the guard hook refuses every
+ * following run until somebody finds and kills it by hand.
  */
 export function orphanProcesses() {
   const runsExist = nodeProcesses().some((p) => RUNNER.test(p.command));
   const workers = nodeProcesses().filter((p) => WORKER.test(p.command));
   const shells = browserShells();
-  return runsExist ? { workers: [], shells: [] } : { workers, shells };
+  const servers = orphanedDevServers(allProcesses());
+  return runsExist ? { workers: [], shells: [], servers: [] } : { workers, shells, servers };
 }
 
 function browserShells() {
@@ -283,31 +449,39 @@ if (process.argv[1] && normalize(process.argv[1]) === normalize(fileURLToPath(im
   const args = process.argv.slice(2);
 
   if (args.includes('--orphans')) {
-    const { workers, shells } = orphanProcesses();
+    const { workers, shells, servers } = orphanProcesses();
     const mb = shells.reduce((sum, s) => sum + s.mb, 0);
-    if (workers.length === 0 && shells.length === 0) {
-      console.log('No orphaned Playwright processes - nothing is holding RAM between runs.');
+    if (workers.length === 0 && shells.length === 0 && servers.length === 0) {
+      console.log('No orphaned Playwright processes - nothing is holding RAM or a port between runs.');
       process.exit(0);
     }
+    const serverLines = servers.map((s) => `\n  - dev server pid ${s.pid} for ${s.root}`).join('');
     console.log(
-      `Orphaned from a killed or crashed run: ${workers.length} worker process(es) and ` +
-        `${shells.length} browser shell(s) holding ~${mb} MB.\n` +
-        'No Playwright CLI is running, so nothing will reap these. Close them with:\n' +
+      `Orphaned from a killed or crashed run: ${workers.length} worker process(es), ` +
+        `${shells.length} browser shell(s) holding ~${mb} MB, and ${servers.length} dev server(s).` +
+        serverLines +
+        '\nNo Playwright CLI is running, so nothing will reap these. ' +
+        'A dev server left here also holds its checkout\'s e2e PORT, which is what makes the next ' +
+        'run refuse to start. Close them with:\n' +
         '  node scripts/e2e-runs.mjs --kill-orphans',
     );
     process.exit(1);
   }
 
   if (args.includes('--kill-orphans')) {
-    const { workers, shells } = orphanProcesses();
-    if (workers.length === 0 && shells.length === 0) {
+    const { workers, shells, servers } = orphanProcesses();
+    if (workers.length === 0 && shells.length === 0 && servers.length === 0) {
       console.log('Nothing to clean up.');
       process.exit(0);
     }
     // Only ever reached when NO Playwright CLI is running, so none of these can belong to a
-    // live run - that check is the whole safety argument for killing anything here.
+    // live run - that check is the whole safety argument for killing anything here. A dev
+    // server clears a second bar on top of it: its launch chain has no living owner either,
+    // so it is not somebody's `npm run dev` or a preview the tools started.
     let killed = 0;
-    for (const p of [...workers, ...shells]) {
+    // A server's CHAIN goes children-first, so the shims cannot outlive what they were shimming.
+    const targets = [...workers, ...shells, ...servers.flatMap((s) => s.chain.map((pid) => ({ pid })))];
+    for (const p of targets) {
       try {
         process.kill(p.pid);
         killed++;
@@ -315,7 +489,8 @@ if (process.argv[1] && normalize(process.argv[1]) === normalize(fileURLToPath(im
         // Already gone, or not ours to signal. Either way there is nothing to report.
       }
     }
-    console.log(`Closed ${killed} orphaned process(es).`);
+    const ports = servers.length ? `, freeing ${servers.length} checkout's e2e port` : '';
+    console.log(`Closed ${killed} orphaned process(es)${ports}.`);
     process.exit(0);
   }
 

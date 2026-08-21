@@ -849,6 +849,72 @@ test('a match clock survives a renderer reboot: the wire carries the instant the
   expect(wire.localRow).toBe(1_755_600_000_000);
 });
 
+test('a resend of the cue’s own clock value keeps the origin, so half time banks the running time', async ({ page }) => {
+  // THE HOSTED FAULT THIS EXISTS FOR (found and fixed 2026-08-21). A cue stores a PLAIN time and
+  // stores it forever, so every Take and ✎ Update mid-match re-sends "10:00" over a clock the
+  // renderer has already stamped. `mergedData` merged that blindly and the origin was gone: the
+  // next clockStop banked the seed instead of the running time, and a renderer booting from that
+  // report came back at the seed too. Both are the very things the origin was added to prevent.
+  //
+  // The rule is the runtime's own - a CORRECTION is a value the wire carries that CHANGED - held
+  // as a pure function so this spec can drive the decision `output/main.ts` makes. The stamp is
+  // OURS, not the operator's, so it is the PLAIN HALF that is compared.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const walk = await page.evaluate(async () => {
+    const w = await import('/src/control/matchClockWire.ts');
+    // sb09's clock: counts DOWN from 10:00.
+    const clock = { field: 'f5', countsDown: true, seed: '10:00', resetTo: '10:00' };
+    const T = 1_755_600_000_000;
+    const at = (mins: number) => new Date(T + mins * 60_000).toISOString();
+
+    // src/output/main.ts apply(), mirrored: an update merges into mergedData - through
+    // clockValueAfterUpdate for the CLOCK field - and clockRowEffect is then asked against it.
+    const merged: Record<string, string> = {};
+    const trace: { row: string; held: string | undefined; effect: string | null }[] = [];
+    const step = (label: string, msg: unknown, createdAt: string) => {
+      const m = msg as { t: string; data?: Record<string, string> };
+      if (m.t === 'update' && m.data) {
+        // The PRIOR value, read before the merge - that is what `held` means, and reading it
+        // after would hand clockValueAfterUpdate the very value it is being asked to judge.
+        const prior = merged[clock.field];
+        Object.assign(merged, m.data);
+        if (m.data[clock.field] !== undefined) {
+          merged[clock.field] = w.clockValueAfterUpdate(prior, m.data[clock.field]);
+        }
+      }
+      const effect = w.clockRowEffect({ msg, created_at: createdAt } as never, clock, merged[clock.field], T);
+      if (effect) merged[clock.field] = effect.value;
+      trace.push({ row: label, held: merged[clock.field], effect: effect?.value ?? null });
+    };
+
+    step('take', { t: 'update', data: { f0: 'HOME', f5: '10:00' } }, at(0));
+    step('clockStart', { t: 'event', event: 'clockStart' }, at(0));
+    step('goal (whole value set, plain f5)', { t: 'update', data: { f1: '1', f5: '10:00' } }, at(5));
+    step('clockStop (half time)', { t: 'event', event: 'clockStop' }, at(5));
+
+    return {
+      trace,
+      // The RULE itself, stated four ways.
+      resendKeepsOrigin: w.clockValueAfterUpdate('10:00@1755600000000', '10:00'),
+      correctionWins: w.clockValueAfterUpdate('10:00@1755600000000', '43:12'),
+      stampAlwaysWins: w.clockValueAfterUpdate('43:12', '10:00@1755600000000'),
+      heldPlainIsReplaced: w.clockValueAfterUpdate('10:00', '9:30'),
+      nothingHeld: w.clockValueAfterUpdate(undefined, '10:00'),
+    };
+  });
+
+  // The origin survives the goal, so half time banks the five minutes that were actually run.
+  expect(walk.trace[2].held).toBe(`10:00@${1_755_600_000_000}`);
+  expect(walk.trace[3].effect).toBe('5:00');
+  // A plain value equal to the held value's PLAIN half is a resend; anything else is an edit.
+  expect(walk.resendKeepsOrigin).toBe(`10:00@${1_755_600_000_000}`);
+  expect(walk.correctionWins).toBe('43:12');
+  expect(walk.stampAlwaysWins).toBe(`10:00@${1_755_600_000_000}`);
+  expect(walk.heldPlainIsReplaced).toBe('9:30');
+  expect(walk.nothingHeld).toBe('10:00');
+});
+
 test('the clock walks a whole match through the log: start, bump, stop, restart, reset', async ({ page }) => {
   // `clockRowEffect` is the one place a control-log row is read as a clock move, and it is pure
   // for exactly this reason: the renderer that uses it (src/output/main.ts) only ever runs

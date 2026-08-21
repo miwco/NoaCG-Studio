@@ -124,6 +124,28 @@ gate - not the importer - is authoritative.
 - **P2:** outlined-text fallback (delete group + overlay field), `<image>` binding, per-layer
   animation stagger, number/clock ftypes, org boilerplate story (an SVG imported once, saved as
   a shared base others restyle - couples with `docs/WYSIWYG_PLAN.md`).
+  **Status 2026-08-21 - shipped:** `<image>` binding (filelist fields, empty restores the
+  drawing); a numeric-looking sample proposes `ftype: number`; the OUTLINED-TEXT fallback -
+  `assets/svgImport.ts` inventories every `<g>` of two-plus glyph shapes (path/polygon only)
+  as an outline candidate, offered OFF in the mapping step, whose box/cap-height/fill are
+  MEASURED on the step's own inline render (`MapSvgFieldsStep` `measureOutline`: the most
+  populated cluster of shape bottoms is the baseline); the generator HIDES a ticked group
+  (`imported-design-outlined` class + one `display: none` rule - kept in the file, never
+  deleted) and `draft.ts withSvgOutlineFields` places the stand-in through the raster flow's
+  `addPlacedLine` (same sizing rules as the erase seed). The SVG's own text fit is
+  `fitSvgText` with its own update() hook, so the placed line's `fitPlacedText` shrink runtime
+  can coexist; `addPlacedLine` inserts after `</svg>`, never inside it. The per-layer stagger
+  is `design-stagger` (designPresets.ts), offered by svg01 only, emitting an ARRAY of the
+  top-level named groups (`PresetConfig.layers`, `structure.ts svgLayerSelectors` - a hidden
+  outlined group is not a layer) with `stagger:` - the shape the data importer turns into
+  per-layer keyframe offsets. The CLOCK ftype is a per-row "Binds as" choice on any
+  clock-shaped layer (`looksClock`: M:SS / H:MM:SS) - Text (default; "22:40" may be the time of
+  day) or COUNTDOWN: the node takes the `imported-design-clock` class (never the field id - update()
+  would overwrite the readout), the field becomes the length in minutes (`clockSampleMinutes`,
+  "22:40" = 22.67) in a hidden `noacg-data-source` holder, the shared `templates/shared/clock.ts`
+  runtime rides outside the region, and the data gains `startClock`/`stopClock` step calls (a
+  `convertToDataRegion` refine - the design presets know nothing of clocks). One countdown per
+  graphic (one shared runtime, one display). **Open:** the org boilerplate story.
 - **P3 (opt-in):** AI label proposals; Figma-specific niceties; SVG *export* of a NoaCG graphic
   is explicitly out of scope.
 

@@ -188,6 +188,49 @@ test('a score bump on air does not pull the running clock back', async ({ page }
   expect(r.corrected).toBe('43:12');         // a genuine correction is still obeyed
 });
 
+test('a score bump does not pull the clock back when the ORIGIN arrived over the wire', async ({ page }) => {
+  test.setTimeout(60_000);
+  await toApp(page);
+  // THE SEAM THE TEST ABOVE CANNOT SEE, and it aired (found 2026-08-21). That one calls
+  // startMatchClock() directly, so the runtime mints its own LOCAL origin and `matchClockSent`
+  // stays the plain "20:00" the operator typed — a resend of "20:00" then matches exactly and
+  // the guard fires. On the HOSTED plane the origin arrives over the WIRE instead: /output
+  // stamps the clock field on clockStart (control/matchClockWire.ts), so what the runtime last
+  // received is "20:00@1755600000000" while the cue still stores "20:00".
+  //
+  // Comparing the whole of those two says CHANGED, so a goal in the 5th minute read as a typed
+  // correction and re-anchored a running clock back to 20:00, on air. The stamp is OURS, not the
+  // operator's: it is the PLAIN HALF that has to be compared.
+  const result = await page.evaluate(`(async () => {
+    ${HARNESS}
+    const { w, d } = await boot('sb05');
+    const clock = () => d.querySelector('.scoreboard-clock').textContent;
+    // The take: the cue's own plain value. Then the origin write a control surface makes when
+    // the operator starts the clock — the same shape output/main.ts puts on the wire.
+    w.update(JSON.stringify({ f1: '0', f3: '0', f5: '20:00' }));
+    w.update(JSON.stringify({ f5: '20:00@' + Date.now() }));
+    await sleep(2200);
+    const running = clock();                 // ticking, anchored to the wire's origin
+    // A goal. The cue's WHOLE value set goes again, and a cue stores a plain time forever.
+    w.update(JSON.stringify({ f1: '1', f3: '0', f5: '20:00' }));
+    const afterGoal = clock();
+    await sleep(1100);
+    const stillRunning = clock();            // and it is still counting, not restarted
+    // A REAL correction must still take, or the guard would have swallowed the one edit that
+    // matters most: a clock that cannot be corrected is a clock nobody trusts.
+    w.update(JSON.stringify({ f1: '1', f3: '1', f5: '43:12' }));
+    const corrected = clock();
+    w.stopMatchClock();
+    return { running, afterGoal, stillRunning, corrected, score: d.querySelector('#f1').textContent };
+  })()`);
+  const r = result as Record<string, string>;
+  expect(r.running).not.toBe('20:00');       // it really was running, or the test proves nothing
+  expect(r.afterGoal).toBe(r.running);       // the goal left the clock exactly where it stood
+  expect(r.stillRunning).not.toBe(r.running); // …and it kept going, rather than being re-seeded
+  expect(r.score).toBe('1');
+  expect(r.corrected).toBe('43:12');         // a genuine correction is still obeyed
+});
+
 test('a clock value carries the instant it was true, so a fresh renderer opens at the real match time', async ({ page }) => {
   test.setTimeout(60_000);
   await toApp(page);
