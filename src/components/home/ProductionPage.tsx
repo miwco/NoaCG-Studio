@@ -680,17 +680,51 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   // subtree, and an effect keyed on the unchanged previewDoc never measured the remounted
   // frame — the observer's last tick on the detaching node had left stageW at 0, so the
   // returning preview rendered a 1920px document unscaled and showed its empty corner.
-  const [stageW, setStageW] = useState(0);
+  const [stageBox, setStageBox] = useState({ width: 0, height: 0 });
   const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!stageEl) return;
-    const measure = () => setStageW(stageEl.clientWidth);
+    const measure = () => setStageBox({ width: stageEl.clientWidth, height: stageEl.clientHeight });
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(stageEl);
     return () => ro.disconnect();
   }, [stageEl]);
-  const fit = previewTemplate && stageW ? stageW / previewTemplate.resolution.width : 0;
+
+  /**
+   * THE STAGE THE PRODUCTION DRAWS ON - both monitors' shape, and never the selected cue's.
+   *
+   * Derived exactly as `buildOutputPayload` derives it (and as the exported controller bakes it
+   * from the payload), so all three surfaces agree on one canvas. The monitor cap is a grid
+   * TRACK WIDTH scaled by this ratio, which is why it has to be the production's: keyed on the
+   * PREVIEWED graphic it re-sized both monitors every time an operator selected a differently
+   * shaped cue - the "monitors don't jump between scales depending on what graphic we are
+   * looking at" rule (docs/PLAYOUT_DASHBOARD.md §2), broken by the mechanism enforcing the cap.
+   * A cue that is not this shape is LETTERBOXED into it below, which is what the /output
+   * renderer has always done with the same payload.
+   */
+  const pool = show?.graphics;
+  const poolResolutionKey = (pool ?? []).map((g) => `${g.id}:${g.savedAt}`).join('|');
+  const stage = useMemo(
+    () =>
+      (pool ?? []).reduce<Resolution>((r, g) => {
+        const res = templateForSavedGraphic(g, library).resolution;
+        return { width: Math.max(r.width, res.width), height: Math.max(r.height, res.height), label: r.label };
+      }, DEFAULT_GRAPHICS_RESOLUTION),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [poolResolutionKey, library],
+  );
+  const stageAspect = `${stage.width} / ${stage.height}`;
+  // CONTAIN, not width-fill (`Math.min`, the same arithmetic as src/output/stage.ts): the frame
+  // is the production's shape now, so a cue of another shape has to fit inside it rather than
+  // overflow its height.
+  const fit =
+    previewTemplate && stageBox.width && stageBox.height
+      ? Math.min(
+          stageBox.width / previewTemplate.resolution.width,
+          stageBox.height / previewTemplate.resolution.height,
+        )
+      : 0;
 
   const selectCue = useCallback(
     (cueId: string) => {
@@ -1309,13 +1343,17 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
             a height and CSS cannot derive a width from `aspect-ratio`, so the grid turns the cap
             into a track width with this (docs/PLAYOUT_DASHBOARD.md §2). A portrait graphic
             therefore caps at the same HEIGHT as a 16:9 one rather than the same width. */}
+        {/* THE STAGE HEAD: the monitors and the verbs that act on them, as ONE sticky block.
+            Two things came out of the 2026-08-21 owner read (docs/PLAYOUT_DASHBOARD.md §2). The
+            verb bar used to scroll away under the sticky monitors - "a bit scary that you scroll
+            the monitors on top of the take buttons" - and what must never leave the screen is
+            sticky, not small, which TAKE and Out plainly are. And above 1366px the bar moves
+            into the empty column beside PROGRAM, which spends that width and gives the monitors
+            back the height the bar was using. Below it, the bar returns underneath. */}
+        <div className="pd-stagehead">
         <div
           className="pd-monitors"
-          style={
-            previewTemplate
-              ? { ['--pd-ar' as string]: previewTemplate.resolution.width / previewTemplate.resolution.height }
-              : undefined
-          }
+          style={{ ['--pd-ar' as string]: stage.width / stage.height }}
         >
           <div className="pd-monitor pd-pvw">
             <h2>
@@ -1328,7 +1366,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                 <div
                   className="pd-frame"
                   ref={setStageEl}
-                  style={{ aspectRatio: `${previewTemplate.resolution.width} / ${previewTemplate.resolution.height}` }}
+                  style={{ aspectRatio: stageAspect }}
                   data-testid="production-preview"
                 >
                   <iframe
@@ -1339,18 +1377,23 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                     onLoad={() => settlePreview(settleData)}
                     style={{
                       position: 'absolute',
-                      left: 0,
-                      top: 0,
+                      // CENTRED IN THE STAGE, the same way src/output/stage.ts centres its own:
+                      // origin at the frame's middle, then translated back by half the SCALED
+                      // size. Percentage translates would compound with the scale.
+                      left: '50%',
+                      top: '50%',
                       width: previewTemplate.resolution.width,
                       height: previewTemplate.resolution.height,
                       border: 0,
                       transformOrigin: '0 0',
-                      transform: `scale(${fit || 1})`,
+                      transform: `translate(${(-previewTemplate.resolution.width * (fit || 1)) / 2}px, ${
+                        (-previewTemplate.resolution.height * (fit || 1)) / 2
+                      }px) scale(${fit || 1})`,
                     }}
                   />
                 </div>
               ) : (
-                <div className="pd-frame pd-frame-empty" style={{ aspectRatio: '16 / 9' }}>
+                <div className="pd-frame pd-frame-empty" style={{ aspectRatio: stageAspect }}>
                   <p className="hint">Add a cue to preview it here.</p>
                 </div>
               )}
@@ -1367,7 +1410,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
               {liveLayers[0] && <span className="pd-layer-badge">L{liveLayers[0].layer}</span>}
             </h2>
             <div className="pd-screen">
-              <div className="pd-frame pd-frame-pgm" style={{ aspectRatio: '16 / 9' }}>
+              <div className="pd-frame pd-frame-pgm" style={{ aspectRatio: stageAspect }}>
                 <ProgramStage
                   ref={programRef}
                   show={show}
@@ -1472,6 +1515,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
               </>
             )}
           </span>
+        </div>
         </div>
 
         {note && <p className={note.startsWith('✓') ? 'status-ok' : 'status-bad'} data-testid="production-note">{note}</p>}

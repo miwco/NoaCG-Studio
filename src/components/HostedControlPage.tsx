@@ -380,6 +380,10 @@ export default function HostedControlPage({ slug }: { slug: string }) {
 
       <main className="pd-body">
         <section className="pd-main">
+          {/* The monitors and the verbs as ONE sticky block, and the bar beside PROGRAM above
+              1366px - the same stage head the in-app page carries, out of the same stylesheet.
+              docs/PLAYOUT_DASHBOARD.md §2; the parity contract is docs/CONTROL_PANEL_PARITY.md. */}
+          <div className="pd-stagehead">
           <div className="pd-monitors">
             <div className="pd-monitor pd-pvw">
               <h2>
@@ -422,6 +426,7 @@ export default function HostedControlPage({ slug }: { slug: string }) {
             liveLabels={liveLayers.map((l) => l.label)}
             onKey={runVerb}
           />
+          </div>
 
           {selectedCue && spec && (
             <HostedCueEditor

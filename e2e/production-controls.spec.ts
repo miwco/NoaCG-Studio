@@ -659,10 +659,20 @@ test.describe('the production page scrolls as one page', () => {
       // The one exception, and it is deliberate.
       expect(await overflowOf('.pd-cues')).toMatch(/auto|scroll/);
 
-      // The monitors give up the height the editor needed: near 30vh, both still 16:9 and still
-      // side by side — smaller, never stacked (§3's rule about air staying beside preview).
-      const monitors = await page.locator('.pd-monitors').boundingBox();
-      expect(monitors!.height).toBeLessThanOrEqual(1080 * 0.32);
+      // The monitors give up the height the editor needed, both still 16:9 and still side by
+      // side — smaller, never stacked (§3's rule about air staying beside preview).
+      //
+      // WHAT IS MEASURED IS THE STICKY HEAD, not the monitor grid, and the bound is 40% rather
+      // than 32% (both changed 2026-08-21). The head now carries the VERB BAR as well — it used
+      // to scroll away under the sticky monitors, which the owner called out — so it, not the
+      // monitor block, is what "how much of the screen is permanently spent" means. And the cap
+      // itself grew, because the owner read 1920x1080 with the old one and rejected it: "too
+      // much empty room at the bottom and the monitors are unnecessarily small".
+      const head = await page.locator('.pd-stagehead').boundingBox();
+      expect(head!.height).toBeLessThanOrEqual(1080 * 0.4);
+      // The verb bar is INSIDE that sticky block, which is the half of the fix a height bound
+      // cannot see: a bar that scrolled away would leave this assertion perfectly green.
+      await expect(page.locator('.pd-stagehead [data-testid="production-verbs"]')).toBeVisible();
       const pvw = await page.locator('.pd-pvw .pd-frame').boundingBox();
       const pgm = await page.locator('.pd-pgm .pd-frame').boundingBox();
       expect(Math.abs(pvw!.y - pgm!.y)).toBeLessThanOrEqual(2);
@@ -711,11 +721,62 @@ test.describe('the production page scrolls as one page', () => {
       // all the time" — and so is the rundown the next cue is picked from.
       await page.evaluate(() => document.scrollingElement!.scrollTo(0, 10_000));
       await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(0);
-      for (const sel of ['.pd-monitors', '.pd-rail']) {
+      // THE VERB BAR IS IN THIS LIST since 2026-08-21. It used to scroll away under the sticky
+      // monitors, and the owner reading the acceptance pack called that out by name: "it's a bit
+      // scary that you scroll the monitors on top of the take buttons… the buttons should be
+      // visible". It is what carries TAKE and Out, so it is exactly what §2's rule is about.
+      for (const sel of ['.pd-monitors', '.pd-rail', '[data-testid="production-verbs"]']) {
         const box = await page.locator(sel).boundingBox();
         expect(box!.y, `${sel} scrolled away above the fold`).toBeGreaterThanOrEqual(0);
         expect(box!.y + box!.height, `${sel} pushed off the bottom`).toBeLessThanOrEqual(561);
       }
     });
+  });
+
+  /**
+   * THE MONITORS DO NOT RESIZE WHEN A DIFFERENTLY SHAPED CUE IS SELECTED.
+   *
+   * Owner, reading the acceptance pack 2026-08-21: "it's also important that the program and
+   * preview monitors don't jump between scales depending on what graphic we are looking at."
+   * They did. The cap is a grid TRACK WIDTH scaled by `--pd-ar`, and `--pd-ar` was the PREVIEWED
+   * graphic's own ratio - so selecting a 9:16 cue narrowed both monitors, which is the rule
+   * broken by the very mechanism enforcing the cap. It is the production's stage now, derived
+   * the way `buildOutputPayload` derives it (and the way the exported controller always baked
+   * it), and a cue of another shape is letterboxed into it.
+   *
+   * Measured on WIDTH, because that is what the track sets and what visibly moved.
+   */
+  test('a portrait cue is letterboxed into the production stage, it does not re-size the monitors', async ({ page }) => {
+    await page.setViewportSize({ width: 1536, height: 814 });
+    await createProject(page, { name: 'Arena Quiz' });
+    await productionFor(page, 'Mixed Shapes');
+
+    // A second graphic on the same production, drawn 1080x1920. Built here rather than through
+    // the wizard because the SHAPE is the whole subject and the wizard's format picker is
+    // covered by its own specs.
+    await page.evaluate(async () => {
+      const { variantById } = await import('/src/templates/catalog.ts');
+      const shows = await import('/src/model/shows.ts');
+      const portrait = {
+        ...variantById('lt01')!.create({}),
+        resolution: { width: 1080, height: 1920, label: '1080x1920' },
+      };
+      const show = shows.loadShows()[0];
+      shows.addGraphicToShow(show.id, portrait, {});
+      const fresh = shows.loadShows().find((s) => s.id === show.id)!;
+      shows.updateShowCue(show.id, fresh.cues![fresh.cues!.length - 1].id, { label: 'Portrait strap' });
+    });
+    await page.reload();
+    await expect(page.getByTestId('production-page')).toBeVisible();
+
+    const monitorWidth = async () => Math.round((await page.locator('.pd-pvw .pd-frame').boundingBox())!.width);
+    await page.locator('.pd-cue').first().click();
+    const landscape = await monitorWidth();
+    expect(landscape).toBeGreaterThan(0);
+
+    await page.locator('.pd-cue', { hasText: 'Portrait strap' }).first().click();
+    await expect(page.getByTestId('cue-label')).toHaveValue('Portrait strap');
+    // Same width, to the pixel. Before the fix this narrowed to roughly nine sixteenths of it.
+    expect(await monitorWidth()).toBe(landscape);
   });
 });
