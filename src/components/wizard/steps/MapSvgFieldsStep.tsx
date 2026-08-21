@@ -23,6 +23,13 @@ interface Props {
   onDraft: (patch: DraftPatch) => void;
 }
 
+/** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
+ *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
+ *  already ticked does too, whatever the measurement thought. */
+function rowIsTexty(f: SvgOutlineDraft): boolean {
+  return f.on || f.looksLikeText !== false;
+}
+
 /**
  * Measure one outlined-text group on the step's rendered artwork (docs/SVG_IMPORT_PLAN.md
  * §1.A): its box in DESIGN px, the cap-top-to-baseline run, and its fill. `k` maps the
@@ -37,13 +44,6 @@ interface Props {
  * cannot be measured) falls back to ~78% of the box height, between a caps-only run (0.72)
  * and one with descenders (0.94).
  */
-/** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
- *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
- *  already ticked does too, whatever the measurement thought. */
-function rowIsTexty(f: SvgOutlineDraft): boolean {
-  return f.on || f.looksLikeText !== false;
-}
-
 function measureOutline(
   stage: HTMLElement,
   svgRect: DOMRect,
