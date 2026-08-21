@@ -85,7 +85,11 @@ export interface ProGraphicSpec {
   /** How many of the 60 reference formats ask for this graphic - the registry's own figure, and
    *  the reason this type is in the package at all. */
   frequency: number;
-  /** Whether a brand mark has anywhere to go. The countdown type declares `logo: 'none'`. */
+  /** Whether a brand mark has anywhere to go. Every type in the package takes one since
+   *  2026-08-21 - a mark is forbidden only by a genuine type constraint, never by an authoring
+   *  default (the owner's ruling, docs/NOACG_PRO_PLAN.md §25.9). The field stays because a
+   *  future type may have a real reason, and because the package rule needs somewhere to read
+   *  the answer from. */
   takesMark: boolean;
   instruments: GraphicInstruments;
   compose(language: DesignLanguage, options: ComposeOptions): ComposedGraphic;
@@ -146,7 +150,7 @@ export const PRO_GRAPHICS: Record<ProGraphicId, ProGraphicSpec> = {
     label: 'Countdown',
     prefix: 'game-timer',
     frequency: 30,
-    takesMark: false,
+    takesMark: true,
     instruments: {
       spacing: {
         // MEASURED TWICE, and the second reading is the owner's. The 0.24 floor that stood here
