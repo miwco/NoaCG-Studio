@@ -22,6 +22,16 @@ export const lt14: TemplateVariant = defineVariant(
       { title: 'Handle', sample: '@noacg' },
       { title: 'Platform', sample: 'INSTAGRAM' },
     ],
+    // NO MARK, AND THE GATE IS WHY. The social-bug TYPE permits one (a handle bug of all things
+    // should be able to carry a channel mark), and this strip cannot take it yet: measured by
+    // e2e/catalog/mark-height.spec.ts, a mark grows lt14 from 113px to 120px on BOTH a square
+    // crest and a portrait one - 6% taller, against a family rule that a strap spends width and
+    // never height. Two short lines (@noacg / INSTAGRAM) make the words shorter than the mark
+    // column, so the mark sets the height.
+    //
+    // Opting in means BOUNDING the mark to the words first (the lt49/lt53 pattern), which is a
+    // drawing decision on a compact strip - not something to force through. Until then the type
+    // offers the capability and this design declines it. docs/MARK_CAPABILITY_AUDIT.md.
     logo: 'none',
     animationPresets: ['slide-up', 'fade', 'line-reveal', 'mask-wipe', 'blur-in'],
     defaultPalette: paletteById('noacg'),

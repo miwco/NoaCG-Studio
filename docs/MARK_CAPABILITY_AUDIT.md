@@ -29,6 +29,26 @@ piece or on none* - fired on **all 36 archived rows and all 4 topic-card rows**
 |---|---|---|
 | `countdown` | 2026-08-21 | type capability + the `game-timer` assembler taught the slot (`f2`) + `TypeDesign.logo`. The Pro countdown opts in; the four catalog timers decline. |
 | `holding-screen` | 2026-08-21 | the same, in `starting-soon` (`f{next}`). `ss04` (house) opts in and draws the mark above its title; `ss01`-`ss03` decline. |
+| `social-bug` | 2026-08-21 | capability only - it rides the lower-third chassis, so `assembleStandard` already injects the slot. **All four designs decline**, and `lt14` declines on a MEASUREMENT: see below. |
+
+**`social-bug` is the first type where the DESIGNS, not the platform, are the obstacle - and a gate
+said so.** The capability cost nothing (no assembler work, the mechanism is already exercised by
+six lower thirds). Opting `lt14` in to prove it, `e2e/catalog/mark-height.spec.ts` failed it:
+
+```
+lt14  bare 113  marked { square: 120, portrait: 120 }
+A mark made these straps TALLER.
+```
+
+Two short lines (`@noacg` / `INSTAGRAM`) leave the words shorter than the mark column, so the mark
+sets the strip's height - 6% taller, against the family rule that **a strap spends width, never
+height**. A hand-rolled probe measuring `.lower-third-box` had reported 113 → 113 and missed it
+entirely; the spec measures the painted strap, and the spec is the authority.
+
+So all four decline and each says why in its own source. Opting one in means BOUNDING the mark to
+the words first (the `lt49`/`lt53` pattern) - a drawing decision on a compact strip, not a flag.
+**This is what "opt-in per design" costs on a type whose designs were authored without room**, and
+it is the shape to expect on the rest of the compact families.
 
 ## "Can this graphic take a mark?" is THREE questions, not one
 
