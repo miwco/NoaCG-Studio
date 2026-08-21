@@ -72,6 +72,7 @@ import {
   type ResolvedControlShow,
 } from '../../control/hostedControl';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
+import { clockRowEffect, clockSpecFromHtml, type ClockSpec } from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
 import { postPreviewCmd } from '../../preview/previewProtocol';
@@ -247,6 +248,81 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   }, []);
   const [wireLog, setWireLog] = useState<LogEntry[]>([]);
   const localLogId = useRef(0);
+
+  /**
+   * THE MATCH CLOCK ON THE LOCAL PROGRAM MONITOR (docs/SPORTS_PACK.md, control/matchClockWire.ts).
+   *
+   * This monitor follows the same commands air does but never ran `clockRowEffect`, so it let
+   * the runtime mint its OWN origin when `clockStart` arrived: it could sit a second off the
+   * published renderer, and — the part that actually showed — a stage remount rebuilt it from
+   * the last SENT value, so a running clock came back at its seed. It now makes the same
+   * decision the hosted renderer makes, against the LOCAL receive instant rather than a server
+   * row's `created_at`: the two therefore agree within delivery skew rather than exactly, which
+   * is the honest ceiling for a monitor. **It is a monitor, not air** — nothing here reaches a
+   * production's renderers.
+   *
+   * The clock is read out of each graphic's own published markup, keyed by the name the wire
+   * uses (`buildOutputPayload` keys the payload by `g.name`, and so does every command), and
+   * read through a ref so the ONE entry point (`applyProgram`) is stable: the log follower binds
+   * it once and must still see a pool the operator has changed since.
+   */
+  const clockSpecs = useMemo(() => {
+    const out = new Map<string, ClockSpec>();
+    for (const g of show?.graphics ?? []) {
+      const spec = clockSpecFromHtml(templateForSavedGraphic(g, library).html);
+      if (spec) out.set(g.name, spec);
+    }
+    return out;
+  }, [show, library]);
+  const clockSpecsRef = useRef(clockSpecs);
+  clockSpecsRef.current = clockSpecs;
+  /**
+   * The clock field's value ON THE WIRE per graphic — the monitor's own copy of what the
+   * renderer keeps in `mergedData`. Deliberately NOT folded into `airedData`: that one also
+   * answers "are the operator's values on air yet", and a stamped clock value differs from the
+   * cue's plain one forever, which would light an amber "1 change not on air yet" for the whole
+   * match. `restoreProgram` folds it back in at the one moment it is needed.
+   */
+  const clockValues = useRef<Record<string, string>>({});
+  /**
+   * The ONE way a command reaches the PROGRAM monitor, so the clock cannot be handled on one
+   * route and missed on the other (the wire follower and the offline verbs both come here).
+   * A clock verb gets its value written around it in the order `clockRowEffect` fixes: the
+   * origin BEFORE a start, so the runtime adopts it instead of minting one; the banked time
+   * AFTER a hold or a reset, because what is banked is what the graphic has just settled on.
+   */
+  const applyProgram = useCallback((items: ControlSendItem[]) => {
+    const out: ControlSendItem[] = [];
+    for (const item of items) {
+      const clock = clockSpecsRef.current.get(item.graphic);
+      if (!clock) {
+        out.push(item);
+        continue;
+      }
+      const msg = item.msg;
+      // Track the clock field exactly as the renderer's own merged data does: an update writes
+      // it, and an accepted event's payload rides the same field path.
+      const carried =
+        msg.t === 'update' ? msg.data?.[clock.field] : msg.t === 'event' ? msg.payload?.[clock.field] : undefined;
+      if (carried !== undefined) clockValues.current[item.graphic] = carried;
+      if (msg.t === 'stop') delete clockValues.current[item.graphic];
+      const effect = clockRowEffect({ msg }, clock, clockValues.current[item.graphic], Date.now());
+      if (!effect) {
+        out.push(item);
+        continue;
+      }
+      clockValues.current[item.graphic] = effect.value;
+      const clockItem: ControlSendItem = {
+        graphic: item.graphic,
+        msg: { t: 'update', data: { [clock.field]: effect.value } },
+      };
+      if (effect.when === 'before') out.push(clockItem);
+      out.push(item);
+      if (effect.when === 'after') out.push(clockItem);
+    }
+    programRef.current?.apply(out);
+  }, []);
+
 
   const cues = useMemo(() => show?.cues ?? [], [show]);
   const graphicByPoolId = useMemo(() => new Map((show?.graphics ?? []).map((g) => [g.id, g] as const)), [show]);
@@ -455,7 +531,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           // meaning for (staged data has not aired; a 'live' row is a graphic REPORTING).
           else if (msg.t !== 'staged') {
             rememberAired([{ graphic: row.graphic, msg }]);
-            programRef.current?.apply([{ graphic: row.graphic, msg }]);
+            applyProgram([{ graphic: row.graphic, msg }]);
             // A FEED wrote (control_data_patch marks its rows `src:'api'`), so the production's
             // tree moved server-side. The row carries the resolved FIELD values, not the tree,
             // so re-read it - and reuse this signal rather than adding a second subscription on
@@ -509,16 +585,23 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
     for (const [graphic, cueId] of Object.entries(liveCueRef.current)) {
       if (!cueId) continue;
       const report = (liveReportsRef.current?.[graphic] ?? null) as { data?: Record<string, string> } | null;
-      const data = airedRef.current[graphic] ?? report?.data;
+      const base = airedRef.current[graphic] ?? report?.data;
+      // THE CLOCK'S WIRE VALUE OVERRIDES THE AIRED ONE. What this replays is what was SENT, and
+      // a clock's sent value is a plain time — so without this a rebuilt monitor came back at
+      // whatever the last Take carried and re-ran from there. The stamped value is kept apart
+      // from `airedData` on purpose (see applyProgram) and is folded back in only here.
+      const clock = clockSpecsRef.current.get(graphic);
+      const stamped = clock ? clockValues.current[graphic] : undefined;
+      const data = base && stamped !== undefined ? { ...base, [clock!.field]: stamped } : base;
       const groups = machineStatesRef.current[graphic]?.groups;
       const items: ControlSendItem[] = [];
       if (data) items.push({ graphic, msg: { t: 'update', data } });
       if (groups) items.push({ graphic, msg: { t: 'snap', snap: groups } });
       else items.push({ graphic, msg: { t: 'play' } });
       if (data) items.push({ graphic, msg: { t: 'update', data } });
-      programRef.current?.apply(items);
+      applyProgram(items);
     }
-  }, []);
+  }, [applyProgram]);
   // The boot half: the wire resolve lands after the stage is already up, so the first time the
   // WIRE says a layer is live there is nothing to have signalled.
   //
@@ -624,7 +707,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         // the whole surface usable (and provable) offline. Nothing leaves the machine.
         for (const batch of batches) {
           rememberAired(batch);
-          programRef.current?.apply(batch);
+          applyProgram(batch);
         }
         const at = new Date().toISOString();
         const entries = batches
@@ -646,7 +729,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         return false;
       }
     },
-    [hostedSlug, cueLabel, rememberAired],
+    [hostedSlug, cueLabel, rememberAired, applyProgram],
   );
 
   /**
