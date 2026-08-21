@@ -367,6 +367,11 @@ function setFieldValue(el, value) {
     else { el.removeAttribute('src'); el.style.display = 'none'; }  // empty = show the design's placeholder
     // The img's parent gets .has-image so the CSS can hide a placeholder mark, resize, etc.
     if (el.parentNode && el.parentNode.classList) el.parentNode.classList.toggle('has-image', !!value);
+  } else if (el.tagName === 'image') {
+    // An SVG picture slot (an imported design's own <image> layer): swap its href. Empty
+    // restores the picture the designer drew, so an untouched field changes nothing.
+    if (!el.hasAttribute('data-orig-href')) el.setAttribute('data-orig-href', el.getAttribute('href') || '');
+    el.setAttribute('href', value || el.getAttribute('data-orig-href'));
   } else {
     el.textContent = value;
   }
