@@ -47,7 +47,20 @@ export type InsertResult = { template: SpxTemplate; selector: string } | { error
 
 /** The JS functions every generated scaffold defines — anything beyond these is
  *  design-owned runtime the merge cannot carry. */
-const SCAFFOLD_FUNCTIONS = new Set(['setFieldValue', 'update', 'play', 'stop', 'next', 'motionSpeed']);
+// The functions every assembled template gets from the shared assembler rather than from its own
+// design. They are not "design-owned runtime code", so they must not block an insertion.
+//
+// The `stage*` / `fit*` group is the stage fit (templates/shared/stageFit.ts), emitted for every
+// design that declares a stageWidth. It is safe to merge for a reason worth stating: the merged
+// file declares these twice and the later declaration wins, but they read the panels they act on
+// from a shared registry rather than a baked-in selector, so the surviving copy still fits BOTH
+// graphics. Without that, allowing them here would mean the inserted graphic silently stopped
+// being fitted - green tests, quietly wrong output.
+const SCAFFOLD_FUNCTIONS = new Set([
+  'setFieldValue', 'update', 'play', 'stop', 'next', 'motionSpeed',
+  'stageFitBoxes', 'stagedLines', 'stageLineHeight', 'fitStagedText', 'fitOneStagedLine',
+  'holdStageHeight', 'holdOneStageBox', 'drawnBoxOf',
+]);
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 

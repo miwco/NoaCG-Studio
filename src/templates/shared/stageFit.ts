@@ -80,6 +80,28 @@ var STAGE_FIT_MIN = 0.55;        // never shrink below 55% of the size the desig
 var STAGE_FIT_FLOOR_PX = 20;
 var stageCalibrated = false;     // true once the design's own sample has been measured
 
+// THE PANELS THIS RUNTIME LOOKS AFTER, kept in a shared list rather than baked into each
+// function as one selector.
+//
+// It matters when a graphic is INSERTED into another (blocks/templateInsert.ts). Both templates
+// carry this same runtime, so the merged file declares these functions twice and the later
+// declaration wins - and if each copy had its own hardcoded selector, the losing graphic would
+// silently stop being fitted. Registering the selector instead means whichever copy survives
+// still fits BOTH panels, which is what makes the duplicate harmless rather than quietly
+// destructive. It is also why these names can sit in that file's scaffold allowlist honestly:
+// they are assembler scaffolding, like setFieldValue, not design-owned logic.
+var STAGE_FIT_BOXES = (window.__noacgStageFitBoxes = window.__noacgStageFitBoxes || []);
+if (STAGE_FIT_BOXES.indexOf('.${prefix}-box') < 0) STAGE_FIT_BOXES.push('.${prefix}-box');
+
+function stageFitBoxes() {
+  var found = [];
+  for (var i = 0; i < STAGE_FIT_BOXES.length; i++) {
+    var els = document.querySelectorAll(STAGE_FIT_BOXES[i]);
+    for (var j = 0; j < els.length; j++) found.push(els[j]);
+  }
+  return found;
+}
+
 // One row of this line, at the size the design asks for. \`line-height: normal\` computes to a
 // keyword rather than a number on some faces, so fall back to the CSS default ratio.
 function stageLineHeight(el, cs, design) {
@@ -93,9 +115,12 @@ function stageLineHeight(el, cs, design) {
 // the remaining height came from once the masked lines were held. A leaf that already fits is
 // left alone, so widening the net costs nothing on the designs that did not need it.
 function stagedLines() {
-  var box = document.querySelector('.${prefix}-box');
-  if (!box) return [];
-  var all = box.querySelectorAll('*');
+  var boxes = stageFitBoxes();
+  var all = [];
+  for (var b = 0; b < boxes.length; b++) {
+    var kids = boxes[b].querySelectorAll('*');
+    for (var k = 0; k < kids.length; k++) all.push(kids[k]);
+  }
   var out = [];
   for (var i = 0; i < all.length; i++) {
     var el = all[i];
@@ -132,8 +157,11 @@ function fitStagedText() {
 // panel's own height closes that for good - measured once, from the design's own content, on the
 // same terms as everything else here.
 function holdStageHeight() {
-  var box = document.querySelector('.${prefix}-box');
-  if (!box) return;
+  var boxes = stageFitBoxes();
+  for (var i = 0; i < boxes.length; i++) holdOneStageBox(boxes[i]);
+}
+
+function holdOneStageBox(box) {
   var room = parseFloat(box.getAttribute('data-stage-room') || '');
   if (!room) {
     box.style.height = '';
@@ -312,8 +340,11 @@ if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
     // Re-measure from scratch: the reserve taken against the fallback face is not this design's.
     var lines = stagedLines();
     for (var i = 0; i < lines.length; i++) lines[i].removeAttribute('data-stage-room');
-    var box = document.querySelector('.${prefix}-box');
-    if (box) { box.removeAttribute('data-stage-room'); box.style.height = ''; }
+    var boxes = stageFitBoxes();
+    for (var b = 0; b < boxes.length; b++) {
+      boxes[b].removeAttribute('data-stage-room');
+      boxes[b].style.height = '';
+    }
     fitStagedText();
     // Calibration is over: from here the design's own content has been seen, and anything that
     // appears later was built by the design's runtime rather than drawn by its author.
