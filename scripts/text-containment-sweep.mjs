@@ -53,15 +53,29 @@ const baselineArg = flagVal('--baseline');
 const updateBaseline = args.includes('--update-baseline');
 const only = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--json' && args[i - 1] !== '--baseline') || null;
 
-const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
-page.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
-await page.goto(`http://localhost:${devPort()}/app`, { waitUntil: 'domcontentloaded' });
-await page.evaluate(async () => {
-  window.__cat = await import('/src/templates/catalog.ts');
-  window.__comp = await import('/src/preview/composeDocument.ts');
-  window.__wiz = await import('/src/model/wizard.ts');
-});
+let browser = await chromium.launch();
+
+// THE PAGE IS RECYCLED, because 503 designs will not fit in one. Every design mounts a full
+// 1920x1080 template in an iframe, and clearing the body hands the memory back far more slowly
+// than the sweep takes it: the first full run died at 30 designs with "target closed" on a laptop
+// holding 2.5 GB free. Rebuilding the page every RECYCLE_EVERY designs bounds the cost to what one
+// batch can consume, and costs about a second each time.
+const RECYCLE_EVERY = 30;
+
+let page = null;
+const freshPage = async () => {
+  if (page) await page.close().catch(() => {});
+  page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  page.on('pageerror', (e) => console.error('PAGE ERROR:', e.message));
+  await page.goto(`http://localhost:${devPort()}/app`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(async () => {
+    window.__cat = await import('/src/templates/catalog.ts');
+    window.__comp = await import('/src/preview/composeDocument.ts');
+    window.__wiz = await import('/src/model/wizard.ts');
+  });
+  await installScanner();
+};
+await freshPage();
 
 const targets = await page.evaluate(
   (only) =>
@@ -76,7 +90,10 @@ if (!targets.length) {
   process.exit(2);
 }
 
-await page.evaluate((TOLERANCE) => {
+// A function DECLARATION on purpose: `freshPage` above calls it, including for the very first
+// page, and only a declaration hoists far enough for that to work.
+async function installScanner() {
+  return page.evaluate((TOLERANCE) => {
   window.__scanContainment = async (batch) => {
     const FILL = ['Wisniewska', 'district', 'provisional', 'afternoon', 'coverage', 'regional'];
     const out = [];
@@ -167,12 +184,29 @@ await page.evaluate((TOLERANCE) => {
     }
     return out;
   };
-}, TOLERANCE);
+  }, TOLERANCE);
+}
 
 const rows = [];
-for (let i = 0; i < targets.length; i += 6) {
-  const slice = targets.slice(i, i + 6);
-  const res = await page.evaluate((batch) => window.__scanContainment(batch), slice);
+const BATCH = 4;
+for (let i = 0; i < targets.length; i += BATCH) {
+  if (i && i % RECYCLE_EVERY === 0) await freshPage();
+  const slice = targets.slice(i, i + BATCH);
+  // A LOST BROWSER IS NOT A VERDICT. This laptop is RAM-bound and a full run mounts 503 frames;
+  // when the headless shell is killed mid-sweep the honest thing is to bring it back and carry
+  // on, not to report the designs that happened to finish first. Without this the sweep died at
+  // 30 designs once and at 6 the next time - a partial answer that still reads like an answer.
+  let res;
+  try {
+    res = await page.evaluate((batch) => window.__scanContainment(batch), slice);
+  } catch (err) {
+    process.stderr.write(`\n  browser lost at ${i}/${targets.length} - restarting (${String(err.message).split('\n')[0]})\n`);
+    try { await browser.close(); } catch { /* already gone */ }
+    browser = await chromium.launch();
+    page = null;
+    await freshPage();
+    res = await page.evaluate((batch) => window.__scanContainment(batch), slice);
+  }
   for (const r of res) {
     const t = targets.find((x) => x.id === r.id);
     rows.push({ ...r, cat: t?.cat ?? '?', name: t?.name ?? '' });
