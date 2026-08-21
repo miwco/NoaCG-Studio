@@ -264,12 +264,19 @@ the same four back on the way in - control, output, join and presenter alike.
 
 So a production's output URL, once pasted into CasparCG or an OBS browser source, is good for the
 life of that production. It was NOT before 0040: unpublishing dropped the row and re-publishing
-re-minted every slug from its column default, which is the mechanism behind the unexplained "the
-CasparCG URL stopped working" report in acceptance round 2 - and it contradicted what this section
-and the app's own publish confirmation both promised. The fix is in the database rather than in the
-publish path on purpose: restoring identity is an invariant of the table, not a step a writer can
-forget, and it changes no function, policy or authorization path, so it cannot leave a door open
-behind an unpublished production.
+re-minted every slug from its column default, which contradicted what this section and the app's
+own publish confirmation both promised. The fix is in the database rather than in the publish path
+on purpose: restoring identity is an invariant of the table, not a step a writer can forget, and it
+changes no function, policy or authorization path, so it cannot leave a door open behind an
+unpublished production.
+
+0040 was written partly as the one mechanism that would have explained acceptance round 2's
+unexplained "the CasparCG URL stopped working" report. **Do not read it as that report's diagnosis.**
+The symptom as the owner describes it is that a production page's GRAPHIC stopped working, which
+need not involve the URL at all; it happened once, it has not been reproduced, and the address half
+is now closed and verified regardless. The owner parked the case on 2026-08-20 rather than keep an
+un-reproducible item open - so it is not on anyone's list, and it gets reopened by a second
+occurrence, not by another round of speculation about the first.
 
 One consequence worth knowing: a readable join name stays reserved by the production that held it
 even while that production is unpublished, so claiming it from another production is refused as
