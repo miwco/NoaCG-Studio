@@ -397,6 +397,20 @@ can be re-ordered; a silhouette the catalog does not contain has to be drawn.
 
 Re-run: `node scripts/card-look-sweep.mjs lower-third --json out.json` (any category).
 
+**The ordering half is BUILT and the drawing half is scheduled.** `spreadFirstPage`
+(`src/templates/search.ts`, 2026-08-21) fills Browse's fold by spreading accent hue with style
+family breaking ties, so what the category already has is now what the first page shows. It keys
+on the DECLARED palette accent because that predicted the rendered hue 72/72; the declared panel
+predicted the rendered backdrop only 60/80, so **backdrop is deliberately not an ordering axis** -
+spreading on it would need the measurement shipped as a baseline. The six missing silhouettes are
+briefed in `docs/handoffs/lower-third-shapes.md`; the whole catalog queue is
+`docs/CATALOG_WORK_QUEUE.md`.
+
+**The owner's standing position, ratified the same day and binding on catalog work:** *"No one
+wants to use a design that other people also use. It's better to have a unique variety, and if we
+don't have a lot of graphics that are unique and very good, then we are doing something wrong."*
+Sameness is a defect, not a house style - and no design is pinned to the first slot because of it.
+
 **Compositional grammars with no design at all**
 
 7. **A column grid.** 17 designs of 459 use grid columns. There is no editorial two-column card,
