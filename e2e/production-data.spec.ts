@@ -645,3 +645,38 @@ test('SPACE on the Data tab cannot put a graphic on air', async ({ page }) => {
   await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');
   await expect(rows).not.toHaveCount(0);
 });
+
+/**
+ * THE CUE RUNDOWN DOES NOT FOLLOW YOU ONTO THE DATA TAB.
+ *
+ * The playout surface stays MOUNTED behind a workspace and is hidden with a class, because
+ * unmounting it would destroy the PROGRAM monitor's iframes and reload whatever is on air. The
+ * hiding half only ever worked for half the surface: `.pd-offstage` and `.pd-rail` are both
+ * one-class selectors, so the later of the two in styles.css won and the rundown stayed on
+ * screen beside the Data workspace - a list of cues on a page that has no way to air one
+ * (owner, 2026-08-21: "explain to me what the cue rundown is doing here"). `.pd-main` was
+ * hidden only by the accident of being declared above it.
+ *
+ * The workspaces open in their own tab, where the playout column is never built at all - so the
+ * leak needs the IN-TAB route, which is what a Back after "Playout" gives you.
+ */
+test('the playout column stays hidden behind the Data workspace, rundown included', async ({ page }) => {
+  await createProject(page, { name: 'Arena Quiz' });
+  await productionFor(page, 'Quiz Night');
+  const data = await openWorkspace(page, 'data');
+
+  // Back to Playout IN THIS TAB (the one tab control that is a button, not a link), which is
+  // what builds the playout column in the workspace's tab in the first place.
+  await data.getByTestId('tab-playout').click();
+  await expect(data.getByTestId('production-verbs')).toBeVisible();
+  await expect(data.locator('.pd-rail')).toBeVisible();
+
+  // …and back to Data, now with the playout surface mounted behind it.
+  await data.goBack();
+  await expect(data.getByTestId('production-data')).toBeVisible();
+  for (const sel of ['.pd-rail', '.pd-main']) {
+    await expect(data.locator(sel), `${sel} is still on screen behind the Data workspace`).toBeHidden();
+  }
+  // Still MOUNTED, which is the other half of the contract: hidden, never unmounted.
+  expect(await data.locator('.pd-rail').count()).toBe(1);
+});

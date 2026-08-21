@@ -5768,7 +5768,14 @@ h2 + .lib-row,
 /* The playout surface WAITING behind a sub-page. Hidden, never unmounted: unmounting destroys
    the PROGRAM monitor's iframes, and reloading a graphic that is on air because someone opened
    the Data tab is a live fault, not a layout choice. */
-.pd-offstage { display: none; }
+/* TWO CLASSES, not one, and that is the whole point: `.pd-offstage` alone is specificity (0,1,0)
+   and `.pd-rail` further down this file is (0,1,0) too, so the LATER rule won and the cue rundown
+   stayed on screen beside the Data workspace - a list of cues on a page with no way to air one
+   (owner, 2026-08-21: "explain to me what the cue rundown is doing here"). `.pd-main` hid
+   correctly only because it happens to be declared ABOVE this line. Naming both surfaces makes
+   the rule win on specificity instead of on source order, which nothing here should depend on. */
+.pd-main.pd-offstage,
+.pd-rail.pd-offstage { display: none; }
 
 /* ── The monitors: PREVIEW beside PROGRAM, equal, 16:9, CAPPED and STICKY ────
    Owner, 2026-08-19: "we should rather make the preview and program screens a bit smaller",
