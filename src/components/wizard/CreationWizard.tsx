@@ -1435,6 +1435,9 @@ export default function CreationWizard() {
                       title: c.label,
                       sample: c.sample,
                       numeric: c.numeric,
+                      clock: c.clock,
+                      // Text until the user says otherwise — "22:40" may be the time of day.
+                      kind: 'text',
                     })),
                     // Pictures start OFF — inside a design they are usually the artwork
                     // itself — unless the layer opted in by name (`f:`).

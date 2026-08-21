@@ -109,6 +109,12 @@ export interface SvgFieldDraft {
   sample: string;
   /** A numeric-looking sample emits ftype "number". */
   numeric: boolean;
+  /** A clock-shaped sample ("10:00") — the row then offers the countdown kind. */
+  clock: boolean;
+  /** How the layer binds: plain text (the default), or a COUNTDOWN — the node becomes the
+   *  clock display and the operator field its length in minutes (plan P2 "clock ftype").
+   *  One countdown per graphic: the shared clock runtime drives one display. */
+  kind: 'text' | 'countdown';
 }
 
 /** One `<image>` layer offered as a swappable picture field (docs/SVG_IMPORT_PLAN.md P2). */
@@ -401,6 +407,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
               title: f.title.trim() || 'Text',
               sample: f.sample,
               numeric: f.numeric,
+              countdown: f.kind === 'countdown',
             })),
           images: draft.svgImages
             .filter((f) => f.on)

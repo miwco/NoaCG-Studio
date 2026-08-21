@@ -465,3 +465,55 @@ test('svg import: the layer stagger preset walks the artwork’s own top-level l
   expect(data.enter.text![0]).toBeLessThan(data.enter.details![0]);
   expect(data.out.details![0]).toBeLessThan(data.out.back![0]);
 });
+
+test('svg import: a clock-shaped layer can bind as a countdown — the node ticks, the operator sets minutes', async ({ page }) => {
+  await dropSvg(page);
+  await page.locator('.wz-next').click();
+
+  // Only the clock-shaped layer ("22:40", t3) offers the choice; it starts as text.
+  await expect(page.getByTestId('map-svg-kind-t0')).toHaveCount(0);
+  const kind = page.getByTestId('map-svg-kind-t3');
+  await expect(kind).toHaveValue('text');
+  await kind.selectOption('countdown');
+
+  await createProject(page);
+
+  const state = await page.evaluate(async () => {
+    const [{ useTemplateStore }, { parseAnimData }, { validateTemplate }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/blocks/animData.ts'),
+      import('/src/validation/validateTemplate.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    const d = parseAnimData(t.js)!;
+    return {
+      field: t.fields[3],
+      html: t.html,
+      css: t.css,
+      js: t.js,
+      enterCalls: d.steps[0].calls?.map((c) => c.call) ?? [],
+      outCalls: d.steps[d.steps.length - 1].calls?.map((c) => c.call) ?? [],
+      valid: validateTemplate(t).ok,
+    };
+  });
+  // The field is the count's LENGTH in minutes (the drawn "22:40" read as M:SS), held in a
+  // hidden data source; the drawn layer is the display — class, not id, so update() can
+  // never write "22.67" over the ticking readout.
+  expect(state.field).toMatchObject({ field: 'f3', ftype: 'number', title: 'Text Layer (minutes)', value: '22.67' });
+  expect(state.html).toMatch(/<div id="f3" class="noacg-data-source"\s*>\s*22\.67\s*<\/div>/);
+  expect(state.html).toMatch(/<tspan[^>]*class="imported-design-clock"[^>]*>22:40<\/tspan>/);
+  expect(state.html).not.toMatch(/<tspan[^>]*id="f3"/);
+  expect(state.css).toContain('.noacg-data-source {');
+  // The shared clock runtime rides outside the region, and the data calls it at the edges.
+  expect(state.js).toContain('function startClock()');
+  expect(state.enterCalls).toEqual(['startClock']);
+  expect(state.outCalls).toEqual(['stopClock']);
+  expect(state.valid).toBe(true);
+
+  // Idle, the display shows the full length — the designer's own readout, round-tripped.
+  const frame = previewFrame(page);
+  await expect(frame.locator('.imported-design-clock')).toHaveText('22:40');
+  // Playing starts the count: within a couple of seconds the readout has moved.
+  await page.getByRole('button', { name: /^▶ Play$/ }).click();
+  await expect(frame.locator('.imported-design-clock')).not.toHaveText('22:40', { timeout: 5_000 });
+});

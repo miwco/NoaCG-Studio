@@ -29,6 +29,10 @@ export interface SvgTextCandidate {
   marked: boolean;
   /** A numeric-looking sample proposes ftype "number" (a score, a count, a year). */
   numeric: boolean;
+  /** A clock-shaped sample ("10:00", "1:05:00") can be bound as a COUNTDOWN instead of text:
+   *  the node becomes the clock display and the operator field its length in minutes
+   *  (templates/shared/clock.ts). Offered, never assumed — "22:40" may be the time of day. */
+  clock: boolean;
 }
 
 /** One bindable picture layer: an SVG `<image>` element the operator could swap by field
@@ -147,6 +151,23 @@ function candidateName(el: Element, root: Element): string {
  *  Exported for the outlined-text overlay, whose sample the user types in the mapping step. */
 export function looksNumeric(sample: string): boolean {
   return /^[-+]?\d+([.,]\d+)?$/.test(sample.trim());
+}
+
+/** Does this sample look like a clock readout — M:SS or H:MM:SS ("10:00", "1:05:00")?
+ *  Such a layer can be bound as a countdown; the mapping step offers the choice. */
+export function looksClock(sample: string): boolean {
+  return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(sample.trim());
+}
+
+/** A clock-shaped sample as a countdown LENGTH in minutes (two decimals): "10:00" is ten
+ *  minutes, "1:05:00" sixty-five. A two-part readout reads as M:SS — what a drawn countdown
+ *  shows — never as hours:minutes. Not a clock: null. */
+export function clockSampleMinutes(sample: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(sample.trim());
+  if (!m) return null;
+  const [a, b, c] = [Number(m[1]), Number(m[2]), m[3] === undefined ? null : Number(m[3])];
+  const seconds = c === null ? a * 60 + b : a * 3600 + b * 60 + c;
+  return Math.round((seconds / 60) * 100) / 100;
 }
 
 /** Attribute names that run script — removed wholesale. */
@@ -372,6 +393,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
       sample,
       marked,
       numeric: looksNumeric(sample),
+      clock: looksClock(sample),
     };
   });
 

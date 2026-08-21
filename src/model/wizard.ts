@@ -359,6 +359,11 @@ export interface DesignSvgField {
   sample: string;
   /** True emits ftype "number" (a score, a count) instead of "textfield". */
   numeric: boolean;
+  /** True binds the layer as a COUNTDOWN (plan P2 "clock ftype"): the node becomes the
+   *  clock display (templates/shared/clock.ts drives it) and the field is the count's
+   *  length in minutes, held in a hidden data source. The first such field wins - the
+   *  shared runtime drives one clock; any later one binds as plain text. */
+  countdown?: boolean;
 }
 
 /** How one referenced font family resolves (plan §4). Exactly one of the two sources is

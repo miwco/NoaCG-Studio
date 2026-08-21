@@ -226,6 +226,7 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
   };
 
   const onCount = draft.svgFields.filter((f) => f.on).length;
+  const countdownTaken = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
 
   return (
     <div className="map-svg">
@@ -316,6 +317,30 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   data-testid={`map-svg-sample-${f.candidateId}`}
                 />
               </label>
+              {f.clock && (
+                /* A clock-shaped layer ("10:00") can be a COUNTDOWN: the node becomes the
+                   ticking display and the operator sets the length in minutes. One per
+                   graphic - the shared clock runtime drives one display - so once a row
+                   has it, the others keep the choice but greyed. Never assumed: "22:40"
+                   is just as likely the time of day drawn into a news strap. */
+                <label className="save-field">
+                  <span>Binds as</span>
+                  <select
+                    value={f.kind}
+                    disabled={!f.on || (f.kind !== 'countdown' && countdownTaken)}
+                    onChange={(e) => patchField(f.candidateId, { kind: e.target.value as SvgFieldDraft['kind'] })}
+                    title={
+                      f.kind !== 'countdown' && countdownTaken
+                        ? 'Another layer is already the countdown — a graphic has one clock'
+                        : 'Text: the operator types what shows. Countdown: the operator sets minutes and this layer counts down on air.'
+                    }
+                    data-testid={`map-svg-kind-${f.candidateId}`}
+                  >
+                    <option value="text">Text</option>
+                    <option value="countdown">Countdown (operator sets minutes)</option>
+                  </select>
+                </label>
+              )}
             </div>
           ))}
         </div>
