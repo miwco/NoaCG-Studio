@@ -59,8 +59,25 @@ const PROBE = `(async () => {
     }
   }
 
+  // WHAT THE STOREFRONT SHOWS FIRST, per category, through the REAL browse engine rather than a
+  // guess at its order. Browse renders a PAGE of twelve, so for most people the first twelve ARE
+  // the category (docs/GOALS.md step 11).
+  const { browseTemplates, NO_BROWSE_FILTERS } = await import('/src/templates/search.ts');
+  const { GRAPHIC_CATEGORIES } = await import('/src/model/taxonomy.ts');
+  const firstPage = {};
+  for (const cat of GRAPHIC_CATEGORIES) {
+    try {
+      const outcome = browseTemplates({ ...NO_BROWSE_FILTERS, category: cat.id });
+      const shown = [...(outcome.best ?? []), ...(outcome.also ?? [])];
+      firstPage[cat.id] = { name: cat.name, total: shown.length, page: shown.slice(0, 12).map((r) => r.variant.id) };
+    } catch (e) {
+      firstPage[cat.id] = { name: cat.name, error: String((e && e.message) || e) };
+    }
+  }
+
   return {
     variants,
+    firstPage,
     reachable: [...reachable],
     packs: PACKS.map((p) => ({ id: p.id, family: p.family ?? null, paletteId: p.paletteId ?? null, types: p.types ?? [], extras: p.extras ?? [] })),
     types: TYPES.map((t) => ({ id: t.id, category: t.structure?.category ?? null, designs: (t.designs ?? []).map((d) => d.id) })),
@@ -447,6 +464,81 @@ console.log(`\n═══ 7. KIT COHERENCE ═══`);
 console.log(`packs ${packs.length} · declaring a paletteId: ${packs.filter((p) => p.paletteId).length}`);
 console.log(`extras across all packs: ${extras} · whose family differs from the pack's: ${offFamily} (${pct(offFamily, extras)})`);
 console.log(`graphic types ${types.length} · designs attached to a type ${types.reduce((a, t) => a + t.designs.length, 0)} · designs belonging to no type ${built.length - types.reduce((a, t) => a + t.designs.length, 0)}`);
+
+
+// ── 5. WHAT THE FIRST PAGE SHOWS ─────────────────────────────────────────────────────────
+//
+// Browse renders a PAGE of twelve, not the catalog, so for most people the first twelve ARE
+// the category. The owner read two shelves side by side on 2026-08-21 and named the split:
+// Statistics & data was "genuinely different… options to choose from actually", while "we have
+// that problem with the lower thirds right now that when you open it up all the graphics there
+// look the same".
+//
+// This measures that, per category, on the SAME look vector section 2 uses: how many distinct
+// signatures the first page carries, against how many the whole category has. A category whose
+// page is far poorer than its shelf is one whose ORDER is the problem, not its designs - and
+// that is a different fix from drawing more designs.
+//
+// READ THIS NUMBER WITH ITS BLINDNESS IN MIND - it has already produced a false negative. It
+// scores the LOWER-THIRDS first page at 11 distinct looks out of 12, as varied as any shelf
+// here, and the owner looking at that same page said the graphics "all look the same". The
+// owner is right and the vector is blind: its fourteen axes are CSS DECISIONS (radius, blur,
+// skew, clip, tracking, weight counts) and at card size an eye reads PALETTE and SILHOUETTE.
+// All twelve lower thirds are a dark slab with white text and an amber accent, and this vector
+// has no axis for any of that. The stats shelf it was compared against carries a giant
+// percentage, a lime table, a red dial and a cream printed panel - different shapes, and light
+// backgrounds as well as dark. So REORDERING BY THIS SIGNATURE WOULD CHANGE NOTHING A PERSON
+// SEES, and the axis that would is measured off the rendered card, not off the stylesheet.
+// `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves, so the comparison stays
+// one look rather than one argument.
+//
+// READ THE NUMBER WITH ITS BLINDNESS IN MIND, because this section already produced a false
+// negative. It scores the lower-thirds first page at 11 distinct looks out of 12 - as varied as
+// any shelf here - and the owner looking at that same page said the graphics "all look the
+// same". The owner is right and the vector is blind: its fourteen axes are CSS DECISIONS
+// (radius, blur, skew, clip, tracking, weight counts), and at card size an eye reads PALETTE and
+// SILHOUETTE. All twelve lower thirds are a dark slab with white text and an amber accent, and
+// the vector has no axis for any of that; the stats shelf it was compared against carries a
+// giant percentage, a lime table, a red dial and a cream printed panel - different shapes, and
+// light backgrounds as well as dark. Reordering by THIS signature would therefore change
+// nothing a person sees. `node scripts/spike-shelf-look.mjs <out>` captures the shelves so the
+// comparison stays one look rather than one argument.
+console.log(`
+═══ 5. THE FIRST PAGE — what a category shows before anyone scrolls ═══`);
+console.log('category                 page  looks  shelf  looks  page/shelf');
+const pageRows = [];
+for (const [id, fp] of Object.entries(data.firstPage ?? {})) {
+  if (fp.error || !fp.page) continue;
+  const pageLooks = uniq(fp.page.map((v) => lookById.get(v)?.sig).filter(Boolean)).length;
+  const shelf = looks.filter((l) => fp.page.includes(l.id) || l.category === id);
+  const shelfIds = uniq([...fp.page, ...shelf.map((l) => l.id)]);
+  const shelfLooks = uniq(shelfIds.map((v) => lookById.get(v)?.sig).filter(Boolean)).length;
+  const shown = Math.min(12, fp.page.length);
+  if (shown === 0) continue;
+  // Variety DENSITY, not a raw count: a twelve-card page can only ever carry twelve looks, so
+  // comparing counts across a 12-design shelf and a 60-design one would punish the big shelf
+  // for being big. What is asked is how much of the variety it HAS reaches the fold.
+  const density = pageLooks / shown;
+  const shelfDensity = shelfLooks / Math.max(1, shelfIds.length);
+  pageRows.push({ id, name: fp.name, shown, pageLooks, shelfSize: shelfIds.length, shelfLooks, density, shelfDensity });
+}
+pageRows.sort((a, b) => a.density - b.density);
+for (const r of pageRows) {
+  const flag = r.density < 0.5 ? '  ← one design repeated' : r.density < 0.75 ? '  ← thin' : '';
+  console.log(
+    `${r.name.padEnd(24)} ${String(r.shown).padStart(4)} ${String(r.pageLooks).padStart(6)} ` +
+    `${String(r.shelfSize).padStart(6)} ${String(r.shelfLooks).padStart(6)} ` +
+    `${(r.density * 100).toFixed(0).padStart(9)}%${flag}`,
+  );
+}
+const worst = pageRows[0];
+if (worst) {
+  console.log(
+    `
+THINNEST FIRST PAGE: ${worst.name} - ${worst.pageLooks} distinct looks across ${worst.shown} cards, ` +
+    `from a shelf holding ${worst.shelfLooks} across ${worst.shelfSize}.`,
+  );
+}
 
 if (jsonOut) {
   writeFileSync(jsonOut, JSON.stringify({
