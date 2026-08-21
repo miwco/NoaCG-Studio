@@ -17,9 +17,21 @@
 //                          segment lands on the playout surface, so an old build (or a stale
 //                          link) degrades to the page that always exists.
 //   #/video                the video editor shell
-//   #/new[/<designId>]     the creation wizard (Back closes it); an optional trailing catalog
-//                          variant id preselects that design (docs/PRERENDER.md's template-page
-//                          deep link) — an id that fails to resolve just opens at Entry
+//   #/new[/<designId>]     the creation wizard's front page (Back leaves it); an optional
+//                          trailing catalog variant id preselects that design
+//                          (docs/PRERENDER.md's template-page deep link) — an id that fails to
+//                          resolve just opens at Entry
+//   #/new[/<designId>]/step/<name>
+//                          ONE STEP of the wizard's walk. Every step the reader reaches gets its
+//                          own history entry, so browser Back walks the walk backwards instead
+//                          of leaving the app; Back off the front page (no `/step/`) still
+//                          leaves, which is the contract App.tsx's routed-wizard effect keeps.
+//                          The step is named, NEVER numbered: import mode carries an extra
+//                          step and every later index shifts by one, so an index would mean a
+//                          different step depending on which mode wrote the URL. `step` is a
+//                          literal marker segment because the design id is positional and
+//                          optional — without it, `#/new/fields` could not be told apart from
+//                          a design called `fields`
 //   #/package/*            RETIRED (packages removed - docs/GOALS.md "Student release" step 3);
 //                          old links land on Home
 
@@ -36,7 +48,10 @@ export type Route =
   | { view: 'control'; id: string }
   | { view: 'production'; id: string; sub?: ProductionSub }
   | { view: 'video' }
-  | { view: 'new'; design?: string | null };
+  | { view: 'new'; design?: string | null; step?: string | null };
+
+/** The marker segment that introduces a wizard STEP name (see the route table above). */
+const STEP_SEGMENT = 'step';
 
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
@@ -57,8 +72,14 @@ export function parseRoute(hash: string): Route {
         : { view: 'production', id: parts[1] };
     case 'video':
       return { view: 'video' };
-    case 'new':
-      return { view: 'new', design: parts[1] ?? null };
+    case 'new': {
+      // `#/new/step/<name>` (no design) and `#/new/<designId>/step/<name>` both land here;
+      // anything after the step name is ignored rather than 404ing, the way the production
+      // route degrades.
+      const marked = parts.indexOf(STEP_SEGMENT, 1);
+      const design = (marked === 1 ? null : parts[1]) ?? null;
+      return { view: 'new', design, step: marked === -1 ? null : parts[marked + 1] ?? null };
+    }
     default:
       return { view: 'editor' };
   }
@@ -80,8 +101,11 @@ export function routeHash(route: Route): string {
         : `#/production/${encodeURIComponent(route.id)}`;
     case 'video':
       return '#/video';
-    case 'new':
-      return route.design ? `#/new/${encodeURIComponent(route.design)}` : '#/new';
+    case 'new': {
+      const design = route.design ? `/${encodeURIComponent(route.design)}` : '';
+      const step = route.step ? `/${STEP_SEGMENT}/${encodeURIComponent(route.step)}` : '';
+      return `#/new${design}${step}`;
+    }
   }
 }
 

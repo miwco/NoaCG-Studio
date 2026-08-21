@@ -14,12 +14,35 @@ import { useAuthUi } from './components/auth/authUi';
 import { isBackendConfigured } from './backend/config';
 import { useDocKindStore } from './store/docKindStore';
 import { useTemplateStore } from './store/templateStore';
-import { useRouter } from './app/router';
+import { parseRoute, useRouter } from './app/router';
 import { openGraphicById, useSaveUi } from './store/saveActions';
 import { raiseStorageAlert } from './store/storageAlert';
 import { isAdvancedMode, useAdvancedMode } from './components/useAdvancedMode';
 import AnalyticsConsentBanner from './components/AnalyticsConsentBanner';
 import StorageHealthNotice from './components/StorageHealthNotice';
+
+/**
+ * DID THIS PAGE LOAD LAND ON THE WIZARD? Read once, at module load — main.tsx imports this
+ * module and renders immediately after, so this is the boot route by construction, and it
+ * cannot be confused with a later in-app navigation to `#/new`.
+ *
+ * A boot onto `#/new` is the product's PRIMARY DOOR (the landing page's "Start creating"),
+ * and two things below hang off it: the wizard is opened HERE rather than from an effect,
+ * and no under-surface is rendered for it.
+ *
+ * Opening it here is the whole fix for the entry FLASH. A zustand write made from an effect —
+ * layout or not — is scheduled, not flushed: the store notifies through useSyncExternalStore
+ * and React renders the wizard in a LATER frame. So the first commit painted the studio with
+ * no wizard in it, and the wizard arrived ~one frame later. That frame is the flash. It is
+ * also why the two earlier attempts could not remove it: moving the effect to useLayoutEffect
+ * and sharing HomePage's `key` both changed what happened AROUND that frame, never the fact
+ * that the wizard did not exist IN it. Opened at module load, `galleryOpen` is already true
+ * when App renders for the first time, so the wizard is in the first frame there is.
+ */
+const bootRoute = typeof window !== 'undefined' ? parseRoute(window.location.hash) : null;
+if (bootRoute?.view === 'new') {
+  useTemplateStore.getState().openGallery(bootRoute.design ?? null);
+}
 
 export default function App() {
   // Which editor world is active: SPX live graphics or the AI video editor. Persisted;
@@ -106,13 +129,20 @@ export default function App() {
   // `if (galleryOpen)` branch below must still hand a `#/new/<id>` route's design off to
   // openGallery rather than assuming a prior call already did.
   const consumedDesign = useRef<string | null>(null);
-  // useLayoutEffect, not useEffect: the wizard must be IN the frame the route change paints.
-  // As a post-paint effect this ran one frame late, so navigating Home → `#/new` painted an
-  // uncovered under-surface first — the visible "flash" the acceptance round reported.
+  // useLayoutEffect, not useEffect: on the WARM path (Home → `#/new`) the wizard should be in
+  // the frame the route change paints. It cannot carry the COLD path — a store write from any
+  // effect lands a frame later — which is why a boot onto `#/new` opens the wizard at module
+  // load instead (bootRoute above).
   useLayoutEffect(() => {
     if (route.view === 'new') {
       const design = route.design ?? null;
-      if (galleryOpen) {
+      // The LIVE flag, not the rendered one: this effect writes `galleryOpen` and its own
+      // subscribed value is still the pre-write `false` when it runs again with the same
+      // deps — which StrictMode's remount simulation does on every mount. Read stale, the
+      // run below mistook "I just opened it" for "the reader closed it" and rewound `#/new`
+      // to `#/home` on boot. Reading the store makes the effect idempotent, which is exactly
+      // what that simulation is there to check.
+      if (useTemplateStore.getState().galleryOpen) {
         routedWizard.current = true;
         if (design && consumedDesign.current !== design) {
           consumedDesign.current = design;
@@ -132,11 +162,26 @@ export default function App() {
         useTemplateStore.getState().openGallery(design);
       }
     } else {
-      if (galleryOpen && routedWizard.current) useTemplateStore.getState().closeGallery();
+      if (useTemplateStore.getState().galleryOpen && routedWizard.current) {
+        useTemplateStore.getState().closeGallery();
+      }
       routedWizard.current = false;
       consumedDesign.current = null;
     }
+    // `galleryOpen` stays a dependency — it is what RE-RUNS this effect when the wizard opens
+    // or closes; the branches above just read the live value rather than this snapshot of it.
   }, [route, galleryOpen]);
+
+  // Only the WARM path (Home → `#/new`) has a Home worth preserving under the wizard. A boot
+  // that LANDED on `#/new` renders NO under-surface: there is nothing to keep alive, and
+  // mounting the whole dashboard (with its thumbnails) beneath a full-screen opaque wizard is
+  // work whose only possible visible outcome is a flash. The flag clears the moment the route
+  // leaves the wizard, so Home → `#/new` gets the preserved Home back for the rest of the
+  // session.
+  const bootedOnWizard = useRef(bootRoute?.view === 'new');
+  useEffect(() => {
+    if (route.view !== 'new') bootedOnWizard.current = false;
+  }, [route]);
 
   // A session that DIED (refresh token expired/revoked — syncController's transition, never a
   // deliberate Sign out) surfaces as the ordinary sign-in prompt with a reason: sync stops
@@ -193,13 +238,14 @@ export default function App() {
   // remount Home — the remount repainted blank thumbnails for a frame before the wizard
   // covered them (the acceptance round's "flash"). Freshness after a wizard create comes from
   // Home's own 'spx-data-changed' listener instead.
+  // ...but only the WARM path has a Home worth preserving — see `bootedOnWizard` above.
   const surface =
     route.view === 'home' ? <HomePage key="home" route={route} />
     : route.view === 'control' ? <GraphicControlPage id={route.id} />
     : route.view === 'production' ? <ProductionPage id={route.id} sub={route.sub ?? null} />
     : route.view === 'video' ? <VideoAppShell />
     : route.view === 'graphic' ? <AppShell />
-    : route.view === 'new' && !advanced ? <HomePage key="home" route={{ view: 'home', section: null }} />
+    : route.view === 'new' && !advanced ? (bootedOnWizard.current ? null : <HomePage key="home" route={{ view: 'home', section: null }} />)
     : kind === 'video' ? <VideoAppShell />
     : <AppShell />;
 

@@ -168,6 +168,18 @@ than fail, `node scripts/e2e-runs.mjs --all` to see what is running, and `--orph
 `--kill-orphans` to reap browsers a killed run left behind. `NOACG_ALLOW_PARALLEL_E2E=1` in the
 command overrides.
 
+**A killed run leaves its DEV SERVER behind, and that one holds a port rather than just RAM.**
+Playwright starts the server as a child of its own CLI (`webServer`), through an npm script and a
+`cmd /c` shim, so killing the CLI - which is what you do to a stuck run - frees the CLI and leaves
+the chain listening. The guard hook then refuses every following run on this checkout's port, and
+there is nothing left to stop it FROM. `--orphans` reports those servers and `--kill-orphans`
+closes the whole chain, freeing the port. What makes it safe to kill is the same bar the browser
+shells clear plus one more: no Playwright CLI is running anywhere, AND the server's launch chain
+has no living owner outside itself - so a `dev` server you started, or one the preview tools own,
+is never touched. Windows only, like the browser-shell reaper: on POSIX an orphan is reparented to
+init instead of left with a dead parent, so the signal does not exist and the check reports
+nothing rather than guessing.
+
 **Two runs that start in the same second do not both wait.** A run sitting in its globalSetup is
 indistinguishable in the process table from one driving a browser, so each used to queue behind
 the other and both sat out the 30-minute cap - two worktrees, both idle at ~2 s of CPU sixteen

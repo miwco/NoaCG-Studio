@@ -15,7 +15,13 @@
 // The ARGUMENT-SPLITTING cases, which are the actual logic, are platform-neutral and always run.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { blockingRuns, rootOfCommand, sameRoot, selfAndAncestors } from './e2e-runs.mjs';
+import {
+  blockingRuns,
+  orphanedDevServers,
+  rootOfCommand,
+  sameRoot,
+  selfAndAncestors,
+} from './e2e-runs.mjs';
 
 const onlyWindows = { skip: process.platform !== 'win32' };
 const onlyPosix = { skip: process.platform === 'win32' };
@@ -202,4 +208,71 @@ test('three simultaneous runs queue in a stable order rather than all proceeding
 test('a run never blocks on itself', () => {
   const self = { pid: 42, kind: 'run', startedAt: 1_700_000_000_000 };
   assert.deepEqual(blockingRuns([self], self), []);
+});
+
+// ── THE DEV SERVER A KILLED RUN LEAVES BEHIND ──
+// Playwright starts the dev server as a child of its own CLI, through an npm script and a
+// `cmd /c` shim, so killing the CLI frees the RAM and leaves the PORT held - and the guard hook
+// then refuses every following run until somebody finds it by hand. The tables below are the
+// shape captured from this machine with one leftover and one live server side by side: the
+// leftover's chain broke at its own npm supervisor, the live one ran up to explorer.exe.
+
+const REPO = 'C:/claude/NoaCG-Studio';
+const viteCmd = (root) => `"node" "${root}\\node_modules\\.bin\\\\..\\vite\\bin\\vite.js"`;
+const NPM_SUPERVISOR = '"node" "npm-cli.js" ' + 'run ' + 'dev';
+
+/** server -> cmd shim -> the npm supervisor -> whatever owned the run. */
+function serverTree({ pid, root, ownerPid, extra = [] }) {
+  return [
+    { pid, ppid: pid + 1, name: 'node.exe', command: viteCmd(root) },
+    { pid: pid + 1, ppid: pid + 2, name: 'cmd.exe', command: 'cmd.exe /d /s /c vite' },
+    { pid: pid + 2, ppid: ownerPid, name: 'node.exe', command: NPM_SUPERVISOR },
+    ...extra,
+  ];
+}
+
+test('a dev server whose launch chain lost its owner is an orphan', () => {
+  // ownerPid 900 is the killed Playwright CLI: absent from the table.
+  const procs = serverTree({ pid: 100, root: `${REPO}\\.claude\\worktrees\\feature-x`, ownerPid: 900 });
+  const found = orphanedDevServers(procs, REPO);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].pid, 100);
+  // The shims are as unowned as the server, so they are reaped with it - children first.
+  assert.deepEqual(found[0].chain, [100, 101, 102]);
+});
+
+test('a dev server still owned by a live session is left alone', () => {
+  // The same tree, but the chain runs up into a real desktop session rather than ending nowhere.
+  const procs = serverTree({
+    pid: 200,
+    root: `${REPO}\\.claude\\worktrees\\feature-y`,
+    ownerPid: 800,
+    extra: [{ pid: 800, ppid: 4, name: 'explorer.exe', command: 'C:\\Windows\\Explorer.EXE' }],
+  });
+  assert.deepEqual(orphanedDevServers(procs, REPO), []);
+});
+
+test('an unrelated Vite project on the same machine is nobody else\'s business', () => {
+  const procs = serverTree({ pid: 300, root: 'C:\\work\\some-other-app', ownerPid: 900 });
+  assert.deepEqual(orphanedDevServers(procs, REPO), []);
+});
+
+test('the MAIN checkout\'s own server counts, not just a worktree\'s', () => {
+  const procs = serverTree({ pid: 400, root: REPO.replaceAll('/', '\\'), ownerPid: 900 });
+  assert.equal(orphanedDevServers(procs, REPO).length, 1);
+});
+
+test('a recycled pid that makes the chain loop does not hang the walk', () => {
+  const procs = [
+    { pid: 500, ppid: 501, name: 'node.exe', command: viteCmd(`${REPO}\\.claude\\worktrees\\z`) },
+    { pid: 501, ppid: 502, name: 'cmd.exe', command: 'cmd.exe /d /s /c vite' },
+    { pid: 502, ppid: 501, name: 'node.exe', command: NPM_SUPERVISOR },
+  ];
+  assert.equal(orphanedDevServers(procs, REPO).length, 1);
+});
+
+test('an empty process table reports nothing rather than guessing', () => {
+  // The POSIX case and the "could not read the machine" case both land here; every caller of
+  // this module fails OPEN by design.
+  assert.deepEqual(orphanedDevServers([], REPO), []);
 });

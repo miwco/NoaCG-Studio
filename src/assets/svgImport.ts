@@ -29,6 +29,10 @@ export interface SvgTextCandidate {
   marked: boolean;
   /** A numeric-looking sample proposes ftype "number" (a score, a count, a year). */
   numeric: boolean;
+  /** A clock-shaped sample ("10:00", "1:05:00") can be bound as a COUNTDOWN instead of text:
+   *  the node becomes the clock display and the operator field its length in minutes
+   *  (templates/shared/clock.ts). Offered, never assumed — "22:40" may be the time of day. */
+  clock: boolean;
 }
 
 /** One bindable picture layer: an SVG `<image>` element the operator could swap by field
@@ -36,6 +40,22 @@ export interface SvgTextCandidate {
  *  most pictures inside a design are the artwork itself, not a slot. */
 export interface SvgImageCandidate {
   /** Stable marker id ("i0", "i1", …) — the value of data-noacg-candidate on the node. */
+  id: string;
+  /** Operator-facing label, prefilled from the layer name like a text candidate's. */
+  label: string;
+  /** True when the layer name carried the `f:` / `field:` prefix. */
+  marked: boolean;
+}
+
+/** One group of glyph-shaped paths that LOOKS like outlined text (docs/SVG_IMPORT_PLAN.md
+ *  §1.A): a `<g>` holding nothing but path/polygon shapes. Type converted to outlines at
+ *  export has nothing to bind, so the recovery is the raster flow's — hide the group and
+ *  place an HTML field over its box. Offered OFF by default: a logo is also a group of paths,
+ *  and only the user can tell the two apart (the mapping step's hover highlight shows which
+ *  shapes a row means). The box itself is measured in the mapping step, from its rendered
+ *  artwork — DOMParser has no layout. */
+export interface SvgOutlineCandidate {
+  /** Stable marker id ("o0", "o1", …) — the value of data-noacg-candidate on the group. */
   id: string;
   /** Operator-facing label, prefilled from the layer name like a text candidate's. */
   label: string;
@@ -59,6 +79,8 @@ export interface SvgImportResult {
   candidates: SvgTextCandidate[];
   /** Bindable picture candidates (`<image>` layers), in document order. */
   images: SvgImageCandidate[];
+  /** Groups of glyph-shaped paths that may be outlined text, in document order. */
+  outlines: SvgOutlineCandidate[];
   /** Every font family the markup references, in first-seen order. */
   fonts: SvgFontRef[];
   /** What sanitization removed, in user-facing words. Empty for a clean file. */
@@ -125,9 +147,27 @@ function candidateName(el: Element, root: Element): string {
 }
 
 /** Does this sample propose a number field? A PLAIN figure only — an SPX number input can
- *  hold "84" but not "22:40" or "2 – 1", so anything with clock/score furniture stays text. */
-function looksNumeric(sample: string): boolean {
+ *  hold "84" but not "22:40" or "2 – 1", so anything with clock/score furniture stays text.
+ *  Exported for the outlined-text overlay, whose sample the user types in the mapping step. */
+export function looksNumeric(sample: string): boolean {
   return /^[-+]?\d+([.,]\d+)?$/.test(sample.trim());
+}
+
+/** Does this sample look like a clock readout — M:SS or H:MM:SS ("10:00", "1:05:00")?
+ *  Such a layer can be bound as a countdown; the mapping step offers the choice. */
+export function looksClock(sample: string): boolean {
+  return /^\d{1,2}:\d{2}(?::\d{2})?$/.test(sample.trim());
+}
+
+/** A clock-shaped sample as a countdown LENGTH in minutes (two decimals): "10:00" is ten
+ *  minutes, "1:05:00" sixty-five. A two-part readout reads as M:SS — what a drawn countdown
+ *  shows — never as hours:minutes. Not a clock: null. */
+export function clockSampleMinutes(sample: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(sample.trim());
+  if (!m) return null;
+  const [a, b, c] = [Number(m[1]), Number(m[2]), m[3] === undefined ? null : Number(m[3])];
+  const seconds = c === null ? a * 60 + b : a * 3600 + b * 60 + c;
+  return Math.round((seconds / 60) * 100) / 100;
 }
 
 /** Attribute names that run script — removed wholesale. */
@@ -256,6 +296,35 @@ function textCandidates(svg: Element): Element[] {
   return out.filter((el) => (el.textContent ?? '').trim().length > 0);
 }
 
+/** The shapes a glyph outline is made of. Illustrator's Create Outlines writes one path
+ *  per glyph (compound for counters); Inkscape and Figma write paths too, Figma sometimes
+ *  polygons. A rect/circle/ellipse is furniture, never a letter. */
+const GLYPH_TAGS = new Set(['path', 'polygon']);
+
+/** Cap on the outline rows offered — past this a file is an icon set, not outlined copy,
+ *  and a hundred anonymous rows would bury the few that are text. */
+const MAX_OUTLINE_CANDIDATES = 24;
+
+/**
+ * Groups that may be OUTLINED TEXT (plan §1.A): the `<g>`s whose children are all glyph
+ * shapes, at least two of them (one path alone is a shape; a word is several). The root's
+ * own loose paths are not offered — a group is what a text object exports as in every
+ * editor, and a group is what can be hidden as one thing. Named groups survive the cap
+ * first, because a designer who named the layer "Name" has told us what it is.
+ */
+function outlineCandidates(svg: Element): Element[] {
+  const groups = Array.from(svg.querySelectorAll('g')).filter((g) => {
+    const children = Array.from(g.children);
+    return children.length >= 2 && children.every((c) => GLYPH_TAGS.has(c.tagName.toLowerCase()));
+  });
+  if (groups.length <= MAX_OUTLINE_CANDIDATES) return groups;
+  const named = groups.filter((g) => layerName(g));
+  const rest = groups.filter((g) => !layerName(g));
+  // Keep document order inside the cap, so the rows read like the file does.
+  const kept = new Set([...named, ...rest].slice(0, MAX_OUTLINE_CANDIDATES));
+  return groups.filter((g) => kept.has(g));
+}
+
 /** Every font family the markup references: font-family attributes, inline styles, and the
  *  <style> blocks. First-seen order; quotes and fallbacks stripped ("'MyFont', sans-serif"
  *  inventories as MyFont). */
@@ -324,6 +393,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
       sample,
       marked,
       numeric: looksNumeric(sample),
+      clock: looksClock(sample),
     };
   });
 
@@ -338,12 +408,22 @@ export function importSvgMarkup(source: string): SvgImportResult {
       return { id, label: label || `Picture ${i + 1}`, marked };
     });
 
+  // Outlined-text suspects: tagged like the rest, so the mapping step can highlight and
+  // measure them on its rendered artwork, and the generator can hide the chosen ones.
+  const outlines: SvgOutlineCandidate[] = outlineCandidates(svg).map((el, i) => {
+    const id = `o${i}`;
+    el.setAttribute(SVG_CANDIDATE_ATTR, id);
+    const { label, marked } = stripFieldPrefix(candidateName(el, svg));
+    return { id, label: label || `Shapes ${i + 1}`, marked };
+  });
+
   return {
     markup: new XMLSerializer().serializeToString(svg),
     width: size.width,
     height: size.height,
     candidates,
     images,
+    outlines,
     fonts: fontInventory(svg),
     notices,
   };

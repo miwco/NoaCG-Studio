@@ -27,10 +27,14 @@ import {
   type WizardOptions,
 } from '../../model/wizard';
 import type { SpxField } from '../../model/types';
-import { SVG_CANDIDATE_ATTR } from '../../assets/svgImport';
+import { SVG_CANDIDATE_ATTR, clockSampleMinutes } from '../../assets/svgImport';
+import { svgLayerSelectors } from '../../model/structure';
+import type { AnimData } from '../../blocks/animData';
 import {
   baseSettings,
   computeScale,
+  DATA_SOURCE_CLASS,
+  dataSourceCss,
   documentHtml,
   resetCanvasCss,
   resolveHeadingFont,
@@ -38,6 +42,7 @@ import {
   runtimeJs,
   zoneCssText,
 } from '../shared/base';
+import { clockRuntimeJs } from '../shared/clock';
 import { convertToDataRegion } from '../shared/standard';
 import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
 import { DESIGN_PRESETS } from './designPresets';
@@ -53,6 +58,7 @@ const NO_SVG: DesignSvg = {
   height: 270,
   fields: [],
   images: [],
+  outlines: [],
   fonts: [],
 };
 
@@ -86,27 +92,68 @@ function bindSvgMarkup(svg: DesignSvg): string {
     }
   }
 
+  const clock = countdownIndex(svg);
   [...svg.fields, ...svg.images].forEach((field, i) => {
     const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${field.candidateId}"]`);
-    el?.setAttribute('id', `f${i}`);
+    if (!el) return;
+    if (i === clock) {
+      // The countdown DISPLAY: the clock runtime paints into `.{prefix}-clock`, and the
+      // operator's minutes land in the hidden #fN holder instead — so this node takes the
+      // class and NOT the field id, or update() would write "10" over the ticking readout.
+      const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+      if (!own.includes(`${PREFIX}-clock`)) own.push(`${PREFIX}-clock`);
+      el.setAttribute('class', own.join(' '));
+      return;
+    }
+    el.setAttribute('id', `f${i}`);
   });
+  // An outlined-text group the user chose to replace (plan §1.A) is HIDDEN, not deleted:
+  // the class below is what the `.{prefix}-outlined { display: none }` rule in template.css
+  // matches, so a professional can compare the live text against the shapes by deleting
+  // one line, and the file still carries everything the designer exported. The HTML field
+  // that stands in for it is placed afterwards (components/wizard/draft.ts).
+  for (const outline of svg.outlines) {
+    const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${outline.candidateId}"]`);
+    if (!el) continue;
+    const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+    if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
+    el.setAttribute('class', own.join(' '));
+  }
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
     el.removeAttribute(SVG_CANDIDATE_ATTR);
   }
   return new XMLSerializer().serializeToString(root);
 }
 
-/** The SPX DataFields: one per bound text layer (numeric samples as real number fields),
- *  then one filelist per bound picture layer — update() swaps that node's href, and an
- *  empty value keeps the picture the designer drew. */
+/** The ONE countdown field of a design (plan P2 "clock ftype"): the first text layer bound
+ *  as a countdown, or -1. One, because the shared clock runtime (templates/shared/clock.ts)
+ *  drives one display; a second countdown choice binds as plain text. */
+function countdownIndex(svg: DesignSvg): number {
+  return svg.fields.findIndex((f) => f.countdown);
+}
+
+/** The SPX DataFields: one per bound text layer (numeric samples as real number fields;
+ *  the countdown layer as its LENGTH in minutes, the drawn readout converted — "10:00" is
+ *  ten), then one filelist per bound picture layer — update() swaps that node's href, and
+ *  an empty value keeps the picture the designer drew. */
 function svgFields(svg: DesignSvg): SpxField[] {
+  const clock = countdownIndex(svg);
   return [
-    ...svg.fields.map((f, i): SpxField => ({
-      field: `f${i}`,
-      ftype: f.numeric ? 'number' : 'textfield',
-      title: f.title,
-      value: f.sample,
-    })),
+    ...svg.fields.map((f, i): SpxField =>
+      i === clock
+        ? {
+            field: `f${i}`,
+            ftype: 'number',
+            title: `${f.title} (minutes)`,
+            value: String(clockSampleMinutes(f.sample) ?? 5),
+          }
+        : {
+            field: `f${i}`,
+            ftype: f.numeric ? 'number' : 'textfield',
+            title: f.title,
+            value: f.sample,
+          },
+    ),
     ...svg.images.map((f, i): SpxField => ({
       field: `f${svg.fields.length + i}`,
       ftype: 'filelist',
@@ -149,9 +196,15 @@ function svgFontCss(svg: DesignSvg): string {
  * operator value would simply run past the artwork. The runtime records each bound node's
  * original length on first measure and applies `textLength` + `lengthAdjust` ONLY when a new
  * value overflows it — never distorting by default, mirroring the raster flow's
- * shrink-not-condense rule. Named `fitPlacedText` because that is the optional hook the
- * shared update() already calls (templates/shared/base.ts). Design-owned JS OUTSIDE the
- * marked region, so the data conversion and every export carry it untouched.
+ * shrink-not-condense rule. Design-owned JS OUTSIDE the marked region, so the data
+ * conversion and every export carry it untouched.
+ *
+ * Its name is `fitSvgText`, NOT the shared update()'s optional `fitPlacedText` hook: that
+ * name belongs to the HTML placed-line shrink runtime (templates/shared/textFit.ts), which
+ * blocks/designLayout installs by that exact marker the first time a placed field asks for
+ * shrink - an outlined-text stand-in on this very design (plan §1.A). Two functions of one
+ * name would leave the later declaration winning and the other fit silently dead, so the SVG
+ * fit gets its own hook line in update() (SVG_FIT_HOOK below) and both can coexist.
  */
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
@@ -161,7 +214,7 @@ const SVG_FIT_JS = `
 // A value that fits keeps the designer's typography untouched. Remove this block to let
 // text run free instead.
 var svgFitWidths = {};
-function fitPlacedText() {
+function fitSvgText() {
   var nodes = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
@@ -178,15 +231,21 @@ function fitPlacedText() {
   }
 }
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', fitPlacedText);
+  document.addEventListener('DOMContentLoaded', fitSvgText);
 } else {
-  fitPlacedText();                              // DOM already parsed (e.g. an inline preview build)
+  fitSvgText();                                 // DOM already parsed (e.g. an inline preview build)
 }
 // The first pass may have measured a FALLBACK face; once the real fonts arrive, re-measure
 // from scratch so the recorded widths are the design's true ones.
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(function () { svgFitWidths = {}; fitPlacedText(); });
+  document.fonts.ready.then(function () { svgFitWidths = {}; fitSvgText(); });
 }`;
+
+/** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs)
+ *  — the SVG fit's own hook is inserted right after it, so update() re-fits the SVG's text
+ *  the way it re-fits placed lines. Matched by shape, like blocks/designLayout does. */
+const PLACED_TEXT_HOOK = `  if (typeof fitPlacedText === 'function') fitPlacedText();`;
+const SVG_FIT_HOOK = `  if (typeof fitSvgText === 'function') fitSvgText();       // the SVG's own text layers (below)`;
 
 /** The preset to build with — always one of this category's, whatever a carried-over draft says. */
 function designPreset(id: string): AnimPreset {
@@ -218,6 +277,18 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
     .map((line) => `    ${line}`)
     .join('\n');
 
+  // The countdown (plan P2 "clock ftype"): the chosen layer is the clock DISPLAY
+  // (`.{prefix}-clock`, painted by the shared runtime), and the operator's minutes live in a
+  // hidden data source the runtime reads — the exact contract every catalog countdown uses.
+  const clock = countdownIndex(svg);
+  const clockField = clock === -1 ? null : fields[clock];
+  const clockHolder = clockField
+    ? `
+    <!-- ${clockField.title} (${clockField.field}) — the countdown's length in minutes, written by SPX
+         and read by the clock runtime in template.js; the drawn clock layer shows the count. -->
+    <div id="${clockField.field}" class="${DATA_SOURCE_CLASS}">${clockField.value}</div>`
+    : '';
+
   const html = documentHtml({
     title: name,
     definitionBlock: definitionScriptBlock(settings, fields),
@@ -226,7 +297,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
        them; everything else is untouched. -->
   <div class="${PREFIX}">
     <div class="${PREFIX}-box">
-${inlineSvg}
+${inlineSvg}${clockHolder}
     </div>
   </div>`,
   });
@@ -247,6 +318,7 @@ ${rootPosition}
 
 /* ── The design unit: the SVG and its bound text animate together as one box. ── */
 .${PREFIX}-box {
+  position: relative;              /* a placed HTML field (over outlined text) positions against it */
   width: calc(${svg.width}px * var(--scale));  /* the artwork's own width drives the size */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -255,7 +327,15 @@ ${rootPosition}
   width: 100%;                     /* fills the box — so --scale resizes art and text together */
   height: auto;                    /* the viewBox keeps the aspect */
 }
-`;
+${svg.outlines.length > 0 ? `
+/* Outlined text replaced by a live field: the original shapes stay in the file, hidden.
+   Delete this rule to see them again beside the text that stands in for them. */
+.${PREFIX}-outlined {
+  display: none;
+}
+` : ''}${clockField ? `
+${dataSourceCss}
+` : ''}`;
 
   const preset = designPreset(o.animation.presetId);
   const ease = resolveEasing(o.animation.easing, preset.autoEase);
@@ -263,13 +343,36 @@ ${rootPosition}
     prefix: PREFIX,
     lineCount: 0, // the design presets animate the whole box; the SVG's text is inside it
     hasAccent: false,
+    // The artwork's own top-level layers — what the per-layer stagger walks. Read off the
+    // emitted HTML by the same function emitPresetRegion uses, so create and re-apply agree.
+    layers: svgLayerSelectors(html),
     steps: false,
     speed: o.animation.speed,
     easeIn: ease.easeIn,
     easeOut: ease.easeOut,
   };
 
-  const js = runtimeJs(name, preset.emit(cfg)) + SVG_FIT_JS + '\n';
+  // The clock runtime is design-owned JS outside the marked region, like the SVG fit: the
+  // data conversion and every preset swap leave it alone, and the presets only CALL it.
+  const js =
+    runtimeJs(name, preset.emit(cfg)).replace(PLACED_TEXT_HOOK, `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}`) +
+    SVG_FIT_JS +
+    '\n' +
+    (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '');
+
+  // The design presets know nothing of clocks, so the lifecycle hooks are added to the DATA
+  // (the step-calls model, docs/TIMELINE_V2_PLAN.md §3b): startClock as the entrance lands,
+  // stopClock the moment the exit begins — exactly what the catalog's countdown presets emit.
+  const withClockCalls = clockField
+    ? (data: AnimData): AnimData => {
+        const steps = data.steps.map((s) => ({ ...s }));
+        const enter = steps[0];
+        const out = steps[steps.length - 1];
+        enter.calls = [...(enter.calls ?? []), { time: enter.duration, call: 'startClock' }];
+        out.calls = [...(out.calls ?? []), { time: 0, call: 'stopClock' }];
+        return { ...data, steps };
+      }
+    : undefined;
 
   const template: SpxTemplate = {
     name,
@@ -283,17 +386,15 @@ ${rootPosition}
     settings,
     // The SVG is inline; only embedded font files ride as assets.
     assets: svg.fonts.filter((f) => f.customFont).map((f) => f.customFont!.asset),
-    layers: svg.fields.map((f, i) => ({
-      id: `f${i}`,
-      type: 'text' as const,
-      label: f.title,
-      fieldId: `f${i}`,
-      text: f.sample,
-      styles: {},
-    })),
+    // The countdown's layer is the clock display, not a text field — left out here.
+    layers: svg.fields.flatMap((f, i) =>
+      i === clock
+        ? []
+        : [{ id: `f${i}`, type: 'text' as const, label: f.title, fieldId: `f${i}`, text: f.sample, styles: {} }],
+    ),
   };
 
-  return convertToDataRegion(template);
+  return convertToDataRegion(template, withClockCalls);
 }
 
 export const IMPORTED_SVG: TemplateVariant = {
@@ -308,7 +409,8 @@ export const IMPORTED_SVG: TemplateVariant = {
   fieldPlan: { kind: 'fixed', reason: 'The fields are the SVG’s own text layers, chosen at import.' },
   // The artwork IS the design — a logo drawn into it needs no slot from us.
   logo: 'none',
-  animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur'],
+  // The whole-unit presets plus the per-layer stagger — only an SVG has layers to stagger.
+  animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur', 'design-stagger'],
   defaultPalette: paletteById('ivory'),
   defaultFontId: 'inter',
   defaultZone: 'bottom-left',

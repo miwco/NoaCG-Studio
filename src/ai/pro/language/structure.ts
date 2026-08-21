@@ -320,20 +320,27 @@ const WEIGHT: Record<TypeWeight, number> = {
 };
 
 /**
- * THE SUPPORTING LINE'S WEIGHT FLOOR, AND WHY IT IS A FUNCTION OF ITS SIZE.
+ * THE WEIGHT FLOOR EVERY INFORMATIONAL LINE CARRIES, WHATEVER SIZE IT IS SET AT.
  *
  * The owner's blind read of the first Phase A round (2026-08-15): *"the title is too thin and
  * small for it to be legible"*. That graphic's supporting line was 26px `regular` in the brand's
  * own grey - and it CLEARED the contrast floor at 4.6:1, so no colour repair fired. Contrast was
  * never the defect; a hairline stroke at broadcast distance was.
  *
- * Small text is read by its STEM, not by its colour, so the floor is size-dependent: at the
- * catalog's own median supporting size a regular weight is not enough, and above this size the
- * model's choice stands untouched. It is a boundary rather than a repair - the language still
- * decides the voice, it just cannot ask for a stroke nobody can resolve.
+ * IT USED TO STOP AT 30px, AND THE MEASUREMENT IS WHAT REMOVED THE CONDITION. Reading a stem as
+ * a small-text problem was a guess, and re-judging the paid corpus against the owner's own
+ * ratified floor of 500 (2026-08-20, `spike/tasteCheck.ts`) says it was the wrong one: **33 of
+ * the 40 readings rule 4 raised were the countdown's label at 38px weight 400**, eight pixels
+ * above the old boundary and therefore untouched, and the four rows the owner named in
+ * `docs/NOACG_PRO_PLAN.md` §25.6 include a **54px name at weight 400** and an **80px clock at
+ * weight 400**. A floor that exempts exactly the sizes he complained about is not a floor.
+ *
+ * So it applies to the heading as well as the supporting line, and at every size. It is still a
+ * BOUNDARY rather than a repair - `medium` is one usable step above `regular`, the language still
+ * chooses among four weights above it, and the owner explicitly declined `semibold` for the
+ * general case because that legislates the design rather than guarding it.
  */
-export const SUPPORTING_WEIGHT_FLOOR_BELOW_PX = 30;
-export const SUPPORTING_WEIGHT_FLOOR = WEIGHT.medium;
+export const TYPE_WEIGHT_FLOOR = WEIGHT.medium;
 
 /**
  * A LABEL ON A SOLID SLAB IS A LABEL. The block accent form puts the supporting line ON the
@@ -412,7 +419,7 @@ export function resolveSpacing(
   // The two floors above, applied. Recorded by the caller as an adjustment when either bites.
   const supportingWeight = Math.max(
     WEIGHT[language.typography.supportingWeight],
-    supporting < SUPPORTING_WEIGHT_FLOOR_BELOW_PX ? SUPPORTING_WEIGHT_FLOOR : 0,
+    TYPE_WEIGHT_FLOOR,
     language.accent.form === 'block' ? BLOCK_LABEL_WEIGHT_FLOOR : 0,
   );
   // ── THE UNIT IS THE LARGEST PAINTED TYPE SIZE, NOT THE ANCHOR ──────────────────────────
@@ -444,7 +451,7 @@ export function resolveSpacing(
     // The shared slot's own geometry, or the lower third's ratios where it has none to state.
     markHeightPx: metrics.mark?.heightPx ?? Math.round(heading * MARK_HEIGHT_RATIO),
     markGapPx: metrics.mark?.gapPx ?? Math.round(heading * MARK_HEIGHT_RATIO * MARK_GAP_RATIO),
-    headingWeight: WEIGHT[language.typography.headingWeight],
+    headingWeight: Math.max(WEIGHT[language.typography.headingWeight], TYPE_WEIGHT_FLOOR),
     supportingWeight,
     headingTracking: tracking.heading,
     supportingTracking: tracking.supporting,

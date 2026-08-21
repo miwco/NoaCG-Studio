@@ -471,9 +471,16 @@ e2e/layout.spec.ts.
   air only on an explicit take; event buttons still grey by structural guard; the graphic's
   saved ENTRIES stay a READ-ONLY picker in the editor head (authoring stays in
   GraphicControlPage). Login-optional by design (the slug is the capability); offline builds
-  answer the route honestly, which is also why the page's UI is covered by the maintainer's
-  live checklist rather than the offline e2e suite (e2e/hosted-control.spec.ts pins the
-  publish-side spec build).
+  answer the route honestly, which is also why the page's UI cannot be pinned by the offline
+  suite (e2e/hosted-control.spec.ts covers the publish-side spec build only).
+  **e2e/configured/hosted-control-recovery.spec.ts** is the live half: a capability URL
+  resolves signed-out, a first take reaches the durable log and comes back round the follower,
+  the layer is still on air with the monitor holding it, and the PROGRAM monitor has played
+  exactly ONE entrance. That last one is the gate on the round-1 bug (the boot replay re-firing
+  when the returning cue row moved `liveCue`), and it is arithmetic because it cannot be
+  visual: a replayed `play` settles on the picture that was already there. Asserting on the
+  picture passed the bug when it was mutation-tested; asserting on `data-plays` reads
+  `Expected "1" Received "2"`. Mutation-test both halves when touching either.
 - **home/PayloadStage** - ONE monitor component: `createOutputStage` over an `OutputPayload`,
   the same two functions the published output URL is built from, fed the same
   `ControlSendItem[]` the verbs send. Both monitors on both surfaces are one of these, which
@@ -483,6 +490,11 @@ e2e/layout.spec.ts.
   this state via `isEventLegal`). The guard is the SUBSCRIBER (`onState`), not mount-time
   config, so a preview monitor nobody reads state from costs one boolean per second. Pinned by
   e2e/production-controls.spec.ts.
+  It also publishes **`data-plays`** on its root - entrances applied since this stage came up,
+  reset per rebuild and counted only when a stage actually took the command. A DUPLICATE
+  renderer command is the one fault that leaves no trace (a second `play` settles on the picture
+  already showing), so this is the only handle a test has on it; see the mutation-test note
+  under HostedControlPage.
   **home/ProgramStage** is the app-side wrapper that builds the payload from the local show
   first (it was the rehearsal stage; rehearsal is retired - docs/PLAYOUT_DASHBOARD.md §6).
 - **StylePanel** - reads/writes the :root style contract (src/templates/AGENTS.md): colours,

@@ -234,7 +234,10 @@ export type AnimPresetId =
   | 'design-fade'
   | 'design-slide'
   | 'design-pop'
-  | 'design-blur';
+  | 'design-blur'
+  // …except the SVG road's per-layer stagger, which walks the artwork's OWN top-level layers
+  // in (PresetConfig.layers) — a designer-drawn structure, unlike a flat picture's.
+  | 'design-stagger';
 
 export type AnimSpeed = 0.75 | 1 | 1.5;
 
@@ -323,8 +326,19 @@ export interface DesignSvg {
   /** The `<image>` layers becoming picture fields (filelist), numbered after the text
    *  fields. update() swaps the node's href; an empty value restores the drawn picture. */
   images: DesignSvgImage[];
+  /** Outlined-text groups the user chose to REPLACE (plan §1.A): the generator hides each
+   *  one; the HTML field that stands in for it is placed afterwards through the raster
+   *  flow's placed-line transform (components/wizard/draft.ts withSvgOutlineFields), which
+   *  is why only the identity travels here — the placement is a draft concern. */
+  outlines: DesignSvgOutline[];
   /** Every font family the SVG references, with how each one was resolved. */
   fonts: DesignSvgFont[];
+}
+
+/** One outlined-text group hidden in favour of a placed HTML field. */
+export interface DesignSvgOutline {
+  /** The group's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
 }
 
 /** One SVG picture layer bound as a filelist field. */
@@ -345,6 +359,11 @@ export interface DesignSvgField {
   sample: string;
   /** True emits ftype "number" (a score, a count) instead of "textfield". */
   numeric: boolean;
+  /** True binds the layer as a COUNTDOWN (plan P2 "clock ftype"): the node becomes the
+   *  clock display (templates/shared/clock.ts drives it) and the field is the count's
+   *  length in minutes, held in a hidden data source. The first such field wins - the
+   *  shared runtime drives one clock; any later one binds as plain text. */
+  countdown?: boolean;
 }
 
 /** How one referenced font family resolves (plan §4). Exactly one of the two sources is
