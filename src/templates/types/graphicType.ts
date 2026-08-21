@@ -327,6 +327,21 @@ export interface TypeDesign {
    */
   defaultSteps?: boolean;
   /**
+   * Whether THIS DESIGN draws a mark, when it differs from the type's answer - the fifth
+   * capability that is really a property of the design, and the one the 2026-08-21 mark ruling
+   * made necessary (`docs/MARK_CAPABILITY_AUDIT.md`).
+   *
+   * THE TYPE PERMITS; THE DESIGN IMPLEMENTS. A type saying `logo: 'optional'` is a statement that
+   * nothing about this KIND of graphic excludes a mark - the owner's rule that a mark is forbidden
+   * only by a genuine type constraint, never by an authoring default. Whether a particular design
+   * has anywhere sensible to put one is a drawing decision, and it belongs to the design.
+   *
+   * `graphic-types.spec.ts` is what forced the distinction rather than any argument here: flipping
+   * `countdownType` to `optional` silently re-capabilitied gt01, gt02, gt05 and gt06, which were
+   * authored without a slot, and the promotion check caught all four by name.
+   */
+  logo?: LogoSupport;
+  /**
    * Why this design belongs to THIS type, when a mechanical signal says it might not.
    *
    * The semantics gate (docs/GRAPHIC_TYPES.md §5) is the one that cannot be automated: lt01
@@ -728,7 +743,7 @@ export function variantsFromType(type: GraphicType): TemplateVariant[] {
       // cannot silently start blanking it.
       maxLines: Math.max(type.capabilities.maxLines, type.fields.filter((f) => f.role === 'line').length),
       suggestedLines: typeLines(type.fields, design.samples),
-      logo: type.capabilities.logo,
+      logo: design.logo ?? type.capabilities.logo,
       // The design's own vocabulary wins where it has one — see TypeDesign.animationPresets.
       animationPresets: design.animationPresets ?? type.capabilities.animationPresets,
       defaultPalette: design.palette,

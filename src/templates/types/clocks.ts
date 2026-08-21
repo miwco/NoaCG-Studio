@@ -82,19 +82,40 @@ export const countdownType: GraphicType = {
     // ROLE (it lives in a display:none holder — a bare "3" painted on air means nothing), and
     // `number` is the control: a round is lengthened by a minute far more often than it is
     // retyped, so every operator surface gives it steppers.
+    // NO LOGO FIELD IS DECLARED, and that is what `optional` means. A declared field is one the
+    // template ALWAYS emits - `signOffType` declares one because its designs draw the slot
+    // unconditionally - while an optional mark appears only when the operator turns it on. Declare
+    // one here and the type contract gate reads "type declares 3, template emits 2" on every
+    // catalog timer, which is the honest complaint: the count would be a promise the emit breaks.
+    // `lowerThirdType` is optional and declares none either.
     { key: 'minutes', label: 'Timer (minutes)', kind: 'number', value: '3', role: 'hidden' },
   ],
   machine: { parallel: [clockGroup()] },
   controls: CLOCK_CONTROLS,
   capabilities: {
     maxLines: 1,
-    logo: 'none',
+    // A CLOCK TAKES A MARK. It read `none` until 2026-08-21, and that was an accident of
+    // authoring rather than a property of the type: nothing about a label over a clock excludes a
+    // channel mark, and the catalog already proves it - `ss14`-`ss17` are clock-family designs
+    // shipping an optional slot, with CSS that collapses it when empty.
+    //
+    // What it cost while it stood: a Pro package carried its mark on the lower third and the
+    // sponsor bug and never on the countdown, so the owner's sixth taste rule - a package's mark
+    // is on every piece or on none - fired on all 36 archived rows and all 4 topic-card rows
+    // (docs/NOACG_PRO_PLAN.md §25.4). The owner's ruling, 2026-08-21: a mark is allowed anywhere
+    // unless the type genuinely cannot hold one, and a model placing one badly is a reason to
+    // teach the model, never to forbid the mark in the platform.
+    logo: 'optional',
     animationPresets: ['timer-line-reveal', 'timer-run'],
     defaultZone: 'top-center',
   },
   designs: [
     {
       id: 'gt01',
+      // AUTHORED WITHOUT A MARK, and it stays that way. The type PERMITS one - a clock is not a
+      // kind of graphic that excludes a mark - but whether this DESIGN has somewhere to put one is
+      // a drawing decision, and nobody has drawn it. Opt in by changing this line and placing it.
+      logo: 'none',
       name: 'Clean Clock',
       description: 'A quiet label over big tabular digits — the timer that gets out of the way.',
       styleTag: 'minimal',
@@ -104,6 +125,10 @@ export const countdownType: GraphicType = {
     },
     {
       id: 'gt02',
+      // AUTHORED WITHOUT A MARK, and it stays that way. The type PERMITS one - a clock is not a
+      // kind of graphic that excludes a mark - but whether this DESIGN has somewhere to put one is
+      // a drawing decision, and nobody has drawn it. Opt in by changing this line and placing it.
+      logo: 'none',
       name: 'Power Clock',
       description: 'A corner slab clock with a leaning accent edge — flips to the accent and flashes at zero.',
       styleTag: 'sport',
@@ -120,6 +145,10 @@ export const countdownType: GraphicType = {
       // Designed FOR this cell: no noacg countdown existed. The house strap as a timer —
       // amber bar, void panel, mono label, display clock. Sibling of lt11 House Strap.
       id: 'gt05',
+      // AUTHORED WITHOUT A MARK, and it stays that way. The type PERMITS one - a clock is not a
+      // kind of graphic that excludes a mark - but whether this DESIGN has somewhere to put one is
+      // a drawing decision, and nobody has drawn it. Opt in by changing this line and placing it.
+      logo: 'none',
       name: 'House Countdown',
       description: 'The house timer: an amber bar and void panel, a mono label over a display clock.',
       styleTag: 'noacg',
@@ -133,6 +162,10 @@ export const countdownType: GraphicType = {
       // Designed FOR this cell: no glass countdown existed. A frosted card with the clock in
       // an accent-ringed pill — sibling of lt08 Frosted Card and the ss03 Frost Hold.
       id: 'gt06',
+      // AUTHORED WITHOUT A MARK, and it stays that way. The type PERMITS one - a clock is not a
+      // kind of graphic that excludes a mark - but whether this DESIGN has somewhere to put one is
+      // a drawing decision, and nobody has drawn it. Opt in by changing this line and placing it.
+      logo: 'none',
       name: 'Frost Countdown',
       description: 'A frosted card with a soft label over a clock set in an accent-ringed glass pill.',
       styleTag: 'glass',
