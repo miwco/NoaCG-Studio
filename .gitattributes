@@ -1,0 +1,25 @@
+# Line endings for GENERATED, TRACKED files - the ones a script rewrites in place.
+#
+# THE PHANTOM THIS KILLS. Windows checkouts here run with `core.autocrlf=true`, so git writes these
+# files to the working tree with CRLF and caches that size in the index. Every generator below
+# writes plain "\n". After `npm run build` the bytes are therefore SHORTER than the index expects,
+# and git reports the file as modified - while `git diff` shows nothing at all, because the cleaned
+# content hashes to the very same blob. Nothing changed; the file just looks changed.
+#
+# WHAT IT COST. `scripts/merge-order.mjs` and `scripts/safe-merge-preflight.mjs` both refuse to act
+# on a dirty worktree, correctly. On 2026-08-21 that phantom marked TWO branches NOT LANDABLE
+# (claude/migration-0040-1f501a, claude/template-width-scaling-5dd0a6) over zero changed lines, and
+# blocked a safe-merge run mid-flight. A session that runs the build looks unlandable to every tool
+# that asks "is this tree clean?".
+#
+# `text eol=lf` makes checkout write LF, which is what the generators write and what git already
+# stores - so the working tree, the index and the generator finally agree. Add a path here when a
+# script starts rewriting a tracked file in place; nothing else belongs in this file.
+
+# Rewritten by scripts/build-production-pack.mjs on EVERY `npm run build`.
+public/packs/*.json text eol=lf
+
+# Rewritten by the catalog sweeps and by `npm run record:e2e-durations`.
+e2e/catalog-baseline.json text eol=lf
+e2e/catalog-render-baseline.json text eol=lf
+scripts/e2e-durations.json text eol=lf

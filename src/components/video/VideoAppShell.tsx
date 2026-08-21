@@ -157,13 +157,11 @@ export default function VideoAppShell() {
   return (
     <div className="app" data-testid="video-shell">
       <header className="topbar">
-        <button
-          className="brand brand-home"
-          onClick={() => useRouter.getState().navigate({ view: 'home', section: null })}
-          title="NoaCG Studio — Home"
-        >
+        {/* The site root, exactly as on the SPX shell's topbar - the two editor shells cannot
+            disagree about what their logo means. `.home-btn` further along this bar is Home. */}
+        <a className="brand brand-home" href="/" title="NoaCG Studio — the front page">
           <BrandLogo size={24} />
-        </button>
+        </a>
         <span className="video-workspace-badge" title="The Video workspace makes standalone videos — separate from live broadcast graphics">
           🎬 Video <span className="wz-beta-tag">Beta</span>
         </span>

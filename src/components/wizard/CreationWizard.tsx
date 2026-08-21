@@ -27,6 +27,7 @@ import ImportStep from './steps/ImportStep';
 import ImportDesignStep from './steps/ImportDesignStep';
 import PrepareDesignStep from './steps/PrepareDesignStep';
 import PlaceFieldsStep from './steps/PlaceFieldsStep';
+import MapSvgFieldsStep from './steps/MapSvgFieldsStep';
 import TemplateStep from './steps/TemplateStep';
 import BrowseStep, { type BuildMode } from './steps/BrowseStep';
 import { defaultFamilyFor, defaultSelectionFor } from './steps/KitPicker';
@@ -106,11 +107,40 @@ const STEP_TITLES_BLANK = ['Start', 'Blank project'];
 // works. Text and Animation are optional stops: Create is available from the Design step on
 // (docs/IMPORT_MVP.md).
 const STEP_TITLES_DESIGN = ['Start', 'Design', 'Prepare', 'Text', 'Animation', 'Finish'];
+// A layered SVG dropped on that same zone has nothing to erase and nothing to place — its
+// text layers are already exactly where the designer set them — so its walk swaps
+// Prepare/Text for ONE mapping step: which layers the operator can edit
+// (docs/SVG_IMPORT_PLAN.md §2). A MODE, not a branch, for the same reason 'file' is one.
+const STEP_TITLES_SVG = ['Start', 'Design', 'Fields', 'Animation', 'Finish'];
 // A finished template (.html / .zip) dropped on that same zone has nothing to prepare, place
 // or animate — it already declares all three — so its walk is two stops: the file, then where
 // it goes. A MODE rather than a branch inside design mode, so the rail never offers four steps
 // that cannot apply to it.
 const STEP_TITLES_FILE = ['Start', 'Template file', 'Finish'];
+
+/** Which walk the wizard is on. Each one has its own step list above. */
+type WizardMode = 'template' | 'import' | 'design' | 'svg' | 'file' | 'ai' | 'video' | 'blank';
+
+/** The active walk's steps, in order. One function so the RAIL and the URL can never disagree
+ *  about what step 3 of this mode is called. */
+function stepTitlesFor(mode: WizardMode, kitWalk: boolean): string[] {
+  return mode === 'ai' ? STEP_TITLES_AI
+    : mode === 'video' ? STEP_TITLES_VIDEO
+    : mode === 'blank' ? STEP_TITLES_BLANK
+    : mode === 'design' ? STEP_TITLES_DESIGN
+    : mode === 'svg' ? STEP_TITLES_SVG
+    : mode === 'file' ? STEP_TITLES_FILE
+    : mode === 'import' ? STEP_TITLES_IMPORT
+    : kitWalk ? STEP_TITLES_KIT
+    : STEP_TITLES;
+}
+
+/** A step's name in the URL: its TITLE, slugged. Never its index — import mode carries an extra
+ *  Images step, so index 3 is Fields on one walk and Style on another, and a history entry
+ *  written by one mode would mean a different step when another mode read it back. */
+function stepSlug(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
 
 /* What each step is FOR, in the reader's words — the second line of every rail entry
    (re-design/handoff.md §2). A title alone says where you are; the sub says what the step
@@ -123,6 +153,7 @@ const STEP_SUBS: Record<string, string[]> = {
   video: ['Choose mode', 'Brief & format'],
   blank: ['Choose mode', 'Format & name'],
   design: ['Choose mode', 'Your artwork', 'Erase & scale', 'Place fields', 'In & out motion', 'Name & save'],
+  svg: ['Choose mode', 'Your artwork', 'Map text layers', 'In & out motion', 'Name & save'],
   file: ['Choose mode', 'Your graphic', 'Name & save'],
 };
 
@@ -151,7 +182,7 @@ export default function CreationWizard() {
 
   const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<'template' | 'import' | 'design' | 'file' | 'ai' | 'video' | 'blank'>('template');
+  const [mode, setMode] = useState<WizardMode>('template');
   /** A finished template file dropped on the Import graphic step — parsed, never rebuilt. */
   const [importedFile, setImportedFile] = useState<ImportedTemplateResult | null>(null);
   const [importedFileError, setImportedFileError] = useState<string | null>(null);
@@ -211,6 +242,43 @@ export default function CreationWizard() {
   // user never learns the lower entry cards exist. Scroll + resize + DOM changes all re-check.
   const stepRef = useRef<HTMLDivElement>(null);
   const [stepOverflow, setStepOverflow] = useState(false);
+  // ── THE WALK IS THE HISTORY ──
+  // Every step the reader reaches gets its own history entry (`#/new/step/<name>`), so browser
+  // Back walks the wizard backwards. Before this, the whole wizard was ONE entry: Back from
+  // step four of six left for the landing page and threw the walk away, which is the last thing
+  // a Back press should mean on the product's primary door.
+  //
+  // Step 0 deliberately has NO step segment. Its entry is the plain `#/new`, so Back off the
+  // front page still LEAVES the wizard — the contract App.tsx's routed-wizard effect keeps.
+  const stepTitles = stepTitlesFor(mode, !!kit || buildMode === 'kit');
+  const route = useRouter((s) => s.route);
+  const stepKey = step > 0 ? stepSlug(stepTitles[step] ?? '') : null;
+  /** The step this component last agreed with the URL about. Comparing it to `stepKey` is what
+   *  tells the two directions apart: if the WIZARD moved, push the new step; if the URL moved
+   *  (Back/Forward), follow it. Without that, following a Back would look like a step change
+   *  and immediately push the reader forward again. */
+  const syncedStepKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      syncedStepKey.current = null;
+      return;
+    }
+    if (route.view !== 'new') return; // a create already navigated away; the wizard is closing
+    const urlKey = route.step ?? null;
+    const wizardMoved = syncedStepKey.current !== stepKey;
+    syncedStepKey.current = stepKey;
+    if (urlKey === stepKey) return;
+    if (wizardMoved) {
+      useRouter.getState().navigate({ view: 'new', design: route.design ?? null, step: stepKey });
+    } else {
+      // Back/Forward, or a hand-typed URL. An unknown name (a link written by a build whose
+      // walk had other steps, or a step this mode does not have) degrades to the front page
+      // rather than to a step that means something else here.
+      const idx = stepTitles.findIndex((t) => stepSlug(t) === urlKey);
+      setStep(idx >= 0 ? idx : 0);
+    }
+  }, [open, route, stepKey, stepTitles]);
+
   // Each route/step starts at its own first control. This is especially important on phones:
   // the Video entry sits at the bottom of Entry, and carrying that scrollTop forward used to
   // land Video below its project-format picker.
@@ -252,7 +320,18 @@ export default function CreationWizard() {
   // Fresh wizard every time it opens; reload the brand (it may have just been saved).
   useEffect(() => {
     if (open) {
-      setStep(0);
+      // A `#/new/step/<name>` OPEN starts on the step the URL names — a reload three steps in,
+      // or a link somebody was sent. This reset runs AFTER the route sync above on the same
+      // mount, so a hard-coded 0 here silently won and every step link landed on Entry.
+      // Resolved against the walk this reset installs (mode 'template', no kit), which is the
+      // only walk a cold open can be on; a name that walk does not have degrades to the front
+      // page rather than to whatever step happens to sit at some index.
+      const opened = useRouter.getState().route;
+      const named =
+        opened.view === 'new' && opened.step
+          ? stepTitlesFor('template', false).findIndex((t) => stepSlug(t) === opened.step)
+          : -1;
+      setStep(named > 0 ? named : 0);
       setMode('template');
       setDraft(initialDraft());
       setBrowseFilters(NO_BROWSE_FILTERS);
@@ -280,6 +359,12 @@ export default function CreationWizard() {
           setDraft((d) => mergeDraft(d, brandPatch(show.look!)));
         }
       }
+    } else {
+      // BACK TO STEP 0 ON CLOSE TOO. This component stays mounted and renders null when it is
+      // closed, so a closed wizard still holds the step its last walk ended on. The route sync
+      // above would read that stale step at the NEXT open and push it into the URL - so "+ New
+      // graphic" after finishing a walk reopened the wizard on Finish instead of on Entry.
+      setStep(0);
     }
   }, [open]);
 
@@ -362,7 +447,7 @@ export default function CreationWizard() {
 
   // The Animation step's index per mode: the one-step Browse flow ends at 4, the import
   // continuation keeps the old six-step shape. Finish always follows it.
-  const animStep = mode === 'import' ? 5 : 4;
+  const animStep = mode === 'import' ? 5 : mode === 'svg' ? 3 : 4;
   // AI has no configuring steps of its own — the result IS the configuration — so its
   // Finish sits right after the working step (index 2), not after an animation step it
   // never shows.
@@ -992,20 +1077,11 @@ export default function CreationWizard() {
     (mode === 'ai' ? (step === 1 || step === finishStep) && !!aiResult
     : mode === 'video' ? false
     : mode === 'blank' ? step === 1
-    : mode === 'design' ? step >= 1 && !!previewTemplate
+    : mode === 'design' || mode === 'svg' ? step >= 1 && !!previewTemplate
     // A dropped template is previewed as itself: it is the graphic, already finished.
     : mode === 'file' ? step >= 1 && !!importedFile
     : mode === 'template' ? (kit ? step >= 2 && step < finishStep : step >= 1) && !!previewTemplate
     : step >= 2 && !!previewTemplate) && !(isMobile && step === finishStep);
-  const stepTitles =
-    mode === 'ai' ? STEP_TITLES_AI
-    : mode === 'video' ? STEP_TITLES_VIDEO
-    : mode === 'blank' ? STEP_TITLES_BLANK
-    : mode === 'design' ? STEP_TITLES_DESIGN
-    : mode === 'file' ? STEP_TITLES_FILE
-    : mode === 'import' ? STEP_TITLES_IMPORT
-    : kit || buildMode === 'kit' ? STEP_TITLES_KIT
-    : STEP_TITLES;
   const stepSubs = mode === 'template' && (kit || buildMode === 'kit') ? STEP_SUBS_KIT : STEP_SUBS[mode];
   // Rail position → step index (1:1 in every mode).
   const stepIndexes = stepTitles.map((_, i) => i);
@@ -1040,6 +1116,12 @@ export default function CreationWizard() {
      The row names its decision, not a step NUMBER, because import mode carries an extra
      Images step and every later index shifts by one (animStep above says the same thing). */
   const editSummaryStep = (key: SummaryStepKey) => {
+    // SVG mode: the artwork and its format live on step 1, the field mapping on step 2;
+    // there is no Look step (the SVG carries its own look).
+    if (mode === 'svg') {
+      setStep({ design: 1, format: 1, fields: 2, look: 2, motion: animStep }[key]);
+      return;
+    }
     const browse = mode === 'import' ? 2 : 1;
     setStep({ design: browse, format: browse, fields: browse + 1, look: browse + 2, motion: animStep }[key]);
   };
@@ -1117,12 +1199,12 @@ export default function CreationWizard() {
           Skip ahead
         </button>
       )}
-      {(mode === 'design' || mode === 'import') && step < finishStep && (mode === 'import' ? step >= 2 : step >= 1) && (
+      {(mode === 'design' || mode === 'svg' || mode === 'import') && step < finishStep && (mode === 'import' ? step >= 2 : step >= 1) && (
         <button
           disabled={!previewTemplate}
           onClick={create}
           title={
-            mode === 'design'
+            mode === 'design' || mode === 'svg'
               ? 'Create the project with everything chosen so far — refine anything later in the editor'
               : 'Create the project now — remaining steps keep their defaults'
           }
@@ -1184,22 +1266,18 @@ export default function CreationWizard() {
             never say what a step was FOR, and they wrapped to four rows on a phone. */}
         <div className="wz-header">
           <div className="wz-title">
-            {/* The brand is the Home door on every topbar — the wizard's included. */}
-            <button
-              className="brand brand-home"
-              title="NoaCG Studio — Home"
-              onClick={() => {
-                closeGallery();
-                useRouter.getState().navigate({ view: 'home', section: null });
-              }}
-            >
+            {/* The logo is the SITE ROOT here exactly as it is on the editor's topbar; the
+                Home door is the button beside it. Home has to stay one press away from every
+                step (✕ only rewinds to the front page), which is why the pair travels
+                together rather than the lockup doing both jobs. */}
+            <a className="brand brand-home" href="/" title="NoaCG Studio — the front page">
               <BrandLogo size={24} />
-            </button>
+            </a>
             <span className="wz-title-sep">·</span>
             <span className="wz-title-step">
               {mode === 'ai' ? 'Create with AI'
                 : mode === 'video' ? 'Video with AI'
-                : mode === 'design' || mode === 'file' ? 'Import graphic'
+                : mode === 'design' || mode === 'svg' || mode === 'file' ? 'Import graphic'
                 : kit ? `${kit.pack.name} kit`
                 : 'New graphic'}
             </span>
@@ -1207,6 +1285,22 @@ export default function CreationWizard() {
                 "what am I working on" without the reader looking at the preview. */}
             {variant && step < finishStep && <span className="wz-title-doc">· {variant.name}</span>}
           </div>
+          {/* THE HOME DOOR, its own control beside the title rather than a job the logo does.
+              It sits OUTSIDE `.wz-title` so the brand keeps its "lockup · what you are making"
+              reading — inside, its separator ended up between Home and the step name and named
+              neither. Home has to stay one press from every step: ✕ only rewinds to the front
+              page, so without it a reader three steps in had no way back to their work. */}
+          <button
+            className="home-btn wz-home"
+            data-testid="wz-home"
+            title="Home — your graphics, productions, control panels, and videos"
+            onClick={() => {
+              closeGallery();
+              useRouter.getState().navigate({ view: 'home', section: null });
+            }}
+          >
+            🏠 Home
+          </button>
           {/* HOW FAR ALONG — from the SECOND step onward. On Entry there is no answer to give:
               no mode is chosen yet, so the denominator is not even the same number for every
               door (Create with AI is 3 steps, a kit is 2), and "Step 1 / 6" on a screen whose
@@ -1241,7 +1335,7 @@ export default function CreationWizard() {
             step splits evenly. */}
         <div
           className={`wz-body ${showPreview ? 'with-preview' : ''}${
-            mode === 'design' && step === 3 ? ' wz-body-working' : ''
+            (mode === 'design' && step === 3) || (mode === 'svg' && step === 2) ? ' wz-body-working' : ''
           }`}
         >
           {/* The entry is a MENU, not the first committed step of every possible walk. Until
@@ -1394,8 +1488,86 @@ export default function CreationWizard() {
                 />
               </div>
             )}
-            {step === 1 && (mode === 'design' || mode === 'file') && (
+            {step === 1 && (mode === 'design' || mode === 'svg' || mode === 'file') && (
               <ImportDesignStep
+                svg={draft.designSvg}
+                onSvg={(result) => {
+                  // Fit-to-frame like the raster path: a larger canvas scales DOWN to the
+                  // frame (vector — nothing is lost); the viewBox in the markup is untouched,
+                  // only the design-space size the box is sized by changes.
+                  const res = draftResolution(draft);
+                  const fit =
+                    result.width > res.width || result.height > res.height
+                      ? Math.min(res.width / result.width, res.height / result.height)
+                      : 1;
+                  // The `f:` prefix rule (plan §2): when ANY layer opted in by name, only
+                  // those default ON; otherwise every detected text is ON — zero clicks.
+                  const anyMarked = result.candidates.some((c) => c.marked);
+                  patch({
+                    designSvg: {
+                      ...result,
+                      width: Math.round(result.width * fit),
+                      height: Math.round(result.height * fit),
+                    },
+                    svgFields: result.candidates.map((c) => ({
+                      candidateId: c.id,
+                      on: anyMarked ? c.marked : true,
+                      title: c.label,
+                      sample: c.sample,
+                      numeric: c.numeric,
+                      clock: c.clock,
+                      // Text until the user says otherwise — "22:40" may be the time of day.
+                      kind: 'text',
+                    })),
+                    // Pictures start OFF — inside a design they are usually the artwork
+                    // itself — unless the layer opted in by name (`f:`).
+                    svgImages: result.images.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                    })),
+                    // Outlined-text suspects start OFF (a logo is a group of paths too) —
+                    // unless named `f:`; the mapping step measures their boxes on its own
+                    // render, and the generator hides whichever the user ticks (plan §1.A).
+                    svgOutlines: result.outlines.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                      sample: c.label,
+                      box: null,
+                      color: null,
+                    })),
+                    // Bundled faces auto-match by family name; the mapping step offers the
+                    // Google fetch or an upload for the rest (plan §4).
+                    svgFonts: result.fonts.map((f) => ({
+                      family: f.family,
+                      fontId:
+                        FONTS.find((b) => b.family.toLowerCase() === f.family.toLowerCase())?.id ?? null,
+                      customFont: null,
+                    })),
+                    // A fresh drop replaces any raster state from this walk.
+                    designArt: null,
+                    importedImages: [],
+                    designOriginal: null,
+                    designErases: [],
+                    designFields: [],
+                    category: 'imported-design',
+                    variantId: 'svg01',
+                    lines: [],
+                    zone: null,
+                    animation: { presetId: null, outPresetId: null },
+                    ...(matchBrand && brand
+                      ? brandPatch(brand)
+                      : { paletteId: null, customPalette: null, fontId: null }),
+                  });
+                  // The walk changes shape the moment the file is read: an SVG has nothing
+                  // to erase and nothing to place — its one setup step is the mapping.
+                  setMode('svg');
+                }}
+                onClearSvg={() => {
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgFonts: [], variantId: null, category: null });
+                  setMode('design');
+                }}
                 templateFile={importedFile}
                 onTemplateFile={(file) => {
                   setImportedFileError(null);
@@ -1423,6 +1595,12 @@ export default function CreationWizard() {
                 onFormat={(selection) => patch(formatDraftPatch(selection))}
                 onArt={(designArt, importedImages) => {
                   patch({
+                    // A raster drop replaces any SVG from this walk (and vice versa above).
+                    designSvg: null,
+                    svgFields: [],
+                    svgImages: [],
+                    svgOutlines: [],
+                    svgFonts: [],
                     designArt,
                     importedImages,
                     // A fresh drop resets the Prepare step: the pristine pixels become the
@@ -1443,6 +1621,9 @@ export default function CreationWizard() {
                       ? brandPatch(brand)
                       : { paletteId: null, customPalette: null, fontId: null }),
                   });
+                  // A raster drop is the classic prepare/place walk — also the way back from
+                  // an SVG drop replaced by a picture.
+                  setMode('design');
                 }}
                 onClear={() =>
                   patch({
@@ -1523,6 +1704,18 @@ export default function CreationWizard() {
               />
             )}
             {step === 4 && mode === 'design' && variant && (
+              <AnimationStep
+                variant={variant}
+                draft={draft}
+                onDraft={patch}
+                onReplay={() => setReplayKey((k) => k + 1)}
+              />
+            )}
+            {/* The SVG walk's one setup step: which text layers the operator can edit. */}
+            {step === 2 && mode === 'svg' && draft.designSvg && (
+              <MapSvgFieldsStep draft={draft} onDraft={patch} />
+            )}
+            {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
                 variant={variant}
                 draft={draft}

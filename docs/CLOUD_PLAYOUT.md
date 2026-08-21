@@ -227,10 +227,12 @@ The page:
   exactly where a bug here would hide, on air. `e2e/productions.spec.ts` walks a whole match
   through it (kick-off, a goal re-sending the value set, half time, the second half resuming
   from 45:00, a reset) and is mutation-tested against the ordering and both banked values.
-  **THIS PAGE IS THE ONLY PLANE THAT PERSISTS THE ORIGIN**, and that is a decision, not an
-  omission: everywhere else the runtime mints a local one, which bounds the drift and fixes the
-  throttled tab but does NOT survive a reload. `docs/SPORTS_PACK.md` carries the per-plane table
-  and what it would take to close the export door.
+  **THIS PAGE IS THE ONLY PLANE THAT DERIVES THE ORIGIN FROM THE ROW**, which is the one way
+  several renderers agree EXACTLY rather than within delivery skew. Since 2026-08-20 the
+  exported operator pages stamp one too (`control/matchClockPageJs.ts`, the dependency-free
+  copy of this module's arithmetic), so a reload is recovered off the hosted plane as well.
+  `docs/SPORTS_PACK.md` carries the per-plane table and the one gap left — a relay-driven
+  browser source, which boots at the log head and so recovers nothing until an operator acts.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside
@@ -264,16 +266,42 @@ the same four back on the way in - control, output, join and presenter alike.
 
 So a production's output URL, once pasted into CasparCG or an OBS browser source, is good for the
 life of that production. It was NOT before 0040: unpublishing dropped the row and re-publishing
-re-minted every slug from its column default, which is the mechanism behind the unexplained "the
-CasparCG URL stopped working" report in acceptance round 2 - and it contradicted what this section
-and the app's own publish confirmation both promised. The fix is in the database rather than in the
-publish path on purpose: restoring identity is an invariant of the table, not a step a writer can
-forget, and it changes no function, policy or authorization path, so it cannot leave a door open
-behind an unpublished production.
+re-minted every slug from its column default, which contradicted what this section and the app's
+own publish confirmation both promised. The fix is in the database rather than in the publish path
+on purpose: restoring identity is an invariant of the table, not a step a writer can forget, and it
+changes no function, policy or authorization path, so it cannot leave a door open behind an
+unpublished production.
+
+0040 was written partly as the one mechanism that would have explained acceptance round 2's
+unexplained "the CasparCG URL stopped working" report. **Do not read it as that report's diagnosis.**
+The symptom as the owner describes it is that a production page's GRAPHIC stopped working, which
+need not involve the URL at all; it happened once, it has not been reproduced, and the address half
+is now closed and verified regardless. The owner parked the case on 2026-08-20 rather than keep an
+un-reproducible item open - so it is not on anyone's list, and it gets reopened by a second
+occurrence, not by another round of speculation about the first.
 
 One consequence worth knowing: a readable join name stays reserved by the production that held it
 even while that production is unpublished, so claiming it from another production is refused as
-taken. That is the same promise seen from the other side.
+taken. That is the same promise seen from the other side. The refusal reaches the operator as the
+ordinary "already taken" message and not as a raw database error: the unique index that stops it
+is the one on `control_show_identity`, it is violated inside the AFTER trigger, and a unique
+violation raised in a trigger still propagates as SQLSTATE 23505 - which is the code
+`claimJoinName` (`control/hostedControl.ts`) already translates.
+
+**Applied on production 2026-08-12, and confirmed by CALLING it on 2026-08-20.** Worth writing down
+because the obvious check is the one that cannot answer the question: `supabase migration list
+--linked` reports a version number, so a `0040` in the remote ledger says only that *something*
+numbered 0040 ran - the duplicate-number trap, where two branches mint the same number and `db push`
+silently skips the loser while still reporting success. Reading the catalog is no better: finding
+the table, the two triggers and the RLS state proves shape, not behaviour. What was actually
+measured, as `authenticated`, inside a transaction deliberately aborted so production kept nothing:
+publish a throwaway production, unpublish it the way the app does, publish it again, and compare all
+four addresses - control, output, join and presenter all came back identical, and the identity row
+survived the delete. A second walk claimed a readable name on a production, unpublished it, and had
+another production try to take the name: refused, 23505, as the paragraph above promises. The
+back-fill ran over the 29 productions published at the time and no published production is missing
+its identity row today. Re-run either walk the same way if the question ever comes up again; the
+follow-up that closed the two functions' EXECUTE grants is migration 0042.
 
 ## 4. The operator surfaces
 

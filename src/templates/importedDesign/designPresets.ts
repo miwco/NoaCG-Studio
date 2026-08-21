@@ -146,4 +146,61 @@ export const DESIGN_PRESETS: AnimPreset[] = [
         outTimeline(cfg, `{ opacity: 0, filter: 'blur(10px)', duration: 0.4 / animSpeed }`),
       ),
   },
+
+  // The SVG road's per-layer entrance (docs/SVG_IMPORT_PLAN.md §3 phase 2). An imported SVG
+  // is the one imported design WITH structure the designer drew — its top-level named groups
+  // (a backplate, a name block, a crest) are registry parts — so here, and only here, the
+  // layers move one after another instead of as one picture. The targets come in as
+  // `cfg.layers` (model/structure.ts svgLayerSelectors); they are written as an ARRAY of
+  // `#id` targets with a `stagger:`, which is exactly the shape the data importer turns into
+  // per-layer keyframe OFFSETS (the keyframe model has no stagger field; blocks/animImport).
+  // With no layers (a raster design, or an SVG whose groups are unnamed) it is an honest
+  // whole-unit fade: nothing targets elements that are not there.
+  {
+    id: 'design-stagger' as AnimPresetId,
+    name: 'Layer stagger',
+    description: 'In: the design’s layers rise into place one after another. Out: they leave in reverse.',
+    autoEase: { easeIn: 'power3.out', easeOut: 'power2.in' },
+    emit: (cfg) => {
+      const layers = cfg.layers ?? [];
+      const list = (sel: string[]) => `[${sel.map((s) => `'${s}'`).join(', ')}]`;
+      const layersIn = layers.length
+        ? `
+  // Each top-level layer of the artwork rises in, a beat apart, in the order the file
+  // draws them (back to front). Add or remove a selector to change who takes part.
+  tl.fromTo(${list(layers)},
+    { opacity: 0, y: 28 },
+    { opacity: 1, y: 0, duration: 0.55 / animSpeed, stagger: 0.09 / animSpeed },
+    '-=0.15'
+  );`
+        : `
+  // This design has no named top-level layers to stagger, so the whole unit fades up.`;
+      const layersOut = layers.length
+        ? `  tl.to(${list([...layers].reverse())}, { opacity: 0, y: -16, duration: 0.3 / animSpeed, stagger: 0.05 / animSpeed });
+  tl.to('.${cfg.prefix}-box', { opacity: 0, duration: 0.25 / animSpeed }, '-=0.1');`
+        : `  tl.to('.${cfg.prefix}-box', { opacity: 0, duration: 0.4 / animSpeed });`;
+      return region(
+        cfg,
+        'Preset: Layer stagger — the artwork’s own layers arrive one after another.',
+        `// buildInTimeline(): choreographs the entrance. Called by play().
+// The box fades up as a whole, then the layers inside it take turns.
+function buildInTimeline() {
+  var tl = gsap.timeline({ defaults: { ease: easeIn } });
+  tl.set('.${cfg.prefix}', { opacity: 1 });   // reveal the (CSS-hidden) graphic
+  tl.fromTo('.${cfg.prefix}-box',
+    { opacity: 0 },
+    { opacity: 1, duration: 0.3 / animSpeed }
+  );${layersIn}
+  return tl;
+}`,
+        `// buildOutTimeline(): the exit — the layers leave in reverse, faster than they arrived.
+function buildOutTimeline() {
+  var tl = gsap.timeline({ defaults: { ease: easeOut } });
+${layersOut}
+  tl.set('.${cfg.prefix}', { opacity: 0 });   // fully hidden; ready to play again
+  return tl;
+}`,
+      );
+    },
+  },
 ];

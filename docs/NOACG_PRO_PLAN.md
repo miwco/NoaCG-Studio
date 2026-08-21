@@ -1384,8 +1384,10 @@ no palette, no typeface, no motion and no composition was called wrong. Ranked b
   set on a solid slab of the accent is a badge rather than a caption.
 - **A thin supporting line is illegible even at full contrast**: *"the title is too thin and small
   for it to be legible"* - 26px regular that measured 4.6:1 and passed every colour check, because
-  contrast was never the defect. The supporting weight now has a floor that is a FUNCTION OF ITS
-  SIZE (medium below 30px): small text is read by its stem.
+  contrast was never the defect. The supporting weight got a floor that was a FUNCTION OF ITS SIZE
+  (medium below 30px), reasoning that small text is read by its stem. **SUPERSEDED 2026-08-21 -
+  the size condition was the wrong half of the lesson and §25.8.5 has the measurement**: `medium`
+  is now the floor for the heading and the supporting line alike, at every size.
 - **An invisible mark reads as an unfinished graphic**: *"has a place for a logo, so it is nice if
   there is a logo. Without one it looks unfinished."* The mark was there; its dark ink had nothing
   to read against on the dark panel the language chose. **This one needs an owner decision - see
@@ -3202,6 +3204,9 @@ quiet on twelve. The extras are not noise: every firing row is a SQUARE mark in 
 tile sized to its caption, and every quiet row carries a WIDE wordmark that fills that tile by
 fitting. One construction, one defect, named by the owner on the examples a blind read stops at.
 
+**FIXED 2026-08-20 - the composer centres the mark across the tile, and rule 1 goes to zero on
+every row the composer rebuilds. §25.8.1 has the numbers.**
+
 Two calibration decisions made this work, and the first version got both wrong:
 
 - **The axes are asked separately.** Measuring both axes of the smallest surface above the mark
@@ -3235,6 +3240,9 @@ that is a report, not an over-fire. Measured over the 28 shipped corner bugs, ro
 BESIDE the caption, and Pro stacks it above.** Silencing that with a per-type override would be
 moving a threshold to hide a design, which is the failure `PRO_GRAPHICS.countdown` already warns
 about. It goes in front of the owner as a question instead.
+
+**ANSWERED 2026-08-20 - the stack is legitimate, and the rule was rewritten around what is left of
+the question. §25.8.3 has the ruling and the numbers.**
 
 ### 25.4 Rule 6 - a package's mark is on every piece or none. Reproduced, on every row
 
@@ -3292,6 +3300,9 @@ numbers a re-ratification needs whether or not a floor fired: `TasteReport.weake
 frame's lightest and faintest informational text every time. A contrast floor the owner would
 accept sits above 3.04:1; a weight floor sits above 400 for text this size.
 
+**RATIFIED 2026-08-20 at 3.25:1 and 500, with 28px deciding which secondary lines the rule applies
+to at all. §25.8.2 has the decision and what it caught.**
+
 ### 25.7 Two blind spots worth stating
 
 - **A panel-free design is invisible to rules 1 and 5.** The minimalist language (B-28, S-09,
@@ -3300,6 +3311,247 @@ accept sits above 3.04:1; a weight floor sits above 400 for text this size.
 - **Rule 6 sees artwork, not wordmarks.** Presence is "the `filelist` field paints something",
   which is how the composer places every mark it places; a wordmark set as TEXT would read as
   absent.
+
+### 25.8 Acting on the rules - three changes, each measured (2026-08-20)
+
+The instrument had reported for a day; this is what was done with it. Every number below is a
+re-judge of the SAME archived corpus - the 36 package rows of `round-2026-08-16` +
+`round-2026-08-17`, plus the 4 rows of `round-2026-08-19-topiccard` - and it cost nothing, because
+those rounds are paid for and their code is committed (§25.1).
+
+**All of it was measured on ONE tree.** The branch started from a pre-merge `main` and was
+fast-forwarded mid-session; that merge touched `preview/composeDocument.ts` and
+`validation/validateTemplate.ts`, both of which the re-judge mounts through. The baseline was
+therefore re-taken afterwards and compared reading by reading: **identical on every finding and
+every gap in all 108 pieces**, so the merge is inert for this measurement and the before/after
+below spans no tree change. Stating that is cheaper than trusting it - a comparison across two
+trees is the failure AGENTS.md names about merges.
+
+The corpus baseline, which reproduces §25.2-25.6 exactly:
+
+| rule | baseline rows (of 36) |
+|---|---|
+| 1 `mark-off-centre` | 24 |
+| 4 `legible-size-only` | 2 |
+| 5 `mark-owns-a-row` | 34 |
+| 6 `package-mark-mixed` | 36 |
+
+#### 25.8.1 Rule 1 - the mark is centred in its tile
+
+`composeBug.ts` gives the shared mark slot `align-self: center` inside the bug's tile. The tile is
+`fit-content` around the WIDER of the mark and the caption, so a square crest under a longer
+caption sat flush against the leading edge with all of the slack on the other side - the one
+construction every firing row shared (§25.2).
+
+**The MARK is centred, not the whole stack**, and both halves of that matter: the caption keeps the
+reading edge the rest of the package is set to, and a wide wordmark that already fills the tile
+does not move at all - which is exactly the twelve rows the rule was already quiet on.
+
+| | baseline | after |
+|---|---|---|
+| rule 1, whole corpus | 24 rows | **12 rows** |
+| rule 1, `round-2026-08-16` (members RECOMPOSED) | 12 of 18 | **0 of 18** |
+| rule 1, `round-2026-08-17` (members SAVED AS CODE) | 12 of 18 | 12 of 18 |
+
+**The split is the result, not the headline.** A composer change cannot reach a round whose package
+members were saved as CODE - the re-judge mounts the artefact the money bought. On every row the
+composer actually rebuilds, rule 1 goes to zero: each recomposed bug now reads offset `0.0` on its
+free axis, with equal gaps to two decimal places (S-01: 21px against 47.94px, now 34.47/34.47).
+The twelve that remain are August artefacts, unchanged by construction.
+
+**Nothing was traded for it.** Rules 4, 5 and 6 are unmoved (2 / 34 / 36 rows, before and after),
+and rule 2 - which is reported and never judged - moved from p50 0.80 to 0.79 with its min (0.33),
+p90 and max unchanged. The direction is the part worth keeping: across all 72 pieces carrying an
+accent, **no piece's gap to its accent got SMALLER** (6 grew, 66 unchanged). Rule 2's defect is
+CROWDING - "if it's too close to the accent line, it feels like it's some mistake" - and a mark
+that only ever moves away from the accent cannot commit it. The largest single balance move,
+S-05's 0.95 → 0.59, is that gap growing from 21px to 34px against an unchanged 20px to the
+caption; the ratio falls because the two numbers are a horizontal gap and a vertical one, which is
+also why rule 2 carries no threshold.
+
+The topic-card round is unchanged on every rule (3 / 1 / 3 / 4 rows), as it must be: all four of
+its rows saved every piece as code.
+
+#### 25.8.2 Rule 4 - the floors the owner ratified
+
+**OWNER DECISION, 2026-08-20**, not read off a distribution and marked as such in the code: a text
+this instrument calls readable clears **contrast 3.25:1**, **weight 500**, and - if it is a
+SECONDARY line - **28px**. The owner explicitly declined 4.5:1, 600 and 32px: those stop being a
+taste guard and start being a design constraint. §25.6 had already shown the joint framing was
+right and the floors were the miss, so this is only the threshold moving.
+
+**The 28px is an ELIGIBILITY floor, not a third failure axis, and the corpus is what decides
+that.** Rule 4 asks which text was big enough and still could not be read. Measured on the
+baseline, every lower third in the corpus sets its role line at 26px and **0 of 72** secondary
+readings are flagged by the ratified table (20px hard, 22px warn). Read as an axis TO FIRE ON,
+28px therefore fires on all 36 lower thirds - all 36 rows - and a rule that fires on the whole
+corpus reports nothing, which is the exact complaint that sent rule 5 back to be rewritten one
+rule over. Read as the answer to "big enough", it keeps the 26px role line out of rule 4 (where it
+is a SIZE defect that rule 3 reports) and leaves the joint reading to say what it is for.
+
+The comparison also moved INTO this file. Rule 4 used to pair `readabilityCheck`'s
+`text-under-weight-floor` and `text-low-contrast` findings, which are the ratified table's
+verdicts - correct while the table agreed with the owner, and silent on all four named rows the
+moment it did not. The readings are still that instrument's; only the threshold is ours.
+
+| | after 25.8.1 | after the floors |
+|---|---|---|
+| rule 4 `legible-size-only` | 2 rows | **26 rows of 36** |
+| rules 1 / 5 / 6 | 12 / 34 / 36 | 12 / 34 / 36 (unmoved) |
+| topic-card round | 1 of 4 | 3 of 4 |
+
+**It catches all four rows the owner named** (§25.6), each on the axis measured there: S-03 on
+CONTRAST - its countdown label at 38px reads 3.04:1, the reading that clears the ratified 3:1
+large-text floor by four hundredths - and S-14, S-20 and S-33 on WEIGHT at 400. S-14 fires three
+times, including its 54px name.
+
+**And it names ONE construction rather than lighting up the corpus.** Of the 40 readings, **33 are
+the countdown's own label** at 38px weight 400, 7 are lower-third primaries, and **none is a
+sponsor bug** - the bug's 24px caption is already flagged on size by the ratified 50px primary
+floor, so it never reaches this rule. By axis: 37 weight alone, 1 contrast alone, 2 both. Ten rows
+stay quiet (S-04, S-05, S-06, S-12, S-13, S-15, S-18, S-21, S-35, S-36). **That is a finding with
+an address**: the composer's supporting/label weight on the countdown is where 33 of 40 readings
+live, and it is one number in `structure.ts` rather than 26 separate defects.
+
+#### 25.8.3 Rule 5 - the real-estate rule, narrowed to the question inside it
+
+**OWNER DECISION, 2026-08-20**, on the question §25.3 put to him: **a mark deliberately stacked
+ABOVE its caption is a different composition, not a defect.** Rule 5 was firing on 34 of the 36
+rows for that arrangement alone, and a rule that fires on almost everything reports nothing.
+
+What survives is the HORIZONTAL question inside his own sentence about B27 - "it should be on the
+same row as the text" - read as: **could it have been?** A stack the panel's width never allowed is
+the composition the design was forced into. A stack with room to spare beside it is a mark taking a
+row it did not need, which is what eating real estate means. Both sides are measured on the
+rendered frame in the panel's own width, and the gap budgeted between mark and line is the ratified
+0.35 primary type sizes rather than a number of this rule's own.
+
+| | after 25.8.1 | after the rewrite |
+|---|---|---|
+| rule 5, corpus | 34 rows | **0 of 36** |
+| rule 5, topic-card round | 3 rows | **0 of 4** |
+| rule 5, shipped lower thirds (`--control`) | 1 of 25 (`ls18`) | **0 of 25** |
+| rule 5, shipped corner bugs (`--control --category=corner-bug`) | 0 of 28 | **1 of 28** (`bug17`) |
+
+**THE UNIT WAS THE WHOLE ARGUMENT, and the first version of this rewrite got it wrong in a way the
+repo has already paid for.** Written as CROWDING - the gap between mark and line, measured in the
+mark's own height, the brand manual's 0.25 - it fired on `ls18` in the shipped catalog: the exact
+design `spacingCheck`'s 2026-08-15 recalibration cleared, because ls18 stretches an institution's
+mark to the height of the card and was being divided by its own generosity (src/ai/AGENTS.md, "the
+mark-gap unit is the primary type size"). An instrument whose false positives are the designs that
+carry a mark best is one authors learn to ignore. So rule 5 does not re-ask crowding at all -
+`spacingCheck` owns it in the ratified unit, and a second opinion here is either a duplicate or a
+regression.
+
+**Zero firings is not a vacuous rule, and it was checked rather than assumed**
+(`scripts/spike-taste-rule5-mutation.mjs`, free, one page). Same stack, two panel widths: at 948px
+with 502px of room left over beside the line it FIRES; at 288px, where the arrangement is 512px
+short of fitting, it is QUIET. And it fires on a real shipped design - **`bug17`**, whose 96px mark
+sits alone in a 424px tile, 30px from one edge against 298px from the other, with 143px to spare
+beside its caption. That is a row anyone can look at.
+
+**The reported half carries what a re-ratification would need.** Of the 72 pieces in the corpus
+that resolve a mark row, 36 are stacked, and **none of them would have fitted beside its line** in
+the width its panel already had (band fill min 0.17, p50 0.48, max 0.89). The topic-card round says
+the same: 8 of 12 stacked, 0 that would have fitted. **So the owner's ruling is not only a taste
+call - the geometry never offered the alternative anywhere in this corpus**, which is why the rule
+now agrees with him by measuring rather than by exemption. There is no per-type override; the bug's
+tile is `fit-content` around the wider of the mark and its caption, so side by side never fits and
+the tile is quiet by construction.
+
+**B27 is still caught, by rule 1.** Its topic-card mark sits 38px from one edge against 400px from
+the other, which is `mark-off-centre` - and all three mark-carrying topic cards still fire it. The
+orphaned mark the owner saw is reported where an orphaned mark belongs, once instead of twice.
+
+**The blind spot is unchanged and worth restating**: 6 of the 8 stacked shipped corner bugs resolve
+no panel at all, so rule 5 cannot apply to them - the same panel-free blindness §25.7 records for
+rules 1 and 5 on the minimalist language.
+
+#### 25.8.4 Where the corpus stands after all three
+
+| rule | baseline | after |
+|---|---|---|
+| 1 `mark-off-centre` | 24 rows | 12 (0 of the 18 rows the composer rebuilds) |
+| 4 `legible-size-only` | 2 rows | 26 |
+| 5 real estate | 34 rows | 0 |
+| 6 `package-mark-mixed` | 36 rows | 36 |
+
+Rule 6 is untouched and still fires on every row: the mark is on the lower third, the sponsor bug
+and the topic card and never on the countdown, because `PRO_GRAPHICS.countdown` declares
+`takesMark: false` (§25.4). That is the next decision to put in front of the owner, and it is a
+registry decision rather than a composer one. Rules 2 and 3 still carry no pass/fail, and rule 3's
+ratified floor still disagrees with the owner - §25.5's re-ratification target (a secondary floor
+above 26px) is unchanged by anything here, because rule 4's 28px is an eligibility gate and not a
+floor rule 3 judges against.
+
+#### 25.8.5 Acting on rule 4 - the composer meets the ratified weight floor (2026-08-21)
+
+§25.8.2 left rule 4 firing on 26 rows with an ADDRESS rather than a spread: 33 of its 40 readings
+were text at weight 400, and the composer's own guard could not reach them.
+`structure.ts` floored the supporting line at `medium` **only below 30px**
+(`SUPPORTING_WEIGHT_FLOOR_BELOW_PX`), reasoning from the 2026-08-15 blind read that a hairline
+stroke is a SMALL-text problem. Measured against the owner's own floor, that reasoning was the
+wrong one: the countdown's label sits at **38px**, eight pixels above the boundary, and two of the
+four rows he named are a **54px name** and an **80px clock**, both at weight 400. A floor that
+exempts exactly the sizes he complained about is not a floor.
+
+So the size condition is gone. `TYPE_WEIGHT_FLOOR` is `medium` (500) and applies to the HEADING as
+well as the supporting line, at every size. It stays a boundary rather than a repair - the
+language still chooses among four weights above it, and `semibold` was declined for the general
+case for exactly the reason the owner declined 600.
+
+| | after 25.8.2 | after the floor |
+|---|---|---|
+| rule 4 rows | 26 of 36 | **18 of 36** |
+| rule 4 readings | 40 | **27** |
+| …on `round-2026-08-16` (members RECOMPOSED) | 13 rows | **5** |
+| …on `round-2026-08-17` (members SAVED AS CODE) | 13 rows | 13 (unreachable) |
+| rules 1 / 5 / 6 | 12 / 0 / 36 | 12 / 0 / 36 (unmoved) |
+
+**On the half of the corpus a composer change can reach, the weight axis is now empty.** Recomposed
+countdown readings fall **16 → 3**, and weight 400 disappears from every one of them (weakest
+weights 400/500/600/700 → 500/600/700). Every one of the 24 weight readings that remain belongs to
+a piece mounted as SAVED CODE, exactly like the twelve rule-1 rows in §25.8.1 - August artefacts a
+composer change cannot reach, not a fix that failed to land.
+
+**What is left on the reachable half is CONTRAST, not weight.** The 3 remaining recomposed readings
+are all contrast against the ratified 3.25:1, with no weight component (before: 1 contrast + 2
+both; after: 3 contrast + 0 both). That is the palette furniture question rather than the type
+question, and it is the next address rule 4 hands over.
+
+#### 25.8.6 …and the contrast half, on Pro's own floor (2026-08-21)
+
+§25.8.5 left rule 4 with three readings on the reachable half, all CONTRAST and none of them
+weight. The repair was already there and pointed at the wrong number: Pro resolves its palette
+through Lite's furniture ladder (`clampLitePalette`, imported rather than re-implemented, because
+two ladders are two answers about one customer's colours), and that ladder repaired the supporting
+tone to `LITE_CONTRAST_FLOOR.secondary` - **3:1**, WCAG's large-text floor. The line the owner
+named on S-03 measures **3.04:1** and cleared it by four hundredths.
+
+**THE LADDER IS SHARED; THE NUMBERS ARE NOT.** Raising `LITE_CONTRAST_FLOOR` would have moved
+Lite on Pro's evidence, and the two are separate projects that do not share a quality bar
+(`src/ai/AGENTS.md`) - a floor ratified on one tier's corpus says nothing about the other's. So
+`clampLitePalette` and `applyLiteBrandPalette` take an optional floor pair, defaulting to Lite's,
+and `pro/language/paint.ts` states `PRO_CONTRAST_FLOOR = { primary: 4.5, secondary: 3.25 }`. One
+implementation, two ratified numbers. The primary rung is untouched: nothing measured names it,
+and moving a floor no evidence names is how a threshold stops meaning anything.
+
+| | after 25.8.5 | after Pro's floor |
+|---|---|---|
+| rule 4 rows | 18 of 36 | **16 of 36** |
+| rule 4 readings | 27 | **24** |
+| …from RECOMPOSED pieces | 3 (all contrast) | **0** |
+| weakest recomposed contrast | 3.01:1 | **3.27:1** |
+| rules 1 / 5 / 6 | 12 / 0 / 36 | 12 / 0 / 36 (unmoved) |
+
+**Rule 4 is now silent on every piece the composer rebuilds** - both axes, after two changes. All
+24 readings that remain belong to pieces mounted as SAVED CODE from August, the same
+unreachable half as the twelve rule-1 rows in §25.8.1. To move those the round would have to be
+recomposed, not re-judged.
+
+`e2e/pro-language.spec.ts` pins the SEPARATION rather than the number: a tone found in the band
+between the two floors comes back repaired for Pro and untouched for Lite, so collapsing the two
+back into one constant fails there.
 
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 

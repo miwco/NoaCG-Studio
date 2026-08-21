@@ -234,7 +234,10 @@ export type AnimPresetId =
   | 'design-fade'
   | 'design-slide'
   | 'design-pop'
-  | 'design-blur';
+  | 'design-blur'
+  // …except the SVG road's per-layer stagger, which walks the artwork's OWN top-level layers
+  // in (PresetConfig.layers) — a designer-drawn structure, unlike a flat picture's.
+  | 'design-stagger';
 
 export type AnimSpeed = 0.75 | 1 | 1.5;
 
@@ -300,6 +303,80 @@ export interface WizardOptions {
   /** The artwork that IS the graphic (the Import Graphic flow's imported-design category).
    *  Its natural size decides the design's size, so it is measured at import, not guessed. */
   designArt?: DesignArt;
+  /** The SVG that IS the graphic (the Import Graphic flow's SVG road,
+   *  docs/SVG_IMPORT_PLAN.md): sanitized markup with its chosen text layers to bind. */
+  designSvg?: DesignSvg;
+}
+
+/**
+ * An imported SVG graphic: the sanitized markup (candidates tagged with
+ * data-noacg-candidate — assets/svgImport.ts) plus the text layers the user chose to bind
+ * as operator fields. The markup is inlined VERBATIM into the template; binding adds
+ * id="fN" to the chosen nodes and nothing else, which is what keeps the pixels exactly the
+ * designer's (plan §1, architecture B).
+ */
+export interface DesignSvg {
+  /** Sanitized SVG markup from assets/svgImport.ts, candidate markers still in place. */
+  markup: string;
+  /** Design-space size in px — the viewBox size, fitted to the frame when larger. */
+  width: number;
+  height: number;
+  /** The text layers becoming operator fields, in field order (index i binds as fN). */
+  fields: DesignSvgField[];
+  /** The `<image>` layers becoming picture fields (filelist), numbered after the text
+   *  fields. update() swaps the node's href; an empty value restores the drawn picture. */
+  images: DesignSvgImage[];
+  /** Outlined-text groups the user chose to REPLACE (plan §1.A): the generator hides each
+   *  one; the HTML field that stands in for it is placed afterwards through the raster
+   *  flow's placed-line transform (components/wizard/draft.ts withSvgOutlineFields), which
+   *  is why only the identity travels here — the placement is a draft concern. */
+  outlines: DesignSvgOutline[];
+  /** Every font family the SVG references, with how each one was resolved. */
+  fonts: DesignSvgFont[];
+}
+
+/** One outlined-text group hidden in favour of a placed HTML field. */
+export interface DesignSvgOutline {
+  /** The group's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+}
+
+/** One SVG picture layer bound as a filelist field. */
+export interface DesignSvgImage {
+  /** The node's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+  /** Operator-facing field label. */
+  title: string;
+}
+
+/** One SVG text layer bound as an operator field. */
+export interface DesignSvgField {
+  /** The node's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+  /** Operator-facing field label. */
+  title: string;
+  /** The layer's own text — the sample/default value. */
+  sample: string;
+  /** True emits ftype "number" (a score, a count) instead of "textfield". */
+  numeric: boolean;
+  /** True binds the layer as a COUNTDOWN (plan P2 "clock ftype"): the node becomes the
+   *  clock display (templates/shared/clock.ts drives it) and the field is the count's
+   *  length in minutes, held in a hidden data source. The first such field wins - the
+   *  shared runtime drives one clock; any later one binds as plain text. */
+  countdown?: boolean;
+}
+
+/** How one referenced font family resolves (plan §4). Exactly one of the two sources is
+ *  set when resolved; neither means UNRESOLVED — emitted with a warning, never blocked,
+ *  because the designer may know the playout machine has the face installed. */
+export interface DesignSvgFont {
+  /** The family name exactly as the SVG references it. */
+  family: string;
+  /** A bundled face whose family name matches — its @font-face ships with the template. */
+  fontId?: string;
+  /** A fetched (Google) or uploaded face, embedded as an asset like any custom font.
+   *  Its `family` must equal the SVG's family name for the @font-face to apply. */
+  customFont?: CustomFont;
 }
 
 /** The imported artwork a design is built on, with the natural size measured at import. */
@@ -351,6 +428,7 @@ export interface ResolvedOptions {
   logoEnabled: boolean;
   logoInkKnocked: boolean;
   designArt: DesignArt | null;
+  designSvg: DesignSvg | null;
 }
 
 // ── Template variants ────────────────────────────────────────────────────────
@@ -529,6 +607,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
       (variant.logo === 'optional' && (options.logoEnabled ?? !!options.logoAssetPath)),
     logoInkKnocked: options.logoInkKnocked ?? false,
     designArt: options.designArt ?? null,
+    designSvg: options.designSvg ?? null,
   };
 }
 

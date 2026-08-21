@@ -169,36 +169,50 @@ exists for:
   `output/main.ts`), so every renderer computes the same one and a boot-time replay of the log
   reconstructs it exactly. There is no authority to elect.
 
-  **WHICH PLANE GETS WHICH HALF OF THE FIX — measured 2026-08-20, not assumed.** The origin is
-  attached by `output/main.ts`, so only the hosted `/output` renderer derives and PERSISTS one.
-  Everywhere else the runtime mints a local origin when `startMatchClock` runs. That splits the
-  three faults cleanly, and the split is deliberate rather than unfinished: the owner's direction
-  (2026-08-19) is that the web control panel and `/output` are the surface under investment and
-  the export door is the rehearsed backup, so that is where the durable half lives.
+  **WHICH PLANE GETS WHICH HALF OF THE FIX — re-measured 2026-08-20, not assumed.** Every
+  operator surface now stamps the origin itself, so the difference between the planes is no
+  longer *whether* one exists but *what can carry it back to a renderer that rebooted*.
 
   | | throttled tab | two renderers | reload / reboot |
   |---|---|---|---|
   | hosted `/output` | fixed | fixed (one derived stamp) | **fixed** |
-  | the dashboard's own PROGRAM monitor | fixed | within delivery skew | n/a — see below |
-  | exported package · local relay · standalone panel | fixed | within delivery skew | **still lost** |
+  | exported package · standalone panel (BroadcastChannel) | fixed | within delivery skew | **fixed** |
+  | exported package · local relay (OBS/vMix) | fixed | within delivery skew | **on the next Take or ✎ Update** |
+  | the dashboard's own PROGRAM monitor | fixed | within delivery skew | **fixed** (stage rebuild) |
 
   - **Throttled tabs are fixed everywhere**, because painting from an origin is the runtime's
     job and every plane runs the same runtime.
-  - **Drift is bounded everywhere**, which is the change that matters most off the hosted plane:
-    a locally minted origin is anchored to when that renderer received `clockStart`, so two
-    renderers differ by the delivery skew between them — sub-second in practice — and never by
-    more, where the old counter's error grew for the whole match.
-  - **A reload is recovered only on the hosted plane.** The in-app dashboard's PROGRAM monitor
-    follows the same log but does not run `clockRowEffect`, so it mints locally too; it is a
-    monitor and not air, and it cannot outlive the page it is in. The standalone control panel
-    DOES rebuild a rebooted graphic from its own in-memory log (`graphic-online` → data, snap,
-    data) — but the data it replays is the last value it SENT, which is a plain time, so the
-    clock returns to that value rather than to the match time. The exported production
-    controller has no `graphic-online` handling at all.
-  - **To close the export plane** the panel would have to stamp the clock field itself when it
-    sends `clockStart` and keep the stamped value in the log it replays. It ships dependency-free
-    vanilla JS, so that is a second implementation of `matchClockWire`'s few lines — worth doing
-    when the export door next gets attention, not worth a divergent copy before then.
+  - **Drift is bounded everywhere**: a locally minted origin is anchored to when that renderer
+    received `clockStart`, so two renderers differ by the delivery skew between them —
+    sub-second in practice — and never by more, where the old counter's error grew all match.
+    Only `/output` derives its stamp from the row's own `created_at`, which is the one way to
+    agree EXACTLY; every other plane agrees within that skew, and that is the honest ceiling.
+  - **A reload is recovered wherever something replays.** `/output` replays the log. The
+    standalone panel rebuilds a rebooted graphic from its own log (`graphic-online` → data,
+    snap, data) and the value in that log is now the STAMPED one, so what comes back is the
+    match time. The dashboard's PROGRAM monitor keeps the stamped value beside its aired data
+    and folds it into the rebuild, so a stage that comes up fresh no longer restarts the clock
+    at its seed.
+  - **The local relay is the one gap left, and it is not a clock gap.** A relay-driven browser
+    source boots at the log HEAD by design (`control/localReceiver.ts`: replaying a whole show
+    blind is worse than starting clean), so it recovers NOTHING until an operator acts — text,
+    scores and clock alike. What changed is that when the operator does act, the value set the
+    controller sends carries the stamped clock, so the graphic lands on the right second
+    instead of being dragged back to the cue's typed time. Closing it properly means teaching
+    that receiver to RECONSTRUCT from the log rather than replay it, which is a recovery
+    design, not another clock stamp.
+  - **The stamped value rides every later send, and that is safe because it is idempotent** —
+    re-resolving `"10:00@1787257289761"` a minute later still gives the right second. A plain
+    snapshot did not have that property, which is why re-sending the cue's whole value set on
+    every score bump used to drag a running clock backwards.
+  - **The arithmetic exists twice on purpose.** `control/matchClockWire.ts` is the module the
+    app and `/output` import; `control/matchClockPageJs.ts` is the vanilla-JS copy the two
+    GENERATED operator pages emit, because they ship as one self-contained file in a zip. The
+    wire format is the contract between them. Each page keeps its own few lines of the
+    DECISION (which verb stamps what, before or after the event), since where a page holds its
+    field values differs; the pure arithmetic is shared.
+  - Pinned by `e2e/production-controls.spec.ts` — a real exported package whose renderer is
+    reloaded mid-match, asserted against REAL ELAPSED TIME, plus the controller's wire order.
 
   A tick now computes nothing and remembers nothing — it is a repaint — so a missed or late one
   costs a frame of freshness and never a second of match time.

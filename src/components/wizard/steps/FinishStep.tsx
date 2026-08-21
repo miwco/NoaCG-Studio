@@ -87,7 +87,25 @@ export function catalogSummaryRows(variant: TemplateVariant, draft: WizardDraft)
       step: 'fields',
     });
   }
-  rows.push({ label: 'Look', value: `${palette.name} · ${font}`, step: 'look' });
+  // An imported SVG's fields are its own text layers, chosen on the mapping step.
+  if (draft.designSvg) {
+    const on = draft.svgFields.filter((f) => f.on).length;
+    // An outlined-text stand-in is a field too (plan §1.A) — a graphic with only those is
+    // editable, not fixed.
+    const replaced = draft.svgOutlines.filter((f) => f.on && f.box).length;
+    const parts = [
+      on > 0 ? `${on} editable text layer${on === 1 ? '' : 's'}` : '',
+      replaced > 0 ? `${replaced} outlined text replaced by live text` : '',
+    ].filter(Boolean);
+    rows.push({
+      label: 'Fields',
+      value: parts.length > 0 ? parts.join(' · ') : 'None — a fixed graphic',
+      step: 'fields',
+    });
+  }
+  // An imported SVG carries its own look — the palette/typeface read-back would describe
+  // knobs the artwork does not read.
+  if (!draft.designSvg) rows.push({ label: 'Look', value: `${palette.name} · ${font}`, step: 'look' });
   rows.push({ label: 'Motion', value: outPreset ? `${preset} in · ${outPreset} out` : preset, step: 'motion' });
   return rows;
 }

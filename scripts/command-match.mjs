@@ -83,7 +83,13 @@ export const SWEEP_SCRIPTS =
   // siblings and belongs here for the same reason they do.
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
   + '|text-containment-sweep'
-  + `|acceptance-shots|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
+  // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
+  // they are easy to forget here: a script nobody calls a test still opens Chromium and still
+  // drives the whole app through it. `acceptance-pack` walks four productions, a hosted-page rig
+  // over its own build, an exported package and a catalog category at three viewport sizes,
+  // which is a job by every measure this module cares about.
+  + '|acceptance-shots|acceptance-pack'
+  + `|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 
 /**

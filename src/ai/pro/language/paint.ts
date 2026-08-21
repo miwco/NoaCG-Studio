@@ -64,12 +64,28 @@ export interface ResolvedPalette {
  * ladder. `applyLiteBrandPalette` is imported rather than re-implemented for the reason a second
  * legibility ladder is always wrong: two answers that can disagree about one customer's colours.
  */
+/**
+ * PRO'S OWN FLOOR PAIR, and the reason it is not `LITE_CONTRAST_FLOOR`.
+ *
+ * The ladder is shared - one implementation, because two would be two answers about one
+ * customer's colours - but the NUMBERS are not: Lite and Pro are separate projects that do not
+ * share a quality bar (`src/ai/AGENTS.md`), so a floor ratified on one tier's corpus is not
+ * evidence for the other's.
+ *
+ * The secondary rung is the owner's 3.25:1, ratified 2026-08-20 (docs/NOACG_PRO_PLAN.md §25.8.2).
+ * Lite's 3 is WCAG's large-text floor, and re-judging the paid Pro corpus against it is what
+ * showed 3 to be the wrong number HERE: the supporting line the owner named on S-03 measured
+ * **3.04:1** and cleared it by four hundredths. The primary rung is unchanged - nothing measured
+ * says otherwise, and moving a floor no evidence names is how a threshold stops meaning anything.
+ */
+const PRO_CONTRAST_FLOOR = { primary: 4.5, secondary: 3.25 } as const;
+
 export function resolvePalette(
   language: DesignLanguage,
   brand?: BrandPalette | null,
 ): ResolvedPalette {
-  if (!brand) return clampLitePalette(language.palette);
-  return applyLiteBrandPalette(brand, language.palette);
+  if (!brand) return clampLitePalette(language.palette, PRO_CONTRAST_FLOOR);
+  return applyLiteBrandPalette(brand, language.palette, PRO_CONTRAST_FLOOR);
 }
 
 /**

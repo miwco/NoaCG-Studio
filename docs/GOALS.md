@@ -101,6 +101,18 @@ from ~80 places in the tree, so it never changes.*
       archived "remaining, owner + real hardware" paragraph as owed work.
       **Remaining is the PEOPLE half of `docs/STUDENT_RELEASE_ACCEPTANCE.md`:** the soak, one
       live-suite run against the real project, and the timed first-time-user walks.
+- [ ] **11. What the storefront SHOWS FIRST, per category.** Owner, 2026-08-21, comparing two
+      shelves in one sitting: the Statistics & data result is eight genuinely different offers and
+      reads as a catalog - *"the graphics look different… you have options to choose from actually
+      and not just slight modifications of one graphic"* - while *"we have that problem with the
+      lower thirds right now that when you open it up all the graphics there look the same."*
+      Browse renders a PAGE of twelve, not the catalog, so for most people the first twelve ARE
+      the category; a category whose first twelve are variations of one design reads as a catalog
+      with one design in it. This is curation and default ordering, not a request for more
+      designs. Related and separable: **ig01 "Big Stat" is filed as a `stat-panel` and is a `kpi`**
+      (a one-line `src/templates/meta.ts` re-file plus the catalog baselines it moves) - it is the
+      one card the owner said *"does pop out"* of that otherwise coherent shelf. Detail and quotes:
+      `docs/CATALOG_VARIETY.md` §7.
 
 ### The surface under investment: the WEB PLAYOUT CONTROL PANEL
 
@@ -115,6 +127,29 @@ goes further than the cloud-first decision below: that one settled which door th
 this settles which door the PRODUCT invests in. Weigh any playout work by what it does for the web
 control panel first. The binding design is `docs/PLAYOUT_DASHBOARD.md`, and the three surfaces that
 render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
+
+**Owner read of the dashboard, 2026-08-21** (`docs/acceptance/owner-pack/index.html` §2, verdicts
+in `docs/PLAYOUT_DASHBOARD.md` §2). At the reported 1536×814 the monitor cap and the space beside
+PROGRAM are both accepted. **At 1920×1080 they are not** - *"too much empty room at the bottom and
+the monitors are unnecessarily small"* - and at 1536×560 the verb bar scrolling under the sticky
+monitors is called a hazard. The next dashboard session is therefore already specified:
+
+- [ ] **Re-lay the dashboard's vertical budget.** Move the verb bar into the empty column beside
+      PROGRAM as a BREAKPOINT (below the width where it fits, it returns underneath), which spends
+      the dead width, un-scrolls the buttons and frees the height the monitors need at 1080p.
+      Replace the flat `26vh` monitor cap with "what is left", floored and ceilinged, so a graphic
+      with many controls gets smaller monitors and a simple one gets big ones - the owner's own
+      tie-breaker is *"I would rather have the controls big than the monitors too big"*. Fix the
+      cap's per-cue ratio dependence in the same change: `--pd-ar` is the PREVIEWED graphic's
+      ratio, so a 9:16 cue narrows both monitors today, which is the twitch the owner ruled out.
+      All three surfaces, one session, with the pack's `scroll`/`hosted`/`controller` sections
+      re-run as its evidence.
+- [x] **The MINIMUM supported window is 1366×768** (owner, 2026-08-21). The budget school-laptop
+      floor, which is the hardware the class case actually runs on. Below it the phone breakpoint
+      takes over; a 560px-tall window is a resized browser rather than a screen, so it must
+      degrade without breaking but is not a size anything is designed against. This is what bounds
+      the verb-bar breakpoint above: the bar sits beside PROGRAM down to 1366 and returns
+      underneath below it.
 
 ### Open risks for the deadline
 - [ ] **Visual acceptance of the interactive playout plane.** Phases 0-6 of
@@ -135,8 +170,12 @@ render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
       pinned by a spec that waits first; two shared-control defects fixed with it. The Data
       workspace's empty state - a sentence over ~950px of nothing, with its ⬇ Blank CSV button
       orphaned on a row of its own - was rebuilt 2026-08-12 around the three doors and the column
-      names that would bind. **Still owed: the owner's own eyes**
-      (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08").
+      names that would bind. **READ AND ACCEPTED BY THE OWNER 2026-08-21** from
+      `docs/acceptance/owner-pack/index.html` §3 - *"I think these screens look good."* The
+      release's largest unmeasured risk is measured. Four follow-ups came out of it, none of them
+      a rejection: teams (below), Data/Audience opening in their own tabs, the offline `/join`
+      dead end, and the fact that the shipped CSV import/template was invisible to a reader of the
+      screen (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08").
 - [x] **Which door the class runs on: DECIDED 2026-08-08 - CLOUD FIRST, EXPORT AS THE BACKUP.**
       The class publishes and drives the persistent output URL with phone control; the export route
       (files, local relay and controller on the playout machine - the one round 2 proved on real
@@ -181,14 +220,6 @@ The binding plan is `docs/SVG_IMPORT_PLAN.md`.
       fields (no renaming ritual; layer names prefill labels), map + preview, create - the exact
       graphic becomes an ordinary NoaCG template. Acceptance: a student takes an Illustrator SVG
       to air, unchanged pixels, inside one session.
-- [ ] **OGraf boilerplate story** (Yle's explicit ask): a curated, teaching-grade OGraf starter
-      set - our validated export packaged as free, hand-editable base templates an organization
-      modifies instead of starting from scratch. Study `SuperFlyTV/ograf-devtool` + the EBU
-      examples for what authors already get.
-- [ ] **Restricted-network resilience**: the Yle demo died inside the wizard on their corporate
-      network. No third-party host may ever block create/preview/export; diagnose, harden,
-      pin with an e2e spec that walks the wizard with all third-party hosts blocked, and give
-      failures a visible diagnosis instead of a silent stall.
 
 ---
 
@@ -317,6 +348,15 @@ across it; the full entry is in the archive.*
 ## THEN - the custom road (ordered, unscheduled)
 
 Only after the north star is true for real users. Each step is a direct competitive answer.
+
+0. [ ] **TEAMS - several people holding ONE production.** Owner, 2026-08-21: *"someone can edit
+       the spreadsheet, someone can steer the queue, someone can attach an API… if we have many
+       students working on one project, it's never just one person doing this all."* This is a
+       class requirement rather than a nicety: the whole teaching case is a group running a show
+       together. The capability model already splits WHAT a person may do - control, output, join
+       and presenter are four separate URLs - and has no concept of WHO, so two students cannot
+       hold the same production under their own accounts. Backend, entitlements and a migration;
+       numbered 0 because it is the one item here the deadline case actually leans on.
 
 1. [ ] **WYSIWYG canvas** - back to the editor: drag, place and restyle your own graphics
        visually, with code still the source of truth underneath. `docs/WYSIWYG_PLAN.md`.

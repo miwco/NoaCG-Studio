@@ -480,6 +480,7 @@ export const PRESET_MOTION: Record<AnimPresetId, PresetMotion> = {
   'design-slide':      { intensity: 'medium', styles: ['slide'] },
   'design-pop':        { intensity: 'medium', styles: ['pop', 'scale'] },
   'design-blur':       { intensity: 'subtle', styles: ['blur'] },
+  'design-stagger':    { intensity: 'medium', styles: ['reveal', 'slide'] },
   'goal-ring':         { intensity: 'medium', styles: ['reveal'] },
   'milestone-run':     { intensity: 'medium', styles: ['reveal', 'pop'] },
   'frame-draw':        { intensity: 'medium', styles: ['reveal'] },

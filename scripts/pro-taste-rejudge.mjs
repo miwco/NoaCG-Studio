@@ -173,7 +173,7 @@ if (CONTROL) {
   console.log('  |offset y| ', JSON.stringify(spread(centred.map((r) => Math.abs(r.taste.markCentre.offset.y)))));
   console.log('  rule 2 balance ', JSON.stringify(spread(rows.map((r) => r.taste?.markBalance?.balance).filter((n) => n != null))));
   console.log('  rule 5 rowShare ', JSON.stringify(spread(rows.map((r) => r.taste?.markRow?.rowShare).filter((n) => n != null))));
-  const owns = rows.filter((r) => r.taste?.findings.some((f) => f.code === 'mark-owns-a-row'));
+  const owns = rows.filter((r) => r.taste?.findings.some((f) => f.code === 'mark-stacked-with-room'));
   console.log(`  rule 5 fires on ${owns.length}: ${owns.map((r) => r.id).join(', ') || '-'}`);
   const off = rows.filter((r) => r.taste?.findings.some((f) => f.code === 'mark-off-centre'));
   console.log(`  rule 1 fires on ${off.length}: ${off.map((r) => r.id).join(', ') || '-'}`);
@@ -444,7 +444,18 @@ const count = (code) => report.rows.filter((r) => r.pieces
 console.log(`\n── ${report.rows.length} rows, ${allPieces.length} pieces ──`);
 console.log(`  rule 1 mark-off-centre    ${count('mark-off-centre')} rows`);
 console.log(`  rule 4 legible-size-only  ${count('legible-size-only')} rows`);
-console.log(`  rule 5 mark-owns-a-row    ${count('mark-owns-a-row')} rows`);
+console.log(`  rule 5 mark-stacked-with-room ${count('mark-stacked-with-room')} rows`);
+// Rule 5's REPORTED half. A stacked mark is no longer a defect (docs/NOACG_PRO_PLAN.md §25.8.3),
+// so the numbers a re-ratification of that arrangement would be read off are printed instead of
+// being buried in the JSON: how much of the band it took the mark actually fills, and whether it
+// would have fitted beside the line in the width the panel already had.
+const stacked = allPieces.map((p) => p.taste?.markRow).filter((m) => m && m.rowShare < 0.25);
+if (stacked.length) {
+  console.log(`  rule 5 stacked instead (reported, never judged): ${stacked.length} of `
+    + `${allPieces.filter((p) => p.taste?.markRow).length} pieces with a mark row;`
+    + ` band fill ${JSON.stringify(spread(stacked.map((m) => m.bandFill).filter((n) => n != null)))};`
+    + ` ${stacked.filter((m) => (m.besideSlackPx ?? -1) >= 0).length} would have fitted beside the line`);
+}
 console.log(`  rule 6 package-mark-mixed ${report.rows.filter((r) => r.packageMark && !r.packageMark.consistent).length} rows`);
 console.log('  rule 2 balance (reported, never judged) ',
   JSON.stringify(spread(allPieces.map((p) => p.taste?.markBalance?.balance).filter((n) => n != null))));
