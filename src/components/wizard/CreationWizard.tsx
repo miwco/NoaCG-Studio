@@ -1536,6 +1536,7 @@ export default function CreationWizard() {
                       sample: c.label,
                       box: null,
                       color: null,
+                      looksLikeText: null,
                     })),
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).

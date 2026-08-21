@@ -52,6 +52,8 @@ your back.
 |---|---|
 | `<text>` with plain content | one operator text field, bound in place |
 | `<text>` with several positioned `<tspan>` lines | **one field per line** - each is separately editable |
+| two labels placed apart on one baseline | two fields - the gap between them is what says so |
+| a line broken into runs by kerning or tracking | **one** field - the runs are one line, not three |
 | a plain figure as the sample (`84`, `2`) | proposes a **number** field |
 | a clock-shaped sample (`12:00`, `1:05:00`) | the row asks: ordinary text, or a **countdown** whose operator field is its length in minutes. One countdown per graphic |
 | `2 – 1`, `10 pts` | stays a text field - an SPX number input cannot hold the furniture |
@@ -101,6 +103,10 @@ editable line over its measured box, matching the original's position, cap heigh
 
 That is the fallback, not the good road: the stand-in is re-rendered type, so the kerning is the
 font's and not the designer's. **Re-export with live text where you can.**
+
+Rows whose shapes read as a line of type - several glyphs standing on one baseline in a wide box -
+are listed first; the rest are marked "looks like artwork" so you can skip past the crests and
+icons. Nothing is hidden: a two-letter logotype really can be the text you want editable.
 
 ## 6. Export settings, app by app
 

@@ -144,6 +144,10 @@ export interface SvgOutlineDraft {
   /** The shapes' own fill colour, read off the rendered group — so the replacement text
    *  arrives in the colour the outlined text was. null = the design default. */
   color: string | null;
+  /** Does the measured shape cluster READ as a line of type (several glyphs on one baseline in
+   *  a wide box) rather than as a logo or an icon? Ranks the rows in the mapping step and
+   *  badges the rest; it never hides one. null until measured. */
+  looksLikeText: boolean | null;
 }
 
 /** How one font family the SVG references resolves (plan §4). */

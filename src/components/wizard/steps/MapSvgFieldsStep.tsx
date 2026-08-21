@@ -37,12 +37,19 @@ interface Props {
  * cannot be measured) falls back to ~78% of the box height, between a caps-only run (0.72)
  * and one with descenders (0.94).
  */
+/** Does this row belong with the text-shaped ones? An unmeasured row (null) does — it has not
+ *  been judged, and demoting it would bury a row for a reason nobody can see. A row the reader
+ *  already ticked does too, whatever the measurement thought. */
+function rowIsTexty(f: SvgOutlineDraft): boolean {
+  return f.on || f.looksLikeText !== false;
+}
+
 function measureOutline(
   stage: HTMLElement,
   svgRect: DOMRect,
   k: number,
   candidateId: string,
-): Pick<SvgOutlineDraft, 'box' | 'color'> | null {
+): Pick<SvgOutlineDraft, 'box' | 'color' | 'looksLikeText'> | null {
   const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
   if (!el) return null;
   const r = el.getBoundingClientRect();
@@ -51,6 +58,7 @@ function measureOutline(
 
   let baseline: number | null = null;
   let lineTop = r.top;
+  let onBaseline = 0;
   if (glyphs.length >= 2) {
     // Cluster the bottoms: values within `tol` of each other are one baseline. A descender
     // drops ~0.2 em below the baseline and a second line sits a full line below, so a
@@ -70,6 +78,7 @@ function measureOutline(
     // descender glyph straddles it; a hyphen floats above and is rightly left out).
     const bl = baseline;
     const onLine = glyphs.filter((g) => g.top < bl - tol && g.bottom > bl - tol);
+    onBaseline = onLine.length;
     if (onLine.length > 0) lineTop = Math.min(...onLine.map((g) => g.top));
   }
   const capHeight = baseline !== null && baseline - lineTop > 0 ? baseline - lineTop : r.height * 0.78;
@@ -80,6 +89,14 @@ function measureOutline(
   const fill = first ? getComputedStyle(first).fill : '';
   const color = fill && fill !== 'none' && !fill.startsWith('url(') ? fill : null;
 
+  // DOES IT READ AS A LINE OF TYPE? The markup cannot say — a logo, an icon and a word are all
+  // "a group of paths" — but the measured shapes can. A word is several glyphs, most of them
+  // standing ON one baseline, in a box wider than it is tall. An icon is two or three shapes
+  // nested inside each other with nothing in common. This only RANKS the rows (and badges the
+  // rest); nothing is hidden, because the one file where a two-letter logotype really was text
+  // is exactly the file this would otherwise silently lose.
+  const looksLikeText = glyphs.length >= 3 && onBaseline / glyphs.length >= 0.6 && r.width / r.height >= 1.5;
+
   return {
     box: {
       x: Math.round((r.left - svgRect.left) * k),
@@ -89,6 +106,7 @@ function measureOutline(
       capHeight: Math.round(capHeight * k),
     },
     color,
+    looksLikeText,
   };
 }
 
@@ -160,6 +178,14 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
   }, [outlines, onDraft, svg]);
 
   if (!svg) return null;
+
+  // Text-shaped groups first, everything else after — a STABLE sort, so within each half the
+  // rows still read in the order the file draws them. A row a ticked group put ON stays with
+  // the text-shaped ones: the reader already answered for it.
+  const rankedOutlines = draft.svgOutlines
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => Number(rowIsTexty(b.f)) - Number(rowIsTexty(a.f)) || a.i - b.i)
+    .map(({ f }) => f);
 
   const patchField = (candidateId: string, patch: Partial<SvgFieldDraft>) =>
     onDraft({
@@ -404,8 +430,15 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
               : ''}
             Tick a group that was text and a typed field replaces it — at the same spot, size
             and colour, in a typeface of yours. Hover a row to see which shapes it means.
+            {draft.svgOutlines.some((f) => f.looksLikeText === false) && (
+              <> The ones that read as a line of type are listed first.</>
+            )}
           </p>
-          {draft.svgOutlines.map((f) => (
+          {/* RANKED, never filtered. A Figma export can carry dozens of icon groups, each of
+              them "a group of paths" exactly like outlined copy is, and the one row that IS the
+              headline should not be the twentieth. The measurement (measureOutline) does the
+              ranking; an unranked row keeps its place in document order. */}
+          {rankedOutlines.map((f) => (
             <div
               key={f.candidateId}
               className={`map-svg-row ${f.on ? '' : 'off'}`}
@@ -444,6 +477,11 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   data-testid={`map-svg-outline-sample-${f.candidateId}`}
                 />
               </label>
+              {f.looksLikeText === false && (
+                <span className="muted" data-testid={`map-svg-outline-artwork-${f.candidateId}`}>
+                  looks like artwork
+                </span>
+              )}
             </div>
           ))}
         </div>

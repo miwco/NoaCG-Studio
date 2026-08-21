@@ -325,23 +325,181 @@ function isOffered(el: Element, root: Element): boolean {
   return node ? !isHiddenNode(node) : true;
 }
 
+/** Font sizes declared by CLASS in the file's own `<style>` blocks — Illustrator's "Internal
+ *  CSS" styling option puts every size there rather than on the element. Only class selectors
+ *  are read; that is what Illustrator, Figma and Inkscape all emit. */
+function classFontSizes(svg: Element): Map<string, number> {
+  const sizes = new Map<string, number>();
+  for (const style of Array.from(svg.querySelectorAll('style'))) {
+    for (const rule of (style.textContent ?? '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const size = /font-size\s*:\s*([\d.]+)/i.exec(rule[2]);
+      if (!size) continue;
+      const px = parseFloat(size[1]);
+      if (!Number.isFinite(px)) continue;
+      for (const selector of rule[1].split(',')) {
+        const cls = /\.([A-Za-z0-9_-]+)\s*$/.exec(selector.trim());
+        if (cls) sizes.set(cls[1], px);
+      }
+    }
+  }
+  return sizes;
+}
+
 /**
- * The bindable text nodes, in document order. A <text> whose lines are positioned <tspan>s
- * (Illustrator's multi-line idiom) offers EACH tspan as its own candidate — ids are legal on
- * tspans and getElementById finds them, so each line can be its own operator field. A <text>
- * with plain character content binds itself.
+ * How big is this run's type? Attribute, inline style, then the class rules above, walking up
+ * the ancestors the way inheritance does. **16 is not a guess when nothing says** — it is the
+ * CSS initial font size, which is exactly what the browser will draw.
+ *
+ * Only used to judge whether two runs sit flush or apart (`groupRuns`), so a relative unit
+ * nobody resolves (`em`, `%`) is skipped rather than approximated: the next ancestor that
+ * states a real number is a better answer than arithmetic on a value we cannot see.
  */
-function textCandidates(svg: Element): Element[] {
+function fontSizeResolver(svg: Element): (el: Element) => number {
+  const byClass = classFontSizes(svg);
+  const read = (raw: string | null | undefined): number | null => {
+    if (!raw) return null;
+    const m = /^([\d.]+)\s*(px|pt)?$/i.exec(raw.trim());
+    if (!m) return null;
+    const n = parseFloat(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+  return (el: Element): number => {
+    let node: Element | null = el;
+    while (node) {
+      const attr = read(node.getAttribute('font-size'));
+      if (attr !== null) return attr;
+      const inline = /font-size\s*:\s*([^;]+)/i.exec(node.getAttribute('style') ?? '');
+      const styled = read(inline?.[1]);
+      if (styled !== null) return styled;
+      for (const cls of (node.getAttribute('class') ?? '').split(/\s+/)) {
+        const fromClass = cls && byClass.get(cls);
+        if (fromClass) return fromClass;
+      }
+      node = node.parentElement;
+    }
+    return 16;
+  };
+}
+
+/** The leaf `<tspan>`s of one `<text>` — the runs that actually hold characters. A wrapper
+ *  tspan around more tspans holds none. */
+function leafTspans(text: Element): Element[] {
+  return Array.from(text.querySelectorAll('tspan')).filter((t) => !t.querySelector('tspan'));
+}
+
+/**
+ * THE RUN PROBLEM. A `<tspan>` means two completely different things, and telling them apart
+ * decides how many operator fields a file produces.
+ *
+ * Illustrator writes one tspan per LINE of a multi-line block — and ALSO one tspan per KERNED
+ * RUN whenever the type carries tracking or manual kerning, several of them on ONE baseline.
+ * Treating every run as a field turned one headline into three ("A" / "lexandra" / " Riva").
+ * Treating every shared baseline as one field merged a designer's two SIDE-BY-SIDE labels
+ * ("Helsinki" and "22:40", placed apart on the same line) into a single unusable field.
+ *
+ * Neither reading is in the markup, so the split is decided by the GAP. Runs of one line sit
+ * flush against each other - the next one starts about where the previous one ended - while two
+ * separate labels are placed a real distance apart. `groupRuns` walks the runs, estimates where
+ * each one ends, and starts a new field only when the next `x` is more than an em past that.
+ *
+ * The estimate assumes start-anchored runs, which is the idiom Illustrator's kerning writes.
+ * It is deliberately generous: merging two labels a designer meant to keep apart costs them a
+ * field, while splitting a kerned headline costs them their headline.
+ */
+const CHAR_EM = 0.55; // average advance of a mixed-case glyph, in ems - good to ~15%
+const GAP_EMS = 1; // a gap wider than one em means a new field, not the next run
+
+interface TextRun {
+  el: Element;
+  x: number | null;
+  y: number | null;
+  text: string;
+  size: number;
+}
+
+function numAttr(el: Element, name: string): number | null {
+  const raw = (el.getAttribute(name) ?? '').trim();
+  if (!raw) return null;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Runs grouped into FIELDS: a new field starts on a new baseline, or on a horizontal gap
+ *  wider than `GAP_EMS`. Runs with no `x` continue whatever they follow - they are the middle
+ *  of a line by definition. */
+function groupRuns(runs: TextRun[]): TextRun[][] {
+  const fields: TextRun[][] = [];
+  let current: TextRun[] = [];
+  let lineY: number | null = null;
+  let penEnd: number | null = null; // where the previous run is estimated to end
+
+  for (const run of runs) {
+    const newLine = run.y !== null && lineY !== null && run.y !== lineY;
+    const gapped =
+      !newLine && run.x !== null && penEnd !== null && run.x - penEnd > run.size * GAP_EMS;
+    if (current.length && (newLine || gapped)) {
+      fields.push(current);
+      current = [];
+    }
+    current.push(run);
+    if (run.y !== null) lineY = run.y;
+    const start: number = run.x ?? penEnd ?? 0;
+    penEnd = start + run.text.length * CHAR_EM * run.size;
+  }
+  if (current.length) fields.push(current);
+  return fields;
+}
+
+/**
+ * The bindable text nodes, in document order. A `<text>` whose runs each stand alone as a field
+ * offers each of them - ids are legal on tspans and getElementById finds them, so a line or a
+ * side-by-side label can be its own operator field. When any field is made of SEVERAL runs (a
+ * kerned line), the `<text>` binds whole instead: `update()` then replaces its content in one
+ * write, which is the only write that cannot lose half a line.
+ */
+function textCandidates(svg: Element, fontSize: (el: Element) => number): Element[] {
   const out: Element[] = [];
   for (const text of Array.from(svg.querySelectorAll('text')).filter((el) => isOffered(el, svg))) {
-    const tspans = Array.from(text.querySelectorAll('tspan')).filter(
-      // Only LEAF tspans hold bindable runs; a wrapper tspan around more tspans does not.
-      (t) => !t.querySelector('tspan'),
-    );
-    if (tspans.length > 1) out.push(...tspans);
+    const fields = textFields(text, fontSize);
+    if (fields.length > 1 && fields.every((f) => f.length === 1)) out.push(...fields.map((f) => f[0].el));
     else out.push(text);
   }
-  return out.filter((el) => (el.textContent ?? '').trim().length > 0);
+  return out.filter((el) => candidateSample(el, fontSize).length > 0);
+}
+
+/** One `<text>`'s runs, grouped into the fields they read as. A text with one run (or none)
+ *  is one field holding itself. */
+function textFields(text: Element, fontSize: (el: Element) => number): TextRun[][] {
+  const tspans = leafTspans(text);
+  if (tspans.length < 2) return [[{ el: text, x: null, y: null, text: text.textContent ?? '', size: fontSize(text) }]];
+  return groupRuns(
+    tspans.map((el) => ({
+      el,
+      x: numAttr(el, 'x'),
+      y: numAttr(el, 'y'),
+      text: el.textContent ?? '',
+      size: fontSize(el),
+    })),
+  );
+}
+
+/**
+ * The sample value a candidate starts with — what the layer READS as drawn.
+ *
+ * `textContent` concatenates runs with nothing between them, which is right INSIDE a field
+ * ("A" + "lexandra" + " Riva" is "Alexandra Riva") and wrong between two, where a line break or
+ * a placed gap would collapse into one word ("Helsinki22:40"). So a `<text>` bound whole joins
+ * by the same grouping that decided the fields: runs run together, fields separated by a space.
+ */
+function candidateSample(el: Element, fontSize: (element: Element) => number): string {
+  if (el.tagName.toLowerCase() !== 'text' || leafTspans(el).length < 2) {
+    return (el.textContent ?? '').trim();
+  }
+  return textFields(el, fontSize)
+    .map((field) => field.map((run) => run.text).join(''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** The shapes a glyph outline is made of. Illustrator's Create Outlines writes one path
@@ -438,7 +596,8 @@ export function importSvgMarkup(source: string): SvgImportResult {
   }
 
   // Tag the candidates AFTER sanitizing, so a candidate can never sit inside removed markup.
-  const nodes = textCandidates(svg);
+  const fontSize = fontSizeResolver(svg);
+  const nodes = textCandidates(svg, fontSize);
   const candidates: SvgTextCandidate[] = nodes.map((el, i) => {
     const id = `t${i}`;
     el.setAttribute(SVG_CANDIDATE_ATTR, id);
@@ -446,7 +605,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
     // group Illustrator made of the layer.
     const name = candidateName(el, svg);
     const { label, marked } = stripFieldPrefix(name);
-    const sample = (el.textContent ?? '').trim();
+    const sample = candidateSample(el, fontSize);
     return {
       id,
       label: label || `Text ${i + 1}`,

@@ -223,6 +223,10 @@ reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 
 cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
 rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
 own inline render, never the preview iframe; draft.ts `withSvgOutlineFields` via addPlacedLine).
+What is OFFERED is decided in assets/svgImport.ts, and three rules there are load-bearing: a
+`<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
+hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
+the measured shapes read as a line of type, and never filtered.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),

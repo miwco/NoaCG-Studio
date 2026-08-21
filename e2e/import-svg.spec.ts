@@ -356,6 +356,59 @@ test('svg import: text a designer switched off, or parked in a symbol, is never 
   await expect(page.getByTestId('map-svg-row-t1')).toHaveCount(0);
 });
 
+test('svg import: a kerned headline is ONE field, and two labels on one baseline are two', async ({ page }) => {
+  // A <tspan> means two different things. Illustrator writes one per LINE for a multi-line
+  // block, and one per KERNED RUN whenever the type carries tracking - several on one baseline.
+  // The run reading turned this headline into three fields ("A" / "lexandra" / " Riva"); the
+  // baseline reading merged the two placed labels below it into one. The gap tells them apart.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+      <text id="Headline" font-size="48" fill="#fff"><tspan x="40" y="120">A</tspan><tspan x="78" y="120">lexandra</tspan><tspan x="240" y="120"> Riva</tspan></text>
+      <text id="Footnote" font-size="18" fill="#b7bcc4"><tspan x="40" y="200">Helsinki</tspan><tspan x="300" y="200">Live</tspan></text>
+    </svg>`,
+    'kerned.svg',
+  );
+
+  await expect(page.getByTestId('import-svg-layers')).toContainText('3 text layers');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-sample-t0')).toHaveValue('Alexandra Riva');
+  await expect(page.getByTestId('map-svg-sample-t1')).toHaveValue('Helsinki');
+  await expect(page.getByTestId('map-svg-sample-t2')).toHaveValue('Live');
+  await expect(page.getByTestId('map-svg-row-t3')).toHaveCount(0);
+});
+
+test('svg import: outline rows are ranked — a word of glyphs leads, an icon is badged artwork', async ({ page }) => {
+  // "A group of paths" describes outlined copy AND every icon in the file, so a Figma export
+  // can bury the one row that is the headline under a dozen crests. The measured shapes tell
+  // them apart: a word is several glyphs standing on one baseline in a wide box.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+      <g id="Crest" fill="#fff"><path d="M20 20h60v60H20z"/><path d="M35 35h30v30H35z"/></g>
+      <g id="Headline" fill="#fff">
+        <path d="M100 120 h20 v80 h-20 Z M100 120 h60 v18 h-60 Z"/>
+        <path d="M180 120 h20 v80 h-20 Z"/>
+        <path d="M240 120 h20 v80 h-20 Z M300 120 h20 v80 h-20 Z M220 120 l20 0 l60 80 l-20 0 Z"/>
+        <path d="M360 120 h20 v80 h-20 Z M360 120 h60 v18 h-60 Z"/>
+        <path d="M440 120 h20 v80 h-20 Z M440 182 h50 v18 h-50 Z"/>
+      </g>
+    </svg>`,
+    'ranked-outlines.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  // The word's row leads, whatever the drawing order was.
+  const rows = page.locator('[data-testid^="map-svg-outline-o"]');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toHaveAttribute('data-testid', 'map-svg-outline-o1');
+
+  // The icon is still offered — a two-letter logotype really can be text — but it says what it
+  // measured as, so the reader can skip it.
+  await expect(page.getByTestId('map-svg-outline-artwork-o0')).toBeVisible();
+  await expect(page.getByTestId('map-svg-outline-artwork-o1')).toHaveCount(0);
+});
+
 test('svg import: Inkscape flowed text is called out, since no browser draws it', async ({ page }) => {
   await dropSvgMarkup(
     page,
