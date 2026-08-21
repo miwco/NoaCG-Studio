@@ -807,10 +807,10 @@ figure is the short final part, so the label is what may contain one). Say which
   e2e/import-stretch.spec.ts.
   **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md,
   the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
-  as `id="fN"` (the only markup edits: bound ids + the `-art` class); sanitized at import
+  as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at import
   (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
-  `textLength` fit; box-only DESIGN_PRESETS; `fieldPlan: fixed` (fields = the mapping step's
-  choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
+  `textLength` fit; DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
+  step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
   E2E: e2e/import-svg.spec.ts.
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat

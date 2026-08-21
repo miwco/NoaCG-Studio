@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DraftPatch, SvgFieldDraft, SvgFontDraft, SvgImageDraft, WizardDraft } from '../draft';
+import type {
+  DraftPatch,
+  SvgFieldDraft,
+  SvgFontDraft,
+  SvgImageDraft,
+  SvgOutlineDraft,
+  WizardDraft,
+} from '../draft';
 import { SVG_CANDIDATE_ATTR } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
@@ -14,6 +21,75 @@ import './mapSvgFields.css';
 interface Props {
   draft: WizardDraft;
   onDraft: (patch: DraftPatch) => void;
+}
+
+/**
+ * Measure one outlined-text group on the step's rendered artwork (docs/SVG_IMPORT_PLAN.md
+ * §1.A): its box in DESIGN px, the cap-top-to-baseline run, and its fill. `k` maps the
+ * rendered SVG's px to design px (the artwork's own space, what addPlacedLine speaks).
+ *
+ * Outlines carry no type, but the glyph SHAPES still say where the text sat: most glyphs of
+ * a line sit ON the baseline, so the most populated cluster of shape bottoms is the baseline
+ * (ties go to the top line of a multi-line object), and the tallest shape on that line is
+ * its cap/ascender top. That run is what a font size derives from (~0.72 em) — the same
+ * reasoning the raster erase uses (draft.ts withEraseSeedFields), measured here from vector
+ * shapes instead of ink pixels. A group of fewer than two shapes (or one whose children
+ * cannot be measured) falls back to ~78% of the box height, between a caps-only run (0.72)
+ * and one with descenders (0.94).
+ */
+function measureOutline(
+  stage: HTMLElement,
+  svgRect: DOMRect,
+  k: number,
+  candidateId: string,
+): Pick<SvgOutlineDraft, 'box' | 'color'> | null {
+  const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!(r.width > 0) || !(r.height > 0)) return null;
+  const glyphs = Array.from(el.children).map((c) => c.getBoundingClientRect()).filter((g) => g.height > 0);
+
+  let baseline: number | null = null;
+  let lineTop = r.top;
+  if (glyphs.length >= 2) {
+    // Cluster the bottoms: values within `tol` of each other are one baseline. A descender
+    // drops ~0.2 em below the baseline and a second line sits a full line below, so a
+    // tolerance of a tenth of the box height separates both without splitting a baseline.
+    const tol = r.height * 0.1;
+    const bottoms = glyphs.map((g) => g.bottom).sort((a, b) => a - b);
+    const clusters: number[][] = [];
+    for (const b of bottoms) {
+      const last = clusters[clusters.length - 1];
+      if (last && b - last[0] <= tol) last.push(b);
+      else clusters.push([b]);
+    }
+    // Most members wins; a tie goes to the earlier (higher) cluster — the first line.
+    const best = clusters.reduce((a, c) => (c.length > a.length ? c : a), clusters[0]);
+    baseline = best[Math.floor(best.length / 2)];
+    // The shapes ON that line: the ones whose vertical span reaches the baseline (a
+    // descender glyph straddles it; a hyphen floats above and is rightly left out).
+    const bl = baseline;
+    const onLine = glyphs.filter((g) => g.top < bl - tol && g.bottom > bl - tol);
+    if (onLine.length > 0) lineTop = Math.min(...onLine.map((g) => g.top));
+  }
+  const capHeight = baseline !== null && baseline - lineTop > 0 ? baseline - lineTop : r.height * 0.78;
+
+  // The shapes' own colour, so the stand-in arrives in it. A stroked-only or unfilled
+  // outline has nothing to read; the design default serves then.
+  const first = el.children[0];
+  const fill = first ? getComputedStyle(first).fill : '';
+  const color = fill && fill !== 'none' && !fill.startsWith('url(') ? fill : null;
+
+  return {
+    box: {
+      x: Math.round((r.left - svgRect.left) * k),
+      y: Math.round((lineTop - svgRect.top) * k),
+      width: Math.round(r.width * k),
+      height: Math.round(r.height * k),
+      capHeight: Math.round(capHeight * k),
+    },
+    color,
+  };
 }
 
 /**
@@ -58,6 +134,31 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     setHighlight({ x: box.x - frame.x, y: box.y - frame.y, w: box.width, h: box.height });
   }, [hoverId]);
 
+  // Measure every outlined-text suspect once the artwork is rendered (the draft keeps the
+  // boxes, so a return visit measures nothing — and the create path reads them from there,
+  // where no layout exists). The whole batch lands in ONE patch.
+  const outlines = draft.svgOutlines;
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !svg || outlines.every((o) => o.box)) return;
+    const root = stage.querySelector('svg');
+    if (!root) return;
+    const svgRect = root.getBoundingClientRect();
+    if (!(svgRect.width > 0)) return;
+    const k = svg.width / svgRect.width;
+    let changed = false;
+    const measured = outlines.map((o) => {
+      if (o.box) return o;
+      const m = measureOutline(stage, svgRect, k, o.candidateId);
+      if (!m) return o;
+      changed = true;
+      return { ...o, ...m };
+    });
+    // A group that cannot be measured stays unmeasured (and unreplaceable) without
+    // re-patching forever: no change, no patch, no re-run.
+    if (changed) onDraft({ svgOutlines: measured });
+  }, [outlines, onDraft, svg]);
+
   if (!svg) return null;
 
   const patchField = (candidateId: string, patch: Partial<SvgFieldDraft>) =>
@@ -68,6 +169,11 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
   const patchImage = (candidateId: string, patch: Partial<SvgImageDraft>) =>
     onDraft({
       svgImages: draft.svgImages.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
+    });
+
+  const patchOutline = (candidateId: string, patch: Partial<SvgOutlineDraft>) =>
+    onDraft({
+      svgOutlines: draft.svgOutlines.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
     });
 
   const patchFont = (family: string, patch: Partial<SvgFontDraft>) =>
@@ -120,6 +226,7 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
   };
 
   const onCount = draft.svgFields.filter((f) => f.on).length;
+  const countdownTaken = draft.svgFields.some((f) => f.on && f.kind === 'countdown');
 
   return (
     <div className="map-svg">
@@ -158,6 +265,13 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
             “Convert to outlines”); in Figma, export without “Outline text” — and drop the new
             file on the previous step.
           </p>
+          {draft.svgOutlines.length > 0 && (
+            <p className="hint">
+              Or keep this file: tick a group of shapes below that <em>was</em> text, and a
+              live text field takes its place — same spot, same size and colour, in a typeface
+              of yours rather than the original.
+            </p>
+          )}
         </div>
       ) : (
         <div className="panel-section" data-testid="map-svg-fields">
@@ -203,6 +317,30 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   data-testid={`map-svg-sample-${f.candidateId}`}
                 />
               </label>
+              {f.clock && (
+                /* A clock-shaped layer ("10:00") can be a COUNTDOWN: the node becomes the
+                   ticking display and the operator sets the length in minutes. One per
+                   graphic - the shared clock runtime drives one display - so once a row
+                   has it, the others keep the choice but greyed. Never assumed: "22:40"
+                   is just as likely the time of day drawn into a news strap. */
+                <label className="save-field">
+                  <span>Binds as</span>
+                  <select
+                    value={f.kind}
+                    disabled={!f.on || (f.kind !== 'countdown' && countdownTaken)}
+                    onChange={(e) => patchField(f.candidateId, { kind: e.target.value as SvgFieldDraft['kind'] })}
+                    title={
+                      f.kind !== 'countdown' && countdownTaken
+                        ? 'Another layer is already the countdown — a graphic has one clock'
+                        : 'Text: the operator types what shows. Countdown: the operator sets minutes and this layer counts down on air.'
+                    }
+                    data-testid={`map-svg-kind-${f.candidateId}`}
+                  >
+                    <option value="text">Text</option>
+                    <option value="countdown">Countdown (operator sets minutes)</option>
+                  </select>
+                </label>
+              )}
             </div>
           ))}
         </div>
@@ -241,6 +379,69 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                   disabled={!f.on}
                   onChange={(e) => patchImage(f.candidateId, { title: e.target.value })}
                   data-testid={`map-svg-image-title-${f.candidateId}`}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {draft.svgOutlines.length > 0 && (
+        /* The overlay road for OUTLINED text (plan §1.A): groups of glyph-shaped paths,
+           offered OFF — a logo is a group of paths too, and only the user can tell which
+           shapes were type. Hover shows which. A ticked group is hidden at create and a
+           placed HTML field (the raster flow's exact field machinery) stands in for it. */
+        <div className="panel-section" data-testid="map-svg-outlines">
+          <h3>
+            Outlined text{' '}
+            <span className="muted">
+              {draft.svgOutlines.filter((f) => f.on).length} of {draft.svgOutlines.length} replaced by live text
+            </span>
+          </h3>
+          <p className="hint">
+            {svg.candidates.length > 0
+              ? 'Shapes that may be text converted to outlines. '
+              : ''}
+            Tick a group that was text and a typed field replaces it — at the same spot, size
+            and colour, in a typeface of yours. Hover a row to see which shapes it means.
+          </p>
+          {draft.svgOutlines.map((f) => (
+            <div
+              key={f.candidateId}
+              className={`map-svg-row ${f.on ? '' : 'off'}`}
+              onMouseEnter={() => setHoverId(f.candidateId)}
+              onMouseLeave={() => setHoverId((h) => (h === f.candidateId ? null : h))}
+              data-testid={`map-svg-outline-${f.candidateId}`}
+            >
+              <input
+                type="checkbox"
+                checked={f.on}
+                disabled={!f.box}
+                onChange={(e) => patchOutline(f.candidateId, { on: e.target.checked })}
+                title={
+                  !f.box
+                    ? 'These shapes could not be measured, so no field can take their place'
+                    : f.on
+                      ? 'On — these shapes are hidden and a text field stands in for them'
+                      : 'Off — these shapes stay as drawn'
+                }
+              />
+              <label className="save-field grow">
+                <span>Field name</span>
+                <input
+                  value={f.title}
+                  disabled={!f.on}
+                  onChange={(e) => patchOutline(f.candidateId, { title: e.target.value })}
+                  data-testid={`map-svg-outline-title-${f.candidateId}`}
+                />
+              </label>
+              <label className="save-field grow">
+                <span>Text</span>
+                <input
+                  value={f.sample}
+                  disabled={!f.on}
+                  onChange={(e) => patchOutline(f.candidateId, { sample: e.target.value })}
+                  data-testid={`map-svg-outline-sample-${f.candidateId}`}
                 />
               </label>
             </div>

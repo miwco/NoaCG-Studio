@@ -49,6 +49,16 @@ export interface PresetConfig {
    * re-applied after creation sees exactly what the create-time emit saw.
    */
   parts?: string[];
+  /**
+   * An imported SVG's own LAYERS — the selectors of its top-level named groups, in document
+   * order (model/structure.ts svgLayerSelectors; docs/SVG_IMPORT_PLAN.md §3 phase 2). Same
+   * job as `parts`, for a design whose structure the designer drew rather than a category
+   * declared: the per-layer stagger preset animates exactly these, and a preset must not
+   * write motion for a layer that is not there. Filled from the markup by both the SVG
+   * assembler and `emitPresetRegion`, so a re-applied preset sees what create saw. Absent
+   * or empty on every other design — the stagger then degrades to its whole-unit motion.
+   */
+  layers?: string[];
   /** Multi-step mode: in-timeline shows line 1; each next() reveals one more line. */
   steps: boolean;
   /** The current chain to preserve (when the template already has one); absent = defaults. */

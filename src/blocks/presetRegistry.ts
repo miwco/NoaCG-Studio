@@ -28,7 +28,7 @@ import { FRAME_PRESETS } from '../templates/frames/framePresets';
 import { TRANSITION_PRESETS } from '../templates/transitions/transitionPresets';
 import type { AnimPresetId } from '../model/wizard';
 import type { SpxTemplate } from '../model/types';
-import { countLines, detectPrefix } from '../model/structure';
+import { countLines, detectPrefix, svgLayerSelectors } from '../model/structure';
 
 /**
  * The presets a template can be RE-POINTED at after creation - the post-creation pickers'
@@ -137,6 +137,9 @@ export function emitPresetRegion(
     // The optional parts this design actually draws — read off the HTML, the same way
     // hasAccent and hasBars are, so a re-applied preset animates what is there and nothing else.
     parts: optionalParts(template.html, prefix),
+    // An imported SVG's own top-level layers (empty for everything else) — the per-layer
+    // stagger's targets, read the same way the SVG assembler read them at create.
+    layers: svgLayerSelectors(template.html),
     steps: false,
     stepOutsideParts: [],
     speed: opts?.speed ?? 1,

@@ -1515,6 +1515,9 @@ export default function CreationWizard() {
                       title: c.label,
                       sample: c.sample,
                       numeric: c.numeric,
+                      clock: c.clock,
+                      // Text until the user says otherwise — "22:40" may be the time of day.
+                      kind: 'text',
                     })),
                     // Pictures start OFF — inside a design they are usually the artwork
                     // itself — unless the layer opted in by name (`f:`).
@@ -1522,6 +1525,17 @@ export default function CreationWizard() {
                       candidateId: c.id,
                       on: c.marked,
                       title: c.label,
+                    })),
+                    // Outlined-text suspects start OFF (a logo is a group of paths too) —
+                    // unless named `f:`; the mapping step measures their boxes on its own
+                    // render, and the generator hides whichever the user ticks (plan §1.A).
+                    svgOutlines: result.outlines.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                      sample: c.label,
+                      box: null,
+                      color: null,
                     })),
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
@@ -1551,7 +1565,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgImages: [], svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1585,6 +1599,7 @@ export default function CreationWizard() {
                     designSvg: null,
                     svgFields: [],
                     svgImages: [],
+                    svgOutlines: [],
                     svgFonts: [],
                     designArt,
                     importedImages,

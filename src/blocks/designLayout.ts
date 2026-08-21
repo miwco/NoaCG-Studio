@@ -498,6 +498,29 @@ export interface NewPlacedLineSpec {
 }
 
 /**
+ * The HTML line a new placed element is inserted AFTER: the last mask (or the artwork), so
+ * the design unit keeps its top-down reading order. The artwork may be an inlined `<svg>`
+ * spanning many lines (templates/importedDesign/svg.ts) — its class sits on the OPENING tag,
+ * and inserting right after that line would put HTML inside the SVG; so for an svg art the
+ * answer is the line its `</svg>` closes on. The class test tolerates other classes beside
+ * ours (an SVG root keeps whatever class the designer gave it; ours is appended). -1 when the
+ * template has no design unit at all.
+ */
+function placedInsertIndex(lines: string[], prefix: string): number {
+  const inBoxRe = new RegExp(`class="[^"]*\\b${escapeRe(prefix)}-(?:mask|art)\\b[^"]*"`);
+  let insertAt = -1;
+  lines.forEach((l, i) => {
+    if (!inBoxRe.test(l)) return;
+    insertAt = i;
+    if (/<svg\b/i.test(l) && !/<\/svg>/i.test(l)) {
+      const close = lines.findIndex((m, j) => j > i && /<\/svg>/i.test(m));
+      if (close !== -1) insertAt = close;
+    }
+  });
+  return insertAt;
+}
+
+/**
  * Add a NEW placed text line to an imported design — the Data panel's add-field made real.
  * One pure transform emits everything a field needs to exist end to end: the mask wrapper +
  * `#fN` span in the design unit (which makes it a registry `line` part — selectable,
@@ -555,11 +578,7 @@ export function addPlacedLine(
   // mask an entrance can slide the text inside); the span carries the TYPE. Inserted after
   // the last mask (or the artwork), so the design unit keeps its top-down reading order.
   const lines = template.html.split('\n');
-  const inBoxRe = new RegExp(`class="${escapeRe(prefix)}-(?:mask|art)"`);
-  let insertAt = -1;
-  lines.forEach((l, i) => {
-    if (inBoxRe.test(l)) insertAt = i;
-  });
+  const insertAt = placedInsertIndex(lines, prefix);
   if (insertAt === -1) return null;
   // The new line FITS by default: it keeps one row and condenses if the operator's value
   // outgrows the room between it and the artwork's right edge (or the explicit slot the
@@ -676,11 +695,7 @@ export function addPlacedImageSlot(
     : Math.round(boxWidth * (9 / 16) * 0.72);
 
   const lines = template.html.split('\n');
-  const inBoxRe = new RegExp(`class="${escapeRe(prefix)}-(?:mask|art)"`);
-  let insertAt = -1;
-  lines.forEach((l, i) => {
-    if (inBoxRe.test(l)) insertAt = i;
-  });
+  const insertAt = placedInsertIndex(lines, prefix);
   if (insertAt === -1) return null;
   lines.splice(
     insertAt + 1,

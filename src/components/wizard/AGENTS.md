@@ -220,8 +220,10 @@ with the Data tab revealed
 in the editor: the Data tab's placed add, the canvas gestures, the Inspector's Style/Animations
 tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design mode never
 reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 'file', Prepare/Text
-cannot apply): ONE mapping step, MapSvgFieldsStep. Contract + reasoning:
-docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
+cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
+rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
+own inline render, never the preview iframe; draft.ts `withSvgOutlineFields` via addPlacedLine).
+Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
 which switches the wizard to mode **'file'**: a two-stop rail (Template file -> Finish), the
