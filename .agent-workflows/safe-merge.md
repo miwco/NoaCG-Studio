@@ -87,6 +87,21 @@ the user has invoked it, and the adapter is only a pointer to this file anyway.
 This phase only reads state and fetches remote metadata (`git fetch` touches no working tree
 or branch history, so it is safe here). Report findings before any later state change.
 
+**Run the mechanical checks rather than narrating them:**
+
+    node scripts/safe-merge-preflight.mjs --branch <branch>
+
+It settles steps 1-8 below in about two seconds - every condition printed PASS/FAIL with the value
+it found, and a non-zero exit when any blocking one fails. It only READS (its one write-shaped
+command is the `git fetch` of step 3, which touches no working tree and no branch history), so it
+can never change what it is assessing. Paste its output; a condition that was checked and one that
+was merely claimed must never again look the same in a report. `--skip-order` drops the
+merge-order ranking, `--no-fetch` the fetch.
+
+It covers what a machine can settle. The judgement calls stay here and with the user: whether a
+`hold` should be waved through, whether a conflict is mechanically resolvable, and - in Phase 3 -
+whether a red CI run is a verdict or a damaged run.
+
 Run and summarize:
 
 1. `git worktree list --porcelain` - what worktrees exist, what branch is each on, and **where is
@@ -460,6 +475,13 @@ branch - it is never where conflicts get resolved.
 ## Phase 4 - Re-check main, fast-forward merge, and push
 
 Do this immediately before merging - main may have moved on the remote while you verified.
+
+**Run these five checks rather than narrating them** - same script, phase 4:
+
+    node scripts/safe-merge-preflight.mjs --branch <branch> --phase 4 \
+      --verified-sha <VERIFIED_SHA> --integrated-main-sha <INTEGRATED_MAIN_SHA>
+
+A non-zero exit means step 2 applies: STOP, do not merge. Paste the output.
 
 1. `git fetch origin`, then confirm ALL of:
    - the actual `main` worktree and source worktree are still clean;
