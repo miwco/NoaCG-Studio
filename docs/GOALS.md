@@ -113,6 +113,18 @@ from ~80 places in the tree, so it never changes.*
       (a one-line `src/templates/meta.ts` re-file plus the catalog baselines it moves) - it is the
       one card the owner said *"does pop out"* of that otherwise coherent shelf. Detail and quotes:
       `docs/CATALOG_VARIETY.md` §7.
+      **MEASURED 2026-08-21, and the obvious fix is ruled out.** `catalog-sameness.mjs` now
+      reports the first page per category through the real browse engine. It scores the
+      lower-thirds page at **11 distinct looks out of 12** - as varied as every other shelf - so
+      RE-ORDERING IS NOT THE FIX, and the sameness signature is not the thing to order by. The
+      instrument is blind on the axes that decide this at card size: its fourteen axes are CSS
+      decisions (radius, blur, skew, tracking), while an eye reads PALETTE and SILHOUETTE, and
+      all twelve lower thirds are a dark slab with white text and an amber accent. The stats
+      shelf beside it carries a giant percentage, a lime table, a red dial and a cream printed
+      panel - different shapes, and light backgrounds as well as dark. **The real item is
+      variety of palette and silhouette WITHIN a category**, which is design work rather than
+      ordering work; the next step is an axis measured off the RENDERED card.
+      `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves to compare.
 
 ### The surface under investment: the WEB PLAYOUT CONTROL PANEL
 
