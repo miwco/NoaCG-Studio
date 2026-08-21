@@ -3519,6 +3519,40 @@ are all contrast against the ratified 3.25:1, with no weight component (before: 
 both; after: 3 contrast + 0 both). That is the palette furniture question rather than the type
 question, and it is the next address rule 4 hands over.
 
+#### 25.8.6 …and the contrast half, on Pro's own floor (2026-08-21)
+
+§25.8.5 left rule 4 with three readings on the reachable half, all CONTRAST and none of them
+weight. The repair was already there and pointed at the wrong number: Pro resolves its palette
+through Lite's furniture ladder (`clampLitePalette`, imported rather than re-implemented, because
+two ladders are two answers about one customer's colours), and that ladder repaired the supporting
+tone to `LITE_CONTRAST_FLOOR.secondary` - **3:1**, WCAG's large-text floor. The line the owner
+named on S-03 measures **3.04:1** and cleared it by four hundredths.
+
+**THE LADDER IS SHARED; THE NUMBERS ARE NOT.** Raising `LITE_CONTRAST_FLOOR` would have moved
+Lite on Pro's evidence, and the two are separate projects that do not share a quality bar
+(`src/ai/AGENTS.md`) - a floor ratified on one tier's corpus says nothing about the other's. So
+`clampLitePalette` and `applyLiteBrandPalette` take an optional floor pair, defaulting to Lite's,
+and `pro/language/paint.ts` states `PRO_CONTRAST_FLOOR = { primary: 4.5, secondary: 3.25 }`. One
+implementation, two ratified numbers. The primary rung is untouched: nothing measured names it,
+and moving a floor no evidence names is how a threshold stops meaning anything.
+
+| | after 25.8.5 | after Pro's floor |
+|---|---|---|
+| rule 4 rows | 18 of 36 | **16 of 36** |
+| rule 4 readings | 27 | **24** |
+| …from RECOMPOSED pieces | 3 (all contrast) | **0** |
+| weakest recomposed contrast | 3.01:1 | **3.27:1** |
+| rules 1 / 5 / 6 | 12 / 0 / 36 | 12 / 0 / 36 (unmoved) |
+
+**Rule 4 is now silent on every piece the composer rebuilds** - both axes, after two changes. All
+24 readings that remain belong to pieces mounted as SAVED CODE from August, the same
+unreachable half as the twelve rule-1 rows in §25.8.1. To move those the round would have to be
+recomposed, not re-judged.
+
+`e2e/pro-language.spec.ts` pins the SEPARATION rather than the number: a tone found in the band
+between the two floors comes back repaired for Pro and untouched for Lite, so collapsing the two
+back into one constant fails there.
+
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 
 Three things came out of the owner's 2026-08-19 read of the recreate archives, and all three are

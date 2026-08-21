@@ -770,4 +770,77 @@ test.describe('one design language, the whole package', () => {
     // The unbranded path is untouched: no brand, no override, the language's own colours.
     expect(cases.unbranded.accent).toBe('#22ff88');
   });
+
+  /**
+   * PRO REPAIRS FURNITURE TO ITS OWN FLOOR, THROUGH LITE'S LADDER (§25.8.6).
+   *
+   * The ladder is shared on purpose - two implementations would be two answers about one
+   * customer's colours - but the NUMBERS are not shared, because Lite and Pro are separate
+   * projects that do not share a quality bar (src/ai/AGENTS.md). Lite repairs a supporting tone
+   * to WCAG's large-text 3:1; the owner ratified 3.25:1 for Pro on 2026-08-20, after the line he
+   * named on S-03 measured 3.04:1 and cleared 3 by four hundredths.
+   *
+   * So this pins the DIFFERENCE, on a tone chosen to land in the gap between the two floors: the
+   * same palette through the same function must come back repaired for Pro and untouched for
+   * Lite. A single shared constant would fail here, which is the point.
+   */
+  test('Pro repairs the supporting tone to its own floor, and Lite keeps hers', async ({ page }) => {
+    const out = await page.evaluate(async () => {
+      const { clampLitePalette, LITE_CONTRAST_FLOOR } = await import('/src/ai/liteContract.ts');
+      const { resolvePalette } = await import('/src/ai/pro/language/paint.ts');
+      const { HOUSE_LANGUAGE } = await import('/src/ai/pro/language/contract.ts');
+      // WCAG contrast from first principles: the ladder's own helper is module-private, and
+      // `cssVars.contrastRatio` takes parsed colours rather than hex. Six lines is cheaper than
+      // widening an export purely so a test can see it.
+      const contrastRatio = (a: string, b: string): number => {
+        const chan = (hex: string, i: number) => {
+          const c = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        const lum = (hex: string) => 0.2126 * chan(hex, 0) + 0.7152 * chan(hex, 1) + 0.0722 * chan(hex, 2);
+        const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+        return (hi + 0.05) / (lo + 0.05);
+      };
+      // A supporting tone measured to sit BETWEEN the two floors against this panel. FOUND rather
+      // than hand-picked: a hex guessed to land in a 0.25-wide contrast band is a spec that fails
+      // for arithmetic reasons rather than for the reason it was written.
+      const panel = '#0b1522';
+      const ramp: string[] = [];
+      for (let v = 0x30; v <= 0xd0; v += 1) {
+        const c = v.toString(16).padStart(2, '0');
+        ramp.push(`#${c}${c}${c}`);
+      }
+      const between = ramp.find((hex) => {
+        const r = contrastRatio(hex, panel);
+        return r >= 3.02 && r < 3.24;
+      });
+      if (!between) return { found: false as const };
+      const palette = { accent: '#c8a24a', panel, text: '#ffffff', textDim: between };
+      const lite = clampLitePalette(palette);
+      const pro = resolvePalette({ ...HOUSE_LANGUAGE, palette });
+      return {
+        found: true as const,
+        floorSecondary: LITE_CONTRAST_FLOOR.secondary,
+        source: between,
+        sourceRatio: contrastRatio(between, panel),
+        lite: { textDim: lite.palette.textDim, adjustments: lite.adjustments },
+        pro: {
+          textDim: pro.palette.textDim,
+          ratio: contrastRatio(pro.palette.textDim, panel),
+          adjustments: pro.adjustments,
+        },
+      };
+    });
+
+    expect(out.found, 'a tone between the two floors exists to test with').toBe(true);
+    if (!out.found) return;
+    expect(out.floorSecondary, "Lite's own floor is unchanged by Pro's").toBe(3);
+    // Lite clears its 3:1 already, so the ladder leaves the brand's tone exactly as given.
+    expect(out.lite.textDim, 'Lite keeps a tone that clears 3:1').toBe(out.source);
+    expect(out.lite.adjustments).toEqual([]);
+    // Pro does not, so the same tone is repaired - and past its own floor, not merely past 3.
+    expect(out.pro.textDim, 'Pro moves a tone that only clears 3:1').not.toBe(out.source);
+    expect(out.pro.ratio ?? 0).toBeGreaterThanOrEqual(3.25);
+    expect(out.pro.adjustments).toEqual(expect.arrayContaining([expect.stringContaining('palette_')]));
+  });
 });
