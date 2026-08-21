@@ -471,9 +471,15 @@ e2e/layout.spec.ts.
   air only on an explicit take; event buttons still grey by structural guard; the graphic's
   saved ENTRIES stay a READ-ONLY picker in the editor head (authoring stays in
   GraphicControlPage). Login-optional by design (the slug is the capability); offline builds
-  answer the route honestly, which is also why the page's UI is covered by the maintainer's
-  live checklist rather than the offline e2e suite (e2e/hosted-control.spec.ts pins the
-  publish-side spec build).
+  answer the route honestly, which is also why the page's UI cannot be pinned by the offline
+  suite (e2e/hosted-control.spec.ts covers the publish-side spec build only).
+  **e2e/configured/hosted-control-recovery.spec.ts** is the live half: a capability URL
+  resolves signed-out, a first take reaches the durable log and comes back round the follower,
+  and the layer is still on air with the monitor holding it. It deliberately does NOT gate the
+  boot replay firing TWICE - mutation-tested 2026-08-21, the round-1 bug passes it - because a
+  re-fired replay changes no state the DOM reports (sandboxed monitor iframes, GSAP not ticking
+  headless, re-applied data equal to what is already on air). Closing that needs an observable
+  the stage does not expose; the spec's own header says so rather than implying cover it lacks.
 - **home/PayloadStage** - ONE monitor component: `createOutputStage` over an `OutputPayload`,
   the same two functions the published output URL is built from, fed the same
   `ControlSendItem[]` the verbs send. Both monitors on both surfaces are one of these, which
