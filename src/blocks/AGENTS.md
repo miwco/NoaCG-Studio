@@ -138,7 +138,8 @@ fontSize/maxWidth/color overrides (the Prepare step's erased-region seed field).
 `addPlacedLine(template, {title, ftype})` is the Data panel's add-field on an imported design:
 ONE pure transform emitting the mask wrapper + span (a registry `line` part), the placement +
 type rules in the assembler's exact idiom, and the SPX DataField (update() binds by id - no JS
-change). New lines stack under the lowest existing line and inherit its look. Optional `align`
+change). The element lands after the unit's last mask or the artwork's END - after `</svg>` for
+an inlined SVG, never inside it. New lines stack under the lowest existing line and inherit its look. Optional `align`
 writes the anchor (the wrapper's translateX shift, the assembler's idiom that lineTextStyle
 reads back) and sizes the default slot from that anchor outwards; optional `lineHeight` pins
 the span's line-height. Both exist for the Prepare step's seeded field, which is built from

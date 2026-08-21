@@ -344,3 +344,124 @@ test('svg import: the export door ships the bound SVG unchanged through the gate
   expect(spxFiles.svgInline).toBe(true);
   expect(spxFiles.bound).toBe(true);
 });
+
+test('svg import: outlined text — a glyph-shaped group becomes a placed live field over its own box', async ({ page }) => {
+  // A file whose type was converted to outlines: a backplate group, one group of six glyph
+  // shapes on a shared baseline (one with a descender) named "Name", and a two-path mark.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <g id="Backplate">
+        <rect x="10" y="10" width="380" height="180" fill="#161a22"/>
+        <rect x="10" y="10" width="6" height="180" fill="#f6a623"/>
+      </g>
+      <g id="Name">
+        <path d="M60 80 h20 v40 h-20 Z" fill="#ffffff"/>
+        <path d="M85 80 h20 v40 h-20 Z" fill="#ffffff"/>
+        <path d="M110 80 h20 v40 h-20 Z" fill="#ffffff"/>
+        <path d="M135 80 h20 v50 h-20 Z" fill="#ffffff"/>
+        <path d="M160 80 h20 v40 h-20 Z" fill="#ffffff"/>
+        <path d="M185 80 h20 v40 h-20 Z" fill="#ffffff"/>
+      </g>
+      <g id="Mark">
+        <path d="M320 40 l30 0 l0 30 l-30 0 Z" fill="#f6a623"/>
+        <path d="M330 50 l10 0 l0 10 l-10 0 Z" fill="#161a22"/>
+      </g>
+    </svg>`,
+    'outlined-name.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  // The honest answer still stands — and now names the third road.
+  await expect(page.getByTestId('map-svg-outlined')).toContainText('tick a group of shapes');
+  // Every glyph-shaped group is offered, OFF, labelled from its layer name; the backplate's
+  // rects are furniture, never letters, so it is not on the list.
+  const rows = page.getByTestId('map-svg-outlines');
+  await expect(rows).toContainText('0 of 2 replaced');
+  await expect(page.getByTestId('map-svg-outline-title-o0')).toHaveValue('Name');
+  await expect(page.getByTestId('map-svg-outline-title-o1')).toHaveValue('Mark');
+  const tick = page.getByTestId('map-svg-outline-o0').locator('input[type=checkbox]');
+  await expect(tick).not.toBeChecked();
+  await expect(tick).toBeEnabled(); // measured on the step's own render
+  await page.getByTestId('map-svg-outline-o0').hover();
+  await expect(page.getByTestId('map-svg-highlight')).toBeVisible();
+  await tick.check();
+  await page.getByTestId('map-svg-outline-sample-o0').fill('Ada');
+
+  await createProject(page);
+
+  const state = await page.evaluate(async () => {
+    const [{ useTemplateStore }, { getTemplateParts }, { validateTemplate }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/model/structure.ts'),
+      import('/src/validation/validateTemplate.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    return {
+      fields: t.fields.map((f) => `${f.field}:${f.ftype}:${f.title}:${f.value}`),
+      html: t.html,
+      css: t.css,
+      js: t.js,
+      parts: getTemplateParts(t.html, t.fields).map((p) => `${p.selector}|${p.kind}`),
+      valid: validateTemplate(t).ok,
+    };
+  });
+  // One real placed field, through the raster flow's own transform: mask wrapper + span
+  // in the design unit (AFTER the inlined svg, never inside it), shrink-fit by default.
+  expect(state.fields).toEqual(['f0:textfield:Name:Ada']);
+  const svgEnd = state.html.lastIndexOf('</svg>');
+  expect(state.html.slice(svgEnd)).toMatch(/<div class="imported-design-mask" id="fw0"\s*>\s*<span id="f0" data-fit="shrink"\s*>\s*Ada\s*<\/span>/);
+  expect(state.html.slice(0, svgEnd)).not.toContain('imported-design-mask');
+  // The outlined group is hidden — in the file, not deleted — by the class + the one rule.
+  expect(state.html).toMatch(/<g id="Name" class="imported-design-outlined"\s*>/);
+  expect(state.css).toContain('.imported-design-outlined {\n  display: none;');
+  // …and the field sits where the shapes were: their left edge, cap top a tenth of an em up,
+  // sized from the measured cap height (40 design px / 0.72 ≈ 56), in the shapes' own fill.
+  expect(state.css).toMatch(/#fw0 \{\n {2}position: absolute;\n {2}left: calc\(60px \* var\(--scale\)\);[^}]*top: calc\(74px \* var\(--scale\)\);/);
+  expect(state.css).toMatch(/#f0 \{[^}]*font-size: calc\(56px \* var\(--scale\)\);[^}]*color: rgb\(255, 255, 255\);/);
+  // Both fit runtimes coexist: the SVG's own textLength fit and the placed line's shrink.
+  expect(state.js).toContain('function fitSvgText');
+  expect(state.js).toContain('function fitPlacedText');
+  expect(state.js).toMatch(/typeof fitSvgText === 'function'\) fitSvgText\(\)/);
+  // A hidden group is not a layer: no registry part, no phantom timeline row. The mark is.
+  expect(state.parts).not.toContain('#Name|block');
+  expect(state.parts).toContain('#Mark|block');
+  expect(state.parts).toContain('#f0|line');
+  expect(state.valid).toBe(true);
+
+  // On screen: the live text shows, the shapes it replaced do not.
+  const frame = previewFrame(page);
+  await expect(frame.locator('#f0')).toHaveText('Ada');
+  await expect(frame.locator('#f0')).toBeVisible();
+  await expect(frame.locator('#Name')).toBeHidden();
+});
+
+test('svg import: the layer stagger preset walks the artwork’s own top-level layers, as per-layer data', async ({ page }) => {
+  await dropSvg(page);
+  await page.locator('.wz-next').click();
+  await page.locator('.wz-next').click();
+  // Only the SVG variant offers it — its groups are the layers.
+  await page.locator('.wz-anim', { hasText: 'Layer stagger' }).click();
+  await createProject(page);
+
+  const data = await page.evaluate(async () => {
+    const [{ useTemplateStore }, { parseAnimData }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/blocks/animData.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    const d = parseAnimData(t.js)!;
+    const at = (step: number, sel: string) => d.steps[step].layers[sel]?.opacity?.map((k) => k.time) ?? null;
+    return {
+      enter: { box: at(0, '.imported-design-box'), back: at(0, '#Backplate'), text: at(0, '#Text_x20_Layer'), details: at(0, '#Details') },
+      out: { back: at(d.steps.length - 1, '#Backplate'), details: at(d.steps.length - 1, '#Details') },
+    };
+  });
+  // Every named top-level group has its own track (the keyframe model has no stagger field,
+  // so the stagger survives ONLY as per-layer offsets); they start a beat apart, in file
+  // order on the way in and reversed on the way out.
+  expect(data.enter.box).not.toBeNull();
+  expect(data.enter.back![0]).toBeLessThan(data.enter.text![0]);
+  expect(data.enter.text![0]).toBeLessThan(data.enter.details![0]);
+  expect(data.out.details![0]).toBeLessThan(data.out.back![0]);
+});

@@ -1443,6 +1443,17 @@ export default function CreationWizard() {
                       on: c.marked,
                       title: c.label,
                     })),
+                    // Outlined-text suspects start OFF (a logo is a group of paths too) —
+                    // unless named `f:`; the mapping step measures their boxes on its own
+                    // render, and the generator hides whichever the user ticks (plan §1.A).
+                    svgOutlines: result.outlines.map((c) => ({
+                      candidateId: c.id,
+                      on: c.marked,
+                      title: c.label,
+                      sample: c.label,
+                      box: null,
+                      color: null,
+                    })),
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
@@ -1471,7 +1482,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgImages: [], svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1505,6 +1516,7 @@ export default function CreationWizard() {
                     designSvg: null,
                     svgFields: [],
                     svgImages: [],
+                    svgOutlines: [],
                     svgFonts: [],
                     designArt,
                     importedImages,

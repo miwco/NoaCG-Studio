@@ -9,6 +9,45 @@ import type { SpxField } from './types';
 import { svgLayerLabel } from '../assets/svgImport';
 
 /**
+ * An imported SVG's LAYERS: the top-level named `<g>`s of the inlined artwork (docs/
+ * SVG_IMPORT_PLAN.md P2) — direct children only, because deeper structure is the design's
+ * internals and offering every nested group would bury the layers that matter under dozens
+ * of anonymous ones. Ids are the designer's own, so only a CSS-safe, document-unique one
+ * becomes an identity (the single-token contract every part follows), never one shaped like
+ * a field id. A group hidden because a live field replaced its outlined text (the
+ * `<prefix>-outlined` class, templates/importedDesign/svg.ts) is not a layer — it is not
+ * on screen, so a timeline row or a stagger slot for it would be a phantom.
+ * THE one definition: the part registry and the preset emitters both read it here.
+ */
+export function svgLayerElements(art: Element): Element[] {
+  const doc = art.ownerDocument;
+  const out: Element[] = [];
+  for (const child of Array.from(art.children)) {
+    if (child.tagName.toLowerCase() !== 'g') continue;
+    const id = child.getAttribute('id');
+    if (!id || /^f\d+$/.test(id) || !/^[A-Za-z_][\w-]*$/.test(id)) continue;
+    if (doc.querySelectorAll(`#${id}`).length !== 1) continue;
+    if (/(?:^|\s)[\w-]+-outlined(?:\s|$)/.test(child.getAttribute('class') ?? '')) continue;
+    out.push(child);
+  }
+  return out;
+}
+
+/** The same layers as SELECTORS, read off a template's HTML — `PresetConfig.layers` for the
+ *  per-layer stagger (blocks/presetRegistry emitPresetRegion and the SVG assembler both call
+ *  this, so a preset re-applied after creation targets what create-time targeted). Empty for
+ *  any template whose artwork is not an inlined SVG. */
+export function svgLayerSelectors(html: string): string[] {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const prefix = boxPrefix(doc);
+  if (!prefix) return [];
+  const arts = doc.querySelectorAll(`.${prefix}-art`);
+  const art = arts.length === 1 ? arts[0] : null;
+  if (!art || art.tagName.toLowerCase() !== 'svg') return [];
+  return svgLayerElements(art).map((g) => `#${g.getAttribute('id')}`);
+}
+
+/**
  * The structure contract's spine: the token before `-box` on the first element carrying a
  * `<prefix>-box` class. Resolved against the PARSED DOM (never a raw-text match), so other
  * classes on the same element are fine (`class="lower-third-box glass"` still yields
@@ -126,14 +165,11 @@ export function getTemplateParts(html: string, fields: SpxField[] = []): Templat
     // one becomes an identity, same as every other part.
     const art = unique(`.${prefix}-art`);
     if (art && art.tagName.toLowerCase() === 'svg') {
-      for (const child of Array.from(art.children)) {
-        if (child.tagName.toLowerCase() !== 'g') continue;
-        const id = child.getAttribute('id');
-        if (!id || /^f\d+$/.test(id) || !/^[A-Za-z_][\w-]*$/.test(id) || !unique(`#${id}`)) continue;
+      for (const child of svgLayerElements(art)) {
         parts.push({
-          selector: `#${id}`,
+          selector: `#${child.getAttribute('id')}`,
           kind: 'block',
-          label: svgLayerLabel(child) || id,
+          label: svgLayerLabel(child) || child.getAttribute('id')!,
           channel: 'rise',
         });
       }

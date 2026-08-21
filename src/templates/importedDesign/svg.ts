@@ -28,6 +28,7 @@ import {
 } from '../../model/wizard';
 import type { SpxField } from '../../model/types';
 import { SVG_CANDIDATE_ATTR } from '../../assets/svgImport';
+import { svgLayerSelectors } from '../../model/structure';
 import {
   baseSettings,
   computeScale,
@@ -53,6 +54,7 @@ const NO_SVG: DesignSvg = {
   height: 270,
   fields: [],
   images: [],
+  outlines: [],
   fonts: [],
 };
 
@@ -90,6 +92,18 @@ function bindSvgMarkup(svg: DesignSvg): string {
     const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${field.candidateId}"]`);
     el?.setAttribute('id', `f${i}`);
   });
+  // An outlined-text group the user chose to replace (plan §1.A) is HIDDEN, not deleted:
+  // the class below is what the `.{prefix}-outlined { display: none }` rule in template.css
+  // matches, so a professional can compare the live text against the shapes by deleting
+  // one line, and the file still carries everything the designer exported. The HTML field
+  // that stands in for it is placed afterwards (components/wizard/draft.ts).
+  for (const outline of svg.outlines) {
+    const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${outline.candidateId}"]`);
+    if (!el) continue;
+    const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+    if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
+    el.setAttribute('class', own.join(' '));
+  }
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
     el.removeAttribute(SVG_CANDIDATE_ATTR);
   }
@@ -149,9 +163,15 @@ function svgFontCss(svg: DesignSvg): string {
  * operator value would simply run past the artwork. The runtime records each bound node's
  * original length on first measure and applies `textLength` + `lengthAdjust` ONLY when a new
  * value overflows it — never distorting by default, mirroring the raster flow's
- * shrink-not-condense rule. Named `fitPlacedText` because that is the optional hook the
- * shared update() already calls (templates/shared/base.ts). Design-owned JS OUTSIDE the
- * marked region, so the data conversion and every export carry it untouched.
+ * shrink-not-condense rule. Design-owned JS OUTSIDE the marked region, so the data
+ * conversion and every export carry it untouched.
+ *
+ * Its name is `fitSvgText`, NOT the shared update()'s optional `fitPlacedText` hook: that
+ * name belongs to the HTML placed-line shrink runtime (templates/shared/textFit.ts), which
+ * blocks/designLayout installs by that exact marker the first time a placed field asks for
+ * shrink - an outlined-text stand-in on this very design (plan §1.A). Two functions of one
+ * name would leave the later declaration winning and the other fit silently dead, so the SVG
+ * fit gets its own hook line in update() (SVG_FIT_HOOK below) and both can coexist.
  */
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
@@ -161,7 +181,7 @@ const SVG_FIT_JS = `
 // A value that fits keeps the designer's typography untouched. Remove this block to let
 // text run free instead.
 var svgFitWidths = {};
-function fitPlacedText() {
+function fitSvgText() {
   var nodes = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
@@ -178,15 +198,21 @@ function fitPlacedText() {
   }
 }
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', fitPlacedText);
+  document.addEventListener('DOMContentLoaded', fitSvgText);
 } else {
-  fitPlacedText();                              // DOM already parsed (e.g. an inline preview build)
+  fitSvgText();                                 // DOM already parsed (e.g. an inline preview build)
 }
 // The first pass may have measured a FALLBACK face; once the real fonts arrive, re-measure
 // from scratch so the recorded widths are the design's true ones.
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(function () { svgFitWidths = {}; fitPlacedText(); });
+  document.fonts.ready.then(function () { svgFitWidths = {}; fitSvgText(); });
 }`;
+
+/** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs)
+ *  — the SVG fit's own hook is inserted right after it, so update() re-fits the SVG's text
+ *  the way it re-fits placed lines. Matched by shape, like blocks/designLayout does. */
+const PLACED_TEXT_HOOK = `  if (typeof fitPlacedText === 'function') fitPlacedText();`;
+const SVG_FIT_HOOK = `  if (typeof fitSvgText === 'function') fitSvgText();       // the SVG's own text layers (below)`;
 
 /** The preset to build with — always one of this category's, whatever a carried-over draft says. */
 function designPreset(id: string): AnimPreset {
@@ -247,6 +273,7 @@ ${rootPosition}
 
 /* ── The design unit: the SVG and its bound text animate together as one box. ── */
 .${PREFIX}-box {
+  position: relative;              /* a placed HTML field (over outlined text) positions against it */
   width: calc(${svg.width}px * var(--scale));  /* the artwork's own width drives the size */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -255,7 +282,13 @@ ${rootPosition}
   width: 100%;                     /* fills the box — so --scale resizes art and text together */
   height: auto;                    /* the viewBox keeps the aspect */
 }
-`;
+${svg.outlines.length > 0 ? `
+/* Outlined text replaced by a live field: the original shapes stay in the file, hidden.
+   Delete this rule to see them again beside the text that stands in for them. */
+.${PREFIX}-outlined {
+  display: none;
+}
+` : ''}`;
 
   const preset = designPreset(o.animation.presetId);
   const ease = resolveEasing(o.animation.easing, preset.autoEase);
@@ -263,13 +296,19 @@ ${rootPosition}
     prefix: PREFIX,
     lineCount: 0, // the design presets animate the whole box; the SVG's text is inside it
     hasAccent: false,
+    // The artwork's own top-level layers — what the per-layer stagger walks. Read off the
+    // emitted HTML by the same function emitPresetRegion uses, so create and re-apply agree.
+    layers: svgLayerSelectors(html),
     steps: false,
     speed: o.animation.speed,
     easeIn: ease.easeIn,
     easeOut: ease.easeOut,
   };
 
-  const js = runtimeJs(name, preset.emit(cfg)) + SVG_FIT_JS + '\n';
+  const js =
+    runtimeJs(name, preset.emit(cfg)).replace(PLACED_TEXT_HOOK, `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}`) +
+    SVG_FIT_JS +
+    '\n';
 
   const template: SpxTemplate = {
     name,
@@ -308,7 +347,8 @@ export const IMPORTED_SVG: TemplateVariant = {
   fieldPlan: { kind: 'fixed', reason: 'The fields are the SVG’s own text layers, chosen at import.' },
   // The artwork IS the design — a logo drawn into it needs no slot from us.
   logo: 'none',
-  animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur'],
+  // The whole-unit presets plus the per-layer stagger — only an SVG has layers to stagger.
+  animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur', 'design-stagger'],
   defaultPalette: paletteById('ivory'),
   defaultFontId: 'inter',
   defaultZone: 'bottom-left',
