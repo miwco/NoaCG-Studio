@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createProject } from './_create';
+import { openWorkspace } from './_workspace';
 
 // CHAT INTAKE (src/audience/chatIntake.ts): Twitch / YouTube live chat as a PRODUCER of
 // submissions into the production's audience inbox.
@@ -55,41 +56,40 @@ test('a chat line reaches air the way a phone question does: inbox, edit, approv
   await createProject(page, { name: 'House Q&A' });
   await productionFor(page, 'Chat In');
 
-  await page.getByTestId('tab-audience').click();
-  await expect(page.getByTestId('production-audience')).toBeVisible();
-  await page.getByTestId('audience-open').check();
+  const audience = await openWorkspace(page, 'audience');
+  await audience.getByTestId('audience-open').check();
 
-  await attachTestSource(page, 'Chat In');
+  await attachTestSource(audience, 'Chat In');
   // The source is on the board: platform + label as TEXT, with a live indicator.
-  const source = page.getByTestId('chat-source-test');
+  const source = audience.getByTestId('chat-source-test');
   await expect(source).toBeVisible();
   await expect(source).toContainText('Chat · Test');
   await expect(source.locator('.pd-aud-source-dot')).toHaveClass(/live/);
 
-  await pushChat(page, 'rivergirl', 'This is the best show you have done all year', 'm1');
+  await pushChat(audience, 'rivergirl', 'This is the best show you have done all year', 'm1');
 
   // It lands in the INBOX as an ordinary 'new' submission - the platform rides the author
   // line as plain text (the audience category's rule: text, never a logo).
-  const row = page.locator('.pd-aud-row').first();
+  const row = audience.locator('.pd-aud-row').first();
   await expect(row).toBeVisible();
   await expect(row.locator('.pd-aud-author')).toHaveText('rivergirl · Chat');
   await expect(row.locator('.pd-aud-body')).toContainText('best show you have done all year');
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('1 in · 0 dropped');
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('1 in · 0 dropped');
 
   // The operator's ordinary moderation: tidy the broadcast version, approve - which moves the
   // row out of the Inbox filter and into Approved - then send it from there.
   await row.getByTestId('audience-edit-body').fill('Best show of the year - thank you!');
   await row.getByTestId('audience-approve').click();
-  await expect(page.locator('.pd-aud-row')).toHaveCount(0); // the inbox is done with it
-  await page.getByTestId('audience-filter-approved').click();
-  const approved = page.locator('.pd-aud-row').first();
+  await expect(audience.locator('.pd-aud-row')).toHaveCount(0); // the inbox is done with it
+  await audience.getByTestId('audience-filter-approved').click();
+  const approved = audience.locator('.pd-aud-row').first();
   await expect(approved.locator('.pd-aud-author')).toHaveText('rivergirl · Chat');
   await approved.getByTestId('audience-send').click();
-  await expect(page.getByTestId('audience-note')).toContainText('airs when you Take it');
+  await expect(audience.getByTestId('audience-note')).toContainText('airs when you Take it');
 
   // And the ONE exit works end to end: the cue airs on Take, with the edited text and the
   // chat author's name on it.
-  await page.getByTestId('tab-playout').click();
+  // Playout never left this tab - that is the point of the workspaces having their own.
   const cue = page.locator('.pd-cue', { hasText: 'Best show of the year' }).first();
   await expect(cue).toBeVisible();
   await cue.click();
@@ -102,14 +102,15 @@ test('a chat line reaches air the way a phone question does: inbox, edit, approv
 test('the throttle and the dedupe refuse visibly, and what passes is what the inbox holds', async ({ page }) => {
   await createProject(page, { name: 'House Q&A' });
   await productionFor(page, 'Firehose');
-  await page.getByTestId('tab-audience').click();
-  await page.getByTestId('audience-open').check();
-  await attachTestSource(page, 'Firehose');
+  const audience = await openWorkspace(page, 'audience');
+  await audience.getByTestId('audience-open').check();
+  await attachTestSource(audience, 'Firehose');
 
   // One synchronous burst, so the 10-per-10-s intake window cannot slide mid-test: three
   // warm-up lines, an exact re-delivery of the first (the dedupe case), then a ten-line
   // flood. 3 + 7 fit the window; the duplicate and the last 3 of the flood are refused.
-  await page.evaluate(() => {
+  // On the AUDIENCE page: the intake seam is installed on whichever tab attached the source.
+  await audience.evaluate(() => {
     const held = (window as unknown as { __chatTest?: { push(a: string, t: string, i?: string): void } }).__chatTest;
     if (!held) throw new Error('no test chat source attached');
     for (let i = 0; i < 3; i += 1) held.push(`viewer${i}`, `warm-up line ${i}`, `d${i}`);
@@ -120,77 +121,77 @@ test('the throttle and the dedupe refuse visibly, and what passes is what the in
   // The counters say exactly what happened - a limiter that drops silently reads as a broken
   // connector - and the inbox holds exactly what was accepted, each line its own author, so
   // the per-author caps never bit.
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('10 in · 4 dropped');
-  await expect(page.getByTestId('audience-filter-inbox')).toContainText('(10)');
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('10 in · 4 dropped');
+  await expect(audience.getByTestId('audience-filter-inbox')).toContainText('(10)');
 });
 
 test('a closed door refuses chat the same as phones, and the surface says so', async ({ page }) => {
   await createProject(page, { name: 'House Q&A' });
   await productionFor(page, 'Doors Shut');
-  await page.getByTestId('tab-audience').click();
-  await attachTestSource(page, 'Doors Shut');
+  const audience = await openWorkspace(page, 'audience');
+  await attachTestSource(audience, 'Doors Shut');
 
   // The door is closed. The submit refusal is COUNTED, and the strip explains it - without
   // the hint, every dropped line reads as a connector fault.
-  await expect(page.getByTestId('chat-sources-closed-hint')).toBeVisible();
-  await pushChat(page, 'early-bird', 'Am I first?', 'e1');
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('0 in · 1 dropped');
-  await expect(page.locator('.pd-aud-row')).toHaveCount(0);
+  await expect(audience.getByTestId('chat-sources-closed-hint')).toBeVisible();
+  await pushChat(audience, 'early-bird', 'Am I first?', 'e1');
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('0 in · 1 dropped');
+  await expect(audience.locator('.pd-aud-row')).toHaveCount(0);
 
   // Opening the door clears the hint and lets the next line through.
-  await page.getByTestId('audience-open').check();
-  await expect(page.getByTestId('chat-sources-closed-hint')).toBeHidden();
-  await pushChat(page, 'early-bird', 'Am I first now?', 'e2');
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('1 in · 1 dropped');
-  await expect(page.locator('.pd-aud-row')).toHaveCount(1);
+  await audience.getByTestId('audience-open').check();
+  await expect(audience.getByTestId('chat-sources-closed-hint')).toBeHidden();
+  await pushChat(audience, 'early-bird', 'Am I first now?', 'e2');
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('1 in · 1 dropped');
+  await expect(audience.locator('.pd-aud-row')).toHaveCount(1);
 });
 
 test('pause stops collecting without counting a backlog, resume collects again, remove disconnects', async ({ page }) => {
   await createProject(page, { name: 'House Q&A' });
   await productionFor(page, 'Half Time');
-  await page.getByTestId('tab-audience').click();
-  await page.getByTestId('audience-open').check();
-  await attachTestSource(page, 'Half Time');
+  const audience = await openWorkspace(page, 'audience');
+  await audience.getByTestId('audience-open').check();
+  await attachTestSource(audience, 'Half Time');
 
-  await pushChat(page, 'viewer-one', 'Before the pause', 'p1');
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('1 in · 0 dropped');
+  await pushChat(audience, 'viewer-one', 'Before the pause', 'p1');
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('1 in · 0 dropped');
 
   // PAUSED means not collecting: nothing lands, and nothing is remembered as "dropped" - an
   // operator pausing a firehose does not want ten minutes of backlog counted against it.
-  await page.getByTestId('chat-source-pause').click();
-  await expect(page.getByTestId('chat-source-pause')).toContainText('Resume');
-  await pushChat(page, 'viewer-two', 'Shouted into the void', 'p2');
-  await pushChat(page, 'viewer-three', 'Also unheard', 'p3');
+  await audience.getByTestId('chat-source-pause').click();
+  await expect(audience.getByTestId('chat-source-pause')).toContainText('Resume');
+  await pushChat(audience, 'viewer-two', 'Shouted into the void', 'p2');
+  await pushChat(audience, 'viewer-three', 'Also unheard', 'p3');
 
-  await page.getByTestId('chat-source-pause').click(); // resume
-  await pushChat(page, 'viewer-four', 'After the pause', 'p4');
+  await audience.getByTestId('chat-source-pause').click(); // resume
+  await pushChat(audience, 'viewer-four', 'After the pause', 'p4');
   // 2 in proves the paused pair truly vanished - three landings would read 4 in.
-  await expect(page.getByTestId('chat-source-stats')).toHaveText('2 in · 0 dropped');
-  await expect(page.locator('.pd-aud-row')).toHaveCount(2);
+  await expect(audience.getByTestId('chat-source-stats')).toHaveText('2 in · 0 dropped');
+  await expect(audience.locator('.pd-aud-row')).toHaveCount(2);
 
-  await page.getByTestId('chat-source-remove').click();
-  await expect(page.getByTestId('chat-source-test')).toHaveCount(0);
+  await audience.getByTestId('chat-source-remove').click();
+  await expect(audience.getByTestId('chat-source-test')).toHaveCount(0);
 });
 
 test('the add form refuses what no driver could use, before any source row exists', async ({ page }) => {
   await createProject(page, { name: 'House Q&A' });
   await productionFor(page, 'Form Check');
-  await page.getByTestId('tab-audience').click();
+  const audience = await openWorkspace(page, 'audience');
 
   // A Twitch name that is not one.
-  await page.getByTestId('chat-add-channel').fill('not a channel!!');
-  await page.getByTestId('chat-add-connect').click();
-  await expect(page.getByTestId('chat-add-note')).toContainText('Not a Twitch channel name');
+  await audience.getByTestId('chat-add-channel').fill('not a channel!!');
+  await audience.getByTestId('chat-add-connect').click();
+  await expect(audience.getByTestId('chat-add-note')).toContainText('Not a Twitch channel name');
 
   // YouTube needs a video AND a key - and says which is missing.
-  await page.getByTestId('chat-add-platform').selectOption('youtube');
-  await page.getByTestId('chat-add-video').fill('definitely-not-a-video-url');
-  await page.getByTestId('chat-add-connect').click();
-  await expect(page.getByTestId('chat-add-note')).toContainText('Not a YouTube video id');
-  await page.getByTestId('chat-add-video').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-  await page.getByTestId('chat-add-connect').click();
-  await expect(page.getByTestId('chat-add-note')).toContainText('API key');
+  await audience.getByTestId('chat-add-platform').selectOption('youtube');
+  await audience.getByTestId('chat-add-video').fill('definitely-not-a-video-url');
+  await audience.getByTestId('chat-add-connect').click();
+  await expect(audience.getByTestId('chat-add-note')).toContainText('Not a YouTube video id');
+  await audience.getByTestId('chat-add-video').fill('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+  await audience.getByTestId('chat-add-connect').click();
+  await expect(audience.getByTestId('chat-add-note')).toContainText('API key');
 
   // Nothing connected - refusing at the form means no row was born to show an error on.
-  await expect(page.locator('.pd-aud-source')).toHaveCount(0);
+  await expect(audience.locator('.pd-aud-source')).toHaveCount(0);
 });

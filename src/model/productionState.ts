@@ -17,6 +17,11 @@ import type { JsonObject } from './productionData';
 
 const KEY = 'spx-gfx-production-data';
 
+/** The localStorage key the tree lives under, so another TAB can recognise a write to it.
+ *  Exported because the production page listens for `storage` to pick up a value typed on the
+ *  Data workspace, which now opens in its own browser tab. */
+export const PRODUCTION_DATA_KEY = KEY;
+
 type Store = Record<string, JsonObject>;
 
 function readStore(): Store {

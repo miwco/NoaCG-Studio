@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { createProject } from './_create';
+import { openWorkspace } from './_workspace';
+import { settleDurableWrites } from './_durable';
 import { parkFocusOffControls } from './_keys';
 
 // The production DATA workspace (docs/INTERACTIVE_PLAYOUT_PLAN.md D3/D6): the show's own
@@ -22,11 +24,10 @@ test('a quiz bank authored on the Data tab loads into the cue, airs only on Take
   await productionFor(page, 'Quiz Night');
 
   // ── The Data workspace: create a quiz table (preset columns spell the quiz field titles). ──
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('production-data')).toBeVisible();
-  await expect(page.getByTestId('data-empty')).toBeVisible();
-  await page.getByTestId('add-dataset').click();
-  const dataset = page.locator('.pd-dataset');
+  const data = await openWorkspace(page, 'data');
+  await expect(data.getByTestId('data-empty')).toBeVisible();
+  await data.getByTestId('add-dataset').click();
+  const dataset = data.locator('.pd-dataset');
   await expect(dataset).toHaveCount(1);
   await expect(dataset.getByTestId('dataset-name')).toHaveValue('Quiz questions');
   // The preset ships its starter row; fill it, then add a second question.
@@ -37,13 +38,13 @@ test('a quiz bank authored on the Data tab loads into the cue, airs only on Take
     }
   };
   await fill(0, ['Which planet is known as the Red Planet?', 'Venus', 'Mars', 'Pluto', 'Titan', 'B']);
-  await page.getByTestId('add-row').click();
+  await data.getByTestId('add-row').click();
   await expect(dataset.locator('tbody tr')).toHaveCount(2);
   await fill(1, ['Which ocean is the largest?', 'Atlantic', 'Indian', 'Pacific', 'Arctic', 'C']);
   await expect(dataset).toContainText('2 rows');
 
   // ── Back on Playout, the cue offers the rows — labelled by their question. ──
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   const load = page.getByTestId('cue-load-row');
   await expect(load).toBeVisible();
   await expect(load.locator('option')).toHaveCount(3); // the placeholder + two rows
@@ -75,28 +76,27 @@ test('a quiz bank authored on the Data tab loads into the cue, airs only on Take
   await expect(program.locator('#f0')).toHaveText('Which ocean is the largest?');
 
   // ── The table is on the Show record: reload, reopen the Data tab, everything is there. ──
-  await page.reload();
+  await data.reload();
   await expect(page.getByTestId('production-page')).toBeVisible();
-  await page.getByTestId('tab-data').click();
-  await expect(page.locator('.pd-dataset tbody tr')).toHaveCount(2);
-  await expect(page.locator('.pd-dataset tbody tr').nth(1).locator('td input').first()).toHaveValue(
+  await expect(data.locator('.pd-dataset tbody tr')).toHaveCount(2);
+  await expect(data.locator('.pd-dataset tbody tr').nth(1).locator('td input').first()).toHaveValue(
     'Which ocean is the largest?',
   );
 
   // The deep link works too: #/production/<id>/data is a real route with real history.
-  expect(page.url()).toContain('/data');
+  expect(data.url()).toContain('/data');
 
   // ── Row and table removal: a row goes at once; a whole table asks twice. ──
-  const rows = page.locator('.pd-dataset tbody tr');
+  const rows = data.locator('.pd-dataset tbody tr');
   await rows.nth(0).locator('[data-testid^="row-delete-"]').click();
   await expect(rows).toHaveCount(1);
-  await page.getByTestId('dataset-delete').click();
-  await expect(page.getByTestId('dataset-delete')).toHaveText('Delete table?');
-  await page.getByTestId('dataset-delete').click();
-  await expect(page.getByTestId('data-empty')).toBeVisible();
+  await data.getByTestId('dataset-delete').click();
+  await expect(data.getByTestId('dataset-delete')).toHaveText('Delete table?');
+  await data.getByTestId('dataset-delete').click();
+  await expect(data.getByTestId('data-empty')).toBeVisible();
 
   // Back on Playout the load control disappears with the table — no dead select.
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   await expect(page.getByTestId('cue-load-row')).toBeHidden();
 });
 
@@ -104,24 +104,23 @@ test('a table whose columns match nothing offers no load control, and columns ca
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Plain News');
 
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('new-dataset-kind').selectOption('generic');
-  await page.getByTestId('add-dataset').click();
-  const dataset = page.locator('.pd-dataset');
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('new-dataset-kind').selectOption('generic');
+  await data.getByTestId('add-dataset').click();
+  const dataset = data.locator('.pd-dataset');
 
   // Generic columns match no lower-third field — the Playout tab offers nothing.
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   await expect(page.getByTestId('cue-load-row')).toBeHidden();
 
   // Rename a column to the field's TITLE and the binding appears — the words are the wiring.
-  await page.getByTestId('tab-data').click();
   await dataset.getByTestId('col-c0').fill('Name');
   await dataset.locator('tbody tr td input').first().fill('Alexandra Riva');
-  await page.getByTestId('new-column-name').fill('Title');
-  await page.getByTestId('add-column').click();
+  await data.getByTestId('new-column-name').fill('Title');
+  await data.getByTestId('add-column').click();
   await dataset.locator('tbody tr td input').nth(3).fill('Chief Correspondent');
 
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   const load = page.getByTestId('cue-load-row');
   await expect(load).toBeVisible();
   await load.selectOption({ label: 'Data table: Alexandra Riva' });
@@ -138,10 +137,10 @@ test('a teams table loads one team into the side the operator picked, and leaves
   await createProject(page, { name: 'House Match Board' });
   await productionFor(page, 'Cup Final');
 
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('new-dataset-kind').selectOption('teams');
-  await page.getByTestId('add-dataset').click();
-  const dataset = page.locator('.pd-dataset');
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('new-dataset-kind').selectOption('teams');
+  await data.getByTestId('add-dataset').click();
+  const dataset = data.locator('.pd-dataset');
   await expect(dataset.getByTestId('dataset-name')).toHaveValue('Teams');
   const fill = async (rowIndex: number, cells: string[]) => {
     const row = dataset.locator('tbody tr').nth(rowIndex);
@@ -150,10 +149,10 @@ test('a teams table loads one team into the side the operator picked, and leaves
   // Columns: Team · Score · Team colour · Team logo — every one the sideless half of a real
   // field title, which is what makes them bindable at all.
   await fill(0, ['Ashton United', '2', '#ff0000', '']);
-  await page.getByTestId('add-row').click();
+  await data.getByTestId('add-row').click();
   await fill(1, ['Marske Town', '1', '#0000ff', '']);
 
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   const side = page.getByTestId('cue-load-side');
   await expect(side).toBeVisible();          // a sided board, so the picker is offered
 
@@ -186,14 +185,14 @@ test('a graphic with no sides never grows a side picker, and the quiz binding is
   await createProject(page, { name: 'Arena Quiz' });
   await productionFor(page, 'Quiz Night 2');
 
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('add-dataset').click();
-  const dataset = page.locator('.pd-dataset');
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('add-dataset').click();
+  const dataset = data.locator('.pd-dataset');
   const row = dataset.locator('tbody tr').nth(0);
   const cells = ['Which planet is red?', 'Venus', 'Mars', 'Pluto', 'Titan', 'B'];
   for (let i = 0; i < cells.length; i++) await row.locator('td input').nth(i).fill(cells[i]);
 
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   await page.getByTestId('cue-load-row').selectOption({ index: 1 });
   await expect(page.getByTestId('cue-field-f0')).toHaveValue('Which planet is red?');
   await expect(page.getByTestId('cue-field-f2')).toHaveValue('Mars');
@@ -221,9 +220,8 @@ test('a graphic on air survives a Data-workspace round trip', async ({ page }) =
   await expect(program.locator('#f0')).toHaveText(AIRED);
   await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');
 
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('production-data')).toBeVisible();
-  await page.getByTestId('tab-playout').click();
+  const data = await openWorkspace(page, 'data');
+  await settleDurableWrites(data);
 
   // Back on Playout: the rundown still says ON AIR, and now so does the picture.
   await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');
@@ -247,8 +245,8 @@ test('a quiz bank imported from CSV loads into a cue and airs — the Phase 2 wa
   await createProject(page, { name: 'Arena Quiz' });
   await productionFor(page, 'Import Night');
 
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('import-dataset').setInputFiles({
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('import-dataset').setInputFiles({
     name: 'Quiz bank.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(
@@ -260,13 +258,13 @@ test('a quiz bank imported from CSV loads into a cue and airs — the Phase 2 wa
 
   // It reports what BOUND, not merely what arrived: a table that matches no field imports
   // perfectly and does nothing.
-  const note = page.getByTestId('import-note');
+  const note = data.getByTestId('import-note');
   await expect(note).toContainText('Imported 2 rows');
   await expect(note).toContainText('Question');
   await expect(note).toContainText('Correct answer');
 
   // A real table, named after the file, editable like any other.
-  const dataset = page.locator('.pd-dataset');
+  const dataset = data.locator('.pd-dataset');
   await expect(dataset).toHaveCount(1);
   await expect(dataset.getByTestId('dataset-name')).toHaveValue('Quiz bank');
   await expect(dataset.locator('tbody tr')).toHaveCount(2);
@@ -276,7 +274,7 @@ test('a quiz bank imported from CSV loads into a cue and airs — the Phase 2 wa
   );
 
   // ── Load a row into the cue and air it. ──
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   await page.getByTestId('cue-load-next').click();
   await expect(page.getByTestId('cue-field-f0')).toHaveValue('Which of these, exactly, is a planet?');
   const program = page.frameLocator('[data-testid="program-stage"] iframe');
@@ -293,12 +291,12 @@ test('the downloaded template is a file the importer accepts, with the columns a
   // which is the whole reason a blank template beats guessing at column names.
   await createProject(page, { name: 'Arena Quiz' });
   await productionFor(page, 'Template Night');
-  await page.getByTestId('tab-data').click();
+  const data = await openWorkspace(page, 'data');
 
-  await page.getByTestId('new-dataset-kind').selectOption('quiz');
+  await data.getByTestId('new-dataset-kind').selectOption('quiz');
   const download = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByTestId('download-dataset-template').click(),
+    data.waitForEvent('download'),
+    data.getByTestId('download-dataset-template').click(),
   ]).then(([d]) => d);
   expect(download.suggestedFilename()).toBe('quiz-questions-template.csv');
   const stream = await download.createReadStream();
@@ -308,12 +306,12 @@ test('the downloaded template is a file the importer accepts, with the columns a
   expect(text.trim()).toBe('Question,Answer A,Answer B,Answer C,Answer D,Correct answer');
 
   // Hand it straight back, with a row typed in as an operator would.
-  await page.getByTestId('import-dataset').setInputFiles({
+  await data.getByTestId('import-dataset').setInputFiles({
     name: 'Quiz questions.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from(`${text}Which planet is red?,Venus,Mars,Pluto,Titan,B\r\n`),
   });
-  const note = page.getByTestId('import-note');
+  const note = data.getByTestId('import-note');
   await expect(note).toContainText('Imported 1 row');
   // Every column bound - a template that named a column no field answers to would be the one
   // failure this feature exists to make impossible.
@@ -323,44 +321,44 @@ test('the downloaded template is a file the importer accepts, with the columns a
 test('an imported table whose columns match no field says so rather than looking successful', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'No Match');
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('import-dataset').setInputFiles({
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('import-dataset').setInputFiles({
     name: 'sales.csv',
     mimeType: 'text/csv',
     buffer: Buffer.from('Region;Revenue\nNorth;12\nSouth;9\n'),
   });
-  const note = page.getByTestId('import-note');
+  const note = data.getByTestId('import-note');
   // The semicolon export still parses as two columns — the separator is detected, not assumed.
-  await expect(page.getByTestId('col-c0')).toHaveValue('Region');
-  await expect(page.getByTestId('col-c1')).toHaveValue('Revenue');
+  await expect(data.getByTestId('col-c0')).toHaveValue('Region');
+  await expect(data.getByTestId('col-c1')).toHaveValue('Revenue');
   await expect(note).toContainText('NO column matches');
 });
 
 test('a file that is not a table is refused with a reason', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Bad File');
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('import-dataset').setInputFiles({
+  const data = await openWorkspace(page, 'data');
+  await data.getByTestId('import-dataset').setInputFiles({
     name: 'notes.json',
     mimeType: 'application/json',
     buffer: Buffer.from('{"hello":"world"}'),
   });
-  await expect(page.getByTestId('import-note')).toContainText('list of rows');
-  await expect(page.getByTestId('data-empty')).toBeVisible();
+  await expect(data.getByTestId('import-note')).toContainText('list of rows');
+  await expect(data.getByTestId('data-empty')).toBeVisible();
 });
 
 test('the empty workspace carries the doors and names the columns that would bind', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Empty Data');
-  await page.getByTestId('tab-data').click();
+  const data = await openWorkspace(page, 'data');
 
   // With no tables the three doors live INSIDE the empty state - it used to be one grey
   // sentence over most of the screen with the actions parked in a corner of the header.
-  const empty = page.getByTestId('data-empty');
+  const empty = data.getByTestId('data-empty');
   await expect(empty).toBeVisible();
   await expect(empty.getByTestId('add-dataset')).toBeVisible();
   await expect(empty.getByTestId('download-dataset-template')).toBeVisible();
-  await expect(page.locator('.pd-data-head .pd-data-actions')).toHaveCount(0);
+  await expect(data.locator('.pd-data-head .pd-data-actions')).toHaveCount(0);
 
   // And it answers the surface's one hard question - what do I call my columns? - with this
   // production's own field titles, which is what an imported header is matched against.
@@ -370,16 +368,16 @@ test('the empty workspace carries the doors and names the columns that would bin
   // Create a table and the same cluster moves to the header, flush right and unbroken. Asserted
   // as GEOMETRY: `toBeVisible` is blind to a button that wrapped onto a row of its own, which is
   // exactly what the ⬇ Blank CSV button used to do beside a `.spacer` that pushes nothing.
-  await page.getByTestId('add-dataset').click();
+  await data.getByTestId('add-dataset').click();
   await expect(empty).toHaveCount(0);
-  const actions = page.locator('.pd-data-head .pd-data-actions');
+  const actions = data.locator('.pd-data-head .pd-data-actions');
   await expect(actions).toBeVisible();
   // ONE ROW is measured as the cluster's own HEIGHT, not by comparing the children's tops:
   // they are centred on the line at slightly different heights (a select is a pixel taller than
   // a button), so rounded tops disagree by one pixel on some platforms and read as two rows on a
   // cluster that never wrapped. A wrapped cluster is two control heights plus the gap - far
   // above any rounding.
-  const layout = await page.evaluate(() => {
+  const layout = await data.evaluate(() => {
     const head = document.querySelector('.pd-data-head')!.getBoundingClientRect();
     const box = document.querySelector('.pd-data-head .pd-data-actions')!.getBoundingClientRect();
     return { height: Math.round(box.height), rightGap: Math.round(head.right - box.right) };
@@ -410,23 +408,23 @@ test('a bound field takes the LIVE value on air, and an old cue cannot re-air a 
   await productionFor(page, 'Match Night');
 
   // ── The playground: a nested tree, typed by what was written rather than by a schema. ──
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('production-live-data')).toBeVisible();
-  await addValue(page, 'match.home.name', 'Finland');
-  await addValue(page, 'match.home.score', '1');
-  await expect(page.getByTestId('data-row-match.home.score')).toContainText('number');
+  const data = await openWorkspace(page, 'data');
+  await expect(data.getByTestId('production-live-data')).toBeVisible();
+  await addValue(data, 'match.home.name', 'Finland');
+  await addValue(data, 'match.home.score', '1');
+  await expect(data.getByTestId('data-row-match.home.score')).toContainText('number');
   // A clock is TEXT - a value box that parsed 12:31 as a number would air 12.
-  await addValue(page, 'match.clock', '12:31');
-  await expect(page.getByTestId('data-row-match.clock')).toContainText('string');
+  await addValue(data, 'match.clock', '12:31');
+  await expect(data.getByTestId('data-row-match.clock')).toContainText('string');
 
   // ── Bind the graphic's first field to the name. ──
-  const graphicName = await firstGraphicName(page);
-  await page.getByTestId(`bind-${graphicName}-f0`).fill('match.home.name');
-  await expect(page.getByTestId(`bind-value-${graphicName}-f0`)).toHaveText('Finland');
+  const graphicName = await firstGraphicName(data);
+  await data.getByTestId(`bind-${graphicName}-f0`).fill('match.home.name');
+  await expect(data.getByTestId(`bind-value-${graphicName}-f0`)).toHaveText('Finland');
 
   // ── On Playout the bound field READS OUT: it is not a cue value, so there is no box to type
   //    a value into that nothing would ever air. ──
-  await page.getByTestId('tab-playout').click();
+  await settleDurableWrites(data);
   await expect(page.getByTestId('cue-bound-f0')).toBeVisible();
   await expect(page.getByTestId('cue-field-f0')).toHaveCount(0);
   const preview = page.frameLocator('iframe[title="Cue preview"]');
@@ -459,18 +457,16 @@ test('a bound field takes the LIVE value on air, and an old cue cannot re-air a 
 
   // ── THE RULE THAT MATTERS (plan 2.7): the data moves while this cue sits there prepared,
   //    and taking it AGAIN airs the new value, never the one it was prepared with. ──
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('data-value-match.home.name').fill('Sweden');
-  await page.getByTestId('tab-playout').click();
+  await data.getByTestId('data-value-match.home.name').fill('Sweden');
+  await settleDurableWrites(data);
   await expect(program.locator('#f0')).toHaveText('Sweden');
   await page.getByTestId('verb-take').click();
   await expect(program.locator('#f0')).toHaveText('Sweden');
 
   // ── Reload: the live tree is runtime state and survives, and it is NOT on the show record. ──
-  await page.reload();
+  await data.reload();
   await expect(page.getByTestId('production-page')).toBeVisible();
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('data-value-match.home.name')).toHaveValue('Sweden');
+  await expect(data.getByTestId('data-value-match.home.name')).toHaveValue('Sweden');
   // The seed was never written, because saving one is a deliberate act - this is the whole
   // anti-churn rule (plan 2.1): live values must not touch the synced Show record.
   const onRecord = await page.evaluate(() => {
@@ -483,32 +479,31 @@ test('a bound field takes the LIVE value on air, and an old cue cannot re-air a 
 test('the seed is the reset target, and unbinding hands the field back to the cue', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Seed Show');
-  await page.getByTestId('tab-data').click();
-  await addValue(page, 'counter', '5');
+  const data = await openWorkspace(page, 'data');
+  await addValue(data, 'counter', '5');
 
   // Save as seed, move the value, reset - the seed is what Reset returns to.
-  await page.getByTestId('data-save-seed').click();
-  await expect(page.getByTestId('data-note')).toContainText('seed');
-  await page.getByTestId('data-up-counter').click();
-  await expect(page.getByTestId('data-value-counter')).toHaveValue('6');
-  await page.getByTestId('data-reset').click();
-  await expect(page.getByTestId('data-value-counter')).toHaveValue('5');
+  await data.getByTestId('data-save-seed').click();
+  await expect(data.getByTestId('data-note')).toContainText('seed');
+  await data.getByTestId('data-up-counter').click();
+  await expect(data.getByTestId('data-value-counter')).toHaveValue('6');
+  await data.getByTestId('data-reset').click();
+  await expect(data.getByTestId('data-value-counter')).toHaveValue('5');
 
   // Clear empties the tree; Reset brings the seed back, so Clear is never a data loss.
-  await page.getByTestId('data-clear').click();
-  await expect(page.getByTestId('data-empty-live')).toBeVisible();
-  await page.getByTestId('data-reset').click();
-  await expect(page.getByTestId('data-value-counter')).toHaveValue('5');
+  await data.getByTestId('data-clear').click();
+  await expect(data.getByTestId('data-empty-live')).toBeVisible();
+  await data.getByTestId('data-reset').click();
+  await expect(data.getByTestId('data-value-counter')).toHaveValue('5');
 
   // ── Bind, then UNBIND: the one override gesture (plan 2.7). The cue's own editable field
   //    comes back, which is what makes "manual override = unbind" a complete answer. ──
-  const graphicName = await firstGraphicName(page);
-  await page.getByTestId(`bind-${graphicName}-f0`).fill('counter');
-  await page.getByTestId('tab-playout').click();
+  const graphicName = await firstGraphicName(data);
+  await data.getByTestId(`bind-${graphicName}-f0`).fill('counter');
+  await settleDurableWrites(data);
   await expect(page.getByTestId('cue-bound-f0')).toBeVisible();
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId(`unbind-${graphicName}-f0`).click();
-  await page.getByTestId('tab-playout').click();
+  await data.getByTestId(`unbind-${graphicName}-f0`).click();
+  await settleDurableWrites(data);
   await expect(page.getByTestId('cue-field-f0')).toBeVisible();
   await expect(page.getByTestId('cue-bound-f0')).toHaveCount(0);
 });
@@ -516,67 +511,65 @@ test('the seed is the reset target, and unbinding hands the field back to the cu
 test('nested trees, arrays and a missing path each behave as the contract says', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Shapes');
-  await page.getByTestId('tab-data').click();
+  const data = await openWorkspace(page, 'data');
 
   // A whole payload pasted as JSON - the same shape the future ingress API will accept, which
   // is what makes this panel the API's documentation as well as its playground.
-  await page.getByTestId('data-raw-toggle').click();
-  await page.getByTestId('data-raw-text').fill(
+  await data.getByTestId('data-raw-toggle').click();
+  await data.getByTestId('data-raw-text').fill(
     JSON.stringify({
       poll: { open: true, options: [{ label: 'Yes', votes: 72 }] },
       headlines: ['First story', 'Second story'],
       drivers: [{ name: 'Driver A', gap: 'LEADER' }],
     }),
   );
-  await page.getByTestId('data-raw-apply').click();
+  await data.getByTestId('data-raw-apply').click();
   // Nested objects, arrays of objects (indexed paths) and a scalar array as ONE leaf.
-  await expect(page.getByTestId('data-row-poll.open')).toBeVisible();
-  await expect(page.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
-  await expect(page.getByTestId('data-row-drivers.0.gap')).toBeVisible();
-  await expect(page.getByTestId('data-value-headlines')).toHaveValue('First story\nSecond story');
+  await expect(data.getByTestId('data-row-poll.open')).toBeVisible();
+  await expect(data.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
+  await expect(data.getByTestId('data-row-drivers.0.gap')).toBeVisible();
+  await expect(data.getByTestId('data-value-headlines')).toHaveValue('First story\nSecond story');
 
   // Malformed JSON is refused with its own reason, and the tree is untouched. (A successful
   // apply CLOSES the panel - the edit is done - so this reopens it.)
-  await page.getByTestId('data-raw-toggle').click();
-  await page.getByTestId('data-raw-text').fill('{not json');
-  await page.getByTestId('data-raw-apply').click();
-  await expect(page.getByTestId('data-raw-error')).toBeVisible();
-  await expect(page.getByTestId('data-row-poll.open')).toBeVisible();
+  await data.getByTestId('data-raw-toggle').click();
+  await data.getByTestId('data-raw-text').fill('{not json');
+  await data.getByTestId('data-raw-apply').click();
+  await expect(data.getByTestId('data-raw-error')).toBeVisible();
+  await expect(data.getByTestId('data-row-poll.open')).toBeVisible();
 
   // ── A binding to a path that is not there writes NOTHING: the field keeps its own value
   //    rather than going blank on air (plan 2.4, "freeze is not-writing"). ──
-  const graphicName = await firstGraphicName(page);
-  await page.getByTestId(`bind-${graphicName}-f0`).fill('nothing.here');
-  await expect(page.getByTestId(`bind-value-${graphicName}-f0`)).toContainText('no value');
-  await page.getByTestId('tab-playout').click();
+  const graphicName = await firstGraphicName(data);
+  await data.getByTestId(`bind-${graphicName}-f0`).fill('nothing.here');
+  await expect(data.getByTestId(`bind-value-${graphicName}-f0`)).toContainText('no value');
+  await settleDurableWrites(data);
   const preview = page.frameLocator('iframe[title="Cue preview"]');
   await expect(preview.locator('#f0')).not.toHaveText('');
 
   // Deleting a value leaves the rest of the tree alone.
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('data-delete-poll.open').click();
-  await expect(page.getByTestId('data-row-poll.open')).toHaveCount(0);
-  await expect(page.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
+  await data.getByTestId('data-delete-poll.open').click();
+  await expect(data.getByTestId('data-row-poll.open')).toHaveCount(0);
+  await expect(data.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
 });
 
 test('one value moves every graphic bound to it, and only the graphics bound to it', async ({ page }) => {
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Two Graphics');
-  await page.getByTestId('tab-data').click();
-  await addValue(page, 'shared.title', 'First');
+  const data = await openWorkspace(page, 'data');
+  await addValue(data, 'shared.title', 'First');
 
   // The one binding this pool offers, bound - then the value moves and the preview follows
   // without anything being taken: a data write never plays, stops or takes anything.
-  const graphicName = await firstGraphicName(page);
-  await page.getByTestId(`bind-${graphicName}-f0`).fill('shared.title');
-  await page.getByTestId('tab-playout').click();
+  const graphicName = await firstGraphicName(data);
+  await data.getByTestId(`bind-${graphicName}-f0`).fill('shared.title');
+  await settleDurableWrites(data);
   const preview = page.frameLocator('iframe[title="Cue preview"]');
   await expect(preview.locator('#f0')).toHaveText('First');
   await expect(page.getByTestId('live-cue-chip')).toContainText('nothing on air');
 
-  await page.getByTestId('tab-data').click();
-  await page.getByTestId('data-value-shared.title').fill('Second');
-  await page.getByTestId('tab-playout').click();
+  await data.getByTestId('data-value-shared.title').fill('Second');
+  await settleDurableWrites(data);
   await expect(preview.locator('#f0')).toHaveText('Second');
   // Still nothing on air: state changed, no graphic was played.
   await expect(page.getByTestId('live-cue-chip')).toContainText('nothing on air');
@@ -586,23 +579,28 @@ test('production data is scoped to its production, never shared between two', as
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Show One');
   const showOneUrl = page.url();
-  await page.getByTestId('tab-data').click();
-  await addValue(page, 'shared.value', 'one');
+  // EACH PRODUCTION GETS ITS OWN WORKSPACE TAB, because the workspaces open in their own tab
+  // now and a tab is opened onto ONE production. Re-using the first production's tab for the
+  // second would be asking a question about that tab, not about the scoping.
+  const dataOne = await openWorkspace(page, 'data');
+  await addValue(dataOne, 'shared.value', 'one');
 
   // A second production, from its own project. Same path, its own tree - the store is keyed by
   // production id, so nothing about "shared.value" is global.
   await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
   await productionFor(page, 'Show Two');
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('production-live-data')).toBeVisible();
-  await expect(page.getByTestId('data-row-shared.value')).toHaveCount(0);
-  await addValue(page, 'shared.value', 'two');
+  const dataTwo = await openWorkspace(page, 'data');
+  await expect(dataTwo.getByTestId('production-live-data')).toBeVisible();
+  await expect(dataTwo.getByTestId('data-row-shared.value')).toHaveCount(0);
+  await addValue(dataTwo, 'shared.value', 'two');
 
-  // Back to the first by its own URL (deterministic - no card hunting): still 'one'.
+  // The first production's own tab still holds its own value - and it is still 'one' even
+  // though the second tab wrote the same PATH a moment ago.
+  await dataOne.reload();
+  await expect(dataOne.getByTestId('data-value-shared.value')).toHaveValue('one');
+  // …and reaching it by its own URL says the same (deterministic - no card hunting).
   await page.goto(showOneUrl);
   await expect(page.getByTestId('production-page')).toBeVisible();
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('data-value-shared.value')).toHaveValue('one');
 });
 
 test('SPACE on the Data tab cannot put a graphic on air', async ({ page }) => {
@@ -627,19 +625,21 @@ test('SPACE on the Data tab cannot put a graphic on air', async ({ page }) => {
   const rows = page.getByTestId('action-log-row');
   await expect(rows).toHaveCount(0);
 
-  await page.getByTestId('tab-data').click();
-  await expect(page.getByTestId('production-data')).toBeVisible();
+  // The keys are pressed IN THE WORKSPACE'S OWN TAB, which is where an operator would press
+  // them: the workspaces open in their own browser tab now (see `openWorkspace`), so this is
+  // the ordinary way to be standing on Data. The guard is the same one either way - the shell
+  // binds the verb keys only while playout is the surface on screen.
+  const data = await openWorkspace(page, 'data');
 
   // Space belongs to a focused button by design, so say where focus is rather than inherit it.
-  await parkFocusOffControls(page);
+  await parkFocusOffControls(data);
   for (const key of ['Space', 'n', 'r', '0', 'u']) {
-    await page.keyboard.press(key);
-    await page.waitForTimeout(150);
+    await data.keyboard.press(key);
+    await data.waitForTimeout(150);
   }
   await expect(rows, 'a verb key pressed on the Data tab reached the wire').toHaveCount(0);
 
-  // …and back on Playout the same key works, so this is a scoping rule and not a dead keymap.
-  await page.getByTestId('tab-playout').click();
+  // …and on Playout the same key works, so this is a scoping rule and not a dead keymap.
   await parkFocusOffControls(page);
   await page.keyboard.press('Space');
   await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');

@@ -592,27 +592,31 @@ rather than as a spec drives them.
 >    danger being named is real — Data and Audience are authoring surfaces, and authoring while
 >    the thing you are steering is off-screen is how a live mistake happens.
 >
->    **NOT cheap, and BLOCKED — attempted 2026-08-21 and reverted.** Two browser tabs on one
->    production LOSE EACH OTHER'S WORK today, and making the workspaces open in their own tab
->    would turn that from something a user has to go out of their way to do into the default
->    path. `patchShow` (`src/model/shows.ts`) is a whole-array read-modify-write:
->    `loadAllShows()` → mutate → `saveAll(all)`. It reads the SYNCHRONOUS MIRROR in
->    `model/durableStore.ts`, which is per-tab and has no cross-tab invalidation — no
->    `BroadcastChannel`, no `storage` listener. So a tab that has not seen another tab's write
->    still holds the old array, and its next write puts that array back.
+>    **BUILT 2026-08-21, and it needed two storage fixes first.** The change itself is small -
+>    the tab controls are links with `target="_blank"`, Playout stays a button because it returns
+>    IN THIS TAB. What it cost was everything underneath:
 >
->    Reproduced, not reasoned: open a production in tab A, open `#/production/<id>/data` in tab
->    B, add a table there, then make any cue edit in tab A. A THIRD, fresh tab then reports
->    `datasets: 0` with tab A's edit intact — the table is gone from the durable store, not
->    merely absent from tab A's view. (Reading it in tab A proves nothing: its mirror never saw
->    the table. That is what the first attempt at this probe got wrong.)
+>    - **Two tabs on one production used to lose each other's work** (`patchShow` is a
+>      read-modify-WHOLE-RECORD write over a per-tab mirror). Fixed first, separately, because it
+>      was a live defect without any of this: `durableStore.ts` announces every landed write and
+>      the other tabs re-read that key. `e2e/cross-tab.spec.ts`.
+>    - **A mirror nobody re-reads changes nothing on screen.** `ProductionPage` now listens for
+>      `spx-data-changed` and re-reads the record, so a table typed in the workspace tab reaches
+>      the rundown's row picker. The cue draft, the selection and the playhead are this tab's own
+>      state and are deliberately untouched.
+>    - **The LIVE TREE had no route to air across tabs.** This plan's own rule is that
+>      ProductionPage owns the tree because "the Data tab unmounts the playout surface, so an edit
+>      made on Data would otherwise have no route to air" - which assumed ONE React tree. An
+>      unpublished production's tree is localStorage, so the page now listens for `storage` and
+>      re-reads; published ones are untouched, since there the API answer is the authority.
+>    - **A tab opened straight onto a workspace does not mount the playout surface at all**
+>      (`ownsPlayout`), or it would build a second renderer on a production that already has one.
 >
->    **The fix is cross-tab safety, and it comes first:** invalidate the mirror when another tab
->    writes (a `BroadcastChannel` message from `durableStore.setItem`, other tabs dropping the
->    affected key), or move off whole-array writes to per-record ones. Until then the workspaces
->    stay in-tab. This is ALSO a live defect on its own — anyone with two tabs on one production
->    is exposed right now, without any of this — and it is the same hazard class as
->    [teams](#) above: the moment two people hold one production, whole-record writes lose.
+>    Specs: `e2e/_workspace.ts` opens a workspace and returns its page, because a spec that
+>    clicks the link and keeps asserting on the same page is asserting about the tab that still
+>    holds Playout. Four specs migrated. Two of them changed MEANING rather than syntax - a
+>    "workspace round trip" is now history inside the workspace's own tab, and the
+>    production-scoping test opens a tab per production, since a tab is opened onto one.
 > 4. **The offline audience page needs a better answer than a sentence.** *"I don't really know
 >    how the audience participation screen should look if the build is run offline."* Options are
 >    in "The offline audience plane" below.
