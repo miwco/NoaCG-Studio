@@ -168,6 +168,12 @@ supabase/.temp/cli-latest
 # finally, but a killed run leaks one, and a leaked directory reads as an unmapped source
 # change to scripts/e2e-affected.mjs (which then escalates to the full suite).
 /.tmp-api-runtime-*/
+
+# The acceptance pack's HOSTED-page rig (scripts/acceptance-pack.mjs, section `hosted`): an
+# ordinary production build with the Supabase env pointed at a stub origin, served to the browser
+# out of memory rather than by a server. It is a real bundle with fake credentials in it - never
+# deploy it, never commit it, and it is rebuilt in seconds whenever that section runs.
+/.tmp-hosted-build/
 .env*
 
 # Local Lite test rig: a real bearer token, never committed.
