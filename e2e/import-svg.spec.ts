@@ -378,6 +378,55 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   await expect(page.getByTestId('map-svg-row-t3')).toHaveCount(0);
 });
 
+test('svg import: text on a path binds the path run, and keeps its curve when an operator types', async ({ page }) => {
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <defs><path id="curve" d="M20 150 Q200 40 380 150"/></defs>
+      <text id="Arc" font-size="24" fill="#fff"><textPath href="#curve">Around the bend</textPath></text>
+    </svg>`,
+    'text-on-path.svg',
+  );
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-sample-t0')).toHaveValue('Around the bend');
+  await createProject(page);
+
+  // The field id is on the <textPath>, not the <text>: update() writes textContent, and writing
+  // it on the <text> would REPLACE the textPath element — the first typed word would straighten
+  // the curve the designer drew. The check is the live document, after an update.
+  const shape = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const html = useTemplateStore.getState().template.html;
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bound = doc.getElementById('f0');
+    return { tag: bound?.tagName.toLowerCase() ?? null, href: bound?.getAttribute('href') ?? null };
+  });
+  expect(shape.tag).toBe('textpath');
+  expect(shape.href).toBe('#curve');
+});
+
+test('svg import: a wrapped source line becomes one clean sample, unless the file preserved it', async ({ page }) => {
+  // A pretty-printed export wraps a long line across several SOURCE lines. The renderer
+  // collapses that whitespace and nothing on screen shows it — but the raw text becomes the
+  // FIELD'S DEFAULT VALUE, where a run of newlines and indentation is real.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Body" x="20" y="80" font-size="20" fill="#fff">
+        Breaking news from
+        the capital
+      </text>
+      <text id="Spaced" xml:space="preserve" x="20" y="140" font-size="20" fill="#fff">A   B</text>
+    </svg>`,
+    'wrapped-source.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  await expect(page.getByTestId('map-svg-sample-t0')).toHaveValue('Breaking news from the capital');
+  // …and a file that asked for its spacing to be literal keeps it.
+  await expect(page.getByTestId('map-svg-sample-t1')).toHaveValue('A   B');
+});
+
 test('svg import: a PostScript font name finds the bundled face, and ships under its own name', async ({ page }) => {
   // Illustrator writes PostScript names, so a file set in Archivo Bold asks for "Archivo-Bold".
   // Matched literally that finds nothing, and the graphic goes to air in a substitute face.

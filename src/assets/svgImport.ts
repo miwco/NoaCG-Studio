@@ -468,6 +468,14 @@ function groupRuns(runs: TextRun[]): TextRun[][] {
 function textCandidates(svg: Element, fontSize: (el: Element) => number): Element[] {
   const out: Element[] = [];
   for (const text of Array.from(svg.querySelectorAll('text')).filter((el) => isOffered(el, svg))) {
+    // TEXT ON A PATH binds the `<textPath>` itself, not the `<text>` around it. `update()`
+    // writes textContent, and writing it on the `<text>` REPLACES the textPath element — the
+    // first thing an operator typed would straighten the curve the designer drew.
+    const onPath = text.querySelector('textPath');
+    if (onPath && text.querySelectorAll('textPath').length === 1) {
+      out.push(onPath);
+      continue;
+    }
     const fields = textFields(text, fontSize);
     if (fields.length > 1 && fields.every((f) => f.length === 1)) out.push(...fields.map((f) => f[0].el));
     else out.push(text);
@@ -498,16 +506,34 @@ function textFields(text: Element, fontSize: (el: Element) => number): TextRun[]
  * ("A" + "lexandra" + " Riva" is "Alexandra Riva") and wrong between two, where a line break or
  * a placed gap would collapse into one word ("Helsinki22:40"). So a `<text>` bound whole joins
  * by the same grouping that decided the fields: runs run together, fields separated by a space.
+ *
+ * WHITESPACE IS COLLAPSED, as the renderer collapses it. A pretty-printed export wraps a long
+ * line across several source lines, so the raw textContent carries newlines and indentation that
+ * nothing on screen shows — and that text becomes the FIELD'S DEFAULT VALUE, where a stray run
+ * of spaces is real. `xml:space="preserve"` is honoured: a designer who asked for the spacing
+ * to be literal gets it literal.
  */
 function candidateSample(el: Element, fontSize: (element: Element) => number): string {
+  const collapse = (s: string) => (spacePreserved(el) ? s.trim() : s.replace(/\s+/g, ' ').trim());
   if (el.tagName.toLowerCase() !== 'text' || leafTspans(el).length < 2) {
-    return (el.textContent ?? '').trim();
+    return collapse(el.textContent ?? '');
   }
-  return textFields(el, fontSize)
-    .map((field) => field.map((run) => run.text).join(''))
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return collapse(
+    textFields(el, fontSize)
+      .map((field) => field.map((run) => run.text).join(''))
+      .join(' '),
+  );
+}
+
+/** Did the author ask for whitespace to be taken literally, here or on an ancestor? */
+function spacePreserved(el: Element): boolean {
+  let node: Element | null = el;
+  while (node) {
+    const value = node.getAttribute('xml:space') ?? node.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'space');
+    if (value) return value.trim() === 'preserve';
+    node = node.parentElement;
+  }
+  return false;
 }
 
 /** The shapes a glyph outline is made of. Illustrator's Create Outlines writes one path
