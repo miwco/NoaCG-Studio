@@ -1384,8 +1384,10 @@ no palette, no typeface, no motion and no composition was called wrong. Ranked b
   set on a solid slab of the accent is a badge rather than a caption.
 - **A thin supporting line is illegible even at full contrast**: *"the title is too thin and small
   for it to be legible"* - 26px regular that measured 4.6:1 and passed every colour check, because
-  contrast was never the defect. The supporting weight now has a floor that is a FUNCTION OF ITS
-  SIZE (medium below 30px): small text is read by its stem.
+  contrast was never the defect. The supporting weight got a floor that was a FUNCTION OF ITS SIZE
+  (medium below 30px), reasoning that small text is read by its stem. **SUPERSEDED 2026-08-21 -
+  the size condition was the wrong half of the lesson and §25.8.5 has the measurement**: `medium`
+  is now the floor for the heading and the supporting line alike, at every size.
 - **An invisible mark reads as an unfinished graphic**: *"has a place for a logo, so it is nice if
   there is a logo. Without one it looks unfinished."* The mark was there; its dark ink had nothing
   to read against on the dark panel the language chose. **This one needs an owner decision - see
@@ -3481,6 +3483,41 @@ registry decision rather than a composer one. Rules 2 and 3 still carry no pass/
 ratified floor still disagrees with the owner - §25.5's re-ratification target (a secondary floor
 above 26px) is unchanged by anything here, because rule 4's 28px is an eligibility gate and not a
 floor rule 3 judges against.
+
+#### 25.8.5 Acting on rule 4 - the composer meets the ratified weight floor (2026-08-21)
+
+§25.8.2 left rule 4 firing on 26 rows with an ADDRESS rather than a spread: 33 of its 40 readings
+were text at weight 400, and the composer's own guard could not reach them.
+`structure.ts` floored the supporting line at `medium` **only below 30px**
+(`SUPPORTING_WEIGHT_FLOOR_BELOW_PX`), reasoning from the 2026-08-15 blind read that a hairline
+stroke is a SMALL-text problem. Measured against the owner's own floor, that reasoning was the
+wrong one: the countdown's label sits at **38px**, eight pixels above the boundary, and two of the
+four rows he named are a **54px name** and an **80px clock**, both at weight 400. A floor that
+exempts exactly the sizes he complained about is not a floor.
+
+So the size condition is gone. `TYPE_WEIGHT_FLOOR` is `medium` (500) and applies to the HEADING as
+well as the supporting line, at every size. It stays a boundary rather than a repair - the
+language still chooses among four weights above it, and `semibold` was declined for the general
+case for exactly the reason the owner declined 600.
+
+| | after 25.8.2 | after the floor |
+|---|---|---|
+| rule 4 rows | 26 of 36 | **18 of 36** |
+| rule 4 readings | 40 | **27** |
+| …on `round-2026-08-16` (members RECOMPOSED) | 13 rows | **5** |
+| …on `round-2026-08-17` (members SAVED AS CODE) | 13 rows | 13 (unreachable) |
+| rules 1 / 5 / 6 | 12 / 0 / 36 | 12 / 0 / 36 (unmoved) |
+
+**On the half of the corpus a composer change can reach, the weight axis is now empty.** Recomposed
+countdown readings fall **16 → 3**, and weight 400 disappears from every one of them (weakest
+weights 400/500/600/700 → 500/600/700). Every one of the 24 weight readings that remain belongs to
+a piece mounted as SAVED CODE, exactly like the twelve rule-1 rows in §25.8.1 - August artefacts a
+composer change cannot reach, not a fix that failed to land.
+
+**What is left on the reachable half is CONTRAST, not weight.** The 3 remaining recomposed readings
+are all contrast against the ratified 3.25:1, with no weight component (before: 1 contrast + 2
+both; after: 3 contrast + 0 both). That is the palette furniture question rather than the type
+question, and it is the next address rule 4 hands over.
 
 ## 26. The recreate loop's economics, and why its stress pass "missed" batch 1.4 - 2026-08-20
 

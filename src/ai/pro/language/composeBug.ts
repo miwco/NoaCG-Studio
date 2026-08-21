@@ -225,7 +225,7 @@ ${form === 'underline' ? accentEl : ''}    </div>`;
    line stepped down from itself would be a size decision with no relationship in it. */
 .corner-bug-name {
   font-size: ${typePx(s.supportingPx)};  /* the bug's own anchor size */
-  font-weight: ${s.supportingWeight};                /* the language's label weight, floored for its size */
+  font-weight: ${s.supportingWeight};                /* the language's label weight, never under the floor */
   line-height: 1.25;                /* a touch of air if the caption wraps */
   letter-spacing: ${s.supportingTracking};        /* the package's label tracking */
   text-transform: ${language.typography.supportingCase === 'caps' ? 'uppercase' : 'none'};
