@@ -34,6 +34,9 @@ export const ss01: TemplateVariant = defineStartingSoonVariant(
     uicolor: '1',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     // A single centered stack: kicker (f0) → show name (f1) → hairline (the breath
     // target) → clock. Both text lines are mask-wrapped so future presets can reveal them.
     html: `    <!-- Quiet Hold: caps title, big show name, breathing hairline, light countdown. -->

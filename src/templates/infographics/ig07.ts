@@ -96,6 +96,12 @@ export const ig07: TemplateVariant = defineInfographicVariant(
     };
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 1000,
       html: `    <!-- Election Bars: one results board — [title + flag over an accent rule] / three
          candidate rows / a closing accent strip. -->
     <div class="infographic-box">

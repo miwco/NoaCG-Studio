@@ -109,5 +109,8 @@ ${piMasks(o, [[0, 'public-info-kicker'], [1, 'public-info-body'], [2, 'public-in
   color: var(--label-color);       /* the accent, in the glass family */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1030,
   }),
 );

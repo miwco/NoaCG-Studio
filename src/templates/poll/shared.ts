@@ -49,6 +49,7 @@ import {
   dataSourceCss,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -56,6 +57,7 @@ import {
   zoneCssText,
 } from '../shared/base';
 import { composeRefine, convertToDataRegion } from '../shared/standard';
+import { stageFitRuntimeJs } from '../shared/stageFit';
 import type { AnimData, AnimStep } from '../../blocks/animData';
 import type { PresetConfig } from '../lowerThirds/animPresets';
 import { pollPresetById } from './pollPresets';
@@ -63,6 +65,17 @@ import { POLL_MOTION_JS } from './pollMotion';
 import { resolveTokens, type ThemeTokens, type TokenOverrides } from '../../model/themeTokens';
 
 export interface PollDesign {
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this graphic was drawn for (`stageBoxCss` in
+   * shared/base.ts carries the whole contract).
+   *
+   * With one declared, the panel stops hugging the operator's text and the text lives inside
+   * it instead - which is what a BOARD needs, because the same panel is on air with different
+   * content all evening and an audience reads a graphic that re-sizes itself as a broken one.
+   * The number holds a realistic worst case; shorter content leaves reserved room where the
+   * anchor already reads.
+   */
+  stageWidth?: number;
   /** Inner HTML of .poll — must contain .poll-box with .poll-mask > span#f0, .poll-cue,
    *  #poll-rows and .poll-foot > span#f2. */
   html: string;
@@ -196,6 +209,8 @@ function update(data) {
     if (el) setFieldValue(el, fields[key]);
   }
   pollRebuild();
+  // Designs on a stage hold their lines to the rows they were drawn for (no-op otherwise).
+  if (typeof fitStagedText === 'function') fitStagedText();
 }
 
 // play(): take the board on air with voting OPEN — no figures, no bars, no winner.
@@ -281,7 +296,11 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
 
 /* ── Auto-fit: the panel hugs its content and wraps instead of overflowing. ── */
 .poll-box {
-  width: fit-content;              /* the panel hugs the question and the bars */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this poll was drawn for')
+      : "  width: fit-content;              /* the panel hugs the question and the bars */"
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -320,6 +339,11 @@ ${design.css}
 ${POLL_MOTION_JS}
 
 ${preset.emit(cfg)}`);
+  const jsWithStage = design.stageWidth
+    ? `${js}
+
+${stageFitRuntimeJs('poll')}`
+    : js;
 
   const template: SpxTemplate = {
     name: meta.name,
@@ -328,7 +352,7 @@ ${preset.emit(cfg)}`);
     fps: o.fps,
     html,
     css,
-    js,
+    js: jsWithStage,
     fields,
     settings,
     assets: [...o.importedImages, ...(o.customFont ? [o.customFont.asset] : [])],

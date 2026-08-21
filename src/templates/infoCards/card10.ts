@@ -35,5 +35,10 @@ export const card10: TemplateVariant = defineCardVariant(
       'halo keeps the type legible over live video.',
     uicolor: '1',
   },
-  (o) => buildTitleCard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTitleCard(CLEAN, o),
+    stageWidth: 1080,
+  }),
 );

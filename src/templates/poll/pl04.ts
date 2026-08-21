@@ -178,5 +178,8 @@ function renderPollRow(row) {
        + '</div>';
 }`,
     hasAccent: false, // the accent moments are the label, the fills and the call — not a .poll-accent element
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 890,
   }),
 );

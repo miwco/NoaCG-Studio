@@ -53,6 +53,12 @@ export const ig26: TemplateVariant = defineInfographicVariant(
     const noteText = o.lines[2]?.sample || 'Matchday 24';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 960,
       html: listBoardHtml({
         note: 'House Fixtures: void panel — mono heading, then one row per match.',
         heading: headingText,

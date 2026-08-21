@@ -138,6 +138,9 @@ ${maskLines([
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);  /* legibility over an unknown picture */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 400,
     extraFields: [
       {
         field: designFieldId(o),

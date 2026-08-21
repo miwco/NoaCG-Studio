@@ -32,5 +32,10 @@ export const ig20: TemplateVariant = defineInfographicVariant(
       'analysis, coaching points and post-match takeaways.',
     uicolor: '5',
   },
-  (o) => buildRecapBoard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildRecapBoard(VOLT, o),
+    stageWidth: 1060,
+  }),
 );

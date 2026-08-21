@@ -1,0 +1,239 @@
+// THE HEIGHT HALF OF THE STAGE CONTRACT: a staged panel must not grow TALLER either.
+//
+// `stageBoxCss` (shared/base.ts) stops a board changing WIDTH with the operator's text. That is
+// half the job, and on several categories it is the smaller half: the text that can no longer
+// widen a board wraps onto another row and makes it taller instead. Measured 2026-08-20 over the
+// registry, quiz, alert, public-info and results-board move ONLY vertically - their widths were
+// already pinned by a `min-width` floor, which is not a fix but a change of axis.
+//
+// THE ROOM IS THE DESIGN'S OWN, AND NOBODY HAS TO TYPE IT. A line's reserve is the number of rows
+// it occupies with the design's OWN sample text - the content the design was calibrated against,
+// and the content sitting in the emitted HTML before any operator touches it. So this runtime
+// measures each line once, at load, and holds every later value to what it found. That is the same
+// derivation the stage width uses (the width a design settles at with realistic content), and it
+// means a category can be flipped without annotating hundreds of designs with row counts that
+// would then have to be re-measured every time a typeface or a size step moved.
+//
+// SHRINK, NEVER CLIP. Past the reserve the line reduces its font size, down to a floor - the same
+// lever and the same 55% floor as `fitPlacedText` (shared/textFit.ts), and for the same reason:
+// size is the honest answer, a horizontal condense distorts the typeface the user chose, and an
+// ellipsis silently drops the operator's words. Below the floor the line is unreadable on air,
+// which is worse than tight, so it stops there and the panel is allowed to be the one thing that
+// gives - by then the operator has typed something no board was drawn to hold.
+//
+// WHY THE SHRINK STEP IS A SQUARE ROOT. Reducing font size shortens the text AND the row it sits
+// on, so a wrapped block's height falls roughly with the SQUARE of the size: half the size is a
+// quarter of the height. Scaling by the linear ratio (`room / scrollHeight`) therefore overshoots
+// hard - a line 20% too tall would come back 20% smaller when 10% was enough - and the first draft
+// of this made a two-row headline visibly smaller than its own subtitle. `sqrt` converges in two
+// passes and lands on a size a designer would have picked.
+//
+// It is design-owned JS, emitted OUTSIDE the marked ANIMATION region like `shared/clock.ts` and
+// the category motion runtimes, so the timeline never rewrites it and it survives every export.
+
+/** The marker an assembler tests for - present means the runtime is already emitted. */
+export const STAGE_FIT_MARKER = 'function fitStagedText';
+
+/**
+ * The design-owned JS a staged graphic needs, appended to whatever runtime the design already
+ * ships. ONE function, called from every assembler's `runtimeExtraJs` seam, so a category that
+ * gains a stage cannot emit the width without the height half - the failure mode there is a
+ * panel that holds its width perfectly and grows downward instead, which looks like the fix
+ * working right up until someone types a long line.
+ *
+ * No stage means no runtime at all: a hugging design gets byte-identical output to before.
+ *
+ * A FULL-FRAME design passes `true` rather than a width. Its panel is the frame, so it has no
+ * `stageWidth` to declare and looked stable by construction - and it was, on the outside. The
+ * plates INSIDE it were not: a nominee tag grew 636 -> 1498px while the card around it stood
+ * still. "Nothing to declare" is not the same as "nothing to hold".
+ */
+export function stageExtraJs(
+  staged: number | boolean | undefined,
+  prefix: string,
+  designJs: string | undefined,
+): string {
+  const own = (designJs ?? '').trim();
+  if (!staged) return own;
+  return own ? `${own}\n\n${stageFitRuntimeJs(prefix)}` : stageFitRuntimeJs(prefix);
+}
+
+/**
+ * The emitted runtime, for a category whose masked lines are `.<prefix>-mask > span`.
+ *
+ * Deliberately ES5 and comment-rich: it ships inside the user's own template.js, where it has to
+ * read as ordinary code a professional can edit.
+ */
+export function stageFitRuntimeJs(prefix: string): string {
+  return `// Hold every line to the room this design gives it, so the panel never grows taller than
+// it was drawn. Called after each update() (see update() above) and once the fonts are in.
+//
+// The room is measured ONCE, from the design's own sample text, and remembered on the element:
+// that is "the rows this line was drawn for". Everything the operator types afterwards is fitted
+// into it by reducing the font size, never past STAGE_FIT_MIN of the design size.
+var STAGE_FIT_MIN = 0.55;        // never shrink below 55% of the size the design asks for
+// …and never below the CATALOG'S OWN TYPE FLOOR either, whatever the design size was. 55% of a
+// 32px letter is 17.6px, which is under the 20px this catalogue holds every graphic to
+// (scripts/type-floor.mjs, DESIGN_LANGUAGE §1) - so the relative floor alone let the fit shrink
+// text into illegibility and the type-floor gate caught four variants doing it. Past this point
+// a tight line is the better failure: the words stay readable and the panel still holds.
+var STAGE_FIT_FLOOR_PX = 20;
+var stageCalibrated = false;     // true once the design's own sample has been measured
+
+// One row of this line, at the size the design asks for. \`line-height: normal\` computes to a
+// keyword rather than a number on some faces, so fall back to the CSS default ratio.
+function stageLineHeight(el, cs, design) {
+  var line = parseFloat(cs.lineHeight);
+  return (line && !isNaN(line)) ? line : design * 1.2;
+}
+
+// EVERY LEAF TEXT ELEMENT inside the staged panel, not just the masked lines the presets
+// choreograph. A poll's option rows, a standings board's names and a queue's entries are built by
+// the design's own runtime from a textarea, so they carry no mask - and they are exactly where
+// the remaining height came from once the masked lines were held. A leaf that already fits is
+// left alone, so widening the net costs nothing on the designs that did not need it.
+function stagedLines() {
+  var box = document.querySelector('.${prefix}-box');
+  if (!box) return [];
+  var all = box.querySelectorAll('*');
+  var out = [];
+  for (var i = 0; i < all.length; i++) {
+    var el = all[i];
+    if (el.children.length) continue;                       // not a leaf: its children carry the text
+    var text = (el.textContent || '').trim();
+    if (!text) continue;                                    // nothing to fit
+    // A one- or two-character leaf is a glyph, a letter chip or a single digit: it cannot
+    // wrap, so it has no room to be held to - and reserving one clipped sn03's avatar, whose
+    // icon sits inside a fixed circular frame that was never ours to resize.
+    if (text.length < 3) continue;
+    if (el.className && String(el.className).indexOf('noacg-data-source') >= 0) continue;
+    out.push(el);
+  }
+  return out;
+}
+
+function fitStagedText() {
+  var lines = stagedLines();
+  for (var i = 0; i < lines.length; i++) fitOneStagedLine(lines[i]);
+  holdStageHeight();
+}
+
+// THE OUTER GUARANTEE. Fitting the lines is what SHOULD keep the panel its own size, and on a
+// design whose text is all in lines it does. It is not enough on a board whose runtime rebuilds
+// its own rows: the row elements are replaced wholesale on every update, so anything remembered
+// on them is gone, and one reflow the fit did not see would move the panel again. Reserving the
+// panel's own height closes that for good - measured once, from the design's own content, on the
+// same terms as everything else here.
+function holdStageHeight() {
+  var box = document.querySelector('.${prefix}-box');
+  if (!box) return;
+  var room = parseFloat(box.getAttribute('data-stage-room') || '');
+  if (!room) {
+    box.style.height = '';
+    room = box.getBoundingClientRect().height;
+    if (!room) return;
+    box.setAttribute('data-stage-room', room);
+  }
+  box.style.boxSizing = 'border-box';   // the reserve is the border box it was measured from
+  // HEIGHT, and deliberately NOT overflow:hidden - the same lesson as the lines above, one
+  // level up. The height is what holds the panel; hiding the overflow as well cut content on
+  // 17 designs at their OWN default text. If a value ever beats the shrink floor it bleeds a
+  // little rather than losing words, and the panel still has not moved.
+  // A FLOOR, not a fixed height. The panel must not SHRINK when a value is short - that is the
+  // wobble - but it has to be allowed to grow when a value is so long that the shrink hits the
+  // 20px type floor and still does not fit. Pinning it there instead makes the runtime bench
+  // fail with siblings overlapping by 71%: with the words held at a legible size and the panel
+  // refusing to give, the only thing left to collide is the content.
+  box.style.minHeight = room + 'px';
+}
+
+function fitOneStagedLine(el) {
+  el.style.fontSize = '';                       // back to the design size before measuring
+  var cs = window.getComputedStyle(el);
+  var design = parseFloat(cs.fontSize);
+  if (!design) return;
+
+  // The reserve, remembered from the first measurement - the design's own sample decides it.
+  var room = parseFloat(el.getAttribute('data-stage-room') || '');
+  if (!room) {
+    if (stageCalibrated) {
+      // A line the design never showed us: it was BUILT by the design's own runtime after load
+      // (a poll's options, a standings row, a queue entry), so a rebuild wipes the reserve every
+      // time and re-measuring here would take it from the operator's value instead of the
+      // design's. One row is the honest answer for a row - that is what a row is - and it is
+      // what a board does with a long club name: keep the row, shrink the name.
+      room = stageLineHeight(el, cs, design);
+    } else {
+      el.style.height = '';                     // measure the natural block, not a reserve
+      if (cs.display === 'inline') el.style.display = 'inline-block';
+      // The RENDERED height, not scrollHeight: the latter answers "does this overflow", and
+      // leaves out the box's own bottom padding, which under-reserves and then clips at the
+      // design's OWN content - 37 variants did exactly that.
+      // Round up: a reserve a sub-pixel short of the design's own line is a clipped design.
+      room = Math.ceil(el.getBoundingClientRect().height);
+    }
+    if (!room) return;                          // not laid out yet; a later pass will catch it
+    el.setAttribute('data-stage-room', room);
+  }
+  // A real HEIGHT, not a max-height. A cap stops the line growing and lets it SHRINK, so a
+  // short value still moves the panel - just in the other direction, which is the same defect
+  // wearing the opposite sign. Measured 2026-08-20: with a cap, alert still moved 16px and
+  // public-info 27px between a short value and a long one, entirely at the short end.
+  // INLINE-BLOCK, never block. A height needs a block-level box, but promoting an inline span
+  // to full block makes it fill its parent instead of shrink-wrapping, which re-wraps the row
+  // around it and clipped 9 designs sideways at their OWN content.
+  if (cs.display === 'inline') el.style.display = 'inline-block';
+  // HEIGHT ONLY, never overflow:hidden. The height is what holds the layout - that is the whole
+  // contract. Hiding the excess as well only CUTS the words when the reserve is a sub-pixel
+  // short, which the overflow gate caught on eleven designs at their OWN content; a hair of
+  // bleed is a better failure than a clipped letter.
+  el.style.height = room + 'px';
+
+  // The bigger of the two floors wins: a design already at the floor never shrinks at all.
+  var floor = Math.max(design * STAGE_FIT_MIN, Math.min(design, STAGE_FIT_FLOOR_PX));
+  for (var pass = 0; pass < 4; pass++) {
+    var tallBy = el.scrollHeight / room;
+    // Sideways too: a line inside a HELD chip cannot reflow, so it runs out of the box's side
+    // rather than off its bottom. Same lever, same floor - only the axis differs.
+    // Sideways too: a line inside a fixed row cannot reflow, so it runs out of the box's side
+    // rather than off its bottom. Same lever, same floor - only the axis differs.
+    var wideBy = el.clientWidth ? (el.scrollWidth / el.clientWidth) : 1;
+    if (tallBy <= 1.005 && wideBy <= 1.005) return;   // it fits - leave the size alone
+    var current = parseFloat(window.getComputedStyle(el).fontSize);
+    // A wrapped block's height falls with the SQUARE of the size (shorter text, shorter rows),
+    // so the linear ratio overshoots; the square root converges in about two passes. Width is
+    // linear in the size, so that axis takes the ratio as it stands.
+    var byHeight = tallBy > 1 ? Math.sqrt(1 / tallBy) : 1;
+    var byWidth = wideBy > 1 ? (1 / wideBy) : 1;
+    var next = Math.max(floor, current * Math.min(byHeight, byWidth));
+    if (next >= current) return;                // no progress left to make
+    el.style.fontSize = next + 'px';
+    if (next === floor) return;                 // at the floor: as small as it may go
+  }
+}
+
+// Measure the design's own rows before any update() arrives. This file loads in <head>, so the
+// lines do not exist yet - wait for the DOM, then again for the webfonts: the design's face loads
+// with font-display: swap, and the FALLBACK wraps differently, so a reserve taken before the swap
+// would be the wrong number of rows.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', fitStagedText);
+} else {
+  fitStagedText();
+}
+if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
+  document.fonts.ready.then(function () {
+    // Re-measure from scratch: the reserve taken against the fallback face is not this design's.
+    var lines = stagedLines();
+    for (var i = 0; i < lines.length; i++) lines[i].removeAttribute('data-stage-room');
+    var box = document.querySelector('.${prefix}-box');
+    if (box) { box.removeAttribute('data-stage-room'); box.style.height = ''; }
+    fitStagedText();
+    // Calibration is over: from here the design's own content has been seen, and anything that
+    // appears later was built by the design's runtime rather than drawn by its author.
+    stageCalibrated = true;
+  });
+} else {
+  stageCalibrated = true;
+}`;
+}

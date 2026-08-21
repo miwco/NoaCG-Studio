@@ -52,6 +52,12 @@ export const ig35: TemplateVariant = defineInfographicVariant(
     const coalitionText = o.lines[3]?.sample || 'GOVERNMENT BLOC';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 880,
       html: `    <!-- Majority Meter: [printed rule] / [coalition + margin] / [figure] / [track with the
          majority line] / [caption]. -->
     <div class="infographic-box">

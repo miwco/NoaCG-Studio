@@ -103,6 +103,9 @@ ${alertLineMasks(o)}
   color: var(--label-color);       /* the accent, in the glass family */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 950,
     // Design-owned runtime, emitted BEFORE the marked ANIMATION region — the Motion panel can
     // never rewrite it, and it survives the data-block conversion untouched.
     runtimeExtraJs: `// ── The "as of" stamp ────────────────────────────────────────────────────────

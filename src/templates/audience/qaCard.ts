@@ -183,6 +183,9 @@ const VARIANTS = SPECS.map((spec) =>
       html: qaHtml(spec.family, o),
       css: qaCss(spec.family),
       hasAccent: spec.family === 'noacg',
+      // The stage: the width this design holds a full-length value at, so the panel
+      // stops re-sizing itself between one piece of content and the next.
+      stageWidth: 880,
       ...(spec.family === 'sport' ? { tokens: { displayTracking: '0.01em' } } : {}),
     }),
   ),

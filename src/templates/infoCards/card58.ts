@@ -112,6 +112,9 @@ ${cardLineMasks(o)}
   color: var(--label-color);       /* the honours line carries the accent */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
     tokens: {
       accentWeight: 'calc(5px * var(--scale))',
       labelTracking: '0.2em',

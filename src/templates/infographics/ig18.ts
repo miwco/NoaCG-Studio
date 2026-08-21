@@ -32,5 +32,10 @@ export const ig18: TemplateVariant = defineInfographicVariant(
       'renders — an unassigned action is exactly what a recap needs to show.',
     uicolor: '1',
   },
-  (o) => buildRecapBoard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildRecapBoard(CLEAN, o),
+    stageWidth: 960,
+  }),
 );

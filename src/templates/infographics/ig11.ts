@@ -42,6 +42,12 @@ export const ig11: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'HOW WE WATCH';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 630,
       html: `    <!-- House Poll: void panel — mono heading on top, the bar rows below. -->
     <div class="infographic-box">
       <!-- Heading — the house mono accent kicker (SPX writes field f1 here). -->

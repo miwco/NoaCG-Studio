@@ -167,6 +167,9 @@ export const qz07: TemplateVariant = defineQuizVariant(
   color: #ffffff;                  /* pale ink on the down-colour chip */
 }`,
     hasAccent: false, // the accent moments are the letter chips and the reveal, not a .quiz-accent element
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
   }),
   undefined,
   TWO_ANSWER_CONTENT,

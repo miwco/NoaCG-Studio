@@ -76,6 +76,12 @@ export const ig39: TemplateVariant = defineInfographicVariant(
     const date = o.lines[4]?.sample || 'As of 31 December 2026';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 980,
       html: `    <!-- Key Figures: [band: title + period] / one "label | figure" row per line / [source + date]. -->
     <div class="infographic-box">
       <!-- The header band - the sheet's masthead, printed on the accent across its full width. -->

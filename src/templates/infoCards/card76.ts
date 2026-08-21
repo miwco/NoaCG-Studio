@@ -160,6 +160,9 @@ export const card76: TemplateVariant = defineCardVariant(
   color: var(--accent-ink);  /* assigns the intended hierarchy and contrast role */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1080,
     extraFields: [
       {
         field: designFieldId(o),

@@ -160,6 +160,9 @@ ${maskLines([
   color: var(--text-dim);           /* dimmed — never full white twice */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 740,
     // The code is a real SPX image field. It is NOT the shared logo slot: a logo is
     // decoration a design can do without, and this image IS the graphic's payload.
     extraFields: [

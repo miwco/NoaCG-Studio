@@ -34,5 +34,10 @@ export const card27: TemplateVariant = defineCardVariant(
       'rehearsal or a pre-flight check live on air, ticking off as they go.',
     uicolor: '3',
   },
-  (o) => buildProcessCard(FROST, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildProcessCard(FROST, o),
+    stageWidth: 960,
+  }),
 );

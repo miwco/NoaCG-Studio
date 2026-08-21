@@ -153,5 +153,8 @@ ${maskLines([
   display: none;  /* an empty field takes no space at all */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 940,
   }),
 );

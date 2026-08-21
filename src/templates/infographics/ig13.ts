@@ -41,6 +41,12 @@ export const ig13: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'VIEWER POLL';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 590,
       html: `    <!-- Clean Poll: one dark panel — caps heading, keyline, the bar rows below. -->
     <div class="infographic-box">
       <!-- Heading — the panel's accent tracking-caps kicker (SPX writes field f1 here). -->

@@ -34,5 +34,10 @@ export const card12: TemplateVariant = defineCardVariant(
       'purpose — the leaning slab (card08) is the match opener; this one carries longer lines.',
     uicolor: '5',
   },
-  (o) => buildTitleCard(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTitleCard(VOLT, o),
+    stageWidth: 1030,
+  }),
 );

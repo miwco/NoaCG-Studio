@@ -52,6 +52,12 @@ export const ig29: TemplateVariant = defineInfographicVariant(
     const noteText = o.lines[2]?.sample || 'Division One';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 960,
       html: listBoardHtml({
         note: 'Club Fixtures: flat panel — small heading, then one row per match.',
         heading: headingText,

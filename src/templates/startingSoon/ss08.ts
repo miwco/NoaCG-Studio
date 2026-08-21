@@ -39,6 +39,9 @@ export const ss08: TemplateVariant = defineStartingSoonVariant(
     uicolor: '1',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     lineCount: 2,
     clock: 'none',
     lineDefaults: [

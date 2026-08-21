@@ -43,6 +43,12 @@ export const ig06: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'COMING UP TONIGHT';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 920,
       // Structure: .infographic-box is the panel; #infographic-rows is rebuilt from the hidden #f0
       // source by rebuildInfographic() — exactly like ig02 rebuilds its bar rows.
       html: `    <!-- Schedule Board: one dark panel — caps heading, keyline rule, time/show rows. -->

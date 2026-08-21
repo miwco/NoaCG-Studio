@@ -33,5 +33,10 @@ export const card13: TemplateVariant = defineCardVariant(
       'and a quiet line of welcome. Warm rather than loud — built for services and ceremonies.',
     uicolor: '4',
   },
-  (o) => buildTitleCard(HOUSE, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildTitleCard(HOUSE, o),
+    stageWidth: 960,
+  }),
 );

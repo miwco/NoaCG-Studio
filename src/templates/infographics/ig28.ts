@@ -51,6 +51,12 @@ export const ig28: TemplateVariant = defineInfographicVariant(
     const noteText = o.lines[2]?.sample || 'Group 1';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 960,
       html: listBoardHtml({
         note: 'Frost Fixtures: frosted card — soft heading, then one airy row per match.',
         heading: headingText,

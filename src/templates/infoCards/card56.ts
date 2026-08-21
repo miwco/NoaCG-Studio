@@ -112,6 +112,9 @@ ${cardLineMasks(o)}
   overflow-wrap: break-word;       /* break very long unbroken words */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     tokens: {
       accentWeight: 'calc(4px * var(--scale))',
       labelTracking: '0.22em',

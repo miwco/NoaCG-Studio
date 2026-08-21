@@ -111,5 +111,8 @@ ${alertLineMasks(o)}
   text-align: right;               /* aligns toward the right edge */
 }`,
     hasAccent: true,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1680,
   }),
 );

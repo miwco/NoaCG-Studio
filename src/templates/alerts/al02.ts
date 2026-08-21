@@ -110,6 +110,9 @@ ${ALERT_LEVEL_CSS}
   color: var(--label-color);       /* the accent, in the house family */
 }`,
     hasAccent: false,
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 1680,
     // The flag carries the mono label face at a slightly tighter track than the family's
     // 0.2em: a severity word is longer than a kicker and opens up too far at full tracking.
     tokens: { labelTracking: '0.16em' },

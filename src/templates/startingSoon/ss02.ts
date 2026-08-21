@@ -37,6 +37,9 @@ export const ss02: TemplateVariant = defineStartingSoonVariant(
     uicolor: '5',
   },
   (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    stageWidth: 960,
     // Stack order: chip (f0) → show name (f1) → clock slab. The masks wrap the field
     // spans (structure contract); the accent edge is the one .starting-soon-pulse element.
     html: `    <!-- Volt Hold: a centered sport stack. Every lean is painted on a ::before layer. -->

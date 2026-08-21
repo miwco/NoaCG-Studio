@@ -33,5 +33,10 @@ export const card34: TemplateVariant = defineCardVariant(
       'rule, and the attribution. Sentence case throughout, so accents and diacritics survive.',
     uicolor: '2',
   },
-  (o) => buildStatementCard(CLEAN, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildStatementCard(CLEAN, o),
+    stageWidth: 890,
+  }),
 );

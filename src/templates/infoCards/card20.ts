@@ -32,5 +32,10 @@ export const card20: TemplateVariant = defineCardVariant(
       'schedule under a hairline. For meets, tournaments and any multi-event programme.',
     uicolor: '5',
   },
-  (o) => buildNowNext(VOLT, o),
+  (o) => ({
+    // The stage: the width this design holds a full-length value at, so the panel
+    // stops re-sizing itself between one piece of content and the next.
+    ...buildNowNext(VOLT, o),
+    stageWidth: 1080,
+  }),
 );

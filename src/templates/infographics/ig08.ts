@@ -42,6 +42,12 @@ export const ig08: TemplateVariant = defineInfographicVariant(
     const headingText = o.lines[1]?.sample || 'COMING UP TONIGHT';
 
     return {
+
+      // The stage: the width this design holds a full-length value at, so the panel
+
+      // stops re-sizing itself between one piece of content and the next.
+
+      stageWidth: 940,
       html: `    <!-- House Schedule: void panel — mono heading, keyline, time/show rows. -->
     <div class="infographic-box">
       <!-- Heading — the house mono accent kicker (SPX writes field f1 here). -->

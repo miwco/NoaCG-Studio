@@ -19,6 +19,7 @@ import {
   computeScale,
   documentHtml,
   maxTextWidthCss,
+  stageBoxCss,
   resetCanvasCss,
   resolveHeadingFont,
   rootVarsCss,
@@ -26,6 +27,7 @@ import {
   zoneCssText,
 } from './base';
 import { applyLogoSlot, designHasLogoSlot } from './logoSlot';
+import { stageExtraJs } from './stageFit';
 import { presetById, type PresetConfig } from '../lowerThirds/animPresets';
 import { importAnimData } from '../../blocks/animImport';
 import type { AnimData } from '../../blocks/animData';
@@ -39,6 +41,17 @@ export interface StandardDesign {
   css: string;
   /** Whether the design includes a .<prefix>-accent element. */
   hasAccent: boolean;
+  /**
+   * THE STAGE WIDTH, in px at 1080p: the room this design was drawn for (see
+   * `stageBoxCss` in shared/base.ts for the whole contract).
+   *
+   * Declaring one turns the panel from a box that hugs the operator's text into a box the
+   * text lives inside. Right for a BOARD - a card, a notice, a warning strip - which is on
+   * air with different content all evening. Wrong for a NAMEPLATE, where a strap cut to the
+   * guest's name IS the broadcast convention, so lower thirds, corner bugs and credits leave
+   * it unset and keep hugging.
+   */
+  stageWidth?: number;
   /**
    * Fields the DESIGN owns beyond the wizard lines — e.g. an image field ("filelist")
    * bound to an <img id="fN"> logo slot. Appended after the line/extra fields.
@@ -254,9 +267,13 @@ ${zoneCssText(o.zone, o.nudge, o.resolution)}
   opacity: 0;                      /* hidden until play() runs the entrance */
 }
 
-/* ── Auto-fit: the panel hugs its text and wraps instead of overflowing. ── */
+/* ── ${design.stageWidth ? 'The stage: the panel keeps its own width and the text fits inside it.' : 'Auto-fit: the panel hugs its text and wraps instead of overflowing.'} ── */
 .${p}-box {
-  width: fit-content;              /* the panel hugs the text */
+${
+    design.stageWidth
+      ? stageBoxCss(o.resolution, design.stageWidth, o.zone, 'the room this graphic was drawn for')
+      : '  width: fit-content;              /* the panel hugs the text */'
+  }
   max-width: ${maxTextWidthCss(o.resolution, maxTextWidth)};  /* the wrap cap — follows --scale, stops at the safe area */
   will-change: transform, opacity; /* hint the browser: this element animates */
 }
@@ -288,8 +305,12 @@ ${design.css}
 
   // Design-owned runtime (e.g. a live clock) lives OUTSIDE the marked ANIMATION region —
   // before it — so preset/steps swaps in the Motion panel can never rewrite it.
-  const extraJs = design.runtimeExtraJs?.trim();
-  const js = runtimeJs(meta.name, extraJs ? `${extraJs}\n\n${preset.emit(presetCfg)}` : preset.emit(presetCfg));
+  const extraJs = stageExtraJs(design.stageWidth, p, design.runtimeExtraJs).trim() || undefined;
+  const js = runtimeJs(
+    meta.name,
+    extraJs ? `${extraJs}\n\n${preset.emit(presetCfg)}` : preset.emit(presetCfg),
+    !!design.stageWidth,
+  );
 
   const template: SpxTemplate = {
     name: meta.name,

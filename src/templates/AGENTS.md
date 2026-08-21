@@ -900,61 +900,25 @@ figure is the short final part, so the label is what may contain one). Say which
   silent in every other check. All three boards share ONE machine (types/answerBoard.ts): because
   the pick is DATA, halving the rows changes no state at all.
 
-## THE STAGE: which graphics may change size with the operator's text, and which may not
+## THE STAGE: which graphics may change size with the operator's text
 
-`width: fit-content` (DESIGN_LANGUAGE §5) is the catalog's default, and it is only HALF right.
-On a NAMEPLATE it is the broadcast convention - each guest gets a strap cut to their name. On a
-BOARD it is a defect: the same panel comes back all evening with different content, and an
-audience reads a graphic that re-sizes itself as a graphic that is broken, however correct each
-individual frame is.
+`width: fit-content` (DESIGN_LANGUAGE §5) is the catalog default and only HALF right. On a
+NAMEPLATE it is the convention - a strap cut to the guest's name. On a BOARD it is a defect: the
+panel is back all evening with different content, and an audience reads a graphic that re-sizes
+itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT_STABILITY.md`.**
 
-**The families.** HUG keeps `fit-content`: lower-third, corner-bug, end-credits,
-imported-design, and the already-full-frame frame / transition / versus. FIXED declares a stage:
-every other category. Ratified by the owner 2026-08-20 along with the overflow answer - inside a
-stage, text WRAPS first and then SHRINKS to the type floor, never widens the box.
-
-**`scripts/footprint-stability-sweep.mjs` is the instrument** (`--stage` prints the width a
-design settles at; the default run reports the delta between two content lengths on BOTH axes).
-The registry-wide first run: 264 of the 314 board designs changed size with ordinary operator
-text. Four readings that are binding on anyone extending this:
-
-- **MEASURE BOTH AXES.** A `min-width` floor does not make a board stable, it changes which
-  dimension moves. qz01 is pinned at 1080px wide at every content length - the floor makes the
-  absolutely positioned root shrink-wrap to exactly the floor, so `fit-content` has no room to
-  grow into and the wrap cap above it never binds - and the text that can no longer widen the
-  board wraps and makes it 26% TALLER. A width-only sweep called that design clean.
-- **A NULL BOX IS NOT A STABLE BOX.** A full-frame design has no plate under the sweep's 95%
-  rule and often no `-box` either, so the verdict must come from the boxes that were MEASURED.
-  Starting-soon reads as the worst category on `box` (20/20, 550px median) and is the mildest in
-  fact: its plate is the 1805x1015 ambient backdrop on all 20, its bbox is the frame, and the
-  box that moves is invisible furniture behind centred text.
-- **THE STAGE IS THE DESIGN'S NUMBER, NEVER THE CATEGORY CAP.** The cap is a maximum for text.
-  Handing all 25 scoreboards the 60% cap would repaint the category as identical slabs. Each
-  design declares the width it holds a realistic worst case at (`SbDesign.stageWidth`, px at
-  1080p), emitted through `stageWidthCss` with the same two-declaration `min()` fallback the
-  wrap cap uses. **Freezing at the design's own SAMPLE content is the wrong number** and was
-  tried: at 505px sb03 clipped "MANCHESTER UNITED" to "MANC". A stage is sized for the longest
-  content it will really carry, and short content leaves reserved void - the strap-floor
-  doctrine, one level up.
-- **WHERE THE SLACK GOES IS PART OF THE FIX.** `stageJustifyCss` puts it where the anchor
-  already reads (left zone keeps left, centre stays centred), so the panel edges stop moving
-  without the words moving instead. **A design whose box paints edge-to-edge furniture needs its
-  text cells to absorb the slack as well**: sb23's accent rule is `left:0;right:0` on the box,
-  so a stage wider than its cells left a hairline hanging in empty space until the two club
-  cells took `flex: 1 1 0`.
-
-**The gate is `e2e/catalog/footprint-stability.spec.ts`**, in the catalog suite. It selects its
-targets on the `--stage-width` marker `stageBoxCss` emits - never a list in the spec - so the next
-category to flip is covered the day it flips, and it measures `offsetWidth` rather than the painted
-rect, because sb21 leans its panel and a bounding box widens with HEIGHT. **A staged design that
-still moves fails here**; the sweep beside it is the diagnostic that says which element carries it.
-
-**Where it stands.** Scoreboards are flipped: all 25 declare a stage and the panel is
-width-stable on all 25 (was 23 of 25 moving, sb03 by 86%). Nine still grow in HEIGHT when a name
-wraps to a second row, and a handful move an inner name cell inside the fixed panel - both are
-the second half of the contract (reserved rows plus `fitPlacedText`, `shared/textFit.ts`, which
-today only imported designs use), and the gate asserts WIDTH only until that mechanism exists.
-The other fifteen board categories still hug.
+- **HUG** (keeps `fit-content`): lower-third, corner-bug, end-credits, imported-design, ticker,
+  and the full-frame frame / transition / versus. **FIXED** (declares a stage): every other
+  category. Owner-ratified 2026-08-20, with the overflow answer - inside a stage text WRAPS, then
+  SHRINKS to the type floor, never widens the box.
+- **The mechanism.** A design declares `stageWidth` (px at 1080p). `stageBoxCss`
+  (shared/base.ts) emits the width, the `--stage-width` marker, `box-sizing` and where the slack
+  goes; `stageExtraJs` (shared/stageFit.ts) emits the runtime that holds each line - and the panel
+  itself - to the height it was drawn at. Omit it and the output is byte-identical to before.
+- **The instrument** is `scripts/footprint-stability-sweep.mjs`; **the gate** is
+  `e2e/catalog/footprint-stability.spec.ts`, which selects on the marker rather than a list, so a
+  category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
+  stabilise a board, it changes which dimension moves.
 
 ## The :root style contract
 
