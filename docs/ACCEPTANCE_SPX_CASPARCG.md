@@ -12,7 +12,7 @@ suite (`library.spec.ts`, `machine-graph.spec.ts`, `import-*.spec.ts`, `exports.
    `▶ Enter → » Name In → » Title In → ■ Out` (the internal layer sequence).
 3. Optional: select the `Enter → Name In` arrow, set **change: Cut — instant** (or Fade).
 4. **💾 Save** → name it `Presenter lower third`, create package `Election Night`.
-5. `🏠 Home → Control panels → Open control panel` → **＋ Add entry** three times, filling:
+5. `Home → Control panels → Open control panel` → **＋ Add entry** three times, filling:
    - `Anna Andersson` / `Presenter`
    - `Michael Smith` / `Guest`
    - `Lisa Virtanen` / `Correspondent`

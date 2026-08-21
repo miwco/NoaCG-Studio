@@ -76,7 +76,7 @@ if the room wants to see it.
 
 ### 2a. The newsroom kit (30 seconds)
 
-1. `noacg.studio/app` → **🏠 Home** → **Productions**.
+1. `noacg.studio/app` → **Home** → **Productions**.
 2. The dashed **Import a package** card → **Install** next to **Uutishuone**.
 3. The production page opens with **six graphics** already pooled on their own playout layers
    and **ten cues** in the rundown:

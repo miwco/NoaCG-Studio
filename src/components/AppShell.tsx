@@ -408,7 +408,7 @@ export default function AppShell() {
           data-testid="open-home"
           title="Home — your graphics, packages, control panels, and videos"
         >
-          🏠 Home
+          <span className="home-glyph" aria-hidden="true">▶</span> Home
         </button>
         {/* The general beta door. Deliberately the quietest control on the bar - visible from
             wherever somebody is standing when they get annoyed, and never asking for attention.

@@ -98,7 +98,7 @@ export default function CommunityGallery({ onClose, initialSlug }: Props) {
       return false;
     }
     addLook(body.name || item.name, brand);
-    setNote(`✓ Imported look “${item.name}” — find it under 🏠 Home ▸ Brand looks.`);
+    setNote(`✓ Imported look “${item.name}” — find it under Home ▸ Brand looks.`);
     return false; // a look import doesn't replace the editor, so keep the gallery open
   };
 
@@ -182,7 +182,7 @@ export default function CommunityGallery({ onClose, initialSlug }: Props) {
             ) : cards.length === 0 ? (
               // The route this used to name (📦 Packets ▸ Share to community) went away with the
               // packet manager — publishing is a saved graphic's own action in Home now.
-              <p className="hint">Nothing here yet. Publish one from 🏠 Home ▸ Graphics, with the 🌐 button on a saved graphic&apos;s row.</p>
+              <p className="hint">Nothing here yet. Publish one from Home ▸ Graphics, with the 🌐 button on a saved graphic&apos;s row.</p>
             ) : (
               cards.map((c) => card(c))
             )}

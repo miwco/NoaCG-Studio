@@ -1299,7 +1299,7 @@ export default function CreationWizard() {
               useRouter.getState().navigate({ view: 'home', section: null });
             }}
           >
-            🏠 Home
+            <span className="home-glyph" aria-hidden="true">▶</span> Home
           </button>
           {/* HOW FAR ALONG — from the SECOND step onward. On Entry there is no answer to give:
               no mode is chosen yet, so the denominator is not even the same number for every

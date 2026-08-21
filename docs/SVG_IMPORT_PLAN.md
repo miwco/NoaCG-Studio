@@ -12,6 +12,11 @@ and export-anywhere. See `docs/GOALS.md` ("the SVG road") and the competitor ent
 **The user promise:** design in Illustrator, Figma, Inkscape or any SVG app; drop the file into
 the Import door; your text becomes operator fields; the pixel-exact graphic goes on air.
 
+**The designer-facing half is `docs/SVG_AUTHORING.md`** - how to draw and export a file that
+imports well, per app, plus three ready-to-drop samples in `docs/svg-samples/` (live text, number
+/ countdown / picture fields, and an outlined-text file). This plan is the engineering contract;
+that page is what you hand somebody holding Illustrator.
+
 ---
 
 ## 1. Decision: inline the SVG verbatim, bind text nodes IN PLACE
