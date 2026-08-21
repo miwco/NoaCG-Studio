@@ -31,6 +31,7 @@ import type {
   AnimPresetId,
   LineSpec,
   LogoSupport,
+  MarkPlacement,
   Palette,
   ResolvedOptions,
   AssemblerId,
@@ -341,6 +342,13 @@ export interface TypeDesign {
    * authored without a slot, and the promotion check caught all four by name.
    */
   logo?: LogoSupport;
+  /**
+   * WHERE this design puts the mark, when its category default is wrong for it. The companion
+   * to `logo` above: that one says whether a design draws a mark at all, this says where it
+   * goes, and both are the DESIGN's to answer (owner, 2026-08-21 - placement depends on the
+   * design, so the platform holds no rule about it). Absent keeps the category default.
+   */
+  markPlacement?: MarkPlacement;
   /**
    * Why this design belongs to THIS type, when a mechanical signal says it might not.
    *
@@ -744,6 +752,7 @@ export function variantsFromType(type: GraphicType): TemplateVariant[] {
       maxLines: Math.max(type.capabilities.maxLines, type.fields.filter((f) => f.role === 'line').length),
       suggestedLines: typeLines(type.fields, design.samples),
       logo: design.logo ?? type.capabilities.logo,
+      ...(design.markPlacement ? { markPlacement: design.markPlacement } : {}),
       // The design's own vocabulary wins where it has one — see TypeDesign.animationPresets.
       animationPresets: design.animationPresets ?? type.capabilities.animationPresets,
       defaultPalette: design.palette,

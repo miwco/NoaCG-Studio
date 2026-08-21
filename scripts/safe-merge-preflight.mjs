@@ -91,6 +91,31 @@ export function validateBranchName(branch) {
 }
 
 /**
+ * The one-word verdict from `merge-order.mjs`, read WITHOUT assuming it exited 0.
+ *
+ * THE CHECK THAT COULD NOT SURVIVE THE THING IT CHECKS FOR. `merge-order` sets `exitCode = 3`
+ * to SIGNAL a hold, and this file ran it through `execFileSync`, which throws on any non-zero
+ * exit. So the one verdict the caller exists to catch was the one that crashed it: a Node stack
+ * trace, no verdict line, and the run over before it reported anything. Hit for real on
+ * 2026-08-21 landing a three-branch stack, where the hold was a self-reference between branches
+ * in one lineage - the case a human most needs the report for.
+ *
+ * A thrown `execFileSync` error still carries the child's `stdout`, so the verdict is there
+ * either way. Taking it from both paths is what makes exit 3 an ANSWER rather than an accident;
+ * anything genuinely broken (no output at all) reads as `unknown`, which the caller treats as
+ * not-a-hold rather than inventing one.
+ */
+export function mergeOrderVerdict(run) {
+  let out;
+  try {
+    out = run();
+  } catch (error) {
+    out = typeof error?.stdout === 'string' ? error.stdout : '';
+  }
+  return /VERDICT: (\w+)/.exec(out ?? '')?.[1] ?? 'unknown';
+}
+
+/**
  * Would merging `branch` into `main` conflict? The ANSWER IS AN EXIT CODE, never a text scan.
  *
  * `git merge-tree --write-tree` exits 0 for a clean merge and 1 when there are conflicts, and
@@ -279,11 +304,10 @@ function phase1(args) {
   check('merge preview is conflict-free', preview.clean, preview.detail);
 
   if (args.order) {
-    const order = execFileSync('node', ['scripts/merge-order.mjs', '--branch', branch], {
+    const verdict = mergeOrderVerdict(() => execFileSync('node', ['scripts/merge-order.mjs', '--branch', branch], {
       cwd: ROOT,
       encoding: 'utf8',
-    });
-    const verdict = /VERDICT: (\w+)/.exec(order)?.[1] ?? 'unknown';
+    }));
     check(`merge-order verdict is not "hold" (${verdict})`, verdict !== 'hold', verdict === 'hold' ? 'STOP and get an explicit go-ahead' : '', {
       fatal: verdict === 'hold',
     });
