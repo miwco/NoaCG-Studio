@@ -4,6 +4,7 @@ import type { ProjectFormatSelection } from '../../../model/projectFormat';
 import type { DesignArt } from '../../../model/wizard';
 import { fileToDataUrl, uniqueAssetPath } from '../../../assets/assetUtils';
 import { probeAsset } from '../../../assets/assetInfo';
+import { importSvgMarkup, isSvgFile, type SvgImportResult } from '../../../assets/svgImport';
 import { isTemplateFile, type ImportedTemplateResult } from '../../../model/importTemplate';
 import ProjectFormatPicker from '../../ProjectFormatPicker';
 
@@ -21,6 +22,10 @@ interface Props {
   onClearTemplate: () => void;
   /** Why the dropped template file could not be read (the parse is the wizard's). */
   fileError: string | null;
+  /** A dropped SVG, parsed + sanitized + inventoried (docs/SVG_IMPORT_PLAN.md). */
+  svg: SvgImportResult | null;
+  onSvg: (svg: SvgImportResult) => void;
+  onClearSvg: () => void;
 }
 
 /**
@@ -52,6 +57,9 @@ export default function ImportDesignStep({
   onTemplateFile,
   onClearTemplate,
   fileError,
+  svg,
+  onSvg,
+  onClearSvg,
 }: Props) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -124,6 +132,19 @@ export default function ImportDesignStep({
       onTemplateFile(template);
       return;
     }
+    // An SVG before the raster path: its MIME type is image/*, so without this branch it
+    // would fall into the pixel measurement below and die at the no-intrinsic-size check.
+    // A vector file is not a defect to explain — it is the better import (the SVG road,
+    // docs/SVG_IMPORT_PLAN.md): parsed, sanitized, its text layers offered as fields.
+    const svgFile = dropped.find(isSvgFile);
+    if (svgFile) {
+      try {
+        onSvg(importSvgMarkup(await svgFile.text()));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+      return;
+    }
     // Any image the browser can decode is welcome — the pipeline works off the decoded
     // pixels, never the container, so PNG, JPEG, WebP, GIF and AVIF all behave the same.
     // (Erasing baked-in text re-encodes to PNG, so a lossy original never loses more.)
@@ -155,12 +176,12 @@ export default function ImportDesignStep({
       <ProjectFormatPicker
         value={format}
         onChange={onFormat}
-        disabled={!!art || !!templateFile}
+        disabled={!!art || !!templateFile || !!svg}
         idPrefix="import-design-format"
         description={
           templateFile
             ? 'A finished template brings its own canvas — this is what it is read back against.'
-            : art
+            : art || svg
               ? 'Remove the current artwork before changing its authored canvas.'
               : 'Choose the canvas before artwork is measured and placed.'
         }
@@ -170,7 +191,7 @@ export default function ImportDesignStep({
           at full height would give the loudest element on the step to an action the user has
           already finished, and push everything that still matters below the fold. */}
       <div
-        className={`wz-drop ${art || templateFile ? 'compact' : ''} ${dragOver ? 'over' : ''}`}
+        className={`wz-drop ${art || templateFile || svg ? 'compact' : ''} ${dragOver ? 'over' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); void take(e.dataTransfer.files); }}
@@ -181,18 +202,20 @@ export default function ImportDesignStep({
         <input
           ref={fileInput}
           type="file"
-          accept="image/*,.html,.htm,.zip"
+          accept="image/*,.svg,.html,.htm,.zip"
           style={{ display: 'none' }}
           onChange={(e) => { if (e.target.files) void take(e.target.files); e.target.value = ''; }}
         />
         <strong>
-          {art || templateFile ? 'Drop another file to replace it' : 'Drop your finished design here'}
+          {art || templateFile || svg ? 'Drop another file to replace it' : 'Drop your finished design here'}
         </strong>
-        {!art && !templateFile && (
+        {!art && !templateFile && !svg && (
           <span className="hint">
-            The image you already made — PNG, JPEG, WebP, or anything else your browser opens.
-            A format that carries transparency (PNG or WebP) keeps everything behind it visible
-            on air. It becomes the graphic itself, and you place its text fields in the next steps.
+            The design you already made. A layered <strong>SVG</strong> (from Illustrator, Figma
+            or Inkscape) is the best import: it stays pixel-exact and its text layers become
+            editable fields by themselves. A PNG, JPEG or WebP works too — you place its text
+            fields in the next steps. A format that carries transparency (SVG, PNG or WebP)
+            keeps everything behind it visible on air.
             <br />
             Already have the finished graphic as an <strong>.html</strong> or <strong>.zip</strong>?
             Drop that instead and it comes in as it is, with its own fields.
@@ -233,6 +256,40 @@ export default function ImportDesignStep({
             <p className="hint" key={m}>{m}</p>
           ))}
           <button onClick={onClearTemplate}>✕ Use a different file</button>
+        </div>
+      )}
+
+      {svg && (
+        <div className="panel-section" style={{ marginTop: 16 }} data-testid="import-svg-card">
+          <h3>Your design</h3>
+          <p>
+            <strong>SVG artwork</strong>{' '}
+            <span className="hint mono">{svg.width} × {svg.height}</span>
+          </p>
+          {/* The text layers are the whole point of an SVG import: each becomes an operator
+              field with the designer's exact typography. Counting them here is what turns
+              "it opened" into "it is bindable". */}
+          {svg.candidates.length > 0 ? (
+            <p className="hint" data-testid="import-svg-layers">
+              {svg.candidates.length} text layer{svg.candidates.length === 1 ? '' : 's'} detected —
+              choose which become operator fields in the next step.
+            </p>
+          ) : (
+            <p className="status-warn" data-testid="import-svg-nolayers">
+              No text layers were found in this SVG — its type was probably converted to
+              outlines. It still imports pixel-exact; the next step explains the two ways to
+              make its text editable.
+            </p>
+          )}
+          {svg.fonts.length > 0 && (
+            <p className="hint" data-testid="import-svg-fonts">
+              Typeface{svg.fonts.length === 1 ? '' : 's'}: {svg.fonts.map((f) => f.family).join(', ')}
+            </p>
+          )}
+          {svg.notices.map((n) => (
+            <p className="hint" key={n}>{n}</p>
+          ))}
+          <button onClick={onClearSvg}>✕ Use a different design</button>
         </div>
       )}
 
@@ -282,7 +339,9 @@ export default function ImportDesignStep({
         <p className="hint">
           {templateFile
             ? 'Name it, then send it to a production or export it — SPX, CasparCG, OGraf, LiveOS or an OBS/vMix overlay. The file is kept exactly as you wrote it; NoaCG adds nothing to it.'
-            : 'The next steps clean up the artwork if it needs it, place the text fields on it, and choose how it moves on and off air. Your artwork is never redrawn or regenerated — NoaCG only adds the broadcast behaviour around it, and exports it as a working template.'}
+            : svg
+              ? 'The next steps choose which text layers the operator can edit, match the typefaces, and pick how it moves on and off air. The SVG itself is never redrawn — your exact artwork goes on air, and exports as a working template.'
+              : 'The next steps clean up the artwork if it needs it, place the text fields on it, and choose how it moves on and off air. Your artwork is never redrawn or regenerated — NoaCG only adds the broadcast behaviour around it, and exports it as a working template.'}
         </p>
       </div>
     </div>

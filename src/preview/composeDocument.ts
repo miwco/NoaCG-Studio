@@ -149,21 +149,24 @@ body { position: relative; overflow: visible !important; margin: ${options.autho
     ? `<script id="spx-preview-assets">
 (function () {
   var MAP = ${JSON.stringify(runtimeAssets)};
-  function fix(img) {
-    var src = img.getAttribute('src');
+  // <img> uses src; an SVG picture slot (<image>, the imported-SVG road) uses href.
+  function fix(el) {
+    var attr = el.tagName === 'IMG' ? 'src' : 'href';
+    var src = el.getAttribute(attr);
     if (!src) return;
     var clean = src.replace(/^\\.\\//, '');
-    if (MAP[clean]) img.src = MAP[clean];
+    if (MAP[clean]) el.setAttribute(attr, MAP[clean]);
   }
+  function isPic(el) { return el.tagName === 'IMG' || el.tagName === 'image'; }
   new MutationObserver(function (muts) {
     muts.forEach(function (m) {
-      if (m.type === 'attributes' && m.target.tagName === 'IMG') fix(m.target);
+      if (m.type === 'attributes' && isPic(m.target)) fix(m.target);
       if (m.addedNodes) m.addedNodes.forEach(function (n) {
-        if (n.tagName === 'IMG') fix(n);
-        else if (n.querySelectorAll) n.querySelectorAll('img').forEach(fix);
+        if (n.tagName && isPic(n)) fix(n);
+        else if (n.querySelectorAll) n.querySelectorAll('img, image').forEach(fix);
       });
     });
-  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'href'] });
 })();
 </script>\n`
     : '';

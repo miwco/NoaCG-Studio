@@ -173,6 +173,20 @@ function lineCount(file) {
   return text(file).split('\n').length;
 }
 
+/**
+ * What one instruction file COSTS a Codex session, measured LF-normalised.
+ *
+ * The number that matters is the size of the file as committed, which is what a fresh checkout
+ * hands the agent. A Windows working copy checks these out with CRLF (`core.autocrlf`), so
+ * measuring the bytes on disk adds one per line - 1,468 of them across the largest chain here.
+ * That was enough to report the chain 759 bytes OVER a budget it was actually 709 bytes under,
+ * so the check failed on every Windows machine while CI, which checks out LF, stayed green. A
+ * gate that says different things on different machines teaches people to ignore it.
+ */
+function chainBytes(file) {
+  return Buffer.byteLength(text(file).replace(/\r\n/g, '\n'), 'utf8');
+}
+
 function checkThinWrapper(file, mustContain, label) {
   if (!existsSync(file)) {
     failures.push(`${label}: missing ${rel(file)}`);
@@ -301,19 +315,8 @@ function checkInstructionChains(agentsFiles) {
     const chain = agentsFiles.filter((candidate) =>
       isDirectoryAncestor(path.dirname(candidate), leafDir),
     );
-    // MEASURED WITH LF LINE ENDINGS, whatever this checkout has on disk. With
-    // `core.autocrlf=true` - the Windows default, and what the maintainer's checkouts use -
-    // every line costs one extra byte, which on a ~120 KB budget is about 1.5 KB of pure
-    // punctuation. A chain sitting just under the cap therefore FAILED on Windows and passed
-    // in CI on the identical commit, so the gate was reporting the checkout's line endings
-    // rather than the size of the documentation. The budget itself is stated against the
-    // repository's own (LF) content, so normalize to that and the verdict is the same
-    // everywhere.
     const bytes =
-      chain.reduce(
-        (sum, file) => sum + Buffer.byteLength(text(file).replace(/\r\n/g, '\n'), 'utf8'),
-        0,
-      ) + Math.max(0, chain.length - 1) * 2;
+      chain.reduce((sum, file) => sum + chainBytes(file), 0) + Math.max(0, chain.length - 1) * 2;
     chainUsage.push({ leaf: rel(leaf), bytes, limit, headroom: limit - bytes });
     if (bytes > limit) {
       failures.push(

@@ -234,11 +234,77 @@ export function activeRuns({ exclude, excludePids, unattributableRoot = '<unknow
       pid: p.pid,
       root: RUNNER.test(p.command) ? rootOfCommand(p.command) : rootOfSweep(p.command, unattributableRoot),
       label: labelOf(p.command),
+      // A SWEEP never queues behind anything; only a Playwright run has a globalSetup that
+      // waits. `blockingRuns` needs to tell the two apart, and `startedAt` is how two runs
+      // that can both be waiting decide which of them goes first.
+      kind: RUNNER.test(p.command) ? 'run' : 'sweep',
+      startedAt: p.startedAt ?? null,
       elapsedMin: p.startedAt ? Math.round(((Date.now() - p.startedAt) / 60_000) * 10) / 10 : null,
     }))
     .filter((r) => !excludePids?.has(r.pid))
     .filter((r) => r.root && !(exclude && sameRoot(r.root, exclude)))
     .sort((a, b) => (b.elapsedMin ?? 0) - (a.elapsedMin ?? 0));
+}
+
+/**
+ * Two Playwright runs started within this many milliseconds count as having started TOGETHER,
+ * and the tie is settled by pid instead of by clock.
+ *
+ * The slack is not cosmetic. On POSIX `startedAt` is derived from `ps -o etimes`, which reports
+ * ELAPSED WHOLE SECONDS - so the same process yields a value that wobbles by up to a second
+ * depending on when the table was read, and two runs comparing each other a few seconds apart
+ * must still reach the SAME verdict or they both stall again. Pid is stable, unique, and
+ * available on every platform, which is all a tiebreak has to be.
+ */
+const SIMULTANEOUS_MS = 2_000;
+
+/**
+ * Which of `runs` a WAITING run must actually yield to.
+ *
+ * THE STALL THIS EXISTS TO PREVENT. A Playwright CLI that is sitting in its globalSetup waiting
+ * looks exactly like one that is driving a browser - same process, same command line - because
+ * this module reads the OS process table rather than any state a run publishes about itself. So
+ * two runs started in the same second each saw the other as active work and queued behind it,
+ * and neither could ever be the one that finished: both sat there until the 30-minute cap in
+ * e2e/_offline-guard.ts let them through. Measured on 2026-08-21 - two worktrees, both idle at
+ * ~2 s of CPU sixteen minutes in, and killing either one released the other within seconds.
+ *
+ * THE RULE. Runs are ordered by when they started, ties broken by pid, and a run yields only to
+ * those AHEAD of it. That is a total order every run computes identically from the same process
+ * table, so exactly one of any simultaneous set proceeds and the rest queue behind it in a
+ * stable FIFO - no lock file, nothing to release, nothing to go stale, which is the property
+ * this module is built on (see the header).
+ *
+ * A SWEEP is always yielded to, whenever it started: a sweep has no globalSetup and never waits
+ * for anybody, so it can only ever be real work in progress.
+ */
+export function blockingRuns(runs, self) {
+  return runs.filter((r) => {
+    if (r.kind !== 'run') return true; // a sweep or bench: always real work
+    if (r.pid === self.pid) return false;
+    const known = typeof r.startedAt === 'number' && typeof self.startedAt === 'number';
+    // An unreadable start time on either side falls back to the pid order alone. Both runs see
+    // the same pair of values, so they still agree on who goes first - which is the only
+    // property that matters here.
+    if (!known || Math.abs(r.startedAt - self.startedAt) <= SIMULTANEOUS_MS) return r.pid < self.pid;
+    return r.startedAt < self.startedAt;
+  });
+}
+
+/**
+ * This run's own identity for `blockingRuns`: the pid and start time of the Playwright CLI in
+ * our own process chain.
+ *
+ * globalSetup does not necessarily run IN the CLI process, so `process.pid` is not reliably the
+ * one other checkouts can see. The CLI is whichever of our ancestors the runner pattern matches;
+ * failing that we fall back to this process, which still gives a stable, unique pid - the part
+ * the tiebreak actually depends on.
+ */
+export function selfRun(pids = selfAndAncestors(), processes = nodeProcesses()) {
+  const cli = processes.find((p) => pids.has(p.pid) && RUNNER.test(p.command));
+  if (cli) return { pid: cli.pid, startedAt: cli.startedAt ?? null };
+  const own = processes.find((p) => p.pid === process.pid);
+  return { pid: process.pid, startedAt: own?.startedAt ?? null };
 }
 
 /** One human-readable line per active run. */

@@ -27,6 +27,8 @@ import {
   type ControlButton,
 } from './controlModel';
 import type { RemoteControlConfig } from './realtimeControl';
+import { clockSpecFromHtml, type ClockSpec } from './matchClockWire';
+import { MATCH_CLOCK_PAGE_JS } from './matchClockPageJs';
 import { isImageAsset } from '../assets/assetUtils';
 
 interface EmittedControl extends FieldDescriptor {
@@ -63,6 +65,11 @@ export interface EmittedGraphic {
   entries: EmittedEntry[];
   /** {ref,key,topic} when this graphic has remote control enabled, else null. */
   remote: RemoteControlConfig | null;
+  /** The MATCH CLOCK this graphic carries, read off its published markup at generation time
+   *  (`matchClockWire.ts` clockSpecFromHtml), or null for the graphics that have none — which
+   *  is most of them. The page needs it to stamp the clock's time origin itself; see the
+   *  clock block in the emitted script. */
+  clock: ClockSpec | null;
 }
 
 /** The template shape the panel needs (SpxTemplate satisfies it). */
@@ -70,6 +77,9 @@ export interface PanelTemplate {
   name: string;
   fields: SpxField[];
   js: string;
+  /** Optional only so a hand-built fixture can omit it: a real template always has markup, and
+   *  without it the panel simply finds no clock. */
+  html?: string;
   assets: { path: string; data?: unknown }[];
 }
 
@@ -106,6 +116,9 @@ export function emitGraphic(
     // `formatMachineState`, but it must not print raw ids either — a student operating an
     // exported package has never seen "sealed". Resolved here, at generation time.
     stateNames: machineStateNames(template.js),
+    // The clock, read off the markup rather than declared: the same reader the hosted renderer
+    // uses, run once here so the page ships with the answer instead of a DOM parse.
+    clock: clockSpecFromHtml(template.html ?? ''),
     images,
     entries: (opts?.entries ?? []).map((e) => ({ id: e.id, label: e.label, values: e.values })),
     remote,
@@ -286,6 +299,8 @@ function sendRelay(graphic, msg) {
   }).catch(function () { /* the BroadcastChannel path still works */ });
 }
 
+${MATCH_CLOCK_PAGE_JS}
+
 function el(tag, attrs, kids) {
   var e = document.createElement(tag);
   for (var k in (attrs || {})) { if (k === 'class') e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
@@ -367,11 +382,52 @@ GRAPHICS.forEach(function (g) {
     stagedChip.style.display = dirty && !live() ? 'inline' : 'none';
   }
   function sendUpdate() {
-    post({ t: 'update', data: state });
+    // A COPY, not the live state object. log.sent keeps the message it was handed, so sending
+    // the state object itself put a live reference into the transition history: a later edit rewrote
+    // what the log said had already been sent, and persistLog wrote the rewrite to disk.
+    var snapshot = {};
+    for (var k in state) snapshot[k] = state[k];
+    post({ t: 'update', data: snapshot });
     for (var uk in state) lastSent[uk] = state[uk];
     paintStaged();
   }
   function onChange(field, value) { state[field] = value; if (live()) sendUpdate(); else paintStaged(); }
+
+  // ── The clock verbs. CLOCK is this graphic's clock spec, or null for the graphics that carry
+  // no clock — which is most of them. The arithmetic is the shared block above
+  // (control/matchClockPageJs.ts); what follows is this page's own copy of the DECISION.
+  var CLOCK = g.clock || null;
+  var clockInput = null;               // the operator's correction box, so a banked time repaints
+  // What one clock verb does to the field, and WHEN relative to the event itself — the panel's
+  // copy of matchClockWire.ts's clockRowEffect, and it must stay the same decision.
+  //
+  // 'before' for a START: the origin has to be in the document by the time startMatchClock runs,
+  // or the runtime mints a local one and this panel's log has no origin to replay.
+  // 'after' for a hold or a reset: the value banked is what the graphic has just settled on.
+  // Reset banks the spec's resetTo — what the RUNTIME returns to — rather than what the element
+  // happens to read, or a reboot after a reset would recover a different time from the one aired.
+  function clockEffect(event, at) {
+    if (!CLOCK) return null;
+    var from = state[CLOCK.field] !== undefined ? state[CLOCK.field] : CLOCK.seed;
+    if (event === 'clockStart') return { value: clockValueAt(from, CLOCK.countsDown, at) + '@' + at, when: 'before' };
+    if (event === 'clockStop') return { value: clockValueAt(from, CLOCK.countsDown, at), when: 'after' };
+    if (event === 'clockReset') return { value: CLOCK.resetTo, when: 'after' };
+    return null;
+  }
+  // Bank the clock's new value: into the field state, so every later ⟳ Take re-sends it (a
+  // STAMPED value is idempotent — re-sending it a minute later still resolves to the right
+  // second, where a raw counter snapshot pulled the clock backwards on every score bump), and
+  // onto the wire, which is what puts it in the log this panel replays when a rebooted graphic
+  // announces itself. That replay IS the recovery.
+  function applyClock(value) {
+    var data = {};
+    data[CLOCK.field] = value;
+    state[CLOCK.field] = value;
+    post({ t: 'update', data: data });
+    lastSent[CLOCK.field] = value;     // it just aired: not staged
+    if (clockInput) clockInput.value = clockPlain(value);
+    paintStaged();
+  }
 
   function buildControl(c) {
     var wrap = el('div', { class: 'field' }, [el('label', {}, [c.label])]);
@@ -458,7 +514,14 @@ GRAPHICS.forEach(function (g) {
       isel.onchange = function () { paint(isel.value); onChange(c.key, isel.value); };
       wrap.appendChild(el('div', { class: 'row' }, [isel, img]));
     } else {
-      var t = el('input', { type: 'text' }); t.value = v || '';
+      var t = el('input', { type: 'text' });
+      // THE CLOCK FIELD HOLDS THE WIRE VALUE, which while the clock runs carries its origin
+      // stamp ("45:00@1755600000000"). An operator reads and types the time alone, so the box
+      // shows the plain half; typing into it replaces the whole value, which is exactly right —
+      // a typed time is a correction, and a correction has no origin but the moment it lands.
+      var isClock = !!CLOCK && c.key === CLOCK.field;
+      t.value = isClock ? clockPlain(v) : (v || '');
+      if (isClock) clockInput = t;
       t.oninput = function () { onChange(c.key, t.value); };
       wrap.appendChild(t);
     }
@@ -516,7 +579,12 @@ GRAPHICS.forEach(function (g) {
     (e.payload || []).forEach(function (key) {
       if (state[key] !== undefined) { payload = payload || {}; payload[key] = state[key]; }
     });
+    // A clock verb writes the clock's own value around the event, in the order the wire module
+    // fixes: the origin BEFORE a start, the banked time AFTER a hold or a reset.
+    var effect = clockEffect(e.event, Date.now());
+    if (effect && effect.when === 'before') applyClock(effect.value);
     post(payload ? { t: 'event', event: e.event, payload: payload } : { t: 'event', event: e.event });
+    if (effect && effect.when === 'after') applyClock(effect.value);
     // The payload just aired those fields — they are no longer merely staged.
     if (payload) { for (var pk in payload) lastSent[pk] = payload[pk]; paintStaged(); }
   }
