@@ -467,6 +467,12 @@ e2e/layout.spec.ts.
   too (the exported controller keeps its own copy - it ships without React). A key belongs in
   that module, never in a surface; the bar is `HostedVerbs`, a component of its own only because
   the hooks rule forbids binding a key while the page is still resolving its show.
+  **They bind while playout is the surface ON SCREEN, never merely while it is mounted.** The
+  in-app shell renders on Data and Audience too, with the playout column hidden behind them
+  rather than unmounted - so bound-while-mounted meant SPACE ran Take from a screen with no
+  monitors on it, and a cue went to air with nothing saying so (measured 2026-08-21: nine rows
+  on the wire). Hence `usePlayoutVerbKeys(onKey, sub === null)`; this page has no workspaces and
+  passes nothing. A verb acts on what the operator can SEE.
   Field edits still go to the SHARED staging buffer (local echo + debounced control_stage) and
   air only on an explicit take; event buttons still grey by structural guard; the graphic's
   saved ENTRIES stay a READ-ONLY picker in the editor head (authoring stays in

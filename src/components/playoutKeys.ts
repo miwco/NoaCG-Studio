@@ -52,11 +52,26 @@ const KEY_MAP: Record<string, PlayoutVerb> = {
 };
 
 /**
- * Bind the verb keys for as long as the surface is mounted. Never while typing - the cue title
- * and the fields live on these same surfaces, and SPACE inside a name must stay a space.
+ * Bind the verb keys while the playout surface is the one ON SCREEN. Never while typing - the
+ * cue title and the fields live on these same surfaces, and SPACE inside a name must stay a
+ * space.
+ *
+ * `enabled` exists because "mounted" was the wrong condition, and the difference put a graphic
+ * on air by accident. The production page's SHELL renders on the Data and Audience workspaces
+ * too, with the playout column hidden behind them rather than unmounted (which is right - see
+ * ProductionPage, unmounting restarts every live graphic). So the keys stayed bound on a screen
+ * with no monitors on it: standing on the Data tab with focus anywhere but an input, SPACE ran
+ * Take and a cue went to air with nothing visible saying so. Measured 2026-08-21 - three rows
+ * on the wire and the chip reading "on air" - and it is the concrete hazard behind the owner's
+ * read of these workspaces the same day: "the buttons that we have and the side pages we have
+ * feel a bit dangerous to swap between."
+ *
+ * A verb acts on what the operator can SEE. When they cannot see PROGRAM, the keys are not
+ * theirs to press.
  */
-export function usePlayoutVerbKeys(onKey: (verb: PlayoutVerb) => void): void {
+export function usePlayoutVerbKeys(onKey: (verb: PlayoutVerb) => void, enabled = true): void {
   useEffect(() => {
+    if (!enabled) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || typingInto(e.target)) return;
       const verb = KEY_MAP[e.key.toLowerCase()];
@@ -66,7 +81,7 @@ export function usePlayoutVerbKeys(onKey: (verb: PlayoutVerb) => void): void {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onKey]);
+  }, [onKey, enabled]);
 }
 
 /**

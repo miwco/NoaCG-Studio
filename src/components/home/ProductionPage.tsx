@@ -2200,7 +2200,11 @@ function ProductionShell({
 }) {
   // The verb keys (docs/PLAYOUT_DASHBOARD.md §2) come from the SHARED keymap, so the hosted
   // control page cannot drift away from this one again — see components/playoutKeys.ts.
-  usePlayoutVerbKeys(onKey);
+  //
+  // ONLY WHILE PLAYOUT IS THE SURFACE ON SCREEN. This shell renders on Data and Audience too,
+  // with the playout column hidden behind them, so bound-while-mounted meant SPACE ran Take
+  // from a screen showing neither monitor. The hosted page has no workspaces and passes nothing.
+  usePlayoutVerbKeys(onKey, sub === null);
 
   return (
     <div className="app playout-dashboard" data-testid="production-page">
