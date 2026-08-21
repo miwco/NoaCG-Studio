@@ -1665,6 +1665,13 @@ export function clampLightnessForContrast(color: string, panel: string, target: 
 
 export const LITE_CONTRAST_FLOOR = { primary: 4.5, secondary: 3 } as const;
 
+/** The pair the furniture ladder repairs against. A CALLER may state its own - see the `floor`
+ *  argument on `clampLitePalette` - because Lite and Pro are separate projects that do not share
+ *  a quality bar (`src/ai/AGENTS.md`), and one tier's ratified floor is not evidence for the
+ *  other's. What they DO share is this one ladder: two implementations would be two answers about
+ *  one customer's colours. */
+export interface ContrastFloor { primary: number; secondary: number }
+
 /** A mark is a GRAPHICAL object, so WCAG's non-text floor applies rather than the text one -
  *  the same 3:1 `scripts/ai-lite-brand-audit.mjs` measures a rendered mark against. */
 export const LITE_MARK_CONTRAST_FLOOR = 3;
@@ -1698,9 +1705,10 @@ function neutralOn(panel: string): string {
  */
 export function clampLitePalette(
   palette: NonNullable<LiteDesignSpec['palette']>,
+  floor: ContrastFloor = LITE_CONTRAST_FLOOR,
 ): { palette: NonNullable<LiteDesignSpec['palette']>; adjustments: string[] } {
   const adjustments: string[] = [];
-  const { primary, secondary } = LITE_CONTRAST_FLOOR;
+  const { primary, secondary } = floor;
   const ratio = (color: string): number => contrastRatio(color, palette.panel) ?? 0;
   let source = palette;
   if (ratio(palette.text) < primary && ratio(palette.textDim) >= primary && ratio(palette.text) >= secondary) {
@@ -1751,13 +1759,14 @@ function sameHex(a: string, b: string): boolean {
 export function applyLiteBrandPalette(
   requested: NonNullable<LiteDesignSpec['palette']>,
   emitted: LiteDesignSpec['palette'] | undefined,
+  floor: ContrastFloor = LITE_CONTRAST_FLOOR,
 ): { palette: NonNullable<LiteDesignSpec['palette']>; adjustments: string[] } {
   const adjustments: string[] = [];
   if (!emitted) adjustments.push('brand_palette_missing');
   else if (!(['accent', 'panel', 'text', 'textDim'] as const).every((slot) => sameHex(emitted[slot], requested[slot]))) {
     adjustments.push('brand_palette_overridden');
   }
-  const repaired = clampLitePalette(requested);
+  const repaired = clampLitePalette(requested, floor);
   return { palette: repaired.palette, adjustments: [...adjustments, ...repaired.adjustments] };
 }
 

@@ -328,9 +328,13 @@ export default function AppShell() {
     <div className="app">
       <SystemNoticeBar />
       <header className="topbar">
-        <button className="brand brand-home" onClick={() => navigate({ view: 'home', section: null })} title="NoaCG Studio — Home">
+        {/* THE LOGO IS THE SITE ROOT, not a second Home door — `.home-btn` further along this
+            bar is Home. Until this was a link there was no way back to the public landing page
+            from inside the studio at all short of retyping the URL. A real <a> so it behaves
+            like a logo everywhere: middle-click and ⌘-click open it in a new tab. */}
+        <a className="brand brand-home" href="/" title="NoaCG Studio — the front page">
           <BrandLogo size={24} />
-        </button>
+        </a>
         <span className="divider-dot" aria-hidden="true">·</span>
         <span className="tpl-name">{template.name}</span>
         <span className="topbar-meta mono muted">

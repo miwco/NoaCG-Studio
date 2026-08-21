@@ -27,6 +27,19 @@ is ONE LINE, carries no label of its own, and is FLUSH with the card grid. Both 
 (Create with AI, video) wear the Beta tag INSIDE the title. **THREE DIVERGENCES ARE DELIBERATE**, pinned by `e2e/wizard-entry-fit.spec.ts`: no
 kit card, cards act on CLICK not radio-plus-Continue, Blank stays behind Advanced mode.
 
+**THE HEADER'S TWO DOORS ARE TWO DESTINATIONS**: the brand lockup is an `<a href="/">` to the
+public FRONT PAGE (as on every topbar), and `wz-home` beside it is Home. Home must stay one press
+from every step - ✕ only rewinds to the front page. Every wizard-shell control answers a hover in
+amber like the entry cards, stated once over `.wz-header`/`.wz-dot` in styles.css, never per button.
+
+**EVERY STEP IS ITS OWN HISTORY ENTRY** (`#/new/step/<name>`, src/app/router.ts): the step is
+named, NEVER indexed, because import mode's extra step shifts every later index. Step 0 carries
+no segment, so Back off the front page still leaves. Two rules follow. The open reset seeds its
+step from the route, not from 0. And **nothing the wizard renders may navigate a live frame** -
+WizardPreview mounts a NEW iframe per document (keyed on its generation) because replacing an
+existing frame's `srcdoc` is a subframe navigation that joins the session history, which put one
+dead Back press in the walk for every rebuild.
+
 **THE FEEDBACK DOOR IS ON THE WIZARD HEADER** (`BetaFeedbackButton area="wizard"`; Home carries
 `area="home"`). Two dependencies: the header's push is a
 CHAIN (`.wz-stepcount ~ .fb-open`, `.fb-open ~ .gallery-close`), since the step counter is
@@ -207,8 +220,10 @@ with the Data tab revealed
 in the editor: the Data tab's placed add, the canvas gestures, the Inspector's Style/Animations
 tabs. FieldsStep/StyleStep carry NO imported-design branches any more - design mode never
 reaches them. **THE SAME DROP ZONE TAKES A LAYERED SVG** (mode **'svg'** - like 'file', Prepare/Text
-cannot apply): ONE mapping step, MapSvgFieldsStep. Contract + reasoning:
-docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
+cannot apply): ONE mapping step, MapSvgFieldsStep - text layers, pictures, and the OUTLINED-TEXT
+rows (a ticked glyph group is hidden and a placed line stands in, its box MEASURED on the step's
+own inline render, never the preview iframe; draft.ts `withSvgOutlineFields` via addPlacedLine).
+Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
 which switches the wizard to mode **'file'**: a two-stop rail (Template file -> Finish), the

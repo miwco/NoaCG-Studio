@@ -78,12 +78,16 @@ export const SWEEP_SCRIPTS =
   // already doing it unlisted, and `footprint-stability-sweep` was listed the day it was written.
   // `footprint-stability-sweep` renders the whole registry TWICE (short text, then long), so it
   // is the heaviest of the four and the one that would hurt most sitting beside a live suite.
+  // `text-containment-sweep` renders the whole registry once, drives every text field to a long
+  // value and freezes the motion before reading, so it holds the machine for as long as its
+  // siblings and belongs here for the same reason they do.
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
+  + '|text-containment-sweep'
   // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
   // they are easy to forget here: a script nobody calls a test still opens Chromium and still
-  // drives the whole app through it. `acceptance-pack` walks four productions, an exported
-  // package and a catalog category at three viewport sizes, which is a job by every measure
-  // this module cares about.
+  // drives the whole app through it. `acceptance-pack` walks four productions, a hosted-page rig
+  // over its own build, an exported package and a catalog category at three viewport sizes,
+  // which is a job by every measure this module cares about.
   + '|acceptance-shots|acceptance-pack'
   + `|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';

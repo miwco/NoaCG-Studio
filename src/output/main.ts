@@ -18,7 +18,7 @@ import {
   followControlLog,
   type ControlEventRow,
 } from '../control/hostedControl';
-import { clockRowEffect, clockSpecFromHtml, type ClockSpec } from '../control/matchClockWire';
+import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../control/matchClockWire';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -181,7 +181,17 @@ async function boot(): Promise<void> {
     if (snapshot !== undefined && row.id <= snapshot) return;
     const msg = row.msg;
     if (msg.t === 'update') {
-      mergedData.set(row.graphic, { ...mergedData.get(row.graphic), ...msg.data });
+      const merged = { ...mergedData.get(row.graphic), ...msg.data };
+      // …except the CLOCK field, which is not an ordinary value: a resend of the cue's plain
+      // time must not erase the origin this renderer stamped onto it (clockValueAfterUpdate).
+      const held = clockSpecs.get(row.graphic);
+      if (held && msg.data[held.field] !== undefined) {
+        merged[held.field] = clockValueAfterUpdate(
+          mergedData.get(row.graphic)?.[held.field],
+          msg.data[held.field],
+        );
+      }
+      mergedData.set(row.graphic, merged);
     } else if (msg.t === 'event' && msg.payload) {
       mergedData.set(row.graphic, { ...mergedData.get(row.graphic), ...msg.payload });
     } else if (msg.t === 'play' || msg.t === 'snap') {

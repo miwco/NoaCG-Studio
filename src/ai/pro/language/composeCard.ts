@@ -166,7 +166,7 @@ ${form === 'top-rule'
 .info-card-title,
 .info-card-extra {
   font-size: ${typePx(s.supportingPx)};  /* the package's supporting size, at card scale */
-  font-weight: ${s.supportingWeight};                /* the language's supporting weight, floored for its size */
+  font-weight: ${s.supportingWeight};                /* the language's supporting weight, never under the floor */
   line-height: 1.35;                /* card body lines breathe a little more than a strap's */
   letter-spacing: ${s.supportingTracking};        /* the package's label tracking */
   text-transform: ${upper(language.typography.supportingCase)};

@@ -72,7 +72,7 @@ import {
   type ResolvedControlShow,
 } from '../../control/hostedControl';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
-import { clockRowEffect, clockSpecFromHtml, type ClockSpec } from '../../control/matchClockWire';
+import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
 import { postPreviewCmd } from '../../preview/previewProtocol';
@@ -304,7 +304,11 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
       // it, and an accepted event's payload rides the same field path.
       const carried =
         msg.t === 'update' ? msg.data?.[clock.field] : msg.t === 'event' ? msg.payload?.[clock.field] : undefined;
-      if (carried !== undefined) clockValues.current[item.graphic] = carried;
+      // A plain resend of the cue's own time must not erase the origin (clockValueAfterUpdate):
+      // the cue stores "10:00" forever, so every Take mid-match re-sends it.
+      if (carried !== undefined) {
+        clockValues.current[item.graphic] = clockValueAfterUpdate(clockValues.current[item.graphic], carried);
+      }
       if (msg.t === 'stop') delete clockValues.current[item.graphic];
       const effect = clockRowEffect({ msg }, clock, clockValues.current[item.graphic], Date.now());
       if (!effect) {

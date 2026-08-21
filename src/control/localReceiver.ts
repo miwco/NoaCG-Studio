@@ -61,14 +61,96 @@ export function localReceiverJs(graphicName: string): string {
       .catch(function () { polling = false; });
   }
 
-  // Boot at the log HEAD: a reloaded browser source starts clean and follows live commands
-  // (full replay recovery is the shared controller's job, not a blind re-run of the show).
+  // ── BOOT RECOVERY (docs/CLOUD_PLAYOUT.md's recovery discipline, local half) ───────────────
+  // A browser source that reloads mid-show used to boot at the log HEAD and come back BLANK:
+  // off air, every field at the design's own defaults, until an operator happened to press
+  // something. Measured on an exported package: a board aired at 89-84 with the clock at 9:55
+  // came back invisible, reading 88 and 10:00, with nine rows sitting unread in the log.
+  //
+  // The log IS the history, so recovery needs no report channel and no new protocol — it needs
+  // a BOUNDED replay. Two things bound it, and both matter:
+  //
+  //   - it starts at the LAST "play" for this graphic and stream, so what is re-run is the
+  //     current airing rather than the whole show. A graphic never played, or stopped since,
+  //     is supposed to be blank and is left alone;
+  //   - it runs OFF AIR. Replayed commands are ordinary commands and they animate, so a
+  //     visible replay would put the outage's history on screen — recovery is never watchable.
+  //     The page hides itself, replays, lets the motion settle, and comes back.
+  //
+  // The opacity goes on documentElement deliberately: the runtime's own entrance reset clears
+  // inline styles across the GRAPHIC's root subtree, which would strip a hide set inside it.
+  var SETTLE_MS = 1200;         // an entrance plus an exit; overshooting only costs blank frames
+  var MAX_PAGES = 40;           // the tail RPC answers 500 rows at a time — the same ceiling
+                                // the hosted renderer's catch-up walk uses
+
+  function readLog(after, acc, pages, done) {
+    if (pages >= MAX_PAGES) { done(acc); return; }
+    fetch('/relay/log?after=' + after)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.rows) { done(acc); return; }
+        for (var i = 0; i < data.rows.length; i++) acc.push(data.rows[i]);
+        if (data.rows.length < 500) done(acc);
+        else readLog(acc[acc.length - 1].id, acc, pages + 1, done);
+      })
+      .catch(function () { done(acc); });
+  }
+
+  function recover(head) {
+    readLog(0, [], 0, function (all) {
+      var mine = [];
+      for (var i = 0; i < all.length; i++) {
+        var r = all[i];
+        if (r.graphic === GRAPHIC && (r.stream || 'program') === STREAM) mine.push(r);
+      }
+      // Where the current airing begins, and whether it is still on.
+      var from = -1;
+      for (var j = 0; j < mine.length; j++) {
+        var t = mine[j].msg && mine[j].msg.t;
+        if (t === 'play') from = j;
+        else if (t === 'stop') from = -1;      // taken off air: blank is the correct picture
+      }
+      if (from === -1) { cursor = head; setInterval(poll, 400); return; }
+
+      // The data half: EVERY value ever written to this graphic, merged in order - not merely
+      // those up to the play. Two things depend on the whole set:
+      //
+      //   - a bump sent after the take is a PARTIAL update carrying one field, so the score is
+      //     only in the later rows (measured: recovering from the pre-play values alone brought
+      //     the board back at 88 when it had aired at 89);
+      //   - the clock's value carries its origin stamp, written when the clock started, which
+      //     is after the play. Merging in order means the newest write wins, and the operator
+      //     surfaces stage the stamped value into the cue, so a later Take carries it too
+      //     (control/matchClockWire.ts clockValueAfterUpdate) rather than reverting it.
+      var data = {};
+      var k, key;
+      for (k = 0; k < mine.length; k++) {
+        var m = mine[k].msg || {};
+        if (m.t === 'update' && m.data) { for (key in m.data) data[key] = m.data[key]; }
+        else if (m.t === 'event' && m.payload) { for (key in m.payload) data[key] = m.payload[key]; }
+      }
+
+      var root = document.documentElement;
+      var prior = root.style.opacity;
+      root.style.opacity = '0';
+      if (typeof update === 'function') update(JSON.stringify(data));
+      for (k = from; k < mine.length; k++) apply(mine[k].msg);
+      // …and the data again, because a "snap" in the replay resets the graphic first and clears
+      // the inline styles the DATA layer owns (an empty image field hides itself with one).
+      if (typeof update === 'function') update(JSON.stringify(data));
+
+      // Follow live from the head we read, then come back on air once the replay has settled.
+      cursor = head;
+      setInterval(poll, 400);
+      setTimeout(function () { root.style.opacity = prior; }, SETTLE_MS);
+    });
+  }
+
   fetch('/relay/ping')
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
       if (!d || !d.ok) return; // plain static hosting — stay quiet
-      cursor = d.head || 0;
-      setInterval(poll, 400);
+      recover(d.head || 0);
     })
     .catch(function () { /* no relay here */ });
 })();
