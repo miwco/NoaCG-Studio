@@ -564,17 +564,48 @@ risk: the production page's ⚡ GRAPHIC ACTIONS, the Data workspace and the vote
 driven as an operator drives them (a production carrying a quiz, a match board and a vote board)
 rather than as a spec drives them.
 
-> **THE OWNER'S OWN EYES ARE STILL OWED ON THIS, and the pack for it now exists:
-> `docs/acceptance/owner-pack/index.html` §3** (built 2026-08-20 from
-> `claude/e-owner-acceptance-pack`; rebuild with `node scripts/acceptance-pack.mjs`). Fourteen
-> frames of the real running app, one question each: the ⚡ actions off air, live, and a beat
-> later; the Data workspace empty, filled, and a row loaded into a cue; a vote opened, counted,
-> staged and aired; the presenter Now/Next pointers; and the audience join page in two modes,
-> rendered by `joinSurface.ts` itself. What it deliberately CANNOT show, and says so on the
+> **READ BY THE OWNER 2026-08-21 AND ACCEPTED.** *"I think these screens look good."* The
+> ⚡ contextual controls, the Data workspace, the vote-to-air walk, the presenter pointers and the
+> audience join page all pass their first human look — the acceptance this plan has been carrying
+> a caveat about since Phase 0. **Four things came out of the read**, none of them a rejection of
+> what is built:
+>
+> 1. **The spreadsheet question is already answered and the owner did not know it.** *"you should
+>    always be able to download a template so you don't have to create the fields yourself."*
+>    `ProductionDataWorkspace` ships `⬆ Import CSV / JSON` beside `⬇ Blank CSV` as one cluster,
+>    and the empty state names the column titles that would bind on this production. Nothing to
+>    build; the finding is that a shipped door was invisible in a screenshot, which is a
+>    discoverability note, not a feature request.
+> 2. **TEAMS — the largest new ask, and it is a class requirement, not a nicety.** *"you should be
+>    able to create a team so that a team can edit these together. For instance, someone can edit
+>    the spreadsheet, someone can steer the queue, someone can attach an API… if we have many
+>    students working on one project, it's never just one person doing this all."* The capability
+>    model today is per-URL and per-device (control / output / join / presenter slugs), which
+>    already splits WHAT a person may do; what it has no concept of is WHO, so two students cannot
+>    hold the same production under their own accounts. This is a backend and entitlements change
+>    (`src/backend/`, `src/entitlements/`, a migration), not a dashboard one. Not scoped here.
+> 3. **Playout / Data / Audience should not be a swap.** *"the buttons that we have and the side
+>    pages we have feel a bit dangerous to swap between. I think the play out should always be
+>    open, so the data and audience could open in new tabs by default."* Cheap to honour: all
+>    three are already REAL ROUTES with history (`#/production/<id>/data`, `/audience`), so the
+>    tab controls can become anchors that open a second browser tab while Playout stays put. The
+>    danger being named is real — Data and Audience are authoring surfaces, and authoring while
+>    the thing you are steering is off-screen is how a live mistake happens.
+> 4. **The offline audience page needs a better answer than a sentence.** *"I don't really know
+>    how the audience participation screen should look if the build is run offline."* Options are
+>    in "The offline audience plane" below.
+>
+> The pack that carried this read, rebuilt 2026-08-21 on the merged tree:
+> **`docs/acceptance/owner-pack/index.html` §3** (rebuild with `node scripts/acceptance-pack.mjs`).
+> Fourteen frames of the real running app, one question each: the ⚡ actions off air, live, and a
+> beat later; the Data workspace empty, filled, and a row loaded into a cue; a vote opened,
+> counted, staged and aired; the presenter Now/Next pointers; and the audience join page in two
+> modes, rendered by `joinSurface.ts` itself. What it deliberately CANNOT show, and says so on the
 > frame rather than in a note somebody has to remember: the public `/join` page against a real
 > backend, the presenter's own tablet page (`presenterBySlug` is server work), and the Links
 > panel's four capability URLs — all three need a publish, and this checkout is offline by
-> design. That hosted walk stays owed on its own. Record the verdict here when the pack is read.
+> design. **That hosted walk stays owed on its own**, and it is the one part of this plane the
+> 2026-08-21 read could not cover.
 >
 > **One divergence is visible in the pack and is recorded as an observation, not a verdict:**
 > with nothing on air the EXPORTED controller offers all five ⚡ actions and shows no state chip,
@@ -586,6 +617,40 @@ rather than as a spec drives them.
 > them ("a control that acts on air has nothing to act on until the cue is taken") — but §7b's own
 > parity sentence covers the two REACT surfaces, and the exported controller is a third
 > implementation. Nobody has yet decided which of the frames is the one the contract wants.
+
+### The offline audience plane — what `/join` should say when there is no backend
+
+Owner question, 2026-08-21: *"I don't really know how the audience participation screen should
+look if the build is run offline."* Today it says one sentence — *"Audience participation needs
+the cloud backend. This build runs offline."* — and stops.
+
+**Start from who actually reaches that page, because it is nearly nobody.** An offline build mints
+no slug, so no link exists to hand out and no phone in a hall can arrive there. The only visitor
+is someone on the self-hosted build who typed `/join` themselves, or a teacher demonstrating the
+studio without an account. That reality caps how much this deserves; it does not make the dead end
+acceptable.
+
+Three answers, cheapest first. They compose — 1 is worth doing whatever else happens.
+
+1. **Make the dead end a door.** Keep the honest sentence, add what to DO about it: this build has
+   no backend configured, audience participation needs one, here is the page that explains
+   self-hosting or signing in. One paragraph and a link. The rule it must not break is the one
+   `nothing()` exists for: a viewer holding a guessed slug must not learn whether a production
+   exists, so the offline message stays identical for every slug, valid or not.
+2. **A REHEARSAL room on the same device.** The operator's Audience workspace already runs the
+   whole plane offline on `localAudience` — that is what makes the walk in the pack drivable. The
+   join page could mount the same provider so a teacher on one laptop can open `/join` in a second
+   tab, send a question, and watch it arrive in the inbox. It must be unmistakably labelled as a
+   rehearsal (the workspace's own `Simulate` button sets the precedent, and its rows read
+   "(rehearsal)"), and it must never suggest other devices can join, because they cannot: the
+   provider is in memory in ONE tab.
+3. **Nothing, deliberately.** Defensible if teams (above) arrive first and the answer becomes
+   "sign in" for every offline user anyway.
+
+**Recommendation: 1 now, 2 only if a teacher actually asks to demo the plane without an account.**
+2 is a second surface that can drift from the real one, and the pack already shows the join page
+faithfully through the operator preview — which is a teaching artifact that costs nothing to keep
+true.
 
 **P0 — the first Take of a session aired the graphic and put it straight back off.** The boot
 recovery was keyed on `liveCue` MOVING, and `liveCue` also moves when this operator takes a cue -

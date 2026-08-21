@@ -383,11 +383,34 @@ before the contract widens.
    every existing rows runtime nests the figure inside a growing bar and so cannot express a
    second column at all (src/templates/AGENTS.md). The contents page and the two-column card
    are still absent.
-   **The owner's read of ig39 is owed and the frames for it exist:
-   `docs/acceptance/owner-pack/index.html` §1** — the design full-frame, the three stat panels it
-   shares a storefront shelf with (ig01, ig37, ig36), the ig38 its source argues against, and the
-   Browse row it actually lands in. One question: does it belong in the catalog as it stands?
-   Record the verdict here.
+   **READ AND ACCEPTED by the owner, 2026-08-21** (`docs/acceptance/owner-pack/index.html` §1):
+   *"iG39 key figure catalog list looks good. I don't see a problem why we couldn't use this."*
+   The four designs shown beside it were accepted in the same read — ig37 and ig36 good and
+   replacing nothing, ig38 liked, ig01 *"stylish so it can be used if this is what the customer
+   wants"* but explicitly NOT a substitute for ig39, because it carries a percentage and a text
+   where ig39 carries a list. **The read also settled the question the frames could not ask:
+   these five look DIFFERENT from each other, and the owner said so unprompted** — which is the
+   thing this whole document exists to measure.
+
+   **Two findings came OUT of that read rather than into it.** Both are recorded here because
+   they are about the shelf, not about a design:
+
+   - **ig01 "Big Stat" does not belong on the Statistics & data → stat panel shelf.** Owner, on
+     seeing the eight cards together: *"the big stat with just the percentage and audience share
+     does pop out. It feels like that's not part of this family because that's just one big
+     number and not a real list."* The taxonomy already has the right home: `stats` carries a
+     `kpi` subtype beside `stat-panel` (`src/model/taxonomy.ts`), and ig01 is a KPI by every
+     reading — one figure, one label, no rows. Re-filing it is a one-line `src/templates/meta.ts`
+     change plus the catalog baselines it moves. NOT done here; it is a `src/` change and the
+     session that found it was pack-only.
+   - **The lower-thirds shelf has the opposite problem, and it is the bigger one.** Owner, same
+     read: *"We have that problem with the lower thirds right now that when you open it up all
+     the graphics there look the same."* The stats shelf passes precisely because its eight cards
+     are genuinely different offers. **What that asks for is a session on the DEFAULT graphic each
+     category shows** — the first page of twelve is the whole storefront for most people, and a
+     category whose first twelve are variations of one design reads as a catalog with one design
+     in it. This is a discovery/curation question about which designs surface first, not a request
+     for more designs.
 8. **Type as the composition.** The catalog's display size tops out around 52 px for 21% of
    designs; 16 designs go over 110 px. There is no oversized-numeral scoreboard, no full-frame
    word, no type-that-bleeds-off-frame opener.

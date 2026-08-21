@@ -81,12 +81,50 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   A VISUAL ACCEPTANCE PACK exists for this change (the contract is in
   `docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Verification contract"): five before/after pairs from the
   real app — the reported size, nominal 1080p, scrolled to the bottom of a short window, the Data
-  tab, and the phone — with the repeat-by-hand sequence. **The owner's read is still owed**, and
-  the two things it asks about are whether the capped monitors are now too small to judge a
-  graphic by, and whether the space they free to the right of PROGRAM reads as sized or as
-  unfinished.
+  tab, and the phone — with the repeat-by-hand sequence. It asked two things: whether the capped
+  monitors are now too small to judge a graphic by, and whether the space they free to the right
+  of PROGRAM reads as sized or as unfinished.
 
-  **Where to do that read: `docs/acceptance/owner-pack/index.html` §2** (rebuilt 2026-08-21 by
+  **READ BY THE OWNER 2026-08-21. Both questions answered, and the read opened three more.**
+
+  - **At 1536×814 the cap is RIGHT** — *"The gap and monitors are not too small; I think they're
+    fine."* The empty column is accepted for now: *"Right now, I can't come up with anything for
+    that area, so it's fine."* This size is settled; do not re-open it without a new complaint.
+  - **At 1920×1080 the cap is WRONG, and it is the opposite complaint** — *"that actually looks
+    pretty bad… I think that it has too much empty room at the bottom and the monitors are
+    unnecessarily small."* A flat `26vh` answers the 814px window and wastes the 1080p one: the
+    monitor block is 323px with over 500px of page below it doing nothing. **The rule the cap
+    should express is not a fraction of the viewport, it is what is LEFT** — the monitors take the
+    room nothing else needs, floored and ceilinged. Owner's tie-breaker when they compete:
+    *"if the graphic needs controls, I would rather have the controls big than the monitors too
+    big."*
+  - **…but sizing off leftover room must not make the monitors twitch.** *"it's also important
+    that the program and preview monitors don't jump between scales depending on what graphic we
+    are looking at."* That is a constraint on the fix AND a defect that already exists: the cap is
+    a grid track of `--pd-monitor-h * min(--pd-ar, 16/9)`, and `--pd-ar` is the PREVIEWED
+    GRAPHIC's own ratio — so selecting a 9:16 or square cue narrows both monitors today. Whatever
+    replaces the flat `vh` has to be computed per PRODUCTION (the pool's worst case), never per
+    cue, or it trades one twitch for another.
+  - **At 1536×560 the verb bar scrolling under the sticky monitors is a real hazard** — *"I think
+    it's a bit scary that you scroll the monitors on top of the take buttons… I think the buttons
+    should be visible."* Correct by this document's own §2 rule: what must never leave the screen
+    is STICKY, not small — and the verb bar is the one block that carries TAKE and Out. It is
+    currently neither sticky nor protected.
+  - **The proposed answer to both, from the owner: put the verb bar in the empty column beside
+    PROGRAM.** *"the buttons would fit to the right of the monitors."* It is one change that
+    spends the dead width, takes the bar out of the vertical stack (so the monitors can grow into
+    the height it frees at 1080p), and makes the bar part of the sticky monitor block instead of
+    something that scrolls away. Treat it as a BREAKPOINT, not a move: below the width where a
+    verb stack fits beside PROGRAM the bar returns underneath. `■ All out` stays in the header
+    regardless — it is the panic control and its distance from the others is deliberate.
+  - **A MINIMUM SUPPORTED SIZE is sanctioned** — *"we don't have to fit everything on any size. We
+    can have a minimum that we need to use."* The number itself is still an owner decision.
+
+  None of this is built. It is a layout change to `ProductionPage.tsx`, `HostedControlPage.tsx`,
+  `productionControllerHtml.ts` and the `.pd-*` rules — all three surfaces, in one session, with
+  the pack's `scroll`/`hosted`/`controller` sections re-run as its evidence.
+
+  **Where that read was done: `docs/acceptance/owner-pack/index.html` §2** (rebuilt 2026-08-21 by
   `node scripts/acceptance-pack.mjs`). It carries both questions verbatim over frames of the real
   app at 1536×814, 1536×560 and 1920×1080, on **all three surfaces**. Each frame carries the
   geometry read off the live document at capture time, which reproduces the table above and adds
@@ -102,7 +140,7 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   captured OPENING onto a show already on air — the hosted page's own case — because the log
   follower tail-fills only when Realtime reports SUBSCRIBED, so nothing after the open moves in
   that rig, and the frame says so rather than implying otherwise. What it proves is the LAYOUT;
-  the server side stays the live checklist's job. Record the verdict here when it has been read.
+  the server side stays the live checklist's job.
 - **Monitors are 16:9, side by side, equal, and CAPPED near 30vh** — owner, same report: *"we
   should rather make the preview and program screens a bit smaller… you see what's out all the
   time"*. Uncapped they took 41% of the height (442px of 1080). The cap is expressed as a grid
@@ -111,7 +149,12 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   measured for something else. The track width that keeps both monitors under the cap is
   `--pd-monitor-h * min(preview ratio, 16/9)`, where `--pd-ar` carries the preview graphic's own
   ratio as a bare number. The pair stays flush LEFT, sharing an edge with the TAKE button and the
-  editor card below. PVW wears the amber frame, PGM the red one. PGM's header carries the layer
+  editor card below.
+  **KNOWN DEFECT, found in the 2026-08-21 owner read (§2 above), not yet fixed:** because
+  `--pd-ar` is the PREVIEWED cue's ratio and not the production's, selecting a non-16:9 cue
+  narrows BOTH monitors — the "monitors don't jump between scales depending on what graphic we
+  are looking at" rule, broken by the mechanism that enforces the cap. The cap has to be derived
+  from the production's own worst case, not from whatever is on preview this second. PVW wears the amber frame, PGM the red one. PGM's header carries the layer
   badge of what is up.
 - **A monitor is a monitor: `pointer-events: none` on its iframe.** A click that lands inside
   moves focus into a document that does not listen for the verb keys, so SPACE, N and 0 go dead

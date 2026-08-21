@@ -121,8 +121,28 @@ pack was rebuilt on the merged tree before anyone read it. Which files map to wh
 | `interactive` | `ProductionPage.tsx`, `ProductionDataWorkspace.tsx`, `ProductionAudienceWorkspace.tsx`, `src/audience/joinSurface.ts` |
 | `catalog` | `src/templates/infographics/`, and re-run the l3 sweep first |
 
-## When it has been read
+## It has been read — 2026-08-21
 
-Record the verdict where each read is recorded as owed — the table above names the file for each
-one — and say what was decided, not that a pack was looked at. A pack that has been read and
-leaves no verdict behind costs the next session the same sitting all over again.
+All three reads are answered. The verdicts live where each read was recorded as owed, not here;
+this is only the map to them.
+
+| § | Verdict | Written down in |
+|---|---|---|
+| 1 | **Accepted.** ig39 ships; ig37, ig36, ig38 good; ig01 usable but not a substitute for ig39. | `docs/CATALOG_VARIETY.md` §7 |
+| 2 | **Split.** 1536×814 accepted — the cap and the empty column are fine. 1920×1080 rejected: too much empty at the bottom, monitors unnecessarily small. 1536×560: the verb bar scrolling under the sticky monitors is a hazard. | `docs/PLAYOUT_DASHBOARD.md` §2 |
+| 3 | **Accepted.** *"I think these screens look good."* | `docs/INTERACTIVE_PLAYOUT_PLAN.md`, acceptance pass |
+
+**What the read produced that the frames did not ask for** — the part worth the sitting:
+
+- The stats shelf reads as a real catalog and the LOWER-THIRDS shelf does not; what a category
+  shows FIRST is now its own release item (`docs/GOALS.md` step 11).
+- ig01 "Big Stat" is filed as a `stat-panel` and is a `kpi`.
+- **Teams** — several students holding one production — is a class requirement, not a nicety
+  (`docs/GOALS.md`, THEN §0).
+- Playout / Data / Audience should open in their own tabs rather than swap.
+- The monitor cap depends on the PREVIEWED cue's aspect ratio, so the monitors already twitch —
+  found by reading the CSS behind a question the owner asked, not by looking at a frame.
+
+**When a later read happens, do the same:** record what was decided, not that a pack was looked
+at. A pack that has been read and leaves no verdict behind costs the next session the same sitting
+all over again.
