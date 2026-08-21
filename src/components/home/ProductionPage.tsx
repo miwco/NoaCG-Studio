@@ -1259,6 +1259,17 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    *  graphic the rule is not confident about. */
   const fieldGroups = groupCueFields(descriptors);
   const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
+  /** What a band HEADING reads, resolved the way the field boxes under it resolve: the live tree
+   *  for a bound field, then the cue's own value, then the authored default. */
+  const headingValues = Object.fromEntries(
+    descriptors.map((d) => [
+      d.key,
+      (boundFields(selectedGraphic)[d.key] ? resolved[selectedGraphic ?? '']?.[d.key] : undefined) ??
+        editingView?.values[d.key] ??
+        d.defaultValue ??
+        '',
+    ]),
+  );
   const loadableRows = rowsForSide(dataRows, loadSide);
   /** Load one row into the edited cue's DRAFT (never air), remembering it per cue so ↷ Next
    *  walks the bank in order. */
@@ -1693,7 +1704,11 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                   word for that side; one unlabelled band - today's flat flow - on everything
                   else. The grouping is derived, never authored (control/cueFieldGroups.ts). */}
               {fieldGroups.map((group) => {
-                const heading = groupHeading(group, editingView.values);
+                // WHAT THE OPERATOR IS LOOKING AT, in the same order the field boxes resolve it:
+                // a bound field shows the live tree's value, an unset one its authored default.
+                // Reading `editingView.values` alone would head a band "Side A" while the box
+                // under it plainly said HOME.
+                const heading = groupHeading(group, headingValues);
                 return (
                   <div
                     className={`pd-band${heading ? '' : ' pd-band-plain'}`}

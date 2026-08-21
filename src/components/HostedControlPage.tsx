@@ -687,6 +687,8 @@ function HostedCueEditor({
     for (const d of descriptors) out[d.key] = valueOf(d.key);
     return out;
   };
+  /** What the band headings read, resolved ONCE per render rather than once per band. */
+  const headingValues = currentValues();
 
   // Debounced shared staging: a typing operator sends a few rows, not one per keystroke.
   const pending = useRef<Record<string, string>>({});
@@ -845,7 +847,7 @@ function HostedCueEditor({
             operator's own word for it, everything else keeps the flat flow. A class operating
             from this page reads the same surface they were taught on. */}
         {fieldGroups.map((group) => {
-          const heading = groupHeading(group, currentValues());
+          const heading = groupHeading(group, headingValues);
           return (
             <div
               className={`pd-band${heading ? '' : ' pd-band-plain'}`}
