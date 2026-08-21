@@ -779,4 +779,94 @@ test.describe('the production page scrolls as one page', () => {
     // Same width, to the pixel. Before the fix this narrowed to roughly nine sixteenths of it.
     expect(await monitorWidth()).toBe(landscape);
   });
+
+  /**
+   * NO CUE FIELD PAINTS OVER THE FIELD BESIDE IT.
+   *
+   * Owner report, 2026-08-21, from a wide monitor: "the YLE box is on top of the step one, and
+   * F4 Period is also on top of the step one box". `.pd-fields` is `repeat(auto-fit,
+   * minmax(<floor>, 1fr))`, and that floor is a HARD track minimum — a control whose own
+   * min-content is wider neither widens the track nor shrinks, it simply overflows, and the next
+   * column draws on top. A number control is 245px wide at its minimum against a 210px floor, so
+   * EVERY number field on the surface was 35px into its neighbour: two scores unreadable on a
+   * scoreboard, which is the graphic most likely to have them.
+   *
+   * Measured as overflow, not as a screenshot: the fields are laid out by a grid whose column
+   * count changes with the window, so what has to hold at every width is "no field is wider than
+   * its own track", and that is a number the browser already keeps.
+   */
+  test('a scoreboard cue lays its number fields out without overlapping the fields beside them', async ({ page }) => {
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+    // The subject: this graphic really does carry the number fields the report is about.
+    expect(await editor.locator('.ctl-num').count()).toBeGreaterThan(0);
+
+    // Every supported width, because the track count — and so the track WIDTH — changes with it.
+    for (const width of [1366, 1536, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 900 });
+      const grid = page.locator('.pd-fields');
+      const spills = await grid.evaluate((el) =>
+        [...el.children]
+          .filter((f) => f.scrollWidth > f.clientWidth + 1)
+          .map((f) => `${f.textContent?.slice(0, 24)} (${f.scrollWidth} > ${f.clientWidth})`),
+      );
+      expect(spills, `fields overflow their grid track at ${width}px`).toEqual([]);
+
+      // AND THE FLOOR IS DOING THE WORK, not the wrap backstop behind it. Both keep a field
+      // inside its own track, so overflow alone cannot tell a floor that fits from one that
+      // silently folds every number control onto three lines. One flex line is a row no taller
+      // than its tallest control — measured that way rather than by matching tops, because the
+      // step-size label is shorter than the boxes beside it and rides centred within the line.
+      const wrapped = await grid.evaluate((el) =>
+        [...el.querySelectorAll('.row')]
+          .filter((row) => row.querySelector('.ctl-num'))
+          .filter((row) => {
+            const tallest = Math.max(...[...row.children].map((c) => c.getBoundingClientRect().height));
+            return row.getBoundingClientRect().height > tallest + 2;
+          })
+          .map((row) => row.parentElement?.textContent?.slice(0, 24) ?? '?'),
+      );
+      expect(wrapped, `number controls wrapped onto a second line at ${width}px`).toEqual([]);
+    }
+  });
+
+  /**
+   * THE VERB STACK IS PACKED, NOT SPREAD.
+   *
+   * The same owner read: "we now have the buttons to the right side of the monitors but they are
+   * spaced out vertically… they could be stacked a little bit closer on top of each other in a
+   * column if there's space." `align-content: stretch` had nothing to stretch but the GAPS once
+   * the window was tall, so six 40px buttons sat on a 75px pitch.
+   *
+   * The pin is the PITCH: consecutive verbs are one button-height plus the 6px gap apart, so a
+   * stack that starts spreading again fails here rather than in a screenshot nobody re-reads.
+   */
+  test('on a tall window the verbs stack in one packed column beside PROGRAM', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const verbs = page.locator('.pd-stagehead [data-testid="production-verbs"]');
+    await expect(verbs).toBeVisible();
+
+    const boxes = await verbs.evaluate((el) =>
+      [...el.querySelectorAll('.pd-verb')].map((b) => {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.x), y: Math.round(r.y), h: Math.round(r.height) };
+      }),
+    );
+    expect(boxes.length).toBe(6);
+    // ONE COLUMN: every verb starts at the same x, so none of them is beside another.
+    expect(new Set(boxes.map((b) => b.x)).size).toBe(1);
+    const byY = [...boxes].sort((a, b) => a.y - b.y);
+    for (let i = 1; i < byY.length; i += 1) {
+      const pitch = byY[i].y - byY[i - 1].y;
+      expect(pitch, `verb ${i} sits ${pitch}px below its neighbour`).toBe(byY[i - 1].h + 6);
+    }
+    // And the stack still does not drive the sticky head's height — the monitors do.
+    const head = await page.locator('.pd-stagehead').boundingBox();
+    const monitors = await page.locator('.pd-monitors').boundingBox();
+    expect(head!.height).toBeLessThanOrEqual(monitors!.height + 30);
+  });
 });

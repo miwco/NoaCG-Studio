@@ -262,6 +262,50 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   rows the same matcher resolved AT PUBLISH TIME, which is the freshness contract its cues and
   entries already have: edit a dataset, publish changes.
 
+### 2d. The cue editor's field grid — the one rule, and the open question
+
+**The rule (binding).** `.pd-fields` is `repeat(auto-fit, minmax(<floor>, 1fr))`, and that floor
+is a HARD track minimum: a control whose own min-content is wider than the floor does not widen
+its track and does not shrink — it **overflows, and the next column paints on top of it**. So the
+floor is the widest control's min-content, measured, never a round number that looked right beside
+a text box. A number control is `−`(40) + value(64) + `+`(40) + the captioned step size(77) +
+three 6px gaps = **245px**; the floor is 250px. Two structural backstops sit behind the
+arithmetic, because the next control added here will not be in it: a control row inside
+`.pd-fields` may **wrap** (a taller field is merely ugly; an overlapping one is unreadable and
+silent), and `.row > .ctl-num` carries an explicit `flex-basis` rather than `auto` — a bare
+`<input type=number>` reports ~170px of content, and a flex line breaks against BASE sizes before
+anything shrinks, so an auto basis makes the backstop fire at widths where everything fits.
+Pinned by `production-controls.spec.ts` at 1366/1536/1920/2560, as overflow rather than as a
+screenshot: the column count changes with the window, so the invariant is "no field is wider than
+its own track".
+
+**The verbs beside PROGRAM stack in one packed column** once one fits — the threshold is the
+arithmetic (6 buttons + 5×6px gaps + the chip against `--pd-monitor-h`), 960px of viewport height
+— and the slack goes into the BUTTONS, never the gaps. `align-content: stretch` with nothing left
+to stretch inflates the pitch instead, which is what put six 40px buttons on a 75px pitch at
+1920×1000. Below the threshold the two-up grid stands, because six 44px verbs are taller than the
+monitors on a short window.
+
+**The open question — grouping (owner, 2026-08-21, NOT DONE).** The fields flow in field order
+into whatever number of columns the window affords, so a scoreboard reads as one long undifferentiated
+row: Team A, Score A, Team B, Score B, Period, Clock, colours, note, layer, with the layer left
+alone on a second row on a wide monitor. *"If we have a scoring system then everything that fits
+one team should be on one row or one column and the other team is in the next row. There would be
+some logic in how we build up the dashboard."* The owner's own caveat is why nothing here has been
+built: **we do not know what graphics exist yet**, so no hard per-graphic layout rule can be
+written, and the surface must keep scaling to every resolution.
+
+What a solution would have to be, when it is taken up: **grouping derived from the fields
+themselves, never a per-template layout**. The candidates, cheapest first — (1) the A/B SIDE
+split the surface already computes for the data-row loader (`hasSides`, `control/cueData.ts`): a
+field whose title ends in "A"/"B" or "Home"/"Away" belongs to that side, and one side is one row;
+(2) a shared title PREFIX ("Team …", "Score …") as a weaker grouping for everything the side rule
+misses; (3) CUE METADATA — the operator note and the playout layer are not content and probably
+belong in their own strip rather than as two more cells in the content grid, which is also what
+makes the layer stop reading as an orphan. All three are derivable from what a template already
+carries, which is the test any candidate has to pass. Until then the flow is deliberate, and the
+bug the flow used to have (overlap) is fixed and pinned.
+
 ## 3. Layout — phone
 
 One column: header (name · mode · All out) → the two monitors side by side, small → the cue list

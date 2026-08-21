@@ -570,7 +570,13 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .ctl-stepsize > span { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
 /* The VALUE keeps the room: a two-digit score must never be squeezed to one visible digit by
    the controls around it (`.pd-field input { width: 100% }` otherwise sets all three equal). */
-.row > .ctl-num { flex: 1 1 auto; min-width: 64px; }
+/* Basis 64px, NOT `auto`: a bare `<input type=number>` reports a ~170px content width, and a
+   flex line is broken against BASE sizes before anything is allowed to shrink. On `nowrap` that
+   never showed (the line could not break, so the input simply shrank); the moment the row is
+   allowed to wrap as a safety net, an auto basis makes it wrap at widths where everything fits
+   comfortably. Naming the basis makes the line's real demand its real demand - 40+64+40 plus the
+   step size - and `flex-grow: 1` hands the leftover back to the value box, as before. */
+.row > .ctl-num { flex: 1 1 64px; min-width: 64px; }
 .ctl-stepsize > .ctl-num-step { flex: 0 0 auto; width: 46px; min-width: 46px; }
 /* A picture field's select has no content of its own to hold it open; the hint goes underneath
    rather than competing with it for the row. */
@@ -5865,6 +5871,31 @@ h2 + .lib-row,
     text-align: center;
   }
 }
+/* ONE COLUMN, ONCE ONE FITS. The two-up grid above exists because six 44px verbs are taller
+   than the monitors on a short window - not because two-up is the better shape. On a tall one
+   it is the worse shape twice over: `align-content: stretch` had nothing left to do but inflate
+   the GAPS, so at 1920×1000 six 40px buttons sat on a 75px pitch - "spaced out vertically, I
+   don't think it works so well" (owner, 2026-08-21) - and TAKE was half the width it could be.
+
+   The threshold is the arithmetic, not a guess: the stack is 6 buttons + 5×6px gaps + the on-air
+   chip, and it has to fit the monitors, whose height is `--pd-monitor-h` (+ ~25px of label). At
+   960px of viewport that is 302px of stack against 327px of monitor; below it, two-up.
+
+   The SLACK then goes into the BUTTONS rather than the gaps - the same tie-breaker that chose
+   stretch in the first place ("I would rather have the controls big than the monitors too big"),
+   spent where it reads as one block of controls instead of six scattered ones. Capped at 72px so
+   a 4K window does not grow a TAKE the size of a monitor. */
+@media (min-width: 1366px) and (min-height: 960px) {
+  .pd-stagehead .pd-verbs {
+    grid-template-columns: minmax(0, 1fr);
+    /* PACKED, not spread: the gap is a constant 6px at every window size. */
+    align-content: start;
+  }
+  /* Row 1 explicitly, because TAKE is not first in the DOM (PREVIEW is) and auto-placement
+     would put the one red button in the middle of the stack. */
+  .pd-stagehead .pd-verb-take { grid-area: 1 / 1 / 2 / 2; }
+  .pd-stagehead .pd-verb { min-height: clamp(44px, calc((var(--pd-monitor-h) - 25px) / 6), 72px); }
+}
 .pd-monitor { display: flex; flex-direction: column; min-width: 0; }
 .pd-monitor h2 {
   margin: 0 0 5px;
@@ -6026,7 +6057,25 @@ h2 + .lib-row,
 /* Update, where the line naming it already is. It exists for the PHONE, whose bottom bar
    carries only TAKE/Next/Out; on desktop the verb bar owns it and this stands down. */
 .pd-editor-update { display: none; font-size: 12px; padding: 4px 10px; }
-.pd-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 14px; }
+/* THE TRACK FLOOR IS THE WIDEST CONTROL'S MIN-CONTENT, not a round number that looked right
+   next to a text box. `minmax(<fixed>, 1fr)` gives the track a HARD minimum, so a control whose
+   own min-content is wider does not widen the track and does not shrink - it OVERFLOWS, and the
+   next column paints on top of it. That is what put F2's box across F1's step size on a wide
+   window (owner, 2026-08-21): a number control is −(40) + value(64) + +(40) + the captioned step
+   size(77) + three 6px gaps = 245px against a 210px floor, so every number field on the surface
+   was 35px into its neighbour. Measured, not guessed - `.ctl-*` widths are a few lines up, and
+   `.pd-fields .row` below is the structural backstop for the control this arithmetic misses. */
+.pd-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--pd-field-min, 250px), 1fr));
+  gap: 8px 14px;
+}
+/* THE BACKSTOP. A future control wider than the floor above WRAPS inside its own field instead
+   of painting over the field beside it: an overlap is unreadable and silent, a wrapped row is
+   merely taller. Never the everyday layout - at or above the floor nothing here wraps. */
+.pd-fields .field-row > .row,
+.pd-fields .pd-field > .row { flex-wrap: wrap; }
+.pd-fields > * { min-width: 0; }
 .pd-field { display: flex; flex-direction: column; gap: 3px; }
 .pd-field > span {
   font-size: 10px;
