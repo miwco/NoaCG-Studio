@@ -144,9 +144,12 @@ monitors is called a hazard. The next dashboard session is therefore already spe
       ratio, so a 9:16 cue narrows both monitors today, which is the twitch the owner ruled out.
       All three surfaces, one session, with the pack's `scroll`/`hosted`/`controller` sections
       re-run as its evidence.
-- [ ] **Decide the MINIMUM supported window** - sanctioned by the owner (*"we don't have to fit
-      everything on any size. We can have a minimum"*), number not yet chosen. It bounds the
-      breakpoint above, so it comes first.
+- [x] **The MINIMUM supported window is 1366×768** (owner, 2026-08-21). The budget school-laptop
+      floor, which is the hardware the class case actually runs on. Below it the phone breakpoint
+      takes over; a 560px-tall window is a resized browser rather than a screen, so it must
+      degrade without breaking but is not a size anything is designed against. This is what bounds
+      the verb-bar breakpoint above: the bar sits beside PROGRAM down to 1366 and returns
+      underneath below it.
 
 ### Open risks for the deadline
 - [ ] **Visual acceptance of the interactive playout plane.** Phases 0-6 of

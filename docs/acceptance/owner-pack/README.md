@@ -143,6 +143,11 @@ this is only the map to them.
 - The monitor cap depends on the PREVIEWED cue's aspect ratio, so the monitors already twitch —
   found by reading the CSS behind a question the owner asked, not by looking at a frame.
 
+**Two decisions taken the same day, so nobody re-litigates them:** the minimum supported window is
+**1366×768** (`docs/GOALS.md`, `docs/PLAYOUT_DASHBOARD.md` §2), and the ⚡ off-air divergence
+between the three surfaces is **deliberately left open** — an accepted difference, not a defect to
+quietly harmonise (`docs/INTERACTIVE_PLAYOUT_PLAN.md`).
+
 **When a later read happens, do the same:** record what was decided, not that a pack was looked
 at. A pack that has been read and leaves no verdict behind costs the next session the same sitting
 all over again.

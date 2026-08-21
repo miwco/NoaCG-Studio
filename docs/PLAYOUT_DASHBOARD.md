@@ -117,8 +117,12 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
     something that scrolls away. Treat it as a BREAKPOINT, not a move: below the width where a
     verb stack fits beside PROGRAM the bar returns underneath. `■ All out` stays in the header
     regardless — it is the panic control and its distance from the others is deliberate.
-  - **A MINIMUM SUPPORTED SIZE is sanctioned** — *"we don't have to fit everything on any size. We
-    can have a minimum that we need to use."* The number itself is still an owner decision.
+  - **THE MINIMUM SUPPORTED WINDOW IS 1366×768** — sanctioned and then set by the owner the same
+    day (*"we don't have to fit everything on any size. We can have a minimum that we need to
+    use."*). It is the budget school-laptop floor, which is the hardware the class runs on. Below
+    it the phone breakpoint takes over. **1536×560 is therefore not a design target** — it is a
+    resized browser, and what it owes is degrading without breaking, not fitting. The verb bar
+    sits beside PROGRAM down to 1366 and returns underneath below it.
 
   None of this is built. It is a layout change to `ProductionPage.tsx`, `HostedControlPage.tsx`,
   `productionControllerHtml.ts` and the `.pd-*` rules — all three surfaces, in one session, with

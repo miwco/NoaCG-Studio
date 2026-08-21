@@ -616,7 +616,13 @@ rather than as a spec drives them.
 > "on the layer that is on air", and §7c states the greying rule explicitly for the ± pair beside
 > them ("a control that acts on air has nothing to act on until the cue is taken") — but §7b's own
 > parity sentence covers the two REACT surfaces, and the exported controller is a third
-> implementation. Nobody has yet decided which of the frames is the one the contract wants.
+> implementation.
+>
+> **DELIBERATELY LEFT OPEN by the owner, 2026-08-21.** Asked to choose between greying them
+> everywhere and offering them everywhere, the answer was to leave it and decide later. So this
+> is a KNOWN, ACCEPTED divergence and not a bug anyone should quietly fix: do not "harmonise" the
+> three surfaces on a hunch, because the decision that would justify it has not been made. Bring
+> it back with the dashboard re-lay, when all three surfaces are open anyway.
 
 ### The offline audience plane — what `/join` should say when there is no backend
 
