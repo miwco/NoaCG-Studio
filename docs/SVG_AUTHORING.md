@@ -98,6 +98,9 @@ the import reads them: the style suffix names the weight, the rest names the fam
 match ignores spelling, so `JetBrainsMono` finds JetBrains Mono. The `@font-face` that ships is
 still declared under the exact name your artwork asks for.
 
+A family Google does not carry - a licensed foundry face - says so on its row and points at the
+upload instead, rather than offering a download that could only fail.
+
 Two consequences worth designing around:
 
 - Prefer a family you can supply as a file, or one of the bundled/Google faces.
