@@ -90,6 +90,31 @@ export function validateBranchName(branch) {
   return null;
 }
 
+/**
+ * Would merging `branch` into `main` conflict? The ANSWER IS AN EXIT CODE, never a text scan.
+ *
+ * `git merge-tree --write-tree` exits 0 for a clean merge and 1 when there are conflicts, and
+ * names the conflicted paths. The naive version of this check grepped the old merge-tree output
+ * for `<<<<<<<` and reported a conflict the first time this very file was merged - because the
+ * marker it was looking for appears, as a string literal, in the line right above. Content that
+ * TALKS about conflicts is not a conflict.
+ *
+ * It writes a tree object into the object store and nothing else: no working tree, no index, no
+ * ref. An unreferenced tree is collected by `git gc` and is invisible to every checkout.
+ */
+export function previewConflicts(branch, runner = git) {
+  try {
+    runner(['merge-tree', '--write-tree', '--name-only', 'main', branch]);
+    return { clean: true, detail: 'no conflicts' };
+  } catch (error) {
+    if (error.status === 1) {
+      const paths = String(error.stdout ?? '').trim().split('\n').slice(1).filter(Boolean);
+      return { clean: false, detail: `${paths.length} conflicted path(s): ${paths.slice(0, 5).join(', ')}` };
+    }
+    return { clean: false, detail: `merge-tree failed: ${error.message.split('\n')[0]}` };
+  }
+}
+
 const results = [];
 function check(label, ok, detail = '', { fatal = true } = {}) {
   results.push({ label, ok, detail, fatal });
@@ -183,8 +208,8 @@ function phase1(args) {
     overlap.length === 0 ? 'none' : `${overlap.length}: ${overlap.slice(0, 5).join(', ')}`,
     { fatal: false },
   );
-  const preview = git(['merge-tree', base, 'main', branch]);
-  check('merge preview has no conflict markers', !preview.includes('<<<<<<<'), overlap.length ? 'both-sides files auto-merge' : '');
+  const preview = previewConflicts(branch);
+  check('merge preview is conflict-free', preview.clean, preview.detail);
 
   if (args.order) {
     const order = execFileSync('node', ['scripts/merge-order.mjs', '--branch', branch], {

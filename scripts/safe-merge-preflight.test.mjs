@@ -11,7 +11,7 @@
 //     difference between checking the right tree and checking a stranger's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyMainSync, parseWorktrees, validateBranchName } from './safe-merge-preflight.mjs';
+import { classifyMainSync, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -80,4 +80,34 @@ test('worktrees are read from the porcelain, branch by branch', () => {
 
 test('an empty porcelain yields no worktrees rather than throwing', () => {
   assert.deepEqual(parseWorktrees(''), []);
+});
+
+// The first version of this check grepped merge-tree's output for `<<<<<<<`, and the first branch
+// it was ever pointed at was the one ADDING this very file - whose source contains that marker as
+// a string literal. It reported a conflict in a merge git resolves perfectly. Content that talks
+// about conflict markers is not a conflict; only git's exit code says.
+test('a clean merge whose diff MENTIONS conflict markers is still clean', () => {
+  const runner = () => '<<<<<<< this text is data, not a conflict\n=======\n>>>>>>>';
+  assert.deepEqual(previewConflicts('some-branch', runner), { clean: true, detail: 'no conflicts' });
+});
+
+test('a real conflict is read from the exit code, and names the paths', () => {
+  const runner = () => {
+    const error = new Error('conflict');
+    error.status = 1;
+    error.stdout = 'treesha\nsrc/a.ts\nsrc/b.ts\n';
+    throw error;
+  };
+  const verdict = previewConflicts('some-branch', runner);
+  assert.equal(verdict.clean, false);
+  assert.match(verdict.detail, /2 conflicted path\(s\): src\/a\.ts, src\/b\.ts/);
+});
+
+test('merge-tree failing for any other reason is not reported as clean', () => {
+  const runner = () => {
+    const error = new Error('fatal: not a valid object name\nmore');
+    error.status = 128;
+    throw error;
+  };
+  assert.equal(previewConflicts('some-branch', runner).clean, false);
 });
