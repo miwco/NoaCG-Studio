@@ -154,11 +154,47 @@
     }
   },
   {
+    "viewport": {
+      "width": 1536,
+      "height": 814
+    },
+    "file": "scroll-hosted-1536x814.png",
+    "title": "The HOSTED control page at 1536×814 — the third surface, opened onto a live show",
+    "question": "Same two questions as the frames above, on the surface an operator drives from a phone or a laptop across the building: are the capped monitors too small to judge a graphic by, and does the space beside PROGRAM read as sized or as unfinished?",
+    "note": "The real built bundle — nothing about it differs from a deployed one except which URL its Supabase env points at. What it renders is this production’s own `buildPanelSpec` and `buildOutputPayload`, computed by the app itself, and migration 0008’s RPCs answered from memory. It is captured OPENING onto a production already on air, which is the hosted page’s own case (an operator joining mid-show): the resolve reports which layer is up and what it last applied, and the boot recovery plays that onto PROGRAM from those two fields alone. WHAT THIS FRAME CANNOT SHOW: anything that happens AFTER the open. The log follower tail-fills only when Supabase Realtime reports SUBSCRIBED, and this rig has no socket — so the buttons here would not move the picture. It proves the LAYOUT, which is all the two questions are about; the server side (RLS, the slug capability, the log’s ordering) belongs to the live checklist.",
     "section": "scroll",
-    "file": "scroll-hosted-offline.png",
-    "title": "The hosted control page — what this offline checkout can show of it",
-    "question": "THIS FRAME DOES NOT ANSWER ANYTHING. It is here so the gap is visible: the hosted surface needs Supabase env plus a publish, and this checkout has neither by design. Is a hosted walk worth its own sitting, or does the in-app read settle the two questions for all three surfaces?",
-    "note": "HostedControlPage.tsx mounts the same `.pd-monitors` / `.pd-main` / `.pd-editor` grid out of src/styles.css, so the cap and the scroll model are the same CSS — but the same CSS is an argument, not a picture, and this pack does not trade one for the other."
+    "measured": {
+      "viewport": "1536x814",
+      "monitorBlock": 254,
+      "monitorShareOfHeight": "31%",
+      "spaceRightOfProgram": 378,
+      "editorHeight": 333,
+      "editorHidden": 0,
+      "pageScrollable": 0,
+      "panesThatScroll": []
+    }
+  },
+  {
+    "viewport": {
+      "width": 1536,
+      "height": 560
+    },
+    "file": "scroll-hosted-1536x560.png",
+    "scrollToBottom": true,
+    "title": "The hosted page in a short window — 1536×560, scrolled down",
+    "question": "Third surface, same short window. Do all three behave the same way at the size that forces a choice?",
+    "note": "The header, the monitors and the cue rail stay put; the page is what moves. One thing to look at while you are here, recorded as an observation and not a verdict: the ⚡ block is offered for the cue being EDITED, whose layer (L21) is not the one on air — the same undecided question the exported-controller frame below raises, which §7b and §7c of docs/PLAYOUT_DASHBOARD.md are the two places the rule would live.",
+    "section": "scroll",
+    "measured": {
+      "viewport": "1536x560",
+      "monitorBlock": 188,
+      "monitorShareOfHeight": "33%",
+      "spaceRightOfProgram": 612,
+      "editorHeight": 333,
+      "editorHidden": 0,
+      "pageScrollable": 118,
+      "panesThatScroll": []
+    }
   },
   {
     "section": "scroll",

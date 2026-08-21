@@ -207,10 +207,23 @@ applies to a sweep:
   for every read the repo records as OWED, one page, each frame captioned with the question it is
   asking and nothing else. Its dashboard frames carry geometry read off the live document at
   capture time. **A pack asks; it never answers**, and where a frame cannot answer the question
-  beside it (an offline checkout has no hosted control page and no published join page) it says
-  so on the frame rather than standing in for one. The pack is committed, unlike a sweep's
-  output: three docs point at it as the thing that settles a read, and a picture only this
-  machine can see settles nothing.
+  beside it (an offline checkout has no published join page and no minted capability links) it
+  says so on the frame rather than standing in for one. The pack is committed, unlike a sweep's
+  output: four docs point at it as the thing that settles a read, and a picture only this machine
+  can see settles nothing.
+
+  **A backend-only surface can still be photographed, and the rig is worth copying.** The pack's
+  `hosted` section builds the ORDINARY production bundle with `VITE_SUPABASE_URL` pointed at a
+  stub origin (`isBackendConfigured` reads BUILD env, so no page-side shim can reach it), serves
+  the built tree to the browser out of memory through `page.route`, and answers the migration's
+  RPCs from memory using the production's OWN `buildPanelSpec`/`buildOutputPayload`. Only the
+  transport is fake. Its limit is worth knowing before copying it: anything driven through
+  Supabase REALTIME does not move, because the log follower tail-fills only on a `SUBSCRIBED`
+  channel - so the page is captured OPENING onto the state under test rather than driven into it.
+
+  **Every frame pictures the tree it was built from, so a pack has a staleness contract too.**
+  The pack's own README maps each section to the files that make it stale; a branch landing on one
+  of them means re-running that section, not reading a picture of a tree that no longer exists.
 
 ## The five catalog quality gates
 

@@ -579,12 +579,13 @@ rather than as a spec drives them.
 > **One divergence is visible in the pack and is recorded as an observation, not a verdict:**
 > with nothing on air the EXPORTED controller offers all five ⚡ actions and shows no state chip,
 > where the in-app production page at the same moment greys all five and says "not on air"
-> (frames `controller-1536x814.png` and `interactive-actions-offair.png`). `docs/PLAYOUT_DASHBOARD.md`
-> §7b says the ⚡ buttons fire beats "on the layer that is on air", and §7c states the greying rule
-> explicitly for the ± pair beside them ("a control that acts on air has nothing to act on until
-> the cue is taken") — but §7b's own parity sentence covers the two REACT surfaces, and the
-> exported controller is the third implementation. Nobody has yet decided which of the two frames
-> is the one the contract wants.
+> (frames `controller-1536x814.png` and `interactive-actions-offair.png`); the HOSTED page shows
+> the same shape from the other side — the ⚡ block offered for a cue whose layer is not the one
+> up (`scroll-hosted-1536x814.png`). `docs/PLAYOUT_DASHBOARD.md` §7b says the ⚡ buttons fire beats
+> "on the layer that is on air", and §7c states the greying rule explicitly for the ± pair beside
+> them ("a control that acts on air has nothing to act on until the cue is taken") — but §7b's own
+> parity sentence covers the two REACT surfaces, and the exported controller is a third
+> implementation. Nobody has yet decided which of the frames is the one the contract wants.
 
 **P0 — the first Take of a session aired the graphic and put it straight back off.** The boot
 recovery was keyed on `liveCue` MOVING, and `liveCue` also moves when this operator takes a cue -

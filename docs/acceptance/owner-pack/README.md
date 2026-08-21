@@ -8,9 +8,10 @@ or internal state exists (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Verification cont
 in a spec is not acceptance. So this is pictures of the real running app, in one place, each one
 captioned with the exact question it is asking.
 
-Built 2026-08-20 from `claude/e-owner-acceptance-pack`, on an OFFLINE checkout (no `.env`, no
-Supabase) — which is the door a self-hosted student build runs on, and the reason two frames in
-the pack are honest gaps rather than answers. See "What this pack cannot show" below.
+Built from `claude/e-owner-acceptance-pack`, rebuilt 2026-08-21 after `main` moved
+`ProductionPage.tsx` and `productionControllerHtml.ts` under it. The checkout is OFFLINE (no
+`.env`, no Supabase) — the door a self-hosted student build runs on, and the reason one frame in
+the pack is an honest gap rather than an answer. See "What this pack cannot show" below.
 
 ## What it asks
 
@@ -20,8 +21,16 @@ the pack are honest gaps rather than answers. See "What this pack cannot show" b
 | 2 | The playout dashboard's scroll model | Are the capped monitors too small to judge a graphic by? Does the space beside PROGRAM read as SIZED or as UNFINISHED? | `docs/PLAYOUT_DASHBOARD.md` §2 |
 | 3 | The interactive playout plane | One question per screen — contextual ⚡ controls, the Data workspace, vote-to-air, the presenter pointers, the audience join page | `docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08"; `docs/GOALS.md` |
 
-Section 2's two questions are quoted verbatim from the contract, not paraphrased. Nothing in the
-pack answers them; nothing in it hints at an answer.
+Section 2's two questions are quoted verbatim from the contract, not paraphrased, and are asked
+over **all three surfaces** that render the dashboard — the in-app production page, the hosted
+control page, and the exported controller. Nothing in the pack answers them; nothing in it hints
+at an answer.
+
+Two frames raise the same **observation, deliberately not judged**: with the cue being edited on
+a layer that is not on air, the hosted page and the exported controller both offer the ⚡ graphic
+actions, where the in-app page with nothing on air greys all five and says "not on air".
+`docs/PLAYOUT_DASHBOARD.md` §7b and §7c are the two places that rule would live; nobody has
+decided which frame the contract wants.
 
 ## The measurements under §2
 
@@ -39,20 +48,35 @@ the before/after table `docs/PLAYOUT_DASHBOARD.md` §2 records:
 
 No pane on any of the three has a scrollbar of its own. The page is the only scroller.
 
-## What this pack cannot show, and why
+**The hosted page measures identically to the in-app one** — 254px / 31% / 378px at 1536×814,
+188px / 33% / 612px at 1536×560. The contract says the three surfaces must not diverge; on the
+scroll model that is now measured rather than argued from shared CSS.
 
-Two frames in it are labelled as answering nothing. They are in the pack so the gap is visible
-rather than remembered:
+## How the hosted frames exist at all
 
-- **The hosted control page.** It needs Supabase env plus a published production. This checkout
-  has neither, by design. It renders the same `.pd-monitors` / `.pd-main` / `.pd-editor` grid out
-  of `src/styles.css`, so the cap and the scroll model are the same CSS — but shared CSS is an
-  argument, and this pack does not trade a picture for one.
-- **The public `/join` page, the presenter's own tablet page, and the Links panel's four
-  capability URLs.** All three need a real publish. Offline `/join` says so in words; the
-  presenter view is server work (`presenterBySlug`) that an offline build never reaches; and the
-  production header carries "▶ Start production" where the Links button lives, because each URL
-  appears only once a publish has minted its slug — so there is no panel to photograph.
+The hosted control page needs Supabase env plus a published production, and this checkout has
+neither. So the pack's `hosted` section builds the **ordinary production bundle** with
+`VITE_SUPABASE_URL` pointed at a stub origin, serves it to the browser out of memory, and answers
+migration 0008's RPCs from memory — with the production's own `buildPanelSpec` and
+`buildOutputPayload`, computed by the app itself on the dev server. Nothing about the page is a
+mockup; what is fake is the transport.
+
+It is captured **opening onto a production already on air**, which is the hosted page's own real
+case: an operator joining from a phone mid-show. The resolve reports which layer is up and what it
+last applied, and the page's boot recovery plays that onto PROGRAM from those two fields alone.
+Nothing AFTER the open moves in this rig — the log follower tail-fills only when Supabase Realtime
+reports `SUBSCRIBED`, and there is no socket here. The frame says that rather than implying
+otherwise. What it proves is the LAYOUT; the server side (RLS, the slug capability, the log's
+ordering) stays the live checklist's job.
+
+## What this pack still cannot show
+
+One frame is labelled as answering nothing, and it is in the pack so the gap stays visible rather
+than remembered: **the public `/join` page, the presenter's own tablet page, and the Links panel's
+four capability URLs.** All three need a real publish against a real backend. Offline `/join` says
+so in words; the presenter view is server work (`presenterBySlug`) an offline build never reaches;
+and the production header carries "▶ Start production" where the Links button lives, because each
+URL appears only once a publish has minted its slug — so there is no panel to photograph.
 
 What the pack DOES show of the audience plane is the real thing, not a drawing of it:
 `src/audience/joinSurface.ts` is the ONE renderer that both the public page and the operator's
@@ -77,17 +101,25 @@ node scripts/l3-sweep.mjs ./l3-shots/infographic infographic
 ```
 
 `node scripts/acceptance-pack.mjs docs/acceptance/owner-pack <section>` re-runs one section
-(`catalog`, `scroll`, `controller`, `interactive`) and re-renders the page around every frame the
-manifest already holds; `index` alone re-renders the page and opens no production at all.
+(`catalog`, `scroll`, `hosted`, `controller`, `interactive`) and re-renders the page around every
+frame the manifest already holds; `index` alone re-renders the page and opens no production at
+all. Deleting `manifest.json` first forces a full rebuild in page order.
 
 ## Keeping it true
 
-Every frame pictures the tree it was built from, and the pack says which one at the top. A branch
-that changes one of these surfaces makes the affected section stale — re-run that section rather
-than reading a picture of a tree that no longer exists. As of 2026-08-20,
-`claude/b-clock-export-recovery` is in flight over `src/components/home/ProductionPage.tsx` and
-`src/control/productionControllerHtml.ts`, which are exactly what §2 and the controller frames
-show; re-run `scroll` and `controller` after it lands.
+Every frame pictures the tree it was built from. A branch that changes one of these surfaces makes
+the affected section stale — re-run that section rather than reading a picture of a tree that no
+longer exists. This is not hypothetical: `claude/b-clock-export-recovery` landed on 2026-08-21
+carrying 95 lines of `ProductionPage.tsx` and 58 of `productionControllerHtml.ts`, and the whole
+pack was rebuilt on the merged tree before anyone read it. Which files map to which section:
+
+| Section | Goes stale when these move |
+|---|---|
+| `scroll` | `src/components/home/ProductionPage.tsx`, the `.pd-*` rules in `src/styles.css` |
+| `hosted` | `src/components/HostedControlPage.tsx`, the same `.pd-*` rules |
+| `controller` | `src/control/productionControllerHtml.ts` |
+| `interactive` | `ProductionPage.tsx`, `ProductionDataWorkspace.tsx`, `ProductionAudienceWorkspace.tsx`, `src/audience/joinSurface.ts` |
+| `catalog` | `src/templates/infographics/`, and re-run the l3 sweep first |
 
 ## When it has been read
 
