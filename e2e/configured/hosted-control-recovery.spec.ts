@@ -23,23 +23,27 @@ import { haveCreds, signIn } from './_helpers';
 // rather than merely untested (`e2e/hosted-control.spec.ts` says as much and covers the local
 // half only).
 //
-// WHAT THIS GATES, MEASURED RATHER THAN ASSUMED. It was mutation-tested on 2026-08-21 by putting
-// the round-1 bug back (keyed on the live `liveCue` state, ref guard removed) and re-running:
-// **it still passed**. So state it plainly - THIS SPEC DOES NOT GATE THE DOUBLE ENTRANCE. On this
-// page the re-fired rebuild replays an animation and changes no state the DOM reports: GSAP does
-// not visibly tick headless, the monitor's iframes are sandboxed without same-origin so a test
-// cannot count what reached them, and the re-applied data equals what is already on air. There is
-// no observable left, which is exactly why the defect survived review the first time.
+// WHAT THIS GATES, MEASURED RATHER THAN ASSUMED. The first version of this file asserted on the
+// PICTURE - on air, monitor not blank - and was mutation-tested on 2026-08-21 by putting the
+// round-1 bug back. It PASSED. That is the defect's whole nature: replaying `play` on a graphic
+// already up re-runs an animation and settles on exactly the picture that was already there, so
+// the buggy surface is pixel-identical to the correct one. GSAP does not visibly tick headless
+// and the monitor's iframes are sandboxed without same-origin, so nothing downstream could tell
+// them apart either.
 //
-// What it DOES gate is the path underneath, none of which had ever run against a real backend:
-// a signed-out capability URL resolves, the boot rebuild runs against a real `control_show_by_slug`
-// answer, a first take reaches the durable log, comes back round the follower, and leaves the
-// layer on air with the monitor still holding it. That also catches the cockpit's ending - a
-// rebuild that blanks the monitor or drops the layer - because those ARE state the DOM answers.
+// So the count is the observable: `PayloadStage` publishes how many entrances it has played as
+// `data-plays`, and the invariant is arithmetic rather than visual. A take is `update` + `play` +
+// `cue` (`takeCueItems`), the `cue` row is status and never reaches a stage, and the follower
+// dedupes by row id - so ONE take must leave the PROGRAM monitor on exactly ONE play, before and
+// after the row comes back round. Under the round-1 bug the returning `cue` row moves `liveCue`,
+// the boot replay re-fires, and the count is 2. Re-mutation-tested with the counter in place, and
+// it now reads `Expected: "1"  Received: "2"` - the gate this file was supposed to be.
 //
-// Closing the remaining hole needs an observable that does not exist yet (a play counter on the
-// stage seam, or a rendered marker the interpreter updates per entrance). Worth doing; not worth
-// pretending this file already does it.
+// Underneath that it also walks the path itself, none of which had ever run against a real
+// backend: a signed-out capability URL resolves, the boot replay runs against a real
+// `control_show_by_slug` answer, a take reaches the durable log, and the layer is still on air
+// afterwards - which is the cockpit's ending (a replay that blanks the monitor or drops the
+// layer) caught as well.
 
 test.skip(!haveCreds, 'E2E_EMAIL / E2E_PASSWORD unset — configured-mode spec');
 
@@ -101,9 +105,13 @@ test('a fresh operator page boots, takes its first cue, and holds it on air', as
   // monitor says so. Establishing this is what makes the assertions after the take mean
   // something: whatever appears below was put there by the TAKE, not by the boot.
   const chip = op.getByTestId('hosted-live-chip');
-  const programEmpty = op.getByTestId('hosted-program-stage').locator('.prod-monitor-empty');
+  const program = op.getByTestId('hosted-program-stage');
+  const programEmpty = program.locator('.prod-monitor-empty');
   await expect(chip).toContainText('nothing on air');
   await expect(programEmpty).toBeVisible();
+  // Nothing has aired, so the boot replay had nothing to play. Every count below is measured
+  // against this zero rather than against an assumption about it.
+  await expect(program).toHaveAttribute('data-plays', '0');
 
   // THE FIRST TAKE OF THE SESSION - the press that used to detonate the rebuild.
   await op.getByTestId('hosted-cues').locator('.pd-cue').first().getByTestId('hosted-select-cue').click();
@@ -119,17 +127,29 @@ test('a fresh operator page boots, takes its first cue, and holds it on air', as
   // ATTACHED, not visible: the log is a collapsed <details>, so its rows render hidden until an
   // operator opens it. Asserting visibility here waited out the full timeout on a row that had
   // been in the DOM for thirty seconds.
-  await expect(op.getByTestId('hosted-action-log-row').first()).toBeAttached({ timeout: 30_000 });
+  //
+  // The TAKE row is the one to wait for, by class rather than by position: it is the `cue` row,
+  // the last of the batch and the only one that moves `liveCue` - which is precisely the trigger
+  // the round-1 bug hung the replay on. Waiting for any row would sometimes pass on the `update`
+  // that precedes it and assert the count before the trigger had even arrived.
+  await expect(op.locator('.prod-log-take')).toBeAttached({ timeout: 30_000 });
 
-  // The graphic is still up, and the monitor still has it. Under the round-1 bug the rebuild
-  // re-fired here: this page replayed the entrance, and the cockpit's copy snapped to a stale
-  // "off" and took the layer off air.
+  // THE CLAIM. One take, one entrance - the returning `cue` row moved `liveCue`, and the boot
+  // replay must not have answered it. Under the round-1 bug this reads '2'.
+  await expect(program).toHaveAttribute('data-plays', '1');
+
+  // The graphic is still up and the monitor still has it - the cockpit's ending, where the
+  // re-fired replay snapped to a stale "off" and took the layer off air.
   await expect(chip).toContainText('on air:');
   await expect(programEmpty).toHaveCount(0);
 
-  // And it STAYS - the follower keeps delivering (the report the graphic writes back is itself
-  // another row), so a rebuild latched wrongly has more than one chance to fire.
-  await expect(chip).toContainText('on air:', { timeout: 10_000 });
+  // And it HOLDS once the WHOLE batch has landed. A take is three logged rows - the field
+  // update, the entrance, and the cue marker - and each one re-renders the page, so a replay
+  // latched wrongly has three chances rather than one. Waiting for all three makes the reading
+  // above a property of the page rather than of the instant it was taken.
+  await expect(op.getByTestId('hosted-action-log-row')).toHaveCount(3, { timeout: 30_000 });
+  await expect(program).toHaveAttribute('data-plays', '1');
+  await expect(chip).toContainText('on air:');
   await expect(programEmpty).toHaveCount(0);
 
   await op.close();
