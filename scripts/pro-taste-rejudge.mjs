@@ -173,8 +173,8 @@ if (CONTROL) {
   console.log('  |offset y| ', JSON.stringify(spread(centred.map((r) => Math.abs(r.taste.markCentre.offset.y)))));
   console.log('  rule 2 balance ', JSON.stringify(spread(rows.map((r) => r.taste?.markBalance?.balance).filter((n) => n != null))));
   console.log('  rule 5 rowShare ', JSON.stringify(spread(rows.map((r) => r.taste?.markRow?.rowShare).filter((n) => n != null))));
-  const owns = rows.filter((r) => r.taste?.findings.some((f) => f.code === 'mark-stacked-with-room'));
-  console.log(`  rule 5 fires on ${owns.length}: ${owns.map((r) => r.id).join(', ') || '-'}`);
+  const owns = rows.filter((r) => r.taste?.markRow?.stacked);
+  console.log(`  rule 5 stacks the mark on ${owns.length}: ${owns.map((r) => r.id).join(', ') || '-'}`);
   const off = rows.filter((r) => r.taste?.findings.some((f) => f.code === 'mark-off-centre'));
   console.log(`  rule 1 fires on ${off.length}: ${off.map((r) => r.id).join(', ') || '-'}`);
   const outFile = path.resolve(OUT ?? 'benchmarks/pro/v1/spike/taste-calibration.json');
@@ -444,17 +444,17 @@ const count = (code) => report.rows.filter((r) => r.pieces
 console.log(`\n── ${report.rows.length} rows, ${allPieces.length} pieces ──`);
 console.log(`  rule 1 mark-off-centre    ${count('mark-off-centre')} rows`);
 console.log(`  rule 4 legible-size-only  ${count('legible-size-only')} rows`);
-console.log(`  rule 5 mark-stacked-with-room ${count('mark-stacked-with-room')} rows`);
-// Rule 5's REPORTED half. A stacked mark is no longer a defect (docs/NOACG_PRO_PLAN.md §25.8.3),
-// so the numbers a re-ratification of that arrangement would be read off are printed instead of
-// being buried in the JSON: how much of the band it took the mark actually fills, and whether it
-// would have fitted beside the line in the width the panel already had.
-const stacked = allPieces.map((p) => p.taste?.markRow).filter((m) => m && m.rowShare < 0.25);
-if (stacked.length) {
-  console.log(`  rule 5 stacked instead (reported, never judged): ${stacked.length} of `
-    + `${allPieces.filter((p) => p.taste?.markRow).length} pieces with a mark row;`
+// Rule 5 MINTS NO FINDING (owner, 2026-08-21: placement has no rule, it is a property of each
+// design), so what it contributes is the arrangement and the width that allowed it - the numbers
+// a PLACEMENT decision reads. `stacked` comes from the instrument rather than being re-derived
+// against a floor this file would have to know.
+const marked = allPieces.map((p) => p.taste?.markRow).filter(Boolean);
+const stacked = marked.filter((m) => m.stacked);
+if (marked.length) {
+  console.log(`  rule 5 arrangement (reported, never judged): ${stacked.length} of ${marked.length}`
+    + ' pieces stack the mark over the line, the rest stand it beside;'
     + ` band fill ${JSON.stringify(spread(stacked.map((m) => m.bandFill).filter((n) => n != null)))};`
-    + ` ${stacked.filter((m) => (m.besideSlackPx ?? -1) >= 0).length} would have fitted beside the line`);
+    + ` ${stacked.filter((m) => (m.besideSlackPx ?? -1) >= 0).length} of the stacked ones had room beside`);
 }
 console.log(`  rule 6 package-mark-mixed ${report.rows.filter((r) => r.packageMark && !r.packageMark.consistent).length} rows`);
 console.log('  rule 2 balance (reported, never judged) ',

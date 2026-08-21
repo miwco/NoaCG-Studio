@@ -155,17 +155,32 @@ category rule with a design-shaped question behind it, and every remaining type 
 accident. Until it moves, flipping a type silently chooses "band above the words" for every design
 in it.
 
-## The open question the countdown left
+## The question the countdown left, and the ruling that dissolved it
 
-Rule 5 (`mark-stacked-with-room`) fires on **12 of the 18** recomposed countdowns: the panel is
-sized for a big clock, so the mark had room to sit BESIDE the label and the composer stacked it
-above. Either the placement is wrong for this type, or rule 5's floor is - and the two readings
-lead to different work:
+Rule 5 fired on **12 of the 18** recomposed countdowns: the panel is sized for a big clock, so the
+mark had room to sit BESIDE the label and the composer stacked it above. That was put to the owner
+as "is the placement wrong, or is the floor?".
 
-- the countdown panel is the widest in the package, so *beside* is genuinely available where it was
-  not on the sponsor bug (where 0 of 36 could have fitted);
-- a channel mark over the label over the digits is how a countdown is drawn on air, and the panel is
-  a centred vertical stack.
+**Neither. The owner, 2026-08-21:** *"I cannot give you hard rules on where to place a logo. It
+depends on the design."*
 
-Deliberately not settled here. It is the same question the sponsor bug raised on 2026-08-20, except
-there the geometry agreed with the owner's ruling and here it does not.
+So the question had no answer of the kind it was asking for, and **rule 5 was demoted to
+report-only** the same day - the third of the six to carry no pass/fail, beside rule 2
+(conditional by the owner's own words) and rule 3 (a ratified floor he has not re-ratified). The
+geometry is still measured on every frame; nothing is called a defect.
+
+**The lesson is worth more than the rule was.** That second version of rule 5 was calibrated,
+measured, and quiet on the whole corpus - and still wrong, because *"a mark takes a row of its own
+only when the width leaves it no choice"* is a placement rule however well it measures. A threshold
+can be perfectly calibrated and still assert something its author does not believe.
+
+**Where the measurement should go instead.** Pro GENERATES its designs, so "the design decides"
+needs something to decide per graphic, and in Pro the platform owns layout rather than the model.
+The reading rule 5 already takes - *does the mark fit beside this line in this panel's width?* - is
+exactly the input a composer needs to PLACE one. Used that way it is not a rule at all: it is each
+graphic's own geometry answering for itself. That is a deliberate build, not a demotion, and it has
+not been started.
+
+Corpus reading after the demotion (36 rows, 90 pieces with a mark row): **54 of 90 stack the mark
+over the line and 36 stand it beside; 12 of the stacked ones had room beside.** Those are numbers
+to place from, not to fail on.

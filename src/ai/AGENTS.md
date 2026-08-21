@@ -838,19 +838,25 @@ Three properties are the ones to keep in mind before touching it:
   FLOW did not decide, and flow peers are painted TEXT only - counting an accent bar as a peer
   suppressed the exact case the rule exists for.
 - **A rule that fires on a shipped design is a question, not a threshold to move - and the owner
-  answers it.** Rule 5 fired on Pro's sponsor bug across nearly the whole corpus, so it went to
-  him rather than into a per-type override, and on 2026-08-20 he ruled the STACK legitimate: a
-  mark deliberately above its caption is a different composition. What the rule asks now is the
-  horizontal question inside "it should be on the same row as the text" - **could it have been?**
-  A stack the panel's width never allowed is the composition; a stack with room to spare beside it
-  is the defect. No per-type override was needed in the end: the bug's tile is `fit-content` around
-  the wider of mark and caption, so side by side never fits and it is quiet by construction.
-- **Rule 5 does NOT re-ask crowding, and the first attempt at this rewrite is why.** Measured in
-  the mark's own height it re-flagged `ls18` - the design `spacingCheck`'s own mark-gap
+  answers it.** Rule 5 fired on Pro's sponsor bug across nearly the whole corpus, so it went to him
+  rather than into a per-type override. He ruled the STACK legitimate (2026-08-20), the rule was
+  rewritten around the horizontal question inside "it should be on the same row as the text", and
+  the day after - when a countdown gained a mark and it fired on 12 of 18 - he ruled the whole
+  question out: **"I cannot give you hard rules on where to place a logo. It depends on the
+  design."** Rule 5 now mints NO finding, the third of the six to carry no pass/fail.
+- **A THRESHOLD CAN BE PERFECTLY CALIBRATED AND STILL ASSERT SOMETHING ITS AUTHOR DOES NOT
+  BELIEVE**, and the withdrawn rule 5 is the case to remember. It was read off the catalog, quiet
+  on the whole corpus, mutation-checked, and it re-flagged nothing it should not have - and it was
+  still wrong, because "a mark takes a row of its own only when the width leaves it no choice" is a
+  placement rule. Measuring well is not the same as being entitled to judge. Before adding a
+  threshold, ask whether the owner holds the RULE, not whether the number fits the data.
+- **Rule 5 does NOT re-ask crowding either, and the first attempt at the rewrite is why.** Measured
+  in the mark's own height it re-flagged `ls18` - the design `spacingCheck`'s own mark-gap
   recalibration had just cleared. `spacingCheck` owns the gap in the ratified unit; a second
-  opinion here is a duplicate or a regression. **A rule that fires nowhere is checked, not
-  assumed**: `scripts/spike-taste-rule5-mutation.mjs` (free, one page) proves it fires with room
-  beside the line and is quiet without it, and it does fire on shipped `bug17`.
+  opinion here is a duplicate or a regression. What rule 5 contributes now is the ARRANGEMENT and
+  the width that allowed it (`stacked`, `besideSlackPx`, `bandFill`) - the numbers a PLACEMENT
+  decision reads. `scripts/spike-taste-rule5-reading.mjs` (free, one page) proves that geometry
+  discriminates: same stack, +502px of room beside against -512px, and no finding on either.
 
 Rule 4 reads its NUMBERS through `validation/readabilityCheck` rather than measuring weight or
 contrast again, and compares them against **its own three owner-ratified floors** (2026-08-20):

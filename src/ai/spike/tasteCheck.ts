@@ -25,26 +25,32 @@
 //      legibility instrument passes text the owner cannot read."
 //   5. A mark never eats PRIMARY real estate - B27 put the logo on top of the topic card:
 //      "it takes valuable real estate - it should be on the same row as the text." NARROWED BY
-//      THE OWNER 2026-08-20, after this rule fired on 34 of 36 archived rows: a mark deliberately
-//      stacked ABOVE its caption is a different composition, not a fault. What survives is the
-//      HORIZONTAL question inside his own sentence - could it have been on that row? A stack the
-//      panel's width never allowed is the composition; a stack with room to spare is the defect.
+//      THE OWNER 2026-08-20 and then made THRESHOLDLESS BY HIM 2026-08-21: a deliberate stack is
+//      a different composition, and beyond that *"I cannot give you hard rules on where to place
+//      a logo. It depends on the design."* It measures the arrangement and judges none of it.
 //   6. A package's mark is present on EVERY piece or none.
 //
 // IT REPORTS AND DOES NOT GATE, like every instrument beside it (docs/DESIGN_PRINCIPLES.md and
-// the §0.2 human read). Two of the six additionally refuse to carry a pass/fail at all, and
+// the §0.2 human read). THREE of the six additionally refuse to carry a pass/fail at all, and
 // they say so where they are measured: rule 2 because the owner stated it is not absolute
-// ("sometimes it can work, and that's kind of the problem"), and rule 3 because the ratified
+// ("sometimes it can work, and that's kind of the problem"), rule 3 because the ratified
 // secondary floor already exists in `model/designRules.ts` and disagrees with the owner by a
-// factor the owner has not yet re-ratified. An instrument that invents a threshold to settle a
-// disagreement has replaced the measurement with the opinion it was built to remove.
+// factor the owner has not yet re-ratified, and rule 5 because PLACEMENT HAS NO RULE - it is a
+// property of each design. An instrument that invents a threshold to settle a disagreement has
+// replaced the measurement with the opinion it was built to remove.
+//
+// Rule 5 is the one that reached that state by being written twice, and the second version is
+// the instructive one: it was measured, quiet on the whole corpus, and still wrong - because
+// "a mark takes a row of its own only when the width leaves it no choice" is a placement rule,
+// however well it measures. A threshold can be calibrated and still assert something its author
+// does not believe.
 //
 // WHAT IT DOES NOT DUPLICATE. `spacingCheck` already measures the mark's GAP to the nearest
 // text and `proportionCheck` its HEIGHT against the type; neither asks where the mark sits
 // INSIDE something, which is rules 1, 2 and 5. Rule 5 in particular does NOT re-ask the gap
-// question - it asks whether the panel's WIDTH left room for an arrangement the design did not
-// take, and the one version of it that measured crowding instead re-flagged `ls18`, the design
-// `spacingCheck`'s own recalibration had just cleared (see MARK_BESIDE_GAP_RATIO).
+// question - it reports the panel's WIDTH against the arrangement the design chose, and the one
+// version of it that measured crowding instead re-flagged `ls18`, the design `spacingCheck`'s own
+// recalibration had just cleared (see MARK_BESIDE_GAP_RATIO).
 // `readabilityCheck` already measures size, weight and contrast separately; rule 4 is the JOINT
 // reading - text that clears its size floor and still cannot be read - which is a question none
 // of its three findings asks, and since 2026-08-20 it is judged against the owner's own floors
@@ -164,8 +170,8 @@ export const ROW_SHARE_FLOOR = 0.25;
 export const MARK_BESIDE_GAP_RATIO = MARK_GAP_FLOOR_RATIO;
 
 export interface TasteFinding {
-  /** The vocabulary: mark-off-centre, mark-stacked-with-room, legible-size-only. The two
-   *  deliberately-thresholdless rules (2 and 3) mint no findings - they report numbers. */
+  /** The vocabulary: mark-off-centre, legible-size-only. THREE of the six rules
+   *  (2, 3 and 5) mint no findings at all - they report numbers. */
   code: string;
   /** The owner rule this answers, 1-6, so a reader can go straight to the words behind it. */
   rule: number;
@@ -256,10 +262,12 @@ export interface MarkRowReading {
   bandFill: number | null;
   /** Room left over if the mark and the primary line were laid side by side in the width the
    *  panel already has, the ratified gap apart. Positive means the design could have put them on
-   *  one row without growing the panel - RULE 5'S JUDGED NUMBER, and only while the mark is
-   *  stacked. Negative means the width never allowed it, which is a composition rather than a
-   *  choice. */
+   *  one row without growing the panel; negative means the width never allowed it. REPORTED,
+   *  NEVER JUDGED - it is the number a placement decision reads, not a verdict on one. */
   besideSlackPx: number | null;
+  /** Whether the mark took a band of its own rather than standing beside the line, against
+   *  `ROW_SHARE_FLOOR`. The arrangement, not a verdict on it. */
+  stacked: boolean;
 }
 
 /** Rule 4's other half: the frame's weakest informational text on each of the two axes,
@@ -630,38 +638,37 @@ export function measureTaste(doc: Document, options: TasteOptions = {}): TasteRe
         besideSlackPx: panelW > 0
           ? round2(panelW - (markW + textW + primary * besideGapRatio))
           : null,
+        // WHICH ARRANGEMENT THE DESIGN CHOSE, said once here rather than re-derived by every
+        // reader against a floor it had to know. `pro-taste-rejudge` compared `rowShare < 0.25`
+        // itself, which is the shape a constant drifts out of.
+        stacked: rowShare < rowFloor,
       };
-      // THE DEFECT IS HORIZONTAL ROOM, and that is the owner's own ruling of 2026-08-20 (§25.8.3).
+      // RULE 5 REPORTS AND DOES NOT JUDGE, ratified by the owner 2026-08-21 - the third of the
+      // six to carry no pass/fail, and the one that took two attempts to learn why.
       //
-      // This rule used to fire on any mark that took a band of its own, and that read 34 of the
-      // 36 archived rows - because Pro's sponsor bug stacks its mark over its caption on every
-      // one of them. The owner's answer: a mark deliberately stacked ABOVE its caption is a
-      // different COMPOSITION, not a fault. A rule firing on almost everything reports nothing.
+      // It first fired on any mark that took a band of its own: 34 of the 36 archived rows,
+      // because Pro's sponsor bug stacks its mark over its caption on every one. The owner's
+      // answer was that a deliberate stack is a different COMPOSITION, not a fault. So it was
+      // rewritten to fire only on a stack the panel's width did not force - "it should be on the
+      // SAME ROW as the text", read as *could it have been?* - which was quiet on the whole
+      // corpus and then fired on 12 of the 18 countdowns the moment a clock carried a mark.
       //
-      // What survives is his own words about B27 - "it should be on the SAME ROW as the text" -
-      // read as the question it actually is: **could it have been?** A stack the panel's width
-      // never allowed is the composition the design was forced into; a stack with room to spare
-      // beside it is the mark taking a row it did not need, which is what eating real estate
-      // means. Both sides of that are measured on the rendered frame, in the panel's own width,
-      // and the gap budgeted between them is the ratified one.
+      // THAT SECOND VERSION WAS STILL A HARD PLACEMENT RULE, which is the thing the owner says
+      // does not exist: *"I cannot give you hard rules on where to place a logo. It depends on
+      // the design."* An instrument asserting a rule its author disowns has replaced the
+      // measurement with an opinion - the same sentence this file opens with about rules 2 and 3,
+      // arriving a third time by a different road.
       //
-      // NO PER-TYPE OVERRIDE, and none is needed - the geometry answers for itself, which is the
-      // point. The bug's tile is `fit-content` around the wider of the mark and its caption, so
-      // side by side never fits and the tile is quiet by construction rather than by exemption.
+      // So the geometry is still measured, on every frame, and nothing is called a defect:
+      // `rowShare` says which arrangement the design chose, `besideSlackPx` whether the width
+      // allowed the other one, `bandFill` how much of its band the mark uses. Those are the
+      // numbers a PLACEMENT decision needs - and placing is where they belong, since a composer
+      // asking "does the mark fit beside this line?" is the design's own geometry answering for
+      // itself rather than a rule applied over the top of it.
       //
-      // Crowding is deliberately NOT re-asked here: `spacingCheck` owns the mark-to-text gap in
-      // the ratified unit, and a second opinion in the mark's own height re-flags `ls18` - see
+      // Crowding is not asked here either: `spacingCheck` owns the mark-to-text gap in the
+      // ratified unit, and a second opinion in the mark's own height re-flags `ls18` - see
       // MARK_BESIDE_GAP_RATIO for the measurement that settled it.
-      if (inside && rowShare < rowFloor && (report.markRow.besideSlackPx ?? -1) >= 0) {
-        report.findings.push({
-          code: 'mark-stacked-with-room',
-          rule: 5,
-          detail: `the mark is stacked over ${primaryText.desc} (sharing ${rowShare} of a row) although`
-            + ` ${report.markRow.besideSlackPx}px would have been left over standing them side by side`
-            + ` in the panel's own ${report.markRow.panelWidthPx}px`
-            + ' - a mark takes a row of its own only when the width leaves it no choice',
-        });
-      }
     }
   }
 
