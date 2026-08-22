@@ -292,7 +292,9 @@ function DatasetCard({
   dataset: ShowDataset;
   setShows: (shows: Show[]) => void;
 }) {
-  const [armedDelete, setArmedDelete] = useState(false);
+  /** Which destructive button is armed: 'table', `col:<key>` or `row:<id>` — ONE state, so arming
+   *  any of them disarms the rest and the card can never show two pending confirms at once. */
+  const [armed, setArmed] = useState<string | null>(null);
   const [newColumn, setNewColumn] = useState('');
 
   return (
@@ -309,15 +311,15 @@ function DatasetCard({
         <div className="spacer" />
         {/* Two-step delete: a table of typed-in questions has no undo behind it. */}
         <button
-          className={armedDelete ? 'pd-dataset-delete armed' : 'pd-dataset-delete'}
+          className={armed === 'table' ? 'pd-dataset-delete armed' : 'pd-dataset-delete'}
           onClick={() => {
-            if (!armedDelete) setArmedDelete(true);
+            if (armed !== 'table') setArmed('table');
             else setShows(removeShowDataset(show.id, ds.id));
           }}
-          onBlur={() => setArmedDelete(false)}
+          onBlur={() => setArmed((a) => (a === 'table' ? null : a))}
           data-testid="dataset-delete"
         >
-          {armedDelete ? 'Delete table?' : '✕'}
+          {armed === 'table' ? 'Delete table?' : '✕'}
         </button>
       </div>
 
@@ -335,13 +337,29 @@ function DatasetCard({
                       data-testid={`col-${c.key}`}
                     />
                     {ds.columns.length > 1 && (
+                      /* ARMED, like the table delete above it and the Data panel's value ✕: a
+                         column takes every value under it, with no undo, off a table someone may
+                         be reading rows from live. A GLYPH rather than the table button's word -
+                         this sits inside the header's flex line beside the name input, so
+                         "Delete column?" would push the column wider than its own content. */
                       <button
-                        className="pd-col-delete"
-                        title="Remove this column (its values go with it)"
-                        onClick={() => setShows(removeDatasetColumn(show.id, ds.id, c.key))}
+                        className={`pd-col-delete${armed === `col:${c.key}` ? ' reset-armed' : ''}`}
+                        title={
+                          armed === `col:${c.key}`
+                            ? `Click again to remove ${c.label} and every value in it`
+                            : 'Remove this column (its values go with it)'
+                        }
+                        onClick={() => {
+                          if (armed === `col:${c.key}`) {
+                            setArmed(null);
+                            setShows(removeDatasetColumn(show.id, ds.id, c.key));
+                          } else setArmed(`col:${c.key}`);
+                        }}
+                        onBlur={() => setArmed((a) => (a === `col:${c.key}` ? null : a))}
                         aria-label={`Remove column ${c.label}`}
+                        data-testid={`col-delete-${c.key}`}
                       >
-                        ✕
+                        {armed === `col:${c.key}` ? '✓' : '✕'}
                       </button>
                     )}
                   </span>
@@ -364,13 +382,25 @@ function DatasetCard({
                   </td>
                 ))}
                 <td className="pd-td-actions">
+                  {/* ARMED for the same reason as the column: the row's typed-in values go with
+                      it and nothing brings them back. Glyph, not a word - the actions column is
+                      sized by this button and a widening cell would shove the table sideways. */}
                   <button
-                    title="Remove this row"
-                    onClick={() => setShows(removeDatasetRow(show.id, ds.id, row.id))}
+                    className={armed === `row:${row.id}` ? 'reset-armed' : undefined}
+                    title={
+                      armed === `row:${row.id}` ? 'Click again to remove this row' : 'Remove this row'
+                    }
+                    onClick={() => {
+                      if (armed === `row:${row.id}`) {
+                        setArmed(null);
+                        setShows(removeDatasetRow(show.id, ds.id, row.id));
+                      } else setArmed(`row:${row.id}`);
+                    }}
+                    onBlur={() => setArmed((a) => (a === `row:${row.id}` ? null : a))}
                     aria-label={`Remove row ${i + 1}`}
                     data-testid={`row-delete-${row.id}`}
                   >
-                    ✕
+                    {armed === `row:${row.id}` ? '✓' : '✕'}
                   </button>
                 </td>
               </tr>

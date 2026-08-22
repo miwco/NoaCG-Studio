@@ -369,9 +369,18 @@ branch - it is never where conflicts get resolved.
    It finds the ci.yml run for that exact commit and applies the three acceptance conditions
    below, plus the two that decide whether a green tick is EVIDENCE: whether the E2E shards
    actually ran (a `scripts/`- or `docs/`-only change plans `mode: none` and skips every shard -
-   green, and silent about behaviour), and whether any job is damaged rather than failing. The
-   skipped-shard case warns instead of blocking, because it is often legitimate - but it must be
-   SAID, and the report must then cite the full-suite run it is leaning on.
+   green, and silent about behaviour), and whether any job is damaged rather than failing.
+
+   **A run that skipped every shard is settled by computation, not by prose.** Since 2026-08-22
+   the preflight runs the affected planner itself on the commit being promoted, so the two
+   causes of `mode: none` stop looking alike. It PASSES when the whole branch diffs to nothing
+   behavioural against `main` (skipping was right), or when an earlier green run ON THIS
+   HISTORY did run shards and every file changed since it plans `none` too - the "the nearest
+   run covered it and the delta is inert" argument, with the ancestry and the inertness both
+   measured. It BLOCKS otherwise, which is the case that used to reach `main` on a sentence: a
+   second push cancels the run in flight and plans only itself, so the behaviour the cancelled
+   run covered is gated by nothing while the tick stays green. Force a real one rather than
+   arguing with it: `gh workflow run ci.yml --ref <branch>`.
 
    **Route A - CI (prefer this).** Push the integrated branch and let the gate run there:
 
