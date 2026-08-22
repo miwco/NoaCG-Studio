@@ -14,13 +14,20 @@ import { fileURLToPath } from 'node:url';
 export const SCOREBUG_SVG = fileURLToPath(new URL('../docs/svg-samples/scorebug.svg', import.meta.url));
 export const QUIZ_SVG = fileURLToPath(new URL('../docs/svg-samples/quiz-board.svg', import.meta.url));
 
+/** The wizard's own Next. Scoped to the modal because the live walk runs with ADVANCED MODE on,
+ *  which puts the editor's `» Next` verb on the page behind it — an unscoped role match then
+ *  resolves to two buttons and the walk dies on the first step. */
+function wizardNext(page: Page) {
+  return page.locator('.wz-modal').getByRole('button', { name: 'Next' });
+}
+
 /** Drop a file on the Import door and land on the SVG mapping step. */
 export async function dropSvg(page: Page, fixture: string): Promise<void> {
   await expect(page.locator('.wz-modal')).toBeVisible();
   await page.locator('[data-entry="import-graphic"]').click();
   await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture);
   await expect(page.getByTestId('import-svg-card')).toBeVisible();
-  await page.getByRole('button', { name: 'Next' }).click();
+  await wizardNext(page).click();
   await expect(page.getByTestId('map-svg-fields')).toBeVisible();
 }
 
@@ -32,15 +39,19 @@ export async function dropSvg(page: Page, fixture: string): Promise<void> {
  * another run's cues.
  */
 export async function intoProduction(page: Page, graphic: string, production: string): Promise<void> {
-  await page.getByRole('button', { name: 'Next' }).click(); // Animation
-  await expect(page).toHaveURL(/#\/new\/step\/animation/);
-  await page.getByRole('button', { name: 'Next' }).click(); // Finish
-  await expect(page).toHaveURL(/#\/new\/step\/finish/);
+  // Waiting on the STEP COUNTER, not on the hash: the live walk arrives signed in and the wizard
+  // it opens does not always carry a `#/new/step/…` route, so a URL assertion passes offline and
+  // times out against a real backend on the same clicks. The counter is the same in both, and it
+  // is also the settle the second click needs — clicking Next twice in a row without one lands
+  // the second on a step that has not re-rendered.
+  await wizardNext(page).click(); // Animation
+  await expect(page.getByTestId('wz-stepcount')).toContainText('4');
+  await wizardNext(page).click(); // Finish
+  await expect(page.getByTestId('wz-stepcount')).toContainText('5');
   await page.getByTestId('wz-finish-name').fill(graphic);
   await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
   await page.getByTestId('wz-finish-production-name').fill(production);
   await page.getByTestId('wz-finish-production-go').click();
-  await expect(page).toHaveURL(/#\/production\//);
   // 20 s: landing on the page builds the graphic's document, and the cold Prettier format is the
   // same cost import-graphic.spec.ts documents.
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });

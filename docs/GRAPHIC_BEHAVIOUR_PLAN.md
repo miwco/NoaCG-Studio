@@ -239,16 +239,29 @@ Everything except the paint, which is more than expected going in:
    run drew the verdict over the answer it was judging.
 4. **Was the scoreboard done?** Yes. Half the September goal cost an afternoon of verification.
 
-### The one road still unwalked
+### The hosted road: WALKED, 2026-08-22
 
-**The hosted one.** Everything above happens either in a document the app built or in an exported
-folder opened from disk; the `/output` renderer following the hosted log has not seen this graphic.
-Two things only that run can answer: whether the drawn states cross the wire, and whether BOOT
-RECOVERY repaints them — a snap replays states with callbacks suppressed, so the layers come back
-only because `paintQuizState()` repaints from the machine on the trailing `update()`. It is
-prepared and waiting for the owner: `docs/acceptance/IMPORTED_QUIZ_HOSTED_WALK.md`, whose
-automated half is `e2e/configured/imported-quiz-output.spec.ts`. It needs the main checkout's
-`.env` and writes real rows, which is why it is written down rather than run.
+Run against the real project on the owner's go-ahead
+(`e2e/configured/imported-quiz-output.spec.ts`; checklist and frames:
+`docs/acceptance/IMPORTED_QUIZ_HOSTED_WALK.md`). The board was imported, bound, published, and
+driven from the real `/output` renderer over the hosted command log. Both open questions closed:
+
+- **The drawn states cross the wire.** A renderer that never saw the wizard, following a log,
+  shows the designer's own layers.
+- **BOOT RECOVERY repaints them** — the pilot's one predicted failure, and it did not happen. A
+  snap replays states with callbacks suppressed, so the layers come back only because
+  `paintQuizState()` repaints from the machine on the trailing `update()`. Reloading the renderer
+  mid-lock returned a frame pixel-identical to the one before it (bar the debug overlay's row
+  counter): badge up, pick still showing.
+
+Two things the run found, both about the WALK rather than the graphic, and both now fixed in the
+shared helper: the live walk runs with Advanced mode on, so an unscoped `Next` role match resolves
+to the editor's `» Next` as well as the wizard's; and the wizard opened after sign-in does not
+always carry a `#/new/step/…` route, so a URL assertion passes offline and times out against a
+real backend on the same clicks. The step COUNTER is the same in both.
+
+**Still owed: the eyes-on half** (the walk's step 2) — whether the mapping step reads as usable
+without training. No run answers that.
 
 ### What stays deferred, unchanged
 

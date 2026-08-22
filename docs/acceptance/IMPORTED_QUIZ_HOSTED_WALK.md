@@ -1,5 +1,13 @@
 # Walk: an imported quiz on the hosted road
 
+> **STEP 1 WAS RUN AND PASSED, 2026-08-22**, against the real project on the owner's go-ahead.
+> Both unknowns are answered: the drawn states cross the wire, and **boot recovery repaints
+> them** — frame 4 came back pixel-identical to frame 3 apart from the debug overlay's row
+> counter, so the badge and the pick both survived a renderer reboot mid-lock. The predicted
+> failure did not happen. Frames are in `test-results/signed-in/imported-quiz-*`.
+>
+> **Step 2 is still owed** — it is the eyes-on half, and no run answers it.
+
 **For the owner, ~15 minutes.** Everything else about the imported-quiz pilot
 (`docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10) is already proven and pinned. This is the one road left,
 and it is the one the class actually runs on: **publish the production and drive the graphic from
