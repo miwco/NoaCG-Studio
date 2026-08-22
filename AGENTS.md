@@ -25,11 +25,16 @@ Binding docs, read before generating or judging templates: **`docs/DESIGN_LANGUA
 motion + code style) and **`docs/GOALS.md`** (north star + what is NOT done - a landed goal moves
 verbatim to `docs/GOALS_ARCHIVE.md`, and GOALS.md stays under ~200 lines).
 
-**Current push (2026-08): the STUDENT RELEASE**, whose binding roadmap is the "Student release"
-section of `docs/GOALS.md`. WIZARD-FIRST: choose a template or kit, customize fields and branding,
-add it to a PRODUCTION, export or publish, operate live (CasparCG + OBS are the primary
-verification targets). The editor is being demoted to an Advanced mode and AI work is postponed
-until template-to-live is dependable. Prefer work that serves that north star.
+**Current push (from 2026-08-22): STUDENTS MAKE THEIR OWN GRAPHICS AND PLAY THEM OUT**, whose
+binding roadmap is the "NOW" section of `docs/GOALS.md`. The student release that ran before it is
+CLOSED - the owner accepted the player system on real hardware - and its history is in
+`docs/GOALS_ARCHIVE.md`. The new goal: a student draws their own graphic (any graphic, not a lower
+third), gets the BEHAVIOUR their show needs onto it, and plays it out - **without writing a line of
+code**. Two graphics decide it by **2026-09-12**, a real production with real students: a QUIZ
+(lock answer / reveal answer) and a SCOREBOARD (score + / -). The SVG import door is the way the
+graphic gets in; attaching behaviour to artwork somebody else drew is the open design question.
+Wizard-first still holds for the catalog road, CasparCG + OBS are still the verification targets,
+and AI work stays postponed. Prefer work that serves that date.
 
 **The pillars (keep every change true to these):**
 - **Best & easiest to create - and put on air** - premium output with the least friction; a
