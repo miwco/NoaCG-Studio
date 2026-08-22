@@ -373,6 +373,44 @@ before the contract widens.
 6. **Print and texture.** 7 designs use a repeating gradient, 1 uses a blend mode, 0 use an image
    as a surface. There is no risograph, no newsprint register, no film grain, no halftone.
 
+**THE LOWER THIRDS, MEASURED OFF THE RENDERED CARD (2026-08-21)**
+
+The owner's read of the storefront - *"all the graphics there look the same"* - was ratified as a
+catalog-design ask, and `scripts/card-look-sweep.mjs` is the axis it needed. It measures what an
+eye reads at card size, off the PIXELS: backdrop (dark/light/none), the dominant saturated hue,
+and the ink's footprint. The CSS-decision vector in `catalog-sameness.mjs` could not see any of
+it and scored the same page 11-distinct-of-12.
+
+**The ask splits in two, and only one half is a drawing problem.**
+
+*Buried, not absent - the COLOUR variety is already there.* Across 103 designs the shelf carries
+nine accent hues (orange 28, red 11, amber 10, rose 8, azure 5, cyan 5, violet 4, spring 1) plus
+31 with no coloured accent at all, and 7 light backdrops against 73 dark and 23 none. **The first
+twelve are 10 dark + 10 orange.** So page one shows almost none of what the category has, which
+is a DISCOVERY failure and a cheap fix - order the first page across this axis instead of by
+registry position.
+
+*Genuinely absent - the SHAPE.* **99 of 103 designs are `strap/thin`: 96%.** Only lt61 "Poster
+Slab", ls05 "Studio Pair", ls33 "Quote Strap" and ls39 "Fact Check" break it, and only to
+`strap/mid`. There is no full-width band, no tall panel, no side column, no corner block. Colour
+can be re-ordered; a silhouette the catalog does not contain has to be drawn.
+
+Re-run: `node scripts/card-look-sweep.mjs lower-third --json out.json` (any category).
+
+**The ordering half is BUILT and the drawing half is scheduled.** `spreadFirstPage`
+(`src/templates/search.ts`, 2026-08-21) fills Browse's fold by spreading accent hue with style
+family breaking ties, so what the category already has is now what the first page shows. It keys
+on the DECLARED palette accent because that predicted the rendered hue 72/72; the declared panel
+predicted the rendered backdrop only 60/80, so **backdrop is deliberately not an ordering axis** -
+spreading on it would need the measurement shipped as a baseline. The six missing silhouettes are
+briefed in `docs/handoffs/lower-third-shapes.md`; the whole catalog queue is
+`docs/CATALOG_WORK_QUEUE.md`.
+
+**The owner's standing position, ratified the same day and binding on catalog work:** *"No one
+wants to use a design that other people also use. It's better to have a unique variety, and if we
+don't have a lot of graphics that are unique and very good, then we are doing something wrong."*
+Sameness is a defect, not a house style - and no design is pinned to the first slot because of it.
+
 **Compositional grammars with no design at all**
 
 7. **A column grid.** 17 designs of 459 use grid columns. There is no editorial two-column card,

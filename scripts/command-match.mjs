@@ -82,6 +82,9 @@ export const SWEEP_SCRIPTS =
   // value and freezes the motion before reading, so it holds the machine for as long as its
   // siblings and belongs here for the same reason they do.
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
+  // `card-look-sweep` renders every design in a category full-frame and screenshots each one,
+  // which is the same workload as its siblings above under a name none of them share.
+  + '|card-look-sweep'
   + '|text-containment-sweep'
   // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
   // they are easy to forget here: a script nobody calls a test still opens Chromium and still
