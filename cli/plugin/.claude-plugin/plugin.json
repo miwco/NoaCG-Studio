@@ -1,0 +1,23 @@
+{
+  "name": "noacg",
+  "version": "0.2.0",
+  "description": "Make broadcast graphics for NoaCG Studio from Claude Code: the noacg-graphic skill (the NoaCG contract, the tools, the loop - not how to design), the /noacg:graphic command, and the noacg MCP server (types, scaffold, validate with screenshots, inspect, save into your NoaCG library).",
+  "author": {
+    "name": "NoaCG Studio",
+    "url": "https://noacg.studio"
+  },
+  "homepage": "https://noacg.studio",
+  "repository": "https://github.com/miwco/NoaCG-Studio",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "broadcast-graphics",
+    "lower-third",
+    "scoreboard",
+    "ograf",
+    "spx",
+    "casparcg",
+    "obs",
+    "vmix",
+    "mcp"
+  ]
+}

@@ -120,6 +120,10 @@ const MAP = [
   [/^src\/templates\/types\/neutralDesign/, ['bridge.spec.ts']],
   [/^src\/control\/ografContract/, ['ograf-contract.spec.ts', 'bridge.spec.ts']],
   [/^cli\//, []],
+  // The plugin marketplace entry (root .claude-plugin/) and the agent round's brief bank +
+  // results (benchmarks/agent/): read by `claude plugin` and by scripts/agent-round-bench.mjs,
+  // never by a spec.
+  [/^(\.claude-plugin\/|benchmarks\/agent\/)/, []],
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],

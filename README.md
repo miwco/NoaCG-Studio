@@ -55,6 +55,27 @@ the trade.
 - **Video & animation projects** — a second project kind for stingers, intros and logo reveals,
   generated as React/Remotion or HyperFrames compositions and rendered through the same service.
 
+## For coding agents (Claude Code, Codex, any MCP client)
+
+Ask your coding agent for a graphic "for NoaCG" and it designs one the way it normally designs;
+NoaCG supplies the contract, the tools, the validation and the destination. The `noacg` CLI + MCP
+server (`cli/`, published as **`noacg`** on npm) scaffolds a graphic package - one folder that is
+a valid **EBU OGraf** Graphic, the **SPX/CasparCG** package and the workspace the agent edits -
+validates and benches it against the deployment's own gate, screenshots it, prints the operator
+surface NoaCG derives from it, and saves it straight into your NoaCG library with a scoped agent
+key (`noacg login`). The `noacg-graphic` skill teaches the contract, not a look.
+
+```bash
+npx noacg scaffold --type scoreboard --design neutral --name "Football scoreboard" --out ./football-scoreboard
+npx noacg validate ./football-scoreboard --screenshots ./shots
+npx noacg save ./football-scoreboard
+```
+
+Claude Code: `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install
+noacg@noacg-studio` (the skill, a `/noacg:graphic` command and the MCP server). Codex and other
+MCP clients: `cli/plugin/README.md`. The whole account: [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md)
+and [`docs/AGENT_SAVE.md`](docs/AGENT_SAVE.md).
+
 ## Run it yourself
 
 ```bash
@@ -79,6 +100,7 @@ See [`.env.example`](.env.example) for what turns each optional piece on.
 | [`docs/GOALS.md`](docs/GOALS.md) | North star and the open road ahead (shipped work: [`docs/GOALS_ARCHIVE.md`](docs/GOALS_ARCHIVE.md)) |
 | [`docs/SPX_TEMPLATE_FORMAT.md`](docs/SPX_TEMPLATE_FORMAT.md) | The SPX template contract |
 | [`docs/OGRAF.md`](docs/OGRAF.md) | The EBU OGraf v1 export: manifest, Web Component, limits |
+| [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md) | The agent door: `noacg` CLI + MCP server, the `/bridge` page, the graphic package, the plugin |
 | [`docs/STATE_MACHINE_SCHEMA.md`](docs/STATE_MACHINE_SCHEMA.md) | What a graphic *is*: states, transitions, the default path |
 | [`docs/CONTROL_LAYER.md`](docs/CONTROL_LAYER.md) | Operator panels, rundowns, hosted control |
 | [`docs/RENDER.md`](docs/RENDER.md) | The video/image render service |

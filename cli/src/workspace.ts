@@ -87,6 +87,41 @@ export async function unzipTo(bytes: Uint8Array, dir: string, opts: UnzipOptions
   return written;
 }
 
+/**
+ * After a regenerate, drop the generated pair of the package's PREVIOUS name. A package is named
+ * by its html (`<title>`, then the SPX definition's description); when that name changes - the
+ * agent retitled the graphic, or an older scaffold carried its design's name in the sources - the
+ * bridge writes `<new-slug>.html` + `<new-slug>.ograf.json`, and the old pair would stay behind:
+ * a folder with two manifests that no renderer and no importer can call one graphic (found
+ * 2026-08-22 walking a scaffolded package through validate). Only NoaCG's own generated manifests
+ * are touched (`v_noacg.format`), and only the html such a manifest itself points at; nothing
+ * else in the folder is ever removed.
+ */
+export async function removeStaleGenerated(dir: string, written: string[]): Promise<Array<{ file: string; kind: 'manifest' | 'html' }>> {
+  const abs = path.resolve(dir);
+  const keep = new Set(written);
+  const removed: Array<{ file: string; kind: 'manifest' | 'html' }> = [];
+  type StaleManifest = { v_noacg?: { format?: string; source?: { html?: string } } };
+  for (const name of await fs.readdir(abs)) {
+    if (!/\.ograf\.json$/i.test(name) || keep.has(name)) continue;
+    let manifest: StaleManifest;
+    try {
+      manifest = JSON.parse(await fs.readFile(path.join(abs, name), 'utf8')) as StaleManifest;
+    } catch {
+      continue;
+    }
+    if (manifest?.v_noacg?.format !== 'noacg-graphic') continue;
+    await fs.rm(path.join(abs, name));
+    removed.push({ file: name, kind: 'manifest' });
+    const html = manifest.v_noacg.source?.html;
+    if (html && !html.includes('/') && !keep.has(html) && /\.html?$/i.test(html)) {
+      await fs.rm(path.join(abs, html), { force: true });
+      removed.push({ file: html, kind: 'html' });
+    }
+  }
+  return removed;
+}
+
 /** Is the directory empty or absent (a fresh scaffold target)? */
 export async function isEmptyDir(dir: string): Promise<boolean> {
   const abs = path.resolve(dir);

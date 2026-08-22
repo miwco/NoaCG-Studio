@@ -31,7 +31,11 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
  * which is exactly the discrimination this gate exists to make. Keep it sorted.
  */
 export const ALLOWED_ROOT_ENTRIES = new Set([
-  '.agent-workflows', '.agents', '.claude', '.codex', '.dependency-cruiser.cjs', '.env.bench',
+  // `.claude-plugin/` holds ONLY marketplace.json - the Claude Code plugin marketplace entry for
+  // the `noacg` plugin under cli/plugin/ (docs/AGENT_CLI.md "Distribution"). The marketplace
+  // manifest has to sit at the repository root for `claude plugin marketplace add miwco/NoaCG-Studio`
+  // to find it; the plugin itself stays under cli/.
+  '.agent-workflows', '.agents', '.claude', '.claude-plugin', '.codex', '.dependency-cruiser.cjs', '.env.bench',
   '.env.example', '.gitattributes', '.github', '.gitignore', '.nvmrc', 'AGENTS.md', 'CLAUDE.md', 'LICENSE',
   'NoaCG-Brand-Kit', 'README.md', 'admin.html', 'api', 'app.html', 'benchmarks', 'bridge.html', 'cli', 'docs', 'e2e',
   'eslint.config.js', 'index.html', 'join.html', 'ograf.html', 'output.html', 'package-lock.json',
