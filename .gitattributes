@@ -23,3 +23,11 @@ public/packs/*.json text eol=lf
 e2e/catalog-baseline.json text eol=lf
 e2e/catalog-render-baseline.json text eol=lf
 scripts/e2e-durations.json text eol=lf
+
+# Rewritten by cli/scripts/build-skill.mjs (every `npm --prefix cli run build`; `--check` in the
+# root build): the plugin's skill copy, the version-stamped manifests, the package LICENSE.
+cli/plugin/skills/** text eol=lf
+cli/plugin/.claude-plugin/plugin.json text eol=lf
+cli/plugin/.codex-plugin/plugin.json text eol=lf
+.claude-plugin/marketplace.json text eol=lf
+cli/LICENSE text eol=lf
