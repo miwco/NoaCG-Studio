@@ -82,6 +82,9 @@ export const SWEEP_SCRIPTS =
   // value and freezes the motion before reading, so it holds the machine for as long as its
   // siblings and belongs here for the same reason they do.
   + '|occlusion-sweep|design-rules-audit-sweep|plate-legibility-sweep|footprint-stability-sweep'
+  // `card-look-sweep` renders every design in a category full-frame and screenshots each one,
+  // which is the same workload as its siblings above under a name none of them share.
+  + '|card-look-sweep'
   + '|text-containment-sweep'
   // The two ACCEPTANCE artifact builders. Neither asserts anything, and that is exactly why
   // they are easy to forget here: a script nobody calls a test still opens Chromium and still
@@ -89,6 +92,9 @@ export const SWEEP_SCRIPTS =
   // over its own build, an exported package and a catalog category at three viewport sizes,
   // which is a job by every measure this module cares about.
   + '|acceptance-shots|acceptance-pack'
+  // The PLAYOUT DASHBOARD frames, for the same reason as the two above and named like neither
+  // family: it builds a production through the app and photographs it at four window sizes.
+  + '|playout-dashboard-shots'
   + `|render-smoke[\\w-]*|(?!(?:${SERVER_SCRIPTS})\\.)[\\w-]*bench[\\w-]*`
   + '|[\\w-]*spike[\\w-]*';
 

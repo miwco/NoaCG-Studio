@@ -10,6 +10,7 @@ import {
   machineStateNames,
 } from '../control/controlModel';
 import { nextRow, rowsForSide } from '../control/cueData';
+import { groupCueFields, groupHeading } from '../control/cueFieldGroups';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../control/eventLog';
 import {
   clearAllCuesOnWire,
@@ -663,6 +664,8 @@ function HostedCueEditor({
   onError: (message: string) => void;
 }) {
   const descriptors = useMemo(() => fieldDescriptors(spec.fields), [spec.fields]);
+  const fieldGroups = useMemo(() => groupCueFields(descriptors), [descriptors]);
+  const descriptorByKey = useMemo(() => new Map(descriptors.map((d) => [d.key, d])), [descriptors]);
   const events = useMemo(() => eventButtons(spec.js), [spec.js]);
   const eventSections = useMemo(() => controlSections(events), [events]);
   const legality = useMemo(() => eventLegality(spec.js), [spec.js]);
@@ -684,6 +687,8 @@ function HostedCueEditor({
     for (const d of descriptors) out[d.key] = valueOf(d.key);
     return out;
   };
+  /** What the band headings read, resolved ONCE per render rather than once per band. */
+  const headingValues = currentValues();
 
   // Debounced shared staging: a typing operator sends a few rows, not one per keystroke.
   const pending = useRef<Record<string, string>>({});
@@ -837,17 +842,39 @@ function HostedCueEditor({
             </div>
           </label>
         )}
-        {descriptors.map((d) => (
-          <label key={d.key} className="pd-field">
-            <span>{d.key.toUpperCase()} · {d.label}</span>
-            <FieldControl
-              descriptor={d}
-              value={valueOf(d.key)}
-              onChange={(v: string | number) => edit(d.key, String(v))}
-              images={spec.images.map((i) => ({ value: i.value }))}
-            />
-          </label>
-        ))}
+        {/* THE BANDS, exactly as the in-app editor draws them (control/cueFieldGroups.ts) —
+            docs/CONTROL_PANEL_PARITY.md §4: a two-sided board groups per side under the
+            operator's own word for it, everything else keeps the flat flow. A class operating
+            from this page reads the same surface they were taught on. */}
+        {fieldGroups.map((group) => {
+          const heading = groupHeading(group, headingValues);
+          return (
+            <div
+              className={`pd-band${heading ? '' : ' pd-band-plain'}`}
+              key={group.id}
+              data-testid={`hosted-band-${group.id}`}
+            >
+              {heading && <span className="pd-band-label">{heading}</span>}
+              <div className="pd-band-fields">
+                {group.keys.map((key) => {
+                  const d = descriptorByKey.get(key);
+                  if (!d) return null;
+                  return (
+                    <label key={d.key} className="pd-field">
+                      <span>{d.key.toUpperCase()} · {d.label}</span>
+                      <FieldControl
+                        descriptor={d}
+                        value={valueOf(d.key)}
+                        onChange={(v: string | number) => edit(d.key, String(v))}
+                        images={spec.images.map((i) => ({ value: i.value }))}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ⚡ GRAPHIC ACTIONS (docs/PLAYOUT_DASHBOARD.md §7b), in the in-app page's shape: a header

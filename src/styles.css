@@ -98,8 +98,12 @@ label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 
 .topbar .topbar-meta { font-size: 11px; margin-left: 6px; white-space: nowrap; }
 .topbar .divider-dot { color: #3d4756; margin: 0 -2px; user-select: none; }
 .topbar .spacer { flex: 1; }
-/* Armed Reset — the amber on-air accent signals the pending confirm (Brand Manual §5). */
-.topbar button.reset-armed {
+/* Armed Reset — the amber on-air accent signals the pending confirm (Brand Manual §5).
+   NOT scoped to the topbar: three surfaces now arm a destructive button the same way (the
+   topbar's Reset, an entry's ✕ on the graphic control page, and a value's or a binding's ✕ on
+   the production Data tab), and the two off the topbar were setting a class that styled nothing.
+   The label change carried them, which is exactly how it went unnoticed. */
+button.reset-armed {
   color: var(--amber);
   border-color: rgba(246, 166, 35, 0.55);
   background: rgba(246, 166, 35, 0.12);
@@ -570,7 +574,13 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .ctl-stepsize > span { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
 /* The VALUE keeps the room: a two-digit score must never be squeezed to one visible digit by
    the controls around it (`.pd-field input { width: 100% }` otherwise sets all three equal). */
-.row > .ctl-num { flex: 1 1 auto; min-width: 64px; }
+/* Basis 64px, NOT `auto`: a bare `<input type=number>` reports a ~170px content width, and a
+   flex line is broken against BASE sizes before anything is allowed to shrink. On `nowrap` that
+   never showed (the line could not break, so the input simply shrank); the moment the row is
+   allowed to wrap as a safety net, an auto basis makes it wrap at widths where everything fits
+   comfortably. Naming the basis makes the line's real demand its real demand - 40+64+40 plus the
+   step size - and `flex-grow: 1` hands the leftover back to the value box, as before. */
+.row > .ctl-num { flex: 1 1 64px; min-width: 64px; }
 .ctl-stepsize > .ctl-num-step { flex: 0 0 auto; width: 46px; min-width: 46px; }
 /* A picture field's select has no content of its own to hold it open; the hint goes underneath
    rather than competing with it for the row. */
@@ -5663,6 +5673,13 @@ h2 + .lib-row,
   overflow: visible;
   /* One number for the sticky offsets below and the header's own height. */
   --pd-header-h: 50px;
+  /* THE CUE EDITOR'S FIELD TRACK (§2d). The floor is the widest CONTROL's measured min-content -
+     a number control is 245px - and a track that is smaller does not shrink the control, it lets
+     it overflow onto the field beside it. The ceiling stops three fields being flung across a
+     2560px band. Both are named here rather than written into the rule so the next person to
+     add a control can see what they have to fit, and can measure it against one number. */
+  --pd-field-min: 250px;
+  --pd-field-max: 340px;
   /* The monitor cap (§2). Picture height only; the label row and the sticky padding sit on top.
      NOT a flat fraction of the viewport any more (owner read 2026-08-21): 26vh answered the
      1536×814 window it was tuned on and wasted the 1080p one - "too much empty room at the
@@ -5768,7 +5785,14 @@ h2 + .lib-row,
 /* The playout surface WAITING behind a sub-page. Hidden, never unmounted: unmounting destroys
    the PROGRAM monitor's iframes, and reloading a graphic that is on air because someone opened
    the Data tab is a live fault, not a layout choice. */
-.pd-offstage { display: none; }
+/* TWO CLASSES, not one, and that is the whole point: `.pd-offstage` alone is specificity (0,1,0)
+   and `.pd-rail` further down this file is (0,1,0) too, so the LATER rule won and the cue rundown
+   stayed on screen beside the Data workspace - a list of cues on a page with no way to air one
+   (owner, 2026-08-21: "explain to me what the cue rundown is doing here"). `.pd-main` hid
+   correctly only because it happens to be declared ABOVE this line. Naming both surfaces makes
+   the rule win on specificity instead of on source order, which nothing here should depend on. */
+.pd-main.pd-offstage,
+.pd-rail.pd-offstage { display: none; }
 
 /* ── The monitors: PREVIEW beside PROGRAM, equal, 16:9, CAPPED and STICKY ────
    Owner, 2026-08-19: "we should rather make the preview and program screens a bit smaller",
@@ -5870,6 +5894,31 @@ h2 + .lib-row,
     white-space: normal;
     text-align: center;
   }
+}
+/* ONE COLUMN, ONCE ONE FITS. The two-up grid above exists because six 44px verbs are taller
+   than the monitors on a short window - not because two-up is the better shape. On a tall one
+   it is the worse shape twice over: `align-content: stretch` had nothing left to do but inflate
+   the GAPS, so at 1920×1000 six 40px buttons sat on a 75px pitch - "spaced out vertically, I
+   don't think it works so well" (owner, 2026-08-21) - and TAKE was half the width it could be.
+
+   The threshold is the arithmetic, not a guess: the stack is 6 buttons + 5×6px gaps + the on-air
+   chip, and it has to fit the monitors, whose height is `--pd-monitor-h` (+ ~25px of label). At
+   960px of viewport that is 302px of stack against 327px of monitor; below it, two-up.
+
+   The SLACK then goes into the BUTTONS rather than the gaps - the same tie-breaker that chose
+   stretch in the first place ("I would rather have the controls big than the monitors too big"),
+   spent where it reads as one block of controls instead of six scattered ones. Capped at 72px so
+   a 4K window does not grow a TAKE the size of a monitor. */
+@media (min-width: 1366px) and (min-height: 960px) {
+  .pd-stagehead .pd-verbs {
+    grid-template-columns: minmax(0, 1fr);
+    /* PACKED, not spread: the gap is a constant 6px at every window size. */
+    align-content: start;
+  }
+  /* Row 1 explicitly, because TAKE is not first in the DOM (PREVIEW is) and auto-placement
+     would put the one red button in the middle of the stack. */
+  .pd-stagehead .pd-verb-take { grid-area: 1 / 1 / 2 / 2; }
+  .pd-stagehead .pd-verb { min-height: clamp(44px, calc((var(--pd-monitor-h) - 25px) / 6), 72px); }
 }
 .pd-monitor { display: flex; flex-direction: column; min-width: 0; }
 .pd-monitor h2 {
@@ -6032,7 +6081,68 @@ h2 + .lib-row,
 /* Update, where the line naming it already is. It exists for the PHONE, whose bottom bar
    carries only TAKE/Next/Out; on desktop the verb bar owns it and this stands down. */
 .pd-editor-update { display: none; font-size: 12px; padding: 4px 10px; }
-.pd-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 14px; }
+/* THE TRACK FLOOR IS THE WIDEST CONTROL'S MIN-CONTENT, not a round number that looked right
+   next to a text box. `minmax(<fixed>, 1fr)` gives the track a HARD minimum, so a control whose
+   own min-content is wider does not widen the track and does not shrink - it OVERFLOWS, and the
+   next column paints on top of it. That is what put F2's box across F1's step size on a wide
+   window (owner, 2026-08-21): a number control is −(40) + value(64) + +(40) + the captioned step
+   size(77) + three 6px gaps = 245px against a 210px floor, so every number field on the surface
+   was 35px into its neighbour. Measured, not guessed - `.ctl-*` widths are a few lines up, and
+   `.pd-fields .row` below is the structural backstop for the control this arithmetic misses. */
+/* THE EDITOR IS A STACK OF BANDS, and the grid above is what a band's FIELDS lay out in
+   (control/cueFieldGroups.ts). One band per side on a two-sided board, one for what both sides
+   share, one unlabelled band on everything the grouping rule is not confident about - which is
+   byte-for-byte the flat flow this used to be, because that band holds every field.
+
+   The heading sits in a LEFT GUTTER rather than above the fields, so the bands line up as rows
+   an operator reads across: "ARC · Team, Score, Colour" over "YLE12 · Team, Score, Colour" is
+   the shape the owner asked for ("everything that fits one team should be on one row"). Below
+   the gutter's width the heading goes back on top of its band, where a 92px column would leave
+   a field 150px wide. */
+.pd-fields { display: flex; flex-direction: column; gap: 10px; }
+.pd-band { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: start; gap: 4px 12px; }
+/* No heading, no gutter: the ungrouped band must not indent itself past a column that is empty. */
+.pd-band-plain { grid-template-columns: minmax(0, 1fr); }
+.pd-band-label {
+  /* Cap-aligned with the first field's own label rather than with its input, which is what
+     makes a band read as a heading over a row instead of a stray value beside one. */
+  padding-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A CAP, NOT `1fr`. Stretching three fields across a 2560px band gave a team NAME a 663px box -
+   a text input wider than the monitor above it, and three of them so far apart the band stopped
+   reading as one thing. The leftover width is left over on purpose: the point of a band is that
+   its fields sit TOGETHER. */
+.pd-band-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--pd-field-min, 250px), var(--pd-field-max, 340px)));
+  gap: 8px 14px;
+  min-width: 0;
+}
+/* THE BACKSTOP. A future control wider than the floor above WRAPS inside its own field instead
+   of painting over the field beside it: an overlap is unreadable and silent, a wrapped row is
+   merely taller. Never the everyday layout - at or above the floor nothing here wraps. */
+.pd-fields .field-row > .row,
+.pd-fields .pd-field > .row { flex-wrap: wrap; }
+.pd-band-fields > * { min-width: 0; }
+/* CUE SETTINGS: the note and the layer, under a hairline and OUT of the content grid. They are
+   not things the graphic shows, and flowing them in beside the fields is what left the layer
+   alone on a second row reading like a field nobody finished. */
+.pd-cue-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 8px 14px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  max-width: 640px;
+}
 .pd-field { display: flex; flex-direction: column; gap: 3px; }
 .pd-field > span {
   font-size: 10px;
@@ -6042,6 +6152,14 @@ h2 + .lib-row,
 }
 .pd-field input { width: 100%; }
 .pd-field-layer { max-width: 130px; }
+/* THE GUTTER GOES AWAY BEFORE THE FIELDS DO. A band heading in a 92px left column is worth its
+   width only while the fields beside it still have room; below this the heading sits on top of
+   its own band and the fields keep the full width. The number is where one 250px field plus the
+   gutter plus the editor's padding stops fitting a phone-to-tablet window. */
+@media (max-width: 620px) {
+  .pd-band { grid-template-columns: minmax(0, 1fr); }
+  .pd-cue-meta { grid-template-columns: minmax(0, 1fr); }
+}
 .pd-editor-events { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .pd-editor-events button { font-size: 12.5px; padding: 6px 11px; }
 
@@ -6119,20 +6237,37 @@ h2 + .lib-row,
 }
 
 /* The production workspaces: Playout | Data (docs/INTERACTIVE_PLAYOUT_PLAN.md D6). */
+/* THE SEGMENTED CONTROL IS ADDRESSED BY POSITION, NOT BY TAG. Playout is a `<button>` (it
+   returns in THIS tab), Data and Audience are `<a target=_blank>` (they open in their own), and
+   whichever one you are standing on is a plain `<span>`. Selecting only `button` dressed exactly
+   one of the three: the other two rendered as bare inline text with no padding and no border, so
+   the header read "Playout DataAudience" - two workspaces run together into one word. */
 .pd-tabs { display: inline-flex; margin-left: 10px; }
-.pd-tabs button {
+.pd-tabs > * {
+  display: inline-flex;
+  align-items: center;
   font-size: 12.5px;
   padding: 5px 14px;
-  border-radius: 0;
+  border: 1px solid var(--border);
   border-right-width: 0;
+  border-radius: 0;
+  background: var(--bg-2);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
 }
-.pd-tabs button:first-child { border-radius: 6px 0 0 6px; }
-.pd-tabs button:last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
-.pd-tabs button.on {
+.pd-tabs > a:hover { background: var(--bg-3); }
+.pd-tabs > :first-child { border-radius: 6px 0 0 6px; }
+.pd-tabs > :last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
+/* The one you are on: amber, and NOT a control - it is a span precisely because there is nowhere
+   for it to take you. */
+.pd-tabs > .on {
   background: var(--accent);
   border-color: var(--accent);
   color: #14161a;
   font-weight: 600;
+  cursor: default;
 }
 
 /* The DATA workspace: the production's own tables. */
@@ -6355,10 +6490,11 @@ h2 + .lib-row,
 .pd-dataset-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .pd-dataset-foot input { max-width: 200px; }
 .pd-field-load select { width: 100%; }
-/* The A|B side picker sits in the "Load data row" label. The row must span the whole editor
-   grid (.pd-fields is repeat(auto-fit, minmax(210px, 1fr))), or the picker and the row select
-   get squeezed into one 210px cell beside F0. */
-.pd-field-load { grid-column: 1 / -1; }
+/* The A|B side picker sits in the "Load data row" label, which is a direct child of `.pd-fields`
+   - a BAND-height stack now, not the field grid - so the row already spans the editor and needs
+   no span of its own. It is capped instead, or a full-width select for a five-row question bank
+   stretches across a 2560px window. */
+.pd-field-load { max-width: 640px; }
 .pd-side-pick {
   display: inline-flex;
   margin-left: 8px;

@@ -502,7 +502,13 @@ test('the seed is the reset target, and unbinding hands the field back to the cu
   await data.getByTestId(`bind-${graphicName}-f0`).fill('counter');
   await settleDurableWrites(data);
   await expect(page.getByTestId('cue-bound-f0')).toBeVisible();
-  await data.getByTestId(`unbind-${graphicName}-f0`).click();
+  // ARMED: typed-in data on a live surface, so the first click asks and the second acts (the
+  // same two-step an entry's delete uses). Unbinding CHANGES WHAT AIRS, which is why it asks.
+  const unbind = data.getByTestId(`unbind-${graphicName}-f0`);
+  await unbind.click();
+  await expect(unbind, 'the first click should only arm the unbind').toHaveText('✓');
+  await expect(page.getByTestId('cue-bound-f0'), 'nothing may change on the arming click').toBeVisible();
+  await unbind.click();
   await settleDurableWrites(data);
   await expect(page.getByTestId('cue-field-f0')).toBeVisible();
   await expect(page.getByTestId('cue-bound-f0')).toHaveCount(0);
@@ -548,7 +554,11 @@ test('nested trees, arrays and a missing path each behave as the contract says',
   await expect(preview.locator('#f0')).not.toHaveText('');
 
   // Deleting a value leaves the rest of the tree alone.
-  await data.getByTestId('data-delete-poll.open').click();
+  const del = data.getByTestId('data-delete-poll.open');
+  await del.click();
+  await expect(del, 'the first click should only arm the delete').toHaveText('✓');
+  await expect(data.getByTestId('data-row-poll.open'), 'nothing may go on the arming click').toBeVisible();
+  await del.click();
   await expect(data.getByTestId('data-row-poll.open')).toHaveCount(0);
   await expect(data.getByTestId('data-row-poll.options.0.votes')).toBeVisible();
 });
@@ -644,4 +654,39 @@ test('SPACE on the Data tab cannot put a graphic on air', async ({ page }) => {
   await page.keyboard.press('Space');
   await expect(page.getByTestId('live-cue-chip')).not.toContainText('nothing on air');
   await expect(rows).not.toHaveCount(0);
+});
+
+/**
+ * THE CUE RUNDOWN DOES NOT FOLLOW YOU ONTO THE DATA TAB.
+ *
+ * The playout surface stays MOUNTED behind a workspace and is hidden with a class, because
+ * unmounting it would destroy the PROGRAM monitor's iframes and reload whatever is on air. The
+ * hiding half only ever worked for half the surface: `.pd-offstage` and `.pd-rail` are both
+ * one-class selectors, so the later of the two in styles.css won and the rundown stayed on
+ * screen beside the Data workspace - a list of cues on a page that has no way to air one
+ * (owner, 2026-08-21: "explain to me what the cue rundown is doing here"). `.pd-main` was
+ * hidden only by the accident of being declared above it.
+ *
+ * The workspaces open in their own tab, where the playout column is never built at all - so the
+ * leak needs the IN-TAB route, which is what a Back after "Playout" gives you.
+ */
+test('the playout column stays hidden behind the Data workspace, rundown included', async ({ page }) => {
+  await createProject(page, { name: 'Arena Quiz' });
+  await productionFor(page, 'Quiz Night');
+  const data = await openWorkspace(page, 'data');
+
+  // Back to Playout IN THIS TAB (the one tab control that is a button, not a link), which is
+  // what builds the playout column in the workspace's tab in the first place.
+  await data.getByTestId('tab-playout').click();
+  await expect(data.getByTestId('production-verbs')).toBeVisible();
+  await expect(data.locator('.pd-rail')).toBeVisible();
+
+  // …and back to Data, now with the playout surface mounted behind it.
+  await data.goBack();
+  await expect(data.getByTestId('production-data')).toBeVisible();
+  for (const sel of ['.pd-rail', '.pd-main']) {
+    await expect(data.locator(sel), `${sel} is still on screen behind the Data workspace`).toBeHidden();
+  }
+  // Still MOUNTED, which is the other half of the contract: hidden, never unmounted.
+  expect(await data.locator('.pd-rail').count()).toBe(1);
 });

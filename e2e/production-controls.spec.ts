@@ -767,10 +767,11 @@ test.describe('the production page scrolls as one page', () => {
       const fresh = shows.loadShows().find((s) => s.id === show.id)!;
       shows.updateShowCue(show.id, fresh.cues![fresh.cues!.length - 1].id, { label: 'Portrait strap' });
     });
-    // The two writes above are ACCEPTED synchronously and land a moment later
-    // (model/durableStore.ts), so reloading straight after them aborts what has not committed
-    // and the portrait cue is missing from the page under test. Measured 2026-08-22: without
-    // this the test fails 3 of 3 runs and passes 3 of 3 with it.
+    // A durable write is ACCEPTED synchronously and lands a moment later, so the reload below
+    // was aborting it - intermittently, and only the LAST write, which is the rename this test
+    // then waits sixty seconds for. Every spec that saves off the UI and reloads owes this
+    // (e2e/_durable.ts); this one predates the helper. Measured from the other side on
+    // 2026-08-22: without the wait it failed 3 of 3 runs, with it passed 3 of 3.
     await settleDurableWrites(page);
     await page.reload();
     await expect(page.getByTestId('production-page')).toBeVisible();
@@ -784,5 +785,189 @@ test.describe('the production page scrolls as one page', () => {
     await expect(page.getByTestId('cue-label')).toHaveValue('Portrait strap');
     // Same width, to the pixel. Before the fix this narrowed to roughly nine sixteenths of it.
     expect(await monitorWidth()).toBe(landscape);
+  });
+
+  /**
+   * NO CUE FIELD PAINTS OVER THE FIELD BESIDE IT.
+   *
+   * Owner report, 2026-08-21, from a wide monitor: "the YLE box is on top of the step one, and
+   * F4 Period is also on top of the step one box". `.pd-fields` is `repeat(auto-fit,
+   * minmax(<floor>, 1fr))`, and that floor is a HARD track minimum — a control whose own
+   * min-content is wider neither widens the track nor shrinks, it simply overflows, and the next
+   * column draws on top. A number control is 245px wide at its minimum against a 210px floor, so
+   * EVERY number field on the surface was 35px into its neighbour: two scores unreadable on a
+   * scoreboard, which is the graphic most likely to have them.
+   *
+   * Measured as overflow, not as a screenshot: the fields are laid out by a grid whose column
+   * count changes with the window, so what has to hold at every width is "no field is wider than
+   * its own track", and that is a number the browser already keeps.
+   */
+  test('a scoreboard cue lays its number fields out without overlapping the fields beside them', async ({ page }) => {
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+    // The subject: this graphic really does carry the number fields the report is about.
+    expect(await editor.locator('.ctl-num').count()).toBeGreaterThan(0);
+
+    // Every supported width, because the track count — and so the track WIDTH — changes with it.
+    for (const width of [1366, 1536, 1920, 2560]) {
+      await page.setViewportSize({ width, height: 900 });
+      const grid = page.locator('.pd-fields');
+      const spills = await grid.evaluate((el) =>
+        [...el.querySelectorAll('.pd-band-fields > *')]
+          .filter((f) => f.scrollWidth > f.clientWidth + 1)
+          .map((f) => `${f.textContent?.slice(0, 24)} (${f.scrollWidth} > ${f.clientWidth})`),
+      );
+      expect(spills, `fields overflow their grid track at ${width}px`).toEqual([]);
+
+      // AND THE FLOOR IS DOING THE WORK, not the wrap backstop behind it. Both keep a field
+      // inside its own track, so overflow alone cannot tell a floor that fits from one that
+      // silently folds every number control onto three lines. One flex line is a row no taller
+      // than its tallest control — measured that way rather than by matching tops, because the
+      // step-size label is shorter than the boxes beside it and rides centred within the line.
+      const wrapped = await grid.evaluate((el) =>
+        [...el.querySelectorAll('.row')]
+          .filter((row) => row.querySelector('.ctl-num'))
+          .filter((row) => {
+            const tallest = Math.max(...[...row.children].map((c) => c.getBoundingClientRect().height));
+            return row.getBoundingClientRect().height > tallest + 2;
+          })
+          .map((row) => row.parentElement?.textContent?.slice(0, 24) ?? '?'),
+      );
+      expect(wrapped, `number controls wrapped onto a second line at ${width}px`).toEqual([]);
+    }
+  });
+
+  /**
+   * THE VERB STACK IS PACKED, NOT SPREAD.
+   *
+   * The same owner read: "we now have the buttons to the right side of the monitors but they are
+   * spaced out vertically… they could be stacked a little bit closer on top of each other in a
+   * column if there's space." `align-content: stretch` had nothing to stretch but the GAPS once
+   * the window was tall, so six 40px buttons sat on a 75px pitch.
+   *
+   * The pin is the PITCH: consecutive verbs are one button-height plus the 6px gap apart, so a
+   * stack that starts spreading again fails here rather than in a screenshot nobody re-reads.
+   */
+  test('on a tall window the verbs stack in one packed column beside PROGRAM', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const verbs = page.locator('.pd-stagehead [data-testid="production-verbs"]');
+    await expect(verbs).toBeVisible();
+
+    const boxes = await verbs.evaluate((el) =>
+      [...el.querySelectorAll('.pd-verb')].map((b) => {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.x), y: Math.round(r.y), h: Math.round(r.height) };
+      }),
+    );
+    expect(boxes.length).toBe(6);
+    // ONE COLUMN: every verb starts at the same x, so none of them is beside another.
+    expect(new Set(boxes.map((b) => b.x)).size).toBe(1);
+    const byY = [...boxes].sort((a, b) => a.y - b.y);
+    for (let i = 1; i < byY.length; i += 1) {
+      const pitch = byY[i].y - byY[i - 1].y;
+      expect(pitch, `verb ${i} sits ${pitch}px below its neighbour`).toBe(byY[i - 1].h + 6);
+    }
+    // And the stack still does not drive the sticky head's height — the monitors do.
+    const head = await page.locator('.pd-stagehead').boundingBox();
+    const monitors = await page.locator('.pd-monitors').boundingBox();
+    expect(head!.height).toBeLessThanOrEqual(monitors!.height + 30);
+  });
+});
+
+/**
+ * THE CUE EDITOR GROUPS A TWO-SIDED BOARD BY SIDE — and leaves everything else alone.
+ *
+ * Owner, 2026-08-21: "if we have a scoring system then everything that fits one team should be
+ * on one row or one column and the other team is in the next row." The grouping is DERIVED from
+ * the field titles (control/cueFieldGroups.ts) - the same side tokens the data-row loader
+ * already reads - because the owner's next sentence is the constraint: "we have no idea what
+ * kinds of graphics we will have in the future."
+ *
+ * So this spec has two halves, and the second is the one that matters: a graphic the rule is not
+ * confident about must render EXACTLY as it always did. A wrong grouping tells an operator two
+ * fields are related when they are not, which is worse than no grouping at all.
+ */
+test.describe('the cue editor groups fields by what they belong to', () => {
+  test('a scoreboard reads one team per band, headed by that team’s own name', async ({ page }) => {
+    await createProject(page, { name: 'House Scorebug' });
+    await productionFor(page, 'Match Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+
+    // Three bands: a side each, then what both sides share.
+    await expect(editor.locator('.pd-band')).toHaveCount(3);
+    const band = (id: string) => editor.getByTestId(`cue-band-${id}`);
+    for (const [id, fields] of [
+      ['side-A', ['F0 · Team A', 'F1 · Score A', 'F6 · Team A colour']],
+      ['side-B', ['F2 · Team B', 'F3 · Score B', 'F7 · Team B colour']],
+      ['shared', ['F4 · Period', 'F5 · Clock']],
+    ] as const) {
+      await expect(band(id).locator('.pd-band-fields > *')).toHaveCount(fields.length);
+      for (const f of fields) await expect(band(id)).toContainText(f);
+    }
+
+    // THE HEADING IS THE OPERATOR'S OWN WORD for that side - the value of the side's first
+    // field - because "ARC" says which half of the board you are editing and "Side A" only says
+    // that a split exists. Typing a new name re-heads the band live.
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('HOME');
+    await page.getByTestId('cue-field-f0').fill('ARC');
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('ARC');
+    // Emptied, it falls back rather than showing a blank heading.
+    await page.getByTestId('cue-field-f0').fill('');
+    await expect(band('side-A').getByTestId('cue-band-label-side-A')).toHaveText('Side A');
+
+    // The cue's SETTINGS are not content: out of the field grid, under their own rule. This is
+    // what stopped "Playout layer" flowing in as a tenth field and landing alone on a second row.
+    const meta = page.getByTestId('cue-meta');
+    await expect(meta.getByTestId('cue-note')).toBeVisible();
+    await expect(meta.getByTestId('graphic-layer')).toBeVisible();
+    await expect(editor.locator('.pd-fields').getByTestId('graphic-layer')).toHaveCount(0);
+  });
+
+  test('a quiz is NOT grouped: A and B there are a lettered list, not two sides', async ({ page }) => {
+    // The trap this pins. A quiz titles its fields "Answer A", "Answer B", "Answer C", "Answer
+    // D" - the same tokens a scoreboard uses for two teams. Grouped, it would put Answer A in
+    // one band, Answer B in another, and C and D in a third called "Both".
+    await createProject(page, { name: 'Arena Quiz' });
+    await productionFor(page, 'Quiz Night');
+    const editor = page.getByTestId('cue-editor');
+    await expect(editor).toBeVisible();
+
+    await expect(editor.locator('.pd-band')).toHaveCount(1);
+    await expect(editor.getByTestId('cue-band-all')).toHaveClass(/pd-band-plain/);
+    await expect(editor.locator('.pd-band-label')).toHaveCount(0);
+    // Every field is still there, in field order - the flat flow, untouched.
+    await expect(editor.getByTestId('cue-band-all').locator('.pd-band-fields > *')).toHaveCount(
+      await editor.locator('.pd-band-fields > *').count(),
+    );
+
+    // WHICH GUARD ACTUALLY REFUSED. The shipped quizzes carry one "Answer A" and one "Answer B",
+    // so the two-fields-a-side threshold turns them away before the lettered-list rule is even
+    // consulted - and a rule nothing reaches is a rule nobody has tested. This asks the module
+    // directly, with the shape that gets PAST the threshold: a poll whose options each carry a
+    // colour. Without the lettered-list rule it groups A against B and hides C in "Both".
+    const decided = await page.evaluate(async () => {
+      const { groupCueFields } = await import('/src/control/cueFieldGroups.ts');
+      const lettered = ['Option A', 'Option A colour', 'Option B', 'Option B colour', 'Option C', 'Option C colour']
+        .map((label, i) => ({ key: `f${i}`, label }));
+      const sided = ['Team A', 'Score A', 'Team B', 'Score B', 'Period'].map((label, i) => ({ key: `f${i}`, label }));
+      // Two fields a side, and nothing in common: an A and a B that are not two halves of one
+      // thing. The sides of a real board are described by the SAME words.
+      const unmirrored = ['Camera A', 'Camera A note', 'Sponsor B', 'Sponsor B url', 'Title']
+        .map((label, i) => ({ key: `f${i}`, label }));
+      return {
+        lettered: groupCueFields(lettered).length,
+        sided: groupCueFields(sided).length,
+        unmirrored: groupCueFields(unmirrored).length,
+      };
+    });
+    expect(decided.lettered, 'a lettered list must not be split into two sides').toBe(1);
+    expect(decided.unmirrored, 'an unrelated A and B must not be drawn as two sides').toBe(1);
+    // …and the same call still groups a real board, so this is a rule and not a switched-off one.
+    expect(decided.sided).toBe(3);
   });
 });

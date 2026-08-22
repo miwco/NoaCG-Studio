@@ -113,6 +113,34 @@ from ~80 places in the tree, so it never changes.*
       (a one-line `src/templates/meta.ts` re-file plus the catalog baselines it moves) - it is the
       one card the owner said *"does pop out"* of that otherwise coherent shelf. Detail and quotes:
       `docs/CATALOG_VARIETY.md` §7.
+      **MEASURED 2026-08-21, and the obvious fix is ruled out.** `catalog-sameness.mjs` now
+      reports the first page per category through the real browse engine. It scores the
+      lower-thirds page at **11 distinct looks out of 12** - as varied as every other shelf - so
+      RE-ORDERING IS NOT THE FIX, and the sameness signature is not the thing to order by. The
+      instrument is blind on the axes that decide this at card size: its fourteen axes are CSS
+      decisions (radius, blur, skew, tracking), while an eye reads PALETTE and SILHOUETTE, and
+      all twelve lower thirds are a dark slab with white text and an amber accent. The stats
+      shelf beside it carries a giant percentage, a lime table, a red dial and a cream printed
+      panel - different shapes, and light backgrounds as well as dark. **The real item is
+      variety of palette and silhouette WITHIN a category**, which is design work rather than
+      ordering work; the next step is an axis measured off the RENDERED card.
+      `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves to compare.
+      **RATIFIED BY THE OWNER 2026-08-21 - "lower thirds need real variety" - and then MEASURED
+      on the right axis** (`scripts/card-look-sweep.mjs`, which reads the rendered pixels:
+      backdrop, accent hue, footprint). **The ask splits, and only half of it is drawing work.**
+      *Colour variety is BURIED, not absent:* the shelf carries nine accent hues and 7 light
+      backdrops across 103 designs, and the first twelve are 10 dark + 10 orange. Ordering the
+      first page across this axis is cheap and would show what the category already has.
+      *Shape variety is genuinely ABSENT:* **99 of 103 designs are `strap/thin` - 96%** - with no
+      full-width band, no tall panel, no side column, no corner block. That is the design work,
+      and it cannot be ordered into existence. Numbers in `docs/CATALOG_VARIETY.md`.
+      **The ordering half is BUILT** (`spreadFirstPage`, 2026-08-21): the fold spreads across
+      accent hue with family breaking ties, so the lower thirds went from 2 distinct hue buckets
+      to 4+ and the page now carries a cream editorial card, a glass pill, a sport slab and an
+      outline box. **The drawing half is a written brief:**
+      `docs/handoffs/lower-third-shapes.md`, with the six missing silhouettes named. The whole
+      catalog queue - that brief, the `ig01` re-file, the unmeasured categories and the standing
+      debts - is `docs/CATALOG_WORK_QUEUE.md`.
 
 ### The surface under investment: the WEB PLAYOUT CONTROL PANEL
 

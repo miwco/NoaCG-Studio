@@ -262,6 +262,83 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   rows the same matcher resolved AT PUBLISH TIME, which is the freshness contract its cues and
   entries already have: edit a dataset, publish changes.
 
+### 2d. The cue editor's field grid — the one rule, and the open question
+
+**The rule (binding).** `.pd-fields` is `repeat(auto-fit, minmax(<floor>, 1fr))`, and that floor
+is a HARD track minimum: a control whose own min-content is wider than the floor does not widen
+its track and does not shrink — it **overflows, and the next column paints on top of it**. So the
+floor is the widest control's min-content, measured, never a round number that looked right beside
+a text box. A number control is `−`(40) + value(64) + `+`(40) + the captioned step size(77) +
+three 6px gaps = **245px**; the floor is 250px. Two structural backstops sit behind the
+arithmetic, because the next control added here will not be in it: a control row inside
+`.pd-fields` may **wrap** (a taller field is merely ugly; an overlapping one is unreadable and
+silent), and `.row > .ctl-num` carries an explicit `flex-basis` rather than `auto` — a bare
+`<input type=number>` reports ~170px of content, and a flex line breaks against BASE sizes before
+anything shrinks, so an auto basis makes the backstop fire at widths where everything fits.
+Pinned by `production-controls.spec.ts` at 1366/1536/1920/2560, as overflow rather than as a
+screenshot: the column count changes with the window, so the invariant is "no field is wider than
+its own track".
+
+**The verbs beside PROGRAM stack in one packed column** once one fits — the threshold is the
+arithmetic (6 buttons + 5×6px gaps + the chip against `--pd-monitor-h`), 960px of viewport height
+— and the slack goes into the BUTTONS, never the gaps. `align-content: stretch` with nothing left
+to stretch inflates the pitch instead, which is what put six 40px buttons on a 75px pitch at
+1920×1000. Below the threshold the two-up grid stands, because six 44px verbs are taller than the
+monitors on a short window.
+
+### 2e. Grouping — the editor is a stack of BANDS
+
+Owner, 2026-08-21: *"If we have a scoring system then everything that fits one team should be on
+one row or one column and the other team is in the next row. There would be some logic in how we
+build up the dashboard."* Before this the fields flowed in field order into whatever number of
+columns the window afforded, so a scoreboard read as one long undifferentiated row — Team A,
+Score A, Team B, Score B, Period, Clock, two colours, the note — with the playout layer left alone
+on a second row.
+
+**The rule, and it is the whole rule: grouping is DERIVED from the template, never authored.**
+`control/cueFieldGroups.ts` knows about no graphic type, and the constraint is the owner's own next
+sentence — *"we have no idea what kinds of graphics we will have in the future"*. It reads the same
+A/B side tokens `control/cueData.ts` already reads to load a teams table into one half of a board:
+if that rule is good enough to decide which fields a data row fills, it is good enough to decide
+which fields belong beside each other. When it is not confident it returns ONE unlabelled band
+holding every field, which renders byte-for-byte as the flat flow always did. **A wrong grouping is
+worse than none** — it tells an operator two fields are related when they are not — so every guard
+fails toward the flat flow:
+
+- **Two fields a side, on both sides.** One "Team A" among eight unrelated fields is a coincidence.
+- **The sides must MIRROR each other**: their titles with the side token removed have to overlap.
+  "Camera A / Camera A note" against "Sponsor B / Sponsor B url" is an A and a B, not two halves.
+- **A lettered LIST is not a board.** A quiz titles its fields "Answer A", "Answer B", "Answer C",
+  "Answer D" — the same shape with the same first two letters. A single capital letter standing as
+  its own word past B is the tell, and a two-sided board never has one.
+
+Measured over the whole catalog on the day it shipped: **33 of 504 designs group** — every
+scoreboard, match board, series bug, match-up and head-to-head — and 21 more carry side tokens and
+are refused, every one of them a quiz or a bracket whose sides are a data column rather than a pair
+of field sets. No false positive, no false negative.
+
+**A band's heading is the operator's own word for that side** — the value of its first field, which
+on every two-sided board we ship is the name. "ARC" over "YLE12" says which half of the board you
+are editing in the language of the show; "Side A" over "Side B" only says that a split exists. It
+falls back to `Side A` on an empty value or one longer than 20 characters (a heading is a glance,
+and a wrapped one is worse than a generic one). The shared band is headed `Both`.
+
+The heading sits in a 92px LEFT GUTTER so the bands read as rows across, and drops above its band
+below 620px. A band's fields keep the auto-fit grid from §2d, **capped rather than `1fr`**: three
+fields stretched across a 2560px band gave a team name a 663px box and pushed the three so far
+apart the band stopped reading as one thing.
+
+**Cue SETTINGS are not content.** The operator note (the cue's) and the playout layer (the
+graphic's) sit under a hairline in their own strip, out of the field grid — neither is something
+the graphic shows, and flowing them in beside the content fields is exactly what left the layer
+alone on a second row looking like a field nobody finished.
+
+Both React surfaces render this: the in-app editor and the hosted control page, one module,
+docs/CONTROL_PANEL_PARITY.md §4.
+
+**Still open**: a shared title PREFIX ("Team …", "Score …") as a weaker grouping for what the side
+rule refuses. Nothing in the catalog needs it today, which is why it is not written.
+
 ## 3. Layout — phone
 
 One column: header (name · mode · All out) → the two monitors side by side, small → the cue list

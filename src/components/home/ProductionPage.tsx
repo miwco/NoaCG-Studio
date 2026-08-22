@@ -36,6 +36,7 @@ import { DEFAULT_GRAPHICS_RESOLUTION } from '../../model/projectFormat';
 import { outputEmbedFileName, outputEmbedHtml } from '../../export/outputEmbed';
 import { revealCue, stepSelection, usePlayoutVerbKeys, type PlayoutVerb } from '../playoutKeys';
 import { cueDataRows, hasSideFields, nextRow, rowsForSide } from '../../control/cueData';
+import { groupCueFields, groupHeading } from '../../control/cueFieldGroups';
 import ProductionDataWorkspace from './ProductionDataWorkspace';
 import ProductionAudienceWorkspace from './ProductionAudienceWorkspace';
 import { loadGraphics, templateForSavedGraphic } from '../../model/library';
@@ -1253,6 +1254,22 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    *  edited a second ago is loadable); published for the hosted page. */
   const dataRows = cueDataRows(descriptors, show.datasets ?? []);
   const hasSides = hasSideFields(descriptors);
+  /** The editor's BANDS (control/cueFieldGroups.ts): one per side on a two-sided board, one for
+   *  everything both sides share, and a single unlabelled band - today's flat flow - on every
+   *  graphic the rule is not confident about. */
+  const fieldGroups = groupCueFields(descriptors);
+  const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
+  /** What a band HEADING reads, resolved the way the field boxes under it resolve: the live tree
+   *  for a bound field, then the cue's own value, then the authored default. */
+  const headingValues = Object.fromEntries(
+    descriptors.map((d) => [
+      d.key,
+      (boundFields(selectedGraphic)[d.key] ? resolved[selectedGraphic ?? '']?.[d.key] : undefined) ??
+        editingView?.values[d.key] ??
+        d.defaultValue ??
+        '',
+    ]),
+  );
   const loadableRows = rowsForSide(dataRows, loadSide);
   /** Load one row into the edited cue's DRAFT (never air), remembering it per cue so ↷ Next
    *  walks the bank in order. */
@@ -1683,48 +1700,84 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                   </div>
                 </label>
               )}
-              {descriptors.map((d) => {
-                // A BOUND field is not a cue value (plan §2.7): it takes the live tree's value
-                // at Take, at ✎ Update and in the preview, so an editable box here would show a
-                // number nothing will ever air. It reads out instead, wearing its path — and
-                // the one override gesture is Unbind, on the Data tab, deliberately.
-                const path = boundFields(selectedGraphic)[d.key];
-                if (path) {
-                  // Built on `.field-row`/`.field-meta` - FieldRow's OWN structure - rather than
-                  // on a hand-rolled label. The cue fields lay out in a grid two across, so a row
-                  // of a different height sits its input a few pixels off its neighbour's; matching
-                  // the real structure makes them line up by construction instead of by a number
-                  // kept in step here.
-                  return (
-                    <div className="field-row pd-field-bound" key={d.key} data-testid={`cue-bound-${d.key}`}>
-                      <div className="field-meta">
-                        <label style={{ margin: 0 }}>
-                          {d.key.toUpperCase()} · {d.label}
-                        </label>
-                        <span className="pd-bound-mark" title={`Bound to production data: ${path}`}>
-                          🔗 {path}
-                        </span>
-                      </div>
-                      <input value={resolved[selectedGraphic ?? '']?.[d.key] ?? '—'} readOnly tabIndex={-1} />
-                    </div>
-                  );
-                }
+              {/* THE BANDS. One per side on a two-sided board, headed by the operator's own
+                  word for that side; one unlabelled band - today's flat flow - on everything
+                  else. The grouping is derived, never authored (control/cueFieldGroups.ts). */}
+              {fieldGroups.map((group) => {
+                // WHAT THE OPERATOR IS LOOKING AT, in the same order the field boxes resolve it:
+                // a bound field shows the live tree's value, an unset one its authored default.
+                // Reading `editingView.values` alone would head a band "Side A" while the box
+                // under it plainly said HOME.
+                const heading = groupHeading(group, headingValues);
                 return (
-                  <FieldRow
-                    key={d.key}
-                    descriptor={{ ...d, label: `${d.key.toUpperCase()} · ${d.label}` }}
-                    value={String(editingView.values[d.key] ?? d.defaultValue ?? '')}
-                    onChange={(v) => editDraft({ values: { [d.key]: String(v) } })}
-                    testIdPrefix="cue-field"
-                    images={cueImages}
-                    imageHint={
-                      poolGraphic.type === 'picture'
-                        ? 'Pictures come from this production — add more with ＋ Add pictures.'
-                        : "Pictures come from the graphic itself — add one in the editor's Assets tab."
-                    }
-                  />
+                  <div
+                    className={`pd-band${heading ? '' : ' pd-band-plain'}`}
+                    key={group.id}
+                    data-testid={`cue-band-${group.id}`}
+                  >
+                    {heading && (
+                      <span className="pd-band-label" data-testid={`cue-band-label-${group.id}`}>
+                        {heading}
+                      </span>
+                    )}
+                    <div className="pd-band-fields">
+                      {group.keys.map((key) => {
+                        const d = descriptorByKey.get(key);
+                        if (!d) return null;
+                        // A BOUND field is not a cue value (plan §2.7): it takes the live tree's
+                        // value at Take, at ✎ Update and in the preview, so an editable box here
+                        // would show a number nothing will ever air. It reads out instead,
+                        // wearing its path — the one override gesture is Unbind, on the Data tab.
+                        const path = boundFields(selectedGraphic)[d.key];
+                        if (path) {
+                          // Built on `.field-row`/`.field-meta` - FieldRow's OWN structure -
+                          // rather than on a hand-rolled label. The cue fields lay out in a grid,
+                          // so a row of a different height sits its input a few pixels off its
+                          // neighbour's; matching the real structure makes them line up by
+                          // construction instead of by a number kept in step here.
+                          return (
+                            <div className="field-row pd-field-bound" key={d.key} data-testid={`cue-bound-${d.key}`}>
+                              <div className="field-meta">
+                                <label style={{ margin: 0 }}>
+                                  {d.key.toUpperCase()} · {d.label}
+                                </label>
+                                <span className="pd-bound-mark" title={`Bound to production data: ${path}`}>
+                                  🔗 {path}
+                                </span>
+                              </div>
+                              <input value={resolved[selectedGraphic ?? '']?.[d.key] ?? '—'} readOnly tabIndex={-1} />
+                            </div>
+                          );
+                        }
+                        return (
+                          <FieldRow
+                            key={d.key}
+                            descriptor={{ ...d, label: `${d.key.toUpperCase()} · ${d.label}` }}
+                            value={String(editingView.values[d.key] ?? d.defaultValue ?? '')}
+                            onChange={(v) => editDraft({ values: { [d.key]: String(v) } })}
+                            testIdPrefix="cue-field"
+                            images={cueImages}
+                            imageHint={
+                              poolGraphic.type === 'picture'
+                                ? 'Pictures come from this production — add more with ＋ Add pictures.'
+                                : "Pictures come from the graphic itself — add one in the editor's Assets tab."
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
+            </div>
+
+            {/* CUE SETTINGS, under a rule and not in the content grid. The note is the cue's and
+                the layer is the graphic's; neither is something the graphic SHOWS, and flowing
+                them in beside the content fields is what left "Playout layer" alone on a second
+                row looking like a field nobody finished (owner, 2026-08-21). The layer stays
+                here rather than moving to a settings screen - it belongs where the operator
+                already is when they decide a graphic needs its own (§5). */}
+            <div className="pd-cue-meta" data-testid="cue-meta">
               <label className="pd-field pd-field-note">
                 <span>Operator note</span>
                 <input
@@ -1734,8 +1787,6 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                   data-testid="cue-note"
                 />
               </label>
-              {/* The layer, beside the content — where the operator already is when they decide
-                  a graphic needs its own (docs/PLAYOUT_DASHBOARD.md §5). */}
               <label className="pd-field pd-field-layer">
                 <span>Playout layer</span>
                 <input

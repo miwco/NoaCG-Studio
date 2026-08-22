@@ -1,0 +1,123 @@
+# The catalog work queue
+
+What the catalog still owes, in the order it is worth doing, with the evidence under each item
+rather than an opinion. Written 2026-08-21 at the end of the session that measured the storefront;
+`docs/CATALOG_VARIETY.md` holds the measurements this file schedules.
+
+**The standing rule for everything below.** Owner, 2026-08-21, asked whether a house design should
+lead every category: *"Let's not keep the house designs first. No one wants to use a design that
+other people also use. It's better to have a unique variety, and if we don't have a lot of graphics
+that are unique and very good, then we are doing something wrong."* That is a product position, not
+an ordering preference: **sameness is a defect, not a house style.** Judge catalog work against it.
+
+---
+
+## 1. LOWER THIRDS NEED REAL SHAPES — the one that is drawing work
+
+**Ratified by the owner 2026-08-21: "lower thirds need real variety".**
+
+The measurement (`node scripts/card-look-sweep.mjs lower-third`) says the ask is two problems and
+only this one is a drawing problem:
+
+- **99 of 103 lower thirds are `strap/thin`. 96%.** Only lt61 "Poster Slab", ls05 "Studio Pair",
+  ls33 "Quote Strap" and ls39 "Fact Check" break it, and only as far as `strap/mid`.
+- There is **no full-width band, no tall panel, no side column, no corner block, no full-frame
+  name card**. The catalog has one silhouette for this category and dresses it 103 ways.
+
+Colour is NOT the gap (see §2 — it was buried and is now surfaced). **Shape is.**
+
+**What to draw** — each is a silhouette the category does not contain, not a re-skin:
+
+| Shape | What it is | Why it is not what we have |
+|---|---|---|
+| Full-width band | edge-to-edge bar, name and role in one line | every current design is inset and content-sized |
+| Tall panel | a portrait block at one side, name stacked | the category assumes a horizontal strap |
+| Side column | a vertical rail up the frame edge, rotated or stacked type | `writing-mode` is used 0 times catalog-wide |
+| Corner block | a square/rounded block in a frame corner | the corner is bug territory today; a NAME there is new |
+| Full-frame card | the name owns the frame briefly, then clears | exists for versus/reveal, never for a person |
+| Framed cut-out | the strap is a hole in a colour field, not a plate on one | inverts figure and ground; nothing does this |
+
+**Do not** answer this with more dark slabs in new palettes. `card-look-sweep` reports the
+footprint of anything drawn, so a new design's silhouette is checkable before review.
+
+**Read first:** `docs/CATALOG_VARIETY.md` (what the catalog repeats), `docs/DESIGN_LANGUAGE.md`
+(taste and motion), `src/templates/AGENTS.md` (the assembler contracts, the logo-slot rules, the
+three baselines a new design moves).
+
+---
+
+## 2. THE FIRST PAGE — done, and what is left of it
+
+**Built 2026-08-21** (`spreadFirstPage` in `src/templates/search.ts`). Browse fills the fold by
+spreading accent hue, family breaking ties. Lower thirds went from 2 distinct hue buckets to 4+,
+and from 10-dark/2-none to a page carrying a cream editorial card, a glass pill, a sport slab and
+an outline box.
+
+Left over:
+
+- **The axis is DECLARED, not measured.** Accent hue predicted the rendered hue 72/72, which is
+  why it is used. The palette's panel predicted the rendered backdrop only 60/80, so **backdrop is
+  deliberately not an ordering axis**. If the storefront ever needs to spread on backdrop or
+  footprint, those have to be MEASURED and shipped as a baseline (the pattern is
+  `model/fonts.ts` `tabularFigures`: measured by a script, stored, never hand-declared).
+- **Only accent + family are spread.** Footprint is not, because 96% of lower thirds share one —
+  there is nothing to spread until §1 lands. **Re-run `card-look-sweep` after §1** and consider
+  adding footprint as a third axis then.
+- **Other categories are unmeasured.** `card-look-sweep` takes any category id. Frames & layouts
+  scored the thinnest first page on the CSS instrument (6 looks of 12); nobody has looked at it.
+
+---
+
+## 3. `ig01` "Big Stat" is filed as a `stat-panel` and is a `kpi`
+
+Owner, seeing the Statistics & data shelf: it *"does pop out… that's just one big number and not a
+real list"*. The taxonomy already has the right home — `stats` carries a `kpi` subtype beside
+`stat-panel` (`src/model/taxonomy.ts`).
+
+One line in `src/templates/meta.ts`, plus the catalog baselines it moves. **Deliberately not done
+in the session that found it**, because it was riding along with a re-order that turned out to be
+the wrong fix, and it deserves its own decision rather than being smuggled in.
+
+---
+
+## 4. The instrument's blindness is recorded, not fixed
+
+`scripts/catalog-sameness.mjs` scores designs on fourteen CSS decisions and called the
+lower-thirds first page 11-distinct-of-12 while the owner called it all-the-same. **The owner was
+right.** The caveat is written where the number prints, and `card-look-sweep.mjs` is the axis that
+sees colour and shape.
+
+Worth doing eventually: fold the card-look axes INTO `catalog-sameness` so there is one instrument
+rather than two, and so the near-duplicate distance (`< 0.25` = near-duplicate, quoted in
+`src/templates/AGENTS.md`) accounts for what an eye reads. **Not urgent** — two instruments that
+each say what they measure beat one that quietly measures the wrong thing.
+
+---
+
+## 5. Standing catalog debts (not from this session)
+
+Carried here so the queue is one list. Each has its own doc.
+
+- **148 designs cannot take a light palette** — `docs/CATALOG_VARIETY.md` §5,
+  `claude/noacg-sameness-orphans-investigation-4b750a`. Directly relevant to §1: a category that
+  cannot go light cannot have a light design drawn for it.
+- **151 of 493 designs are ORPHANS** no kit can offer — `docs/KIT_MATRIX_GAPS.md`. A kit-model
+  question, not a drawing one.
+- **Editorial and cinematic are BROWSE families, not KIT families** — filling either for kits is
+  ~118 designs apiece (`src/templates/AGENTS.md`).
+- **Per-design width tail after the footprint work** — `docs/FOOTPRINT_STABILITY.md`; 486 designs
+  have never been looked at by a person.
+- **The type floor** — `node scripts/type-floor.mjs`; growing a graphic spends its capacity.
+
+---
+
+## How to check any of this
+
+```bash
+node scripts/card-look-sweep.mjs <category> --json out.json   # backdrop / accent / footprint
+node scripts/spike-shelf-look.mjs <out-dir>                   # the shelves, as the storefront draws them
+node scripts/catalog-sameness.mjs                             # CSS decisions + the first-page section
+```
+
+All three need the dev server up on this checkout's port and are browser-driving work — use the
+queued form (`node scripts/e2e-runs.mjs --wait && …`), one job per machine.

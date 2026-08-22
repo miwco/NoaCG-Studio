@@ -11,7 +11,7 @@
 //     difference between checking the right tree and checking a stranger's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyCiRun, classifyMainSync, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
+import { classifyCiRun, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -192,4 +192,29 @@ test('a cancelled run is refused even if its gate job somehow reads success', ()
   const verdict = classifyCiRun({ headSha: SHA, conclusion: 'cancelled', jobs: [GATE, ...shardJobs(9, 'full')] }, SHA);
   assert.equal(verdict.ok, false);
   assert.match(verdict.blocking.join(' '), /concluded "cancelled"/);
+});
+
+// ── The merge-order verdict, read off a runner that THROWS ─────────────────────────────────
+//
+// `merge-order.mjs` signals a hold with exit code 3, and `execFileSync` throws on any non-zero
+// exit. The first version of this reader called it bare, so the single verdict the preflight
+// exists to catch was the one that killed it - a Node stack instead of a report, on 2026-08-21,
+// mid-landing. These three pin that the answer survives the throw.
+
+test('a hold verdict is read even though merge-order exits non-zero', () => {
+  const thrown = Object.assign(new Error('Command failed'), {
+    status: 3,
+    stdout: 'Full order ...\n\nVERDICT: hold (claude/x)\n  - renames a path\n',
+  });
+  assert.equal(mergeOrderVerdict(() => { throw thrown; }), 'hold');
+});
+
+test('a clear verdict is read from an ordinary exit-0 run', () => {
+  assert.equal(mergeOrderVerdict(() => 'VERDICT: clear (claude/x)\n  - costs nothing\n'), 'clear');
+});
+
+test('a genuinely broken run reads as unknown, never as a hold', () => {
+  // Nothing on stdout is not evidence of an ordering problem, and inventing one would stop a
+  // landing for a reason nobody could act on.
+  assert.equal(mergeOrderVerdict(() => { throw new Error('spawn ENOENT'); }), 'unknown');
 });
