@@ -157,17 +157,24 @@ The binding design is `docs/PLAYOUT_DASHBOARD.md`; the three surfaces that rende
 *"looks good for right now… the buttons on the right are totally fine."* The vertical-budget re-lay
 specified after the 2026-08-21 read (verb bar into the column beside PROGRAM, "what is left"
 instead of the flat `26vh` monitor cap) is therefore **not current work**; it stays written down in
-`docs/PLAYOUT_DASHBOARD.md` §2 for when a real window makes it hurt again.
+`docs/PLAYOUT_DASHBOARD.md` §2 for when a real window makes it hurt again. One amendment since:
+the verb block must stay **two columns wide with TAKE spanning them, at every window size** -
+"it can't just be one small column that you can miss" (owner, 2026-08-22) - so a tall window
+spends its spare height on the buttons, never by collapsing them into one narrow stack.
 
-- [ ] **Drop the Preview verb.** Owner, 2026-08-22: *"Preview does not seem to have a function."*
-      The code agrees - the `preview` verb runs `selectCue(selectedCue.id)` on the cue that is
-      already selected, so it is a no-op by construction, because **selection IS the preview
-      gesture** (§2). Remove the button and the `P` key from all three surfaces and the keymap.
+- [x] **Drop the Preview verb.** Done on `claude/playout-dashboard-cue-editor-beccdf`, but on TWO
+      surfaces, not three. On the in-app and hosted pages the verb ran `selectCue` on the cue
+      already selected - a no-op, because **selection IS the preview gesture** (§2); button and
+      `P` key are gone from both and from the keymap. The EXPORTED controller keeps its
+      `→ Preview`: there it is not a no-op but `takeTo('preview')`, a real second output stream
+      (`docs/CONTROL_LAYER.md` - Preview and Take are one command list a `stream` apart).
 - [ ] **Re-take has to justify its place, and the owner should decide knowing why it exists.**
       Owner: *"why can't you just press take again?"* Because TAKE is a TOGGLE (owner decision,
       2026-08-06): pressing it on a live cue takes it OFF. Re-take is how the NEXT row goes onto a
       layer that is already up - load the row, `R` - **which is exactly how the quiz bank walks**,
       so it is load-bearing for the goal above. If the toggle changes, this changes with it.
+      That explanation was given on 2026-08-22 and the owner did not ask for its removal; the
+      box stays open because only they can close it.
 - [ ] **OPEN, and the owner's to answer: does SPACE go to preview first?** *"You press space to
       take it to the preview, and then press it again for it to go to the program."* It would
       replace the selection-is-preview rule and re-open what TAKE means, so it is a change to §2
