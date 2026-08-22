@@ -5913,8 +5913,14 @@ h2 + .lib-row,
    rule above; a single narrow column is exactly what an operator misses.
 
    The threshold is arithmetic, not a guess: three rows + 2×6px gaps + the on-air chip against
-   the monitors' height (`--pd-monitor-h` + ~25px of label). Capped at 88px so a 4K window does
-   not grow a TAKE the size of a monitor. */
+   the monitors' height (`--pd-monitor-h` + ~25px of label).
+
+   THE 88px CAP IS DELIBERATE AND RATIFIED (owner, 2026-08-22, shown the 1366/1920/2560 frames).
+   Three rows cannot eat a very tall window the way six could, so above ~1920 the block stops
+   short of the monitors' bottom edge - visibly so at 2560. Uncapping fills that space, but it
+   grows every button past 120px, which is bigger than "big controls" and starts to read as a
+   different surface. The gap is the accepted price; do not close it by raising the cap without
+   asking again. */
 @media (min-width: 1366px) and (min-height: 960px) {
   .pd-stagehead .pd-verbs { align-content: start; }
   .pd-stagehead .pd-verb {
