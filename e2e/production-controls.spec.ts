@@ -851,8 +851,14 @@ test.describe('the production page scrolls as one page', () => {
    *
    * So the block keeps its two-across shape at every size, TAKE spans the pair, and a tall
    * window spends its slack on button HEIGHT. Three things are pinned, because a screenshot
-   * nobody re-reads is what let the thin column ship: the WIDTH (this is the failure mode the
-   * owner named), the two columns, and the PITCH.
+   * nobody re-reads is what let the thin column ship in the first place:
+   *
+   *   - the COLUMN COUNT, which is what actually catches the collapse (mutation-tested by
+   *     restoring the old one-column rule: it fails here, `Expected: 2 Received: 1`);
+   *   - the WIDTH, which catches the other way to end up thin — a block that stays two-up but
+   *     has its cap squeezed. It does NOT catch the collapse on its own, because a single
+   *     column still stretches to the container's width;
+   *   - the PITCH, which is the 2026-08-21 spreading complaint.
    */
   test('on a tall window the verbs are two across beside PROGRAM, packed and not thin', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
@@ -876,18 +882,19 @@ test.describe('the production page scrolls as one page', () => {
     // TAKE · Re-take · Update · Next · Out. There is no Preview verb here any more.
     expect(boxes.length).toBe(5);
 
+    // TWO COLUMNS: the verbs under TAKE sit at exactly two distinct left edges. This is the
+    // assertion the collapse fails on.
+    const rest = boxes.filter((b) => !b.take);
+    expect(new Set(rest.map((b) => b.x)).size).toBe(2);
+
     const block = (await verbs.boundingBox())!;
-    // NOT A THIN COLUMN. The narrow single stack the owner rejected was ~180px; two columns of
-    // real buttons cannot fit under 240, so this fails the moment the block collapses again.
+    // And the block is not squeezed thin while still being two-up: two columns of real buttons
+    // do not fit under 240px.
     expect(block.width, `the verb block is ${block.width}px wide`).toBeGreaterThan(240);
 
     const take = boxes.find((b) => b.take)!;
     // TAKE spans the pair: as wide as the block itself, allowing for the grid's own edges.
     expect(take.w).toBeGreaterThanOrEqual(Math.round(block.width) - 2);
-
-    // TWO COLUMNS: the verbs under TAKE sit at exactly two distinct left edges.
-    const rest = boxes.filter((b) => !b.take);
-    expect(new Set(rest.map((b) => b.x)).size).toBe(2);
 
     // PACKED: one ROW to the next is a button-height plus the 6px gap. Measured per row (the
     // distinct y values), because two verbs beside each other share one.
