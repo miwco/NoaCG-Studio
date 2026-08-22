@@ -15,6 +15,10 @@
 # `text eol=lf` makes checkout write LF, which is what the generators write and what git already
 # stores - so the working tree, the index and the generator finally agree. Add a path here when a
 # script starts rewriting a tracked file in place; nothing else belongs in this file.
+#
+# This list is kept honest by `npm run check:line-endings` (in `npm run build`), which fails on any
+# file `git status` calls modified that `git diff` cannot see - so a generator nobody declared here
+# announces itself the first time it runs, rather than during somebody's landing.
 
 # Rewritten by scripts/build-production-pack.mjs on EVERY `npm run build`.
 public/packs/*.json text eol=lf
