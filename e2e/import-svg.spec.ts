@@ -130,28 +130,42 @@ test('svg import: mapping — labels from layer names, all on by default, edits 
   await expect(frame.locator('#f0')).toHaveText('Miriam Holm');
 });
 
-test('svg import: overflow-only text fit — a long value condenses, a short one stays exact', async ({ page }) => {
+test('svg import: overflow-only text fit — a long value shrinks, a short one stays exact', async ({ page }) => {
   await dropSvg(page);
   await createProject(page);
 
   const frame = previewFrame(page);
-  await expect(frame.locator('#f0')).toHaveText('Alexandra Riva');
-  // The design's own text is untouched: no textLength was applied to anything that fits.
-  await expect(frame.locator('#f0')).not.toHaveAttribute('textLength', /./);
+  const name = frame.locator('#f0');
+  await expect(name).toHaveText('Alexandra Riva');
+  // The design's own text is untouched: nothing is applied to a value that fits.
+  const drawnSize = await name.evaluate((el) => getComputedStyle(el).fontSize);
 
-  // A much longer name overflows the recorded width — the fit condenses it to EXACTLY the
-  // designer's original run (textLength + spacingAndGlyphs), never by default.
+  // A much longer name overflows the budget — and the answer is a SMALLER line of the
+  // designer's own type, never a squeezed one: condensing to the drawn width distorted
+  // tracking and glyph shapes, so one extra letter visibly broke the typeface.
   await page.getByTestId('dock-tab-data').click();
   const nameInput = page.locator('.panel-body .field-row', { hasText: 'Name' }).locator('input').first();
   const pushUpdate = () => page.getByTestId('dock-body-right').getByRole('button', { name: '⟳ Update' }).click();
   await nameInput.fill('Alexandra Konstantinopolous-Riva de la Vega');
   await pushUpdate();
-  await expect(frame.locator('#f0')).toHaveAttribute('lengthAdjust', 'spacingAndGlyphs');
+  const fitted = await name.evaluate((el) => {
+    const node = el as unknown as SVGTextContentElement;
+    return {
+      size: parseFloat(getComputedStyle(node).fontSize),
+      length: node.getComputedTextLength(),
+      textLength: node.getAttribute('textLength'),
+    };
+  });
+  expect(fitted.size).toBeLessThan(parseFloat(drawnSize));
+  expect(fitted.textLength).toBeNull();
+  // …and it fits: the shrunk line is no wider than the run the designer drew.
+  const budget = await name.evaluate(() => (window as unknown as { svgFitWidths: Record<string, number> }).svgFitWidths.f0);
+  expect(fitted.length).toBeLessThanOrEqual(budget + 1);
 
   // Back to a short value: the fit steps away and the typography is the designer's again.
   await nameInput.fill('Riva');
   await pushUpdate();
-  await expect(frame.locator('#f0')).not.toHaveAttribute('textLength', /./);
+  await expect(name).toHaveCSS('font-size', drawnSize);
 });
 
 test('svg import: sanitizer — script, handlers, foreignObject, SMIL and network refs never reach the template', async ({ page }) => {
@@ -708,7 +722,7 @@ test('svg import: outlined text — a glyph-shaped group becomes a placed live f
   // sized from the measured cap height (40 design px / 0.72 ≈ 56), in the shapes' own fill.
   expect(state.css).toMatch(/#fw0 \{\n {2}position: absolute;\n {2}left: calc\(60px \* var\(--scale\)\);[^}]*top: calc\(74px \* var\(--scale\)\);/);
   expect(state.css).toMatch(/#f0 \{[^}]*font-size: calc\(56px \* var\(--scale\)\);[^}]*color: rgb\(255, 255, 255\);/);
-  // Both fit runtimes coexist: the SVG's own textLength fit and the placed line's shrink.
+  // Both fit runtimes coexist: the SVG's own shrink and the placed line's.
   expect(state.js).toContain('function fitSvgText');
   expect(state.js).toContain('function fitPlacedText');
   expect(state.js).toMatch(/typeof fitSvgText === 'function'\) fitSvgText\(\)/);
@@ -888,22 +902,25 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
       refitSvgText: () => void;
       svgFitDrawn: Record<string, string>;
       svgFitWidths: Record<string, number>;
+      svgFitSizes: Record<string, number>;
     };
     w.update(JSON.stringify({ f0: 'An extremely long presenter name' }));
     w.refitSvgText(); // what document.fonts.ready fires once the real face has loaded
     const node = el as unknown as SVGTextContentElement;
-    const held = node.getAttribute('textLength');
-    node.removeAttribute('textLength');
-    const natural = node.getComputedTextLength();
-    if (held) node.setAttribute('textLength', held);
-    return { drawn: w.svgFitDrawn.f0, budget: w.svgFitWidths.f0, textLength: held, natural };
+    return {
+      drawn: w.svgFitDrawn.f0,
+      budget: w.svgFitWidths.f0,
+      drawnSize: w.svgFitSizes.f0,
+      size: parseFloat(getComputedStyle(node).fontSize),
+      length: node.getComputedTextLength(),
+    };
   });
 
   // The budget is still Ada's width — three characters, nothing like the value now on screen —
-  // and the long value is condensed to exactly it.
+  // so the long value is shrunk to fit it rather than left running past the artwork.
   expect(fitted.drawn).toBe('Ada');
-  expect(fitted.natural).toBeGreaterThan(fitted.budget * 2);
-  expect(Number(fitted.textLength)).toBeCloseTo(fitted.budget, 1);
+  expect(fitted.size).toBeLessThan(fitted.drawnSize);
+  expect(fitted.length).toBeLessThanOrEqual(fitted.budget + 1);
 });
 
 test('svg import: retyping a sample repaints the mapping artwork', async ({ page }) => {

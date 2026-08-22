@@ -249,10 +249,11 @@ function svgFontCss(svg: DesignSvg): string {
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
 // SVG text neither wraps nor clips: a longer value would run past the artwork. So each bound
-// layer has a BUDGET — the width of the text the DESIGNER drew — and an operator value wider
-// than that is condensed to exactly that width (textLength + lengthAdjust), and only then.
-// A value that fits keeps the designer's typography untouched. Remove this block to let text
-// run free instead.
+// layer has a BUDGET — the width of the text the DESIGNER drew — and a value wider than that
+// is SHRUNK until it fits: a smaller line of the designer's own type, never a squeezed one.
+// (Condensing to the drawn width, which is what this did before, distorts tracking and glyph
+// shapes, so one extra letter visibly broke the typeface.) A value that fits is left exactly
+// as drawn. Remove this block to let text run free instead.
 //
 // The budget is measured from the DRAWN text, never from whatever happens to be on screen.
 // A playout renderer replays its control log the moment the page exists, so the first value
@@ -260,9 +261,11 @@ const SVG_FIT_JS = `
 // condensed at all, and the same file squished in the editor while running past the artwork
 // on air. The drawn text is remembered before update() can be called, and the budget is
 // re-measured once the real typeface has loaded (the first pass may have measured a
-// fallback face).
+// fallback face). The shrink is set on the bound node; a run carrying its OWN font-size
+// keeps it, which Illustrator only writes when a designer sized one word by hand.
 var svgFitDrawn = {};                           // id -> the text the designer drew
 var svgFitWidths = {};                          // id -> that text's width, in the real face
+var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
 
 function svgFitNodes() {
   var all = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
@@ -289,10 +292,10 @@ function measureSvgBudgets() {
     if (svgFitDrawn[el.id] == null) svgFitDrawn[el.id] = live;
     var drawn = svgFitDrawn[el.id];
     // Any previous fit has to come off first, or the measurement compounds.
-    el.removeAttribute('textLength');
-    el.removeAttribute('lengthAdjust');
+    el.style.fontSize = '';
     if (live !== drawn) el.textContent = drawn;   // measure the design, put the value back
     svgFitWidths[el.id] = el.getComputedTextLength();
+    svgFitSizes[el.id] = parseFloat(getComputedStyle(el).fontSize) || 0;
     if (live !== drawn) el.textContent = live;
   }
 }
@@ -302,12 +305,18 @@ function fitSvgText() {
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
-    el.removeAttribute('textLength');
-    el.removeAttribute('lengthAdjust');
-    var length = el.getComputedTextLength();
-    if (length > svgFitWidths[el.id] + 0.5) {
-      el.setAttribute('textLength', String(svgFitWidths[el.id]));
-      el.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+    el.style.fontSize = '';                     // back to the drawn size before measuring
+    var budget = svgFitWidths[el.id];
+    var size = svgFitSizes[el.id];
+    if (!(budget > 0) || !(size > 0)) continue;
+    // Two passes: a face's advance widths are not perfectly linear in size, so the first
+    // ratio lands close and the second settles it. A line that fits keeps no inline size
+    // at all — the designer's own type, untouched.
+    for (var pass = 0; pass < 2; pass++) {
+      var length = el.getComputedTextLength();
+      if (length <= budget + 0.5) break;
+      size = size * (budget / length);
+      el.style.fontSize = size.toFixed(2) + 'px';
     }
   }
 }

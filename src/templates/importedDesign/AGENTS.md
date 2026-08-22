@@ -40,7 +40,10 @@ e2e/import-stretch.spec.ts.
 the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
 as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at import
 (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
-`textLength` fit; DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
+SHRINK fit, whose budget is the DRAWN text measured in the real face - never whatever is on
+screen when it is first measured, or a playout renderer's own first update becomes the budget
+and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense; the HUG is still
+open, docs/SVG_IMPORT_PLAN.md §3); DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
 step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
 E2E: e2e/import-svg.spec.ts.
 **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the

@@ -108,8 +108,9 @@ Two consequences worth designing around:
 
 - Prefer a family you can supply as a file, or one of the bundled/Google faces.
 - SVG text does not wrap or clip. When an operator types a longer value than the design was set
-  for, the generated code condenses that one line to the width you drew (`textLength`), and only
-  then. A value that fits leaves your typography untouched.
+  for, the generated code shrinks that one line until it fits the width you drew - a smaller
+  line of your own type, never a squeezed one - and only then. A value that fits leaves your
+  typography untouched.
 
 ## 5. If the text was converted to outlines
 

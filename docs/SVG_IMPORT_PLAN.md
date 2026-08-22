@@ -90,23 +90,30 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   contract. `update()` is the shared runtime - `getElementById('fN').textContent = value` works
   identically on SVG nodes under SPX, CasparCG, OGraf and the browser output.
 - **Text fitting:** SVG text neither wraps nor clips. The generated JS gives each bound node a
-  BUDGET - the width of the text the DESIGNER drew - and a value wider than that gets
-  `textLength` + `lengthAdjust="spacingAndGlyphs"` capped at it (comment-documented,
-  deterministic, removable). Never distort by default - only on overflow.
+  BUDGET - the width of the text the DESIGNER drew - and a value wider than that is SHRUNK
+  until it fits (comment-documented, deterministic, removable). Nothing is applied to a value
+  that fits. **Shrink, never condense** (owner ruling, 2026-08-22): holding the drawn width
+  with `textLength` + `lengthAdjust="spacingAndGlyphs"` distorts tracking AND glyph shapes, so
+  one extra letter visibly broke the typeface - which is exactly the taste rule this section
+  always claimed and the code did not follow.
   **The budget is measured from the drawn text, never from whatever is on screen.** A playout
   renderer replays its control log the moment the page exists, so the first value measured
   there is usually the operator's - and a budget taken from that can never be overflowed, which
   is how one file came to squish in the editor and run clean past the artwork on air. The drawn
   text is remembered as the page parses (before `update()` can be called) and the budget is
   re-MEASURED, not re-taken, once the real typeface has loaded.
-  **OPEN, owner-directed 2026-08-22:** condensing is the wrong default for a lower third, where
-  "the text should decide how big the banner is" (hug), while a quiz board and most full-frame
-  graphics declare a stage and must not resize (fixed) - the split `src/templates/AGENTS.md`
-  "THE STAGE" already draws for the catalog. An imported SVG has no category to read it from,
-  so the wizard has to ask or infer, and a hugging panel means widening a shape in flat artwork
-  the way `importedDesign/stretch.ts` already does for raster (one `--stretch-x` driving the
-  box, the middle band and every `[data-stretch]` slot). Shrinking the type is the owner's
-  accepted fallback; distorting glyph shapes is not.
+  **OPEN - THE HUG, owner-directed 2026-08-22 and not yet built.** Shrinking is right for a
+  graphic that declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE
+  STAGE"), and wrong for a lower third, where "the text should decide how big the banner is".
+  An imported SVG has no category to read that from, so **the mapping step ASKS** - one picker,
+  defaulted from geometry (artwork smaller than the frame grows; full-frame declares a stage)
+  and overridable, plus which SHAPE is the panel that stretches. The runtime follows the raster
+  stretch's doctrine (`importedDesign/stretch.ts`): ONE `--stretch-x`-shaped value, measured as
+  the deficit between the drawn text's width and the operator's, widening the picked shape and
+  translating whatever sits beyond its far edge, capped inside the frame's safe area - and the
+  shrink above answers only what the cap could not give. v1 should say out loud which
+  geometries it handles (a left-anchored panel growing rightward is the lower third everybody
+  draws) rather than guessing at the rest.
 - **Animation:** the standard marked ANIMATION region animating the wrapper (entrance/exit
   presets work day one; the timeline dock reads the CODE as always). Phase 2: per-layer stagger -
   top-level named `<g>`s offered as animation units.
