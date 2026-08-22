@@ -1,38 +1,38 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useTemplateStore } from '../store/templateStore';
-import { zoneDecls } from '../templates/shared/base';
-import { nextFieldId, setCssDeclaration, setFieldDefault } from '../blocks/edit';
-import { getCssVariable, setCssVariable } from '../blocks/cssVars';
-import type { Zone9 } from '../model/wizard';
-import type { SpxTemplate } from '../model/types';
-import { detectPrefix, getTemplateParts, type TemplatePart } from '../model/structure';
-import { parseAnimData, type AnimData } from '../blocks/animData';
-import { lensRead, lensWrite, scrubPhase } from '../blocks/timelineLens';
-import { writeAnimData } from '../templates/shared/animRuntime';
-import { setKeyframe } from '../blocks/animEdit';
-import { activationStep } from '../blocks/animEval';
-import { changePartPress } from '../blocks/stepAssign';
-import { createStepFromLayer } from '../blocks/layerTimeline';
-import { useInsertTemplateUi } from './InsertTemplateDialog';
-import { addPlacedLine, designBoxInfo, lineFit, lineFontSize, placedLines, placeLine, placementCss, setLineFit, setLineFontSize, setSlotSize, slotSize, type LinePlacement } from '../blocks/designLayout';
-import { insertImageElement, insertVideoElement } from '../blocks/assetOps';
-import { insertLottieElement } from '../blocks/lottieInsert';
-import { probeAsset } from '../assets/assetInfo';
-import { MAX_VIDEO_ASSET_BYTES, fileToDataUrl, isImageAsset, isLottieAsset, isVideoAsset, uniqueAssetPath } from '../assets/assetUtils';
-import { importImageFile } from '../assets/imageImport';
-import { ASSET_DRAG_TYPE } from './AssetsPanel';
+import { useTemplateStore } from '../../store/templateStore';
+import { zoneDecls } from '../../templates/shared/base';
+import { nextFieldId, setCssDeclaration, setFieldDefault } from '../../blocks/edit';
+import { getCssVariable, setCssVariable } from '../../blocks/cssVars';
+import type { Zone9 } from '../../model/wizard';
+import type { SpxTemplate } from '../../model/types';
+import { detectPrefix, getTemplateParts, type TemplatePart } from '../../model/structure';
+import { parseAnimData, type AnimData } from '../../blocks/animData';
+import { lensRead, lensWrite, scrubPhase } from '../../blocks/timelineLens';
+import { writeAnimData } from '../../templates/shared/animRuntime';
+import { setKeyframe } from '../../blocks/animEdit';
+import { activationStep } from '../../blocks/animEval';
+import { changePartPress } from '../../blocks/stepAssign';
+import { createStepFromLayer } from '../../blocks/layerTimeline';
+import { useInsertTemplateUi } from '../InsertTemplateDialog';
+import { addPlacedLine, designBoxInfo, lineFit, lineFontSize, placedLines, placeLine, placementCss, setLineFit, setLineFontSize, setSlotSize, slotSize, type LinePlacement } from '../../blocks/designLayout';
+import { insertImageElement, insertVideoElement } from '../../blocks/assetOps';
+import { insertLottieElement } from '../../blocks/lottieInsert';
+import { probeAsset } from '../../assets/assetInfo';
+import { MAX_VIDEO_ASSET_BYTES, fileToDataUrl, isImageAsset, isLottieAsset, isVideoAsset, uniqueAssetPath } from '../../assets/assetUtils';
+import { importImageFile } from '../../assets/imageImport';
+import { ASSET_DRAG_TYPE } from '../AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { partLocked } from './partLocks';
-import { editorShortcutsLive } from './spaceKey';
-import { phaseIdOf } from './StepTimeline';
+import { editorShortcutsLive } from '../spaceKey';
+import { phaseIdOf } from '../StepTimeline';
 import {
   postCanvasCmd,
   queryCanvas,
   CANVAS_RECTS_TYPE,
   type CanvasRect as TrackedRect,
   type CanvasRectsMessage,
-} from '../preview/canvasControlProtocol';
-import { useIsMobile } from './useIsMobile';
+} from '../../preview/canvasControlProtocol';
+import { useIsMobile } from '../useIsMobile';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -719,7 +719,7 @@ export default function CanvasInteraction({ iframeRef, width, height, padX = 0, 
   );
   const designUnitSelected = !!selectedPart && designUnit.includes(selectedPart.selector);
 
-  /** Is this part LOCKED for canvas gestures? (components/partLocks.ts owns the meaning and
+  /** Is this part LOCKED for canvas gestures? (components/canvas/partLocks.ts owns the meaning and
    *  the defaults, so this layer and the Inspector's toggle can never disagree.) */
   const isLocked = useCallback(
     (selector: string) => partLocked(selector, partLocks, designInfo?.prefix ?? null),

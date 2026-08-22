@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { composeDocument } from '../preview/composeDocument';
 import { useTemplateStore } from '../store/templateStore';
 import { designBoxInfo } from '../blocks/designLayout';
-import { computePad } from './pasteboard';
+import { computePad } from './canvas/pasteboard';
 import { spacePansCanvas } from './spaceKey';
-import CanvasGuides from './CanvasGuides';
-import CanvasInteraction from './CanvasInteraction';
+import CanvasGuides from './canvas/CanvasGuides';
+import CanvasInteraction from './canvas/CanvasInteraction';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;

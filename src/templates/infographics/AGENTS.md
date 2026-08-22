@@ -1,0 +1,70 @@
+# src/templates/infographics - the infographics
+
+Loaded alongside the root `AGENTS.md` and `src/templates/AGENTS.md` when working in this
+directory (Claude reads it via this directory's `CLAUDE.md` import; Codex reads it directly).
+Keep it accurate.
+
+Split out of `src/templates/AGENTS.md` on 2026-08-22, which keeps the catalog-wide rules and
+the category index. Add a RULE here; leave the reasoning in the code's own comments.
+
+## infographics/ - the measured data graphics
+
+ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
+igPresets (count-up / bars-grow / ring-fill / rows-cascade / **goal-ring** / **milestone-run**)
++ **igMotion.ts** + **dataRuntimes.ts** (the rebuilds several designs of a type share:
+schedule rows, bar rows, the GOAL meter in its two drawn shapes, the MILESTONE track).
+`goal-ring` is its own preset and `infographicGoalRing` its own builder for a reason: on a
+poll ring the middle figure IS the percent, so one number drives both; on a goal meter the
+figure is money and the ring is raised/goal, and feeding the raised total to `ring-fill`
+would clamp it and draw a full ring at 3 % raised. The milestone track spaces its nodes
+EVENLY and interpolates the line BETWEEN them rather than plotting current/max - a rail
+drawn "1 → 2 → 3 → 4" has to have its line mean a position on that rail, and even spacing is
+what keeps four labels readable when a stretch goal is ten times the first. DATA BLOCKS via
+convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
+operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the
+cascade runs one row per line they wrote - so none of it is a number a keyframe can hold, and it
+all lives in the category motion runtime (the category motion runtimes, src/templates/AGENTS.md). The region keeps only the panel entrance
+(real, editable keyframes) and NAMES the measured part. A count-up design may or may not pair a
+progress bar with its figure, so `PresetConfig.hasBars` tells the preset - without it a bar-less
+design (ig01) would carry a phantom timeline layer for an element it doesn't have.
+**ig38 "Results Rail" is the category's first SIDE PANEL** - a fixed-width column at the frame's
+edge that stays up while an anchor talks, rather than a centre-frame board that is shown and
+cleared - and it reuses `seatBarsRuntimeJs` for its rows. **The trap it paid for, binding on
+anything else that reuses a repeating runtime with a different composition in mind:** that
+runtime nests the figure's cap INSIDE the bar's fill (so the readout rides a growing tip), so a
+design that wants the figure pinned at one edge cannot express that as a grid column - the fill
+is the cap's containing block, not the row. The rail takes the whole TRACK out of flow across
+the row (the wash) and pins the cap against it, and reserves the figure's lane with the row's
+own padding, because an out-of-flow cap reserves no width. The first draft laid the row out as
+`label | figure` and rendered every figure on top of its district's name.
+**ig39 "Key Figures" is the other half of that lesson** - the catalog's first TWO-COLUMN STAT
+LIST (a header band, `label | figure` rows, a footer rule with the source and the date). It is
+what a design gets when the runtime is written for the composition instead of borrowed: label
+and figure are SIBLINGS in `statListRuntimeJs`, so the row is a real grid and the figures share
+an edge because they share a column. Two rules it holds beyond that, both stated in its source:
+a figure is rendered exactly as typed (nothing parses it, because nothing derives a share from
+it, so "€4.21bn" and "12.4 %" survive intact), and a stat column asks for **lining** numerals as
+well as tabular ones - the editorial text serif defaults to old-style figures that ride at
+x-height with 3, 4, 7 and 9 below the line, which put "42" lower than "18,400" beside it and
+broke the baseline every figure shares with its label. `tabular-nums` alone does not catch that,
+and neither does the numerals gate: it measures whether a figure's box MOVES, and old-style
+digits are perfectly stable at the wrong height.
+**The ELECTION NIGHT mini-pack is ig34-ig36** (the catalog's first EDITORIAL infographics, all
+siblings of lt25 "Masthead"): a seat board whose parties are one "Party | seats" textarea, a
+coalition majority meter, and a turnout dial. Three rules they hold, each written into the
+runtime that owns it (dataRuntimes.ts):
+- **A seat board's bars are scaled against the BIGGEST PARTY, not the chamber.** Chamber-scaled
+  bars are stubs (76 of 200 is a 38% bar) and the party-against-party comparison the board
+  exists to make is exactly what the stubs stop showing. The scale is a DRAWING choice: the
+  figure at each tip is the seat count they typed, never a share.
+- **The majority is a LINE ACROSS the track, not the track's end.** Running the meter to the
+  majority would draw a full bar the moment a government is formed and have nothing left to
+  say about the seats won past it, which on a count night is most of the story. That is why
+  `majorityMeterRuntimeJs` takes THREE numbers where the goal meter takes two.
+- **The comparison figure is optional by construction.** Clear the turnout dial's hidden
+  previous-turnout source and the swing line empties, which `:empty` removes - a first
+  election costs the operator one deletion, not a different graphic.
+The one that builds markup (ig34) escapes operator text at the data boundary like the rest of
+the category; the two that only DERIVE text (ig35, ig36) write `textContent`, so their operator
+text is inert by construction rather than by escaping - each says so in its own source, because
+"no escaping here" has to read as a decision rather than as an omission.
