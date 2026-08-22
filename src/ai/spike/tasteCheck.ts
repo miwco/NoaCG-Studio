@@ -33,11 +33,19 @@
 // IT REPORTS AND DOES NOT GATE, like every instrument beside it (docs/DESIGN_PRINCIPLES.md and
 // the §0.2 human read). THREE of the six additionally refuse to carry a pass/fail at all, and
 // they say so where they are measured: rule 2 because the owner stated it is not absolute
-// ("sometimes it can work, and that's kind of the problem"), rule 3 because the ratified
-// secondary floor already exists in `model/designRules.ts` and disagrees with the owner by a
-// factor the owner has not yet re-ratified, and rule 5 because PLACEMENT HAS NO RULE - it is a
+// ("sometimes it can work, and that's kind of the problem"), rule 3 because THE OWNER DECLINED
+// THE FLOOR (2026-08-22 - see below), and rule 5 because PLACEMENT HAS NO RULE - it is a
 // property of each design. An instrument that invents a threshold to settle a disagreement has
 // replaced the measurement with the opinion it was built to remove.
+//
+// RULE 3 IS SETTLED, NOT PENDING. It read as an open re-ratification for a while: the ratified
+// secondary floor in `model/designRules.ts` is 20px hard where the owner called 24px "way too
+// small", and the corpus's smallest secondary reading is 26px, so any floor that changed
+// anything had to sit above 26 - which flags every lower third's role line and leaves the
+// countdown's 38px label alone. Put that way it was a well-formed question with a well-measured
+// answer, and the owner still said no: 26px describes what this catalog happens to ship, and a
+// floor read off the catalog asserts that the catalog is right. Rule 3 keeps its reading and
+// mints no finding. Do not re-open it with a better number - the question was never the number.
 //
 // Rule 5 is the one that reached that state by being written twice, and the second version is
 // the instructive one: it was measured, quiet on the whole corpus, and still wrong - because
@@ -204,7 +212,9 @@ export interface MarkBalanceReading {
   balance: number;
 }
 
-/** Rule 3 - the second line's size, beside the floor that is actually ratified for it. */
+/** Rule 3 - the second line's size, beside the floor that is actually ratified for it. A
+ *  READING, never a verdict: the owner declined a floor of his own here on 2026-08-22 (see the
+ *  file head), so these numbers are for someone to look at and never for this file to judge. */
 export interface SecondaryTypeReading {
   primaryPx: number;
   /** Every reading the classifier called SECONDARY, smallest first. Empty on a one-line

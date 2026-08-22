@@ -825,11 +825,14 @@ are part of legibility rather than separate from it, (5) a mark never eats prima
 
 Three properties are the ones to keep in mind before touching it:
 
-- **It reports; two of the six additionally carry NO pass/fail.** Rule 2 because the owner stated
-  it is conditional ("sometimes it can work, and that's kind of the problem"), rule 3 because the
-  ratified secondary floor already exists in `model/designRules.ts` and disagrees with the owner
-  by a factor the owner has not re-ratified. Inventing a threshold to settle either would replace
-  the measurement with the opinion the instrument exists to remove.
+- **It reports; three of the six additionally carry NO pass/fail, and all three are CLOSED
+  questions rather than pending ones.** Rule 2 because the owner stated it is conditional
+  ("sometimes it can work, and that's kind of the problem"); rule 3 because **the owner declined
+  the floor on 2026-08-22** - the corpus's smallest secondary reading is 26px, so the only floor
+  that could change anything sat above it, and a floor read off the catalog asserts that the
+  catalog is right; rule 5 because placement has no rule. Inventing a threshold to settle any of
+  the three would replace the measurement with the opinion the instrument exists to remove. **Do
+  not re-open rule 3 with a better number** - the question was never the number.
 - **Rule 1 asks each axis separately, and that is not a refinement - it is the rule.** Measuring
   both axes of the mark's smallest surface ancestor calls eight shipped catalog designs 0.84-0.96
   off centre, because a mark docked at one end of a strap is off-centre in the strap by
