@@ -5864,11 +5864,16 @@ h2 + .lib-row,
     align-items: stretch;
     gap: 14px;
   }
-  /* TWO ACROSS, not a single stack. Six verbs in one column need ~294px, which is TALLER than
-     the monitors at 1536×814 - so the stack, not the picture, would set the sticky head's
-     height and the head would grow at the one size the owner had already accepted. Two-up it
-     is ~218px, comfortably under, so the MONITORS drive the row again and the buttons grow into
-     whatever the tall window leaves over. */
+  /* TWO ACROSS AT EVERY SIZE, with TAKE spanning the pair. This is the block's shape, not a
+     concession to a short window: the verbs are the only controls on the surface that change
+     air, they sit between the cue list and the monitors, and a single narrow column there is
+     something an operator can slide past without seeing. "This is a very important space on the
+     screen, so it can't just be one small column that you can miss" (owner, 2026-08-22).
+     TAKE two-wide over one-wide verbs is what gives the block a width worth noticing.
+
+     It also keeps the head honest on a short window, which is what first put the grid here: six
+     verbs in one column needed ~294px against 245px of monitor at 1536×814, so the STACK set
+     the sticky head's height instead of the picture. */
   .pd-stagehead .pd-verbs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5878,8 +5883,9 @@ h2 + .lib-row,
     max-width: 300px;
   }
   /* TAKE spans the pair and takes the first row on its own: it is the loudest control on the
-     surface and the only red one, and auto-placement would otherwise drop it wherever its DOM
-     position landed. The rest flow around it in their own order. */
+     surface and the only red one, so its width is part of how the block reads. Placed
+     explicitly rather than left to auto-flow, so re-ordering the DOM can never move it into the
+     middle of the stack. The rest flow around it, two to a row. */
   .pd-stagehead .pd-verb-take { grid-area: 1 / 1 / 2 / 3; }
   /* The buttons SHARE whatever height the monitors leave rather than each claiming 44px. On a
      tall window that makes them bigger, which is the owner's own tie-breaker when the two
@@ -5895,30 +5901,25 @@ h2 + .lib-row,
     text-align: center;
   }
 }
-/* ONE COLUMN, ONCE ONE FITS. The two-up grid above exists because six 44px verbs are taller
-   than the monitors on a short window - not because two-up is the better shape. On a tall one
-   it is the worse shape twice over: `align-content: stretch` had nothing left to do but inflate
-   the GAPS, so at 1920×1000 six 40px buttons sat on a 75px pitch - "spaced out vertically, I
-   don't think it works so well" (owner, 2026-08-21) - and TAKE was half the width it could be.
+/* PACKED, NOT SPREAD, once the window is tall. The grid above stretches its rows to the
+   monitors' height, and on a tall window `align-content: stretch` has nothing left to do but
+   inflate the GAPS - at 1920×1000 the buttons sat on a 75px pitch, "spaced out vertically, I
+   don't think it works so well" (owner, 2026-08-21). So above the threshold the slack goes into
+   the BUTTONS instead: same tie-breaker that chose stretch in the first place ("I would rather
+   have the controls big than the monitors too big"), spent where it reads as one block of
+   controls rather than a scattering of them.
 
-   The threshold is the arithmetic, not a guess: the stack is 6 buttons + 5×6px gaps + the on-air
-   chip, and it has to fit the monitors, whose height is `--pd-monitor-h` (+ ~25px of label). At
-   960px of viewport that is 302px of stack against 327px of monitor; below it, two-up.
+   This used to also collapse the grid to ONE column. It no longer does - see the two-across
+   rule above; a single narrow column is exactly what an operator misses.
 
-   The SLACK then goes into the BUTTONS rather than the gaps - the same tie-breaker that chose
-   stretch in the first place ("I would rather have the controls big than the monitors too big"),
-   spent where it reads as one block of controls instead of six scattered ones. Capped at 72px so
-   a 4K window does not grow a TAKE the size of a monitor. */
+   The threshold is arithmetic, not a guess: three rows + 2×6px gaps + the on-air chip against
+   the monitors' height (`--pd-monitor-h` + ~25px of label). Capped at 88px so a 4K window does
+   not grow a TAKE the size of a monitor. */
 @media (min-width: 1366px) and (min-height: 960px) {
-  .pd-stagehead .pd-verbs {
-    grid-template-columns: minmax(0, 1fr);
-    /* PACKED, not spread: the gap is a constant 6px at every window size. */
-    align-content: start;
+  .pd-stagehead .pd-verbs { align-content: start; }
+  .pd-stagehead .pd-verb {
+    min-height: clamp(44px, calc((var(--pd-monitor-h) - 25px - 12px) / 3), 88px);
   }
-  /* Row 1 explicitly, because TAKE is not first in the DOM (PREVIEW is) and auto-placement
-     would put the one red button in the middle of the stack. */
-  .pd-stagehead .pd-verb-take { grid-area: 1 / 1 / 2 / 2; }
-  .pd-stagehead .pd-verb { min-height: clamp(44px, calc((var(--pd-monitor-h) - 25px) / 6), 72px); }
 }
 .pd-monitor { display: flex; flex-direction: column; min-width: 0; }
 .pd-monitor h2 {
@@ -6008,7 +6009,6 @@ h2 + .lib-row,
   border: 1px solid var(--border);
   color: var(--text-dim);
 }
-.pd-verb-preview { border-color: rgba(246, 166, 35, 0.55); color: #f8c675; }
 /* The ONE red button on the surface. Red means air, and nothing else may claim it. */
 .pd-verb-take { background: #ef4444; border-color: #ef4444; color: #fff; font-weight: 700; padding: 0 24px; }
 .pd-verb-take:hover:not(:disabled) { background: #f05a5a; }
@@ -6702,9 +6702,10 @@ h2 + .lib-row,
   .pd-monitor h2 { font-size: 9px; letter-spacing: 0.1em; white-space: nowrap; }
   .pd-monitor .pd-what { display: none; }
 
-  /* The fixed bottom bar (docs/PLAYOUT_DASHBOARD.md §3): TAKE · Next · Out. Preview is
-     redundant here — selecting a cue already previews it — and Update rides in the editor's
-     own head, where the line that names it already is. */
+  /* The fixed bottom bar (docs/PLAYOUT_DASHBOARD.md §3): TAKE · Next · Out. Update rides in
+     the editor's own head, where the line that names it already is. (Preview used to be hidden
+     here too, for the reason that eventually retired it everywhere: selecting a cue already
+     previews it.) */
   .pd-verbs {
     position: sticky;
     bottom: 0;
@@ -6718,7 +6719,6 @@ h2 + .lib-row,
   .pd-verb { flex: 1 1 0; justify-content: center; min-height: 52px; padding: 0 10px; }
   .pd-verb kbd { display: none; }
   .pd-verb-take { flex: 1.6 1 0; }
-  .pd-verb-preview,
   .pd-verbs .pd-verb-update { display: none; }
   .pd-onair-line { display: none; }
   .pd-editor-update { display: inline-flex; }

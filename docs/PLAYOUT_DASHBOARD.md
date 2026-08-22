@@ -42,7 +42,7 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
 │  ┌───────────────┐            ┌───────────────┐         │      after the intro │
 │  │  amber frame  │            │   red frame   │         │             L1 ON AIR│
 │  └───────────────┘            └───────────────┘         │  ⣿ 2 Topic card  PVW │
-│  [→ Preview P] [⟳ TAKE SPACE] [✎ Update U] [» Next N]   │  …                   │
+│  [⟳ TAKE SPACE] [⟳ Re-take R] [✎ Update U] [» Next N]   │  …                   │
 │  [■ Out 0]                          on air: ● <graphic> │                      │
 │  ┌ EDITING PREVIEW CUE · <name> ─── switch to on-air ▾┐ │                      │
 │  │ F0 · KICKER   F1 · TITLE   F2 · SUBTITLE           │ │                      │
@@ -217,9 +217,20 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
   with nothing on screen saying why. The exported controller always did this; the React surfaces
   did not, and the capped monitors are what put a monitor under the pointer where a gap used to
   be.
-- **The verb bar shows its keyboard shortcuts** as chips: Preview `P`, TAKE `SPACE`, Re-take `R`,
+- **The verb bar shows its keyboard shortcuts** as chips: TAKE `SPACE`, Re-take `R`,
   Update `U`, Next `N`, Out `0`, and `↑`/`↓` walk the rundown. `■ All out` lives in the header,
   away from the others, because it is the panic control.
+- **There is no PREVIEW verb on the two React surfaces** (owner, 2026-08-22 — "you can drop
+  preview"). Selection already IS the preview gesture, and their PVW monitor is a local stage
+  that follows it, so the button re-selected the cue that was already on it and its key `P` did
+  the same. It was reading as the second-loudest control on a bar where everything else changes
+  air. The EXPORTED controller keeps its `→ Preview`, where the word means something else
+  entirely: it puts the cue on a real second output stream.
+- **THE VERB BLOCK IS TWO COLUMNS WIDE AT EVERY SIZE, with TAKE spanning the pair.** It sits
+  between the cue list and the monitors, and that space is not decoration — "this is a very
+  important space on the screen, so it can't just be one small column that you can miss" (owner,
+  2026-08-22). A tall window spends its slack on BUTTON HEIGHT, never on gaps and never by
+  collapsing the block to a single narrow column, which is what it used to do above 960px.
 - **The TAKE control is a TOGGLE, and the button IS the key** (owner decision, acceptance pass
   2026-08-06 — "put something on and take takes it off; it should go in and out with space" —
   corrected 2026-08-07 after a production: `SPACE` took a live cue OFF while the button beside

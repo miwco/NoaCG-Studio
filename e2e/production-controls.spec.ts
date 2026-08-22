@@ -840,17 +840,21 @@ test.describe('the production page scrolls as one page', () => {
   });
 
   /**
-   * THE VERB STACK IS PACKED, NOT SPREAD.
+   * THE VERB BLOCK IS TWO COLUMNS WIDE, AND PACKED RATHER THAN SPREAD.
    *
-   * The same owner read: "we now have the buttons to the right side of the monitors but they are
-   * spaced out vertically… they could be stacked a little bit closer on top of each other in a
-   * column if there's space." `align-content: stretch` had nothing to stretch but the GAPS once
-   * the window was tall, so six 40px buttons sat on a 75px pitch.
+   * Two owner reads, one shape. First: "they are spaced out vertically… they could be stacked a
+   * little bit closer on top of each other" — `align-content: stretch` had nothing to stretch
+   * but the GAPS once the window was tall, so the buttons sat on a 75px pitch. The fix for that
+   * collapsed the grid to ONE column on a tall window, which drew the second read: "I do not
+   * like it when it becomes too thin with just one column… this is a very important space on
+   * the screen, so it can't just be one small column that you can miss" (2026-08-22).
    *
-   * The pin is the PITCH: consecutive verbs are one button-height plus the 6px gap apart, so a
-   * stack that starts spreading again fails here rather than in a screenshot nobody re-reads.
+   * So the block keeps its two-across shape at every size, TAKE spans the pair, and a tall
+   * window spends its slack on button HEIGHT. Three things are pinned, because a screenshot
+   * nobody re-reads is what let the thin column ship: the WIDTH (this is the failure mode the
+   * owner named), the two columns, and the PITCH.
    */
-  test('on a tall window the verbs stack in one packed column beside PROGRAM', async ({ page }) => {
+  test('on a tall window the verbs are two across beside PROGRAM, packed and not thin', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1000 });
     await createProject(page, { name: 'House Scorebug' });
     await productionFor(page, 'Match Night');
@@ -860,18 +864,41 @@ test.describe('the production page scrolls as one page', () => {
     const boxes = await verbs.evaluate((el) =>
       [...el.querySelectorAll('.pd-verb')].map((b) => {
         const r = b.getBoundingClientRect();
-        return { x: Math.round(r.x), y: Math.round(r.y), h: Math.round(r.height) };
+        return {
+          take: b.classList.contains('pd-verb-take'),
+          x: Math.round(r.x),
+          y: Math.round(r.y),
+          w: Math.round(r.width),
+          h: Math.round(r.height),
+        };
       }),
     );
-    expect(boxes.length).toBe(6);
-    // ONE COLUMN: every verb starts at the same x, so none of them is beside another.
-    expect(new Set(boxes.map((b) => b.x)).size).toBe(1);
-    const byY = [...boxes].sort((a, b) => a.y - b.y);
-    for (let i = 1; i < byY.length; i += 1) {
-      const pitch = byY[i].y - byY[i - 1].y;
-      expect(pitch, `verb ${i} sits ${pitch}px below its neighbour`).toBe(byY[i - 1].h + 6);
+    // TAKE · Re-take · Update · Next · Out. There is no Preview verb here any more.
+    expect(boxes.length).toBe(5);
+
+    const block = (await verbs.boundingBox())!;
+    // NOT A THIN COLUMN. The narrow single stack the owner rejected was ~180px; two columns of
+    // real buttons cannot fit under 240, so this fails the moment the block collapses again.
+    expect(block.width, `the verb block is ${block.width}px wide`).toBeGreaterThan(240);
+
+    const take = boxes.find((b) => b.take)!;
+    // TAKE spans the pair: as wide as the block itself, allowing for the grid's own edges.
+    expect(take.w).toBeGreaterThanOrEqual(Math.round(block.width) - 2);
+
+    // TWO COLUMNS: the verbs under TAKE sit at exactly two distinct left edges.
+    const rest = boxes.filter((b) => !b.take);
+    expect(new Set(rest.map((b) => b.x)).size).toBe(2);
+
+    // PACKED: one ROW to the next is a button-height plus the 6px gap. Measured per row (the
+    // distinct y values), because two verbs beside each other share one.
+    const rows = [...new Set(boxes.map((b) => b.y))].sort((a, b) => a - b);
+    for (let i = 1; i < rows.length; i += 1) {
+      const above = boxes.find((b) => b.y === rows[i - 1])!;
+      const pitch = rows[i] - rows[i - 1];
+      expect(pitch, `row ${i} sits ${pitch}px below the one above it`).toBe(above.h + 6);
     }
-    // And the stack still does not drive the sticky head's height — the monitors do.
+
+    // And the block still does not drive the sticky head's height — the monitors do.
     const head = await page.locator('.pd-stagehead').boundingBox();
     const monitors = await page.locator('.pd-monitors').boundingBox();
     expect(head!.height).toBeLessThanOrEqual(monitors!.height + 30);
