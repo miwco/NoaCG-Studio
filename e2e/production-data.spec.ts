@@ -86,9 +86,15 @@ test('a quiz bank authored on the Data tab loads into the cue, airs only on Take
   // The deep link works too: #/production/<id>/data is a real route with real history.
   expect(data.url()).toContain('/data');
 
-  // ── Row and table removal: a row goes at once; a whole table asks twice. ──
+  // ── Row and table removal: every one of them asks twice. ──
   const rows = data.locator('.pd-dataset tbody tr');
-  await rows.nth(0).locator('[data-testid^="row-delete-"]').click();
+  const rowDelete = rows.nth(0).locator('[data-testid^="row-delete-"]');
+  // One click ARMS and takes nothing. Asserting the count alone would pass a button that
+  // deleted on the first press, since the second press would finish the job either way.
+  await rowDelete.click();
+  await expect(rows).toHaveCount(2);
+  await expect(rowDelete).toHaveText('✓');
+  await rowDelete.click();
   await expect(rows).toHaveCount(1);
   await data.getByTestId('dataset-delete').click();
   await expect(data.getByTestId('dataset-delete')).toHaveText('Delete table?');
@@ -126,6 +132,15 @@ test('a table whose columns match nothing offers no load control, and columns ca
   await load.selectOption({ label: 'Data table: Alexandra Riva' });
   await expect(page.getByTestId('cue-field-f0')).toHaveValue('Alexandra Riva');
   await expect(page.getByTestId('cue-field-f1')).toHaveValue('Chief Correspondent');
+
+  // ── A column asks twice too: it takes every value under it and there is no undo. ──
+  const colDelete = dataset.getByTestId('col-delete-c1');
+  await colDelete.click();
+  await expect(dataset.locator('thead th')).toHaveCount(5); // 4 columns + the actions column
+  await expect(colDelete).toHaveText('✓');
+  await colDelete.click();
+  await expect(dataset.locator('thead th')).toHaveCount(4);
+  await expect(dataset.getByTestId('col-c1')).toBeHidden();
 });
 
 test('a teams table loads one team into the side the operator picked, and leaves the other alone', async ({ page }) => {
