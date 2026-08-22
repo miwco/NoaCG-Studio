@@ -131,12 +131,15 @@ on a graphic somebody else drew.
       **how does a student pick "this is a quiz" and get the quiz behaviour bound to their own
       artwork?** A named behaviour applied to a graphic (the graphic-type registry already models
       "a machine this type needs", `docs/GRAPHIC_TYPES.md`) is the shape to try first.
-      **The plan is written and awaiting a read: `docs/GRAPHIC_BEHAVIOUR_PLAN.md`** - it takes a
-      shipped behaviour apart (machine and controls move for free; structure and the LOOK of a
-      state on somebody else's artwork are the work), offers the doors without picking one, and
-      proposes building ONE hard-coded instance rather than a registry designed against a sample
-      of two. It also reports that the SCOREBOARD may already be done, because a `number` field is
-      a +/- stepper on every control surface with no per-template code - unverified end to end.
+      **BOTH CASES NOW WORK, walked in a browser and pinned by `e2e/import-svg-behaviour.spec.ts`
+      (2026-08-22).** The SCOREBOARD needed no code: a numeric SVG layer is already a ± stepper on
+      every control surface, it acts on air without replaying the entrance, and it persists. The
+      QUIZ is a deliberate pilot: the catalog answer board's machine and buttons are reused
+      unchanged, and what is new is the PAINT - the designer draws each moment as its own hidden
+      Illustrator layer and NoaCG decides when it is visible. Binding is pickers in the Fields
+      step, prefilled from layer names, no code and no AI. The plan, the split of what was already
+      generic against what is quiz-specific, and what stays deferred until a third behaviour
+      exists: `docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10. **Owner walk still owed.**
 - [ ] **3. The two graphics, walked as a student would.** Draw a quiz and a scoreboard in
       Illustrator, import, bind, attach the behaviour, put both in one production, and run them
       from the dashboard - lock, reveal, +1, -1 - with the operator never seeing code. That walk is

@@ -11,6 +11,7 @@ import {
   formatDraftPatch,
   initialDraft,
   mergeDraft,
+  proposeQuizBinding,
   type DraftPatch,
   type WizardDraft,
 } from './draft';
@@ -1538,6 +1539,11 @@ export default function CreationWizard() {
                       color: null,
                       looksLikeText: null,
                     })),
+                    // A quiz binding PROPOSED from the layer names, never required
+                    // (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Every picker in the mapping step is
+                    // re-pickable, and a file that looks like nothing in particular proposes
+                    // nothing at all.
+                    svgBehaviour: proposeQuizBinding(result),
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
@@ -1571,7 +1577,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgBehaviour: null, svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1606,6 +1612,7 @@ export default function CreationWizard() {
                     svgFields: [],
                     svgImages: [],
                     svgOutlines: [],
+                    svgBehaviour: null,
                     svgFonts: [],
                     designArt,
                     importedImages,

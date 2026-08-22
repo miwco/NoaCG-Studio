@@ -1,9 +1,8 @@
 # Giving an imported graphic its BEHAVIOUR
 
-**Status: PLAN FOR REVIEW, written 2026-08-22. Nothing here is decided.** It exists to be read,
-argued with, and handed to a second opinion. It deliberately does not pick between the options in
-§5 and §6 - that is the owner's call, and `docs/GOALS.md` says this question gets attacked from
-several angles rather than one.
+**Status: the PLAN (§1-§9) was written 2026-08-22 for review; §10 records what was then BUILT the
+same day.** §1-§9 are left as written, deliberately - a plan edited after its own result can no
+longer be read back against what it promised. Read §10 for what stands today.
 
 **The goal it serves** (`docs/GOALS.md` NOW): by **2026-09-12**, a student draws their own graphic,
 gets the behaviour their show needs onto it, and plays it out - without writing a line of code. The
@@ -180,6 +179,73 @@ The acceptance walk from `docs/GOALS.md` NOW item 3, unchanged: draw a quiz and 
 Illustrator, import both, bind the behaviour, put them in one production, and run them from the
 dashboard - lock, reveal, +1, -1 - with the operator never seeing code. Timed, and walked by
 somebody who did not build it.
+
+---
+
+## 10. THE PILOT, AS BUILT (2026-08-22)
+
+Both September cases are proven end to end, in a browser, and pinned by
+`e2e/import-svg-behaviour.spec.ts`. What follows is the answer to §8's questions as the build
+actually settled them, and the honest split the owner asked for.
+
+### The scoreboard needed no code at all
+
+Verified, not implemented. `docs/svg-samples/scorebug.svg` imports, its `2` and `1` become
+`ftype: number` fields, the production page renders them as **± steppers** with no per-template
+code, and both scores change on air. Three things the walk pinned beyond "the buttons exist":
+
+- **The entrance never replays.** A bump is a partial update carrying ONE field, so the log reads
+  one `Played in` for the take and `Updated 1 field` per press.
+- **The figures persist** across a reload, once the cue draft's 300 ms idle has flushed.
+- **A bump inside that 300 ms window is aired but not yet stored.** Pre-existing behaviour of the
+  whole cue editor, not of this work, and narrow enough to leave alone — but now written down.
+
+### The quiz: what was already generic
+
+Everything except the paint, which is more than expected going in:
+
+| Reused unchanged | How |
+|---|---|
+| The machine | `ANSWER_BOARD_MACHINE`, filtered to drop the audience branch — filtered from the shipped declaration, never copied, so the surviving arcs cannot drift |
+| The buttons | `ANSWER_BOARD_CONTROLS` verbatim. `compileControls` drops a control whose event no arrow carries, so removing the branch removed its button with no second list to maintain |
+| The attach | `attachMachine(type, template)`, already a `(type, template) => template` transform |
+| Legality | The structural guard mirrors as greying on the imported graphic exactly as it does on a catalog board — Reveal is grey until a pick exists |
+| The field pipeline | The dropdowns, the hidden holders, the control surfaces: all the ordinary SPX field contract |
+
+### What had to be quiz-specific, and why
+
+- **The paint** (`src/templates/importedDesign/quizBehaviour.ts`). The catalog's `applySelection`
+  adds a class to a row it drew; on artwork we did not draw, the answer is the designer's own
+  layers shown and hidden. This is the L2 model from §4, and it is the piece that would have to be
+  rethought for a behaviour that is not row-shaped.
+- **The binding UI** (the Behaviour section of `MapSvgFieldsStep`). Pickers, not naming: which
+  layer is the question, which are the answers, which drawings are the picked/right/wrong/locked
+  moments. `proposeQuizBinding` fills every one of them from the layer names when a designer used
+  the obvious ones, so the accelerator is door B behind door A — never a renaming ritual
+  (`docs/COMPETITOR_MXMZ.md` §3).
+- **The type shim** `importedQuizType`, whose only real job is mirroring the field ORDER so a
+  control's payload resolves to the right `fN`.
+
+### §8's questions, answered by the build
+
+1. **The look: L2, with L1/L3 unused.** The designer draws the states. It is the only answer that
+   keeps the artwork theirs, and every drawn layer is optional — a board with none still selects,
+   locks and reveals, which is what keeps the beginner path real.
+2. **The door: pick-then-point, with naming as the accelerator.** No AI. The deterministic path
+   works with zero model calls, which is what the owner asked for.
+3. **Trained designer?** Not required. The one thing a designer must LEARN is not a tool, it is a
+   drawing habit: hidden layers for states, and the words last in the file, because SVG paints in
+   document order (`docs/SVG_AUTHORING.md` §5b). That was found by looking at a frame — the first
+   run drew the verdict over the answer it was judging.
+4. **Was the scoreboard done?** Yes. Half the September goal cost an afternoon of verification.
+
+### What stays deferred, unchanged
+
+No behaviour registry, no plugin shape, no customizing the arc, no AI proposal. §6's reasoning
+stands and the build did nothing to weaken it: the third behaviour is still what would tell us the
+right abstraction, and there is still no third behaviour. The seams that would carry one — the
+`DesignSvgBehaviour` union, the `SvgQuizDraft` discriminant, this module's shape — exist and
+nothing else pretends to be general.
 
 ---
 

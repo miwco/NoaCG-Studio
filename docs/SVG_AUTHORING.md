@@ -123,6 +123,38 @@ Rows whose shapes read as a line of type - several glyphs standing on one baseli
 are listed first; the rest are marked "looks like artwork" so you can skip past the crests and
 icons. Nothing is hidden: a two-letter logotype really can be the text you want editable.
 
+## 5b. Drawing a graphic that DOES something (quizzes)
+
+A graphic can carry behaviour the operator drives live - today, a **quiz**: select an answer,
+lock it in, reveal the right one. You draw what each moment looks like; NoaCG decides when each
+one is on. The sample to copy is [`svg-samples/quiz-board.svg`](svg-samples/quiz-board.svg).
+
+**Draw the base look first** - the panel, the question, one text layer per answer. That alone is
+enough: bind it in the Fields step, pick "Quiz", say which layer is the question and which are the
+answers, and the board already selects, locks and reveals. It just shows nothing extra while it
+does.
+
+**Then draw the moments, one layer each.** For any answer row you can add:
+
+| Layer | When it shows |
+|---|---|
+| the row **picked** | while that answer is the contestant's pick |
+| the row **right** | on the reveal, if it is the correct answer |
+| the row **wrong** | on the reveal, if it is not |
+| **locked in** (one, for the whole board) | once the answer is locked |
+
+**Hide those layers in your design app.** Click the eye off - that is how you keep seeing your own
+artwork while you draw, and the import expects it. A hidden layer is offered to the behaviour
+pickers precisely *because* it is hidden; hidden TEXT is still skipped as a field.
+
+**Put the words last.** SVG has no z-index: whatever is later in the file paints on top. Draw a
+highlight after the answer text and it covers the word it is meant to highlight. Keep the panels
+and every drawn state below, and the answer text at the top of the stack.
+
+**Naming is a shortcut, not a rule.** Every one of these is a picker in the Fields step, so you can
+bind a file whose layers are called "Group 7". But name them `Answer A`, `A selected`, `A correct`,
+`A wrong`, `Locked in` and the whole binding arrives filled in and you change nothing.
+
 ## 6. Export settings, app by app
 
 ### Adobe Illustrator

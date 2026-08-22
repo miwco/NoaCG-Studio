@@ -23,6 +23,7 @@ import type {
   AnimPresetId,
   AnimSpeed,
   DesignArt,
+  DesignSvgBehaviour,
   ExtraFieldSpec,
   LineSpec,
   Palette,
@@ -115,6 +116,28 @@ export interface SvgFieldDraft {
    *  clock display and the operator field its length in minutes (plan P2 "clock ftype").
    *  One countdown per graphic: the shared clock runtime drives one display. */
   kind: 'text' | 'countdown';
+}
+
+/**
+ * The BEHAVIOUR the author bound to imported artwork, as the mapping step holds it
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Everything is a candidate id rather than a field index,
+ * because the step lets rows be ticked and unticked underneath — indices are resolved once, at
+ * `draftToOptions`, when the field order is finally known.
+ *
+ * Quiz only, deliberately: the pilot builds one concrete case rather than a registry designed
+ * against a sample of two (plan §6).
+ */
+export interface SvgQuizDraft {
+  kind: 'quiz';
+  /** Candidate id of the question text layer. Empty = not chosen. */
+  question: string;
+  /** Candidate ids of the answer text layers, in row order — A, B, C, … */
+  answers: string[];
+  /** Per answer row (parallel to `answers`), the DRAWN states as group candidate ids. Empty
+   *  means the designer drew nothing for that moment, which is a valid board. */
+  rows: { selected: string; correct: string; wrong: string }[];
+  /** The board-level "locked in" drawing, as a group candidate id. */
+  locked: string;
 }
 
 /** One `<image>` layer offered as a swappable picture field (docs/SVG_IMPORT_PLAN.md P2). */
@@ -267,6 +290,9 @@ export interface WizardDraft {
   /** The mapping step's outlined-text rows, one per glyph-shaped group: OFF by default,
    *  ON = the group is hidden and a placed HTML field stands in for it (plan §1.A). */
   svgOutlines: SvgOutlineDraft[];
+  /** The BEHAVIOUR bound to the artwork, or null for the ordinary in/out graphic the importer
+   *  has always produced. Proposed from the layer names at drop, and freely re-picked. */
+  svgBehaviour: SvgQuizDraft | null;
   /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
    *  the mapping step offers the Google fetch or an upload for the rest. An entry with
    *  neither source is UNRESOLVED — created anyway, with a warning. */
@@ -326,6 +352,7 @@ export function initialDraft(): WizardDraft {
     svgFields: [],
     svgImages: [],
     svgOutlines: [],
+    svgBehaviour: null,
     svgFonts: [],
     legibility: {},
   };
@@ -428,6 +455,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
           outlines: draft.svgOutlines
             .filter((f) => f.on && f.box)
             .map((f) => ({ candidateId: f.candidateId })),
+          behaviour: svgBehaviourOption(draft) ?? undefined,
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,
@@ -575,6 +603,74 @@ function withStretchDemoLine(template: SpxTemplate, draft: WizardDraft): SpxTemp
     fontSize: Math.min(64, Math.max(12, Math.round(art.height * 0.12))),
   });
   return added ? added.template : template;
+}
+
+/**
+ * The bound behaviour as the generator wants it: candidate ids resolved to FIELD INDICES,
+ * against the rows that are actually on.
+ *
+ * Returns null unless the binding is usable — a question and at least two answers, all of them
+ * still ticked. The mapping step can leave a half-made binding lying around (untick an answer
+ * and its row is gone), and a half-made behaviour is worse than none: the buttons would appear
+ * on the control page and act on rows that are not there.
+ */
+function svgBehaviourOption(draft: WizardDraft): DesignSvgBehaviour | null {
+  const behaviour = draft.svgBehaviour;
+  if (!behaviour) return null;
+  const on = draft.svgFields.filter((f) => f.on);
+  const indexOf = (candidateId: string): number => on.findIndex((f) => f.candidateId === candidateId);
+  const question = indexOf(behaviour.question);
+  const answers = behaviour.answers.map(indexOf);
+  if (question < 0 || answers.length < 2 || answers.some((i) => i < 0)) return null;
+  return {
+    kind: 'quiz',
+    question,
+    answers,
+    rows: behaviour.rows.slice(0, answers.length).map((r) => ({
+      selected: r.selected || undefined,
+      correct: r.correct || undefined,
+      wrong: r.wrong || undefined,
+    })),
+    locked: behaviour.locked || undefined,
+  };
+}
+
+/**
+ * PROPOSE a quiz binding from the layer names — the accelerator, never the requirement.
+ *
+ * The mapping step's pickers are the road anyone can walk (plan §5, door A). This is door B
+ * sitting behind them: a designer who names layers the obvious way ("Question", "Answer A",
+ * "A selected") opens the step with every picker already filled and nothing to do. Naming
+ * NOTHING costs three clicks per row and no correctness, which is the line the MXMZ lesson
+ * draws — a convention may pay you, it may never gate you (docs/COMPETITOR_MXMZ.md §3).
+ *
+ * Returns null when the file does not look like a quiz at all, so an ordinary import is
+ * never nudged toward a behaviour it does not want.
+ */
+export function proposeQuizBinding(svg: SvgImportResult): SvgQuizDraft | null {
+  const answers = svg.candidates.filter((c) => /^answer\b/i.test(c.label.trim()));
+  if (answers.length < 2) return null;
+  const question = svg.candidates.find((c) => /question/i.test(c.label));
+  const letters = answers.map((_, i) => String.fromCharCode(65 + i));
+  // "A selected" / "Answer A selected" / "selected A" all name the same drawing. The letter
+  // and the state word both have to be there — a layer called "Selected" alone belongs to no
+  // row, and guessing which would be worse than leaving the picker empty.
+  const layer = (letter: string, state: string): string =>
+    svg.groups.find((g) => {
+      const label = g.label.toLowerCase();
+      return new RegExp(`(^|\\W)${letter.toLowerCase()}(\\W|$)`).test(label) && label.includes(state);
+    })?.id ?? '';
+  return {
+    kind: 'quiz',
+    question: question?.id ?? '',
+    answers: answers.map((a) => a.id),
+    rows: letters.map((letter) => ({
+      selected: layer(letter, 'select'),
+      correct: layer(letter, 'correct'),
+      wrong: layer(letter, 'wrong'),
+    })),
+    locked: svg.groups.find((g) => /lock/i.test(g.label))?.id ?? '',
+  };
 }
 
 /**

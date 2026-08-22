@@ -59,3 +59,21 @@
   display: flex;
   gap: 6px;
 }
+
+/* One answer row of the quiz behaviour: the letter, which text layer it is, and the three
+   drawn states beside it. Wraps rather than scrolls - four pickers is wider than the panel on
+   a laptop, and a row that scrolls sideways hides the state nobody bound. */
+.map-svg-quiz-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-top: 1px solid var(--edge, rgba(255, 255, 255, 0.08));
+}
+.map-svg-quiz-letter {
+  min-width: 18px;
+  padding-bottom: 9px;
+  font-weight: 700;
+  color: var(--accent, #f6a623);
+}
