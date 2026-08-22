@@ -837,6 +837,15 @@ figure is the short final part, so the label is what may contain one). Say which
   `textLength` fit; DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
   step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
   E2E: e2e/import-svg.spec.ts.
+  **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the
+  generic-vs-quiz-specific split in docs/GRAPHIC_BEHAVIOUR_PLAN.md §10. It reuses
+  `ANSWER_BOARD_MACHINE` (filtered, never copied) and `ANSWER_BOARD_CONTROLS` via `attachMachine`;
+  only the PAINT is new - the DESIGNER draws each moment as its own layer and the runtime toggles
+  it (`.imported-design-qstate` / `-qon`; ids `q-sel-N` / `q-cor-N` / `q-wrong-N` / `q-lock`).
+  **Classes, never inline styles:** a snap clears inline props, so the state would vanish while
+  the machine still held it. Binding is PICKERS (`DesignSvgQuizBehaviour`), layer names only an
+  accelerator. No registry until a third behaviour says what the abstraction is. Sample:
+  docs/svg-samples/quiz-board.svg; E2E: import-svg-behaviour + configured/imported-quiz-output.
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
   highlight, question queue, community/prayer request), 20 designs in five per-form files

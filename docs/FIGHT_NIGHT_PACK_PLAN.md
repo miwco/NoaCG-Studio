@@ -119,9 +119,10 @@ correction) as **pack-owned self-contained code** - no imports from `src/templat
 **Honestly missing / to verify:**
 
 - The import/export feature itself (§3) - the only new platform surface.
-- **Cloud door state**: hosted control is the primary door, and migration 0040 is not yet applied
-  to production (GOALS "what cloud-first pulls forward"). The pack's cloud verification rides
-  that. The offline half (import → rehearse → export) is fully provable today in the e2e suite.
+- **Cloud door state**: hosted control is the primary door. Migration 0040 IS applied to production
+  (confirmed by calling it, 2026-08-20 - `docs/CLOUD_PLAYOUT.md` §3), so the pack's cloud
+  verification is no longer blocked on it and only needs somebody to walk it. The offline half
+  (import → rehearse → export) is fully provable today in the e2e suite.
 - Old-CEF rule applies to every line of pack template JS: no `?.` / `??` (CasparCG 2.3.x).
 - Clock and stat numerals must use faces with MEASURED tabular figures (`numericFontStack` - the
   Oswald trap), or the bug wobbles mid-round.

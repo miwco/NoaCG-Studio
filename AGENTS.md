@@ -25,11 +25,13 @@ Binding docs, read before generating or judging templates: **`docs/DESIGN_LANGUA
 motion + code style) and **`docs/GOALS.md`** (north star + what is NOT done - a landed goal moves
 verbatim to `docs/GOALS_ARCHIVE.md`, and GOALS.md stays under ~200 lines).
 
-**Current push (2026-08): the STUDENT RELEASE**, whose binding roadmap is the "Student release"
-section of `docs/GOALS.md`. WIZARD-FIRST: choose a template or kit, customize fields and branding,
-add it to a PRODUCTION, export or publish, operate live (CasparCG + OBS are the primary
-verification targets). The editor is being demoted to an Advanced mode and AI work is postponed
-until template-to-live is dependable. Prefer work that serves that north star.
+**Current push (from 2026-08-22): STUDENTS MAKE THEIR OWN GRAPHICS AND PLAY THEM OUT** - binding
+roadmap in the "NOW" section of `docs/GOALS.md`; the student release before it is CLOSED (history
+in `docs/GOALS_ARCHIVE.md`). A student draws their own graphic - any graphic, not a lower third -
+gets the BEHAVIOUR their show needs onto it, and plays it out **without writing a line of code**.
+Two graphics decide it by **2026-09-12**, a real production: a QUIZ (lock / reveal) and a
+SCOREBOARD (score + / -). SVG import is how the artwork gets in. Wizard-first still holds for the
+catalog road, CasparCG + OBS are still the verification targets, AI work stays postponed.
 
 **The pillars (keep every change true to these):**
 - **Best & easiest to create - and put on air** - premium output with the least friction; a
@@ -184,9 +186,7 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
   community/   shared templates (signed-in only), validated + benched at publish AND import
   entitlements/ the PURE access contract (docs/ADMIN.md): ONE resolver, precedence
                default < plan < temporary grant < manual override, every value carrying WHY;
-               plus permissions.ts - what a CREDENTIAL may do of what the account may do
-               (a scoped agent key carries `graphics:create` only; `permits()` asks both
-               halves; docs/AGENT_SAVE.md)
+               permissions.ts = what a CREDENTIAL may do (docs/AGENT_SAVE.md)
   feedback/    the PURE feedback contract (docs/ADMIN.md §10) - one vocabulary, four consumers
   admin/       the PRIVATE admin page. Never a security boundary. Usage sections count OTHER
                PEOPLE by default (the ScopePicker excludes internal accounts)
@@ -199,11 +199,10 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
                the OGraf manifest -> operator-surface adapter in control/ografContract.ts
 cli/           the `noacg` CLI + MCP server (its own package, published to npm): an external
                coding agent's door - scaffold, validate, inspect, screenshot, save - over the
-               bridge page of whatever NoaCG deployment NOACG_URL names. `login` mints a SCOPED
-               AGENT KEY through a loopback one-time code (never the user's session); `save`
-               validates in the bridge, then POSTs the library record to /api/me/graphics
-               (docs/AGENT_SAVE.md). Ships the canonical `noacg-graphic` skill; the in-repo
-               adapters under .claude/skills + .agents/skills point at it (docs/AGENT_CLI.md)
+               bridge page of whatever NoaCG deployment NOACG_URL names; `login`/`save` hold a
+               SCOPED AGENT KEY (docs/AGENT_SAVE.md). Ships the canonical
+               `noacg-graphic` skill; the in-repo adapters under .claude/skills + .agents/skills
+               point at it (docs/AGENT_CLI.md)
 public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
                GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
                template.assets like an upload - never referenced by the emitted code
@@ -215,10 +214,8 @@ scripts/       dev-port + port-registry (the per-worktree RESERVATION), the cata
 api/           server-only Vercel functions: the render service, the AI model gateway, Lite
                profile/allowance, sealed user-key endpoints, the production DATA API
                (docs/DATA_API.md - external data as update rows in the control log),
-               api/admin/* behind _lib/adminAuth.ts (404 for every refusal), and the AGENT
-               ACCESS routes under api/me (agent-keys + the graphics save door - the server
-               never executes template code; docs/AGENT_SAVE.md). Typechecked by
-               tsconfig.api.json
+               api/admin/* behind _lib/adminAuth.ts (404 for every refusal), the agent-key +
+               save routes under api/me (docs/AGENT_SAVE.md). Typechecked by tsconfig.api.json
 render-worker/ the Remotion renderer, and player-host/ the preview host - own exact-pinned packages
 player-host/   so the non-OSI licence never enters the AGPL bundle. Built into public/player-host/
                as ONE self-contained page, loaded with sandbox="allow-scripts" ONLY (never add

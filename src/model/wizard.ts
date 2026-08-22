@@ -333,6 +333,47 @@ export interface DesignSvg {
   outlines: DesignSvgOutline[];
   /** Every font family the SVG references, with how each one was resolved. */
   fonts: DesignSvgFont[];
+  /** The BEHAVIOUR the author bound to this artwork, if any (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
+   *  Absent means the ordinary in/out graphic the importer has always produced. */
+  behaviour?: DesignSvgBehaviour;
+}
+
+/**
+ * A behaviour bound to imported artwork. **Quiz only, deliberately** — the pilot builds ONE
+ * concrete case rather than a registry designed against a sample of two
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §6). The union exists so the day a second behaviour arrives
+ * the discriminant is already where it belongs, and nothing above this type has to move.
+ */
+export type DesignSvgBehaviour = DesignSvgQuizBehaviour;
+
+/**
+ * The quiz binding: which text layers are the question and the answers, and which DRAWN layers
+ * show each state (model L2 — the designer says what a state looks like, NoaCG says when).
+ *
+ * Every layer here is optional. A board with no drawn states still works: it selects, locks and
+ * reveals as machine states, and simply shows nothing extra while it does. That is what keeps
+ * the beginner path honest — bind two answers and press the buttons, then draw the looks later.
+ */
+export interface DesignSvgQuizBehaviour {
+  kind: 'quiz';
+  /** Index into `DesignSvg.fields` of the question line. */
+  question: number;
+  /** Indices into `DesignSvg.fields` of the answer lines, in row order — A, B, C, … */
+  answers: number[];
+  /** Per answer row (parallel to `answers`), the drawn states as candidate ids. */
+  rows: DesignSvgQuizRow[];
+  /** The board-level "locked in" drawing, as a candidate id. */
+  locked?: string;
+}
+
+/** The drawn states of one answer row, each a `SvgGroupCandidate` id. */
+export interface DesignSvgQuizRow {
+  /** Shown while this row is the contestant's pick. */
+  selected?: string;
+  /** Shown on this row by the reveal when it is the correct answer. */
+  correct?: string;
+  /** Shown on this row by the reveal when it is NOT the correct answer. */
+  wrong?: string;
 }
 
 /** One outlined-text group hidden in favour of a placed HTML field. */

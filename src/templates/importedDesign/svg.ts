@@ -44,6 +44,17 @@ import {
 } from '../shared/base';
 import { clockRuntimeJs } from '../shared/clock';
 import { convertToDataRegion } from '../shared/standard';
+import { attachMachine } from '../types/graphicType';
+import {
+  behaviourLayerIds,
+  importedQuizType,
+  markQuizLayers,
+  quizBehaviourCss,
+  quizBehaviourFields,
+  quizBehaviourHtml,
+  quizBehaviourJs,
+  withQuizSteps,
+} from './quizBehaviour';
 import type { AnimPreset, PresetConfig } from '../lowerThirds/animPresets';
 import { DESIGN_PRESETS } from './designPresets';
 import { PREFIX } from './shared';
@@ -79,8 +90,14 @@ function bindSvgMarkup(svg: DesignSvg): string {
   root.setAttribute('class', classes.join(' '));
 
   // Field ids are ours: a layer Illustrator happened to name "f0" would collide with the
-  // binding, so any such id moves aside (references to it inside the file move with it).
-  const taken = new Set([...svg.fields, ...svg.images].map((_, i) => `f${i}`));
+  // binding, so any such id moves aside (references to it inside the file move with it). The
+  // behaviour's own fields count here too — its holders carry `fN` ids like any other field,
+  // and the stamped state-layer ids (`q-sel-1`, …) are ours for the same reason.
+  const behaviourFields = svg.behaviour ? 2 : 0;
+  const taken = new Set([
+    ...[...svg.fields, ...svg.images, ...Array(behaviourFields)].map((_, i) => `f${i}`),
+    ...(svg.behaviour ? behaviourLayerIds(svg.behaviour) : []),
+  ]);
   for (const el of Array.from(root.querySelectorAll('[id]'))) {
     const id = el.getAttribute('id')!;
     if (!taken.has(id)) continue;
@@ -119,6 +136,9 @@ function bindSvgMarkup(svg: DesignSvg): string {
     if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
     el.setAttribute('class', own.join(' '));
   }
+  // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
+  // each one on and off. Before the markers are stripped — that is what they are for.
+  if (svg.behaviour) markQuizLayers(root, svg.behaviour);
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
     el.removeAttribute(SVG_CANDIDATE_ATTR);
   }
@@ -276,7 +296,13 @@ function designPreset(id: string): AnimPreset {
 export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   const svg = o.designSvg ?? NO_SVG;
   const name = 'Imported SVG design';
-  const fields = svgFields(svg);
+  const artworkFields = svgFields(svg);
+  // The behaviour's own fields sit AFTER the artwork's, and that order is load-bearing:
+  // `importedQuizType` mirrors it so a control's payload resolves to the right `fN`.
+  const quiz = svg.behaviour?.kind === 'quiz' ? svg.behaviour : null;
+  const fields = quiz
+    ? [...artworkFields, ...quizBehaviourFields(quiz, artworkFields.length)]
+    : artworkFields;
   // Steps are off: the whole design is one unit — a layer can still be given its own press
   // later, from the timeline.
   const settings = baseSettings({ name, uicolor: '7' }, o, { steps: '1' });
@@ -301,7 +327,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   // (`.{prefix}-clock`, painted by the shared runtime), and the operator's minutes live in a
   // hidden data source the runtime reads — the exact contract every catalog countdown uses.
   const clock = countdownIndex(svg);
-  const clockField = clock === -1 ? null : fields[clock];
+  const clockField = clock === -1 ? null : artworkFields[clock];
   const clockHolder = clockField
     ? `
     <!-- ${clockField.title} (${clockField.field}) — the countdown's length in minutes, written by SPX
@@ -317,7 +343,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
        them; everything else is untouched. -->
   <div class="${PREFIX}">
     <div class="${PREFIX}-box">
-${inlineSvg}${clockHolder}
+${inlineSvg}${clockHolder}${quiz ? quizBehaviourHtml(quiz, artworkFields.length) : ''}
     </div>
   </div>`,
   });
@@ -353,8 +379,10 @@ ${svg.outlines.length > 0 ? `
 .${PREFIX}-outlined {
   display: none;
 }
-` : ''}${clockField ? `
+` : ''}${clockField || quiz ? `
 ${dataSourceCss}
+` : ''}${quiz ? `
+${quizBehaviourCss}
 ` : ''}`;
 
   const preset = designPreset(o.animation.presetId);
@@ -374,11 +402,19 @@ ${dataSourceCss}
 
   // The clock runtime is design-owned JS outside the marked region, like the SVG fit: the
   // data conversion and every preset swap leave it alone, and the presets only CALL it.
+  // A bound behaviour repaints on every update() for the reason quiz/shared.ts gives: a data
+  // write must never erase a state the machine still holds, and a snap recovery replays states
+  // with callbacks suppressed, so the trailing update() is what puts the drawn states back.
+  const quizHook = `  if (typeof paintQuizState === 'function') paintQuizState();  // the drawn quiz states (below)`;
   const js =
-    runtimeJs(name, preset.emit(cfg)).replace(PLACED_TEXT_HOOK, `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}`) +
+    runtimeJs(name, preset.emit(cfg)).replace(
+      PLACED_TEXT_HOOK,
+      `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
+    ) +
     SVG_FIT_JS +
     '\n' +
-    (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '');
+    (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '') +
+    (quiz ? `\n${quizBehaviourJs(quiz, artworkFields.length)}` : '');
 
   // The design presets know nothing of clocks, so the lifecycle hooks are added to the DATA
   // (the step-calls model, docs/TIMELINE_V2_PLAN.md §3b): startClock as the entrance lands,
@@ -414,7 +450,20 @@ ${dataSourceCss}
     ),
   };
 
-  return convertToDataRegion(template, withClockCalls);
+  // Compose the two data refinements: the clock's lifecycle calls, then the quiz's Reveal step.
+  // Order matters only in that the clock's `stopClock` must stay on the LAST step, and the
+  // reveal is spliced in front of it — so the quiz refinement runs second.
+  const refine =
+    withClockCalls || quiz
+      ? (data: AnimData): AnimData => {
+          const withClock = withClockCalls ? withClockCalls(data) : data;
+          return quiz ? withQuizSteps(withClock) : withClock;
+        }
+      : undefined;
+  const built = convertToDataRegion(template, refine);
+  // The machine last, on the finished data: `attachMachine` derives the default path from the
+  // steps, so the Reveal step has to already be there when it compiles `pathEvents: ['judge']`.
+  return quiz ? attachMachine(importedQuizType(svg), built) : built;
 }
 
 export const IMPORTED_SVG: TemplateVariant = {

@@ -63,6 +63,30 @@ export interface SvgOutlineCandidate {
   marked: boolean;
 }
 
+/**
+ * One named `<g>` offered as a BEHAVIOUR LAYER — a drawing that shows what a state looks like
+ * (docs/GRAPHIC_BEHAVIOUR_PLAN.md §4, model L2). The designer draws "this answer is selected"
+ * as its own Illustrator layer; NoaCG decides WHEN it is visible and never redraws it.
+ *
+ * Two things separate these from every other candidate kind:
+ *
+ *  - **A HIDDEN group is offered, and is in fact the likeliest one.** A state layer is drawn
+ *    on top of the base look, so a designer hides it in Illustrator to see their artwork -
+ *    which is the exact opposite of a hidden TEXT layer, where hidden means "copy nobody can
+ *    read, do not offer it as a field". `hidden` is reported rather than filtered so the
+ *    mapping step can lead with the layers most likely to be states.
+ *  - **Nothing is bound to a field.** A behaviour layer carries no operator value; it is shown
+ *    and hidden by the machine's state, so it never takes an `fN` id.
+ */
+export interface SvgGroupCandidate {
+  /** Stable marker id ("g0", "g1", …) — the value of data-noacg-candidate on the group. */
+  id: string;
+  /** Operator-facing label, prefilled from the layer name like a text candidate's. */
+  label: string;
+  /** True when the designer had this layer hidden — the usual shape of a drawn state. */
+  hidden: boolean;
+}
+
 /** One font family the SVG references, as written in its own markup. */
 export interface SvgFontRef {
   /** VERBATIM, as the markup asks for it ("ArchivoBlack-Bold"). Every `@font-face` the
@@ -89,6 +113,8 @@ export interface SvgImportResult {
   images: SvgImageCandidate[];
   /** Groups of glyph-shaped paths that may be outlined text, in document order. */
   outlines: SvgOutlineCandidate[];
+  /** Named groups offered as BEHAVIOUR LAYERS (drawn states), in document order. */
+  groups: SvgGroupCandidate[];
   /** Every font family the markup references, in first-seen order. */
   fonts: SvgFontRef[];
   /** What sanitization removed, in user-facing words. Empty for a clean file. */
@@ -318,6 +344,28 @@ function isHiddenNode(el: Element): boolean {
   const style = el.getAttribute('style');
   if (!style) return false;
   return /(?:^|;)\s*display\s*:\s*none/i.test(style) || /(?:^|;)\s*visibility\s*:\s*hidden/i.test(style);
+}
+
+/** Inside `<defs>`, `<symbol>`, `<clipPath>` or a `<mask>` — markup that is machinery rather
+ *  than a layer. Split out of `isOffered` because a BEHAVIOUR layer wants this half of the
+ *  test and not the hidden half (svgImport `SvgGroupCandidate`). */
+function isInNonRendered(el: Element, root: Element): boolean {
+  let node: Element | null = el;
+  while (node && node !== root) {
+    if (NON_RENDERED_TAGS.has(node.tagName.toLowerCase())) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+/** Hidden itself, or inside something hidden — the shape a designer leaves a drawn state in. */
+function isHiddenSubtree(el: Element, root: Element): boolean {
+  let node: Element | null = el;
+  while (node && node !== root) {
+    if (isHiddenNode(node)) return true;
+    node = node.parentElement;
+  }
+  return false;
 }
 
 /** Is this node offered as a candidate at all? False inside a definition block or a hidden
@@ -729,11 +777,28 @@ export function importSvgMarkup(source: string): SvgImportResult {
     return { id, label: label || `Shapes ${i + 1}`, marked };
   });
 
+  // BEHAVIOUR LAYERS: every NAMED group, tagged last so it can never steal a marker from a
+  // text, picture or outline candidate — one element carries one marker, and the kinds above
+  // are the ones that bind to a field. Deliberately NOT filtered by `isOffered`: a drawn state
+  // is normally hidden in Illustrator (that is how the designer sees their base look), so
+  // hidden is a hint here rather than a disqualification. A group inside <defs>/<symbol> is
+  // still excluded — nothing there is a layer.
+  const groups: SvgGroupCandidate[] = Array.from(svg.querySelectorAll('g'))
+    .filter((el) => !el.hasAttribute(SVG_CANDIDATE_ATTR))
+    .filter((el) => !isInNonRendered(el, svg))
+    .filter((el) => layerName(el))
+    .map((el, i) => {
+      const id = `g${i}`;
+      el.setAttribute(SVG_CANDIDATE_ATTR, id);
+      const { label } = stripFieldPrefix(layerName(el));
+      return { id, label, hidden: isHiddenSubtree(el, svg) };
+    });
+
   // A layer name is a designer's private note ("Name" on three different straps) and becomes an
   // OPERATOR'S label. Three rows reading "Name", and a control page with three identical inputs,
   // is a file the reader has to decode by clicking. Numbered in document order, and only where
   // the name actually repeats — the common file numbers nothing.
-  numberRepeats([...candidates, ...images, ...outlines]);
+  numberRepeats([...candidates, ...images, ...outlines, ...groups]);
 
   // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
   // not in the rows above. Said out loud only when a <use> actually paints one: an unused symbol
@@ -751,6 +816,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
     candidates,
     images,
     outlines,
+    groups,
     fonts: fontInventory(svg),
     notices,
   };

@@ -14,10 +14,22 @@ sitting steers nothing.
 > Pick a broadcast graphic, make it yours without touching code, and put it on air in five
 > minutes - in CasparCG, SPX, OBS, vMix, or whatever the show runs on - from **one output URL**,
 > driven by a **control panel inside NoaCG**.
+>
+> And when the catalog does not have what the show needs: **draw your own graphic, give it the
+> behaviour the show needs, and play that out the same way** - still without code.
 
 That URL is the product. Everything else serves it: the wizard exists to fill it, the catalog
 exists to make it look paid-for, the export adapters exist so it reaches any playout machine, the
 control layer exists so a person can drive it live.
+
+**The core question - what NoaCG is actually trying to solve** (owner, 2026-08-22). Drawing a
+graphic without code is the easier half; the hard half is **giving it LOGIC, and then CHANGING that
+logic**, without code. A quiz that locks an answer and then reveals it is one set of rules - and the
+next producer wants no lock at all, just an immediate reveal. Two surfaces have been tried at this
+and neither landed as a way a non-programmer authors logic: the **canvas editor** and the **node
+editor**. The question stays open, it gets attacked from several angles rather than one, and it has
+no hard date. It is also the thing that decides whether NoaCG is usable by productions bigger than
+one school, so nothing here is a side quest.
 
 The first-named user is a **student or non-technical operator** who runs a real production without
 ever seeing code; organizations, channels, streamers and universities follow. A **professional**
@@ -25,8 +37,8 @@ keeps full control through **Advanced mode** - the editor, one toggle away, neve
 generated HTML/CSS/JS is the single source of truth and stays clean and readable; looking at it is
 optional. Used in teaching, but it is a production tool, not a code tutorial.
 
-**The binding deadline: students go live by 2026-08-21.** Work that does not serve that date is
-not current work.
+**The binding deadline: students run a real production with their OWN graphics by 2026-09-12.**
+Work that does not serve that date is not current work.
 
 ### What "done right" feels like
 - **Fast** - open NoaCG, choose a design, make a production, paste the URL into CasparCG or OBS,
@@ -40,10 +52,11 @@ not current work.
 - **Editable** - a pro can open any generated file and extend it. Nobody has to.
 
 ### Anything-goes export (a platform, not an SPX generator)
-Many environments - **SPX, CasparCG, OBS, vMix, OGraf**, more over time. SPX stays the canonical
-*internal* format and the strictest validation target; every other target is an adapter off that
-same source, so breadth costs no rework. Breadth across the live stack, plus automation and remote
-control, is the long-term differentiator.
+Many environments - **SPX, CasparCG, OBS, vMix, OGraf**, more over time. SPX is the canonical
+*internal* format and the strictest validation target **today**; every other target is an adapter
+off that same source, so breadth costs no rework. Breadth across the live stack, plus automation and
+remote control, is the long-term differentiator. **The long-run direction is OGraf-first** - see
+"NEXT - OGraf-first, not SPX-first"; nothing about the contract moves until that is costed.
 
 ### Operating principles
 - **Free forever for the core.** Creating, editing, exporting, controlling, self-hosting - always
@@ -77,179 +90,108 @@ customers, so their proven capabilities are our requirements list.
   operator playout with newsroom/sports-data integrations; 200+ channels, from ~$3k/yr. They prove
   the "your own SVG, playable" workflow at broadcast scale, so our SVG import has to match it
   (layers auto-exposed, no renaming ritual) - and beat it on what they lock away: free-forever,
-  self-host, export the files anywhere, a catalog and AI they don't have.
+  self-host, export the files anywhere, a catalog and AI they don't have. **Researched properly
+  2026-08-22: `docs/COMPETITOR_MXMZ.md`.** The headline: nothing public shows them authoring LOGIC
+  at all - they train the designer for a day on a keyframe timeline, keep the OPERATOR as the
+  non-technical one, and hand-build a control panel per sport. Attachable behaviours are the gap
+  their architecture has no place to put.
 
 ---
 
-## NOW - students live in two weeks
+## NOW - students make their OWN graphics, and play them out
 
-### Student release - wizard to live broadcast
+**The student release closed 2026-08-22.** The owner ran it on the school's hardware and accepted
+the player system - *"I have tried the hardware, and we have a player system that we can use. So
+that goal is now reached."* Steps 1-11, the deadline they carried and the acceptance history are in
+[`GOALS_ARCHIVE.md`](GOALS_ARCHIVE.md), "The student release (closed 2026-08-22)". Student accounts
+are settled too: students make their own, and nothing is owed there.
 
-*Steps 1-9 shipped 2026-08-04/05; the full text of each is in the archive. Step numbering is cited
-from ~80 places in the tree, so it never changes.*
+**The goal that replaces it, owner 2026-08-22:**
 
-- [x] **1.** Scope locked, one goal and one roadmap - **2.** the student-critical focus suite as
-      the per-change gate - **3.** packages removed, Production is the only grouping - **4.**
-      editor behind Advanced mode, full-screen wizard - **5.** deterministic customization with
-      declared field expansion - **6.** wizard → production → publish → output, complete - **7.**
-      two coherent production-ready packs (newsroom, talk-show) - **8.** Home simplified around
-      Productions - **9.** account essentials (reset, change, sign out, expiry recovery).
-- [ ] **10. Playout hardening + owner acceptance.** History in the archive; what stands today:
-      **the HARDWARE half is CLOSED, by the owner, on the school's CasparCG machine (2026-08-19)**
-      - *"The hardware is working, everything is working, and playout is working, so that is not a
-      concern."* Do not plan a night around re-proving CasparCG playout, and do not read the
-      archived "remaining, owner + real hardware" paragraph as owed work.
-      **Remaining is the PEOPLE half of `docs/STUDENT_RELEASE_ACCEPTANCE.md`:** the soak, one
-      live-suite run against the real project, and the timed first-time-user walks.
-- [ ] **11. What the storefront SHOWS FIRST, per category.** Owner, 2026-08-21, comparing two
-      shelves in one sitting: the Statistics & data result is eight genuinely different offers and
-      reads as a catalog - *"the graphics look different… you have options to choose from actually
-      and not just slight modifications of one graphic"* - while *"we have that problem with the
-      lower thirds right now that when you open it up all the graphics there look the same."*
-      Browse renders a PAGE of twelve, not the catalog, so for most people the first twelve ARE
-      the category; a category whose first twelve are variations of one design reads as a catalog
-      with one design in it. This is curation and default ordering, not a request for more
-      designs. Related and separable: **ig01 "Big Stat" is filed as a `stat-panel` and is a `kpi`**
-      (a one-line `src/templates/meta.ts` re-file plus the catalog baselines it moves) - it is the
-      one card the owner said *"does pop out"* of that otherwise coherent shelf. Detail and quotes:
-      `docs/CATALOG_VARIETY.md` §7.
-      **MEASURED 2026-08-21, and the obvious fix is ruled out.** `catalog-sameness.mjs` now
-      reports the first page per category through the real browse engine. It scores the
-      lower-thirds page at **11 distinct looks out of 12** - as varied as every other shelf - so
-      RE-ORDERING IS NOT THE FIX, and the sameness signature is not the thing to order by. The
-      instrument is blind on the axes that decide this at card size: its fourteen axes are CSS
-      decisions (radius, blur, skew, tracking), while an eye reads PALETTE and SILHOUETTE, and
-      all twelve lower thirds are a dark slab with white text and an amber accent. The stats
-      shelf beside it carries a giant percentage, a lime table, a red dial and a cream printed
-      panel - different shapes, and light backgrounds as well as dark. **The real item is
-      variety of palette and silhouette WITHIN a category**, which is design work rather than
-      ordering work; the next step is an axis measured off the RENDERED card.
-      `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves to compare.
-      **RATIFIED BY THE OWNER 2026-08-21 - "lower thirds need real variety" - and then MEASURED
-      on the right axis** (`scripts/card-look-sweep.mjs`, which reads the rendered pixels:
-      backdrop, accent hue, footprint). **The ask splits, and only half of it is drawing work.**
-      *Colour variety is BURIED, not absent:* the shelf carries nine accent hues and 7 light
-      backdrops across 103 designs, and the first twelve are 10 dark + 10 orange. Ordering the
-      first page across this axis is cheap and would show what the category already has.
-      *Shape variety is genuinely ABSENT:* **99 of 103 designs are `strap/thin` - 96%** - with no
-      full-width band, no tall panel, no side column, no corner block. That is the design work,
-      and it cannot be ordered into existence. Numbers in `docs/CATALOG_VARIETY.md`.
-      **The ordering half is BUILT** (`spreadFirstPage`, 2026-08-21): the fold spreads across
-      accent hue with family breaking ties, so the lower thirds went from 2 distinct hue buckets
-      to 4+ and the page now carries a cream editorial card, a glass pill, a sport slab and an
-      outline box. **The drawing half is a written brief:**
-      `docs/handoffs/lower-third-shapes.md`, with the six missing silhouettes named. The whole
-      catalog queue - that brief, the `ig01` re-file, the unmeasured categories and the standing
-      debts - is `docs/CATALOG_WORK_QUEUE.md`.
+> A student draws **their own graphic** - any graphic, not a lower third - gives it **the behaviour
+> their show needs**, and plays it out from the dashboard. **Without writing a line of code.**
 
-### The surface under investment: the WEB PLAYOUT CONTROL PANEL
+**The date is 2026-09-12**, three weeks out, and it is a real production with real students on it
+rather than a rehearsal. Two graphics decide it, because they are what the class actually runs: a
+**QUIZ** with the lock-answer / reveal-answer behaviour the platform already has, and a
+**SCOREBOARD** with score + / score -. **The student draws the graphic; we supply the behaviour.**
+Both behaviours exist in shipped catalog templates today - what does not exist is a way to put them
+on a graphic somebody else drew.
 
-**Owner direction, 2026-08-19:** *"I'm not going to download any templates right now. I like our
-playout system; I don't want to work with the vanilla CasparCG client with these templates. I want
-to use our web playout system… The downloadable templates, of course, are going to stay, but we're
-going to be working on and concentrating on the online playout control panel."*
+- [ ] **1. Prove the SVG road, with eyes on it.** SVG import v1 is merged
+      (`docs/SVG_IMPORT_PLAN.md`) and **nobody has walked it**: a layered Illustrator/Figma SVG in,
+      text layers auto-detected as bindable fields, map, preview, create, and the exact graphic is
+      an ordinary NoaCG template that exports and airs. The owner walks it first, because whether
+      the workflow is CLEAR is the half no test can answer. Everything below assumes it holds.
+- [ ] **2. Attach BEHAVIOUR to a graphic somebody else drew.** The open question of the three
+      weeks, and the one with no design yet. The engine is there - a graphic is data fields plus
+      parallel state groups in one `NOACG_ANIM` block, events are structural, control pages are
+      generated from the machine (`docs/STATE_MACHINE_SCHEMA.md`, `docs/CONTROL_LAYER.md`) - and an
+      imported SVG arrives with fields and no machine. So the question is narrow and answerable:
+      **how does a student pick "this is a quiz" and get the quiz behaviour bound to their own
+      artwork?** A named behaviour applied to a graphic (the graphic-type registry already models
+      "a machine this type needs", `docs/GRAPHIC_TYPES.md`) is the shape to try first.
+      **BOTH CASES NOW WORK, walked in a browser and pinned by `e2e/import-svg-behaviour.spec.ts`
+      (2026-08-22).** The SCOREBOARD needed no code: a numeric SVG layer is already a ± stepper on
+      every control surface, it acts on air without replaying the entrance, and it persists. The
+      QUIZ is a deliberate pilot: the catalog answer board's machine and buttons are reused
+      unchanged, and what is new is the PAINT - the designer draws each moment as its own hidden
+      Illustrator layer and NoaCG decides when it is visible. Binding is pickers in the Fields
+      step, prefilled from layer names, no code and no AI. The plan, the split of what was already
+      generic against what is quiz-specific, and what stays deferred until a third behaviour
+      exists: `docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10. **Owner walk still owed.**
+- [ ] **3. The two graphics, walked as a student would.** Draw a quiz and a scoreboard in
+      Illustrator, import, bind, attach the behaviour, put both in one production, and run them
+      from the dashboard - lock, reveal, +1, -1 - with the operator never seeing code. That walk is
+      the acceptance test for the whole goal, and it is the rehearsal for 2026-09-12.
 
-The hosted control page and the `/output` browser source are the product's PRIMARY surface, not a
-cloud alternative to the export door. Export stays supported and is not where effort goes. This
-goes further than the cloud-first decision below: that one settled which door the CLASS runs on,
-this settles which door the PRODUCT invests in. Weigh any playout work by what it does for the web
-control panel first. The binding design is `docs/PLAYOUT_DASHBOARD.md`, and the three surfaces that
-render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
+**Deliberately NOT in the three weeks: CUSTOMIZING that behaviour.** Owner, 2026-08-22 - *"what if
+I don't want to be able to lock it? I just want to reveal it immediately."* Same question one level
+up, soft deadline, and the north star note above says why it is the one that matters most. For the
+class, our behaviour used as-is is enough.
 
-**Owner read of the dashboard, 2026-08-21** (`docs/acceptance/owner-pack/index.html` §2, verdicts
-in `docs/PLAYOUT_DASHBOARD.md` §2). At the reported 1536×814 the monitor cap and the space beside
-PROGRAM are both accepted. **At 1920×1080 they are not** - *"too much empty room at the bottom and
-the monitors are unnecessarily small"* - and at 1536×560 the verb bar scrolling under the sticky
-monitors is called a hazard. The next dashboard session is therefore already specified:
+### The playout dashboard
 
-- [ ] **Re-lay the dashboard's vertical budget.** Move the verb bar into the empty column beside
-      PROGRAM as a BREAKPOINT (below the width where it fits, it returns underneath), which spends
-      the dead width, un-scrolls the buttons and frees the height the monitors need at 1080p.
-      Replace the flat `26vh` monitor cap with "what is left", floored and ceilinged, so a graphic
-      with many controls gets smaller monitors and a simple one gets big ones - the owner's own
-      tie-breaker is *"I would rather have the controls big than the monitors too big"*. Fix the
-      cap's per-cue ratio dependence in the same change: `--pd-ar` is the PREVIEWED graphic's
-      ratio, so a 9:16 cue narrows both monitors today, which is the twitch the owner ruled out.
-      All three surfaces, one session, with the pack's `scroll`/`hosted`/`controller` sections
-      re-run as its evidence.
-- [x] **The MINIMUM supported window is 1366×768** (owner, 2026-08-21). The budget school-laptop
-      floor, which is the hardware the class case actually runs on. Below it the phone breakpoint
-      takes over; a 560px-tall window is a resized browser rather than a screen, so it must
-      degrade without breaking but is not a size anything is designed against. This is what bounds
-      the verb-bar breakpoint above: the bar sits beside PROGRAM down to 1366 and returns
-      underneath below it.
+The binding design is `docs/PLAYOUT_DASHBOARD.md`; the three surfaces that render it must not drift
+(`docs/CONTROL_PANEL_PARITY.md`). **Owner, 2026-08-22: the dashboard is accepted as it stands** -
+*"looks good for right now… the buttons on the right are totally fine."* The vertical-budget re-lay
+specified after the 2026-08-21 read (verb bar into the column beside PROGRAM, "what is left"
+instead of the flat `26vh` monitor cap) is therefore **not current work**; it stays written down in
+`docs/PLAYOUT_DASHBOARD.md` §2 for when a real window makes it hurt again.
 
-### Open risks for the deadline
-- [ ] **Visual acceptance of the interactive playout plane.** Phases 0-6 of
-      `docs/INTERACTIVE_PLAYOUT_PLAN.md` are merged - per-cue contextual controls, the shared data
-      foundation, vote-to-air, presenter view, the audience join page - and **none of it has ever
-      been looked at by a human**; geometry-only e2e coverage is not acceptance. A student-facing
-      surface that has never been seen is the largest unmeasured risk in the release.
-      **First pass done 2026-08-08, and it paid for itself immediately:** the audience link 404ed
-      on production for every operator who copied it (a `vercel.json` rewrite pointing at
-      `/join.html` under `cleanUrls`), and the presenter view rendered as unstyled serif text
-      because the join stylesheet ships with the surface it never mounts. Both fixed, both now
-      gated. **Second pass done 2026-08-08** over the rest of the plane - contextual cue controls,
-      the Data workspace, vote-to-air - and it paid for itself the same way: **the first Take of a
-      session aired the graphic and put it straight back off** (the boot recovery treated the
-      operator's own take as a page opening onto a live production and snapped to a stale "off"),
-      black PROGRAM monitor and every ⚡ action greyed, on every offline take. Every spec took a
-      cue instantly, inside the window the bug needed, so the suite was green over it. Fixed and
-      pinned by a spec that waits first; two shared-control defects fixed with it. The Data
-      workspace's empty state - a sentence over ~950px of nothing, with its ⬇ Blank CSV button
-      orphaned on a row of its own - was rebuilt 2026-08-12 around the three doors and the column
-      names that would bind. **READ AND ACCEPTED BY THE OWNER 2026-08-21** from
-      `docs/acceptance/owner-pack/index.html` §3 - *"I think these screens look good."* The
-      release's largest unmeasured risk is measured. Four follow-ups came out of it, none of them
-      a rejection: teams (below), Data/Audience opening in their own tabs, the offline `/join`
-      dead end, and the fact that the shipped CSV import/template was invisible to a reader of the
-      screen (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08").
-- [x] **Which door the class runs on: DECIDED 2026-08-08 - CLOUD FIRST, EXPORT AS THE BACKUP.**
-      The class publishes and drives the persistent output URL with phone control; the export route
-      (files, local relay and controller on the playout machine - the one round 2 proved on real
-      hardware) is what a failing network falls back to. One consequence still owed:
-      **the accounts exist before the class, not during it**. The other - rehearsing the cloud
-      door on real hardware before the export door - was **done by the owner 2026-08-19** and
-      closed the hardware half of step 10. Third accepted limitation, unchanged: restyling
-      after save means recreating in the wizard or Advanced mode.
-- [ ] **What cloud-first pulls forward.** Named here rather than discovered during the class:
-      the **hosted control page is now a primary surface** (it was covered by the maintainer's live
-      checklist alone, because an offline build cannot drive it) - its own copy of the first-take
-      recovery defect is fixed but has never run against a real backend; the unexplained
-      **"the CasparCG URL stopped working"** report from acceptance round 2 is a cloud-door report
-      and the one mechanism that matched it - unpublishing deleted the row, so re-publishing minted
-      a new slug for every link - is **fixed 2026-08-12 by migration 0040**, which reserves a
-      production's four addresses for its lifetime and hands them back on re-publish
-      (`docs/CLOUD_PLAYOUT.md` §3). **0040 still has to be applied to production**, and until it is,
-      an unpublish there still moves every URL. **Migration 0034 was NOT the third one** - it
-      has been applied all along and the parking-lot line saying otherwise was stale (see below).
-      **And the live suite is now load-bearing.** Run against the real project 2026-08-08: 7 of 18
-      passed, then **17 of 18 after repair, 1 flaky** (the renderer showed the aired board later
-      than the spec's 30 s and passed on retry and on an isolated re-run - the one thing to watch,
-      since "it did not appear" is the failure a class notices). It found one real defect: signed
-      in at 1366px the topbar overflowed and hung the ACCOUNT AVATAR off the screen edge. The rest
-      was rot from the student release - it only ever runs by hand, so nothing reported any of it.
-      **Run it before the class, and again after any change to publish, output or the topbar.**
+- [ ] **Drop the Preview verb.** Owner, 2026-08-22: *"Preview does not seem to have a function."*
+      The code agrees - the `preview` verb runs `selectCue(selectedCue.id)` on the cue that is
+      already selected, so it is a no-op by construction, because **selection IS the preview
+      gesture** (§2). Remove the button and the `P` key from all three surfaces and the keymap.
+- [ ] **Re-take has to justify its place, and the owner should decide knowing why it exists.**
+      Owner: *"why can't you just press take again?"* Because TAKE is a TOGGLE (owner decision,
+      2026-08-06): pressing it on a live cue takes it OFF. Re-take is how the NEXT row goes onto a
+      layer that is already up - load the row, `R` - **which is exactly how the quiz bank walks**,
+      so it is load-bearing for the goal above. If the toggle changes, this changes with it.
+- [ ] **OPEN, and the owner's to answer: does SPACE go to preview first?** *"You press space to
+      take it to the preview, and then press it again for it to go to the program."* It would
+      replace the selection-is-preview rule and re-open what TAKE means, so it is a change to §2
+      rather than a button. Either way the owner has ruled that **it is the same button** - no
+      separate Preview control returns.
 
 ---
 
-## NEXT - your own graphic, playable (the SVG road)
+## NEXT - OGraf-first, not SPX-first
 
-**Owner direction, 2026-08-20, after the Yle demo - north-star material, wanted working in a few
-weeks.** People take pride in graphics they made themselves; the product must let them PLAY OUT
-their own work, not only our catalog's. The raster Import Graphic cannot deliver that promise -
-erase fails on textured art and AI recreation is "inspired by", never the exact graphic. **SVG is
-code**: a layered SVG from Illustrator/Figma imported verbatim, its text and image layers bound to
-data fields, IS the user's exact graphic as a playable template - exporting to SPX, CasparCG,
-OGraf, OBS like anything else. MXMZ proves this workflow commercially; we do it free and open.
-The binding plan is `docs/SVG_IMPORT_PLAN.md`.
+**Owner direction, 2026-08-22.** Yle is part of the EBU and is our closest partner, so the long-run
+position is that **NoaCG is an OGraf player and OGraf is the first-class format** - SPX becomes one
+system among many rather than the centre. **Nothing changes today**: OGraf export already conforms
+(`docs/OGRAF.md`, externally validated), SPX stays the canonical internal format and the strictest
+validation gate, and flipping that is a rework nobody has costed. What is owed first is
+understanding: how the OGraf ecosystem actually works and what "OGraf-first" would mean for the
+template contract, written down before any code moves.
 
-- [ ] **SVG import v1**: drop an SVG into the Import door, text layers auto-detected as bindable
-      fields (no renaming ritual; layer names prefill labels), map + preview, create - the exact
-      graphic becomes an ordinary NoaCG template. Acceptance: a student takes an Illustrator SVG
-      to air, unchanged pixels, inside one session.
+**The Yle thread, same date.** Demo day already happened; the owner re-contacts in a few weeks, and
+in roughly a month Yle would try NoaCG inside one of their own productions. **Nothing is owed
+now.** The one thing to expect: the Yle building runs a strict network, so the first real question
+will be which ports and hosts it blocks - answer that when they report it, do not design for it in
+advance.
 
----
 
 ## NEXT - AI that anyone can afford
 
@@ -271,56 +213,24 @@ counting every model call a generation makes.
 
 ### Owner decision 2026-08-15: Lite and Pro are revived, and the bar is the same gate
 
-**What was decided on 2026-08-14 and what stands today are different things, so both are written
-here.** Lite's own value gate (`docs/AI_LITE_BRAND_PLAN.md` §2) FAILED on the owner's blind ballot:
-Lite beat the template arm on brand fit while holding the DIY arm on quality on **0 of 8 briefs**,
-against a rule needing a clear majority, and the predeclared consequence retired custom AI
-generation from this roadmap. That verdict is not being rewritten, and §2 itself is deliberately
-left unedited - a plan revised after its own gate answers can no longer be read back against what
-it promised.
+Lite's value gate FAILED on the owner's blind ballot on 2026-08-14, and the owner reopened it the
+next day on evidence rather than appetite: every failure the ballot named was **the MARK**, and it
+hit the hand-branded DIY arm too, so the defect was the platform's and not the model's - a reading
+Pro's first hosted generation independently confirmed. Both platform fixes are merged (the
+mark-legibility gate and the mark-size rule). **The full argument, the verdict it overturned and the
+operationalized pass rule live in `docs/AI_LITE_BRAND_PLAN.md` §2/§2.1/§2.2** and are deliberately
+not restated here.
 
-**The owner reopened it on 2026-08-15.** What changed the answer is evidence, not appetite:
+What binds:
 
-- **Every failure the ballot named was the MARK, and it hit the hand-branded DIY arm too** (§2.2) -
-  white ink on a white package, a mark too small beside the name, a backing too big for the text
-  in it. A defect both branded arms share is the PLATFORM's, not the model's. Both fixes are now
-  built and merged: the mark-legibility gate (`src/validation/markLegibility.ts`, transparent ink
-  only) and the mark-SIZE rule (`src/templates/shared/logoSlot.ts`, the strap spends width).
-- **Pro's first real hosted generation says the same thing from the other side**
-  (`docs/NOACG_PRO_PLAN.md` §16, 2026-08-15). The generation was unusable - but *the panel the
-  model designed was good*, and what wrecked the frame was the platform's reconstruction of it.
-  Two independent rounds now put the failure in the platform.
-- **Students need this in about two weeks**, which is why the question is being answered again
-  rather than left closed.
+- **The bar is that SAME §2 gate, re-run unchanged** - same three arms (template, DIY, Lite), same
+  predeclared rule, re-run once the two 2026-08-15 slices have landed (blocking a Pro graphic whose
+  baked text cannot be erased, and Pro Phase A where the platform takes the panel).
+- **A second FAIL means the retirement stands.** The gate does not get a third reading.
+- **The re-run is not expensive.** `scripts/ai-lite-value-gate.mjs` builds the arms, the blind sheet
+  and the verdict; the 2026-08-14 Lite arm cost **$0.0069 for 8 cells** and the other two arms are
+  `variant.create()` and cost nothing. The expensive part is the owner's eyes.
 
-**The bar, owner-chosen: the SAME §2 gate, re-run unchanged.** Same three arms (template, DIY,
-Lite), same predeclared pass rule - the Lite arm clearly beats the template arm on brand fit AND is
-at least equal to the DIY arm on quality, on a clear majority of briefs, with zero brand-fidelity
-defects among accepted results - and the same operationalization already written down in §2.1
-("clearly beats" = strictly higher brand fit; "at least equal" = quality no lower; "clear majority"
-= more than half the fully judged briefs; "accepted" = would air as-is or after minor edits). The
-re-run happens **once the two 2026-08-15 slices running alongside this decision have landed**, so
-the round films what the product actually does after them:
-
-  - **a Pro graphic whose baked text could not be erased is BLOCKED** rather than reported usable.
-    The compiler already recorded the refusal in a warnings string nothing read, which is how §16's
-    unusable generation carried an empty `validation_rule_codes` and a `usable` ledger row; the
-    refusal becomes a structured blocking finding that every path - browser, offline stub,
-    benchmark - scores through one seam.
-  - **Pro Phase A - the platform takes the panel** (`docs/NOACG_PRO_PLAN.md` §15.5). The platform
-    owns each graphic type's structure and spacing; the model supplies the design LANGUAGE as
-    parameters (palette, type scale and weight, shape and corner language, accent form, density,
-    motion character). `applyLogoSlot` and `fillBrandMark` generalised from the mark to the whole
-    composition, which kills the remaining layout failures by construction rather than by
-    inspection.
-
-**A second FAIL means the retirement stands** - the gate does not get a third reading.
-
-**Nobody should treat the re-run as expensive.** The rig exists: `scripts/ai-lite-value-gate.mjs`
-builds the arms, the blind sheet and the verdict, and `--verdict <ballot.jsonl>` applies the rule
-above and prints PASS or FAIL with the per-brief rows. The 2026-08-14 Lite arm cost **$0.0069 for
-8 cells**; the template and DIY arms are `variant.create()` and cost nothing. The expensive part is
-the owner's eyes, and that is the part that decides.
 
 - [ ] **Lite: make it good, then re-run its gate. The price is already solved.** The target was 100
       generations per euro (~€0.01 each); the 2026-08-08 round measures **$0.00032 per generation**
@@ -388,11 +298,16 @@ Only after the north star is true for real users. Each step is a direct competit
 
 1. [ ] **WYSIWYG canvas** - back to the editor: drag, place and restyle your own graphics
        visually, with code still the source of truth underneath. `docs/WYSIWYG_PLAN.md`.
+       **Tried once and it did not land** (owner, 2026-08-22), so a second attempt starts by
+       saying what was wrong with the first rather than rebuilding it.
 2. [ ] **The node editor as a first-class surface** - state machines and logic drawn as a graph:
        which graphic goes where, on what event, under what guard. The engine and the graph editor
        already exist (`docs/STATE_MACHINE_SCHEMA.md`, `MachineGraph`); what is missing is making
        it a surface a non-programmer uses on purpose. **This is where we meet Loopic head-on, and
-       where interactive graphics put us against Rive.**
+       where interactive graphics put us against Rive.** **Also tried once, also did not land as a
+       way to AUTHOR logic** (owner, 2026-08-22). Items 1 and 2 are the two attempts the north
+       star's core question refers to: neither is the answer yet, and the answer is not assumed to
+       be a third editor - the question gets attacked from several angles.
 3. [ ] **Singular.Live class** - professional, deeply customizable graphics for anything: live
        data, automation, multi-operator shows. The last frontier, and the reason the data hub and
        the export platform are built the way they are.
@@ -408,11 +323,6 @@ Real work, deliberately not now. Each has a plan doc; none is current until it i
   same command log - a CSV sheet driving a ticker, then a real provider); professional automation
   (real-time streams, sports/timing feeds, the local Bridge, public API, Companion/Stream Deck,
   redundant renderers). Stage 3 is the same goal as the old "data-driven/live content" line.
-- ~~Migration 0034 is not yet applied to production~~ - **it is** (checked against the live project
-  2026-08-08: the ledger carries 0001-0036, and `control_live_cue_set` was CALLED, not merely
-  found - a format-1 row migrates into `{v:2, layers:{…}}` keeping both layers, which is the
-  behaviour the shape alone would not have proved). This line was stale; the multi-layer wire half
-  is not blocked.
 - **Adapt-first paid proofs** (`docs/ADAPT_FIRST_PLAN.md` §6.2/§6.3): shortlist-beats-digest, and
   folding Lite onto the platform placement rule. Both need explicit spend approval.
 - **Managed funded AI tier** - quotas, credit weighting, an Auto route. Belongs with Extreme.
@@ -439,3 +349,7 @@ Real work, deliberately not now. Each has a plan doc; none is current until it i
 - Catalog changes run their gates: `l3-sweep`, `type-floor`, `overflow-sweep`, `field-coverage`,
   `numerals`, `engine-floor`, and the calibration tripwire. The nightly runs them unconditionally.
 - Observable behaviour is never called done on a green build alone - it is verified in a browser.
+- **The live suite runs against the real project before a class, and again after any change to
+  publish, output or the topbar.** It only ever runs by hand, so nothing reports the rot it finds -
+  the 2026-08-08 run went 7 of 18 before repair and caught a topbar overflow that hung the account
+  avatar off the screen edge at 1366px. Carried over from the student release, which is closed.

@@ -1519,3 +1519,170 @@ through the wizard or use Advanced mode; cloud publish requires an account (expo
       validate + runtime × preset × easing + auto-fit/track checks + taste screenshots);
       category-aware — run for every category (`lower-third`, `info-card`, `end-credits`,
       `ticker`)
+
+---
+
+## The student release (closed 2026-08-22)
+
+> Moved here verbatim from `GOALS.md` when the owner closed it: *"I have tried the hardware, and
+> we have a player system that we can use. So that goal is now reached."* Steps 1-9 shipped
+> 2026-08-04/05 and are logged under Milestones above; step 10 - playout hardening and owner
+> acceptance - is closed by that verdict, and the deadline it carried (students live by
+> 2026-08-21) is met. Step 11 and the dashboard investment note travel with it because they were
+> written as part of this push; both continue as live work under the goal that replaced it.
+
+## NOW - students live in two weeks
+
+### Student release - wizard to live broadcast
+
+*Steps 1-9 shipped 2026-08-04/05; the full text of each is in the archive. Step numbering is cited
+from ~80 places in the tree, so it never changes.*
+
+- [x] **1.** Scope locked, one goal and one roadmap - **2.** the student-critical focus suite as
+      the per-change gate - **3.** packages removed, Production is the only grouping - **4.**
+      editor behind Advanced mode, full-screen wizard - **5.** deterministic customization with
+      declared field expansion - **6.** wizard → production → publish → output, complete - **7.**
+      two coherent production-ready packs (newsroom, talk-show) - **8.** Home simplified around
+      Productions - **9.** account essentials (reset, change, sign out, expiry recovery).
+- [ ] **10. Playout hardening + owner acceptance.** History in the archive; what stands today:
+      **the HARDWARE half is CLOSED, by the owner, on the school's CasparCG machine (2026-08-19)**
+      - *"The hardware is working, everything is working, and playout is working, so that is not a
+      concern."* Do not plan a night around re-proving CasparCG playout, and do not read the
+      archived "remaining, owner + real hardware" paragraph as owed work.
+      **Remaining is the PEOPLE half of `docs/STUDENT_RELEASE_ACCEPTANCE.md`:** the soak, one
+      live-suite run against the real project, and the timed first-time-user walks.
+- [ ] **11. What the storefront SHOWS FIRST, per category.** Owner, 2026-08-21, comparing two
+      shelves in one sitting: the Statistics & data result is eight genuinely different offers and
+      reads as a catalog - *"the graphics look different… you have options to choose from actually
+      and not just slight modifications of one graphic"* - while *"we have that problem with the
+      lower thirds right now that when you open it up all the graphics there look the same."*
+      Browse renders a PAGE of twelve, not the catalog, so for most people the first twelve ARE
+      the category; a category whose first twelve are variations of one design reads as a catalog
+      with one design in it. This is curation and default ordering, not a request for more
+      designs. Related and separable: **ig01 "Big Stat" is filed as a `stat-panel` and is a `kpi`**
+      (a one-line `src/templates/meta.ts` re-file plus the catalog baselines it moves) - it is the
+      one card the owner said *"does pop out"* of that otherwise coherent shelf. Detail and quotes:
+      `docs/CATALOG_VARIETY.md` §7.
+      **MEASURED 2026-08-21, and the obvious fix is ruled out.** `catalog-sameness.mjs` now
+      reports the first page per category through the real browse engine. It scores the
+      lower-thirds page at **11 distinct looks out of 12** - as varied as every other shelf - so
+      RE-ORDERING IS NOT THE FIX, and the sameness signature is not the thing to order by. The
+      instrument is blind on the axes that decide this at card size: its fourteen axes are CSS
+      decisions (radius, blur, skew, tracking), while an eye reads PALETTE and SILHOUETTE, and
+      all twelve lower thirds are a dark slab with white text and an amber accent. The stats
+      shelf beside it carries a giant percentage, a lime table, a red dial and a cream printed
+      panel - different shapes, and light backgrounds as well as dark. **The real item is
+      variety of palette and silhouette WITHIN a category**, which is design work rather than
+      ordering work; the next step is an axis measured off the RENDERED card.
+      `node scripts/spike-shelf-look.mjs <out-dir>` captures the shelves to compare.
+      **RATIFIED BY THE OWNER 2026-08-21 - "lower thirds need real variety" - and then MEASURED
+      on the right axis** (`scripts/card-look-sweep.mjs`, which reads the rendered pixels:
+      backdrop, accent hue, footprint). **The ask splits, and only half of it is drawing work.**
+      *Colour variety is BURIED, not absent:* the shelf carries nine accent hues and 7 light
+      backdrops across 103 designs, and the first twelve are 10 dark + 10 orange. Ordering the
+      first page across this axis is cheap and would show what the category already has.
+      *Shape variety is genuinely ABSENT:* **99 of 103 designs are `strap/thin` - 96%** - with no
+      full-width band, no tall panel, no side column, no corner block. That is the design work,
+      and it cannot be ordered into existence. Numbers in `docs/CATALOG_VARIETY.md`.
+      **The ordering half is BUILT** (`spreadFirstPage`, 2026-08-21): the fold spreads across
+      accent hue with family breaking ties, so the lower thirds went from 2 distinct hue buckets
+      to 4+ and the page now carries a cream editorial card, a glass pill, a sport slab and an
+      outline box. **The drawing half is a written brief:**
+      `docs/handoffs/lower-third-shapes.md`, with the six missing silhouettes named. The whole
+      catalog queue - that brief, the `ig01` re-file, the unmeasured categories and the standing
+      debts - is `docs/CATALOG_WORK_QUEUE.md`.
+
+### The surface under investment: the WEB PLAYOUT CONTROL PANEL
+
+**Owner direction, 2026-08-19:** *"I'm not going to download any templates right now. I like our
+playout system; I don't want to work with the vanilla CasparCG client with these templates. I want
+to use our web playout system… The downloadable templates, of course, are going to stay, but we're
+going to be working on and concentrating on the online playout control panel."*
+
+The hosted control page and the `/output` browser source are the product's PRIMARY surface, not a
+cloud alternative to the export door. Export stays supported and is not where effort goes. This
+goes further than the cloud-first decision below: that one settled which door the CLASS runs on,
+this settles which door the PRODUCT invests in. Weigh any playout work by what it does for the web
+control panel first. The binding design is `docs/PLAYOUT_DASHBOARD.md`, and the three surfaces that
+render it must not drift (`docs/CONTROL_PANEL_PARITY.md`).
+
+**Owner read of the dashboard, 2026-08-21** (`docs/acceptance/owner-pack/index.html` §2, verdicts
+in `docs/PLAYOUT_DASHBOARD.md` §2). At the reported 1536×814 the monitor cap and the space beside
+PROGRAM are both accepted. **At 1920×1080 they are not** - *"too much empty room at the bottom and
+the monitors are unnecessarily small"* - and at 1536×560 the verb bar scrolling under the sticky
+monitors is called a hazard. The next dashboard session is therefore already specified:
+
+- [ ] **Re-lay the dashboard's vertical budget.** Move the verb bar into the empty column beside
+      PROGRAM as a BREAKPOINT (below the width where it fits, it returns underneath), which spends
+      the dead width, un-scrolls the buttons and frees the height the monitors need at 1080p.
+      Replace the flat `26vh` monitor cap with "what is left", floored and ceilinged, so a graphic
+      with many controls gets smaller monitors and a simple one gets big ones - the owner's own
+      tie-breaker is *"I would rather have the controls big than the monitors too big"*. Fix the
+      cap's per-cue ratio dependence in the same change: `--pd-ar` is the PREVIEWED graphic's
+      ratio, so a 9:16 cue narrows both monitors today, which is the twitch the owner ruled out.
+      All three surfaces, one session, with the pack's `scroll`/`hosted`/`controller` sections
+      re-run as its evidence.
+- [x] **The MINIMUM supported window is 1366×768** (owner, 2026-08-21). The budget school-laptop
+      floor, which is the hardware the class case actually runs on. Below it the phone breakpoint
+      takes over; a 560px-tall window is a resized browser rather than a screen, so it must
+      degrade without breaking but is not a size anything is designed against. This is what bounds
+      the verb-bar breakpoint above: the bar sits beside PROGRAM down to 1366 and returns
+      underneath below it.
+
+### Open risks for the deadline
+- [ ] **Visual acceptance of the interactive playout plane.** Phases 0-6 of
+      `docs/INTERACTIVE_PLAYOUT_PLAN.md` are merged - per-cue contextual controls, the shared data
+      foundation, vote-to-air, presenter view, the audience join page - and **none of it has ever
+      been looked at by a human**; geometry-only e2e coverage is not acceptance. A student-facing
+      surface that has never been seen is the largest unmeasured risk in the release.
+      **First pass done 2026-08-08, and it paid for itself immediately:** the audience link 404ed
+      on production for every operator who copied it (a `vercel.json` rewrite pointing at
+      `/join.html` under `cleanUrls`), and the presenter view rendered as unstyled serif text
+      because the join stylesheet ships with the surface it never mounts. Both fixed, both now
+      gated. **Second pass done 2026-08-08** over the rest of the plane - contextual cue controls,
+      the Data workspace, vote-to-air - and it paid for itself the same way: **the first Take of a
+      session aired the graphic and put it straight back off** (the boot recovery treated the
+      operator's own take as a page opening onto a live production and snapped to a stale "off"),
+      black PROGRAM monitor and every ⚡ action greyed, on every offline take. Every spec took a
+      cue instantly, inside the window the bug needed, so the suite was green over it. Fixed and
+      pinned by a spec that waits first; two shared-control defects fixed with it. The Data
+      workspace's empty state - a sentence over ~950px of nothing, with its ⬇ Blank CSV button
+      orphaned on a row of its own - was rebuilt 2026-08-12 around the three doors and the column
+      names that would bind. **READ AND ACCEPTED BY THE OWNER 2026-08-21** from
+      `docs/acceptance/owner-pack/index.html` §3 - *"I think these screens look good."* The
+      release's largest unmeasured risk is measured. Four follow-ups came out of it, none of them
+      a rejection: teams (below), Data/Audience opening in their own tabs, the offline `/join`
+      dead end, and the fact that the shipped CSV import/template was invisible to a reader of the
+      screen (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Acceptance pass 2026-08-08").
+- [x] **Which door the class runs on: DECIDED 2026-08-08 - CLOUD FIRST, EXPORT AS THE BACKUP.**
+      The class publishes and drives the persistent output URL with phone control; the export route
+      (files, local relay and controller on the playout machine - the one round 2 proved on real
+      hardware) is what a failing network falls back to. One consequence still owed:
+      **the accounts exist before the class, not during it**. The other - rehearsing the cloud
+      door on real hardware before the export door - was **done by the owner 2026-08-19** and
+      closed the hardware half of step 10. Third accepted limitation, unchanged: restyling
+      after save means recreating in the wizard or Advanced mode.
+- [ ] **What cloud-first pulls forward.** Named here rather than discovered during the class:
+      the **hosted control page is now a primary surface** (it was covered by the maintainer's live
+      checklist alone, because an offline build cannot drive it) - its own copy of the first-take
+      recovery defect is fixed but has never run against a real backend; the unexplained
+      **"the CasparCG URL stopped working"** report from acceptance round 2 is a cloud-door report
+      and the one mechanism that matched it - unpublishing deleted the row, so re-publishing minted
+      a new slug for every link - is **fixed 2026-08-12 by migration 0040**, which reserves a
+      production's four addresses for its lifetime and hands them back on re-publish
+      (`docs/CLOUD_PLAYOUT.md` §3). **0040 is applied to production** - pushed 2026-08-12 and
+      confirmed by CALLING it on 2026-08-20 (publish, unpublish, re-publish inside an aborted
+      transaction: all four addresses came back identical), because a version number in the remote
+      ledger alone would only say that *something* numbered 0040 ran. An unpublish no longer moves
+      any URL, and nothing here is owed. **Migration 0034 was NOT the third one** - it
+      has been applied all along and the parking-lot line saying otherwise was stale (see below).
+      **And the live suite is now load-bearing.** Run against the real project 2026-08-08: 7 of 18
+      passed, then **17 of 18 after repair, 1 flaky** (the renderer showed the aired board later
+      than the spec's 30 s and passed on retry and on an isolated re-run - the one thing to watch,
+      since "it did not appear" is the failure a class notices). It found one real defect: signed
+      in at 1366px the topbar overflowed and hung the ACCOUNT AVATAR off the screen edge. The rest
+      was rot from the student release - it only ever runs by hand, so nothing reported any of it.
+      **Run it before the class, and again after any change to publish, output or the topbar.**
+
+---
+

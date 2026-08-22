@@ -5,6 +5,7 @@ import type {
   SvgFontDraft,
   SvgImageDraft,
   SvgOutlineDraft,
+  SvgQuizDraft,
   WizardDraft,
 } from '../draft';
 import { SVG_CANDIDATE_ATTR } from '../../../assets/svgImport';
@@ -232,6 +233,26 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
       svgOutlines: draft.svgOutlines.map((f) => (f.candidateId === candidateId ? { ...f, ...patch } : f)),
     });
 
+  // The behaviour pickers work on the rows that are ON — an answer has to be a real field
+  // before it can be an answer, and the list re-reads itself as rows are ticked.
+  const onFields = draft.svgFields.filter((f) => f.on);
+  const behaviour = draft.svgBehaviour;
+  const patchBehaviour = (patch: Partial<SvgQuizDraft>) =>
+    onDraft({ svgBehaviour: behaviour ? { ...behaviour, ...patch } : null });
+  const patchQuizRow = (at: number, patch: Partial<SvgQuizDraft['rows'][number]>) =>
+    patchBehaviour({ rows: (behaviour?.rows ?? []).map((r, i) => (i === at ? { ...r, ...patch } : r)) });
+  /** Add or remove an answer row, keeping its drawn states beside it. */
+  const setAnswerCount = (n: number) => {
+    if (!behaviour) return;
+    const answers = [...behaviour.answers];
+    const rows = [...behaviour.rows];
+    while (answers.length < n) {
+      answers.push('');
+      rows.push({ selected: '', correct: '', wrong: '' });
+    }
+    patchBehaviour({ answers: answers.slice(0, n), rows: rows.slice(0, n) });
+  };
+
   const patchFont = (family: string, patch: Partial<SvgFontDraft>) =>
     onDraft({
       svgFonts: draft.svgFonts.map((f) => (f.family === family ? { ...f, ...patch } : f)),
@@ -410,6 +431,149 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* THE BEHAVIOUR (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Offered once there are enough text
+          rows for a question and two answers — below that there is nothing to bind, and the
+          section would only be a puzzle. Everything here is a picker: no layer has to be
+          named anything, and nobody edits XML. */}
+      {onFields.length >= 3 && (
+        <div className="panel-section" data-testid="map-svg-behaviour">
+          <h3>
+            What it does{' '}
+            <span className="muted">{behaviour ? 'quiz — select, lock, reveal' : 'nothing but in and out'}</span>
+          </h3>
+          <p className="hint">
+            A graphic can carry behaviour the operator drives live. Your artwork stays exactly as
+            you drew it — you say which layers show each moment, and NoaCG decides when.
+          </p>
+          <label className="save-field">
+            <span>Behaviour</span>
+            <select
+              value={behaviour ? 'quiz' : 'none'}
+              onChange={(e) =>
+                onDraft({
+                  svgBehaviour:
+                    e.target.value === 'quiz'
+                      ? behaviour ?? {
+                          kind: 'quiz',
+                          question: onFields[0]?.candidateId ?? '',
+                          answers: [onFields[1]?.candidateId ?? '', onFields[2]?.candidateId ?? ''],
+                          rows: [
+                            { selected: '', correct: '', wrong: '' },
+                            { selected: '', correct: '', wrong: '' },
+                          ],
+                          locked: '',
+                        }
+                      : null,
+                })
+              }
+              data-testid="map-svg-behaviour-kind"
+            >
+              <option value="none">Nothing — it just comes on and off</option>
+              <option value="quiz">Quiz — select an answer, lock it in, reveal it</option>
+            </select>
+          </label>
+          {behaviour && (
+            <>
+              <div className="map-svg-row">
+                <label className="save-field grow">
+                  <span>Question</span>
+                  <select
+                    value={behaviour.question}
+                    onChange={(e) => patchBehaviour({ question: e.target.value })}
+                    data-testid="map-svg-quiz-question"
+                  >
+                    <option value="">— pick a text layer —</option>
+                    {onFields.map((f) => (
+                      <option key={f.candidateId} value={f.candidateId}>
+                        {f.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="save-field">
+                  <span>Answers</span>
+                  <select
+                    value={String(behaviour.answers.length)}
+                    onChange={(e) => setAnswerCount(Number(e.target.value))}
+                    data-testid="map-svg-quiz-count"
+                  >
+                    {[2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n} answers
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="hint">
+                For each answer: which text layer it is, and — if you drew them — which layers show
+                that answer picked, right and wrong. Leave a drawing empty and that moment simply
+                shows nothing extra; the board still selects, locks and reveals.
+              </p>
+              {behaviour.answers.map((answerId, at) => (
+                <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>
+                  <span className="map-svg-quiz-letter">{String.fromCharCode(65 + at)}</span>
+                  <label className="save-field grow">
+                    <span>Answer text</span>
+                    <select
+                      value={answerId}
+                      onChange={(e) =>
+                        patchBehaviour({
+                          answers: behaviour.answers.map((a, i) => (i === at ? e.target.value : a)),
+                        })
+                      }
+                      data-testid={`map-svg-quiz-answer-${at}`}
+                    >
+                      <option value="">— pick a text layer —</option>
+                      {onFields.map((f) => (
+                        <option key={f.candidateId} value={f.candidateId}>
+                          {f.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {(['selected', 'correct', 'wrong'] as const).map((state) => (
+                    <label className="save-field" key={state}>
+                      <span>{state === 'selected' ? 'Picked' : state === 'correct' ? 'Right' : 'Wrong'}</span>
+                      <select
+                        value={behaviour.rows[at]?.[state] ?? ''}
+                        onChange={(e) => patchQuizRow(at, { [state]: e.target.value })}
+                        onFocus={() => setHoverId(behaviour.rows[at]?.[state] || null)}
+                        data-testid={`map-svg-quiz-${state}-${at}`}
+                      >
+                        <option value="">— not drawn —</option>
+                        {draft.designSvg?.groups.map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.label}
+                            {g.hidden ? ' (hidden)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              ))}
+              <label className="save-field">
+                <span>Locked in</span>
+                <select
+                  value={behaviour.locked}
+                  onChange={(e) => patchBehaviour({ locked: e.target.value })}
+                  data-testid="map-svg-quiz-locked"
+                >
+                  <option value="">— not drawn —</option>
+                  {draft.designSvg?.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                      {g.hidden ? ' (hidden)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          )}
         </div>
       )}
 
