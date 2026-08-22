@@ -169,6 +169,18 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
   (not src/ai) because SavedProject and GraphicDoc persist it as `aiSpec` (additive optional);
   the category REGISTRY that interprets it is src/ai/spec/categories.ts. Version-1 migrate-on-read
   via normalizeSpec; an unknown version degrades to "no spec", never a crash.
+- **graphicDoc.ts** - the PURE half of the library record: `GraphicDocBase<spec, thread,
+  legibility>` (the shape generic over the three app-only payload types, plus the additive
+  optional `origin {tool, version}` - provenance of an agent-saved graphic, never proof of
+  anything), `newGraphicDoc(template, {id?, now?})` and `isGraphicDocShape` (a shape check that
+  never executes template code). ES2020-safe with no storage imports, so a server function and
+  the CLI can mint/check the same record `library.ts` persists (docs/AGENT_CLI.md).
+- **contentHash.ts** - `sourceHash({html, css, js})`: the FNV content hash of a template's three
+  sources, recorded in a dual package's `v_noacg.sourceHash` so a generated OGraf half can be
+  told stale from fresh (export/targets/ografImport.ts). `importTemplate.ts` peeks the same
+  block on a zip import: the shallowest `*.ograf.json`'s `v_noacg.type` restores the graphic TYPE
+  (else `blank`, as before) and its `stale` flag rides on the result - nothing else about the
+  import lane changed.
 - **library.ts** - the FLAT graphics LIBRARY (docs/SAVED_CONTENT_MODEL.md): every durably
   saved graphic is ONE `GraphicDoc` with a STABLE uuid (durable key 'spx-gfx-graphics', sync kind
   'graphic', supabase migration 0009) - template + baseline + the control panel's `entries`

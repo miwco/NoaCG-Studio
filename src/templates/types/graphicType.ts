@@ -796,6 +796,20 @@ export function variantsFromType(type: GraphicType): TemplateVariant[] {
 }
 
 /**
+ * The catalog variant a type compiles to when its only design is THIS one - the seam a design
+ * that is not in the type's own list (a Pro composition, the neutral scaffold) compiles through.
+ *
+ * The type is SPREAD rather than mutated: `TYPES` is module-scope state the whole catalog reads,
+ * and pushing a per-call design onto a registered type would put it into everybody's browse grid.
+ * Lives here beside `variantsFromType` because templates, ai and the bridge all need it and the
+ * lower layers may not import the higher ones.
+ */
+export function variantFromType(type: GraphicType, design: TypeDesign): TemplateVariant {
+  const [variant] = variantsFromType({ ...type, designs: [design] });
+  return variant;
+}
+
+/**
  * The type's SETUP fields: the non-line values that are decided when the graphic is BUILT,
  * as against the ones an operator sends it while it is on air.
  *

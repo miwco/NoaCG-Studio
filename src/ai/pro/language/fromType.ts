@@ -26,17 +26,7 @@
 // and that is exactly why Pro may use it: the design still builds through the category's own
 // assembler, and the type only says what the result has to be.
 
-import { variantsFromType, type GraphicType, type TypeDesign } from '../../../templates/types/graphicType';
-import type { TemplateVariant } from '../../../model/wizard';
-
-/**
- * The catalog variant a registered type compiles to when its only design is this one.
- *
- * The type is SPREAD rather than mutated: `TYPES` is module-scope state the whole catalog reads,
- * and a Pro generation that pushed a design onto a registered type would put a per-generation
- * design into everybody's browse grid.
- */
-export function variantFromType(type: GraphicType, design: TypeDesign): TemplateVariant {
-  const [variant] = variantsFromType({ ...type, designs: [design] });
-  return variant;
-}
+// The seam itself now lives beside `variantsFromType` (templates/types/graphicType.ts), because
+// the bridge page needs the same function and may not import src/ai; this module keeps the
+// Pro-side name and the reasoning above.
+export { variantFromType } from '../../../templates/types/graphicType';

@@ -400,6 +400,31 @@ transition type is its only user (`{ waypoint: 0 } → { waypoint: -1 }`, trigge
 modelling that as a branch would have meant inventing an off-path "cleared" state duplicating
 the exit, i.e. a second way to be off air.
 
+## types/neutralDesign.ts - the NEUTRAL scaffold (a type without a look)
+
+`neutralDesignFor(type)` returns a `TypeDesign` that carries the type's SEMANTICS - its fields,
+its machine and interpreter, the runtime the machine calls (the match clock), every required
+part - on a deliberately plain spine: one box, system-neutral type, the brand accent as the only
+colour. It is what an agent or a user gets when they want the type's behaviour and intend to
+design the look themselves (docs/AGENT_CLI.md; `scaffold --design neutral`). It is NOT a catalog
+design and never appears in Browse.
+
+- Built through the REAL category assemblers (`defineVariant`, `defineCardVariant`,
+  `defineBugVariant`, `defineScoreboardVariant`), so the structure spine, the `:root` contract,
+  the ANIMATION region and the four platform passes in `variantFromType` apply unchanged - the
+  neutral scaffold validates and benches like any catalog template.
+- `hasNeutralDesign(type)` is HONEST about coverage: a standard-category type qualifies only if
+  its machine calls no runtime function; a scoreboard type qualifies only if every call is the
+  match-clock/status runtime the scoreboard assembler supplies (`SCOREBOARD_RUNTIME_CALL`). A
+  type outside that (live-bug, sponsor-rotator, podium-score with its spotlight runtime) reports
+  `neutral: false` and the bridge offers its catalog designs instead - never a scaffold whose
+  machine would call functions that do not exist.
+- `neutralSpineFor(fields)` is the TYPELESS scaffold: an ad-hoc field list (label + kind)
+  becomes a `blank`-type template with the implicit lifecycle machine - one `id="fN"` element
+  per field, text kinds as lines, the rest as extra fields. The control layer renders it with
+  every field + Take/Update/Next/Out, which is the category-agnostic promise pinned by
+  `e2e/ograf-contract.spec.ts`.
+
 ## pack4/ - the TITLE / TOPIC / INFORMATION pack
 
 36 designs over nine graphic types - openers (title-card), topic and chapter cards (topic-card),

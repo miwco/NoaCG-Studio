@@ -11,64 +11,24 @@
 // localStorage: a library record carries data-URL assets and the Reset baseline, so ten
 // image-carrying graphics used to exhaust the ~5 MB origin quota and block every save.
 
-import type { SpxTemplate, TemplateType } from './types';
+import type { SpxTemplate } from './types';
 import type { GenerationSpec } from './generationSpec';
 import type { AiThread } from './aiThread';
 import type { ProjectLegibility } from './designRules';
 import { loadAllPackets, upsertPacket, type Packet, type SavedGraphic } from './packets';
 import { durable } from './durableStore';
 import { uuid } from './id';
+import { newGraphicDoc, type GraphicDocBase } from './graphicDoc';
 
-/** One named, saved data row for a graphic's control panel ("Anna Andersson — Presenter"). */
-export interface ControlEntry {
-  id: string;
-  /** The operator-facing label. Defaults to the entry's first field value when created. */
-  label: string;
-  /** Field values by SPX field id (f0, f1, …) — the exact shape update() consumes. */
-  values: Record<string, string>;
-  updatedAt: string; // ISO
-}
+// The record SHAPE and its pure builder live in model/graphicDoc.ts (DOM-free, storage-free,
+// so the /bridge page and the save API mint the identical record); this module binds the AI
+// provenance generics to the real types and owns the STORE around it.
+export type { ControlEntry } from './graphicDoc';
 
-export interface GraphicDoc {
-  /** Format version — bump only on a breaking shape change, migrating in loadAllGraphics. */
-  version: 1;
-  id: string;
-  name: string;
-  type: TemplateType;
-  /** @deprecated Packages are retired; INERT data, never read by the UI. Kept (not nulled)
-   *  because rewriting every record would bump updatedAt across the whole library - a sync
-   *  storm whose LWW could stomp a genuinely newer remote edit. New records write null. */
-  packageId: string | null;
-  template: SpxTemplate;
-  /** The pristine create-time template — the editor's Reset target travels with the save. */
-  baseline?: SpxTemplate;
-  /** The control panel's saved data entries, in list order. */
-  entries: ControlEntry[];
-  /** Which entry is selected in the control panel (null = the template's own defaults). */
-  activeEntryId: string | null;
-  createdAt: string; // ISO
-  /** Last change (ISO). Bumped on every mutation; drives cloud sync (LWW). */
-  updatedAt: string;
-  /** Soft-delete tombstone (hidden from the UI, kept so the delete syncs). See Packet.deleted. */
-  deleted?: boolean;
-  /** The AI generation spec this graphic was created from (the "More control" setup) — kept
-   *  with the save so a later refine can start from the same structured decisions. Additive
-   *  optional; rides the sync record unchanged. */
-  aiSpec?: GenerationSpec | null;
-  /** The Create-with-AI conversation this graphic was created from (model/aiThread.ts) — kept
-   *  with the save so the graphic carries the reasoning that produced it. Additive optional,
-   *  same rails as aiSpec (no version bump: rule 6, additive fields never bump). */
-  aiThread?: AiThread | null;
-  /** The ONE flat folder this graphic is sorted into (Home's library organisation — a light
-   *  grouping, deliberately not the retired packages: no export unit, no embedded copies,
-   *  just a name). Absent/undefined = unfiled. Additive optional, same rails as aiSpec
-   *  (no version bump: rule 6; rides the sync record unchanged). */
-  folder?: string;
-  /** The project's legibility settings (viewing target + size-floor tri-state,
-   *  model/designRules.ts). Additive optional, same rails as aiSpec — the default state
-   *  serializes to nothing, so pre-existing records are untouched. */
-  legibility?: ProjectLegibility | null;
-}
+/** The persisted library record, version 1 (`model/graphicDoc.ts` holds the field-by-field
+ *  contract; every additive field there rides the sync record unchanged - rule 6). */
+export type GraphicDoc = GraphicDocBase<GenerationSpec, AiThread, ProjectLegibility>;
+import type { ControlEntry } from './graphicDoc';
 
 const GRAPHICS_KEY = 'spx-gfx-graphics';
 
@@ -146,22 +106,12 @@ export function createGraphic(
     legibility?: ProjectLegibility | null;
   },
 ): { doc: GraphicDoc; error: string | null } {
-  const doc: GraphicDoc = {
-    version: 1,
+  // ONE shape, minted by the pure builder every other writer uses (the bridge, the save API).
+  const doc: GraphicDoc = newGraphicDoc<GenerationSpec, AiThread, ProjectLegibility>(template, {
+    ...opts,
     id: uuid(),
-    name: opts.name.trim() || template.name || 'Untitled graphic',
-    type: template.type,
-    packageId: opts.packageId ?? null,
-    template: { ...template, name: opts.name.trim() || template.name },
-    baseline: opts.baseline,
-    entries: opts.entries ?? [],
-    activeEntryId: opts.activeEntryId ?? null,
-    aiSpec: opts.aiSpec ?? null,
-    aiThread: opts.aiThread ?? null,
-    ...(opts.legibility ? { legibility: opts.legibility } : {}),
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
+    now: nowIso(),
+  });
   const all = rawGraphics();
   all.push(doc);
   return { doc, error: saveAll(all) };

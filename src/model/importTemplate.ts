@@ -9,7 +9,14 @@
 import JSZip from 'jszip';
 import { ensureExternalRefs } from '../export/common';
 import { parseDefinition } from './spxDefinition';
-import { DEFAULT_SETTINGS, type AssetFile, type SpxTemplate } from './types';
+import { sourceHash } from './contentHash';
+import {
+  DEFAULT_SETTINGS,
+  TEMPLATE_TYPE_LABELS,
+  type AssetFile,
+  type SpxTemplate,
+  type TemplateType,
+} from './types';
 import {
   DEFAULT_GRAPHICS_FORMAT,
   projectFormatForResolution,
@@ -34,9 +41,24 @@ export interface AuthoredFormatDetection {
   messages: string[];
 }
 
+/**
+ * What a NoaCG-made package says about itself, read off the `v_noacg` vendor block of an OGraf
+ * manifest shipped beside the sources (export/noacgPackage.ts - the dual package). Null for
+ * a plain .html or a foreign zip. `stale` is true when the package's generated OGraf half was
+ * written from OTHER sources than the ones in the zip (somebody edited the html/css/js and did
+ * not regenerate) - a hint for the reader, never a refusal: the sources are the truth.
+ */
+export interface NoacgPackageInfo {
+  type: TemplateType | null;
+  sourceHash: string | null;
+  stale: boolean;
+}
+
 export interface ImportedTemplateResult {
   template: SpxTemplate;
   detection: AuthoredFormatDetection;
+  /** Present when the zip carried a NoaCG `v_noacg` block (see NoacgPackageInfo). */
+  noacg?: NoacgPackageInfo | null;
 }
 
 function positiveNumber(value: string | undefined): number | null {
@@ -117,7 +139,7 @@ export function detectAuthoredFormat(html: string, css = '', js = ''): AuthoredF
 export function importHtmlTemplate(
   fileName: string,
   raw: string,
-  extra?: { css?: string; js?: string; assets?: AssetFile[] },
+  extra?: { css?: string; js?: string; assets?: AssetFile[]; type?: TemplateType },
 ): ImportedTemplateResult {
   const styles: string[] = [];
   const scripts: string[] = [];
@@ -159,7 +181,10 @@ export function importHtmlTemplate(
   return {
     template: {
       name,
-      type: 'blank',
+      // A foreign file carries no NoaCG type, so it lands as the neutral `blank` (which loses
+      // nothing at playout - docs/CONTROL_LAYER.md). A NoaCG dual package says its type in the
+      // manifest's `v_noacg` block, and importZipTemplate passes it through.
+      type: extra?.type ?? 'blank',
       resolution: detection.resolution ?? fallback,
       fps: detection.fps ?? DEFAULT_GRAPHICS_FORMAT.fps,
       html,
@@ -255,8 +280,53 @@ export async function importZipTemplate(fileName: string, data: ArrayBuffer): Pr
     }
   }
 
-  return importHtmlTemplate(fileName.replace(/\.zip$/i, '') || rel(entry), html, { css, js, assets });
+  // A NoaCG dual package (export/noacgPackage.ts) ships an OGraf manifest beside the sources,
+  // and its `v_noacg` block is the ONE place the graphic's TYPE travels - the SPX files have no
+  // slot for it. Read it when present; everything else above stays exactly as it was, so a
+  // foreign zip (no manifest, or somebody else's manifest with no `v_noacg`) imports as before.
+  const noacg = await readNoacgBlock(zip, files, base);
+
+  return {
+    ...importHtmlTemplate(fileName.replace(/\.zip$/i, '') || rel(entry), html, {
+      css, js, assets, ...(noacg?.type ? { type: noacg.type } : {}),
+    }),
+    noacg,
+  };
 }
+
+/** The `v_noacg` block of the shallowest `*.ograf.json` beside the entry page, or null. */
+async function readNoacgBlock(zip: JSZip, files: string[], base: string): Promise<NoacgPackageInfo | null> {
+  const manifests = files
+    .filter((n) => n.startsWith(base) && n.toLowerCase().endsWith('.ograf.json'))
+    .sort((a, b) => a.split('/').length - b.split('/').length);
+  if (!manifests.length) return null;
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(await zip.file(manifests[0])!.async('string'));
+  } catch {
+    return null;
+  }
+  if (!isRecord(manifest) || !isRecord(manifest.v_noacg)) return null;
+  const block = manifest.v_noacg;
+  const type = typeof block.type === 'string' && block.type in TEMPLATE_TYPE_LABELS ? (block.type as TemplateType) : null;
+  const declared = typeof block.sourceHash === 'string' ? block.sourceHash : null;
+  // Staleness: hash the source FILES the block points at, exactly as the writer did.
+  let stale = false;
+  if (declared && isRecord(block.source)) {
+    const readSource = async (key: 'html' | 'css' | 'js') => {
+      const path = block.source && typeof (block.source as Record<string, unknown>)[key] === 'string'
+        ? `${base}${(block.source as Record<string, string>)[key]}`
+        : null;
+      return path ? ((await zip.file(path)?.async('string')) ?? '') : '';
+    };
+    const [h, c, j] = await Promise.all([readSource('html'), readSource('css'), readSource('js')]);
+    stale = sourceHash({ html: h, css: c, js: j }) !== declared;
+  }
+  return { type, sourceHash: declared, stale };
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Dispatch a dropped/browsed file to the right importer. */
 export async function importTemplateFile(file: File): Promise<ImportedTemplateResult> {

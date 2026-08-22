@@ -1,0 +1,34 @@
+{
+  "name": "noacg",
+  "version": "0.1.0",
+  "description": "The NoaCG Studio command-line tool and MCP server: scaffold, validate, inspect, screenshot and save broadcast graphics from a coding agent's terminal, against any NoaCG deployment.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "noacg": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "skill",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/smoke.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "jszip": "3.10.1",
+    "playwright-core": "1.61.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3"
+  }
+}

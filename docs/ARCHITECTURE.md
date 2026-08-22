@@ -53,6 +53,7 @@ thin `CLAUDE.md` import.
 | 3 app | `output/` | the browser-output RENDERER: its own MPA entry (`output.html` -> `/output`), a capability URL loaded by CasparCG/OBS/vMix (docs/CLOUD_PLAYOUT.md) | (top of the graph - nothing imports these) |
 | 3 app | `join/` | the public AUDIENCE page: its own MPA entry (`join.html` -> `/join`), the capability URL a viewer's phone opens. It reads the slug off the URL and mounts `audience/joinSurface` - every decision about what a viewer may see lives in `audience/` and in migration 0035 | (top of the graph - nothing imports these) |
 | 3 app | `ograf/` | the free OGraf STARTERS page: its own MPA entry (`ograf.html` -> `/ograf`, docs/OGRAF.md) - curated catalog graphics as downloadable OGraf packages, built by the real exporter at click time | (top of the graph - nothing imports these) |
+| 3 app | `bridge/` | the headless BRIDGE page: its own MPA entry (`bridge.html` -> `/bridge`, noindex, docs/AGENT_CLI.md) - the platform's scaffold / validate / bench / package / inspect functions exposed on `window.noacgBridge` for the `noacg` CLI and MCP server to drive through a headless browser; holds no account, no key, no store | (top of the graph - nothing imports these) |
 
 ## 3. Allowed edges (the ratchet)
 
@@ -96,6 +97,13 @@ here and not in §6 are wrong - fix the code, not the table.
   it builds real catalog templates, previews them through `preview/composeDocument` +
   `frameGraphic`, and packages them through the OGraf export target - the page's downloads ARE
   the exporter; it reads no store, no components, no backend)
+- `bridge` -> templates, blocks (`animData` - is the region data-shaped?), model, validation,
+  community (`gate` only), preview, export, packs, control (the headless bridge page,
+  docs/AGENT_CLI.md: it composes the studio's OWN functions - the type registry and neutral
+  scaffold, the authored-region converter, `publishGate` + the runtime bench + readiness + the
+  engine scan, `composeDocument`, the dual graphic package + the OGraf package reader, the pack
+  wire entry, the control generator + the OGraf contract adapter - for a headless driver; it
+  reads no store, no components, no backend, and holds no account or key)
 - `app` -> (nothing)
 - `components` -> any lower domain, **through its seam column in §2**
 

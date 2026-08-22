@@ -55,6 +55,27 @@ export interface PackGraphic {
   cues: PackCue[];
 }
 
+/**
+ * One graphic ENTRY of the pack FILE - the wire shape `buildPack` writes and `parsePack` reads
+ * (`fields`/`settings` are never carried: the code is the source of truth). Named because it is
+ * also the shape a single graphic travels in on its own: the bridge hands it to the CLI and the
+ * save API accepts exactly one of these (docs/AGENT_CLI.md) - one wire shape, not a second one.
+ */
+export interface PackGraphicFile {
+  name: string;
+  type: TemplateType;
+  /** Playout layer 1-100 (back = low). Optional: a library graphic has no layer yet. */
+  layer?: number;
+  html: string;
+  css: string;
+  js: string;
+  /** Inlined assets (data URLs), at the paths the markup uses. */
+  assets?: Array<{ path: string; data: string }>;
+  resolution?: { width: number; height: number };
+  fps?: number;
+  cues?: PackCue[];
+}
+
 /** One row of a pack's WHOLE-SHOW rundown: a cue addressing a graphic by pool name. */
 export interface RundownCue extends PackCue {
   graphic: string;
@@ -371,24 +392,38 @@ async function assetAsDataUrl(asset: AssetFile): Promise<AssetFile> {
  * resolution every production export uses); the cue rundown exports as the top-level ordered
  * list. The returned object stringifies straight into a `<name>.noacgpack.json`.
  */
+/** One template as a pack-file graphic entry (assets inlined as data URLs). */
+export async function packGraphicEntry(
+  template: SpxTemplate,
+  opts: { name?: string; layer?: number; cues?: PackCue[] } = {},
+): Promise<PackGraphicFile> {
+  return {
+    name: opts.name ?? template.name,
+    type: template.type,
+    ...(opts.layer !== undefined ? { layer: opts.layer } : {}),
+    html: template.html,
+    css: template.css,
+    js: template.js,
+    ...(template.assets.length
+      ? {
+          assets: (await Promise.all(template.assets.map(assetAsDataUrl))).map((a) => ({
+            path: a.path,
+            data: typeof a.data === 'string' ? a.data : '',
+          })),
+        }
+      : {}),
+    resolution: { width: template.resolution.width, height: template.resolution.height },
+    fps: template.fps,
+    ...(opts.cues?.length ? { cues: opts.cues } : {}),
+  };
+}
+
 export async function buildPack(show: Show): Promise<Record<string, unknown>> {
   const library = loadGraphics();
-  const graphics = [];
+  const graphics: PackGraphicFile[] = [];
   for (const g of show.graphics) {
     const template = templateForSavedGraphic(g, library);
-    graphics.push({
-      name: g.name,
-      type: template.type,
-      layer: graphicLayer(g),
-      html: template.html,
-      css: template.css,
-      js: template.js,
-      ...(template.assets.length
-        ? { assets: await Promise.all(template.assets.map(assetAsDataUrl)) }
-        : {}),
-      resolution: { width: template.resolution.width, height: template.resolution.height },
-      fps: template.fps,
-    });
+    graphics.push(await packGraphicEntry(template, { name: g.name, layer: graphicLayer(g) }));
   }
   const byId = new Map(show.graphics.map((g) => [g.id, g.name]));
   const cues = (show.cues ?? []).flatMap((cue) => {

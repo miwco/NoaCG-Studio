@@ -70,6 +70,12 @@ jobs:
       - name: Build (typecheck + lint + bundle)
         run: npm run build
 
+      # The `noacg` CLI + MCP server is its own package (cli/, docs/AGENT_CLI.md): own lockfile,
+      # own typecheck, own build. Its offline tests run here; the bridge-driving smoke needs a
+      # dev server and is `npm run bench:cli` on a developer machine.
+      - name: CLI package (typecheck + build + offline tests)
+        run: npm --prefix cli ci && npm --prefix cli run typecheck && npm --prefix cli run build && npm --prefix cli test
+
   # Did Vercel even accept this commit? On main only, and deliberately outside the gate below.
   #
   # Vercel validates vercel.json and the function budget BEFORE it creates a deployment, so a

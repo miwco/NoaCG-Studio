@@ -74,7 +74,7 @@ Vite, both Playwright configs, the guard hooks and the dev scripts all read that
 never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details:
 **`docs/DEV_PORTS.md`**; `npm run test:ports` covers the allocator.
 
-**Eight pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
+**Nine pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
 Vercel `cleanUrls` in production.
 
 | URL | Entry | What it is |
@@ -87,6 +87,7 @@ Vercel `cleanUrls` in production.
 | `/terms` | `terms.html` | PUBLIC terms for accounts and optional hosted services |
 | `/privacy` | `privacy.html` | PUBLIC privacy policy, including managed AI and Custom/BYO processing |
 | `/ograf` | `ograf.html` | PUBLIC free OGraf starters - built by the real exporter on click (`src/ograf/`, `docs/OGRAF.md`) |
+| `/bridge` | `bridge.html` | the headless BRIDGE the `noacg` CLI / MCP server drives (`src/bridge/`, `docs/AGENT_CLI.md`) - the platform's own scaffold/validate/bench/package functions on `window.noacgBridge`; `noindex`, no account, no key |
 
 ## Non-negotiable principles (these override default behaviour)
 
@@ -193,6 +194,16 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
                PEOPLE by default (the ScopePicker excludes internal accounts)
   output/      the browser-output RENDERER - one persistent transparent capability URL per
                production, following the hosted-control log with boot recovery (docs/CLOUD_PLAYOUT.md)
+  bridge/      the headless BRIDGE page (/bridge, docs/AGENT_CLI.md): the platform's own
+               scaffold / validate / bench / compose / package / inspect functions on
+               window.noacgBridge, driven by the `noacg` CLI + MCP server through a headless
+               browser. The editable-neutral scaffolds live in templates/types/neutralDesign.ts;
+               the OGraf manifest -> operator-surface adapter in control/ografContract.ts
+cli/           the `noacg` CLI + MCP server (its own package, published to npm): an external
+               coding agent's door - scaffold, validate, inspect, screenshot, save - over the
+               bridge page of whatever NoaCG deployment NOACG_URL names. Ships the canonical
+               `noacg-graphic` skill; the in-repo adapters under .claude/skills + .agents/skills
+               point at it (docs/AGENT_CLI.md)
 public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
                GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
                template.assets like an upload - never referenced by the emitted code
