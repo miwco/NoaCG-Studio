@@ -25,16 +25,13 @@ Binding docs, read before generating or judging templates: **`docs/DESIGN_LANGUA
 motion + code style) and **`docs/GOALS.md`** (north star + what is NOT done - a landed goal moves
 verbatim to `docs/GOALS_ARCHIVE.md`, and GOALS.md stays under ~200 lines).
 
-**Current push (from 2026-08-22): STUDENTS MAKE THEIR OWN GRAPHICS AND PLAY THEM OUT**, whose
-binding roadmap is the "NOW" section of `docs/GOALS.md`. The student release that ran before it is
-CLOSED - the owner accepted the player system on real hardware - and its history is in
-`docs/GOALS_ARCHIVE.md`. The new goal: a student draws their own graphic (any graphic, not a lower
-third), gets the BEHAVIOUR their show needs onto it, and plays it out - **without writing a line of
-code**. Two graphics decide it by **2026-09-12**, a real production with real students: a QUIZ
-(lock answer / reveal answer) and a SCOREBOARD (score + / -). The SVG import door is the way the
-graphic gets in; attaching behaviour to artwork somebody else drew is the open design question.
-Wizard-first still holds for the catalog road, CasparCG + OBS are still the verification targets,
-and AI work stays postponed. Prefer work that serves that date.
+**Current push (from 2026-08-22): STUDENTS MAKE THEIR OWN GRAPHICS AND PLAY THEM OUT** - binding
+roadmap in the "NOW" section of `docs/GOALS.md`; the student release before it is CLOSED (history
+in `docs/GOALS_ARCHIVE.md`). A student draws their own graphic - any graphic, not a lower third -
+gets the BEHAVIOUR their show needs onto it, and plays it out **without writing a line of code**.
+Two graphics decide it by **2026-09-12**, a real production: a QUIZ (lock / reveal) and a
+SCOREBOARD (score + / -). SVG import is how the artwork gets in. Wizard-first still holds for the
+catalog road, CasparCG + OBS are still the verification targets, AI work stays postponed.
 
 **The pillars (keep every change true to these):**
 - **Best & easiest to create - and put on air** - premium output with the least friction; a
