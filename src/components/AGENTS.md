@@ -582,7 +582,7 @@ await entirely, because the app-level dialog already announces unclaimed failure
   `CLAUDE.md`), which loads when you work in that directory.
 - **AuthStatus** now routes Home from the account menu (initials avatar fallback); the
   topbar's always-visible Home button is the no-account door to the same place. Every Home
-  door wears the amber `.home-glyph` ▶, never a pictographic emoji (styles.css says why).
+  door is the WORD alone - no emoji, no glyph (styles.css says why); its NAME is still open.
 
 ## Video editor shell (video/)
 

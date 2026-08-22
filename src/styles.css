@@ -1274,14 +1274,11 @@ kbd {
    measured to the pixel (e2e/wizard-entry-fit.spec.ts), and a taller header spends it. */
 .wz-wizard .wz-home { padding: 5px 10px; font-size: 13px; white-space: nowrap; }
 
-/* THE HOME BUTTON'S GLYPH. It was 🏠, the last pictographic emoji left on the chrome after
-   src/components/icons.tsx replaced the rest: a coloured cartoon that differs per platform and
-   reads as anything but broadcast software (owner, 2026-08-21). The replacement is the wizard's
-   own amber ▶ - the same accent triangle the entry cards wear (.wz-entry-icon) - so the door
-   keeps a scan target in one voice with the surface it opens from, and follows the "monochrome
-   verb glyph" rule the icon set states. Sized just under the label so it reads as a bullet
-   rather than a transport control. */
-.home-glyph { color: var(--accent); font-size: 0.82em; }
+/* THE HOME BUTTON CARRIES NO GLYPH. It was 🏠 - the last pictographic emoji on the chrome after
+   src/components/icons.tsx replaced the rest, a coloured cartoon that differs per platform and
+   reads as anything but broadcast software. The wizard's amber ▶ was tried in its place and
+   rejected on sight (owner, 2026-08-22): the word alone is the door. The name itself is still
+   open, so do not spend a glyph on a label that may not survive. */
 
 /* How far along, in the mono label voice. */
 .wz-stepcount {

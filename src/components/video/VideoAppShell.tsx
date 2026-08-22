@@ -217,7 +217,7 @@ export default function VideoAppShell() {
           data-testid="open-home"
           title="Home — your graphics, packages, control panels, and videos"
         >
-          <span className="home-glyph" aria-hidden="true">▶</span> Home
+          Home
         </button>
         <SyncStatus />
         <AuthStatus />

@@ -85,7 +85,7 @@ export default function AuthStatus() {
             onClick={() => { setMenuOpen(false); navigate({ view: 'home', section: null }); }}
             data-testid="menu-home"
           >
-            <span className="home-glyph" aria-hidden="true">▶</span> Home — your work
+            Home — your work
           </button>
           <button role="menuitem" onClick={() => { setMenuOpen(false); setSettingsOpen(true); }}>
             ⚙ Settings
