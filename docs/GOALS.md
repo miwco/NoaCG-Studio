@@ -90,7 +90,11 @@ customers, so their proven capabilities are our requirements list.
   operator playout with newsroom/sports-data integrations; 200+ channels, from ~$3k/yr. They prove
   the "your own SVG, playable" workflow at broadcast scale, so our SVG import has to match it
   (layers auto-exposed, no renaming ritual) - and beat it on what they lock away: free-forever,
-  self-host, export the files anywhere, a catalog and AI they don't have.
+  self-host, export the files anywhere, a catalog and AI they don't have. **Researched properly
+  2026-08-22: `docs/COMPETITOR_MXMZ.md`.** The headline: nothing public shows them authoring LOGIC
+  at all - they train the designer for a day on a keyframe timeline, keep the OPERATOR as the
+  non-technical one, and hand-build a control panel per sport. Attachable behaviours are the gap
+  their architecture has no place to put.
 
 ---
 

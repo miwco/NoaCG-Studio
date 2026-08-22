@@ -7,7 +7,8 @@ the user's exact graphic. A layered SVG imported *verbatim* IS the exact graphic
 layers to data fields makes it a playable NoaCG template that exports to SPX, CasparCG, OGraf,
 OBS, vMix like anything else. MXMZ (mxmz.com) sells precisely this workflow to 200+ channels
 (Illustrator/Figma -> import -> layers auto-exposed -> JSON data bindings); we do it free, open,
-and export-anywhere. See `docs/GOALS.md` ("the SVG road") and the competitor entry there.
+and export-anywhere. See `docs/GOALS.md` ("the SVG road") and **`docs/COMPETITOR_MXMZ.md`** for
+what they actually ship and where they stop.
 
 **The user promise:** design in Illustrator, Figma, Inkscape or any SVG app; drop the file into
 the Import door; your text becomes operator fields; the pixel-exact graphic goes on air.
