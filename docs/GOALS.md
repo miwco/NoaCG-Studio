@@ -220,8 +220,11 @@ monitors is called a hazard. The next dashboard session is therefore already spe
       and the one mechanism that matched it - unpublishing deleted the row, so re-publishing minted
       a new slug for every link - is **fixed 2026-08-12 by migration 0040**, which reserves a
       production's four addresses for its lifetime and hands them back on re-publish
-      (`docs/CLOUD_PLAYOUT.md` §3). **0040 still has to be applied to production**, and until it is,
-      an unpublish there still moves every URL. **Migration 0034 was NOT the third one** - it
+      (`docs/CLOUD_PLAYOUT.md` §3). **0040 is applied to production** - pushed 2026-08-12 and
+      confirmed by CALLING it on 2026-08-20 (publish, unpublish, re-publish inside an aborted
+      transaction: all four addresses came back identical), because a version number in the remote
+      ledger alone would only say that *something* numbered 0040 ran. An unpublish no longer moves
+      any URL, and nothing here is owed. **Migration 0034 was NOT the third one** - it
       has been applied all along and the parking-lot line saying otherwise was stale (see below).
       **And the live suite is now load-bearing.** Run against the real project 2026-08-08: 7 of 18
       passed, then **17 of 18 after repair, 1 flaky** (the renderer showed the aired board later
