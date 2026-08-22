@@ -11,7 +11,7 @@
 //     difference between checking the right tree and checking a stranger's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyCiRun, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
+import { classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -140,7 +140,7 @@ test('a green run whose E2E shards were SKIPPED passes but says what it does not
     { headSha: SHA, conclusion: 'success', jobs: [GATE, { name: 'E2E ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} (none)', conclusion: 'skipped' }] },
     SHA,
   );
-  assert.equal(verdict.ok, true, 'not a blocker - a scripts-only change legitimately plans mode: none');
+  assert.equal(verdict.ok, true, 'this classifier only REPORTS the skip - classifyEmptyPlan decides whether it is acceptable');
   assert.equal(verdict.shardsRan, 0);
   assert.match(verdict.warnings.join(' '), /proves the build, NOT behaviour/);
 });
@@ -192,6 +192,75 @@ test('a cancelled run is refused even if its gate job somehow reads success', ()
   const verdict = classifyCiRun({ headSha: SHA, conclusion: 'cancelled', jobs: [GATE, ...shardJobs(9, 'full')] }, SHA);
   assert.equal(verdict.ok, false);
   assert.match(verdict.blocking.join(' '), /concluded "cancelled"/);
+});
+
+// ── mode: none - legitimate, or a blind plan? ───────────────────────────────────────────────
+//
+// This is the last route by which a green tick that ran zero specs can reach `main`, so each
+// case below is one of the two things that must not be conflated: a delta with no behaviour in
+// it (skipping was right) and a delta whose behaviour the run never planned for (nothing gated
+// it). The file lists are real paths, classified by the real planner - a fixture here would only
+// pin this test's idea of the affected map rather than the map itself.
+
+const citation = (over) => ({
+  runId: '32472271200',
+  sha: 'a'.repeat(40),
+  mode: 'full',
+  shardsRan: 9,
+  ancestor: true,
+  changed: ['docs/GOALS.md'],
+  ...over,
+});
+
+test('a branch that changes nothing behavioural needs no citation at all', () => {
+  const verdict = classifyEmptyPlan({
+    branchChanged: ['docs/VERIFICATION.md', 'scripts/safe-merge-preflight.mjs', 'README.md'],
+    citation: null,
+  });
+  assert.equal(verdict.ok, true);
+  assert.match(verdict.detail, /nothing behavioural/);
+});
+
+test('a commit already contained in main is not passed on an empty diff', () => {
+  // It diffs to nothing against main, so the file-list question answers "no behavioural files"
+  // for a commit that has no files. True, and evidence of nothing - say which it is.
+  const verdict = classifyEmptyPlan({ branchChanged: [], citation: null, alreadyOnMain: true });
+  assert.equal(verdict.ok, true);
+  assert.match(verdict.detail, /already contained in origin\/main/);
+});
+
+test('a behavioural branch with NO earlier shard-running run is refused', () => {
+  const verdict = classifyEmptyPlan({ branchChanged: ['src/store/templateStore.ts'], citation: null });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /nothing has gated this tree/);
+});
+
+test('a behavioural branch is carried by an earlier run when the delta since it is inert', () => {
+  const verdict = classifyEmptyPlan({ branchChanged: ['src/store/templateStore.ts'], citation: citation() });
+  assert.equal(verdict.ok, true);
+  assert.match(verdict.detail, /carried by run 32472271200/);
+});
+
+test('an earlier run off a DIFFERENT history is not evidence for this commit', () => {
+  // The neighbouring-commit case: green, full suite, shards ran - and it verified a tree this
+  // one does not contain.
+  const verdict = classifyEmptyPlan({
+    branchChanged: ['src/store/templateStore.ts'],
+    citation: citation({ ancestor: false }),
+  });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /NOT an ancestor/);
+});
+
+test('a blind plan is refused: behaviour changed since the run being leaned on', () => {
+  // The 2026-08-21 hole exactly - a second push cancels the run in flight and plans only itself,
+  // so `src/` reaches main gated by nothing while the tick is green.
+  const verdict = classifyEmptyPlan({
+    branchChanged: ['src/store/templateStore.ts'],
+    citation: citation({ changed: ['docs/GOALS.md', 'src/store/templateStore.ts'] }),
+  });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /never gated/);
 });
 
 // ── The merge-order verdict, read off a runner that THROWS ─────────────────────────────────

@@ -29,6 +29,9 @@
 // costs seconds rather than milliseconds.
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+// The affected planner, imported rather than reimplemented: Phase 3 has to answer "should shards
+// have run for this file list", and the only answer worth having is the one CI plans with.
+import { planFor } from './e2e-affected.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -150,8 +153,8 @@ export function previewConflicts(branch, runner = git) {
  *    them plans `mode: none` and every E2E shard is SKIPPED. That run is green and proves the
  *    build; it proves nothing about behaviour. It happened twice on 2026-08-21, and each time the
  *    reasoning ("the previous commit ran the full suite and the delta is inert") lived only in
- *    prose. Stating it is fine - assuming it silently is not - so this WARNS rather than blocks,
- *    and names what has to be cited instead.
+ *    prose. This function only REPORTS the skip; whether it is acceptable is decided by
+ *    `classifyEmptyPlan` below, which settles that same reasoning mechanically.
  * 2. WHETHER THE RUN WAS DAMAGED. A job killed while queued, or one whose only failed step is
  *    `Set up job`, is a runner failure and not a verdict on the code (docs/VERIFICATION.md, and
  *    the 2026-08-06 Actions incident). A damaged run must never read as a clean red OR a clean
@@ -179,7 +182,7 @@ export function classifyCiRun(run, verifiedSha) {
   if (ranShards.length === 0) {
     warnings.push(
       skippedShardMatrix || shards.length === 0
-        ? 'E2E shards were SKIPPED (mode: none) - this run proves the build, NOT behaviour. Cite the full-suite run on the nearest commit and show the delta is inert, or force one: gh workflow run ci.yml --ref <branch>'
+        ? 'E2E shards were SKIPPED (mode: none) - this run proves the build, NOT behaviour. Whether that is acceptable is `classifyEmptyPlan`, not this line.'
         : 'no E2E shard reported success',
     );
   }
@@ -207,6 +210,76 @@ export function classifyCiRun(run, verifiedSha) {
   return { ok: blocking.length === 0, blocking, warnings, shardsRan: ranShards.length, mode };
 }
 
+/**
+ * WHETHER A RUN THAT SKIPPED EVERY SHARD IS STILL EVIDENCE - settled by computation, not prose.
+ *
+ * `mode: none` has two causes, and until 2026-08-22 the preflight treated them alike (it warned,
+ * and the operator wrote the reasoning by hand):
+ *
+ *   LEGITIMATE - the delta really is confined to paths the affected map ignores, so there was no
+ *   behaviour for a spec to observe and skipping was correct. Forcing a 70-minute full run on a
+ *   docs-only branch buys nothing.
+ *
+ *   BLIND - the delta does touch behaviour, but the run planned from the wrong base. An ordinary
+ *   push plans from the PREVIOUS push, so a second push made while a run is in flight cancels it
+ *   and plans only itself; the changes the cancelled run covered are then gated by nothing. That
+ *   is a green tick over unverified `src/`, and it is the last route by which one can reach main.
+ *
+ * The planner is in this checkout, so the two are told apart by running it: `planFor` is the same
+ * tested code CI plans with, and its `mode` for a file list is the answer to "should shards have
+ * run for this". Two questions, asked in cost order:
+ *
+ *   1. Does the WHOLE BRANCH, diffed against `main`, plan `none`? Then nothing behavioural is
+ *      being promoted at all and the skip is right on its own terms - no citation needed.
+ *   2. Otherwise, is there an EARLIER green run on this branch that did run shards, at a commit
+ *      contained in the one being promoted, whose delta up to it plans `none`? That is exactly
+ *      the "the nearest run covered it and the delta since is inert" argument, with both halves
+ *      checked: the ancestry (so it cannot be a neighbouring commit off this history) and the
+ *      inertness (so "inert" is measured rather than asserted).
+ *
+ * Anything else blocks. `citation` is null when no such run was found.
+ *
+ * @param {{branchChanged: string[], citation: null|{runId: string, sha: string, mode: string,
+ *   shardsRan: number, ancestor: boolean, changed: string[]}}} facts
+ */
+export function classifyEmptyPlan({ branchChanged, citation, alreadyOnMain = false }) {
+  // An empty diff is not an argument. A commit already contained in `origin/main` diffs to
+  // nothing against it, so without this line the check would read PASS - "no behavioural files"
+  // - for a commit that has no files at all. True, and evidence of nothing.
+  if (alreadyOnMain) {
+    return { ok: true, detail: 'this commit is already contained in origin/main - there is nothing here to promote, so nothing for a shard to prove' };
+  }
+  if (planFor(branchChanged).mode === 'none') {
+    return {
+      ok: true,
+      detail: `nothing behavioural is being promoted - all ${branchChanged.length} changed file(s) vs main are ignored by the affected map, so the plan is honestly empty`,
+    };
+  }
+  if (!citation) {
+    return {
+      ok: false,
+      detail: 'the branch changes behaviour and NO earlier green run on it ran a shard - nothing has gated this tree. Force one: gh workflow run ci.yml --ref <branch>',
+    };
+  }
+  if (!citation.ancestor) {
+    return {
+      ok: false,
+      detail: `the nearest shard-running run (${citation.runId}, ${citation.sha.slice(0, 8)}) is NOT an ancestor of this commit, so it verified a different history`,
+    };
+  }
+  const since = planFor(citation.changed);
+  if (since.mode !== 'none') {
+    return {
+      ok: false,
+      detail: `run ${citation.runId} (${citation.sha.slice(0, 8)}, ${citation.shardsRan} shard(s)) is the nearest evidence, but ${citation.changed.length} file(s) changed since it and they plan mode ${since.mode} - that behaviour was never gated`,
+    };
+  }
+  return {
+    ok: true,
+    detail: `carried by run ${citation.runId} on ${citation.sha.slice(0, 8)} (${citation.shardsRan} shard(s), mode ${citation.mode}); the ${citation.changed.length} file(s) changed since it plan mode none`,
+  };
+}
+
 const results = [];
 function check(label, ok, detail = '', { fatal = true } = {}) {
   results.push({ label, ok, detail, fatal });
@@ -218,14 +291,29 @@ function info(label, detail) {
   console.log(`  [ .. ] ${label}${detail ? ` - ${detail}` : ''}`);
 }
 
+/** A sha as this repository stores it. Unresolvable input is handed back untouched, so a typo
+ *  still fails on its own terms rather than being turned into something else's commit. */
+function expandSha(value) {
+  if (!value) return value;
+  try {
+    return git(['rev-parse', '--verify', `${value}^{commit}`], { stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    return value;
+  }
+}
+
 function parseArgs(argv) {
   const args = { phase: 1, fetch: true, order: true };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--branch') args.branch = argv[++i];
     else if (a === '--phase') args.phase = Number(argv[++i]);
-    else if (a === '--verified-sha') args.verifiedSha = argv[++i];
-    else if (a === '--integrated-main-sha') args.integratedMainSha = argv[++i];
+    // EXPANDED, because everything downstream compares SHAs as strings and `gh run list
+    // --commit` matches only the full 40 characters. An abbreviated sha typed off a `git log`
+    // line would otherwise report "no CI run exists for this commit" - a FAIL that is not true,
+    // and the exact shape of mistake this script exists to stop.
+    else if (a === '--verified-sha') args.verifiedSha = expandSha(argv[++i]);
+    else if (a === '--integrated-main-sha') args.integratedMainSha = expandSha(argv[++i]);
     else if (a === '--no-fetch') args.fetch = false;
     else if (a === '--skip-order') args.order = false;
   }
@@ -351,13 +439,86 @@ function phase3(args) {
 
   const verdict = classifyCiRun(run, verifiedSha);
   check('CI run verifies exactly this commit, green, gate included', verdict.ok, verdict.blocking.join('; '));
-  check(
-    `E2E shards ran (${verdict.shardsRan} shard(s), mode ${verdict.mode})`,
-    verdict.shardsRan > 0,
-    verdict.warnings.join(' | '),
-    { fatal: false },
-  );
+  if (verdict.shardsRan > 0) {
+    check(`E2E shards ran (${verdict.shardsRan} shard(s), mode ${verdict.mode})`, true);
+  } else {
+    // The run itself proves only the build. Whether that is enough is a computed question, so
+    // ask it here rather than handing the operator a warning to argue with.
+    info('E2E shards', `0 ran (mode ${verdict.mode}) - this run proves the build, NOT behaviour`);
+    const empty = classifyEmptyPlan(gatherEmptyPlanFacts(branch, verifiedSha));
+    check('the skipped shards are accounted for', empty.ok, empty.detail);
+  }
+  for (const warning of verdict.warnings.filter((w) => !/mode: none|no E2E shard/.test(w))) {
+    check('run is a verdict, not damaged', false, warning, { fatal: false });
+  }
   return 0;
+}
+
+/**
+ * The facts `classifyEmptyPlan` needs, read from git and `gh`.
+ *
+ * The branch diff comes first and costs nothing, so a docs-only branch - the common legitimate
+ * case - never reaches the network at all. Only when behaviour IS being promoted does this go
+ * looking for the earlier run that covered it, newest first and no further than the last handful:
+ * evidence older than that is not the "nearest run" argument any more.
+ */
+function gatherEmptyPlanFacts(branch, verifiedSha) {
+  const alreadyOnMain = gitOk(['merge-base', '--is-ancestor', verifiedSha, 'origin/main']);
+  const base = git(['merge-base', 'origin/main', verifiedSha]);
+  const branchChanged = git(['diff', '--name-only', base, verifiedSha]).split('\n').filter(Boolean);
+  if (alreadyOnMain || planFor(branchChanged).mode === 'none') return { branchChanged, citation: null, alreadyOnMain };
+
+  let candidates;
+  try {
+    candidates = JSON.parse(
+      execFileSync(
+        'gh',
+        ['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--limit', '15',
+          '--json', 'databaseId,headSha,conclusion'],
+        { cwd: ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+      ),
+    ).filter((r) => r.conclusion === 'success' && r.headSha !== verifiedSha);
+  } catch {
+    return { branchChanged, citation: null, alreadyOnMain };
+  }
+
+  let stray = null;
+  for (const candidate of candidates.slice(0, 5)) {
+    let earlier;
+    try {
+      earlier = JSON.parse(
+        execFileSync('gh', ['run', 'view', String(candidate.databaseId), '--json', 'headSha,conclusion,jobs'], {
+          cwd: ROOT,
+          encoding: 'utf8',
+          maxBuffer: 32 * 1024 * 1024,
+        }),
+      );
+    } catch {
+      continue;
+    }
+    const earlierVerdict = classifyCiRun(earlier, earlier.headSha);
+    if (!earlierVerdict.ok || earlierVerdict.shardsRan === 0) continue;
+    // A run can name a commit this checkout has never fetched (a force-pushed or pruned tip).
+    // Without the object there is no delta to measure, so it is not evidence here.
+    if (!gitOk(['cat-file', '-e', `${earlier.headSha}^{commit}`])) continue;
+    const found = {
+      runId: String(candidate.databaseId),
+      sha: earlier.headSha,
+      mode: earlierVerdict.mode,
+      shardsRan: earlierVerdict.shardsRan,
+      ancestor: gitOk(['merge-base', '--is-ancestor', earlier.headSha, verifiedSha]),
+      changed: git(['diff', '--name-only', earlier.headSha, verifiedSha]).split('\n').filter(Boolean),
+    };
+    // A run on this branch is not automatically ON this commit's history: pushing again while
+    // reading a run leaves a DESCENDANT at the head of the list, and a force-push leaves runs
+    // from a history that no longer exists. Taking the newest and stopping would block on one of
+    // those while the ancestor that really does carry the tree sits one entry further down. Keep
+    // the first stray as the fallback, so a branch with nothing but strays still gets told which
+    // run it is being refused over rather than a blank "none found".
+    if (found.ancestor) return { branchChanged, alreadyOnMain, citation: found };
+    stray ??= found;
+  }
+  return { branchChanged, citation: stray ?? null, alreadyOnMain };
 }
 
 function phase4(args) {
@@ -387,7 +548,7 @@ function phase4(args) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.branch) {
-    console.error('usage: node scripts/safe-merge-preflight.mjs --branch <branch> [--phase 1|4] ' +
+    console.error('usage: node scripts/safe-merge-preflight.mjs --branch <branch> [--phase 1|3|4] ' +
       '[--verified-sha <sha>] [--integrated-main-sha <sha>] [--no-fetch] [--skip-order]');
     return 2;
   }

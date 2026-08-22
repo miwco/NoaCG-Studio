@@ -23,3 +23,18 @@ public/packs/*.json text eol=lf
 e2e/catalog-baseline.json text eol=lf
 e2e/catalog-render-baseline.json text eol=lf
 scripts/e2e-durations.json text eol=lf
+
+# THE REST OF THE GENERATORS, found by auditing every write in `scripts/` against the tracked
+# file list on 2026-08-22. These are measurement OUTPUTS - a sweep or a calibration run rewrites
+# the file in place and the numbers are then committed as the baseline - so each one is a tree
+# that goes phantom-dirty the moment somebody runs the sweep, which is mid-session, which is when
+# `merge-order` and `safe-merge-preflight` are asked whether the tree is clean.
+benchmarks/pro/v1/spike/*-calibration.json text eol=lf
+benchmarks/pro/v1/spike/occlusion-sweep.json text eol=lf
+benchmarks/pro/v1/spike/mark-clearance-sweep.json text eol=lf
+benchmarks/pro/v1/spike/structure-margins.json text eol=lf
+benchmarks/pro/evidence/plate-legibility.json text eol=lf
+# The default --report target of scripts/design-rules-audit-sweep.mjs.
+benchmarks/design-rules/AUDIT-*.md text eol=lf
+benchmarks/video/model-catalog.json text eol=lf
+supabase/advisor-baseline.json text eol=lf
