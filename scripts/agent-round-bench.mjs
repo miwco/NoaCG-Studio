@@ -402,10 +402,26 @@ if (path.resolve(roundDir).startsWith(ROOT + path.sep) && paid) fail(`--out must
 mkdirSync(roundDir, { recursive: true });
 const cells = cellsOf();
 console.log(`${paid ? 'PAID RUN' : 'CONTROL'}: ${cells.filter((c) => !c.na).length} live cell(s) -> ${roundDir}`);
-if (paid) console.log(`claude: ${claudeExecutable()}`);
+if (paid) {
+  const exe = claudeExecutable();
+  // The CLI's OWN login, not the desktop app's: a `claude -p` child authenticates from the CLI's
+  // stored OAuth session, and with none every cell returns "Failed to authenticate" in 300 ms -
+  // which the first paid attempt burned five cells discovering (2026-08-22). Refuse up front.
+  const auth = spawnSync(exe, ['auth', 'status'], { encoding: 'utf8' });
+  let status = null;
+  try { status = JSON.parse(auth.stdout); } catch { /* older CLI */ }
+  if (status && status.loggedIn === false) fail('the claude CLI is not logged in (`claude auth status`) - run `claude login` in a terminal first; the round cannot sign in for you');
+  console.log(`claude: ${exe}${status ? ` (${status.authMethod})` : ''}`);
+}
 for (const cell of cells) {
   const t = Date.now();
   const record = runCell(roundDir, cell, { paid });
+  // A cell that never reached the model (auth, API outage) says nothing about the arm; stop the
+  // round rather than record twenty-five copies of the same outage.
+  if (paid && record.claude?.isError && record.claude.turns != null && record.claude.turns <= 1 && !record.measured?.present) {
+    console.error(`  ${cell.id}: the session failed before doing any work - ${record.claude.result ?? 'no result'}\nStopping the round; fix and re-run (${roundDir}).`);
+    process.exit(1);
+  }
   const line = record.na
     ? `n/a (${record.na})`
     : `${record.minutes} min, ${record.validateRounds} validate round(s), final ${record.measured?.final?.ok ? 'clean' : 'ERRORS'}, ${record.measured?.inspect?.inputCount ?? '?'} input(s) / ${record.measured?.inspect?.buttonCount ?? '?'} button(s)${record.expectations?.length ? ` - ${record.expectations.join('; ')}` : ''}${record.claude?.turns != null ? `, ${record.claude.turns} turns${record.claude.costUsd != null ? `, $${record.claude.costUsd.toFixed(2)}` : ''}` : ''}`;
