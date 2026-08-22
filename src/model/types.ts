@@ -105,9 +105,9 @@ export function graphicKindLabel(idOrPrefix: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-import type { Resolution } from './projectFormat';
-export type { AspectPreset, Resolution } from './projectFormat';
-export { ASPECTS, FPS_OPTIONS, RESOLUTIONS } from './projectFormat';
+import type { Resolution } from './projectFormat.js';
+export type { AspectPreset, Resolution } from './projectFormat.js';
+export { ASPECTS, FPS_OPTIONS, RESOLUTIONS } from './projectFormat.js';
 
 // ── Layer model (structural foundation for future visual editing) ─────────────
 //

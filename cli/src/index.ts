@@ -3,9 +3,10 @@
 //
 // An external coding agent's door into NoaCG: scaffold a graphic from a type or a field list,
 // validate + bench it (and see it), inspect the operator surface it earns, package it, and -
-// in the next release - save it straight into the user's library. Every command drives the
-// deployment's own /bridge page through a contained headless browser; nothing here re-implements
-// the studio. `--json` on any command prints one JSON object on stdout for an agent to parse.
+// with a scoped agent key - save it straight into the user's library (docs/AGENT_SAVE.md). Every
+// command drives the deployment's own /bridge page through a contained headless browser; nothing
+// here re-implements the studio. `--json` on any command prints one JSON object on stdout for an
+// agent to parse.
 
 import { closeBrowser } from './browser.js';
 import { cliVersion } from './config.js';
@@ -18,6 +19,10 @@ import { runInspect } from './commands/inspect.js';
 import { runScreenshot } from './commands/screenshot.js';
 import { runPack } from './commands/pack.js';
 import { runDocs } from './commands/docs.js';
+import { runLogin } from './commands/login.js';
+import { runLogout } from './commands/logout.js';
+import { runWhoami } from './commands/whoami.js';
+import { runSave } from './commands/save.js';
 import { runMcp } from './mcp.js';
 
 const USAGE = `noacg v${cliVersion()} - make broadcast graphics for NoaCG Studio from your terminal.
@@ -33,10 +38,16 @@ Usage: noacg <command> [options]   (add --json to any command for machine-readab
   screenshot <dir|zip> --state off|onair|stress [--data k=v]... --out <png>
   pack <dir|zip>... --out <file.noacgpack.json> [--layer n]...
   docs [contract|package|validator|control|design-notes]
-  login | logout | whoami | save  (next release)
+  login [--name N] [--no-browser] [--key <noacg_ak_...>]
+                                 Get a scoped agent key for this machine (opens the consent page).
+  logout [--local]               Revoke and forget this machine's key.
+  whoami                         Which key this machine holds, and whether it is still valid.
+  save <dir|zip> [--name N] [--folder F] [--no-bench]
+                                 Validate, then put the graphic in your NoaCG library.
   mcp                            Run as an MCP server over stdio.
 
-Environment: NOACG_URL (default https://noacg.studio), NOACG_BROWSER (a Chromium executable).
+Environment: NOACG_URL (default https://noacg.studio), NOACG_BROWSER (a Chromium executable),
+             NOACG_AGENT_KEY (a key for CI - beats the stored one).
 Exit codes: 0 clean, 1 findings / refused, 2 usage or IO error.`;
 
 type Command = (args: ParsedArgs, out: Out) => Promise<number>;
@@ -51,16 +62,11 @@ const COMMANDS: Record<string, Command> = {
   pack: runPack,
   docs: runDocs,
   mcp: runMcp,
-  login: notYet,
-  logout: notYet,
-  whoami: notYet,
-  save: notYet,
+  login: runLogin,
+  logout: runLogout,
+  whoami: runWhoami,
+  save: runSave,
 };
-
-async function notYet(args: ParsedArgs, out: Out): Promise<number> {
-  out.say(`\`noacg ${args._[0]}\` is not available in this version - it lands in the next release together with the scoped agent key (docs/AGENT_CLI.md, P2). Until then: zip the package folder and drop it on the studio's Import door.`);
-  return EXIT_USAGE;
-}
 
 async function main(): Promise<number> {
   const argv = process.argv.slice(2);

@@ -33,7 +33,7 @@ thin `CLAUDE.md` import.
 | 0 kernel | `feedback/` | the PURE feedback contract: rating axis, enumerated reason vocabularies, area and triage states, the submission shape (docs/ADMIN.md §10) | `contract` |
 | 1 transforms | `blocks/` * | deterministic `(template) => template` patchers, Timeline v2 engine, `NOACG_ANIM` literal, state-machine graph + mutators | `registry`, `animData`, `animMachine`, `machineEdit`, named patcher modules |
 | 1 transforms | `templates/` * | wizard catalog, assemblers, graphic types, `:root` style contract | `catalog`, `variant.create(options)`, `types/` registry |
-| 1 transforms | `validation/` | the export + AI gate, runtime bench | `validateTemplate`, `runtimeBench` |
+| 1 transforms | `validation/` | the export + AI gate, runtime bench, the PUBLISH gate (`publishGate` = validate + share-safety bench; the one gate behind the community door, the bridge, hosted publish and production export) and the production-grain LIBRARY->AIR gate (`productionGate`, docs/AGENT_SAVE.md §4) | `validateTemplate`, `runtimeBench`, `publishGate`, `productionGate` |
 | 1 transforms | `preview/` | srcdoc composition | `composeDocument` |
 | 1 transforms | `editor/` | Monaco view-only helpers (comment visibility) | `commentVisibility` |
 | 1 transforms | `format/` | code formatting (docs/FORMATTING.md) | `formatCode` |
@@ -73,11 +73,16 @@ here and not in §6 are wrong - fix the code, not the table.
 - `ai` -> templates, blocks, validation, video, backend (`getAccessToken` only - proxy metering)
 - `video` -> validation, render
 - `render` -> control, preview, showchat, backend (`getAccessToken` only)
-- `export` -> blocks, control (the panel/receiver generators are control's declared packaging seam);
+- `export` -> blocks, control (the panel/receiver generators are control's declared packaging seam),
+  validation (`productionGate` only - a production export is a door a library draft leaves
+  through, and the builder itself refuses an invalid graphic so the promise holds for every
+  caller, not only the dialog that shows the verdict; docs/AGENT_SAVE.md);
   `export/targets/ograf.ts` -> `render/runtimeScript.ts` (the shared deterministic virtual clock)
 - `control` -> blocks, backend, audience (`audienceBrand` only - publishing carries the production's
   look into the audience plane's own state, and the audience domain owns that shape; a copy of the
-  mapping in the publish path would be a second opinion about what a viewer's page looks like)
+  mapping in the publish path would be a second opinion about what a viewer's page looks like),
+  validation (`productionGate` only - publishing is the library->air boundary, and
+  `publishControlShow` refuses an invalid graphic before it pins anything to an output URL)
 - `audience` -> backend (the Supabase provider is eleven slug-keyed RPCs through `getSupabase()`;
   it reaches no other domain, which is what keeps "nothing viewer-written airs without an
   operator" structural - there is nowhere for it to write a command)
@@ -138,6 +143,8 @@ dependency-cruiser; §7):
 | manifest, schedule, tier, or render-job work | `render/` (respect the purity trio) |
 | a cloud table, sync kind, or auth change | `backend/` + `supabase/migrations/` (RLS in the same migration) |
 | a new gateable feature, plan dimension, or access rule | `entitlements/contract.ts` - one resolver, one precedence order (docs/ADMIN.md); the server loader and the admin surface consume it, never re-decide it |
+| a new PERMISSION a credential may carry (what a key / token may do of what the account may do), or a new credential kind | `entitlements/permissions.ts` (the pure vocabulary + `permits`) and ONE more branch in `api/_lib/principal.ts resolvePrincipal` - never a second check (docs/AGENT_SAVE.md) |
+| a new door from the library to air (publish, export, a renderer) | it calls `validation/productionGate.ts` before crossing - the gate lives in the code that crosses, not in the dialog that shows the verdict |
 | video compile/validate/bridge work | `video/` |
 | editor UI state, undo, save/guard flow | `store/` |
 | a panel, dialog, or canvas interaction | `components/` - thin, per §5 |

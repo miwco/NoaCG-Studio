@@ -7542,3 +7542,51 @@ h2 + .lib-row,
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* ---------- Agent access (docs/AGENT_SAVE.md): the consent page + the Settings key list ---------- */
+/* The consent page is the auth gate's SHAPE (a centred card on the page's own ground), not its
+   overlay variant: it renders INSTEAD of the studio, asks one question, and leaves. */
+.agent-consent-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+  overflow: auto;
+}
+.agent-consent-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 26px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+.agent-consent-card h1 { font-size: 18px; line-height: 1.3; margin: 0 0 10px; }
+.agent-consent-brand { margin-bottom: 14px; }
+.agent-consent-permissions { margin: 8px 0 10px; padding: 0 0 0 4px; list-style: none; font-size: 14px; }
+.agent-consent-permissions li { padding: 4px 0; }
+.agent-consent-target code { font-size: 12px; }
+.agent-consent-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+/* The prompt inside the card keeps the panel-section look but drops its own border. */
+.agent-consent-card .signin-prompt { border: 0; padding: 0; background: transparent; }
+
+.agent-keys { margin-top: 18px; }
+.agent-keys-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.agent-key-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.agent-key-row .agent-key-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-key-row .agent-key-prefix { font-size: 12px; grid-column: 1; }
+.agent-key-row .agent-key-meta { grid-column: 1; font-size: 12px; }
+.agent-key-row button { grid-column: 2; grid-row: 1 / span 3; }

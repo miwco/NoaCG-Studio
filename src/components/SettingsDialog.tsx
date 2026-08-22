@@ -3,6 +3,7 @@ import { loadAiSettings, saveAiSettings } from '../ai/settings';
 import { loadPrefs, savePrefs } from '../model/prefs';
 import { EXPORT_TARGETS } from '../export/registry';
 import { signOut, updatePassword } from '../backend/auth';
+import { listAgentKeys, revokeAgentKey, type AgentKeySummary } from '../backend/agentAccess';
 import { useModalGate } from './spaceKey';
 import { useAdvancedMode } from './useAdvancedMode';
 import { useAuthState } from './auth/useAuthState';
@@ -125,6 +126,70 @@ function AccountSection({ onClose }: { onClose: () => void }) {
         </div>
       </form>
       {note && <p className={note.startsWith('✓') ? 'status-ok' : 'status-bad'} data-testid="account-note">{note}</p>}
+      <AgentAccessSection />
+    </div>
+  );
+}
+
+/**
+ * "Agent access" - the scoped keys a coding agent's CLI holds for this account
+ * (docs/AGENT_SAVE.md): name, prefix, created, last used, and the one button that ends one. A key
+ * is minted by `noacg login` in a terminal, never here; this list exists so the person can SEE
+ * what may write into their library and stop it. Signed-in only (the section it lives in
+ * already renders nothing offline).
+ */
+function AgentAccessSection() {
+  const [keys, setKeys] = useState<AgentKeySummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    listAgentKeys()
+      .then((list) => { if (live) setKeys(list); })
+      .catch((e: unknown) => { if (live) { setKeys([]); setError(e instanceof Error ? e.message : String(e)); } });
+    return () => { live = false; };
+  }, []);
+
+  const revoke = async (id: string) => {
+    setBusyId(id);
+    setError(null);
+    try {
+      await revokeAgentKey(id);
+      setKeys((list) => (list ?? []).filter((k) => k.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const when = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : 'never');
+
+  return (
+    <div className="agent-keys" data-testid="agent-keys">
+      <p className="dlg-caption">Agent access</p>
+      <p className="hint">
+        Keys a tool on your computer holds to save graphics into this library (<code>noacg login</code>).
+        Each can only create graphics - never control a production, use AI or delete anything.
+      </p>
+      {keys === null && <p className="hint">Loading…</p>}
+      {keys && keys.length === 0 && <p className="hint" data-testid="agent-keys-empty">No agent keys. Run <code>noacg login</code> in a terminal to create one.</p>}
+      {keys && keys.length > 0 && (
+        <ul className="agent-keys-list">
+          {keys.map((k) => (
+            <li key={k.id} className="agent-key-row" data-testid="agent-key-row">
+              <span className="agent-key-name">{k.name}</span>
+              <code className="agent-key-prefix">{k.prefix}</code>
+              <span className="hint agent-key-meta">created {when(k.createdAt)} · last used {when(k.lastUsedAt)}</span>
+              <button onClick={() => void revoke(k.id)} disabled={busyId === k.id} data-testid="agent-key-revoke">
+                {busyId === k.id ? 'Revoking…' : 'Revoke'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className="status-bad" data-testid="agent-keys-error">{error}</p>}
     </div>
   );
 }

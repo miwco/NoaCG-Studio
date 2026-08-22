@@ -10,6 +10,7 @@
 // the E2E_SPRINT_FOCUS env in ci.yml and the focus branch in e2e-affected.mjs - when the
 // sprint ends.
 export const FOCUS = [
+  'agent-access.spec.ts',
   'analytics.spec.ts',
   'advanced-mode.spec.ts',
   'auth.spec.ts',
@@ -38,6 +39,7 @@ export const FOCUS = [
   'production-chat-intake.spec.ts',
   'production-controls.spec.ts',
   'production-data.spec.ts',
+  'production-gate.spec.ts',
   'production-pack.spec.ts',
   'production-persistence.spec.ts',
   'productions.spec.ts',
@@ -82,6 +84,15 @@ export const CONFIGURED_TRIGGERS = [
   // the second half of that decision reads.
   /^src\/components\/wizard\/steps\/AiStep\.tsx$/,
   /^src\/backend\/config\.ts$/,
+  // AGENT ACCESS (docs/AGENT_SAVE.md): the consent page with a session, the loopback handoff,
+  // redeem, a save 201, the deep link after sync and revoke -> 401 only exist against a real
+  // backend (e2e/configured/agent-access.spec.ts). The offline spec can only pin their absence.
+  /^src\/backend\/agentAccess\.ts$/,
+  /^src\/components\/auth\/AgentAccessConsent\.tsx$/,
+  /^api\/_lib\/me\/(agentKeys|graphics|graphicShape)\.ts$/,
+  /^api\/_lib\/(principal|agentAccessStore)\.ts$/,
+  /^api\/me\/\[\.\.\.path\]\.ts$/,
+  /^scripts\/meDevPlugin\.mjs$/,
   // The suite's own files.
   /^e2e\/configured\//,
   /^playwright\.live\.config\.ts$/,

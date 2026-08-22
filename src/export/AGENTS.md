@@ -179,6 +179,12 @@ export-time reflow, stretching, or cropping.
   collision-suffixed names). The overlay flavor adds the aggregated show_controlpanel.html
   (inline assets); the UI is components/home/ProductionExportDialog.tsx, opened from the
   production page and the Home row, validation-gated per graphic (non-negotiable 4).
+  **The gate lives in the BUILDERS** (docs/AGENT_SAVE.md §4): `buildShowZip` and the generic
+  branch of `buildShowZipFor` both call `assertProductionGate` (validation/productionGate.ts -
+  `publishGate` per pool graphic over the live library template) before packaging, so an
+  invalid graphic cannot export whoever calls them; the dialog shows the SAME verdict
+  (`productionGateFailures`), never a second opinion. The edge is `export -> validation`,
+  `productionGate` only (docs/ARCHITECTURE.md §3). Pinned by e2e/production-gate.spec.ts.
 - **noacgPackage.ts** - the DUAL graphic package (docs/AGENT_CLI.md): ONE folder that is both the
   SPX starter layout (`<slug>.html`, `css/template.css`, `js/template.js`, `js/gsap.min.js`,
   images/, fonts/ - the editable SOURCES) and a valid OGraf v1 package (`<slug>.ograf.json` +

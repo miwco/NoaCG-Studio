@@ -25,8 +25,8 @@ great graphic. It made one. Now it is in NoaCG, editable and ready to go on air.
  │   noacg CLI (playwright-core, system     ├─────────────▶│   inspect compose readPackage      │
  │     Chrome/Edge, a FRESH contained ctx)  │  headless    │   exportPackage packEntry          │
  │   noacg mcp  (same library, stdio)       │  Chromium    │   graphicDoc ografHost             │
- │   holds: a scoped agent key (P2)         │              ├───────────────────────────────────┤
- │                                          │   POST (P2)  │ /api/me/graphics  -> the library  │
+ │   holds: a scoped agent key              │              ├───────────────────────────────────┤
+ │     (noacg login, docs/AGENT_SAVE.md)    │   POST       │ /api/me/graphics  -> the library  │
  └──────────────────────────────────────────┘              └───────────────────────────────────┘
 ```
 
@@ -67,7 +67,7 @@ request was refused, `2` a usage/IO error.
 
 | Command | What it does |
 |---|---|
-| `noacg doctor` | Reports the browser it will use, the bridge it reaches at `NOACG_URL` and its protocol version, and (P2) whether you are logged in. |
+| `noacg doctor` | Reports the browser it will use, the bridge it reaches at `NOACG_URL` and its protocol version, and whether a key is held for it (`whoami` asks the deployment if it is still valid). |
 | `noacg types [--json]` | The graphic TYPES the deployment knows: fields (key, label, kind, role), operator events, designs, whether a neutral scaffold exists. Optional - an agent may author from scratch against the contract. |
 | `noacg scaffold --type <id> [--design <id>\|neutral] [--name N] [--set key=value ...] [--palette id] [--font id] [--zone z] --out <dir>` | A complete, valid graphic package from a type: a catalog chassis (a proven composition to restyle) or the NEUTRAL scaffold (the type's fields, machine, controls and runtime on a plain spine). |
 | `noacg scaffold --fields "Label:kind[=value],..." [--name N] --out <dir>` | A typeless graphic (`blank`) with exactly the fields you declare - every one an operator input, the implicit lifecycle machine. |
@@ -76,13 +76,14 @@ request was refused, `2` a usage/IO error.
 | `noacg screenshot <dir\|zip> --state off\|onair\|stress [--data k=v ...] --out <png>` | One transparent frame of the settled graphic. |
 | `noacg pack <dir...> --out <file.noacgpack.json> [--layer n]` | A multi-graphic production file for the studio's Import door (`docs/GRAPHICS_PACKS.md`). |
 | `noacg docs [contract\|package\|validator\|ograf]` | Prints the skill's reference texts (the same files the skill ships). |
-| `noacg login` / `logout` / `whoami` | (P2) Obtain, drop and show the scoped agent key. |
-| `noacg save <dir\|zip> [--name N] [--folder F]` | (P2) Validate, then put the graphic in your NoaCG library - it is there the next time the studio opens. |
+| `noacg login [--name N] [--no-browser] [--key <noacg_ak_…>]` / `logout [--local]` / `whoami` | Obtain, end and show this machine's SCOPED AGENT KEY (docs/AGENT_SAVE.md): `login` opens the consent page in your browser and receives a one-time code on a loopback listener - the key is minted at redeem and never transits the browser; it can only create graphics in your library. `--key` stores a key minted elsewhere. |
+| `noacg save <dir\|zip> [--name N] [--folder F] [--no-bench]` | Validate (gate + bench) in the bridge, refuse on errors, then POST the library record to `/api/me/graphics` with the key; prints the `#/graphic/<id>` link, which opens at once (a miss while signed in runs one sync pass). SAVE is the library - never publish, never a production. |
 | `noacg mcp` | The same verbs as an MCP server over stdio (`noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`, `noacg_screenshot`, `noacg_save`; screenshots are returned as images). |
 
 Environment: `NOACG_URL` (the deployment to drive and save to; default `https://noacg.studio`;
 `http://localhost:<port>` for a dev server; any self-host), `NOACG_BROWSER` (a Chromium
-executable when the system Chrome/Edge channel is not wanted), `NOACG_AGENT_KEY` (P2, for CI).
+executable when the system Chrome/Edge channel is not wanted), `NOACG_AGENT_KEY` (a key for CI /
+containers - beats the stored one), `NOACG_AGENT_NAME` (what `login` calls itself).
 
 Vocabulary (the product's): `save` puts a graphic in the LIBRARY. `publish` is what a PRODUCTION
 does when it goes to the hosted control page / output URL; `add`, `publish`, `take`/`update`/
@@ -159,8 +160,12 @@ production shows an input per field + Take/Update/Next/Out. No application code 
   `e2e/bridge.spec.ts` + `e2e/ograf-contract.spec.ts`, the CLI smoke (`npm run bench:cli`, five
   tests including the third-party OGraf host), and the pre-existing OGraf conformance, import,
   export and SVG-import specs all green.
-- **P2:** `save` - a scoped agent key minted through a loopback one-time code, the permission
-  vocabulary, `/api/me/graphics`, the consent route, the library->air gates.
+- **P2 (docs/AGENT_SAVE.md):** `save` - a scoped agent key minted through a loopback one-time
+  code, the permission vocabulary (`src/entitlements/permissions.ts`), `/api/me/agent-keys` +
+  `/api/me/graphics` (the server never executes template code), the consent route, Settings →
+  Account → Agent access, and the library->air gates at hosted publish and production export.
+  LANDED on its branch; offline-verified by `e2e/agent-access.spec.ts` + `e2e/production-gate.spec.ts`
+  and the api unit tests; the live walk is `e2e/configured/agent-access.spec.ts`.
 - **P3:** distribution (plugin, Codex skill, npm) and the measured round (the same briefs through
   arms A contract-only free design, B + neutral scaffold, C + catalog chassis, D + a design skill,
   E + NoaCG design notes; blind owner read). Evidence decides what the skill recommends.

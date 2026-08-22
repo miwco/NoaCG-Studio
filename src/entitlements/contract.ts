@@ -108,6 +108,12 @@ export const ENFORCED_FEATURE_KEYS: ReadonlySet<FeatureKey> = new Set([
   // join resolve folds a denial into `open = false` so a viewer sees a closed door rather than
   // an error.
   'audience',
+  // Reached by exactly ONE server path: the agent save door (POST /api/me/graphics,
+  // api/_lib/me/graphics.ts) - `permits(principal, 'graphics:create')` rides on this feature
+  // (permissions.ts PERMISSION_FEATURE). The browser's own sync writes straight through RLS and
+  // is deliberately NOT gated (docs/ADMIN.md: it would stop a user saving their own work), so
+  // the note below says exactly how far the switch reaches.
+  'sync.cloud',
 ]);
 
 /** Where an enforced key does not reach EVERY caller, in the words the admin page shows.
@@ -129,6 +135,8 @@ export const FEATURE_ENFORCEMENT_NOTES: Partial<Record<FeatureKey, string>> = {
   showchat: 'stops new send-ins and moderation; messages already on air stay on air',
   audience:
     'stops the join page taking anything and stops moderation; the join link keeps working and says it is closed, and anything already on air stays on air',
+  'sync.cloud':
+    'reaches only the agent save door (noacg save / POST /api/me/graphics); the browser\'s own cloud sync of saved work is not stopped',
 };
 
 // ── limits ─────────────────────────────────────────────────────────────────────────────

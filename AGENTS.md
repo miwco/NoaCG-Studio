@@ -183,7 +183,10 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
                both the public page and the operator preview mount
   community/   shared templates (signed-in only), validated + benched at publish AND import
   entitlements/ the PURE access contract (docs/ADMIN.md): ONE resolver, precedence
-               default < plan < temporary grant < manual override, every value carrying WHY
+               default < plan < temporary grant < manual override, every value carrying WHY;
+               plus permissions.ts - what a CREDENTIAL may do of what the account may do
+               (a scoped agent key carries `graphics:create` only; `permits()` asks both
+               halves; docs/AGENT_SAVE.md)
   feedback/    the PURE feedback contract (docs/ADMIN.md §10) - one vocabulary, four consumers
   admin/       the PRIVATE admin page. Never a security boundary. Usage sections count OTHER
                PEOPLE by default (the ScopePicker excludes internal accounts)
@@ -196,9 +199,11 @@ src/                     (* = has its own AGENTS.md; read it, this line is only 
                the OGraf manifest -> operator-surface adapter in control/ografContract.ts
 cli/           the `noacg` CLI + MCP server (its own package, published to npm): an external
                coding agent's door - scaffold, validate, inspect, screenshot, save - over the
-               bridge page of whatever NoaCG deployment NOACG_URL names. Ships the canonical
-               `noacg-graphic` skill; the in-repo adapters under .claude/skills + .agents/skills
-               point at it (docs/AGENT_CLI.md)
+               bridge page of whatever NoaCG deployment NOACG_URL names. `login` mints a SCOPED
+               AGENT KEY through a loopback one-time code (never the user's session); `save`
+               validates in the bridge, then POSTs the library record to /api/me/graphics
+               (docs/AGENT_SAVE.md). Ships the canonical `noacg-graphic` skill; the in-repo
+               adapters under .claude/skills + .agents/skills point at it (docs/AGENT_CLI.md)
 public/fonts/  the 17 bundled woff2 fonts (served at /fonts, copied into exports). A picked
                GOOGLE family (model/googleFonts.ts) is fetched at design time and embedded in
                template.assets like an upload - never referenced by the emitted code
@@ -210,7 +215,9 @@ scripts/       dev-port + port-registry (the per-worktree RESERVATION), the cata
 api/           server-only Vercel functions: the render service, the AI model gateway, Lite
                profile/allowance, sealed user-key endpoints, the production DATA API
                (docs/DATA_API.md - external data as update rows in the control log),
-               api/admin/* behind _lib/adminAuth.ts (404 for every refusal). Typechecked by
+               api/admin/* behind _lib/adminAuth.ts (404 for every refusal), and the AGENT
+               ACCESS routes under api/me (agent-keys + the graphics save door - the server
+               never executes template code; docs/AGENT_SAVE.md). Typechecked by
                tsconfig.api.json
 render-worker/ the Remotion renderer, and player-host/ the preview host - own exact-pinned packages
 player-host/   so the non-OSI licence never enters the AGPL bundle. Built into public/player-host/

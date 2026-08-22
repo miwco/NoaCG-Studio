@@ -27,6 +27,8 @@ const runtime = await buildApiRuntime([
   'api/_lib/admin/periods.test.ts',
   'api/_lib/admin/eligibility.test.ts',
   'api/_lib/admin/usage.test.ts',
+  'api/_lib/me/agentKeys.test.ts',
+  'api/_lib/me/graphics.test.ts',
 ]);
 
 try {
@@ -51,6 +53,8 @@ try {
     path.join(runtime.outputDir, 'api/_lib/admin/periods.test.js'),
     path.join(runtime.outputDir, 'api/_lib/admin/eligibility.test.js'),
     path.join(runtime.outputDir, 'api/_lib/admin/usage.test.js'),
+    path.join(runtime.outputDir, 'api/_lib/me/agentKeys.test.js'),
+    path.join(runtime.outputDir, 'api/_lib/me/graphics.test.js'),
   ];
   const result = spawnSync(process.execPath, ['--test', ...testFiles], {
     cwd: projectRoot,

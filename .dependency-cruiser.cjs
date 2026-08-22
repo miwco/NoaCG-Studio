@@ -153,6 +153,15 @@ module.exports = {
       to: { path: '^src/(blocks|control)/' },
     },
     {
+      comment:
+        '§3: export -> validation, the production gate only. A production export is a door a ' +
+        'library draft leaves through, and it is gated in the BUILDER (showExport.ts) so the ' +
+        'promise "an invalid graphic cannot export" holds for every caller, not only the dialog ' +
+        'that shows the verdict (docs/AGENT_SAVE.md).',
+      from: { path: '^src/export/' },
+      to: { path: '^src/validation/productionGate\\.ts$' },
+    },
+    {
       comment: 'OGraf export -> shared deterministic virtual-clock runtime',
       from: { path: '^src/export/targets/ograf\\.ts$' },
       to: { path: '^src/render/runtimeScript\\.ts$' },
@@ -161,6 +170,14 @@ module.exports = {
       comment: '§3: control -> blocks, backend',
       from: { path: '^src/control/' },
       to: { path: '^src/(blocks|backend)/' },
+    },
+    {
+      comment:
+        '§3: control -> validation, the production gate only. Publishing a production is the ' +
+        'library->air boundary: publishControlShow refuses an invalid graphic before it pins ' +
+        'anything to an output URL, whoever calls it (docs/AGENT_SAVE.md).',
+      from: { path: '^src/control/' },
+      to: { path: '^src/validation/productionGate\\.ts$' },
     },
     {
       comment:

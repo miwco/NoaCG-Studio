@@ -17,6 +17,9 @@ import { fileToDataUrl, isImageAsset } from '../assets/assetUtils';
 // The audience plane owns the shape of its own brand (docs/ARCHITECTURE.md §3, control ->
 // audience): publish is the courier, not the author.
 import { audienceBrandFor } from '../audience/audienceBrand';
+// The library->air gate (docs/ARCHITECTURE.md §3, control -> validation): publishing is the
+// boundary where a library draft becomes something a renderer trusts.
+import { assertProductionGate } from '../validation/productionGate';
 import { joinNameCandidates } from './joinName';
 import { fieldDescriptors, type ControlMessage } from './controlModel';
 import { cueDataRows, type CueDataRow } from './cueData';
@@ -300,9 +303,14 @@ export interface PublishedCapabilities {
  *  owner DELETE policy) so a 24/7 output URL never grows the log without bound.
  *  Returns every capability slug, or null offline. */
 export async function publishControlShow(show: Show): Promise<PublishedCapabilities | null> {
+  // THE LIBRARY->AIR GATE, before anything else - including the backend check: an invalid
+  // graphic cannot publish, and that is true of this function whoever calls it and wherever it
+  // runs (validation/productionGate.ts - the same publishGate the community door runs). A
+  // library record may be a broken draft; what is pinned to an output URL may not.
+  const library = loadGraphics();
+  assertProductionGate(show.graphics, library);
   const sb = await getSupabase();
   if (!sb) return null;
-  const library = loadGraphics();
   const output = await buildOutputPayload(show, library);
   // The upsert names only the columns it owns, which is what keeps `audience_state` (0035) —
   // open/mode/prompt/round/rev, all of it live operator state — from being reset by a

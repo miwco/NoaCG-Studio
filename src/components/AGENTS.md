@@ -620,3 +620,13 @@ EXPIRED session (a signed-in to signed-out transition that was not the user's ow
 backend/auth's consume-once deliberate-sign-out flag, checked in syncController) dispatches
 `spx-session-expired`; App.tsx answers with openSignIn + a reason naming that local work is
 safe. Offline pins in e2e/auth.spec.ts; the real flows in e2e/configured/account.spec.ts.
+
+AGENT ACCESS (docs/AGENT_SAVE.md): **AgentAccessConsent** is the `?agent=…` QUERY route App.tsx
+renders INSTEAD of the studio (beside `?control=`): `noacg login` opened it; it asks ONE
+question - allow "<name>" to save graphics to your library? - and hands a one-time code to the
+CLI's loopback listener (`backend/agentAccess.ts` parses the request and owns the ONLY redirect
+target, `http://127.0.0.1:<port>/callback#…`). Offline = an honest "no backend" card with ZERO
+auth UI; signed out = SignInPrompt `offerSignUp` + its own SignInDialog; signed in = the card
+naming what the key may do (`PERMISSION_LABELS`) and the local port. Settings → Account grows
+**Agent access** (`AgentAccessSection`): live keys with a Revoke each - minted in a terminal,
+never here. Pins: e2e/agent-access.spec.ts (offline), e2e/configured/agent-access.spec.ts.

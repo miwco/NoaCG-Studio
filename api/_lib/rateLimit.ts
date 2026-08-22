@@ -207,3 +207,62 @@ export function checkFeedbackRateLimit(req: Request): RateLimitDecision | null {
   const decision = hitRateLimit(`feedback:${ipHash(req)}`, feedbackRateLimitCaps(), Date.now());
   return decision.allowed ? null : decision;
 }
+
+// ── The agent access doors (docs/AGENT_SAVE.md) ──────────────────────────────────────────
+// Three gates, per IP like the others and for the same reasons: refuse a hammering client
+// before the handler reads a body or touches the database. `redeem` is the tight one - it is
+// the only unauthenticated POST on the key routes (the code it consumes IS the credential,
+// 256 bits of it, so this is about cost rather than brute force). The save door carries a
+// SECOND, per-principal budget: one leaked key must not be able to fill a library faster
+// than its owner can revoke it, whatever IPs it arrives from.
+
+export function agentKeysRateLimitCaps(): RateLimitCaps {
+  return {
+    windowMs: Math.max(1, envInt('AGENT_KEYS_RATE_WINDOW_SEC', 60)) * 1000,
+    max: envInt('AGENT_KEYS_RATE_MAX', 30),
+  };
+}
+
+export function checkAgentKeysRateLimit(req: Request): RateLimitDecision | null {
+  const decision = hitRateLimit(`agent-keys:${ipHash(req)}`, agentKeysRateLimitCaps(), Date.now());
+  return decision.allowed ? null : decision;
+}
+
+export function agentRedeemRateLimitCaps(): RateLimitCaps {
+  return {
+    windowMs: Math.max(1, envInt('AGENT_REDEEM_RATE_WINDOW_SEC', 60)) * 1000,
+    max: envInt('AGENT_REDEEM_RATE_MAX', 10),
+  };
+}
+
+export function checkAgentRedeemRateLimit(req: Request): RateLimitDecision | null {
+  const decision = hitRateLimit(`agent-redeem:${ipHash(req)}`, agentRedeemRateLimitCaps(), Date.now());
+  return decision.allowed ? null : decision;
+}
+
+export function agentSaveRateLimitCaps(): RateLimitCaps {
+  return {
+    windowMs: Math.max(1, envInt('AGENT_SAVE_RATE_WINDOW_SEC', 60)) * 1000,
+    max: envInt('AGENT_SAVE_RATE_MAX', 60),
+  };
+}
+
+/** Per IP, in front of everything else on the save door. */
+export function checkAgentSaveIpRateLimit(req: Request): RateLimitDecision | null {
+  const decision = hitRateLimit(`agent-save-ip:${ipHash(req)}`, agentSaveRateLimitCaps(), Date.now());
+  return decision.allowed ? null : decision;
+}
+
+export function agentSavePrincipalRateLimitCaps(): RateLimitCaps {
+  return {
+    windowMs: Math.max(1, envInt('AGENT_SAVE_USER_RATE_WINDOW_SEC', 60)) * 1000,
+    max: envInt('AGENT_SAVE_USER_RATE_MAX', 30),
+  };
+}
+
+/** Per PRINCIPAL (the account the key belongs to), keyed on the user id - one leaked key and
+ *  one busy agent are the same key on purpose: the budget protects the LIBRARY. */
+export function checkAgentSavePrincipalRateLimit(userId: string): RateLimitDecision | null {
+  const decision = hitRateLimit(`agent-save-user:${userId}`, agentSavePrincipalRateLimitCaps(), Date.now());
+  return decision.allowed ? null : decision;
+}

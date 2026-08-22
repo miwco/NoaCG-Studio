@@ -47,9 +47,14 @@ check it, and how it reaches the user's library. It does not tell you how it sho
    derives from your graphic - one input per field, one button per action, the step semantics. If
    the operator cannot change what they will need to change, add the field; if an action is
    missing, it needs to be in the machine (a type's) or the graphic has no such action.
-5. **Save.** `noacg save ./my-graphic --name "…"` puts it in the user's NoaCG library; it is there
-   the next time NoaCG opens. (No account? `zip` the folder - it imports through the studio's
-   Import door, and it is also a complete OGraf package any OGraf renderer plays.)
+5. **Save.** `noacg save ./my-graphic --name "…"` validates once more and puts it in the user's
+   NoaCG library, printing the `#/graphic/<id>` link (it opens at once; it is in Home → Graphics).
+   It needs the user's scoped agent key on this machine: if `noacg whoami` says not logged in,
+   ask the user to run `noacg login` (it opens a consent page in THEIR browser - you cannot and
+   must not do that step for them), or set `NOACG_AGENT_KEY` in CI. The key can only create
+   graphics in the library - save never publishes, adds to a production or airs anything. (No
+   account? `zip` the folder - it imports through the studio's Import door, and it is also a
+   complete OGraf package any OGraf renderer plays.)
 
 MCP clients use the same verbs as tools (`noacg_types`, `noacg_scaffold`, `noacg_validate`,
 `noacg_inspect`, `noacg_screenshot`, `noacg_save`); screenshots come back as images.

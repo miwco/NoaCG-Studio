@@ -9,9 +9,13 @@ import CreationWizard from './components/wizard/CreationWizard';
 import GraphicControlPage from './components/home/GraphicControlPage';
 import ProductionPage from './components/home/ProductionPage';
 import PasswordRecoveryDialog from './components/auth/PasswordRecoveryDialog';
+import AgentAccessConsent from './components/auth/AgentAccessConsent';
 import StorageAlertDialog from './components/save/StorageAlertDialog';
 import { useAuthUi } from './components/auth/authUi';
 import { isBackendConfigured } from './backend/config';
+import { isAgentRequestUrl } from './backend/agentAccess';
+import { getAccessToken } from './backend/auth';
+import { syncNow } from './backend/syncController';
 import { useDocKindStore } from './store/docKindStore';
 import { useTemplateStore } from './store/templateStore';
 import { parseRoute, useRouter } from './app/router';
@@ -97,10 +101,19 @@ export default function App() {
     if (saved.graphicId === route.id) return; // already open (the normal refresh case)
     useSaveUi.getState().requestSwitch(
       () => {
-        if (!openGraphicById(route.id)) {
+        if (openGraphicById(route.id)) return;
+        // A MISS while signed in may be a record that exists in the cloud and has not been
+        // pulled yet - the deep link an agent's `noacg save` printed, opened on a machine that
+        // has not synced since (docs/AGENT_SAVE.md). One sync pass, one retry, then Home: the
+        // link works on first open instead of "next time the studio opens".
+        void (async () => {
+          if (isBackendConfigured() && (await getAccessToken().catch(() => null))) {
+            await syncNow().catch(() => undefined);
+            if (openGraphicById(route.id)) return;
+          }
           // Unknown id (deleted, other profile): land on Home rather than a dead editor.
           useRouter.getState().replace({ view: 'home', section: null });
-        }
+        })();
       },
       () => useRouter.getState().replace({ view: 'editor' }),
     );
@@ -227,6 +240,12 @@ export default function App() {
   // the unguessable slug is the capability (same pattern as ?chat=).
   const controlSlug = params.get('control');
   if (controlSlug) return <HostedControlPage slug={controlSlug} />;
+
+  // Agent access consent: <app-url>?agent=<state>&port=&name=&challenge= — a coding agent's CLI
+  // (`noacg login`) opened this; the page asks once and hands a one-time code to the CLI's
+  // loopback listener (docs/AGENT_SAVE.md). A query route like the two above, rendered INSTEAD
+  // of the studio: it is a question, not a surface.
+  if (isAgentRequestUrl(params)) return <AgentAccessConsent params={params} />;
 
   // Routed surfaces: Home, a saved graphic's control panel, a production's page; then the
   // editor, which is open to everyone — no login wall (Era 5.6). Account features (cloud

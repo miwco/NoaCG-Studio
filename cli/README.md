@@ -25,7 +25,9 @@ npx noacg inspect ./football-scoreboard
 | `pack <dir\|zip>... --out <file.noacgpack.json>` | A multi-graphic production file for the studio's Import door. |
 | `docs [topic]` | The skill's reference texts. |
 | `mcp` | The same verbs as an MCP server over stdio. |
-| `login` / `save` | Next release (the scoped agent key). |
+| `login [--name N] [--no-browser] [--key <noacg_ak_…>]` | Get a scoped agent key for this machine: opens the NoaCG consent page, receives a one-time code on a loopback listener, redeems it. The key can only create graphics in your library; revoke it in Settings → Account → Agent access or with `logout`. `NOACG_AGENT_KEY` for CI. |
+| `logout [--local]` / `whoami` | Revoke + forget this machine's key / show which key is held and whether it is still valid. |
+| `save <dir\|zip> [--name N] [--folder F] [--no-bench]` | Validate (gate + bench), refuse on errors, then put the graphic in your NoaCG library and print its `#/graphic/<id>` link. Save = the library, never a production. |
 
 Add `--json` to any command for one JSON object on stdout. Exit codes: 0 clean, 1 findings or
 refused, 2 usage/IO error. Environment: `NOACG_URL` (default `https://noacg.studio`; a dev server
@@ -51,7 +53,7 @@ One folder is a valid EBU OGraf v1 Graphic, the SPX/CasparCG package and the wor
 claude mcp add noacg -- npx -y noacg mcp
 ```
 
-Tools: `noacg_types`, `noacg_scaffold`, `noacg_validate` (screenshots as images), `noacg_inspect`,
+Tools: `noacg_types`, `noacg_scaffold`, `noacg_validate` (screenshots as images), `noacg_inspect`, `noacg_save` (after `noacg login`),
 `noacg_screenshot`, `noacg_docs`. The `noacg-graphic` skill ships under `skill/`.
 
 ## Develop

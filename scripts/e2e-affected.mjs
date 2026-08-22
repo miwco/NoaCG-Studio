@@ -103,7 +103,7 @@ const MAP = [
   // of mocking it, which is the only thing that can prove a route is reachable at all - every
   // other AI spec mocks at the network level, which is why an allowlist hid three surfaces.
   [/^scripts\/(aiDevPlugin|apiRouteTable)/, ['ai-dev-routes.spec.ts', 'ai.spec.ts', 'ai-depth.spec.ts', 'ai-more-control.spec.ts']],
-  [/^src\/export\//, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts']],
+  [/^src\/export\//, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts', 'production-gate.spec.ts']],
   // OGraf conformance is checked over the whole CATALOG, so a template change can break it as
   // surely as an exporter change can (a new field type, a new machine shape).
   [/^src\/(export\/targets\/ograf|templates)\//, ['ograf-conformance.spec.ts']],
@@ -123,7 +123,11 @@ const MAP = [
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],
-  [/^src\/control\//, ['control.spec.ts', 'control-panel-types.spec.ts', 'exports.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'snap-recovery.spec.ts']],
+  [/^src\/control\//, ['control.spec.ts', 'control-panel-types.spec.ts', 'exports.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'snap-recovery.spec.ts', 'production-gate.spec.ts']],
+  // The library->air gate (docs/AGENT_SAVE.md): publishControlShow and the production builders
+  // refuse an invalid graphic. src/validation is CORE, so a change to the gate itself runs the
+  // full suite; this line is for the two call sites and the dialog that shows the verdict.
+  [/^(src\/export\/showExport|src\/components\/home\/ProductionExportDialog)/, ['production-gate.spec.ts']],
   // The readable audience name is minted by the publish path but READ on the audience surfaces,
   // and rules union rather than shadowing - so this adds to the src/control/ list above.
   [/^src\/control\/joinName/, ['production-audience.spec.ts']],
@@ -246,6 +250,10 @@ const MAP = [
   // is not. That gap wants a spec, not a wider mapping.
   [/^src\/components\/(ExportSurface|PlayoutCompatibility)/, ['exports.spec.ts', 'package.spec.ts', 'offline.spec.ts', 'control.spec.ts', 'shows.spec.ts', 'local-relay.spec.ts', 'template-pack-10.spec.ts', 'design-rules-product.spec.ts']],
   [/^src\/components\/auth\//, ['auth.spec.ts', 'sync.spec.ts']],
+  // AGENT ACCESS (docs/AGENT_SAVE.md): the consent query route, the Settings key list, the
+  // browser client and the two /api/me routes it calls. The offline spec pins the no-backend
+  // posture; the live half is e2e/configured/agent-access.spec.ts (CONFIGURED_TRIGGERS).
+  [/^(src\/backend\/agentAccess|src\/components\/auth\/AgentAccessConsent|src\/components\/SettingsDialog|api\/_lib\/me\/(agentKeys|graphics|graphicShape)|api\/_lib\/(principal|agentAccessStore)|src\/entitlements\/permissions)/, ['agent-access.spec.ts']],
   [/^src\/backend\//, ['auth.spec.ts', 'sync.spec.ts', 'offline.spec.ts', 'network-resilience.spec.ts']],
   // Restricted-network resilience (docs/GOALS.md "the SVG road"): the boot watchdog and the
   // inline connection check live in app.html, the hydration timeout in the durable store, and

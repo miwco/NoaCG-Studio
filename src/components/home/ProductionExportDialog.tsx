@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { EXPORT_TARGETS } from '../../export/registry';
 import { downloadShowZipFor } from '../../export/showExport';
-import { loadGraphics, templateForSavedGraphic } from '../../model/library';
+import { loadGraphics } from '../../model/library';
 import { loadPrefs, savePrefs } from '../../model/prefs';
 import { buildPack, packFileName } from '../../packs/graphicsPack';
-import { validateTemplate } from '../../validation/validateTemplate';
+import { productionGateFailures } from '../../validation/productionGate';
 import type { Show } from '../../model/shows';
 import { useModalGate } from '../spaceKey';
 
@@ -37,15 +37,10 @@ export default function ProductionExportDialog({ show, onClose }: { show: Show; 
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
-  // The export gate, per pool graphic, over the LIVE library template (what actually ships).
-  const gate = useMemo(() => {
-    const library = loadGraphics();
-    return show.graphics.map((g) => {
-      const template = templateForSavedGraphic(g, library);
-      return { name: g.name, errors: validateTemplate(template).errors };
-    });
-  }, [show]);
-  const blocked = gate.filter((g) => g.errors.length > 0);
+  // The export gate, per pool graphic, over the LIVE library template (what actually ships) -
+  // THE SAME gate buildShowZipFor enforces (validation/productionGate.ts), so the dialog's
+  // verdict and the builder's refusal can never disagree.
+  const blocked = useMemo(() => productionGateFailures(show.graphics, loadGraphics()), [show]);
 
   const download = async () => {
     setBusy(true);

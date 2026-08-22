@@ -79,6 +79,7 @@ export interface RenderApiError {
       | 'busy'
       | 'duplicate'
       | 'unauthorized'
+      | 'forbidden'
       | 'not_found'
       | 'unavailable'
       | 'internal';

@@ -14,6 +14,7 @@ import { cliVersion } from './config.js';
 import { describeInspection } from './commands/inspect.js';
 import { docTopics, readDoc } from './commands/docs.js';
 import { scaffoldRequestFrom } from './commands/scaffold.js';
+import { savePackage } from './commands/save.js';
 import { describeValidation } from './commands/validate.js';
 import { ografBench } from './ografBench.js';
 import { EXIT_OK, parseArgs, type Out, type ParsedArgs } from './output.js';
@@ -160,8 +161,24 @@ export async function runMcp(_args: ParsedArgs, _out: Out): Promise<number> {
 
   server.registerTool(
     'noacg_save',
-    { title: 'Save into the NoaCG library', description: 'Not available in this version - lands in the next release with the scoped agent key. Until then, zip the package folder and drop it on the studio\'s Import door.', inputSchema: { path: z.string(), name: z.string().optional() } },
-    async () => ({ content: text('noacg_save is not available in this version (next release). Zip the package folder and drop it on the studio\'s Import door.'), isError: true }),
+    {
+      title: 'Save into the NoaCG library',
+      description: 'Validate the package (static gate + runtime bench), and when it has no errors put it in the user\'s NoaCG library with the machine\'s scoped agent key (`noacg login` first). Returns the #/graphic/<id> link. SAVE means the library: it does not publish, add to a production or air anything. No key / no account: zip the folder and use the studio\'s Import door.',
+      inputSchema: {
+        path: z.string().describe('The package directory or .zip'),
+        name: z.string().optional().describe('The library name (default: the template\'s name)'),
+        folder: z.string().optional().describe('A library folder to file it under'),
+        bench: z.boolean().optional().describe('Run the live runtime bench before saving (default true)'),
+      },
+    },
+    async (input) => {
+      const b = await bridge();
+      const outcome = await savePackage(input.path, { name: input.name, folder: input.folder, bench: input.bench ?? true }, b, () => undefined);
+      const lines: string[] = [];
+      if (outcome.validation) lines.push(describeValidation(outcome.validation as Parameters<typeof describeValidation>[0]));
+      lines.push(outcome.ok ? `Saved "${outcome.name}" to the NoaCG library -> ${outcome.url}` : (outcome.error ?? 'Not saved.'));
+      return { content: text(lines.join('\n\n')), isError: !outcome.ok };
+    },
   );
 
   for (const topic of docTopics()) {

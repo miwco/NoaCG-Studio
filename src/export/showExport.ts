@@ -35,6 +35,9 @@ import { EXPORT_TARGETS } from './registry';
 import { emitGraphic, renderShowControlPanelHtml } from '../control/controlPanelHtml';
 import { renderProductionControllerHtml, type EmittedCue } from '../control/productionControllerHtml';
 import { stripHostedReceiver } from '../control/hostedReceiver';
+// The library->air gate (docs/ARCHITECTURE.md §3, export -> validation): a production export is
+// the other door a library draft leaves through, and it is gated like the publish.
+import { assertProductionGate } from '../validation/productionGate';
 import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import {
   loadGraphics,
@@ -96,13 +99,16 @@ function activeEntryValues(graphic: SavedGraphic, library: GraphicDoc[]): Record
 }
 
 export async function buildShowZip(show: Show, _opts?: ShowExportOptions): Promise<JSZip> {
-  const zip = new JSZip();
-  const root = zip.folder(slug(show.name))!;
   // Each graphic's saved control-panel entries live in the library, not in the show's embedded
   // copy — resolve them once here (by graphicId, unique-name fallback) so both the aggregated
   // show panel and each graphic's own controlpanel.html bake them in. Authoring stays in the
   // app; a change reaches the package on the next export (docs/SAVED_CONTENT_MODEL.md §4).
   const library = loadGraphics();
+  // An invalid graphic cannot export (validation/productionGate.ts) - enforced HERE so it holds
+  // for every caller, not only the dialog that happens to show the verdict.
+  assertProductionGate(show.graphics, library);
+  const zip = new JSZip();
+  const root = zip.folder(slug(show.name))!;
   const usedSlugs = new Set<string>();
   const folderNames: string[] = [];
   const fieldGraphics: ProductionFieldGraphic[] = [];
@@ -212,9 +218,10 @@ export async function buildShowZipFor(show: Show, targetId: string): Promise<JSZ
   const target = EXPORT_TARGETS.find((t) => t.id === targetId);
   if (!target) throw new Error(`Unknown export target: ${targetId}`);
 
+  const library = loadGraphics();
+  assertProductionGate(show.graphics, library);
   const zip = new JSZip();
   const root = zip.folder(slug(show.name))!;
-  const library = loadGraphics();
   const usedSlugs = new Set<string>();
   const panelGraphics: { template: SpxTemplate; entries: ReturnType<typeof entriesForSavedGraphic> }[] = [];
   for (const graphic of show.graphics) {

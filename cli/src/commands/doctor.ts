@@ -3,10 +3,17 @@
 import { browserLabel, launchBrowser } from '../browser.js';
 import { BridgeClient } from '../bridgeClient.js';
 import { cliVersion, configDir, noacgUrl } from '../config.js';
+import { displayPrefix, resolveKey } from '../auth.js';
 import { EXIT_OK, EXIT_USAGE, type Out, type ParsedArgs } from '../output.js';
 
 export async function runDoctor(_args: ParsedArgs, out: Out): Promise<number> {
   const report: Record<string, unknown> = { cli: cliVersion(), url: noacgUrl(), configDir: configDir() };
+  // Whether a key is HELD here, not whether it is still honoured - `noacg whoami` asks the
+  // deployment; doctor stays a local report that works with no network at all.
+  const held = await resolveKey(noacgUrl());
+  report.login = held
+    ? `${held.stored?.prefix ?? displayPrefix(held.key)}${held.source === 'env' ? ' (NOACG_AGENT_KEY)' : ''} - run \`noacg whoami\` to check it`
+    : 'not logged in - run `noacg login` to save into your library';
   try {
     await launchBrowser();
     report.browser = browserLabel();
@@ -35,6 +42,6 @@ export async function runDoctor(_args: ParsedArgs, out: Out): Promise<number> {
     out.say(`bridge       NONE - ${report.bridgeError}`);
   }
   out.say(`config dir   ${report.configDir}`);
-  out.say('login        not available in this version (next release)');
+  out.say(`login        ${report.login}`);
   return report.browser && report.bridge ? EXIT_OK : EXIT_USAGE;
 }
