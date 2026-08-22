@@ -130,8 +130,13 @@ on a graphic somebody else drew.
       imported SVG arrives with fields and no machine. So the question is narrow and answerable:
       **how does a student pick "this is a quiz" and get the quiz behaviour bound to their own
       artwork?** A named behaviour applied to a graphic (the graphic-type registry already models
-      "a machine this type needs", `docs/GRAPHIC_TYPES.md`) is the shape to try first. Write the
-      plan doc before writing code.
+      "a machine this type needs", `docs/GRAPHIC_TYPES.md`) is the shape to try first.
+      **The plan is written and awaiting a read: `docs/GRAPHIC_BEHAVIOUR_PLAN.md`** - it takes a
+      shipped behaviour apart (machine and controls move for free; structure and the LOOK of a
+      state on somebody else's artwork are the work), offers the doors without picking one, and
+      proposes building ONE hard-coded instance rather than a registry designed against a sample
+      of two. It also reports that the SCOREBOARD may already be done, because a `number` field is
+      a +/- stepper on every control surface with no per-template code - unverified end to end.
 - [ ] **3. The two graphics, walked as a student would.** Draw a quiz and a scoreboard in
       Illustrator, import, bind, attach the behaviour, put both in one production, and run them
       from the dashboard - lock, reveal, +1, -1 - with the operator never seeing code. That walk is
