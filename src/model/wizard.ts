@@ -336,6 +336,23 @@ export interface DesignSvg {
   /** The BEHAVIOUR the author bound to this artwork, if any (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
    *  Absent means the ordinary in/out graphic the importer has always produced. */
   behaviour?: DesignSvgBehaviour;
+  /** THE HUG (plan §3): the rectangle that widens so a longer value fits at full size.
+   *  Absent = the graphic declares a STAGE and nothing moves, which is every board, every
+   *  scorebug, and everything the importer produced before this existed. */
+  stretch?: DesignSvgStretch;
+}
+
+/**
+ * The hug: one rectangle grows with its text (docs/SVG_IMPORT_PLAN.md §3).
+ *
+ * ONE shape, because a lower third has one banner and a rule that grew several would need to
+ * say how they relate. Everything else the runtime needs it measures on the live artwork -
+ * which text sits inside the panel, what sits beyond its far edge and must travel with it -
+ * so nothing here has to be recomputed when the operator's value changes.
+ */
+export interface DesignSvgStretch {
+  /** The rectangle's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
 }
 
 /**

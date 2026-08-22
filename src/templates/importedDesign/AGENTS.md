@@ -42,8 +42,13 @@ as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at
 (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
 SHRINK fit, whose budget is the DRAWN text measured in the real face - never whatever is on
 screen when it is first measured, or a playout renderer's own first update becomes the budget
-and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense; the HUG is still
-open, docs/SVG_IMPORT_PLAN.md §3); DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
+and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense). The HUG is the
+per-graphic alternative the mapping step ASKS for (`DesignSvg.stretch` -> one `-panel` class on
+one `<rect>` + `stretchRuntimeJs`): the picked rectangle widens by the widest inside line's
+deficit, whatever is drawn past its right edge travels by its transform ATTRIBUTE, the growth
+caps at the frame's 4% safe margin and the shrink answers the rest. Default OFF and never
+inferred - no geometry separates a lower third from a scorebug (docs/SVG_IMPORT_PLAN.md §3 says
+why, and what v1 does not handle). DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
 step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
 E2E: e2e/import-svg.spec.ts.
 **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the

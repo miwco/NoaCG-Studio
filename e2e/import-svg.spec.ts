@@ -923,6 +923,89 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
   expect(fitted.length).toBeLessThanOrEqual(fitted.budget + 1);
 });
 
+// THE HUG (docs/SVG_IMPORT_PLAN.md §3): a lower third's banner is as wide as the name on it.
+// Fixed is the default and the board's behaviour; growing is a per-graphic answer the mapping
+// step asks for, because no geometry separates the two — the shipped lower third is drawn on a
+// full-frame artboard and the shipped scorebug is a small floating object.
+const HUG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <g id="Panel">
+    <rect x="140" y="760" width="600" height="190" rx="8" fill="#0d1017"/>
+    <rect x="140" y="760" width="10" height="190" fill="#f6a623"/>
+  </g>
+  <text id="Name" x="190" y="860" font-size="56" fill="#ffffff">Ada</text>
+  <rect id="Logo" x="800" y="780" width="90" height="90" fill="#ffffff"/>
+</svg>`;
+
+test('svg import: the panel hug is offered, off, with the widest rectangle proposed', async ({ page }) => {
+  await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
+  await page.locator('.wz-next').click();
+
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  await expect(mode).toHaveValue('shrink');
+  // Nothing to pick until the answer is "grow" — a shape picker for a graphic that never
+  // resizes is a control with no effect.
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
+
+  await mode.selectOption('grow');
+  const shape = page.getByTestId('map-svg-stretch-shape');
+  // Widest first, and it is the proposal: a banner's background is the widest rectangle on it.
+  await expect(shape.locator('option')).toHaveText([
+    'Panel — 600 × 190',
+    'Logo — 90 × 90',
+    'Panel — 10 × 190',
+  ]);
+  await expect(shape).toHaveValue('s0');
+});
+
+test('svg import: a hugging panel grows with its text, and what is beyond it travels', async ({ page }) => {
+  await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  // ONE class on ONE rectangle is the whole markup edit; the runtime finds it by that class.
+  await expect(frame.locator('rect.imported-design-panel')).toHaveAttribute('width', '600');
+
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
+      const panel = document.querySelector('rect.imported-design-panel')!;
+      const logo = document.getElementById('Logo')!;
+      return {
+        panelWidth: Math.round(parseFloat(panel.getAttribute('width')!)),
+        logoLeft: Math.round(logo.getBoundingClientRect().left),
+        panelRight: Math.round(panel.getBoundingClientRect().right),
+        frameRight: Math.round(document.querySelector('.imported-design-art')!.getBoundingClientRect().right),
+        frameWidth: document.querySelector('.imported-design-art')!.getBoundingClientRect().width,
+        size: parseFloat(getComputedStyle(el).fontSize),
+      };
+    }, value);
+
+  const rest = await run('Ada');
+  expect(rest.panelWidth).toBe(600);
+
+  // A longer name widens the panel instead of shrinking the type — the whole point of the hug —
+  // and the logo drawn past the panel's right edge travels with it, keeping the gap as drawn.
+  const longer = await run('Alexandra Riva');
+  expect(longer.panelWidth).toBeGreaterThan(rest.panelWidth);
+  expect(longer.size).toBe(rest.size);
+  expect(longer.logoLeft - rest.logoLeft).toBeGreaterThan(0);
+  expect(longer.logoLeft - rest.logoLeft).toBeCloseTo(longer.panelRight - rest.panelRight, 0);
+
+  // A name nothing could hold: the panel stops at the frame's safe margin and the type shrinks
+  // for whatever the cap could not give. Growing off the screen is not a fit.
+  const huge = await run('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Mar');
+  expect(huge.panelRight).toBeLessThanOrEqual(huge.frameRight - huge.frameWidth * 0.04 + 1);
+  expect(huge.size).toBeLessThan(rest.size);
+
+  // And a short value again puts the artwork back exactly as drawn.
+  const back = await run('Ada');
+  expect(back.panelWidth).toBe(600);
+  expect(back.logoLeft).toBe(rest.logoLeft);
+  expect(back.size).toBe(rest.size);
+});
+
 test('svg import: retyping a sample repaints the mapping artwork', async ({ page }) => {
   // The step shows the design at its own size, which is the one place a real value can be
   // tried for length — and editing a row used to change nothing there, so the field read as

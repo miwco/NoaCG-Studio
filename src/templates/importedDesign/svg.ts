@@ -136,6 +136,16 @@ function bindSvgMarkup(svg: DesignSvg): string {
     if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
     el.setAttribute('class', own.join(' '));
   }
+  // THE PANEL THAT GROWS (plan §3, the hug): one class on one rectangle, which is the whole
+  // markup edit the feature needs — the runtime finds it by that class and changes its `width`.
+  if (svg.stretch) {
+    const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${svg.stretch.candidateId}"]`);
+    if (el) {
+      const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+      if (!own.includes(`${PREFIX}-panel`)) own.push(`${PREFIX}-panel`);
+      el.setAttribute('class', own.join(' '));
+    }
+  }
   // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
   // each one on and off. Before the markers are stripped — that is what they are for.
   if (svg.behaviour) markQuizLayers(root, svg.behaviour);
@@ -266,6 +276,7 @@ const SVG_FIT_JS = `
 var svgFitDrawn = {};                           // id -> the text the designer drew
 var svgFitWidths = {};                          // id -> that text's width, in the real face
 var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
+var svgFitExtra = {};                           // id -> room a growing panel gave this line
 
 function svgFitNodes() {
   var all = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
@@ -301,12 +312,16 @@ function measureSvgBudgets() {
 }
 
 function fitSvgText() {
+  // A hugging design widens its panel FIRST — stretching gives the room, shrinking answers
+  // only what the frame's safe margin could not give (the same order the raster import's
+  // stretch runtime keeps). A fixed design has no such function and skips this.
+  if (typeof stretchSvgPanel === 'function') stretchSvgPanel();
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
     el.style.fontSize = '';                     // back to the drawn size before measuring
-    var budget = svgFitWidths[el.id];
+    var budget = svgFitWidths[el.id] + (svgFitExtra[el.id] || 0);
     var size = svgFitSizes[el.id];
     if (!(budget > 0) || !(size > 0)) continue;
     // Two passes: a face's advance widths are not perfectly linear in size, so the first
@@ -330,6 +345,132 @@ if (document.readyState === 'loading') {
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(refitSvgText);
 }`;
+
+/**
+ * THE HUG (docs/SVG_IMPORT_PLAN.md §3), emitted only for a design whose author said its panel
+ * grows. Its doctrine is the raster stretch runtime's (importedDesign/stretch.ts): ONE measured
+ * value — how far the longest bound line overflows the width it was drawn at — widens the
+ * panel, and the text fit above then answers only what the frame's safe margin could not give.
+ *
+ * Everything is measured in SCREEN px and converted back through each element's own CTM,
+ * because a group between the artwork's root and a layer may carry a transform, and comparing
+ * raw attribute numbers across two such spaces is how a banner ends up growing the wrong way.
+ */
+function stretchRuntimeJs(): string {
+  return `
+// ── Panel hug (SVG) ───────────────────────────────────────────────────────────
+// The panel below grows with its text: a longer value widens it instead of shrinking the type,
+// which is what a lower third wants (a board wants the opposite, and simply has no such
+// function). Everything drawn PAST the panel's right edge travels with it, and the growth stops
+// at the frame's safe margin — past that, the text fit shrinks whatever is still over.
+// Remove this block and the graphic becomes a fixed one.
+//
+// One limit worth knowing: a follower travels by its transform ATTRIBUTE, and a CSS transform
+// beats an attribute — so a layer the timeline animates in its own right (a per-layer stagger,
+// say) stays where its animation puts it instead of travelling with the edge.
+var PANEL_SAFE = 0.04;                          // keep the grown panel 4% inside the frame edge
+var svgPanelWidth = null;                       // the panel's DRAWN width, in its own units
+var svgPanelFollowers = [];                     // { el, base } — what travels with the far edge
+var svgPanelTexts = [];                         // the bound lines drawn inside the panel
+
+function svgPanelNode() { return document.querySelector('.${PREFIX}-art .${PREFIX}-panel'); }
+
+/** Screen px per user unit for the space an element's own transform is written in. */
+function svgUserScale(el) {
+  var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
+  return ctm && ctm.a ? ctm.a : 1;
+}
+
+/** Put the artwork back exactly as drawn, so every measurement starts from the design. */
+function svgPanelRest() {
+  var panel = svgPanelNode();
+  if (!panel) return null;
+  if (svgPanelWidth === null) svgPanelWidth = parseFloat(panel.getAttribute('width')) || 0;
+  panel.setAttribute('width', String(svgPanelWidth));
+  for (var i = 0; i < svgPanelFollowers.length; i++) {
+    var f = svgPanelFollowers[i];
+    if (f.base === null) f.el.removeAttribute('transform');
+    else f.el.setAttribute('transform', f.base);
+  }
+  svgFitExtra = {};
+  return panel;
+}
+
+// WHAT TRAVELS. A shape drawn entirely past the panel's right edge has to move with it or the
+// gap the designer left would close. A GROUP that straddles the edge is looked inside instead
+// of moved whole — half of it belongs on each side. A straddling SHAPE is left alone: it is
+// either the panel itself or something drawn across the boundary, and moving it would tear the
+// artwork. A rotated or skewed space is skipped for the same reason.
+function svgCollectFollowers(node, right, out) {
+  var kids = node.children;
+  for (var i = 0; i < kids.length; i++) {
+    var el = kids[i];
+    if (el.classList && el.classList.contains('${PREFIX}-panel')) continue;
+    var box = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (!box || (box.width === 0 && box.height === 0)) continue;
+    if (box.left >= right - 0.5) {
+      var ctm = el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
+      if (ctm && (ctm.b || ctm.c)) continue;    // rotated/skewed: not ours to move
+      out.push({ el: el, base: el.getAttribute('transform') });
+    } else if (box.right > right + 0.5 && el.children && el.children.length) {
+      svgCollectFollowers(el, right, out);
+    }
+  }
+}
+
+/** Which bound lines live inside the panel: the ones that START inside it, on its own rows. */
+function svgPanelInside(panel) {
+  var box = panel.getBoundingClientRect();
+  var nodes = svgFitNodes();
+  var out = [];
+  for (var i = 0; i < nodes.length; i++) {
+    var r = nodes[i].getBoundingClientRect();
+    var sameRows = r.top < box.bottom && r.bottom > box.top;
+    if (sameRows && r.left >= box.left - 1 && r.left < box.right) out.push(nodes[i]);
+  }
+  return out;
+}
+
+function stretchSvgPanel() {
+  var panel = svgPanelRest();
+  if (!panel) return;
+  var art = document.querySelector('.${PREFIX}-art');
+  if (!art) return;
+
+  // The layers that move and the lines that drive the growth are read off the artwork AT REST,
+  // so an operator value already on screen can never change who is inside the panel.
+  svgPanelFollowers = [];
+  svgCollectFollowers(art, panel.getBoundingClientRect().right, svgPanelFollowers);
+  svgPanelTexts = svgPanelInside(panel);
+
+  // THE DEFICIT: how far past its drawn width the widest line now runs, in screen px.
+  var need = 0;
+  for (var i = 0; i < svgPanelTexts.length; i++) {
+    var el = svgPanelTexts[i];
+    if (svgFitWidths[el.id] == null) measureSvgBudgets();
+    el.style.fontSize = '';                     // at the drawn size — the panel gives the room
+    var over = (el.getComputedTextLength() - svgFitWidths[el.id]) * svgUserScale(el);
+    if (over > need) need = over;
+  }
+  if (!(need > 0)) return;
+
+  // THE CAP: the panel's far edge stays inside the frame's safe margin. Anything the cap
+  // withholds is what fitSvgText() shrinks.
+  var frame = art.getBoundingClientRect();
+  var grant = Math.min(need, Math.max(0, frame.right - frame.width * PANEL_SAFE - panel.getBoundingClientRect().right));
+  if (!(grant > 0)) return;
+
+  panel.setAttribute('width', String(svgPanelWidth + grant / svgUserScale(panel)));
+  for (var j = 0; j < svgPanelFollowers.length; j++) {
+    var f = svgPanelFollowers[j];
+    var shift = grant / svgUserScale(f.el);
+    f.el.setAttribute('transform', 'translate(' + shift.toFixed(2) + ',0)' + (f.base ? ' ' + f.base : ''));
+  }
+  for (var k = 0; k < svgPanelTexts.length; k++) {
+    svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+  }
+}`;
+}
 
 /** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs)
  *  — the SVG fit's own hook is inserted right after it, so update() re-fits the SVG's text
@@ -462,6 +603,7 @@ ${quizBehaviourCss}
       `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
     ) +
     SVG_FIT_JS +
+    (svg.stretch ? `\n${stretchRuntimeJs()}` : '') +
     '\n' +
     (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '') +
     (quiz ? `\n${quizBehaviourJs(quiz, artworkFields.length)}` : '');

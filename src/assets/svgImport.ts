@@ -88,6 +88,31 @@ export interface SvgGroupCandidate {
   hidden: boolean;
 }
 
+/**
+ * One `<rect>` offered as the PANEL that grows with its text (docs/SVG_IMPORT_PLAN.md §3, the
+ * hug). A lower third's banner should be as wide as the name on it; a quiz board declares a
+ * stage and must never resize. The markup cannot say which this is, and neither can the
+ * artboard size - the shipped lower-third sample is a full-frame artboard with a small banner
+ * drawn into it, while the scorebug is a small floating object that must stay put - so the
+ * mapping step ASKS, and this is the list it asks over.
+ *
+ * Rectangles only in v1: growing a shape means changing one number (`width`), and a panel
+ * drawn as a `<path>` would need its outline rewritten, which is a different feature with a
+ * different risk. The geometry travels because the mapping step ranks and labels by it, and
+ * `DOMParser` has no layout to measure with.
+ */
+export interface SvgShapeCandidate {
+  /** Stable marker id ("s0", "s1", …) — the value of data-noacg-candidate on the rect. */
+  id: string;
+  /** Operator-facing label, prefilled from the layer name like a text candidate's. */
+  label: string;
+  /** The rectangle as drawn, in the artwork's own units. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** One font family the SVG references, as written in its own markup. */
 export interface SvgFontRef {
   /** VERBATIM, as the markup asks for it ("ArchivoBlack-Bold"). Every `@font-face` the
@@ -116,6 +141,8 @@ export interface SvgImportResult {
   outlines: SvgOutlineCandidate[];
   /** Named groups offered as BEHAVIOUR LAYERS (drawn states), in document order. */
   groups: SvgGroupCandidate[];
+  /** Rectangles offered as the PANEL that grows with its text, widest first. */
+  shapes: SvgShapeCandidate[];
   /** Every font family the markup references, in first-seen order. */
   fonts: SvgFontRef[];
   /** What sanitization removed, in user-facing words. Empty for a clean file. */
@@ -623,6 +650,10 @@ const GLYPH_TAGS = new Set(['path', 'polygon']);
  *  and a hundred anonymous rows would bury the few that are text. */
 const MAX_OUTLINE_CANDIDATES = 24;
 
+/** Cap on the panel rectangles offered. A design with more rectangles than this is a chart or
+ *  a table, and its panel is not among the twentieth-widest of them. */
+const MAX_SHAPE_CANDIDATES = 12;
+
 /**
  * Groups that may be OUTLINED TEXT (plan §1.A): the `<g>`s whose children are all glyph
  * shapes, at least two of them (one path alone is a shape; a word is several). The root's
@@ -825,10 +856,39 @@ export function importSvgMarkup(source: string): SvgImportResult {
       return { id, label, hidden: isHiddenSubtree(el, svg) };
     });
 
+  // PANEL SHAPES: the rectangles a graphic could grow (plan §3, the hug). Tagged after every
+  // binding kind, so a marker is never taken from something that becomes a field — a rect is
+  // none of those, but the order is the rule rather than the exception. WIDEST FIRST: the
+  // background of a banner is the widest rectangle in it, and the picker should lead with the
+  // shape the reader means nine times out of ten.
+  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect'))
+    .filter((el) => !el.hasAttribute(SVG_CANDIDATE_ATTR))
+    .filter((el) => isOffered(el, svg))
+    .map((el) => ({ el: el as Element, w: numAttr(el, 'width') ?? 0, h: numAttr(el, 'height') ?? 0 }))
+    .filter((r) => r.w > 0 && r.h > 0)
+    .sort((a, b) => b.w - a.w)
+    .slice(0, MAX_SHAPE_CANDIDATES)
+    .map(({ el, w, h }, i) => {
+      const id = `s${i}`;
+      el.setAttribute(SVG_CANDIDATE_ATTR, id);
+      const { label } = stripFieldPrefix(candidateName(el, svg));
+      return {
+        id,
+        label: label || `Rectangle ${i + 1}`,
+        x: numAttr(el, 'x') ?? 0,
+        y: numAttr(el, 'y') ?? 0,
+        width: w,
+        height: h,
+      };
+    });
+
   // A layer name is a designer's private note ("Name" on three different straps) and becomes an
   // OPERATOR'S label. Three rows reading "Name", and a control page with three identical inputs,
   // is a file the reader has to decode by clicking. Numbered in document order, and only where
   // the name actually repeats — the common file numbers nothing.
+  // Shapes are deliberately NOT numbered with the rest: they share a name with the group they
+  // sit in ("Panel"), so numbering the whole set would start the rectangle list at "Panel 2".
+  // The picker prints each one's size beside its name, which is what tells them apart anyway.
   numberRepeats([...candidates, ...images, ...outlines, ...groups]);
 
   // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
@@ -848,6 +908,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
     images,
     outlines,
     groups,
+    shapes,
     fonts: fontInventory(svg),
     notices,
   };

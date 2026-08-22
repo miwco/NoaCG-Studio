@@ -111,6 +111,13 @@ Two consequences worth designing around:
   for, the generated code shrinks that one line until it fits the width you drew - a smaller
   line of your own type, never a squeezed one - and only then. A value that fits leaves your
   typography untouched.
+- **Or let the panel grow instead.** On the mapping step, "when the text is too long" can be
+  answered with **grow** rather than shrink, and you pick which rectangle grows (the widest one
+  is proposed). It widens to the right at the type's full size, anything you drew past its right
+  edge travels with it, and it stops inside the frame's safe margin - past that the line shrinks
+  as usual. This is what a lower third wants; a board or a scoreboard wants the default, because
+  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow: a freeform
+  shape has no width to change.
 
 ## 5. If the text was converted to outlines
 

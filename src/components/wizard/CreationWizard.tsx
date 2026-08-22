@@ -1545,6 +1545,12 @@ export default function CreationWizard() {
                     // re-pickable, and a file that looks like nothing in particular proposes
                     // nothing at all.
                     svgBehaviour: proposeQuizBinding(result),
+                    // THE HUG (plan §3) starts OFF with the widest rectangle already proposed:
+                    // a banner's background is the widest rectangle on it. Off rather than
+                    // inferred because no geometry separates a lower third from a scorebug —
+                    // our own samples draw the banner on a FULL-FRAME artboard and the scorebug
+                    // as a small floating object, so either rule mislabels one of them.
+                    svgStretch: { on: false, shapeId: result.shapes[0]?.id ?? null },
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
@@ -1578,7 +1584,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgBehaviour: null, svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgBehaviour: null, svgStretch: { on: false, shapeId: null }, svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1614,6 +1620,7 @@ export default function CreationWizard() {
                     svgImages: [],
                     svgOutlines: [],
                     svgBehaviour: null,
+                    svgStretch: { on: false, shapeId: null },
                     svgFonts: [],
                     designArt,
                     importedImages,

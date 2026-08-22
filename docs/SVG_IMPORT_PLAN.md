@@ -102,18 +102,27 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   is how one file came to squish in the editor and run clean past the artwork on air. The drawn
   text is remembered as the page parses (before `update()` can be called) and the budget is
   re-MEASURED, not re-taken, once the real typeface has loaded.
-  **OPEN - THE HUG, owner-directed 2026-08-22 and not yet built.** Shrinking is right for a
-  graphic that declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE
-  STAGE"), and wrong for a lower third, where "the text should decide how big the banner is".
-  An imported SVG has no category to read that from, so **the mapping step ASKS** - one picker,
-  defaulted from geometry (artwork smaller than the frame grows; full-frame declares a stage)
-  and overridable, plus which SHAPE is the panel that stretches. The runtime follows the raster
-  stretch's doctrine (`importedDesign/stretch.ts`): ONE `--stretch-x`-shaped value, measured as
-  the deficit between the drawn text's width and the operator's, widening the picked shape and
-  translating whatever sits beyond its far edge, capped inside the frame's safe area - and the
-  shrink above answers only what the cap could not give. v1 should say out loud which
-  geometries it handles (a left-anchored panel growing rightward is the lower third everybody
-  draws) rather than guessing at the rest.
+- **THE HUG** (owner-directed 2026-08-22, shipped): shrinking is right for a graphic that
+  declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE STAGE") and
+  wrong for a lower third, where "the text should decide how big the banner is". An imported SVG
+  has no category to read that from, so **the mapping step ASKS** - "when the text is too long",
+  shrink (default) or grow, plus WHICH RECTANGLE grows, proposed as the widest one.
+  **The default is fixed, and the question is not answered from geometry**, which was the shape
+  of the original instruction: no measurement separates the two cases, and our own samples prove
+  it - the lower third is drawn on a FULL-FRAME artboard while the scorebug is a small floating
+  object, so "smaller than the frame = a banner" mislabels both.
+  The runtime (`stretchRuntimeJs` in importedDesign/svg.ts) keeps the raster stretch's doctrine
+  (`importedDesign/stretch.ts`): ONE measured deficit - how far the widest bound line inside the
+  panel runs past the width it was drawn at - widens the picked rectangle, everything drawn past
+  its right edge travels with it, the growth stops at the frame's 4% safe margin, and the shrink
+  above answers only what the cap could not give.
+  **What v1 handles, said out loud:** a RECTANGLE (a panel drawn as a freeform path has no width
+  to change), growing RIGHTWARD, with start-anchored text inside it - the lower third everybody
+  draws. Everything is measured in screen px and converted back through each element's own CTM,
+  so a transformed group between the root and a layer is handled; a rotated or skewed one is
+  left alone rather than moved wrongly. A follower travels by its transform ATTRIBUTE, so a
+  layer the timeline animates in its own right (a per-layer stagger) stays where its animation
+  puts it.
 - **Animation:** the standard marked ANIMATION region animating the wrapper (entrance/exit
   presets work day one; the timeline dock reads the CODE as always). Phase 2: per-layer stagger -
   top-level named `<g>`s offered as animation units.

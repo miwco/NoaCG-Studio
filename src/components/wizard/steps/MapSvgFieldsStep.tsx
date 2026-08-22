@@ -623,6 +623,74 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
         </div>
       )}
 
+      {svg.candidates.length > 0 && svg.shapes.length > 0 && (
+        /* THE HUG (docs/SVG_IMPORT_PLAN.md §3). A lower third's banner should be as wide as
+           the name on it; a quiz board and a scorebug declare a stage and must not move. No
+           geometry separates the two — our own samples draw the banner on a full-frame
+           artboard and the scorebug as a small floating object — so this asks, with the
+           widest rectangle already proposed and OFF until somebody says otherwise. */
+        <div className="panel-section" data-testid="map-svg-stretch">
+          <h3>
+            When the text is too long{' '}
+            <span className="muted">
+              {draft.svgStretch.on ? 'the panel grows' : 'the text shrinks to fit'}
+            </span>
+          </h3>
+          <p className="hint">
+            A longer value than you drew for has to go somewhere. By default the line shrinks
+            until it fits — right for a board, whose layout is the design. A lower third can
+            instead let its banner grow, so the type stays the size you drew it.
+          </p>
+          <label className="save-field">
+            <span>Too-long text</span>
+            <select
+              value={draft.svgStretch.on ? 'grow' : 'shrink'}
+              onChange={(e) =>
+                onDraft({
+                  svgStretch: {
+                    on: e.target.value === 'grow',
+                    // Turning it on with nothing picked takes the proposal rather than
+                    // leaving a switch that is on and does nothing.
+                    shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
+                  },
+                })
+              }
+              data-testid="map-svg-stretch-mode"
+            >
+              <option value="shrink">Shrinks to fit the space you drew</option>
+              <option value="grow">Grows the panel behind it</option>
+            </select>
+          </label>
+          {draft.svgStretch.on && (
+            <label
+              className="save-field"
+              onMouseEnter={() => setHoverId(draft.svgStretch.shapeId)}
+              onMouseLeave={() => setHoverId((h) => (h === draft.svgStretch.shapeId ? null : h))}
+            >
+              <span>Which panel grows</span>
+              <select
+                value={draft.svgStretch.shapeId ?? ''}
+                onChange={(e) => onDraft({ svgStretch: { on: true, shapeId: e.target.value || null } })}
+                data-testid="map-svg-stretch-shape"
+              >
+                {svg.shapes.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label} — {Math.round(s.width)} × {Math.round(s.height)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {draft.svgStretch.on && (
+            <p className="hint">
+              It widens to the right, and anything drawn past its right edge travels with it —
+              never past the frame's safe margin. Only rectangles can grow: a panel drawn as a
+              freeform shape has no width to change.
+            </p>
+          )}
+        </div>
+      )}
+
       {draft.svgImages.length > 0 && (
         <div className="panel-section" data-testid="map-svg-images">
           <h3>
