@@ -111,6 +111,15 @@ const MAP = [
   // OGraf target (the download IS that target's build) and on src/templates (a catalog RENAME
   // must fail the card-resolution test, not strand a dead card on a public page).
   [/^(ograf\.html|src\/ograf\/|src\/export\/targets\/ograf|src\/templates\/)/, ['ograf-starters.spec.ts']],
+  // The /bridge page (docs/AGENT_CLI.md) and what it composes that nothing else exercises: the
+  // dual graphic package + the OGraf package reader (export), the neutral scaffold (templates),
+  // the OGraf manifest -> operator-surface adapter (control). The CLI under cli/ has its own
+  // package tests (CI) and `npm run bench:cli`; a change there runs no e2e spec.
+  [/^(bridge\.html|src\/bridge\/)/, ['bridge.spec.ts', 'ograf-contract.spec.ts']],
+  [/^src\/export\/(noacgPackage|targets\/ografImport|targets\/ograf)/, ['bridge.spec.ts', 'ograf-contract.spec.ts']],
+  [/^src\/templates\/types\/neutralDesign/, ['bridge.spec.ts']],
+  [/^src\/control\/ografContract/, ['ograf-contract.spec.ts', 'bridge.spec.ts']],
+  [/^cli\//, []],
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],

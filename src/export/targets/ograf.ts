@@ -10,10 +10,11 @@ import lottieSource from '../../assets/lottie.min.js?raw';
 import { inlineAssetRefs, isLottieAsset, parseDataUrl } from '../../assets/assetUtils';
 import { templateUsesLottie } from '../../assets/lottieSupport';
 import { parseAnimData } from '../../blocks/animData';
-import { eventButtons, type ControlButton } from '../../control/controlModel';
+import { eventButtons, kindForField, type ControlButton } from '../../control/controlModel';
 import { stripLiveData } from '../../control/liveData';
 import { stripRealtimeControl } from '../../control/realtimeControl';
-import type { Ftype, SpxField, SpxTemplate } from '../../model/types';
+import { sourceHash } from '../../model/contentHash';
+import type { Ftype, SpxField, SpxTemplate, TemplateType } from '../../model/types';
 import { RENDER_RUNTIME_JS, GSAP_DETACH_JS } from '../../render/runtimeScript';
 import { addReferencedFonts, projectFormatReadme, slug } from '../common';
 import { fieldReferenceMd } from '../fieldReference';
@@ -44,17 +45,27 @@ function schemaDefault(field: SpxField): string | number | boolean {
   return field.value;
 }
 
-/** Build the OGraf data schema from the template's DataFields (one property per fN). */
+/**
+ * Build the OGraf data schema from the template's DataFields (one property per fN).
+ *
+ * The JSON-schema `type` is a 3-way collapse (string / number / boolean), which is all the
+ * standard can say; the CONTROL kind the property came from - a line list, a colour, an image
+ * path - rides along as the per-property `v_noacg.kind` vendor hint (spec: vendor fields are
+ * `v_`-prefixed and allowed in every manifest object), so a reader that knows NoaCG gets the
+ * field back exactly and a reader that does not sees plain OGraf.
+ */
 function dataSchema(fields: SpxField[]) {
   const properties: Record<string, unknown> = {};
   for (const f of fields) {
     if (!['textfield', 'textarea', 'number', 'dropdown', 'filelist', 'checkbox', 'color', 'hidden'].includes(f.ftype)) continue;
+    const kind = kindForField(f);
     properties[f.field] = {
       type: schemaType(f.ftype),
       title: f.title || f.field,
       default: schemaDefault(f),
       ...(f.ftype === 'dropdown' && f.items?.length ? { enum: f.items.map((i) => i.value) } : {}),
       ...(f.ftype === 'hidden' ? { hidden: true } : {}),
+      ...(kind ? { v_noacg: { kind } } : {}),
     };
   }
   return { type: 'object', properties };
@@ -76,6 +87,17 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
     id: button.event,
     name: button.label,
     ...(button.section ? { description: `${button.section} — fires the "${button.event}" event.` } : {}),
+    // The button's grouping and its destructive flag have no standard carrier; they ride the
+    // per-action vendor object so a NoaCG reader (control/ografContract.ts) rebuilds the
+    // operator surface exactly, and any other renderer ignores it.
+    ...(button.section || button.destructive
+      ? {
+          v_noacg: {
+            ...(button.section ? { section: button.section } : {}),
+            ...(button.destructive ? { destructive: true } : {}),
+          },
+        }
+      : {}),
     ...(button.payload?.length
       ? {
           schema: {
@@ -174,10 +196,80 @@ export function ografGraphicId(name: string): string {
   return `noacg-${slug(name).replace(/_/g, '-')}`;
 }
 
+/**
+ * NoaCG's OWN vendor block on the manifest - `v_noacg`, the standard's extension mechanism
+ * (every manifest object admits `v_`-prefixed fields) used for exactly what plain OGraf cannot
+ * express about a NoaCG-made Graphic and nothing more:
+ *
+ *  - `type`: the NoaCG graphic type (a `TemplateType`), which an SPX/OGraf file has no slot
+ *    for and the import lane otherwise has to guess (`blank`);
+ *  - `source`: where the EDITABLE sources sit in this package when it carries them - the SPX
+ *    layout files (`<slug>.html`, `css/template.css`, `js/template.js`) from which the manifest
+ *    and `graphic.mjs` were generated. A package with sources is both a valid OGraf Graphic and
+ *    an editable NoaCG workspace; renderers ignore the sources, NoaCG ignores the generated half;
+ *  - `sourceHash`: the sources' content hash at generation time, so a reader can tell a fresh
+ *    package from one whose sources were edited after the generated half was written (a stale
+ *    `graphic.mjs` is the one way the two halves can disagree);
+ *  - `generator`: who wrote the package.
+ *
+ * Everything else a round trip needs already lives in the sources themselves (the definition
+ * with its DataFields and playout settings, the NOACG_ANIM machine) or in standard fields.
+ * Deliberately NOT a manifest of its own: the format IS OGraf, this is a sticker on it.
+ */
+export interface NoacgVendorBlock {
+  format: 'noacg-graphic';
+  version: 1;
+  type: TemplateType;
+  source?: { html: string; css: string; js: string };
+  sourceHash: string;
+  generator: string;
+}
+
+/** The SPX-layout source paths a dual package writes (export/noacgPackage.ts). */
+export function noacgSourcePaths(template: SpxTemplate): NonNullable<NoacgVendorBlock['source']> {
+  return { html: `${slug(template.name)}.html`, css: 'css/template.css', js: 'js/template.js' };
+}
+
+/**
+ * The vendor block for a template. `source` only when the package carries the sources, and
+ * then `sourceHash` is the hash of those FILES AS WRITTEN (the caller reads them back off the
+ * zip and passes it) - not of the in-memory template, because the packaged html also carries
+ * the project-format meta and the control receiver that the importer strips again, and a hash
+ * that a round trip cannot reproduce detects nothing. Without sources it hashes the template.
+ */
+export function noacgVendorBlock(
+  template: SpxTemplate,
+  opts: { source?: NoacgVendorBlock['source']; sourceHash?: string } = {},
+): NoacgVendorBlock {
+  return {
+    format: 'noacg-graphic',
+    version: 1,
+    type: template.type,
+    ...(opts.source ? { source: opts.source } : {}),
+    sourceHash: opts.sourceHash ?? sourceHash(template),
+    generator: 'noacg-studio',
+  };
+}
+
+/** One manifest `thumbnails[]` entry (spec §2): a PNG/JPG/GIF/webp the package contains. */
+export interface OgrafThumbnail {
+  file: string;
+  resolution?: { width: number; height: number };
+}
+
+export interface OgrafManifestOptions {
+  /** NoaCG's vendor block (`v_noacg`). Absent = plain OGraf, exactly as before. */
+  noacg?: NoacgVendorBlock;
+  /** Preview images the PACKAGE carries (the caller writes the files; `addOgrafPackage`
+   *  checks they exist). Absent = no `thumbnails` field. */
+  thumbnails?: OgrafThumbnail[];
+}
+
 /** The .ograf.json manifest (required fields per spec §2 + the field-driven data schema). */
 export function buildOgrafManifest(
   template: SpxTemplate,
   usage: GraphicUsage = 'live',
+  opts: OgrafManifestOptions = {},
 ): Record<string, unknown> {
   const stepCount = Math.max(1, Number(template.settings.steps) || 1);
   const actions = customActions(template);
@@ -196,6 +288,8 @@ export function buildOgrafManifest(
     ...(actions.length ? { customActions: actions } : {}),
     ...(durations.length ? { actionDurations: durations } : {}),
     renderRequirements: renderRequirements(template),
+    ...(opts.thumbnails?.length ? { thumbnails: opts.thumbnails } : {}),
+    ...(opts.noacg ? { v_noacg: opts.noacg } : {}),
   };
 }
 
@@ -264,10 +358,10 @@ function scriptSafe(source: string): string {
 
 /** Isolated document used only for non-real-time seeks. Rebuilding it for every request is
  * the reset boundary that makes backward and shuffled seeks independent of prior frames. */
-function offlineDocument(template: SpxTemplate): string {
+function offlineDocument(template: SpxTemplate, lib: OgrafLibPaths = DEFAULT_LIB): string {
   const js = stripRealtimeControl(stripLiveData(template.js));
   const lottie = templateUsesLottie(template)
-    ? '<script src="lib/lottie.min.js"></script>'
+    ? `<script src="${lib.lottie}"></script>`
     : '';
   const bridge = `
 var __ografStep = -1;
@@ -302,7 +396,7 @@ window.__noacgScheduledAction = function (entry) {
 <base href="__NOACG_BASE__">
 <style>html,body{width:${template.resolution.width}px;height:${template.resolution.height}px;overflow:hidden;margin:0;background:transparent}${template.css}</style>
 <script>${scriptSafe(RENDER_RUNTIME_JS)}</script>
-<script src="lib/gsap.min.js"></script>
+<script src="${lib.gsap}"></script>
 <script>${scriptSafe(GSAP_DETACH_JS)}</script>${lottie}
 </head><body>${bodyContent(templateHtmlForModule(template))}
 <script>${scriptSafe(js)}</script>
@@ -310,8 +404,17 @@ window.__noacgScheduledAction = function (entry) {
 </body></html>`;
 }
 
+/** Where the bundled libraries sit inside the package, relative to `graphic.mjs`. The plain
+ *  OGraf package keeps them under `lib/`; the dual package (export/noacgPackage.ts) shares the
+ *  SPX layout's `js/` copies instead of shipping GSAP twice. */
+export interface OgrafLibPaths {
+  gsap: string;
+  lottie: string;
+}
+const DEFAULT_LIB: OgrafLibPaths = { gsap: 'lib/gsap.min.js', lottie: 'lib/lottie.min.js' };
+
 /** graphic.mjs: a readable Web Component wrapping the template's own runtime. */
-function graphicModule(template: SpxTemplate): string {
+function graphicModule(template: SpxTemplate, lib: OgrafLibPaths = DEFAULT_LIB): string {
   const stepCount = Math.max(1, Number(template.settings.steps) || 1);
   const machine = parseAnimData(template.js)?.machine;
   // Each state group's off-air (initial) state, so the wrapper can tell when a press took the
@@ -337,9 +440,9 @@ function ensureLottie() {
     window.define = undefined;
     const restore = () => { window.define = prevDefine; };
     const s = document.createElement('script');
-    s.src = new URL('./lib/lottie.min.js', import.meta.url).href;
+    s.src = new URL('./${lib.lottie}', import.meta.url).href;
     s.onload = () => { restore(); resolve(undefined); };
-    s.onerror = () => { restore(); reject(new Error('Could not load lib/lottie.min.js')); };
+    s.onerror = () => { restore(); reject(new Error('Could not load ${lib.lottie}')); };
     document.head.appendChild(s);
   });
 }`
@@ -360,9 +463,9 @@ function ensureGsap() {
     window.define = undefined;
     const restore = () => { window.define = prevDefine; };
     const s = document.createElement('script');
-    s.src = new URL('./lib/gsap.min.js', import.meta.url).href;
+    s.src = new URL('./${lib.gsap}', import.meta.url).href;
     s.onload = () => { restore(); resolve(undefined); };
-    s.onerror = () => { restore(); reject(new Error('Could not load lib/gsap.min.js')); };
+    s.onerror = () => { restore(); reject(new Error('Could not load ${lib.gsap}')); };
     document.head.appendChild(s);
   });
 }${ensureLottieFn}
@@ -403,7 +506,7 @@ const withPackageUrls = {
 
 // Non-real-time rendering runs in an isolated, virtual-clock document. The document is
 // recreated for every seek, so no prior playback, timer, GSAP state, or seek order can leak.
-const OFFLINE_DOCUMENT = ${JSON.stringify(offlineDocument(template))};
+const OFFLINE_DOCUMENT = ${JSON.stringify(offlineDocument(template, lib))};
 
 // Each state group's off-air state. Empty when this graphic has no state machine.
 const OFF_STATES = ${JSON.stringify(offStates)};
@@ -748,10 +851,22 @@ export default Graphic;
  * on this package inherits, rather than something a reviewer has to remember. The LiveOS
  * target reuses this verbatim: LiveOS's HTML5 graphics engine is OGraf-compliant.
  */
+export interface OgrafPackageOptions {
+  /** Where the bundled libraries go (and where `graphic.mjs` loads them from). Default `lib/`;
+   *  the dual package passes the SPX layout's `js/` so one GSAP copy serves both halves. */
+  lib?: OgrafLibPaths;
+  /** NoaCG's `v_noacg` vendor block. Absent = plain OGraf, exactly as before. */
+  noacg?: NoacgVendorBlock;
+  /** A preview raster to ship as the manifest's `thumbnails[0]` - the bridge's bench shot.
+   *  `data` is the image bytes (a Blob, raw bytes, or a base64 string). */
+  thumbnail?: { file: string; data: Blob | Uint8Array | string; width: number; height: number };
+}
+
 export async function addOgrafPackage(
   root: JSZip,
   template: SpxTemplate,
   usage: GraphicUsage = 'live',
+  opts: OgrafPackageOptions = {},
 ): Promise<void> {
   if (usage !== 'live') {
     const compatibility = validateOgrafOfflineCompatibility(template);
@@ -759,7 +874,11 @@ export async function addOgrafPackage(
       throw new Error(`OGraf post-production compatibility: ${compatibility.errors.join(' ')}`);
     }
   }
-  const manifest = buildOgrafManifest(template, usage);
+  const lib = opts.lib ?? DEFAULT_LIB;
+  const thumbnails: OgrafThumbnail[] = opts.thumbnail
+    ? [{ file: opts.thumbnail.file, resolution: { width: opts.thumbnail.width, height: opts.thumbnail.height } }]
+    : [];
+  const manifest = buildOgrafManifest(template, usage, { noacg: opts.noacg, thumbnails });
   const errors = validateOgrafManifest(manifest);
   if (errors.length) throw new Error(`OGraf manifest invalid: ${errors.join(' ')}`);
 
@@ -767,13 +886,13 @@ export async function addOgrafPackage(
   // thumbnail have to resolve against. Collected as we write rather than read back off the
   // zip, whose keys carry the enclosing project folder.
   const packaged: string[] = [];
-  const write = (path: string, data: string | Blob, options?: JSZip.JSZipFileOptions) => {
+  const write = (path: string, data: string | Blob | Uint8Array, options?: JSZip.JSZipFileOptions) => {
     packaged.push(path);
     root.file(path, data, options);
   };
 
   write(`${slug(template.name)}.ograf.json`, JSON.stringify(manifest, null, 2));
-  write('graphic.mjs', graphicModule(template));
+  write('graphic.mjs', graphicModule(template, lib));
   // The ID table travels with every package (LiveOS inherits it here too): an OGraf host's
   // data keys ARE these field ids, and only the package can say what each one means.
   write(
@@ -784,8 +903,13 @@ export async function addOgrafPackage(
         'declares, and what `updateAction({ data })` carries.',
     ),
   );
-  write('lib/gsap.min.js', gsapSource);
-  if (templateUsesLottie(template)) write('lib/lottie.min.js', lottieSource);
+  write(lib.gsap, gsapSource);
+  if (templateUsesLottie(template)) write(lib.lottie, lottieSource);
+  if (opts.thumbnail) {
+    const { file, data } = opts.thumbnail;
+    if (typeof data === 'string') write(file, data, { base64: true });
+    else write(file, data);
+  }
   await addReferencedFonts(root, template);
   for (const asset of template.assets) {
     if (typeof asset.data === 'string') {

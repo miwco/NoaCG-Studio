@@ -1,0 +1,107 @@
+// Smoke: the built CLI against a live NoaCG bridge (NOACG_URL). Skips when no bridge answers -
+// an offline `npm test` is honest, not green by accident. Run `npm run build` first.
+
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { test } from 'node:test';
+
+const exec = promisify(execFile);
+const here = path.dirname(fileURLToPath(import.meta.url));
+const cli = path.join(here, '..', 'dist', 'index.js');
+const url = process.env.NOACG_URL?.replace(/\/+$/, '');
+
+async function bridgeUp() {
+  if (!url) return false;
+  try {
+    const res = await fetch(`${url}/bridge`, { signal: AbortSignal.timeout(5000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function run(args) {
+  try {
+    const { stdout, stderr } = await exec(process.execPath, [cli, ...args], { env: process.env, maxBuffer: 64 * 1024 * 1024 });
+    return { code: 0, stdout, stderr };
+  } catch (e) {
+    return { code: e.code ?? 1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
+  }
+}
+
+const up = await bridgeUp();
+const skip = up ? false : `no NoaCG bridge at NOACG_URL=${url ?? '(unset)'} - start a dev server and set NOACG_URL`;
+
+test('help prints usage', async () => {
+  const r = await run(['--help']);
+  assert.match(r.stdout, /Usage: noacg <command>/);
+});
+
+test('types lists the registry', { skip }, async () => {
+  const r = await run(['types', '--json']);
+  assert.equal(r.code, 0, r.stderr);
+  const json = JSON.parse(r.stdout);
+  assert.ok(json.types.length >= 30, `expected >= 30 types, got ${json.types.length}`);
+  assert.ok(json.types.some((t) => t.id === 'scoreboard'));
+});
+
+test('scaffold -> validate -> inspect -> screenshot on a neutral scoreboard', { skip }, async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'noacg-smoke-'));
+  const pkg = path.join(dir, 'football-scoreboard');
+  const s = await run(['scaffold', '--type', 'scoreboard', '--design', 'neutral', '--name', 'Football scoreboard', '--out', pkg, '--json']);
+  assert.equal(s.code, 0, s.stderr);
+  const files = await fs.readdir(pkg);
+  for (const expected of ['css', 'js', 'graphic.mjs', 'FIELDS.md']) assert.ok(files.includes(expected), `missing ${expected} in ${files.join(', ')}`);
+  assert.ok(files.some((f) => f.endsWith('.ograf.json')), 'no manifest');
+  assert.ok(files.some((f) => f.endsWith('.html') && f !== 'controlpanel.html'), 'no html source');
+
+  const v = await run(['validate', pkg, '--json']);
+  const vj = JSON.parse(v.stdout);
+  assert.equal(vj.ok, true, `validate not ok: ${JSON.stringify(vj.validation?.merged?.errors)}`);
+  assert.equal(v.code, 0);
+
+  const i = await run(['inspect', pkg, '--json']);
+  const ij = JSON.parse(i.stdout);
+  assert.equal(ij.inspection.descriptors.length, 4);
+
+  const png = path.join(dir, 'onair.png');
+  const sh = await run(['screenshot', pkg, '--state', 'onair', '--out', png, '--json']);
+  assert.equal(sh.code, 0, sh.stderr);
+  const stat = await fs.stat(png);
+  assert.ok(stat.size > 1024, `png too small: ${stat.size}`);
+});
+
+test('a typeless graphic from a field list validates', { skip }, async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'noacg-smoke-'));
+  const pkg = path.join(dir, 'now-playing');
+  const s = await run(['scaffold', '--fields', 'Artist:text=Anna,Song:text=Northern Lights,Progress:number=42', '--name', 'Now playing', '--out', pkg, '--json']);
+  assert.equal(s.code, 0, s.stderr);
+  const v = await run(['validate', pkg, '--json']);
+  const vj = JSON.parse(v.stdout);
+  assert.equal(vj.ok, true, `validate not ok: ${JSON.stringify(vj.validation?.merged?.errors)}`);
+  const i = await run(['inspect', pkg, '--json']);
+  assert.equal(JSON.parse(i.stdout).inspection.descriptors.length, 3);
+});
+
+test('a third-party OGraf package is inspected and driven in the OGraf host', { skip }, async () => {
+  // The repo's hand-written fixture (e2e/fixtures/ograf/scorebug-demo): not a NoaCG template -
+  // semantic keys, two custom actions, two steps. `noacg validate` must mount it in the host
+  // and drive load / update / every action / play / stop with 2xx ReturnPayloads.
+  const fixture = path.join(here, '..', '..', 'e2e', 'fixtures', 'ograf', 'scorebug-demo');
+  const v = await run(['validate', fixture, '--json']);
+  const vj = JSON.parse(v.stdout);
+  assert.equal(vj.ok, true, `validate not ok: ${JSON.stringify(vj.errors)}`);
+  assert.equal(v.code, 0);
+  assert.ok(Array.isArray(vj.steps) && vj.steps.length >= 6, `expected the host steps, got ${JSON.stringify(vj.steps)}`);
+  assert.ok(vj.steps.every((s) => s.statusCode < 400), `a host step failed: ${JSON.stringify(vj.steps)}`);
+  assert.equal(vj.contract.descriptors.length, 4);
+  assert.equal(vj.contract.buttons.length, 2);
+  const i = await run(['inspect', fixture, '--json']);
+  assert.equal(i.code, 0, i.stderr);
+  assert.equal(JSON.parse(i.stdout).inspection.descriptors.length, 4);
+});

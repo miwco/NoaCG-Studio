@@ -179,6 +179,27 @@ export-time reflow, stretching, or cropping.
   collision-suffixed names). The overlay flavor adds the aggregated show_controlpanel.html
   (inline assets); the UI is components/home/ProductionExportDialog.tsx, opened from the
   production page and the Home row, validation-gated per graphic (non-negotiable 4).
+- **noacgPackage.ts** - the DUAL graphic package (docs/AGENT_CLI.md): ONE folder that is both the
+  SPX starter layout (`<slug>.html`, `css/template.css`, `js/template.js`, `js/gsap.min.js`,
+  images/, fonts/ - the editable SOURCES) and a valid OGraf v1 package (`<slug>.ograf.json` +
+  `graphic.mjs` - GENERATED, never edited). `addGraphicPackage(root, template, {thumbnail?})`
+  builds the SPX half with `buildStarterInto`, reads the three source files back, and hands the
+  OGraf exporter `lib` paths pointing at the shared `js/` copies (so the package carries ONE
+  gsap) plus the `v_noacg` vendor block; `buildGraphicPackage` zips it under `<slug>/`. The
+  agent workspace, the bridge's `exportPackage`, and the Import door's round trip all use it.
+- **targets/ograf.ts `v_noacg`** - the manifest's only NoaCG-specific content, all under the
+  spec's `v_` vendor prefix and ignored by every renderer: per-property `v_noacg.kind` (the
+  control kind the JSON-schema type collapsed), per-action `v_noacg {section, destructive}`,
+  and at the root `noacgVendorBlock()` = `{format:'noacg-graphic', version:1, type, source
+  {html,css,js}, sourceHash, generator}` when the package ships sources. `thumbnails` is written
+  only when the caller supplies a raster (the CLI's settled on-air shot; the in-app export
+  ships none).
+- **targets/ografImport.ts** - the READER: `readOgrafPackage(files)` finds the shallowest
+  manifest, validates manifest + package, reads `v_noacg` (`readNoacgVendorBlock`), compares the
+  recorded `sourceHash` with the shipped sources (`stale`), and derives the operator contract for
+  ANY manifest through `control/ografContract.ts`. A package without `v_noacg.source` is a
+  third-party graphic: validated, inspectable, hostable in the bench - not importable as a
+  template (future, docs/AGENT_CLI.md).
 - **common.ts** - addSharedAssets, addReferencedFonts, injectControlReceiver + addControlPanel,
   FONT_LICENSES.md.
 

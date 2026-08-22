@@ -30,6 +30,14 @@ A template's playout behaviour travels INSIDE the template, and nowhere else:
   whatever their code declares is what every surface renders. Keep it that way — a switch on
   a category id in `src/control/` or the production surfaces would fork catalog templates
   from imported/AI ones, which is the divergence this design exists to prevent.
+- **The same shapes from an OGraf manifest.** `src/control/ografContract.ts` is the adapter
+  the other way round: any OGraf v1 manifest (a NoaCG export or a stranger's package) yields
+  `FieldDescriptor[]` from its `schema`, `ControlButton[]` from its `customActions` and a
+  `steps` summary from `stepCount` - the SAME types the generator produces, so every consumer
+  renders it unchanged. Honest about what OGraf cannot say: a JSON-schema type is a 3-way
+  collapse, so the exporter's `v_noacg.kind` hint restores the control kind when present; OGraf
+  has no state graph, so every button is live. `e2e/ograf-contract.spec.ts` pins it on a
+  hand-written third-party graphic (docs/AGENT_CLI.md).
 
 ## The one generator, three surfaces
 

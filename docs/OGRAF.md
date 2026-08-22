@@ -22,7 +22,16 @@ break that spec, not the page.
 
 - Specification: <https://ograf.ebu.io/v1/specification/docs/Specification.html>
 - Manifest schema: <https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json>
-- Spec version targeted: **v1**. There is no vendor dialect - a package is plain OGraf.
+- Spec version targeted: **v1**. There is no vendor dialect - a package is plain OGraf. The one
+  NoaCG-specific thing a manifest may carry is the standard's own extension mechanism:
+  `v_`-prefixed vendor fields. Every export writes a per-property `v_noacg.kind` hint inside
+  `schema` (the control kind the property came from, since the JSON-schema type is a 3-way
+  collapse) and a per-action `v_noacg` (the button's section / destructive flag); the **dual
+  graphic package** (`src/export/noacgPackage.ts`, docs/AGENT_CLI.md) additionally writes a root
+  `v_noacg` block naming the graphic TYPE, the editable SPX-layout SOURCES shipped beside the
+  component, and their content hash. Any renderer ignores all of it; NoaCG's reader
+  (`src/export/targets/ografImport.ts`, `src/model/importTemplate.ts`) uses it to re-import the
+  package losslessly and to tell a stale generated half from a fresh one.
 
 The same package is also the **LiveOS (NetOn.Live)** export; that target is this package with
 NetOn.Live install steps in its README, because the LiveOS HTML5 graphics engine is
@@ -137,8 +146,10 @@ disagree with each other.
 
 ## Known limits
 
-- **No `thumbnails`.** The spec allows a preview image per Graphic; we do not rasterise one at
-  export time, so hosts that show a preview tile will show a placeholder.
+- **`thumbnails` only where a raster exists.** The spec allows a preview image per Graphic. The
+  in-app export does not rasterise one, so hosts that show a preview tile show a placeholder
+  there; the `noacg` CLI's `validate --screenshots` (docs/AGENT_CLI.md) shoots the settled on-air
+  frame and writes it into the dual package as `thumbnail.png` + the manifest's `thumbnails[0]`.
 - **No `author`.** A graphic in NoaCG has no author field to fill it from; adding the tool's own
   name there would misdescribe what the field means.
 - **`id` is `noacg-<slug>`**, not a reverse-DNS name and not the bare slug. The spec only says an

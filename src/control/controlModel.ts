@@ -10,8 +10,11 @@ import { parseAnimData } from '../blocks/animData';
 import { deriveMachine, machineControls, type ControlButton } from '../blocks/animMachine';
 import { slug } from '../export/slug';
 
-/** Map an SPX ftype to a control kind. The non-data ftypes carry no control at all. */
-function kindForField(f: SpxField): FieldKind | null {
+/** Map an SPX ftype to a control kind. The non-data ftypes carry no control at all.
+ *  Exported for the OGraf exporter, which records the kind as a per-property vendor hint so
+ *  the standard's 3-way type collapse (string/number/boolean) can be undone on the way back
+ *  (control/ografContract.ts) - one mapping, read from both directions. */
+export function kindForField(f: SpxField): FieldKind | null {
   switch (f.ftype) {
     case 'textfield':
       return 'text';

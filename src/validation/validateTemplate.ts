@@ -141,8 +141,12 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
   // 3. Each data field maps to a matching DOM id. On an imported SVG design this is an
   //    ERROR, not a warning: the field was bound to one of the artwork's own text nodes at
   //    import (docs/SVG_IMPORT_PLAN.md), so a missing id means the operator's value silently
-  //    goes nowhere in a graphic whose whole point is being exactly the designer's.
-  const svgBound = template.type === 'imported-design' && /<svg\b/i.test(template.html);
+  //    goes nowhere in a graphic whose whole point is being exactly the designer's. The design
+  //    is recognised by its MARKUP - the imported SVG root carries the `<prefix>-art` artwork
+  //    class (templates/importedDesign/svg.ts) - never by the template's category string: a
+  //    category selects nothing at the playout boundary (docs/CONTROL_LAYER.md), and this was the
+  //    one place a type string changed an export verdict.
+  const svgBound = /<svg\b[^>]*\bclass="[^"]*\b[\w-]+-art\b[^"]*"/i.test(template.html);
   if (parsed) {
     const ids = htmlIds(template.html);
     for (const field of parsed.fields) {
