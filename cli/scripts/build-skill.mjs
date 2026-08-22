@@ -115,10 +115,14 @@ const strays = existsSync(PLUGIN_SKILL)
   ? walk(PLUGIN_SKILL).map((f) => path.join(PLUGIN_SKILL, ...f.split('/'))).filter((f) => !expected.has(f))
   : [];
 
+// Compared LF-normalised: a Windows checkout with core.autocrlf hands these files back with CRLF,
+// and a generator that re-wrote them on every machine - or a check that failed only there - would
+// teach people to ignore it (scripts/check-shared-instructions.mjs learned the same lesson).
+const same = (a, b) => a.equals(b) || a.toString('utf8').replace(/\r\n/g, '\n') === b.toString('utf8').replace(/\r\n/g, '\n');
 const problems = [];
 for (const [file, bytes] of expected) {
   const current = existsSync(file) && statSync(file).isFile() ? readFileSync(file) : null;
-  if (current && current.equals(bytes)) continue;
+  if (current && same(current, bytes)) continue;
   problems.push(`${current ? 'differs' : 'missing'}: ${rel(file)}`);
   if (!check) {
     mkdirSync(path.dirname(file), { recursive: true });
