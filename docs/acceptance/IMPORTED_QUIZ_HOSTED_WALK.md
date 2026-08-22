@@ -57,7 +57,11 @@ drives select → lock → **reboot the renderer** → reveal. Then it unpublish
 itself.
 
 Green is a real answer to both unknowns. It writes five pairs of frames to
-`test-results/signed-in/`, dashboard and output side by side:
+`test-results/signed-in/`, dashboard and output side by side.
+
+**Copy them somewhere before you run anything else with Playwright.** `test-results/` is wiped at
+the start of the next run, whichever config it uses — the frames from this walk were lost once
+that way already, by an offline suite run minutes later.
 
 | Frame | What it should show on the OUTPUT side |
 |---|---|
