@@ -24,8 +24,9 @@ export interface SvgTextCandidate {
   /** The node's current text content — the sample value the field starts with. */
   sample: string;
   /** True when the layer name carried the optional `f:` / `field:` prefix — the power-user
-   *  sugar that marks a layer editable by name. When ANY candidate carries it, only the
-   *  prefixed ones default ON; with none, every detected text defaults ON. */
+   *  sugar that marks a layer editable by name. For TEXT it is a guarantee, not a filter:
+   *  every detected text defaults ON either way. For a PICTURE, which defaults OFF (inside a
+   *  design a picture is usually the artwork), the prefix is what turns it on. */
   marked: boolean;
   /** A numeric-looking sample proposes ftype "number" (a score, a count, a year). */
   numeric: boolean;
@@ -573,6 +574,35 @@ function candidateSample(el: Element, fontSize: (element: Element) => number): s
   );
 }
 
+/**
+ * WHERE A BOUND `<text>` SITS ONCE ITS RUNS ARE GONE.
+ *
+ * Illustrator writes a kerned headline as one tspan per run and puts the position on the RUNS,
+ * leaving the `<text>` around them with no `x` and no `y` at all. That text is what a merged
+ * field binds (see `textCandidates`), and `update()` writes textContent — which replaces the
+ * runs and, with them, the only coordinates the line had: the headline snaps to the SVG's
+ * origin, off the panel the designer drew it on. On the owner's first walk that read as a
+ * field that "didn't affect anything", because the words landed above the top edge.
+ *
+ * So the run's position is HOISTED onto the text at import: two attributes, on a node that had
+ * neither, changing nothing about how the file draws (a tspan's own `x`/`y` still wins) and
+ * everything about where the operator's text lands. Taken from the FIRST run, which is where a
+ * start-anchored line begins — the same assumption `groupRuns` measures gaps with. A
+ * centre-anchored line lands a little left of where it was drawn, and still on its own
+ * baseline, which is the difference between a graphic to nudge and a graphic with its headline
+ * missing.
+ */
+function hoistRunPosition(el: Element): void {
+  if (el.tagName.toLowerCase() !== 'text') return;
+  if (el.hasAttribute('x') || el.hasAttribute('y')) return;
+  const first = leafTspans(el)[0];
+  if (!first) return;
+  for (const axis of ['x', 'y'] as const) {
+    const value = first.getAttribute(axis);
+    if (value !== null && value.trim() !== '') el.setAttribute(axis, value);
+  }
+}
+
 /** Did the author ask for whitespace to be taken literally, here or on an ancestor? */
 function spacePreserved(el: Element): boolean {
   let node: Element | null = el;
@@ -741,6 +771,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
   const candidates: SvgTextCandidate[] = nodes.map((el, i) => {
     const id = `t${i}`;
     el.setAttribute(SVG_CANDIDATE_ATTR, id);
+    hoistRunPosition(el);
     // A tspan's own name is rarely set; the nearest named thing is usually its <text> or the
     // group Illustrator made of the layer.
     const name = candidateName(el, svg);

@@ -1,18 +1,55 @@
 /* The SVG mapping step (MapSvgFieldsStep.tsx) — wizard-local, like prepProposal.css:
    these classes exist on exactly one surface, so they do not belong in styles.css. */
 
+/* THE STEP'S HEIGHT BUDGET. The artwork is the reference, the checklist is the work: a
+   full-frame 16:9 design at the column's own width is 435px tall, which on a 1366x768 laptop
+   left ONE of seven field rows inside the 630px scrollport and read as a step with nothing to
+   do on it. The artwork is capped to a share of the window and made STICKY, so the checklist
+   starts on screen and the hover highlight still has something to point at once it scrolls. */
+.map-svg {
+  --map-svg-cap: clamp(120px, 34vh, 320px);
+}
+/* The sticky band is FULL-BLEED (it cancels the step scroller's own 20px padding and pays it
+   back as its own) so the checklist scrolls behind it rather than through the gutter beside
+   the artwork. It sticks at `-20px`, its own top padding, so the artwork keeps the inset it
+   has at rest instead of jumping flush to the scrollport edge. */
+.map-svg-stagebar {
+  position: sticky;
+  top: -20px;
+  z-index: 2;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin: 0 -20px 12px;
+  padding: 20px 20px 12px;
+  background: var(--bg-2);
+}
+/* The instruction takes the room the capped artwork leaves; below ~220px of it there is no
+   room to read in, and it drops under the artwork instead. */
+.map-svg-lead {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.map-svg-lead h3 {
+  margin: 0 0 4px;
+}
+.map-svg-lead .hint {
+  margin: 0;
+}
 /* The artwork, rendered inline so hover-highlight can reach its nodes (the preview iframe
    deliberately cannot be reached — no allow-same-origin). Checker background so a
    transparent design reads as transparent, not as broken. */
 .map-svg-stage-wrap {
   position: relative;
+  flex: 1 1 auto;
   border: 1px solid var(--edge, rgba(255, 255, 255, 0.12));
   border-radius: 6px;
-  margin-bottom: 12px;
   overflow: hidden;
   background:
     repeating-conic-gradient(rgba(255, 255, 255, 0.06) 0% 25%, transparent 0% 50%)
     0 0 / 20px 20px;
+  background-color: var(--bg-deepest);
 }
 .map-svg-stage svg {
   display: block;
@@ -29,16 +66,41 @@
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
 
-/* One checklist row: checkbox, label, sample — cap-aligned like a .dlg-check row. */
+/* A PHONE has no room for the band and no hover to spend it on. The step stacks, the
+   scrollport is barely 360px tall, and a sticky artwork would own all of it — so the
+   instruction goes first, the artwork shrinks to a reference thumbnail under it, and the band
+   scrolls away like any other content. The live preview above the step is the big picture
+   here. */
+@media (max-width: 760px) {
+  .map-svg {
+    --map-svg-cap: clamp(80px, 12vh, 120px);
+  }
+  .map-svg-stagebar {
+    position: static;
+    margin: 0 0 12px;
+    padding: 0;
+  }
+  .map-svg-lead {
+    order: -1;
+  }
+}
+
+/* One checklist row: checkbox, label, sample — cap-aligned like a .dlg-check row. Tighter
+   than a form's default rhythm on purpose: this is a LIST to scan, and eleven px per row is
+   the difference between two rows on screen at 1366x768 and three. */
 .map-svg-row {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  padding: 6px 0;
+  padding: 4px 0;
+}
+.map-svg-row .save-field {
+  gap: 3px;
+  margin-bottom: 0;
 }
 .map-svg-row input[type='checkbox'] {
   width: auto;
-  margin-bottom: 9px;
+  margin-bottom: 5px;
 }
 .map-svg-row.off .save-field {
   opacity: 0.55;

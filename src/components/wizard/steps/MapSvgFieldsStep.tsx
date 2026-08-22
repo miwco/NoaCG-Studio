@@ -208,6 +208,28 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     if (changed) onDraft({ svgOutlines: measured });
   }, [outlines, onDraft, svg]);
 
+  // THE SAMPLE IS THE ARTWORK'S TEXT. Editing a row used to change nothing on the picture
+  // above it — the new value only appeared two steps later, which made the field read as
+  // decoration and left no way to try a length here, on the one screen that shows the design
+  // at its own size. Written the way `update()` writes it on air (textContent on the bound
+  // node), so what this step shows is what the operator will get, overflow and all. A row
+  // switched OFF goes back to the text the designer drew; a COUNTDOWN row is left alone —
+  // its field is a length in minutes, not the readout.
+  const fields = draft.svgFields;
+  const drawnText = useRef(new Map<string, string>());
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    for (const f of fields) {
+      const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${f.candidateId}"]`);
+      if (!el) continue;
+      if (!drawnText.current.has(f.candidateId)) drawnText.current.set(f.candidateId, el.textContent ?? '');
+      if (f.kind === 'countdown') continue;
+      const next = f.on ? f.sample : (drawnText.current.get(f.candidateId) ?? '');
+      if (el.textContent !== next) el.textContent = next;
+    }
+  }, [fields]);
+
   if (!svg) return null;
 
   // Text-shaped groups first, everything else after — a STABLE sort, so within each half the
@@ -318,23 +340,51 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
 
   return (
     <div className="map-svg">
-      {/* The artwork, with the hover highlight over it. */}
-      <div className="map-svg-stage-wrap">
+      {/* THE ARTWORK AND WHAT THE STEP IS FOR, side by side and STICKY. The artwork used to
+          be the whole first screen — a full-frame design at the column's width is 435px tall,
+          which left one of seven field rows inside a 1366x768 scrollport, and the step read as
+          having nothing on it. So the artwork is capped to a share of the window, the sentence
+          that says what to do sits in the room beside it rather than above it, and both stay
+          put while the checklist scrolls — the hover highlight is useless the moment the
+          artwork has scrolled off the top. The cap is a HEIGHT applied as a max WIDTH at the
+          artwork's own aspect: letterboxing the svg inside a wider box would break
+          measureOutline, which reads the scale off the root element's rect. */}
+      <div className="map-svg-stagebar">
         <div
-          className="map-svg-stage"
-          ref={stageRef}
-          data-testid="map-svg-stage"
-          // The markup is our own sanitizer's output (script/handlers/foreignObject already
-          // removed at import — assets/svgImport.ts), never raw user input.
-          dangerouslySetInnerHTML={{ __html: svg.markup }}
-        />
-        {highlight && (
+          className="map-svg-stage-wrap"
+          style={{ maxWidth: `calc(var(--map-svg-cap) * ${(svg.width / svg.height).toFixed(4)})` }}
+        >
           <div
-            className="map-svg-highlight"
-            data-testid="map-svg-highlight"
-            style={{ left: highlight.x - 4, top: highlight.y - 4, width: highlight.w + 8, height: highlight.h + 8 }}
+            className="map-svg-stage"
+            ref={stageRef}
+            data-testid="map-svg-stage"
+            // The markup is our own sanitizer's output (script/handlers/foreignObject already
+            // removed at import — assets/svgImport.ts), never raw user input.
+            dangerouslySetInnerHTML={{ __html: svg.markup }}
           />
-        )}
+          {highlight && (
+            <div
+              className="map-svg-highlight"
+              data-testid="map-svg-highlight"
+              style={{ left: highlight.x - 4, top: highlight.y - 4, width: highlight.w + 8, height: highlight.h + 8 }}
+            />
+          )}
+        </div>
+        <div className="map-svg-lead">
+          <h3>Choose what the operator can change</h3>
+          {svg.candidates.length > 0 ? (
+            <p className="hint">
+              Your artwork airs exactly as drawn. Tick the layers below that an operator should
+              be able to retype — hover a row to see which one it is, and edit its text here to
+              try a real length.
+            </p>
+          ) : (
+            <p className="hint">
+              Your artwork airs exactly as drawn. This file has no text layers to bind — what
+              that means, and the two ways forward, are below.
+            </p>
+          )}
+        </div>
       </div>
 
       {svg.candidates.length === 0 ? (
@@ -369,10 +419,6 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
               {onCount} of {draft.svgFields.length} on air as operator fields
             </span>
           </h3>
-          <p className="hint">
-            Everything ticked becomes a field the operator can retype — with your exact
-            typography. Hover a row to see which text it is.
-          </p>
           {draft.svgFields.map((f) => (
             <div
               key={f.candidateId}

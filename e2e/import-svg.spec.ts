@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { awaitPreviewRebuild } from './_preview';
 import { elementPoint } from './_canvas';
 import { previewFrame } from './_frame';
+import { SCOREBUG_SVG } from './_svg-import';
 
 // The SVG import road, door to export (docs/SVG_IMPORT_PLAN.md P1): a layered
 // Illustrator-shaped SVG dropped on the Import door becomes a playable template whose text
@@ -294,7 +295,7 @@ test('svg import: a picture layer binds as a filelist field — swap by value, e
   await expect(frame.locator('#f4')).toHaveAttribute('href', /^data:image\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/);
 });
 
-test('svg import: the f: layer-name prefix opts the file into an explicit field set', async ({ page }) => {
+test('svg import: the f: layer-name prefix names a field without switching the others off', async ({ page }) => {
   await dropSvgMarkup(
     page,
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
@@ -305,11 +306,14 @@ test('svg import: the f: layer-name prefix opts the file into an explicit field 
   );
   await page.locator('.wz-next').click();
 
-  // One layer opted in by name, so only IT defaults on — the prefix is stripped from the
-  // label; the unmarked watermark stays part of the artwork unless ticked.
+  // The prefix names the field (it is stripped from the label) and guarantees it is on. It is
+  // NOT a filter: one layer exported as `f:Name` used to turn every unmarked text OFF, which
+  // read as detection having missed them — the owner's first walk found six of seven rows
+  // unticked on a scorebug whose only marked layer was the competition strap. Unticking one
+  // row costs a click; finding six that were never offered costs the feature.
   await expect(page.getByTestId('map-svg-title-t0')).toHaveValue('Name');
   await expect(page.getByTestId('map-svg-row-t0').locator('input[type=checkbox]')).toBeChecked();
-  await expect(page.getByTestId('map-svg-row-t1').locator('input[type=checkbox]')).not.toBeChecked();
+  await expect(page.getByTestId('map-svg-row-t1').locator('input[type=checkbox]')).toBeChecked();
 });
 
 test('svg import: an Inkscape file is labelled by its layer names, not its serial ids', async ({ page }) => {
@@ -380,6 +384,21 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   await expect(page.getByTestId('map-svg-sample-t1')).toHaveValue('Helsinki');
   await expect(page.getByTestId('map-svg-sample-t2')).toHaveValue('Live');
   await expect(page.getByTestId('map-svg-row-t3')).toHaveCount(0);
+
+  // AND THE MERGED FIELD KEEPS ITS PLACE. Illustrator put the position on the RUNS, so the
+  // <text> this field binds had no x and no y of its own: the first write replaced the runs
+  // and the headline snapped to the SVG origin, off the panel — a field that changed nothing
+  // anybody could see. The run's position is hoisted onto the text at import.
+  const headline = page.getByTestId('map-svg-stage').locator('[data-noacg-candidate="t0"]');
+  await expect(headline).toHaveAttribute('x', '40');
+  await expect(headline).toHaveAttribute('y', '120');
+  const drawnAt = await headline.boundingBox();
+  await page.getByTestId('map-svg-sample-t0').fill('Mika Virtanen');
+  await expect(headline).toHaveText('Mika Virtanen');
+  const typedAt = await headline.boundingBox();
+  expect(Math.abs(typedAt!.x - drawnAt!.x)).toBeLessThan(1);
+  // The baseline is the same; the box top can differ by a glyph's ascender between two words.
+  expect(Math.abs(typedAt!.y - drawnAt!.y)).toBeLessThan(4);
 });
 
 test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
@@ -786,4 +805,127 @@ test('svg import: a clock-shaped layer can bind as a countdown — the node tick
   // Playing starts the count: within a couple of seconds the readout has moved.
   await page.getByRole('button', { name: /^▶ Play$/ }).click();
   await expect(frame.locator('.imported-design-clock')).not.toHaveText('22:40', { timeout: 5_000 });
+});
+
+// ── THE MAPPING STEP'S HEIGHT BUDGET ──
+// The step exists to answer one question — which text becomes an operator field — and the
+// artwork above the checklist used to eat the whole scrollport on a short laptop window: the
+// rows were real, ticked and working, and three graphics were imported without anybody
+// noticing they were there. Geometry, not visibility: a row clipped away by a scrolling
+// ancestor still reports `toBeVisible()`, which is exactly how it shipped.
+for (const [width, height] of [[1366, 768], [1280, 720]] as const) {
+  test(`svg import: the mapping step's checklist is on screen at ${width}x${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/app');
+    await expect(page.locator('.wz-modal')).toBeVisible();
+    await page.locator('[data-entry="import-graphic"]').click();
+    await page.locator('.wz-drop input[type="file"]').setInputFiles(SCOREBUG_SVG);
+    await expect(page.getByTestId('import-svg-card')).toBeVisible();
+    await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+
+    const fold = await page.evaluate(() => {
+      const port = document.querySelector('.wz-step')!.getBoundingClientRect();
+      const rows = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-testid="map-svg-fields"] .map-svg-row'),
+      ).map((r) => r.getBoundingClientRect());
+      return {
+        heading: document.querySelector('[data-testid="map-svg-fields"] h3')!.getBoundingClientRect().bottom,
+        portBottom: port.bottom,
+        firstRowBottom: rows[0].bottom,
+        rowsOnScreen: rows.filter((r) => r.bottom <= port.bottom + 0.5).length,
+        rowCount: rows.length,
+      };
+    });
+    // The heading that says what the step is for, and the first row under it, are both in the
+    // scrollport on arrival — nothing about the job is discovered by scrolling.
+    expect(fold.heading).toBeLessThan(fold.portBottom);
+    expect(fold.firstRowBottom).toBeLessThanOrEqual(fold.portBottom + 0.5);
+    // And enough of the list to read as a list: one visible row looks like a stray control.
+    expect(fold.rowsOnScreen).toBeGreaterThanOrEqual(Math.min(3, fold.rowCount));
+
+    // Every detected layer arrives ticked. The scorebug exports one layer as `f:Competition`,
+    // which used to switch the other six off.
+    const boxes = page.getByTestId('map-svg-fields').locator('input[type=checkbox]');
+    expect(await boxes.count()).toBeGreaterThan(1);
+    for (const box of await boxes.all()) await expect(box).toBeChecked();
+
+    // Scrolled to the bottom of the checklist, the artwork is still on screen — the hover
+    // highlight it carries is the step's answer to "which layer is this", and it cannot answer
+    // anything from above the scrollport.
+    await page.locator('.wz-step').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    const stuck = await page.evaluate(() => {
+      const port = document.querySelector('.wz-step')!.getBoundingClientRect();
+      const art = document.querySelector('.map-svg-stage-wrap')!.getBoundingClientRect();
+      return { inside: art.top >= port.top - 0.5 && art.bottom <= port.bottom + 0.5, height: art.height };
+    });
+    expect(stuck.height).toBeGreaterThan(80);
+    expect(stuck.inside).toBe(true);
+  });
+}
+
+test('svg import: the text-fit budget is the DRAWN text, whenever the first value arrives', async ({ page }) => {
+  // The fit condenses an operator value that is wider than the text the designer drew. What
+  // "the designer drew" means used to be "whatever was on screen the first time we measured",
+  // and a playout renderer replays its control log the moment the page exists — so on air the
+  // budget was often the OPERATOR'S value, which can never overflow itself. The same file then
+  // squished in the editor and ran clean past the artwork on air. The drawn text is remembered
+  // before update() can be called, and re-measured (not re-taken) when the real face lands.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+      <text id="Presenter" x="40" y="120" font-size="48" fill="#fff">Ada</text>
+    </svg>`,
+    'budget.svg',
+  );
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const fitted = await frame.locator('#f0').evaluate((el) => {
+    const w = window as unknown as {
+      update: (json: string) => void;
+      refitSvgText: () => void;
+      svgFitDrawn: Record<string, string>;
+      svgFitWidths: Record<string, number>;
+    };
+    w.update(JSON.stringify({ f0: 'An extremely long presenter name' }));
+    w.refitSvgText(); // what document.fonts.ready fires once the real face has loaded
+    const node = el as unknown as SVGTextContentElement;
+    const held = node.getAttribute('textLength');
+    node.removeAttribute('textLength');
+    const natural = node.getComputedTextLength();
+    if (held) node.setAttribute('textLength', held);
+    return { drawn: w.svgFitDrawn.f0, budget: w.svgFitWidths.f0, textLength: held, natural };
+  });
+
+  // The budget is still Ada's width — three characters, nothing like the value now on screen —
+  // and the long value is condensed to exactly it.
+  expect(fitted.drawn).toBe('Ada');
+  expect(fitted.natural).toBeGreaterThan(fitted.budget * 2);
+  expect(Number(fitted.textLength)).toBeCloseTo(fitted.budget, 1);
+});
+
+test('svg import: retyping a sample repaints the mapping artwork', async ({ page }) => {
+  // The step shows the design at its own size, which is the one place a real value can be
+  // tried for length — and editing a row used to change nothing there, so the field read as
+  // decoration. Written the way update() writes it on air: textContent on the bound node.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Presenter" x="20" y="80" font-size="30" fill="#fff">Alexandra Riva</text>
+    </svg>`,
+    'repaint.svg',
+  );
+  await page.locator('.wz-next').click();
+
+  const drawn = page.getByTestId('map-svg-stage').locator('[data-noacg-candidate="t0"]');
+  await expect(drawn).toHaveText('Alexandra Riva');
+
+  await page.getByTestId('map-svg-sample-t0').fill('A considerably longer name');
+  await expect(drawn).toHaveText('A considerably longer name');
+
+  // Switched off, the layer goes back to the text the designer drew — the graphic keeps it.
+  await page.getByTestId('map-svg-row-t0').locator('input[type=checkbox]').uncheck();
+  await expect(drawn).toHaveText('Alexandra Riva');
 });

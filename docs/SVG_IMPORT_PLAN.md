@@ -54,12 +54,20 @@ On drop, parse with `DOMParser` (`image/svg+xml`) and build the layer inventory:
 - **Labels prefill from layer names.** Illustrator writes layer names as `id` (original in
   `data-name` when uniquified); Figma writes frame/layer names as `id` on groups. Nearest named
   ancestor group labels the candidate. **No naming convention is required** - but a
-  `f:`/`field:` prefix on a layer name auto-marks it editable (optional power-user/org sugar,
-  documented for Illustrator workflows).
+  `f:`/`field:` prefix on a layer name names the field and guarantees it is offered ON
+  (optional power-user/org sugar, documented for Illustrator workflows). **The prefix is a
+  guarantee, never a filter:** it used to mean "and nothing else", so a scorebug with one
+  `f:Competition` layer arrived with six of its seven rows unticked and read as detection
+  having failed. A picture, which defaults OFF because inside a design a picture is usually
+  the artwork, is the one thing the prefix switches on.
 - **Mapping UI** (new wizard step in the import door, replacing Prepare/Text for SVG files): a
   checklist of detected layers with live highlight-on-hover in the preview; toggle which become
   operator fields, edit labels, set sample values. Default: all detected text ON - the graphic
-  should work with zero clicks.
+  should work with zero clicks. **The checklist is what the step is for, so it owns the fold**:
+  the artwork is capped to a share of the window and made sticky beside the instruction rather
+  than stacked above it (a full-frame design at the column's width is 435px tall and left one
+  of seven rows inside a 1366x768 scrollport). Editing a sample writes it into that artwork the
+  way `update()` writes it on air - the one place a real value can be tried at design size.
 - **Zero text nodes detected** = outlined export. Say so honestly ("This SVG's text was converted
   to outlines...") with the two roads: re-export with real text (Illustrator: Type > SVG, not
   Outlines - the teaching moment), or the overlay fallback (§1.A).
@@ -81,11 +89,24 @@ is its own graphic type so the derived machine/timeline stays the standard linea
 - **Fields:** standard `SPXGCTemplateDefinition` DataFields; `fN` -> the bound node, our one
   contract. `update()` is the shared runtime - `getElementById('fN').textContent = value` works
   identically on SVG nodes under SPX, CasparCG, OGraf and the browser output.
-- **Text fitting:** SVG text neither wraps nor clips. The generated JS records each bound node's
-  original bbox width at load; when a new value overflows it, apply `textLength` +
-  `lengthAdjust="spacingAndGlyphs"` capped at that width (comment-documented, deterministic,
-  removable). Never distort by default - only on overflow, mirroring the raster flow's
-  shrink-not-condense taste rule.
+- **Text fitting:** SVG text neither wraps nor clips. The generated JS gives each bound node a
+  BUDGET - the width of the text the DESIGNER drew - and a value wider than that gets
+  `textLength` + `lengthAdjust="spacingAndGlyphs"` capped at it (comment-documented,
+  deterministic, removable). Never distort by default - only on overflow.
+  **The budget is measured from the drawn text, never from whatever is on screen.** A playout
+  renderer replays its control log the moment the page exists, so the first value measured
+  there is usually the operator's - and a budget taken from that can never be overflowed, which
+  is how one file came to squish in the editor and run clean past the artwork on air. The drawn
+  text is remembered as the page parses (before `update()` can be called) and the budget is
+  re-MEASURED, not re-taken, once the real typeface has loaded.
+  **OPEN, owner-directed 2026-08-22:** condensing is the wrong default for a lower third, where
+  "the text should decide how big the banner is" (hug), while a quiz board and most full-frame
+  graphics declare a stage and must not resize (fixed) - the split `src/templates/AGENTS.md`
+  "THE STAGE" already draws for the catalog. An imported SVG has no category to read it from,
+  so the wizard has to ask or infer, and a hugging panel means widening a shape in flat artwork
+  the way `importedDesign/stretch.ts` already does for raster (one `--stretch-x` driving the
+  box, the middle band and every `[data-stretch]` slot). Shrinking the type is the owner's
+  accepted fallback; distorting glyph shapes is not.
 - **Animation:** the standard marked ANIMATION region animating the wrapper (entrance/exit
   presets work day one; the timeline dock reads the CODE as always). Phase 2: per-layer stagger -
   top-level named `<g>`s offered as animation units.
@@ -155,6 +176,10 @@ gate - not the importer - is authoritative.
 - **Detection hardening (2026-08-21/22)**, measured against files shaped the way Illustrator,
   Figma and Inkscape really export - every item below was a wrong answer the importer gave, and
   each one now has its own case in `e2e/import-svg.spec.ts` (mutation-tested):
+  a MERGED field keeps its place - Illustrator puts the position on the RUNS, so the `<text>` a
+  kerned headline binds has no `x`/`y` of its own and the first `update()` (which replaces the
+  runs) sent the line to the SVG origin, reading as a field that changed nothing; the first
+  run's position is hoisted onto the text at import (`hoistRunPosition`);
   a `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`,
   with `fontSizeResolver` reading attribute / inline style / class rules, CSS-initial 16 when
   nothing says); Inkscape's `inkscape:label` is read and an editor-generated serial id

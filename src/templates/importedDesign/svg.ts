@@ -248,37 +248,78 @@ function svgFontCss(svg: DesignSvg): string {
  */
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
-// SVG text neither wraps nor clips: a longer value would run past the artwork. Each bound
-// text layer's ORIGINAL length is recorded once; when an operator value overflows it, the
-// text is condensed to exactly that length (textLength + lengthAdjust) — and only then.
-// A value that fits keeps the designer's typography untouched. Remove this block to let
-// text run free instead.
-var svgFitWidths = {};
-function fitSvgText() {
-  var nodes = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
+// SVG text neither wraps nor clips: a longer value would run past the artwork. So each bound
+// layer has a BUDGET — the width of the text the DESIGNER drew — and an operator value wider
+// than that is condensed to exactly that width (textLength + lengthAdjust), and only then.
+// A value that fits keeps the designer's typography untouched. Remove this block to let text
+// run free instead.
+//
+// The budget is measured from the DRAWN text, never from whatever happens to be on screen.
+// A playout renderer replays its control log the moment the page exists, so the first value
+// measured there is usually the operator's: a graphic that took its budget from that never
+// condensed at all, and the same file squished in the editor while running past the artwork
+// on air. The drawn text is remembered before update() can be called, and the budget is
+// re-measured once the real typeface has loaded (the first pass may have measured a
+// fallback face).
+var svgFitDrawn = {};                           // id -> the text the designer drew
+var svgFitWidths = {};                          // id -> that text's width, in the real face
+
+function svgFitNodes() {
+  var all = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
+  var out = [];
+  for (var i = 0; i < all.length; i++) {
+    if (/^f\\d+$/.test(all[i].id) && typeof all[i].getComputedTextLength === 'function') out.push(all[i]);
+  }
+  return out;
+}
+
+// Runs as the page parses, with the artwork above it and update() not yet callable.
+(function () {
+  var nodes = svgFitNodes();
+  for (var i = 0; i < nodes.length; i++) {
+    if (svgFitDrawn[nodes[i].id] == null) svgFitDrawn[nodes[i].id] = nodes[i].textContent;
+  }
+})();
+
+function measureSvgBudgets() {
+  var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
-    if (!/^f\\d+$/.test(el.id) || typeof el.getComputedTextLength !== 'function') continue;
-    // Measure the natural length with any previous fit removed, or the fit compounds.
+    var live = el.textContent;
+    if (svgFitDrawn[el.id] == null) svgFitDrawn[el.id] = live;
+    var drawn = svgFitDrawn[el.id];
+    // Any previous fit has to come off first, or the measurement compounds.
+    el.removeAttribute('textLength');
+    el.removeAttribute('lengthAdjust');
+    if (live !== drawn) el.textContent = drawn;   // measure the design, put the value back
+    svgFitWidths[el.id] = el.getComputedTextLength();
+    if (live !== drawn) el.textContent = live;
+  }
+}
+
+function fitSvgText() {
+  var nodes = svgFitNodes();
+  for (var i = 0; i < nodes.length; i++) {
+    var el = nodes[i];
+    if (svgFitWidths[el.id] == null) measureSvgBudgets();
     el.removeAttribute('textLength');
     el.removeAttribute('lengthAdjust');
     var length = el.getComputedTextLength();
-    if (svgFitWidths[el.id] == null) svgFitWidths[el.id] = length;    // first sight = the design's own width
     if (length > svgFitWidths[el.id] + 0.5) {
       el.setAttribute('textLength', String(svgFitWidths[el.id]));
       el.setAttribute('lengthAdjust', 'spacingAndGlyphs');
     }
   }
 }
+
+function refitSvgText() { measureSvgBudgets(); fitSvgText(); }
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', fitSvgText);
+  document.addEventListener('DOMContentLoaded', refitSvgText);
 } else {
-  fitSvgText();                                 // DOM already parsed (e.g. an inline preview build)
+  refitSvgText();                               // DOM already parsed (e.g. an inline preview build)
 }
-// The first pass may have measured a FALLBACK face; once the real fonts arrive, re-measure
-// from scratch so the recorded widths are the design's true ones.
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(function () { svgFitWidths = {}; fitSvgText(); });
+  document.fonts.ready.then(refitSvgText);
 }`;
 
 /** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs)

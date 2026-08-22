@@ -1501,18 +1501,19 @@ export default function CreationWizard() {
                     result.width > res.width || result.height > res.height
                       ? Math.min(res.width / result.width, res.height / result.height)
                       : 1;
-                  // The `f:` prefix rule (plan §2): when ANY layer opted in by name, only
-                  // those default ON; otherwise every detected text is ON — zero clicks.
-                  const anyMarked = result.candidates.some((c) => c.marked);
                   patch({
                     designSvg: {
                       ...result,
                       width: Math.round(result.width * fit),
                       height: Math.round(result.height * fit),
                     },
+                    // EVERY detected text starts ON (plan §2, zero clicks). The `f:` prefix
+                    // says "this is definitely a field" and names it — it never says "and
+                    // nothing else is": one layer exported as `f:Competition` used to turn the
+                    // other six off, which reads as detection having missed them.
                     svgFields: result.candidates.map((c) => ({
                       candidateId: c.id,
-                      on: anyMarked ? c.marked : true,
+                      on: true,
                       title: c.label,
                       sample: c.sample,
                       numeric: c.numeric,

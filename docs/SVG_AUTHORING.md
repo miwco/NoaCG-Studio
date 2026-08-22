@@ -81,7 +81,9 @@ you drew them:
 
 **Optional sugar:** prefix a layer name with `f:` or `field:` (`f:Competition`) to mark it
 editable by name; the prefix is stripped from the label. Useful for an organisation that wants
-one shared convention - never required.
+one shared convention - never required, and it does not switch the other layers off: every text
+layer is offered ticked either way. On a PICTURE layer the prefix does more, because a picture
+is offered unticked by default - inside a design it is usually part of the artwork.
 
 ## 4. Fonts - the one thing that can differ on air
 

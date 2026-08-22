@@ -57,9 +57,9 @@ export async function intoProduction(page: Page, graphic: string, production: st
   await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
 }
 
-/** Tick every detected text layer. The scorebug marks one layer by name (`f:Competition`), and
- *  the prefix rule then defaults the REST off — right for the rule, wrong for a walk that wants
- *  the whole board editable. */
+/** Tick every detected text layer. Every one of them arrives ticked, so this is a guard rather
+ *  than a step of the walk: it keeps the two suites honest if a future default ever changes
+ *  under them, without either of them silently binding half a board. */
 export async function bindEveryTextLayer(page: Page): Promise<void> {
   const boxes = page.getByTestId('map-svg-fields').locator('input[type="checkbox"]');
   for (const box of await boxes.all()) if (!(await box.isChecked())) await box.check();
