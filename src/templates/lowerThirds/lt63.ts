@@ -96,7 +96,15 @@ ${lineMasks(o, '      ')}
 /* The navy hairline that opens the band, fused to its top edge and running the same full width.
    It is a SIBLING of the box rather than a child so it cannot become a flex item on the row. */
 .lower-third-accent {
-  height: var(--accent-weight);    /* the family's rule weight */
+  /* A RULE'S WEIGHT HAS TO ANSWER ITS LENGTH, which is why this is the one place the design
+     leaves the family token behind. Editorial sets --accent-weight at 2px, drawn for a rule a
+     few hundred pixels long across an inset plate; this one runs the whole 1920, so at the
+     family value it is a 1:960 hairline - proportionally four times thinner than anything else
+     the family ships, and it disappears rather than reading as restraint. Measured on the
+     rendered card (scripts/card-look-sweep.mjs), the band at 2px registered NO accent colour at
+     all: the catalog's own instrument could not find the navy. A masthead rule is a heavy rule,
+     and 6px over 1920 is still 1:320. */
+  height: calc(6px * var(--scale));  /* the masthead rule, weighted for the width it crosses */
   background: var(--accent);       /* the one accent dose */
   transform-origin: left center;   /* the entrance draws the rule from the leading edge */
   will-change: transform;          /* hints the exact property the entrance animates */

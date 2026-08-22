@@ -32,9 +32,17 @@
 // minimum height, because a rail is furniture standing at the edge of the picture and a short
 // one reads as a chip that drifted.
 //
-// Sport, in Volt: chartreuse is the single thinnest accent bucket in the category (ONE design of
-// 103), and the face is Big Shoulders - a condensed grotesk, which is what a narrow rail wants
-// and which docs/CATALOG_VARIETY.md §3 item 4 records as bundled and barely used.
+// Sport, in Volt, and the face is Big Shoulders - a condensed grotesk, which is what a narrow
+// rail wants and which docs/CATALOG_VARIETY.md §3 item 4 records as bundled and barely used.
+//
+// THIS DESIGN ADDS NO NEW HUE, and the first draft of this comment claimed it did. Volt reads as
+// chartreuse to an eye, but `card-look-sweep.mjs` sorts hues into twelve 30-degree buckets and
+// Volt's 72 degrees falls in the one it labels `amber` - already the category's fourth largest at
+// ten designs. The bucket the sweep calls `spring` (150-180 degrees, one design) is a green-cyan
+// that no sport palette contains. Swapping the palette to reach it would be twisting the design
+// to feed the instrument, so the claim was corrected instead: what this design contributes to the
+// shelf is the SILHOUETTE and the turned type. Measured, not assumed - the sweep is what caught
+// it, and the run before this one is what proved the accent registers at all (see the cap below).
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { maskLine, maskLines } from '../shared/standard';
@@ -116,9 +124,16 @@ ${maskLines([
    column rather than as a cap, and out here \`scaleX\` still draws it across the way the presets
    that animate an accent expect to draw one. */
 .lower-third-accent {
-  width: calc(64px * var(--scale));  /* the rail's own width - the cap reads as its head, not as a rule */
+  /* THE CAP IS THE RAIL'S FULL WIDTH, and the percentage is what makes that true without the
+     design having to guess it. The rail's width is content-driven - it is however thick the
+     turned columns come out - so a hardcoded cap is right for the default sample and wrong for
+     every other one. A percentage width does not contribute to a shrink-to-fit parent's
+     intrinsic size, so the root is still sized by the box below and the cap then matches it
+     exactly. The first draft guessed 64px, which left the cap narrower than the rail it caps
+     and small enough that card-look-sweep read the design as carrying no accent colour at all. */
+  width: 100%;                     /* exactly the rail's width, whatever the columns come out at */
   height: var(--accent-weight);    /* the sport family's heavy bar weight */
-  margin-bottom: calc(10px * var(--scale));  /* a hair of air above the slab */
+  margin-bottom: 0;                /* FUSED to the rail head - floating it read as a separate chip above the rail */
   background: var(--accent);       /* the one bold accent dose */
   box-shadow: var(--accent-glow);  /* the family's accent treatment */
   transform-origin: left center;   /* the entrance draws the cap from the leading edge */
@@ -128,7 +143,7 @@ ${maskLines([
 /* The name, running down the rail nearest the picture's edge. Condensed caps are what makes a
    long name a workable rail height rather than a rail that runs off the bottom of the frame. */
 .lower-third-name {
-  font-size: calc(40px * var(--scale) * var(--type-scale));  /* display scale for a narrow rail */
+  font-size: calc(52px * var(--scale) * var(--type-scale));  /* sized so a real name FILLS the rail it stands in - see the run-length note under the box */
   font-weight: var(--display-weight);  /* the family's heading weight */
   line-height: 1.2;                /* THE COLUMN THICKNESS, and 1.2 is a floor rather than taste - see the note under the rail */
   letter-spacing: 0.06em;          /* turned caps need air between glyphs to stay countable */
@@ -155,7 +170,7 @@ ${maskLines([
   padding-left: calc(14px * var(--scale));  /* …and after it */
   border-left: 1px solid color-mix(in srgb, var(--text-color) 24%, transparent);  /* the rail's one divider */
   font-family: var(--font-label);  /* the design-owned label face */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the smallest type here, above the floor */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type here - 20px IS the catalog's floor, not a margin above it */
   line-height: 1.2;                /* its own column thickness, at the same floor as the name */
   letter-spacing: var(--label-tracking);  /* tracked like the label it is */
   text-transform: uppercase;       /* set in caps to pair the rest */

@@ -169,7 +169,7 @@ ${maskLines([
   padding-top: calc(22px * var(--scale));  /* air above its own rule */
   border-top: 1px solid color-mix(in srgb, var(--text-color) 22%, transparent);  /* the column's one divider */
   font-family: var(--font-label);  /* the design-owned label face, pairing the head */
-  font-size: calc(19px * var(--scale) * var(--type-scale));  /* the smallest type here, above the floor */
+  font-size: calc(20px * var(--scale) * var(--type-scale));  /* the smallest type here - 20px IS the catalog's floor, not a margin above it */
   line-height: 1.35;               /* may wrap to two rows */
   letter-spacing: var(--label-tracking);  /* tracked like the label it answers */
   text-transform: uppercase;       /* set in caps to pair the head */
