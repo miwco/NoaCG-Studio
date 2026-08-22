@@ -11,7 +11,6 @@ import { useEffect } from 'react';
  * rundown on the page a class actually operates from.
  */
 export type PlayoutVerb =
-  | 'preview'
   | 'take'
   | 'retake'
   | 'update'
@@ -34,7 +33,12 @@ export function typingInto(target: EventTarget | null): boolean {
 
 /** key -> verb. `arrowup`/`arrowdown` walk the rundown; SPACE is the take TOGGLE. */
 const KEY_MAP: Record<string, PlayoutVerb> = {
-  p: 'preview',
+  // There is no PREVIEW key, and no Preview button on the two React surfaces (2026-08-22).
+  // Their PVW monitor is a local stage that already follows the selection, so the verb only
+  // ever re-selected the cue that was on it - and it was sitting second-loudest on a live bar
+  // saying almost nothing. Selecting a cue in the rundown IS previewing it; the arrow keys walk
+  // that selection. The EXPORTED controller keeps its own → Preview, where the word means
+  // something else: it puts the cue on a real second output stream.
   ' ': 'take',
   // RE-TAKE is a key of its own, never the toggle wearing a second meaning. It replays a live
   // cue's entrance, which is a different intention from "put this on" and from "take it off",

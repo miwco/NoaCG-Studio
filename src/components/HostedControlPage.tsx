@@ -336,7 +336,6 @@ export default function HostedControlPage({ slug }: { slug: string }) {
    * a cue that is already live, takes it off. Re-take is its own verb.
    */
   const runVerb = (verb: PlayoutVerb) => {
-    if (verb === 'preview' && selectedCue) selectCue(selectedCue);
     if (verb === 'take') {
       if (selectedIsLive) outLayer();
       else if (selectedCue) void takeCue(selectedCue);
@@ -557,15 +556,8 @@ function HostedVerbs({
   usePlayoutVerbKeys(onKey);
   return (
     <div className="pd-verbs" data-testid="hosted-verbs">
-      <button
-        className="pd-verb pd-verb-preview"
-        disabled={!hasSelection}
-        onClick={() => onKey('preview')}
-        title="Show the selected cue on PREVIEW — nothing airs"
-        data-testid="hosted-verb-preview"
-      >
-        → Preview <kbd>P</kbd>
-      </button>
+      {/* No → Preview button here either — parity with the in-app bar, and for the same reason:
+          this page's PVW monitor is a local stage that follows the selection on its own. */}
       {/* THE TOGGLE: the button IS the key, on when the cue is off and off when it is on. */}
       <button
         className={`pd-verb pd-verb-take${selectedIsLive ? ' pd-verb-live' : ''}`}

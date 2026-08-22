@@ -1359,7 +1359,6 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         // Re-take: play a live cue's entrance again from the start. Only meaningful on a cue
         // that IS live - on anything else it would just be Take under a second name.
         if (key === 'retake' && selectedCueIsLive && selectedCue) void takeCue(selectedCue);
-        if (key === 'preview' && selectedCue) selectCue(selectedCue.id);
         if (key === 'update' && editingIsLive) void updateLive();
         if (key === 'next' && selectedLayerLive) void nextLive();
         if (key === 'out' && selectedLayerLive) void outLive();
@@ -1506,15 +1505,10 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         {/* The verbs, with the keys that fire them. All out lives in the header — it is the
             panic control and must not sit beside the ones used every minute. */}
         <div className="pd-verbs" data-testid="production-verbs">
-          <button
-            className="pd-verb pd-verb-preview"
-            disabled={!selectedCue}
-            onClick={() => selectedCue && selectCue(selectedCue.id)}
-            title="Show the selected cue on PREVIEW — nothing airs"
-            data-testid="verb-preview"
-          >
-            → Preview <kbd>P</kbd>
-          </button>
+          {/* There is no → Preview button (2026-08-22). PREVIEW here is a local stage that
+              already follows the selection, so the verb re-selected the cue that was on it and
+              nothing else — while sitting second-loudest on a bar where every other control
+              changes air. Selecting a cue in the rundown IS previewing it. */}
           {/* THE TOGGLE. The button IS the key: on when the cue is off, off when it is on.
               It used to re-take here while SPACE took the cue off air — one surface, two
               behaviours, and the button's own label ("RE-TAKE") was what an operator read
