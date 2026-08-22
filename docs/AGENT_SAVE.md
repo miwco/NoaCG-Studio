@@ -137,7 +137,7 @@ the code that crosses it rather than in the dialogs that happen to show a verdic
 -> validation` and `export -> validation`, `productionGate` only). **The product promise is now
 literal: an invalid graphic cannot publish or export.** Pinned by `e2e/production-gate.spec.ts`.
 Previously an invalid graphic in a production could be published to a hosted page and, through
-the programmatic builders, exported - this closes both, and the owner ratifies the change.
+the programmatic builders, exported - this closes both. Ratified by the owner 2026-08-22.
 
 ## 5. Where things live
 

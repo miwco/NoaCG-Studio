@@ -49,6 +49,16 @@ function loopback(state: string): Promise<{ port: number; code: Promise<string>;
   });
 }
 
+/** Revoke every key this spec (or a failed earlier run of it) minted on the shared account, so the
+ *  Settings list holds exactly the one row the walk expects. Through the browser's own client
+ *  with the session - the same calls the Settings section makes. */
+async function wipeE2EKeys(page: import('@playwright/test').Page, name: string): Promise<void> {
+  await page.evaluate(async (n) => {
+    const { listAgentKeys, revokeAgentKey } = await import('/src/backend/agentAccess.ts');
+    for (const k of await listAgentKeys()) if (k.name === n) await revokeAgentKey(k.id);
+  }, name);
+}
+
 test.describe('agent access (configured)', () => {
   test.skip(!haveCreds, 'needs E2E_EMAIL/E2E_PASSWORD');
   test.setTimeout(120_000);
@@ -64,6 +74,7 @@ test.describe('agent access (configured)', () => {
     const state = randomBytes(16).toString('base64url');
     const listener = await loopback(state);
     const name = 'Claude Code on E2E';
+    await wipeE2EKeys(page, name);
     try {
       // 1. The consent page, signed in.
       await page.goto(`/app?agent=${state}&port=${listener.port}&name=${encodeURIComponent(name)}&challenge=${challenge}`);
@@ -83,8 +94,9 @@ test.describe('agent access (configured)', () => {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ action: 'redeem', code, verifier }),
       });
-      expect(redeem.status, await redeem.text().catch(() => '')).toBe(201);
-      const minted = (await redeem.json()) as { key: string; id: string; name: string; prefix: string; scopes: string[] };
+      const redeemText = await redeem.text();
+      expect(redeem.status, redeemText).toBe(201);
+      const minted = JSON.parse(redeemText) as { key: string; id: string; name: string; prefix: string; scopes: string[] };
       expect(minted.key.startsWith('noacg_ak_')).toBe(true);
       expect(minted.name).toBe(name);
       expect(minted.scopes).toEqual(['graphics:create']);
@@ -95,9 +107,10 @@ test.describe('agent access (configured)', () => {
       });
       expect(again.status).toBe(400);
 
-      // 3. Save: the library record the bridge builds, posted with the key.
+      // 3. Save: the library record the bridge builds, posted with the key. Back in the studio
+      // (Advanced mode + an autosaved project = the editor, no wizard; close one if it shows).
       await page.goto('/app');
-      await dismissWizard(page);
+      await page.locator('.wz-modal .gallery-close').click({ timeout: 3_000 }).catch(() => undefined);
       const doc = await page.evaluate(async () => {
         const { variantsFor } = await import('/src/templates/catalog.ts');
         const { graphicDoc } = await import('/src/bridge/bridgeApi.ts');
@@ -132,9 +145,10 @@ test.describe('agent access (configured)', () => {
       await page.getByTestId('account-button').click();
       await page.getByTestId('account-menu').getByRole('menuitem', { name: /Settings/ }).click();
       await expect(page.getByTestId('settings-account')).toBeVisible();
-      const row = page.getByTestId('agent-key-row').filter({ hasText: name });
+      // By the minted PREFIX (unique), not the name: an earlier run's leftover would be a second row.
+      const row = page.getByTestId('agent-key-row').filter({ hasText: minted.prefix });
       await expect(row).toBeVisible();
-      await expect(row).toContainText(minted.prefix);
+      await expect(row).toContainText(name);
       await row.getByTestId('agent-key-revoke').click();
       await expect(row).toHaveCount(0);
       const afterRevoke = await fetch(`${origin}/api/me/graphics`, {
@@ -147,6 +161,7 @@ test.describe('agent access (configured)', () => {
       listener.close();
       // Leave the shared test account as it was found.
       await page.goto('/app').catch(() => undefined);
+      await wipeE2EKeys(page, name).catch(() => undefined);
       await wipeMyGraphics(page).catch(() => undefined);
     }
   });
