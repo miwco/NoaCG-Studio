@@ -59,6 +59,7 @@ Layers of documentation, top to bottom:
 | `AI_LITE_PROMOTION.md` | Lite route promotion policy: eligibility gates (thresholds owner-TODO), ranking, the proposed-route output, and the manual broadcast verification checklist. |
 | `AI_LITE_PLAN.md` | ACTIVE PLAN: how Lite gets good and stays inside the ~€0.01 budget - what the 2026-08-07 switch-on and first real round measured, the route table with live prices, what the model decides vs the platform, why the judge stays off, and the build order. |
 | `ACCEPTANCE_SPX_CASPARCG.md` | OPEN manual checklist: the parts of acceptance only a real SPX/CasparCG stack can prove. Not yet run. |
+| `acceptance/IMPORTED_QUIZ_HOSTED_WALK.md` | OPEN owner walk, ~15 min, prepared 2026-08-22: the imported quiz on the HOSTED road - published production, real `/output` renderer, and the renderer reboot mid-lock that is the pilot's one predicted failure. Half of it is `e2e/configured/imported-quiz-output.spec.ts` (one command, five frame pairs); the other half is the eyes-on question of whether the mapping step reads as usable without training. Says what a green run does NOT cover. |
 
 ## Active plans (decided, not done)
 

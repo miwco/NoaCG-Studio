@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import nodePath from 'node:path';
 import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
+import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
 //
@@ -24,8 +25,6 @@ import { settleDurableWrites } from './_durable';
 // Both fixtures are the SHIPPED SAMPLES (docs/svg-samples/) rather than copies: the files a
 // designer is handed are the files the tests walk, so the two cannot drift.
 
-const SCOREBUG = fileURLToPath(new URL('../docs/svg-samples/scorebug.svg', import.meta.url));
-const QUIZ = fileURLToPath(new URL('../docs/svg-samples/quiz-board.svg', import.meta.url));
 
 /**
  * FRAMES FOR A HUMAN, off by default.
@@ -41,46 +40,22 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false });
 }
 
-/** Drop a file on the Import door and land on the SVG mapping step. */
-async function dropSvg(page: Page, fixture: string) {
+/** The offline walk starts from a cold /app; the live one arrives already signed in, which is
+ *  why the shared helper does not navigate. */
+async function openImportDoor(page: Page, fixture: string) {
   await page.goto('/app');
-  await expect(page.locator('.wz-modal')).toBeVisible();
-  await page.locator('[data-entry="import-graphic"]').click();
-  await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture);
-  await expect(page.getByTestId('import-svg-card')).toBeVisible();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
-}
-
-/** From the mapping step to a production page with the graphic in it as a cue. */
-async function intoProduction(page: Page, graphic: string, production: string) {
-  await page.getByRole('button', { name: 'Next' }).click(); // Animation
-  await expect(page).toHaveURL(/#\/new\/step\/animation/);
-  await page.getByRole('button', { name: 'Next' }).click(); // Finish
-  await expect(page).toHaveURL(/#\/new\/step\/finish/);
-  await page.getByTestId('wz-finish-name').fill(graphic);
-  // The picker only lists existing productions, so a fresh library has none to choose from.
-  await page.getByTestId('wz-finish-production-pick').locator('select').selectOption('new');
-  await page.getByTestId('wz-finish-production-name').fill(production);
-  await page.getByTestId('wz-finish-production-go').click();
-  await expect(page).toHaveURL(/#\/production\//);
-  // 20 s: landing on the page builds the graphic's document, and the cold Prettier format is
-  // the same cost import-graphic.spec.ts documents.
-  await expect(page.getByTestId('production-page')).toBeVisible({ timeout: 20_000 });
-  await settleDurableWrites(page);
+  await dropSvg(page, fixture);
 }
 
 test('imported scoreboard: a numeric layer is a ± stepper that acts on air, and survives a reload', async ({ page }) => {
-  await dropSvg(page, SCOREBUG);
+  await openImportDoor(page, SCOREBUG_SVG);
 
-  // Every layer on: this file marks one by name (`f:Competition`), and the prefix rule then
-  // defaults the REST off — which is right for the rule and wrong for this walk.
-  const boxes = page.getByTestId('map-svg-fields').locator('input[type="checkbox"]');
-  for (const box of await boxes.all()) if (!(await box.isChecked())) await box.check();
+  await bindEveryTextLayer(page);
   await expect(page.getByTestId('map-svg-fields')).toContainText('7 of 7');
 
   await shot(page, '1-scoreboard-mapping');
   await intoProduction(page, 'Match scorebug', 'Saturday Match');
+  await settleDurableWrites(page);
 
   // The scores arrived as NUMBER fields, so the panel offers them as steppers — the generic
   // control model doing it, with nothing in this template asking for it.
@@ -125,7 +100,7 @@ test('imported scoreboard: a numeric layer is a ± stepper that acts on air, and
 });
 
 test('imported quiz: drawn layers are proposed from their names, and the operator drives select → lock → reveal', async ({ page }) => {
-  await dropSvg(page, QUIZ);
+  await openImportDoor(page, QUIZ_SVG);
 
   // THE PROPOSAL (draft.ts proposeQuizBinding): a designer who named layers the obvious way
   // opens this step with every picker already filled. It is an accelerator, never a gate —
@@ -146,6 +121,7 @@ test('imported quiz: drawn layers are proposed from their names, and the operato
 
   await shot(page, '3-quiz-mapping');
   await intoProduction(page, 'Olympics quiz', 'Quiz Night');
+  await settleDurableWrites(page);
 
   // THE BUTTONS ARE THE MACHINE'S. Nothing here is declared per template: every operator event
   // an arrow carries became a button, and the audience event — whose branch this pilot drops —
@@ -194,7 +170,7 @@ test('imported quiz: the behaviour survives the export and runs standalone from 
   // this asserts the same board works as a folder on a playout machine, with no NoaCG around it.
   // Driven over file:// on purpose — the trap this catches is a reference that silently resolves
   // in the dev server and dangles on disk (docs/VERIFICATION.md).
-  await dropSvg(page, QUIZ);
+  await openImportDoor(page, QUIZ_SVG);
   await page.getByRole('button', { name: 'Create project' }).click();
   await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
 

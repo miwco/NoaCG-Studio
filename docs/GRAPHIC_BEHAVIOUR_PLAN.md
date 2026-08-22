@@ -239,6 +239,17 @@ Everything except the paint, which is more than expected going in:
    run drew the verdict over the answer it was judging.
 4. **Was the scoreboard done?** Yes. Half the September goal cost an afternoon of verification.
 
+### The one road still unwalked
+
+**The hosted one.** Everything above happens either in a document the app built or in an exported
+folder opened from disk; the `/output` renderer following the hosted log has not seen this graphic.
+Two things only that run can answer: whether the drawn states cross the wire, and whether BOOT
+RECOVERY repaints them — a snap replays states with callbacks suppressed, so the layers come back
+only because `paintQuizState()` repaints from the machine on the trailing `update()`. It is
+prepared and waiting for the owner: `docs/acceptance/IMPORTED_QUIZ_HOSTED_WALK.md`, whose
+automated half is `e2e/configured/imported-quiz-output.spec.ts`. It needs the main checkout's
+`.env` and writes real rows, which is why it is written down rather than run.
+
 ### What stays deferred, unchanged
 
 No behaviour registry, no plugin shape, no customizing the arc, no AI proposal. §6's reasoning
