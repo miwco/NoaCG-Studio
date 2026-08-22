@@ -267,3 +267,63 @@ test('a no-logo design offers no logo section', async ({ page }) => {
   await expect(page.locator('.wz-line-row').first()).toBeVisible();
   await expect(page.locator('.panel-section', { hasText: 'Include a logo slot' })).toBeHidden();
 });
+
+
+// ── PLACEMENT IS THE DESIGN'S, NOT THE CATEGORY'S ─────────────────────────────────────────
+//
+// `beside = prefix === 'lower-third'` decided this for every design in every category until
+// 2026-08-21 - the hard placement rule the owner says does not exist ("it depends on the
+// design"). A design may now answer for itself through `TemplateVariant.markPlacement`, and
+// absent it keeps its family's answer, so nothing shipped moves.
+//
+// It exercises the two real steps the answer travels through - `resolveOptions` reading the
+// VARIANT record, then `applyLogoSlot` reading the resolved options - rather than a template
+// build, because a design's placement is declared on its variant and `create` closes over its
+// own meta: spreading a copy of the record proves nothing (it silently did, first attempt).
+test('a design places its own mark, and silence keeps the category default', async ({ page }) => {
+  await page.goto('/app');
+  await page.locator('.topbar').waitFor();
+
+  const out = await page.evaluate(async () => {
+    const bust = '?t=' + Date.now();
+    const { resolveOptions } = await import('/src/model/wizard.ts' + bust);
+    const { applyLogoSlot } = await import('/src/templates/shared/logoSlot.ts' + bust);
+
+    const design = (prefix: string) => ({
+      html: `    <div class="${prefix}-box">\n      <div class="${prefix}-mask"><span id="f0">Name</span></div>\n    </div>`,
+      css: '',
+      hasAccent: false,
+    });
+    const variant = (prefix: string, markPlacement?: string) => ({
+      id: 'probe', category: prefix, name: 'Probe', styleTag: 'minimal', description: '',
+      maxLines: 2, suggestedLines: [{ title: 'Name', sample: 'Name' }],
+      logo: 'optional', animationPresets: ['fade'],
+      defaultPalette: { id: 'signal', name: 'Signal', styleTags: ['minimal'], accent: '#f00', text: '#fff', textDim: '#aaa', panel: '#000' },
+      defaultFontId: 'inter', defaultZone: 'bottom-left',
+      ...(markPlacement ? { markPlacement } : {}),
+      create: () => ({ html: '', css: '', js: '', fields: [], assets: [], resolution: { width: 1920, height: 1080 } }),
+    });
+    const slot = (prefix: string, markPlacement?: string) => {
+      const o = resolveOptions(variant(prefix, markPlacement) as never, {
+        logoEnabled: true, logoAssetPath: 'images/m.svg',
+      });
+      return applyLogoSlot(design(prefix) as never, prefix, o).html;
+    };
+    return {
+      strapDefault: slot('lower-third'),
+      strapAsBand: slot('lower-third', 'band'),
+      cardDefault: slot('info-card'),
+      cardAsBeside: slot('info-card', 'beside'),
+    };
+  });
+
+  // A strap's default is BESIDE: the design's own children are gathered into a lockup so the
+  // mark has ONE row to sit against, which is what costs width and no height.
+  expect(out.strapDefault).toContain('lower-third-lockup');
+  // The same category, a design that asks for a band: no lockup, the mark leads the box.
+  expect(out.strapAsBand).not.toContain('lower-third-lockup');
+
+  // A card's default is the band; asking for beside builds the lockup instead.
+  expect(out.cardDefault).not.toContain('info-card-lockup');
+  expect(out.cardAsBeside).toContain('info-card-lockup');
+});
