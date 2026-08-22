@@ -52,59 +52,46 @@ Work that does not serve that date is not current work.
 - **Editable** - a pro can open any generated file and extend it. Nobody has to.
 
 ### Anything-goes export (a platform, not an SPX generator)
-Many environments - **SPX, CasparCG, OBS, vMix, OGraf**, more over time. SPX is the canonical
-*internal* format and the strictest validation target **today**; every other target is an adapter
-off that same source, so breadth costs no rework. Breadth across the live stack, plus automation and
-remote control, is the long-term differentiator. **The long-run direction is OGraf-first** - see
-"NEXT - OGraf-first, not SPX-first"; nothing about the contract moves until that is costed.
+Many environments - **SPX, CasparCG, OBS, vMix, OGraf**, more over time - each an adapter off one
+source, so breadth costs no rework. SPX is the canonical internal format and the strictest gate
+**today**; the long-run direction is OGraf-first (below), and nothing moves until that is costed.
 
 ### Operating principles
-- **Free forever for the core.** Creating, editing, exporting, controlling, self-hosting - always
-  free. No paywall on the workflow.
+- **Free forever for the core.** Creating, editing, exporting, controlling, self-hosting. No
+  paywall on the workflow, ever.
 - **One paid surface, later: hosted AI** for users who will not bring their own key (real compute
   cost). **Bring-your-own-key is always free.**
-- **Users, not revenue.** Optimize for adoption and regular use. Money is a later consequence of a
-  large, happy user base.
-- **No sign-in for its own sake.** The studio - create, customize, export, self-host - never asks
-  for an account. It is asked for only where it *buys* something the user wants: their graphics
-  and productions saved to their own Home across devices, the persistent cloud output URL, and
-  hosted AI allowance.
+- **Users, not revenue.** Money is a later consequence of a large, happy user base.
+- **No sign-in for its own sake.** An account is asked for only where it *buys* something: saved
+  graphics and productions across devices, the persistent cloud output URL, hosted AI allowance.
 
 ### Who we are replacing
 
-Three products, and what each one obliges us to build. The long-term goal is to take their
-customers, so their proven capabilities are our requirements list.
+Four products, and what each obliges us to build - their proven capabilities are our requirements
+list.
 
-- **Rive** - a designer-first tool for interactive animation with real state-machine logic,
-  embedded through a small runtime. Interactive, state-driven behaviour is what a live graphic
-  fundamentally IS, so Rive sets the bar for our state machine and node editor.
-- **Singular.live** - cloud broadcast graphics: templates in their cloud, a browser control room,
-  output reaching air from their playout. They already do most of what we intend, so the gap we
-  have to open is **breadth** - a catalog covering nearly any use case - over equivalent cloud
-  playout.
-- **Loopic** - HTML broadcast graphics, the closest positioning to ours, with a real editor. Its
-  timeline and canvas editing are what our Advanced mode has to beat.
-- **MXMZ** (mxmz.com, added 2026-08-20 - named by Yle as the working model) - Dutch cloud
-  broadcast-graphics SaaS out of Banijay/Southfields: design in Illustrator/Figma/Canva, import
-  the SVG with **every layer auto-exposed** for animation and JSON data binding, browser timeline,
-  operator playout with newsroom/sports-data integrations; 200+ channels, from ~$3k/yr. They prove
-  the "your own SVG, playable" workflow at broadcast scale, so our SVG import has to match it
-  (layers auto-exposed, no renaming ritual) - and beat it on what they lock away: free-forever,
-  self-host, export the files anywhere, a catalog and AI they don't have. **Researched properly
-  2026-08-22: `docs/COMPETITOR_MXMZ.md`.** The headline: nothing public shows them authoring LOGIC
-  at all - they train the designer for a day on a keyframe timeline, keep the OPERATOR as the
-  non-technical one, and hand-build a control panel per sport. Attachable behaviours are the gap
-  their architecture has no place to put.
+- **Rive** - designer-first interactive animation with real state-machine logic. State-driven
+  behaviour is what a live graphic fundamentally IS, so Rive sets the bar for our machine and node
+  editor.
+- **Singular.live** - cloud graphics, browser control room, their playout reaching air. They do
+  most of what we intend, so our gap to open is **breadth** over equivalent cloud playout.
+- **Loopic** - HTML broadcast graphics, closest positioning to ours. Its timeline and canvas
+  editing are what Advanced mode has to beat.
+- **MXMZ** (mxmz.com - named by Yle as the working model; researched 2026-08-22 in
+  `docs/COMPETITOR_MXMZ.md`) - they prove the "your own SVG, playable" workflow at broadcast
+  scale, so our SVG import has to match it: every layer auto-exposed, no renaming ritual. We beat
+  them on what they lock away (free-forever, self-host, export anywhere, a catalog and AI) and on
+  the gap their architecture has no place to put: **nothing public shows them authoring LOGIC at
+  all** - a designer trained for a day on a keyframe timeline, and a control panel hand-built per
+  sport.
 
 ---
 
 ## NOW - students make their OWN graphics, and play them out
 
-**The student release closed 2026-08-22.** The owner ran it on the school's hardware and accepted
-the player system - *"I have tried the hardware, and we have a player system that we can use. So
-that goal is now reached."* Steps 1-11, the deadline they carried and the acceptance history are in
-[`GOALS_ARCHIVE.md`](GOALS_ARCHIVE.md), "The student release (closed 2026-08-22)". Student accounts
-are settled too: students make their own, and nothing is owed there.
+**The student release closed 2026-08-22** on the owner's hardware run - *"we have a player system
+that we can use."* Steps 1-11 and the acceptance history are in
+[`GOALS_ARCHIVE.md`](GOALS_ARCHIVE.md). Student accounts are settled: students make their own.
 
 **The goal that replaces it, owner 2026-08-22:**
 
@@ -123,23 +110,12 @@ on a graphic somebody else drew.
       text layers auto-detected as bindable fields, map, preview, create, and the exact graphic is
       an ordinary NoaCG template that exports and airs. The owner walks it first, because whether
       the workflow is CLEAR is the half no test can answer. Everything below assumes it holds.
-- [ ] **2. Attach BEHAVIOUR to a graphic somebody else drew.** The open question of the three
-      weeks, and the one with no design yet. The engine is there - a graphic is data fields plus
-      parallel state groups in one `NOACG_ANIM` block, events are structural, control pages are
-      generated from the machine (`docs/STATE_MACHINE_SCHEMA.md`, `docs/CONTROL_LAYER.md`) - and an
-      imported SVG arrives with fields and no machine. So the question is narrow and answerable:
-      **how does a student pick "this is a quiz" and get the quiz behaviour bound to their own
-      artwork?** A named behaviour applied to a graphic (the graphic-type registry already models
-      "a machine this type needs", `docs/GRAPHIC_TYPES.md`) is the shape to try first.
-      **BOTH CASES NOW WORK, walked in a browser and pinned by `e2e/import-svg-behaviour.spec.ts`
-      (2026-08-22).** The SCOREBOARD needed no code: a numeric SVG layer is already a ± stepper on
-      every control surface, it acts on air without replaying the entrance, and it persists. The
-      QUIZ is a deliberate pilot: the catalog answer board's machine and buttons are reused
-      unchanged, and what is new is the PAINT - the designer draws each moment as its own hidden
-      Illustrator layer and NoaCG decides when it is visible. Binding is pickers in the Fields
-      step, prefilled from layer names, no code and no AI. The plan, the split of what was already
-      generic against what is quiz-specific, and what stays deferred until a third behaviour
-      exists: `docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10. **Owner walk still owed.**
+- [ ] **2. Attach BEHAVIOUR to a graphic somebody else drew.** The question was how a student
+      picks "this is a quiz" and gets that behaviour bound to their own artwork, when an imported
+      SVG arrives with fields and no machine. **Both cases now work** - walked in a browser, pinned
+      by `e2e/import-svg-behaviour.spec.ts` (2026-08-22), designed in
+      `docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10, shipped detail in the archive. **What is left is the
+      OWNER WALK**, which is what decides whether a student can find any of it.
 - [ ] **3. The two graphics, walked as a student would.** Draw a quiz and a scoreboard in
       Illustrator, import, bind, attach the behaviour, put both in one production, and run them
       from the dashboard - lock, reveal, +1, -1 - with the operator never seeing code. That walk is
@@ -153,11 +129,9 @@ class, our behaviour used as-is is enough.
 ### The playout dashboard
 
 The binding design is `docs/PLAYOUT_DASHBOARD.md`; the three surfaces that render it must not drift
-(`docs/CONTROL_PANEL_PARITY.md`). **Owner, 2026-08-22: the dashboard is accepted as it stands** -
-*"looks good for right now… the buttons on the right are totally fine."* The vertical-budget re-lay
-specified after the 2026-08-21 read (verb bar into the column beside PROGRAM, "what is left"
-instead of the flat `26vh` monitor cap) is therefore **not current work**; it stays written down in
-`docs/PLAYOUT_DASHBOARD.md` §2 for when a real window makes it hurt again.
+(`docs/CONTROL_PANEL_PARITY.md`). **Accepted as it stands, owner 2026-08-22** (archive); the
+vertical-budget re-lay is deferred, not dropped - `docs/PLAYOUT_DASHBOARD.md` §2. What is open is
+three buttons.
 
 - [ ] **Drop the Preview verb.** Owner, 2026-08-22: *"Preview does not seem to have a function."*
       The code agrees - the `preview` verb runs `selectCue(selectedCue.id)` on the cue that is
@@ -178,19 +152,17 @@ instead of the flat `26vh` monitor cap) is therefore **not current work**; it st
 
 ## NEXT - OGraf-first, not SPX-first
 
-**Owner direction, 2026-08-22.** Yle is part of the EBU and is our closest partner, so the long-run
-position is that **NoaCG is an OGraf player and OGraf is the first-class format** - SPX becomes one
-system among many rather than the centre. **Nothing changes today**: OGraf export already conforms
+**Owner direction, 2026-08-22.** Yle is EBU and our closest partner, so the long-run position is
+that **NoaCG is an OGraf player and OGraf is the first-class format** - SPX becomes one system
+among many rather than the centre. **Nothing changes today**: OGraf export already conforms
 (`docs/OGRAF.md`, externally validated), SPX stays the canonical internal format and the strictest
-validation gate, and flipping that is a rework nobody has costed. What is owed first is
-understanding: how the OGraf ecosystem actually works and what "OGraf-first" would mean for the
-template contract, written down before any code moves.
+gate, and flipping that is a rework nobody has costed. What is owed first is understanding - how
+the ecosystem works, what "OGraf-first" costs the template contract - written before code moves.
 
-**The Yle thread, same date.** Demo day already happened; the owner re-contacts in a few weeks, and
-in roughly a month Yle would try NoaCG inside one of their own productions. **Nothing is owed
-now.** The one thing to expect: the Yle building runs a strict network, so the first real question
-will be which ports and hosts it blocks - answer that when they report it, do not design for it in
-advance.
+**The Yle thread, same date. Nothing is owed now**: demo day happened, the owner re-contacts in a
+few weeks, and in roughly a month Yle would try NoaCG inside one of their own productions. Expect
+one question - their building runs a strict network, so which ports and hosts it blocks. Answer
+that when they report it; do not design for it in advance.
 
 
 ## NEXT - AI that anyone can afford
@@ -213,37 +185,27 @@ counting every model call a generation makes.
 
 ### Owner decision 2026-08-15: Lite and Pro are revived, and the bar is the same gate
 
-Lite's value gate FAILED on the owner's blind ballot on 2026-08-14, and the owner reopened it the
-next day on evidence rather than appetite: every failure the ballot named was **the MARK**, and it
-hit the hand-branded DIY arm too, so the defect was the platform's and not the model's - a reading
-Pro's first hosted generation independently confirmed. Both platform fixes are merged (the
-mark-legibility gate and the mark-size rule). **The full argument, the verdict it overturned and the
-operationalized pass rule live in `docs/AI_LITE_BRAND_PLAN.md` §2/§2.1/§2.2** and are deliberately
-not restated here.
-
-What binds:
+Lite's value gate FAILED on the owner's blind ballot 2026-08-14 and was reopened the next day on
+evidence: every failure it named was **the MARK**, and it hit the hand-branded arm too, so the
+defect was the platform's. The argument is in the archive; the rule it operationalizes is
+`docs/AI_LITE_BRAND_PLAN.md` §2/§2.1/§2.2. What binds:
 
 - **The bar is that SAME §2 gate, re-run unchanged** - same three arms (template, DIY, Lite), same
   predeclared rule, re-run once the two 2026-08-15 slices have landed (blocking a Pro graphic whose
   baked text cannot be erased, and Pro Phase A where the platform takes the panel).
 - **A second FAIL means the retirement stands.** The gate does not get a third reading.
-- **The re-run is not expensive.** `scripts/ai-lite-value-gate.mjs` builds the arms, the blind sheet
-  and the verdict; the 2026-08-14 Lite arm cost **$0.0069 for 8 cells** and the other two arms are
-  `variant.create()` and cost nothing. The expensive part is the owner's eyes.
+- **The re-run is cheap** - `$0.0069` of model spend; the expensive part is the owner's eyes.
 
 
-- [ ] **Lite: make it good, then re-run its gate. The price is already solved.** The target was 100
-      generations per euro (~€0.01 each); the 2026-08-08 round measures **$0.00032 per generation**
-      - thirty times under that ceiling, and unmoved by the transport change
-      (`benchmarks/lite/ROUND-2026-08-08-GATEWAY.md`). Route choice is a QUALITY decision, not a
-      budget one. What is open is the half that was never about money: machine-valid is not the
-      same as good, and the 2026-08-14 ballot said so out loud. Cheap models cannot design a
-      broadcast graphic unaided - a measured finding - so Lite never asks them to; the catalog is
-      the crutch AND the moat, through adapt-first (`docs/ADAPT_FIRST_PLAN.md`). **This is the gate
-      for every other AI goal** - one good graphic must be reliable before anything multiplies it -
-      and "good" now has one definition: passing the §2 re-run described above. Two ballot notes
-      are still unfixed and belong in the build the re-run films: a rule/underline crossing the
-      name on two designs, and a title with no contrast on a light package.
+- [ ] **Lite: make it good, then re-run its gate. The price is already solved** - **$0.00032 per
+      generation** measured 2026-08-08, thirty times under the ceiling and unmoved by the transport
+      change, so route choice is a QUALITY decision, not a budget one. What is open was never about
+      money: machine-valid is not good, and the 2026-08-14 ballot said so. Cheap models cannot
+      design a broadcast graphic unaided, so Lite never asks them to - the catalog is the crutch
+      AND the moat (`docs/ADAPT_FIRST_PLAN.md`). **This is the gate for every other AI goal**, and
+      "good" has one definition: passing the §2 re-run above. Two ballot notes are still unfixed
+      and belong in the build the re-run films - a rule/underline crossing the name on two designs,
+      and a title with no contrast on a light package.
 - [ ] **Pro: the design-language tier** (`docs/NOACG_PRO_PLAN.md`). Both earlier premises are
       retired on evidence: reconstruction (§16) and the free-form coder (§21 - four checkpoints
       one-shot ~30% airable against Phase A's 14/15). What runs is Phase A: one text call buys a
@@ -252,23 +214,23 @@ What binds:
       the fail-closed custom lane (seven §22.1 gate leaks closed, re-read 21/21 - one clean
       round justifies a validation round, not a ship); the topic card's read into the package.
       Every paid round stays spend-capped and approved separately.
-- [ ] **A generated graphic can carry its own STATE MACHINE.** Every tier, not Pro. The platform has
-      the engine, the node editor, the control pages and the hosted log - and **no generation path
-      asks a model for a machine** (the only mention in `src/ai` is Lite's refusal code). A
-      generated clock+scoreboard got six correct fields and zero operator events: its clock engine
-      is unreachable, and the dispatcher it invented was silently overridden by the platform's own.
-      Prompting cannot fix it - every emit converts through `importAnimData`, which drops a machine
-      by construction. The fix is a structured MACHINE stage spliced in deterministically, the way
-      `designSpec` works. **The gap between "make a graphic" and "run a show".**
+- [ ] **A generated graphic can carry its own STATE MACHINE.** Every tier, not Pro. The platform
+      has the engine, the node editor, the control pages and the hosted log - and **no generation
+      path asks a model for a machine**. A generated clock+scoreboard got six correct fields and
+      zero operator events: its clock engine unreachable, its invented dispatcher silently
+      overridden. Prompting cannot fix it - every emit converts through `importAnimData`, which
+      drops a machine by construction. The fix is a structured MACHINE stage spliced in
+      deterministically, the way `designSpec` works. **The gap between "make a graphic" and "run a
+      show".**
 - [ ] **Extreme: frontier models + the subscription that funds them.** After there are users.
       Standing rule until there is income: a NoaCG-funded route must be a CHEAP model on the
-      managed transport - Vercel AI Gateway since 2026-08-07, not OpenRouter. The constraint is
-      cost, not brand: a frontier model served through that transport is an ordinary fundable
-      route once it is affordable; the four DIRECT provider APIs need the user's own key.
+      managed transport (Vercel AI Gateway, not OpenRouter). The constraint is cost, not brand -
+      a frontier model on that transport is fundable once it is affordable; the four DIRECT
+      provider APIs need the user's own key.
 - [ ] **A school account earns more AI.** A verified address on a configured school domain
-      (`@arcada.fi` first) raises the allowance. No new concept needed: a domain match issues a
-      **grant**, which already outranks the plan and carries its own reason and expiry
-      (`src/entitlements/contract.ts`). The first honest reason to sign in that is not a paywall.
+      (`@arcada.fi` first) issues a **grant**, which already outranks the plan and carries its own
+      reason and expiry (`src/entitlements/contract.ts`) - no new concept needed. The first honest
+      reason to sign in that is not a paywall.
 
 ### Kits, not one graphic at a time
 Nobody making a show wants to create graphics one by one. Say which graphics the programme needs,
@@ -287,30 +249,26 @@ across it; the full entry is in the archive.*
 
 Only after the north star is true for real users. Each step is a direct competitive answer.
 
-0. [ ] **TEAMS - several people holding ONE production.** Owner, 2026-08-21: *"someone can edit
-       the spreadsheet, someone can steer the queue, someone can attach an API… if we have many
-       students working on one project, it's never just one person doing this all."* This is a
-       class requirement rather than a nicety: the whole teaching case is a group running a show
-       together. The capability model already splits WHAT a person may do - control, output, join
-       and presenter are four separate URLs - and has no concept of WHO, so two students cannot
-       hold the same production under their own accounts. Backend, entitlements and a migration;
-       numbered 0 because it is the one item here the deadline case actually leans on.
-
-1. [ ] **WYSIWYG canvas** - back to the editor: drag, place and restyle your own graphics
-       visually, with code still the source of truth underneath. `docs/WYSIWYG_PLAN.md`.
-       **Tried once and it did not land** (owner, 2026-08-22), so a second attempt starts by
-       saying what was wrong with the first rather than rebuilding it.
-2. [ ] **The node editor as a first-class surface** - state machines and logic drawn as a graph:
-       which graphic goes where, on what event, under what guard. The engine and the graph editor
-       already exist (`docs/STATE_MACHINE_SCHEMA.md`, `MachineGraph`); what is missing is making
-       it a surface a non-programmer uses on purpose. **This is where we meet Loopic head-on, and
-       where interactive graphics put us against Rive.** **Also tried once, also did not land as a
-       way to AUTHOR logic** (owner, 2026-08-22). Items 1 and 2 are the two attempts the north
-       star's core question refers to: neither is the answer yet, and the answer is not assumed to
-       be a third editor - the question gets attacked from several angles.
-3. [ ] **Singular.Live class** - professional, deeply customizable graphics for anything: live
-       data, automation, multi-operator shows. The last frontier, and the reason the data hub and
-       the export platform are built the way they are.
+0. [ ] **TEAMS - several people holding ONE production.** Owner, 2026-08-21: *"if we have many
+       students working on one project, it's never just one person doing this all."* A class
+       requirement, not a nicety - the whole teaching case is a group running a show together. The
+       capability model splits WHAT a person may do (control, output, join, presenter are four
+       URLs) and has no concept of WHO, so two students cannot hold one production under their own
+       accounts. Backend, entitlements and a migration; numbered 0 because the deadline case leans
+       on it.
+1. [ ] **WYSIWYG canvas** - drag, place and restyle visually, code still the source of truth
+       (`docs/WYSIWYG_PLAN.md`). **Tried once and it did not land** (owner, 2026-08-22), so a
+       second attempt starts by saying what was wrong with the first.
+2. [ ] **The node editor as a first-class surface** - logic drawn as a graph: which graphic goes
+       where, on what event, under what guard. The engine and the graph editor exist
+       (`docs/STATE_MACHINE_SCHEMA.md`, `MachineGraph`); what is missing is a surface a
+       non-programmer uses on purpose. **Where we meet Loopic head-on and Rive on interactivity.**
+       **Also tried once, also did not land as a way to AUTHOR logic.** Items 1 and 2 are the two
+       attempts the north star's core question refers to - the answer is not assumed to be a third
+       editor.
+3. [ ] **Singular.Live class** - professional, deeply customizable graphics: live data, automation,
+       multi-operator shows. The last frontier, and why the data hub and export platform are built
+       the way they are.
 
 ---
 
@@ -329,26 +287,21 @@ Real work, deliberately not now. Each has a plan doc; none is current until it i
 - **Payments/subscriptions** - long beta first; separate private repo, Stripe, metered generations.
 - **Nightly auto-generated graphics library** (`docs/NIGHTLY_AUTOMATION_PLAN.md`) - committed
   direction, unscheduled.
-- **Audience page per-show customisation** and **automatic chat ingestion from YouTube/Twitch into
-  the audience plane** (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Backlog for the audience plane") -
-  both owner-requested on 2026-08-08, both deliberately not started while the plain join page is
-  still being accepted. Each is a capability-disclosure or an architecture decision wearing a
-  feature's clothes; the doc says which.
+- **Audience page per-show customisation** and **chat ingestion from YouTube/Twitch into the
+  audience plane** (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Backlog for the audience plane") - both
+  owner-requested 2026-08-08, both held while the plain join page is still being accepted. Each is
+  a capability-disclosure or an architecture decision wearing a feature's clothes.
 - **Video/animation projects** - the parallel Beta shell stays where it is until the north star
   lands.
-- **The dedicated preview channel, Home polish** - postponed by the student release, still
-  wanted. (Google Fonts import LANDED on 2026-08-16 and moved to `GOALS_ARCHIVE.md`.)
+- **The dedicated preview channel, Home polish** - postponed by the student release, still wanted.
 
 ---
 
 ## Quality bar (always-on)
 
-- `npm run build` green - the CI gate (typecheck, lint, workflow and instruction checks).
-- Every new user-facing flow ships with a Playwright spec **and its entry in the affected-mapper**
-  in the same commit, or it only ever runs at night.
-- Catalog changes run their gates: `l3-sweep`, `type-floor`, `overflow-sweep`, `field-coverage`,
-  `numerals`, `engine-floor`, and the calibration tripwire. The nightly runs them unconditionally.
-- Observable behaviour is never called done on a green build alone - it is verified in a browser.
+The full procedure is `docs/VERIFICATION.md`; what this file adds is the one bar nothing there
+enforces.
+
 - **The live suite runs against the real project before a class, and again after any change to
   publish, output or the topbar.** It only ever runs by hand, so nothing reports the rot it finds -
   the 2026-08-08 run went 7 of 18 before repair and caught a topbar overflow that hung the account
