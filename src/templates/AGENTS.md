@@ -812,6 +812,20 @@ figure is the short final part, so the label is what may contain one). Say which
   `textLength` fit; DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
   step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
   E2E: e2e/import-svg.spec.ts.
+  **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** (docs/GRAPHIC_BEHAVIOUR_PLAN.md §10):
+  imported artwork driven by the answer board's own arc - select, lock, reveal. It REUSES
+  `ANSWER_BOARD_MACHINE` (filtered to drop the audience branch, never copied) and
+  `ANSWER_BOARD_CONTROLS` verbatim, attached with the ordinary `attachMachine`. What is new is only
+  the PAINT: the catalog quiz adds a class to a row it drew, and on artwork we did not draw there
+  is nothing to infer - so the DESIGNER draws each moment as its own layer and the runtime shows
+  and hides it (`.imported-design-qstate` / `-qon`, ids `q-sel-N` / `q-cor-N` / `q-wrong-N` /
+  `q-lock`). **Classes, never inline styles** - a snap clears inline props and the state would
+  vanish while the machine still held it. Every drawn layer is OPTIONAL: a board with none still
+  selects, locks and reveals. The binding is pickers in the mapping step
+  (`DesignSvgQuizBehaviour`), prefilled from layer names by `proposeQuizBinding` - an accelerator,
+  never a renaming ritual. **Deliberately not generalised:** no behaviour registry until a third
+  behaviour says what the abstraction should be. Sample: docs/svg-samples/quiz-board.svg;
+  E2E: e2e/import-svg-behaviour.spec.ts (in-app, and the export run from disk).
 - **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
   ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
   highlight, question queue, community/prayer request), 20 designs in five per-form files

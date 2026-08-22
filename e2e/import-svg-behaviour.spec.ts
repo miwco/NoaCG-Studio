@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import nodePath from 'node:path';
+import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
@@ -184,4 +187,79 @@ test('imported quiz: drawn layers are proposed from their names, and the operato
   }
   await expect(air.locator('#q-cor-1')).not.toHaveClass(/imported-design-qon/);
   await shot(page, '6-quiz-revealed');
+});
+
+test('imported quiz: the behaviour survives the export and runs standalone from a file', async ({ page }, testInfo) => {
+  // EXPORT IS WHERE AN IMPORTED GRAPHIC STOPS BEING OURS. Everything above runs inside the app;
+  // this asserts the same board works as a folder on a playout machine, with no NoaCG around it.
+  // Driven over file:// on purpose — the trap this catches is a reference that silently resolves
+  // in the dev server and dangles on disk (docs/VERIFICATION.md).
+  await dropSvg(page, QUIZ);
+  await page.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden({ timeout: 20_000 });
+
+  await page.getByTestId('dock-tab-export').click();
+  await page.locator('.issue', { hasText: 'CasparCG export' }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /Validate & download/ }).click(),
+  ]);
+  const zip = await JSZip.loadAsync(readFileSync(await download.path()));
+
+  // The graphic's own HTML, whatever the package called the folder.
+  const htmlPath = Object.keys(zip.files).find((n) => n.endsWith('.html') && !n.includes('controlpanel'))!;
+  expect(htmlPath).toBeTruthy();
+  const html = await zip.file(htmlPath)!.async('string');
+
+  // THE DRAWN STATES TRAVELLED: the designer's layers, our ids, the rules that hide them, and
+  // the paint that shows them — all inside the one file.
+  for (const id of ['q-sel-1', 'q-sel-2', 'q-sel-3', 'q-sel-4', 'q-cor-3', 'q-wrong-1', 'q-lock']) {
+    expect(html).toContain(`id="${id}"`);
+  }
+  expect(html).toContain('.imported-design-qstate');
+  expect(html).toContain('function revealAnswer');
+  // THE MACHINE TRAVELLED: it lives in the template's own data block, so the arcs and their
+  // operator events are in the file rather than in a registry the playout machine cannot ask.
+  expect(html).toContain('"machine"');
+  for (const event of ['select', 'lock', 'judge']) expect(html).toContain(`"event": "${event}"`);
+
+  // Unpack the whole package and run the graphic the way CasparCG does: as a local file.
+  const dir = testInfo.outputPath('caspar');
+  for (const [name, entry] of Object.entries(zip.files)) {
+    if (entry.dir) continue;
+    const target = nodePath.join(dir, name);
+    mkdirSync(nodePath.dirname(target), { recursive: true });
+    writeFileSync(target, await entry.async('nodebuffer'));
+  }
+  // Listening BEFORE the navigation, or the check could never fire — which is the shape of a
+  // guard that passes for the wrong reason.
+  const missing: string[] = [];
+  page.on('requestfailed', (r) => missing.push(r.url()));
+  await page.goto(pathToFileURL(nodePath.join(dir, htmlPath)).href);
+
+  const lit = () => page.locator('.imported-design-qstate.imported-design-qon');
+  await page.evaluate(() => {
+    const w = window as unknown as { play?: () => void; update?: (d: string) => void };
+    w.play?.();
+    w.update?.(JSON.stringify({ f5: 'C', f6: 'B' }));
+  });
+  // Nothing is lit until a state says so — the entrance is not a verdict.
+  await expect(lit()).toHaveCount(0);
+
+  const fire = (event: string) =>
+    page.evaluate((e) => {
+      (window as unknown as { noacgDispatch?: (n: string) => void }).noacgDispatch?.(e);
+    }, event);
+
+  await fire('select');
+  await expect(page.locator('#q-sel-2')).toHaveClass(/imported-design-qon/);
+  await fire('lock');
+  await expect(page.locator('#q-lock')).toHaveClass(/imported-design-qon/);
+  await fire('judge');
+  await expect(page.locator('#q-cor-3')).toHaveClass(/imported-design-qon/);
+  await expect(page.locator('#q-wrong-1')).toHaveClass(/imported-design-qon/);
+  await shot(page, '7-quiz-exported-standalone');
+
+  // Nothing reached for the network or for a file the package does not carry.
+  expect(missing).toEqual([]);
 });
