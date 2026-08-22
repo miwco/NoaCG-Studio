@@ -19,6 +19,14 @@
 //    is overwritten the moment the entrance runs, and the design would play upright and land
 //    sideways. Writing mode is layout, so nothing in the timeline can undo it.
 //
+// IT IS DRAWN FOR A LEFT EDGE, and a right zone is a mirror it does not do. The block axis is a
+// property of the writing mode, so at a right zone the rail still stacks name-then-role outward
+// to the RIGHT, which puts the name furthest from the edge it is standing against. Fixing that
+// means `vertical-rl`, which is a second design rather than a branch inside this one - the same
+// answer the catalog already gives for mirrored straps (lt21 Right Rail beside lt01, lt42 Right
+// Slam beside lt05). It renders correctly and stays inside the safe area at every zone; only the
+// stacking order stops meaning what it means on the left.
+//
 // It HUGS, like every other lower third - but rotated, so what it hugs is the height: a longer
 // name makes a longer rail, exactly as a longer name makes a wider strap. The one floor is a
 // minimum height, because a rail is furniture standing at the edge of the picture and a short
@@ -78,6 +86,15 @@ ${maskLines([
    \`vertical-lr\` and why it is not a rotate. */
 .lower-third-box {
   writing-mode: vertical-lr;       /* the whole point: the type runs down, the lines stack across */
+  /* PIN THE LINES TO THE HEAD OF THE RAIL, and this one is not a preference either. The anchor
+     zone emits a physical text-align on the root - left, center or right - and the lines inherit
+     it. Turned, that physical value lands on the INLINE axis, which now runs DOWN the frame: a
+     right zone reads as "align to the bottom" and a centre zone as "align to the middle". Both
+     were measured on this rail and both are the same defect - the three columns stop sharing a
+     top edge and hang at different heights (at mid-right: the name starting 144px lower than at
+     mid-left, the role 361px lower, the detail 384px). The logical value start is what the
+     turned axis actually means, and it holds the columns level in all nine zones. */
+  text-align: start;               /* the columns share the rail's head, whatever the zone said */
   min-height: calc(560px * var(--scale));  /* a rail stands - a short name must not shrink it to a chip */
   padding: calc(34px * var(--scale)) calc(18px * var(--scale));  /* generous down the run, tight across it */
   background: var(--panel-bg);     /* the slab - the family's panel surface, so a palette repaints it */

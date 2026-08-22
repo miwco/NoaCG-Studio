@@ -15,6 +15,12 @@
 //     safe area is a promise about TEXT, not about a bar, so the band spans edge to edge and the
 //     words inside it keep the full inset. The zone's horizontal half is therefore overridden
 //     below; its VERTICAL half (top / mid / bottom) still decides where the band sits.
+//     The CONTENT keeps the leading edge in all nine zones too, and that is the same decision
+//     rather than an oversight: the lines are laid out as a flex row so they can share one
+//     baseline, and a flex row does not read `text-align`. A band is programme furniture whose
+//     words start where the reader's eye starts; there is no version of it whose name floats in
+//     the middle of the picture. So the horizontal third of the zone picker genuinely has
+//     nothing to say to this design, in either half.
 //  2. THE LINES SHARE ONE ROW. The structure contract gives each line its own mask; a flex row
 //     lays those masks side by side instead of stacking them, and each mask after the first
 //     carries the printed rule that separates it from the one before. That is what a band is
