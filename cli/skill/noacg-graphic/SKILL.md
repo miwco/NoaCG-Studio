@@ -23,8 +23,9 @@ check it, and how it reaches the user's library. It does not tell you how it sho
    scaffold when it saves work or brings behaviour you need:
    - `noacg types` lists the graphic TYPES NoaCG knows (fields, operator events, designs). A type
      brings its STATE MACHINE and runtime - the scoreboard's flag/result events, a countdown's
-     pause/resume - so if the graphic needs operator ACTIONS beyond Take/Update/Next/Out, start
-     from its type.
+     pause/resume. **A graphic that needs operator ACTIONS beyond Take/Update/Next/Out should
+     START from its type**: a from-scratch graphic easily ends up carrying that state as extra
+     fields instead of buttons - valid, but the operator cannot DO what the brief meant.
    - `noacg scaffold --type <id> --design neutral --out ./my-graphic` gives the type's fields,
      machine, controls and runtime on a plain spine (design it); `--design <id>` gives a proven
      catalog composition to restyle; `noacg scaffold --fields "Artist:text,Score:number,..."`
@@ -46,7 +47,9 @@ check it, and how it reaches the user's library. It does not tell you how it sho
 4. **Inspect the operator surface.** `noacg inspect ./my-graphic` prints the control panel NoaCG
    derives from your graphic - one input per field, one button per action, the step semantics. If
    the operator cannot change what they will need to change, add the field; if an action is
-   missing, it needs to be in the machine (a type's) or the graphic has no such action.
+   missing, it needs to be in the machine (a type's) or the graphic has no such action. Read the
+   printed BUTTONS against what the brief's operator must do live - a clean validate does not
+   prove the actions exist.
 5. **Save.** `noacg save ./my-graphic --name "…"` validates once more and puts it in the user's
    NoaCG library, printing the `#/graphic/<id>` link (it opens at once; it is in Home → Graphics).
    It needs the user's scoped agent key on this machine: if `noacg whoami` says not logged in,

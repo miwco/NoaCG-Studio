@@ -179,12 +179,18 @@ NoaCG is the BRIDGE - the contract, the tools (`noacg` CLI + MCP server, the `/b
 validation and the destination (`noacg save` into the library with a scoped key). The workspace is
 one folder that is an OGraf package and the SPX package; the skill is contract-only by default.
 
-- [ ] **The measured round** (`benchmarks/agent/`, `scripts/agent-round-bench.mjs`): the same
-      briefs through arms A contract-only free design, B + neutral scaffold, C + catalog chassis,
-      D + a design skill, E + NoaCG design notes - a blind owner read decides what the skill
-      recommends by default and whether any design guidance is added deliberately. Spends the
-      owner's quota; owner says go.
+*The measured round ran 2026-08-22 and was blind-read and decided 2026-08-23
+(`benchmarks/agent/rounds/2026-08-22/VERDICT.md`): all 25 cells airable, arms visually
+indistinguishable, the skill stays contract-only with free authoring as the default, and
+"actions come from a type" is the one sharpened rule.*
+
 - [ ] **Publish** - `npm publish` of `noacg`, the marketplace entry live. Owner's call.
+- [ ] **Agent-authored machines - the owner gate is now armed.** All five novel-brief cells
+      authored a working machine from scratch (operator buttons, zero category code, validator
+      clean). Decide whether the skill blesses an authored machine when no type fits, and what
+      extra validation that path needs.
+- [ ] **What the funded tiers can borrow** - diff the round's winning cells against Lite/Pro on
+      the same briefs; which closed-loop fixes can the platform enforce deterministically.
 - **Future, so the directions are not forgotten:** arbitrary graphic backends (graphic-authored
   actions + machines, validated; the control layer already renders any explicit machine);
   OGraf-native graphics in the library (package hosting + an OGraf host in preview/output);

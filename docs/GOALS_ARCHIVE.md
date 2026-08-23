@@ -1705,6 +1705,12 @@ reading "Custom", and the measured round's brief bank + runner. The WHY that dec
 let the agent design the way it works best; NoaCG is a bridge, not a second creative harness; the
 skill teaches the contract, never a look, until a measured round says otherwise. **Open:** the
 measured round itself (owner quota + blind read) and the publish - both live in `GOALS.md`.
+**The round ran 2026-08-22 (25 cells, arms A-E, all validator-clean) and the owner's blind read
+landed 2026-08-23: every graphic airable, arms visually indistinguishable, "so much better than
+through the Create with AI and the API". Verdict in `benchmarks/agent/rounds/2026-08-22/VERDICT.md`:
+skill stays contract-only, free authoring default, design-notes optional; "actions come from a
+type" sharpened in the skill; agent-authored machines moved from hypothetical to an armed owner
+gate (5/5 novel cells authored working machines).**
 
 ## Landed parts of live goals (moved 2026-08-22)
 
