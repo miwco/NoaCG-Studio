@@ -280,7 +280,13 @@ export type ControlMessage =
   | { t: 'play' }
   | { t: 'stop' }
   | { t: 'next' }
-  | { t: 'event'; event: string; payload?: Record<string, string> }
+  // `at` is WHEN this event happened, in epoch ms — the log row's own server time, which every
+  // renderer of a production sees identically. A graphic that runs a clock of its own anchors it
+  // to that instant instead of to its local `Date.now()`, so two renderers that receive the same
+  // row paint the same second and a replayed row resumes from where it really started rather
+  // than from when it was replayed. Optional: a local BroadcastChannel panel has no server time
+  // and no second renderer to agree with, and a graphic that ignores it behaves exactly as before.
+  | { t: 'event'; event: string; payload?: Record<string, string>; at?: number }
   | { t: 'snap'; snap: Record<string, string> | null }
   | { t: 'hello' };
 

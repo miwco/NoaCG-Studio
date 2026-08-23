@@ -259,6 +259,11 @@ window.addEventListener('unhandledrejection', function (ev) {
     } else if (msg.cmd === 'next') {
       try { window.next && window.next(); } catch (e) {}
     } else if (msg.cmd === 'dispatch') {
+      /* Set and LEFT, never cleared after the call: noacgDispatch queues the event and the
+         state's own calls fire a frame later, so clearing it here would put it back to null
+         before the clock that needed it reads it. Every event rewrites it (to null when there
+         is no instant), so it always reads as the most recent event's. */
+      window.noacgEventAt = (typeof msg.at === 'number' && msg.at > 0) ? msg.at : null;
       try { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); } catch (e) {}
     } else if (msg.cmd === 'measure') {
       report(window);
@@ -305,6 +310,11 @@ window.addEventListener('unhandledrejection', function (ev) {
     if (msg.cmd === 'update') {
       try { window.update && window.update(msg.data); } catch (e) {}
     } else if (msg.cmd === 'dispatch') {
+      /* Set and LEFT, never cleared after the call: noacgDispatch queues the event and the
+         state's own calls fire a frame later, so clearing it here would put it back to null
+         before the clock that needed it reads it. Every event rewrites it (to null when there
+         is no instant), so it always reads as the most recent event's. */
+      window.noacgEventAt = (typeof msg.at === 'number' && msg.at > 0) ? msg.at : null;
       try { window.noacgDispatch && window.noacgDispatch(msg.event, msg.payload); } catch (e) {}
     } else if (msg.cmd === 'state') {
       try {

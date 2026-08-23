@@ -59,14 +59,25 @@ const idOf = (key: string): string => `f${DEBATE_FLOOR_FIELDS.findIndex((f) => f
  * `resetClocks` when the chair re-arms, `applyPenalty` / `clearPenaltyMark` for a docked speaker,
  * `holdClocks` on the way off air.
  *
- * WHAT IT IS HONEST ABOUT: the running count is anchored to a DEADLINE in this renderer's own
- * clock, recomputed every tick, so a late or coalesced interval is self-correcting rather than
- * cumulative — a five-minute speech still ends at 00:00 in the browser that started it. It is
- * NOT origin-stamped the way the match clock is (`"45:00@<epoch>"`, matchClock.ts §4), so two
- * renderers started a second apart stay a second apart, and a browser source RELOADED mid-speech
- * comes back at the time on the field rather than the time on the wall. Stamping needs a
- * control-plane writer per clock (src/control/matchClockWire.ts does it for the one match
- * clock), which this graphic does not have yet.
+ * TICKING IS DISPLAY, NOT STATE — the same rule the match clock states (matchClock.ts §4). The
+ * running count is a DEADLINE recomputed every tick rather than a counter decremented once a
+ * second, so a late or coalesced interval is self-correcting instead of cumulative and a
+ * five-minute speech still ends at 00:00 in a throttled background tab.
+ *
+ * THE DEADLINE IS ANCHORED TO THE EVENT, not to this browser. `debateNow()` reads the instant
+ * the operator event actually happened — the log row's own server time, which every renderer of
+ * a production sees identically (control/controlModel.ts). Two browser sources handed the same
+ * `switch` row therefore paint the same second however far apart they received it, and a
+ * renderer replaying a missed row resumes the speech from where it really started rather than
+ * from the moment it caught up.
+ *
+ * THE LIMIT, stated so nobody assumes otherwise: the clock's value on the WIRE is still a plain
+ * time, not an origin-stamped one (`"45:00@<epoch>"`). A renderer that rebuilds from a report
+ * snapshot taken AFTER the switch it needed has no row left to replay and comes back at the
+ * field's last written value. Closing that means stamping the clock fields in the report the way
+ * `control/matchClockWire.ts` stamps the single match clock — and which of these two clocks is
+ * running is machine state, so a stamper would have to know the floor group's pointer. That is
+ * the piece of work this does not do.
  */
 export function debateFloorRuntimeJs(): string {
   return `// ---- The debate floor's two clocks (playout, not motion — the machine calls into this) ----
@@ -81,6 +92,16 @@ var debateExpired = { a: false, b: false };
 var debateDocked = null;         // the side wearing a just-taken penalty, or null
 
 function debateClockEl(side) { return document.getElementById(side === 'a' ? '${idOf('clockA')}' : '${idOf('clockB')}'); }
+
+// WHEN the thing that is happening happened. Inside an operator event forwarded by a renderer
+// this is the log row's own server time — the same instant every renderer of the production
+// reads — and outside one it is simply now. Anchoring a speech to it rather than to this
+// browser's clock is what stops two browser sources of the same debate drifting apart, and what
+// lets a renderer replaying a missed row resume the speech from where it really started instead
+// of from the moment it caught up.
+function debateNow() {
+  return (typeof noacgEventAt === 'number' && noacgEventAt > 0) ? noacgEventAt : Date.now();
+}
 
 // "05:00" -> 300 · "5:00" -> 300 · "300" -> 300 (a bare number is seconds). Anything else is 0,
 // which is how a half-typed value stops the count instead of racing to a nonsense deadline.
@@ -176,7 +197,7 @@ function debateTick() {
 // Freeze whoever is speaking at the value on screen.
 function debateHold() {
   if (debateActive && debateTimer) {
-    debatePaint(debateActive, Math.max(0, Math.ceil((debateDeadline - Date.now()) / 1000)));
+    debatePaint(debateActive, Math.max(0, Math.ceil((debateDeadline - debateNow()) / 1000)));
   }
   debateStopTimer();
 }
@@ -187,7 +208,7 @@ function debateStart(side) {
   debateHold();
   debateActive = side;
   var left = debateRemaining(side);
-  debateDeadline = Date.now() + left * 1000;
+  debateDeadline = debateNow() + left * 1000;
   debatePaint(side, left);
   if (left > 0) debateTimer = setInterval(debateTick, DEBATE_TICK_MS);
   debatePaintClockColors();
@@ -224,11 +245,11 @@ function applyPenalty() {
   if (badge) badge.textContent = '-' + cost;
   if (!debateActive) return;
   var live = debateTimer
-    ? Math.max(0, Math.ceil((debateDeadline - Date.now()) / 1000))
+    ? Math.max(0, Math.ceil((debateDeadline - debateNow()) / 1000))
     : debateRemaining(debateActive);
   var left = Math.max(0, live - cost);
   debatePaint(debateActive, left);
-  if (left > 0) debateDeadline = Date.now() + left * 1000;
+  if (left > 0) debateDeadline = debateNow() + left * 1000;
   else debateStopTimer();
   debateDocked = debateActive;
   debatePaintClockColors();

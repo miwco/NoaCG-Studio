@@ -34,7 +34,19 @@ export function controlReceiverScript(templateName: string, channelName: string)
       else if (m.t === 'play' && typeof play === 'function') play();
       else if (m.t === 'stop' && typeof stop === 'function') stop();
       else if (m.t === 'next' && typeof next === 'function') next();
-      else if (m.t === 'event' && typeof noacgDispatch === 'function') noacgDispatch(m.event, m.payload);
+      else if (m.t === 'event' && typeof noacgDispatch === 'function') {
+        // WHEN this event happened. A graphic that runs a clock of its own reads it instead of
+        // Date.now(), so every renderer given the same row anchors to the same instant.
+        //
+        // It is SET AND LEFT, never cleared after the call. noacgDispatch queues the event and
+        // the state's own calls fire a frame later, so clearing it on the next line puts the
+        // instant back to null before the thing that needed it runs — which is exactly the bug
+        // the first cut of this shipped: a replayed 90-second-old switch still started the
+        // speech from five minutes. Leaving it is safe because it is rewritten by every event,
+        // to null when there is no instant, so it always reads as the MOST RECENT event's.
+        window.noacgEventAt = (typeof m.at === 'number' && m.at > 0) ? m.at : null;
+        noacgDispatch(m.event, m.payload);
+      }
       else if (m.t === 'snap' && typeof noacgSnap === 'function') noacgSnap(m.snap || null);
       reply(m.t === 'hello');
     };

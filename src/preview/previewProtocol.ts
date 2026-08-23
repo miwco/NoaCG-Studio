@@ -23,7 +23,10 @@ export type PreviewCmd =
   | { cmd: 'update'; data: string }
   | { cmd: 'settle'; data: string }
   | { cmd: 'measure' }
-  | { cmd: 'dispatch'; event: string; payload?: Record<string, string> }
+  // `at` carries the ControlMessage's own instant (see control/controlModel.ts): a graphic that
+  // runs a clock anchors it to that rather than to its local Date.now(), so two renderers given
+  // the same log row agree. Absent for an editor-driven dispatch, which has neither.
+  | { cmd: 'dispatch'; event: string; payload?: Record<string, string>; at?: number }
   | { cmd: 'state' }
   /** Editor scrub (StepTimeline/LegacyTimeline): pause the named phase's timeline at `time`
    *  seconds. `from` is the branch phase's canonical predecessor state — computed on the app
