@@ -146,6 +146,17 @@ interface ParsedQuery {
   boostFormats: Set<ProgrammeFormatId>;
   boostFamilies: Set<ProgrammeFamilyId>;
   boostStyles: Set<StyleTag>;
+  /**
+   * The alias phrases this query matched, kept because expansion CONSUMES them.
+   *
+   * An alias is stripped out of the token text so it cannot also be matched as a word, which is
+   * right for "breaking news" (a genre, not a design) and wrong for "intermission" — a word that
+   * is both an alias for the whole holding category AND the name of one design in it. With the
+   * token gone, `textScore` returns 0 for everybody, so the design literally CALLED Intermission
+   * scored exactly what its twenty siblings scored and sorted purely by catalog order: 13th, off
+   * the first page, unreachable by typing its own name. `namedAliasScore` below is the answer.
+   */
+  aliasPhrases: string[];
 }
 
 function parseQuery(raw: string): ParsedQuery {
@@ -158,6 +169,7 @@ function parseQuery(raw: string): ParsedQuery {
     boostFormats: new Set(),
     boostFamilies: new Set(),
     boostStyles: new Set(),
+    aliasPhrases: [],
   };
   // Longest aliases first so "breaking news" wins over "breaking".
   const aliasKeys = Object.keys(ALIASES).sort((a, b) => b.length - a.length);
@@ -165,6 +177,7 @@ function parseQuery(raw: string): ParsedQuery {
     const needle = ` ${alias} `;
     if (!text.includes(needle)) continue;
     text = text.replace(needle, ' ');
+    parsed.aliasPhrases.push(alias);
     const t = ALIASES[alias];
     t.categories?.forEach((c) => parsed.boostCategories.add(c));
     t.subtypes?.forEach((s) => parsed.boostSubtypes.add(s));
@@ -175,6 +188,22 @@ function parseQuery(raw: string): ParsedQuery {
   }
   parsed.tokens = text.split(/\s+/).filter(Boolean);
   return parsed;
+}
+
+/**
+ * A design NAMED after an alias the query spent — worth the name field's own weight, because
+ * that is exactly what the match is and what `textScore` would have paid had the alias not
+ * eaten the word first.
+ *
+ * It fires only when an alias actually consumed a phrase, so an ordinary query is untouched:
+ * "Short Break" still scores its name through `textScore` once and only once. When one does
+ * fire, the design called by that name clears its category siblings by a full field weight
+ * rather than by a catalog-order thousandth, which is the difference between reachable and not.
+ */
+function namedAliasScore(meta: TemplateMeta, q: ParsedQuery): number {
+  if (!q.aliasPhrases.length) return 0;
+  const name = ` ${normalize(meta.name)} `;
+  return q.aliasPhrases.some((alias) => name.includes(` ${alias} `)) ? 10 : 0;
 }
 
 /** Token-AND text score: every remaining token must match some indexed field (prefix on
@@ -277,7 +306,7 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
       const alias = aliasScore(meta, q);
       // A query must land somewhere — tokens in the index, or an alias hit.
       if (text === 0 && alias === 0) return;
-      score += text + alias;
+      score += text + alias + namedAliasScore(meta, q);
     }
     const { boost, bestFor } = formatBoost(meta, filters);
     score += boost;
