@@ -32,6 +32,7 @@ import { pl01 } from '../poll/pl01';
 import { pl02 } from '../poll/pl02';
 import { pl03 } from '../poll/pl03';
 import { pl04 } from '../poll/pl04';
+import { pl05, PL05_SAMPLES } from '../poll/pl05';
 import { POLL_CONTENT } from '../poll/shared';
 import type { GraphicType } from './graphicType';
 
@@ -173,6 +174,23 @@ export const livePollType: GraphicType = {
       palette: paletteById('ivory'),
       fontId: 'inter',
       create: (_type, options) => pl04.create(options),
+    },
+    {
+      // The fifth board is not a fifth LOOK - the four family cells above are full. It is the
+      // one that is not a card: a wide band at the foot of frame with the options running
+      // horizontally, so a vote can sit under the action instead of beside it. Declared `noacg`
+      // and listed LAST on purpose - `resolvePack` takes the first design of a family, so the
+      // house kit still resolves to pl01 and this one is reached through Browse.
+      id: 'pl05',
+      name: 'Floor Vote',
+      description: 'The live vote as a wide band: the ask on the left, the options running across on the right.',
+      styleTag: 'noacg',
+      palette: paletteById('noacg'),
+      fontId: 'inter',
+      samples: PL05_SAMPLES,
+      // Drawn for the foot of frame; the other four are mid-left cards.
+      defaultZone: 'bottom-center',
+      create: (_type, options) => pl05.create(options),
     },
   ],
 };
