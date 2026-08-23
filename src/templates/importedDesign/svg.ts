@@ -276,7 +276,11 @@ const SVG_FIT_JS = `
 var svgFitDrawn = {};                           // id -> the text the designer drew
 var svgFitWidths = {};                          // id -> that text's width, in the real face
 var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
+var svgFitRoom = {};                            // id -> { width, lines } the design offers it
 var svgFitExtra = {};                           // id -> room a growing panel gave this line
+var svgFitOver = {};                            // id -> true when even the floor could not fit
+var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
+var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
 function svgFitNodes() {
   var all = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
@@ -311,32 +315,206 @@ function measureSvgBudgets() {
   }
 }
 
+// ── THE ROOM THE DESIGN GIVES A LINE ──────────────────────────────────────────
+// The budget is NOT the width of the text the designer typed. A name drawn 402px wide inside a
+// 1040px banner has 588px of empty banner beside it, and taking the drawn text as the budget
+// spent none of it: the 403rd pixel shrank the type while more than half the panel stood
+// empty. So the budget is the ROOM — the shape drawn behind the line, out to a right margin
+// mirroring the left one the designer left. A line with no shape behind it keeps the drawn
+// width as its budget, which is the honest answer when nothing says otherwise.
+//
+// The same measurement answers how many LINES the design can hold: the gap from this line down
+// to the nearest thing drawn below it (a second text layer, or the panel's own bottom margin).
+// A name in a three-line strap measures no room and stays one line, exactly as drawn; a
+// question alone on a board measures several and may wrap. Nothing is asked of the designer
+// and nothing about the artwork changes - which is the rule this ladder exists to keep.
+function svgFitContainer(el) {
+  var art = document.querySelector('.${PREFIX}-art');
+  if (!art) return null;
+  var box = el.getBoundingClientRect();
+  var shapes = art.querySelectorAll('rect, path, polygon, ellipse, circle');
+  var best = null;
+  for (var i = 0; i < shapes.length; i++) {
+    var r = shapes[i].getBoundingClientRect();
+    // Contains the line, and is genuinely bigger than it - a highlight rule under a word is
+    // not the panel the word sits in.
+    if (r.left > box.left + 1 || r.right < box.right - 1) continue;
+    if (r.top > box.top + 1 || r.bottom < box.bottom - 1) continue;
+    if (r.width * r.height <= box.width * box.height) continue;
+    if (!best || r.width * r.height < best.width * best.height) best = r;
+  }
+  return best;
+}
+
+/** The nearest drawn thing BELOW this line - what a wrapped line would run into, and therefore
+ *  how far the block may grow. The panel's own bottom edge is the backstop: a wrapped block
+ *  stays inside the shape it was drawn in, which is what "wrap within the drawn height" means.
+ *  Only things that overlap it horizontally count; a crest off to one side does not. */
+function svgFitCeiling(el, panel) {
+  var art = document.querySelector('.${PREFIX}-art');
+  var box = el.getBoundingClientRect();
+  var others = art.querySelectorAll('text, tspan, image, rect, path, polygon, ellipse, circle');
+  var top = panel.bottom;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === el || o.contains(el) || el.contains(o)) continue;
+    var r = o.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) continue;
+    if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
+    if (r.right < box.left + 1 || r.left > box.right - 1) continue;   // no horizontal overlap
+    if (r.top < box.bottom - 1) continue;                             // not below this line
+    if (r.top < top) top = r.top;
+  }
+  return top;
+}
+
+function measureSvgRoom() {
+  var nodes = svgFitNodes();
+  for (var i = 0; i < nodes.length; i++) {
+    var el = nodes[i];
+    var live = el.textContent;
+    var drawn = svgFitDrawn[el.id];
+    el.style.fontSize = '';
+    if (live !== drawn) el.textContent = drawn;   // measure the DESIGN, then put the value back
+    var box = el.getBoundingClientRect();
+    var scale = box.width > 0 ? el.getComputedTextLength() / box.width : 1;   // screen px -> user units
+    var panel = svgFitContainer(el);
+    // "height" is the room the BLOCK has, measured from this line's own top - not a line
+    // count, because the count depends on the size and the size is what the ladder changes.
+    // A 112px board panel holds one 44px line and three 24px ones, and only the height knows
+    // that. Zero height (a line drawn hard against whatever is below it) means no wrapping.
+    var room = { width: svgFitWidths[el.id], height: 0, top: 0 };
+    if (panel && box.width > 0) {
+      var inset = box.left - panel.left;
+      room.width = Math.max(svgFitWidths[el.id], (panel.right - inset - box.left) * scale);
+      room.height = Math.max(0, (svgFitCeiling(el, panel) - box.top) * scale);
+      // Where the drawn line starts, in the artwork's own units - the datum the painted block's
+      // height is checked against. getBBox() answers in user units and ignores transforms, so
+      // the check holds while an entrance is mid-flight.
+      room.top = el.getBBox ? el.getBBox().y : 0;
+    }
+    svgFitRoom[el.id] = room;
+    if (live !== drawn) el.textContent = live;
+  }
+}
+
+/** Break a value into at most "max" lines no wider than "budget", at the current size. A word
+ *  longer than the budget stays whole and simply overflows - the shrink answers that. */
+function svgWrapLines(el, value, budget, max) {
+  var words = value.split(/\\s+/);
+  var lines = [];
+  var line = '';
+  for (var i = 0; i < words.length; i++) {
+    var next = line ? line + ' ' + words[i] : words[i];
+    el.textContent = next;
+    if (line && el.getComputedTextLength() > budget && lines.length + 1 < max) {
+      lines.push(line);
+      line = words[i];
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Paint a wrapped value as tspans on the node's own x, stepping down by the line height.
+ *  One line is written as plain text, so a graphic that never wraps emits nothing new. */
+function svgPaintLines(el, lines, size) {
+  if (lines.length < 2) { el.textContent = lines[0] || ''; return; }
+  var x = el.getAttribute('x');
+  el.textContent = '';
+  for (var i = 0; i < lines.length; i++) {
+    // The namespace comes from the node itself rather than a literal URL: an XML namespace is
+    // not a network reference, but the export gate scans emitted code for URLs and cannot tell
+    // the two apart - and it is right not to try (pillar 3: emitted code reaches no network).
+    var t = document.createElementNS(el.namespaceURI, 'tspan');
+    if (x !== null) t.setAttribute('x', x);
+    t.setAttribute('dy', i === 0 ? '0' : (size * SVG_LINE_HEIGHT).toFixed(2));
+    t.textContent = lines[i];
+    el.appendChild(t);
+  }
+}
+
+/** The widest of the painted lines, which is what has to fit the budget. */
+function svgBlockWidth(el) {
+  if (!el.children.length) return el.getComputedTextLength();
+  var widest = 0;
+  for (var i = 0; i < el.children.length; i++) {
+    var w = el.children[i].getComputedTextLength();
+    if (w > widest) widest = w;
+  }
+  return widest;
+}
+
+// THE LADDER (owner-ruled 2026-08-23): fill the panel, then wrap inside the height the design
+// already has, then shrink to the readability floor, then say so. The artwork is never
+// reshaped to make copy fit - a panel grows only where the author opted into it (stretchSvgPanel
+// below), and past the floor the value is reported as too long rather than clipped.
 function fitSvgText() {
-  // A hugging design widens its panel FIRST — stretching gives the room, shrinking answers
-  // only what the frame's safe margin could not give (the same order the raster import's
-  // stretch runtime keeps). A fixed design has no such function and skips this.
   if (typeof stretchSvgPanel === 'function') stretchSvgPanel();
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
+    if (svgFitRoom[el.id] == null) measureSvgRoom();
     el.style.fontSize = '';                     // back to the drawn size before measuring
-    var budget = svgFitWidths[el.id] + (svgFitExtra[el.id] || 0);
-    var size = svgFitSizes[el.id];
-    if (!(budget > 0) || !(size > 0)) continue;
-    // Two passes: a face's advance widths are not perfectly linear in size, so the first
-    // ratio lands close and the second settles it. A line that fits keeps no inline size
-    // at all — the designer's own type, untouched.
-    for (var pass = 0; pass < 2; pass++) {
-      var length = el.getComputedTextLength();
-      if (length <= budget + 0.5) break;
-      size = size * (budget / length);
-      el.style.fontSize = size.toFixed(2) + 'px';
+    var room = svgFitRoom[el.id];
+    var budget = room.width + (svgFitExtra[el.id] || 0);
+    var drawnSize = svgFitSizes[el.id];
+    var value = el.textContent;
+    svgFitOver[el.id] = false;
+    if (!(budget > 0) || !(drawnSize > 0)) continue;
+
+    var size = drawnSize;
+    var floor = drawnSize * SVG_FIT_FLOOR;
+    // WRAP AND SHRINK TOGETHER. How many lines fit is a function of the SIZE - the quiz board's
+    // 112px panel holds one line of 44px type and three of 24px - so every pass re-asks. While
+    // more lines are still reachable the size comes down in small steps, because the next step
+    // may buy a whole line rather than a few pixels of width; once the block can only ever be
+    // one line, the exact ratio settles it in one move.
+    for (var pass = 0; pass < 8; pass++) {
+      el.style.fontSize = size === drawnSize ? '' : size.toFixed(2) + 'px';
+      var maxLines = Math.max(1, Math.floor(room.height / (size * SVG_LINE_HEIGHT)));
+      // HEIGHT IS CHECKED, NOT CALCULATED, and a block that does not fit loses a LINE rather
+      // than keeping one that prints through the layer below it. A wrapped block starts at the
+      // first line's baseline and grows down, so the line count is arithmetic with an ascender
+      // and a descender in it; measuring the painted block is exact. Falling back through the
+      // counts is what guarantees the last line stays inside the shape it was drawn in - at the
+      // floor this settles on one long line, which overruns sideways where somebody can see it
+      // rather than over somebody else's artwork.
+      var width = 0;
+      var tall = false;
+      for (var n = maxLines; n >= 1; n--) {
+        svgPaintLines(el, n > 1 ? svgWrapLines(el, value, budget, n) : [value], size);
+        width = svgBlockWidth(el);
+        tall = room.height > 0 && !!el.getBBox
+          && el.getBBox().y + el.getBBox().height > room.top + room.height + 0.5;
+        if (!tall) break;
+      }
+      if (width <= budget + 0.5 && !tall) break;
+      if (size <= floor + 0.01) { svgFitOver[el.id] = true; break; }
+      var canGrowLines = Math.floor(room.height / (floor * SVG_LINE_HEIGHT)) > maxLines;
+      var ratio = width > budget ? budget / width : 0.94;
+      size = Math.max(floor, canGrowLines || tall ? size * 0.9 : size * ratio);
     }
+    el.classList.toggle('${PREFIX}-overflow', !!svgFitOver[el.id]);
   }
 }
 
-function refitSvgText() { measureSvgBudgets(); fitSvgText(); }
+/**
+ * WHICH VALUES ARE TOO LONG FOR THIS GRAPHIC - the field ids whose copy could not be made to
+ * fit even at the floor, after filling the panel and using every line the design has room for.
+ * The artwork is never reshaped and the copy is never cut to hide it (owner ruling 2026-08-23),
+ * so this is how an operator surface can say so before the graphic goes to air.
+ */
+function noacgTextOverflow() {
+  var out = [];
+  for (var id in svgFitOver) if (svgFitOver[id]) out.push(id);
+  return out;
+}
+
+function refitSvgText() { measureSvgBudgets(); measureSvgRoom(); fitSvgText(); }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', refitSvgText);
 } else {
@@ -443,13 +621,17 @@ function stretchSvgPanel() {
   svgCollectFollowers(art, panel.getBoundingClientRect().right, svgPanelFollowers);
   svgPanelTexts = svgPanelInside(panel);
 
-  // THE DEFICIT: how far past its drawn width the widest line now runs, in screen px.
+  // THE DEFICIT: how far past the ROOM THE PANEL ALREADY OFFERS the widest line now runs, in
+  // screen px. Measured against the room and not against the drawn text, or a banner would
+  // start growing at the 403rd pixel of a name drawn 402px wide inside 1040px of panel - which
+  // is the growth being spent before any of the design's own space is.
   var need = 0;
   for (var i = 0; i < svgPanelTexts.length; i++) {
     var el = svgPanelTexts[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
+    if (svgFitRoom[el.id] == null) measureSvgRoom();
     el.style.fontSize = '';                     // at the drawn size — the panel gives the room
-    var over = (el.getComputedTextLength() - svgFitWidths[el.id]) * svgUserScale(el);
+    var over = (el.getComputedTextLength() - svgFitRoom[el.id].width) * svgUserScale(el);
     if (over > need) need = over;
   }
   if (!(need > 0)) return;

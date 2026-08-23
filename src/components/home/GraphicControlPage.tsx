@@ -4,9 +4,11 @@ import { useRouter } from '../../app/router';
 import { graphicById, newEntry, updateGraphic, type ControlEntry, type GraphicDoc } from '../../model/library';
 import { commitDurableWrites } from '../../model/durableStore';
 import {
+  adjustWords as adjustWordsFor,
   fieldDescriptors,
   eventButtons,
   eventLegality,
+  eventPayload,
   formatMachineState,
   isEventLegal,
   machineStateNames,
@@ -20,10 +22,13 @@ import {
   type PreviewCmd,
   type PreviewMachineState,
 } from '../../preview/previewProtocol';
+import { addGraphicToShow, createShowNamedChecked } from '../../model/shows';
+import { raiseStorageAlert } from '../../store/storageAlert';
 import { openGraphicById, useSaveUi } from '../../store/saveActions';
 import { setFieldDefault } from '../../blocks/edit';
 import { FieldRow } from '../fields/FieldControl';
 import BrandLogo from '../BrandLogo';
+import ProductionPicker from './ProductionPicker';
 import { IconControl } from '../icons';
 import { slug } from '../../export/common';
 
@@ -51,6 +56,8 @@ export default function GraphicControlPage({ id }: { id: string }) {
   const [note, setNote] = useState<string | null>(null);
   /** The entry whose ✕ is armed (two-step delete), or null. Cleared by any other entry's arm. */
   const [deleteArmed, setDeleteArmed] = useState<string | null>(null);
+  /** The topbar's "+ Production" picker. */
+  const [addProdOpen, setAddProdOpen] = useState(false);
 
   // Re-read when the route id changes (Back/Forward between two panels).
   useEffect(() => setDoc(graphicById(id)), [id]);
@@ -90,6 +97,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
    *  "carrying Audience results" is the whole explanation, "carrying f7" is none of it. */
   const payloadWords = (b: ControlButton): string =>
     (b.payload ?? []).map((key) => descriptors.find((d) => d.key === key)?.label ?? key).join(', ');
+  const adjustWords = (b: ControlButton): string => adjustWordsFor(b, (key) => descriptors.find((d) => d.key === key)?.label);
   const eventSections = useMemo(() => {
     const sections: [string, ControlButton[]][] = [];
     for (const b of buttons) {
@@ -177,6 +185,10 @@ export default function GraphicControlPage({ id }: { id: string }) {
    *  action started it AND the machine has not returned to off (a stop press, a self-clear
    *  timer, or an exit event all land the machine back on off, clearing the tally). */
   const [aired, setAired] = useState(false);
+  /** The figures an ⚡ `adjust` press put on air while NO entry was active (a goal's +1 on a
+   *  graphic with no entries): the next press counts from here rather than from the default
+   *  again. Cleared by anything that airs a whole value set (Play, ⟳ Update). */
+  const [adjusted, setAdjusted] = useState<Record<string, string>>({});
   /** The lifecycle group is `main` on every template (a derived machine has only it); a
    *  parallel group's own state (an alert level, a language) says nothing about being up. */
   const machineOff = !!machineState && !!machineState.groups &&
@@ -232,10 +244,44 @@ export default function GraphicControlPage({ id }: { id: string }) {
 
   const sendUpdate = (values: Record<string, string>) => {
     postCmd({ cmd: 'update', data: JSON.stringify(mergedValues(values)) });
+    setAdjusted({});
   };
 
   const playEntry = (entry: ControlEntry | null) => {
     postCmd({ cmd: 'play', data: JSON.stringify(mergedValues(entry?.values ?? {})) });
+    setAdjusted({});
+    setAired(true);
+  };
+
+  /** Fire a machine event. A payload rides from the ACTIVE ENTRY; an `adjust` field (a goal's
+   *  +1) rides moved by its delta from what is on air - the entry's value, else the last figure
+   *  a press here put up, else the graphic's default - and the new figure is written back into
+   *  the entry (or remembered for the no-entry case) so the next press counts from it. */
+  const fireEvent = (b: ControlButton) => {
+    // A PAYLOAD ONLY RIDES WHEN THERE IS SOMETHING TO SEND. The values a payload carries live in
+    // an ENTRY on this surface, and a freshly saved graphic has none - so building the payload
+    // from `active?.values[key] ?? ''` sent an EMPTY string for every payload field, which the
+    // machine then applied: pressing ⚡ Select answer on a graphic with no entries wiped the
+    // pick instead of making one. The guard is about the EVENT, never about the value, so
+    // nothing downstream was going to catch that. With no entry the event fires bare and the
+    // graphic keeps the field values it already has on air - the same thing the exported panel
+    // does, where the payload comes from field boxes that always hold a value.
+    const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
+    const payload = eventPayload(b, (key) => {
+      const entryValue = active?.values[key];
+      if (entryValue !== undefined) return String(entryValue);
+      if (b.adjust && key in b.adjust) return adjusted[key] ?? descriptorByKey.get(key)?.defaultValue;
+      return undefined;
+    });
+    postCmd({ cmd: 'dispatch', event: b.event, payload: payload ?? {} });
+    for (const key of Object.keys(b.adjust ?? {})) {
+      const value = payload?.[key];
+      if (value === undefined) continue;
+      if (active) setEntryValue(active, key, value);
+      else setAdjusted((m) => ({ ...m, [key]: value }));
+    }
+    // An accepted event can be what airs the graphic (an arrow out of off); the machine-off
+    // check above clears the tally if it was not.
     setAired(true);
   };
 
@@ -303,6 +349,42 @@ export default function GraphicControlPage({ id }: { id: string }) {
     setNote('✓ Control panel downloaded — open it beside the exported graphic; entries included.');
   };
 
+  /** "+ PRODUCTION" FROM HERE (owner walk 2026-08-23). This is where a graphic gets test-played,
+   *  and the natural next thought after it works is "put it in the show" — which until now meant
+   *  going back to Home and finding its row again. Same picker, same pooling verb as the library
+   *  row's: a production holds a COPY with a graphicId back-link (docs/SAVED_CONTENT_MODEL.md §1),
+   *  so adding from here is the same operation, not a second one. */
+  const addToProduction = async (showId: string, showName: string): Promise<boolean> => {
+    const { error: written } = addGraphicToShow(showId, doc.template, { graphicId: doc.id });
+    const error = written ?? (await commitDurableWrites());
+    if (error) {
+      raiseStorageAlert({
+        action: `Adding “${doc.name}” to “${showName}”`,
+        error,
+        outcome: 'The graphic itself is unchanged in your library.',
+      });
+      return false;
+    }
+    setNote(`✓ "${doc.name}" is in "${showName}".`);
+    return true;
+  };
+
+  const addToNewProduction = async (rawName: string): Promise<boolean> => {
+    const { show, error: written } = createShowNamedChecked(rawName);
+    const error = written ?? (await commitDurableWrites());
+    if (error) {
+      raiseStorageAlert({
+        action: `Creating the production “${show.name}”`,
+        error,
+        outcome: 'The graphic itself is unchanged in your library.',
+      });
+      return false;
+    }
+    const ok = await addToProduction(show.id, show.name);
+    if (ok) navigate({ view: 'production', id: show.id });
+    return ok;
+  };
+
   return (
     <div className="app home-page control-page" data-testid="graphic-control-page">
       <header className="topbar">
@@ -328,6 +410,18 @@ export default function GraphicControlPage({ id }: { id: string }) {
         <button onClick={() => navigate({ view: 'new' })} data-testid="control-new-project">
           + New graphic
         </button>
+        <ProductionPicker
+          open={addProdOpen}
+          onOpenChange={setAddProdOpen}
+          markGraphicId={doc.id}
+          buttonTitle="Add this graphic to a production — the unit that airs"
+          buttonTestid="control-add-production"
+          menuTestid="control-production-menu"
+          newNameTestid="control-new-production-name"
+          newSubmitTestid="control-new-production"
+          onAdd={addToProduction}
+          onCreate={addToNewProduction}
+        />
         <button
           onClick={() =>
             requestSwitch(
@@ -441,37 +535,17 @@ export default function GraphicControlPage({ id }: { id: string }) {
                           key={b.event}
                           className={b.destructive ? 'ctl-event-destructive' : undefined}
                           disabled={!legal}
-                          onClick={() => {
-                            // A PAYLOAD ONLY RIDES WHEN THERE IS SOMETHING TO SEND. The values
-                            // a payload carries live in an ENTRY on this surface, and a freshly
-                            // saved graphic has none - so building the payload from
-                            // `active?.values[key] ?? ''` sent an EMPTY string for every payload
-                            // field, which the machine then applied: pressing ⚡ Select answer on
-                            // a graphic with no entries wiped the pick instead of making one.
-                            // The guard is about the EVENT, never about the value, so nothing
-                            // downstream was going to catch that.
-                            // With no entry the event now fires bare and the graphic keeps the
-                            // field values it already has on air - the same thing the exported
-                            // panel does, where the payload comes from field boxes that always
-                            // hold a value.
-                            const payload: Record<string, string> = {};
-                            for (const key of b.payload ?? []) {
-                              const value = active?.values[key];
-                              if (value !== undefined) payload[key] = String(value);
-                            }
-                            postCmd({ cmd: 'dispatch', event: b.event, payload });
-                            // An accepted event can be what airs the graphic (an arrow out of
-                            // off); the machine-off check above clears the tally if it was not.
-                            setAired(true);
-                          }}
+                          onClick={() => fireEvent(b)}
                           title={
                             !legal
                               ? `"${b.event}" has no arrow out of the current state, so the graphic would drop it`
-                              : b.payload?.length
-                                ? active
-                                  ? `Fires "${b.event}" with ${payloadWords(b)} from “${active.label}”`
-                                  : `Fires "${b.event}". ${payloadWords(b)} ride this event from the ACTIVE ENTRY — with none selected the graphic keeps its current values.`
-                                : `Fire "${b.event}"`
+                              : b.adjust
+                                ? `Fires "${b.event}" and moves ${adjustWords(b)} with it`
+                                : b.payload?.length
+                                  ? active
+                                    ? `Fires "${b.event}" with ${payloadWords(b)} from “${active.label}”`
+                                    : `Fires "${b.event}". ${payloadWords(b)} ride this event from the ACTIVE ENTRY — with none selected the graphic keeps its current values.`
+                                  : `Fire "${b.event}"`
                           }
                           data-testid={`control-event-${b.event}`}
                         >
@@ -492,10 +566,17 @@ export default function GraphicControlPage({ id }: { id: string }) {
             <div className="spacer" />
             <button className="primary" onClick={addEntry} data-testid="add-entry">＋ Add entry</button>
           </div>
+          {/* WHAT AN ENTRY IS, where the word is (owner walk 2026-08-23: he had to guess). The
+              paragraph under it says what this SURFACE is; neither answers the other's
+              question, and the definition is the one a first visit needs first. */}
+          <p className="hint" data-testid="entries-explainer">
+            <strong>An entry is one saved set of field values</strong> — “Anna Andersson ·
+            Presenter”, “Michael Smith · Guest”. Select one and ▶ Play to take it on air, then
+            switch and play the next. Edits save as you type.
+          </p>
           <p className="hint">
             This is the on-air control surface — playing an entry here airs it (the editor’s
-            Rehearse tab only drives the preview). Saved data rows for this graphic — “Anna
-            Andersson · Presenter”, “Michael Smith · Guest”. Select one, play it, switch, play again.
+            Rehearse tab only drives the preview).
           </p>
 
           {doc.entries.length === 0 && (

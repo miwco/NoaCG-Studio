@@ -200,6 +200,12 @@ export interface MachineControl {
   /** Field ids (fN) whose current values are sent WITH the event — applied only if the
    *  machine accepts it, which is what makes a multi-part change atomic. */
   payload?: string[];
+  /** Field ids (fN) whose current value, MOVED by the delta, rides the event — a goal's +1 on
+   *  that side's score. The control surface computes `current + delta` and sends it as an
+   *  ordinary payload value, so the write rides the event (never a bare update), the machine
+   *  applies it only if it accepts the event, and the command log holds the absolute value
+   *  for recovery. A key may not also appear in `payload`. */
+  adjust?: Record<string, number>;
   /** Style the button as consequential (a lock, a final call). */
   destructive?: boolean;
 }
@@ -538,6 +544,14 @@ function isMachineShape(raw: unknown, stepCount: number): raw is AnimMachine {
           if (typeof key !== 'string' || !key) return false;
         }
       }
+      if (c.adjust !== undefined) {
+        if (!c.adjust || typeof c.adjust !== 'object' || Array.isArray(c.adjust)) return false;
+        for (const [key, delta] of Object.entries(c.adjust as Record<string, unknown>)) {
+          if (!key || typeof delta !== 'number' || !Number.isFinite(delta) || delta === 0) return false;
+          // One road per field: a value either rides as it is or moved by the delta.
+          if (Array.isArray(c.payload) && c.payload.includes(key)) return false;
+        }
+      }
       if (c.destructive !== undefined && typeof c.destructive !== 'boolean') return false;
     }
   }
@@ -738,6 +752,12 @@ export function serializeAnimData(data: AnimData): string {
         if (c.order !== undefined) parts.push(`"order": ${round(c.order)}`);
         if (c.section !== undefined) parts.push(`"section": ${JSON.stringify(c.section)}`);
         if (c.payload !== undefined) parts.push(`"payload": [${c.payload.map((k) => JSON.stringify(k)).join(', ')}]`);
+        if (c.adjust !== undefined) {
+          // Sorted keys: the map's order is content, so the fixed-point proof holds here too.
+          const adjust = c.adjust;
+          const entries = Object.keys(adjust).sort().map((k) => `${JSON.stringify(k)}: ${round(adjust[k])}`);
+          parts.push(`"adjust": { ${entries.join(', ')} }`);
+        }
         if (c.destructive !== undefined) parts.push(`"destructive": ${c.destructive}`);
         lines.push(`      { ${parts.join(', ')} }${ci < sorted.length - 1 ? ',' : ''}`);
       });

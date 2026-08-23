@@ -353,13 +353,29 @@ export function validateTemplate(template: SpxTemplate, options: ValidateOptions
       // A control button's payload names field ids whose values ride the event — a key no
       // field carries would send nothing and silently break the atomic-change promise.
       if (data.machine?.controls) {
-        const fieldIds = new Set(template.fields.map((f) => f.field));
+        const fieldById = new Map(template.fields.map((f) => [f.field, f]));
         for (const control of data.machine.controls) {
           for (const key of control.payload ?? []) {
-            if (!fieldIds.has(key)) {
+            if (!fieldById.has(key)) {
               warnings.push({
                 rule: 'machine',
                 message: `Machine controls: "${control.event}" sends the value of "${key}", but no field has that id.`,
+              });
+            }
+          }
+          // An adjust moves a FIGURE: a key no field carries sends nothing, and a field that is
+          // not a number would be "moved" from whatever parseInt makes of its text.
+          for (const key of Object.keys(control.adjust ?? {})) {
+            const field = fieldById.get(key);
+            if (!field) {
+              warnings.push({
+                rule: 'machine',
+                message: `Machine controls: "${control.event}" adjusts "${key}", but no field has that id.`,
+              });
+            } else if (field.ftype !== 'number') {
+              warnings.push({
+                rule: 'machine',
+                message: `Machine controls: "${control.event}" adjusts "${key}", which is a ${field.ftype} field, not a number.`,
               });
             }
           }

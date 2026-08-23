@@ -77,7 +77,7 @@ export interface BridgeTypeSummary {
   prefix: string;
   fields: Array<{ key: string; label: string; kind: string; value: string; role: string; ftype: string; options?: Array<{ label: string; value: string }> }>;
   /** The operator events the type's machine carries (its buttons), with declared labels. */
-  events: Array<{ event: string; label: string; section?: string; payload?: string[] }>;
+  events: Array<{ event: string; label: string; section?: string; payload?: string[]; adjust?: Record<string, number> }>;
   designs: Array<{ id: string; name: string; description: string; styleTag: string }>;
   /** Whether `scaffold({type, design:'neutral'})` is available for this type. */
   neutral: boolean;
@@ -105,6 +105,7 @@ function summarize(type: GraphicType): BridgeTypeSummary {
       label: c?.label ?? event,
       ...(c?.section ? { section: c.section } : {}),
       ...(c?.payload?.length ? { payload: c.payload } : {}),
+      ...(c?.adjust && Object.keys(c.adjust).length ? { adjust: c.adjust } : {}),
     };
   });
   return {

@@ -292,6 +292,14 @@ test('a relay browser source reloaded mid-show comes back on air, with the score
   // THE RELOAD - and nothing else. No operator touches anything after this point.
   const at = Date.now();
   await air.reload({ waitUntil: 'load' });
+  // The receiver HIDES the page only once its relay fetch has answered, so right after `load`
+  // the root still reads opacity 1 over the design's own defaults (88, 10:00) - a poll on the
+  // opacity alone passed at once and read the pre-replay picture whenever the fetch was slower
+  // than the first sample (measured under a busy machine). Wait for the RECOVERED value, which
+  // is the thing under test, then for the page to be back on air.
+  await expect
+    .poll(() => airState(air).then((s) => s.score), { timeout: 15_000, message: 'the goal must survive the reload' })
+    .toBe('89');
   await expect.poll(() => airState(air).then((s) => s.opacity), { timeout: 15_000 }).toBe('1');
   const back = await airState(air);
 

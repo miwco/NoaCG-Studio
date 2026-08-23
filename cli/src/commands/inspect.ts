@@ -18,7 +18,7 @@ export function describeInspection(i: BridgeInspection): string {
   lines.push(`Buttons (${i.buttons.length})`);
   lines.push(
     i.buttons.length
-      ? table([['event', 'label', 'section', 'payload'], ...i.buttons.map((b) => [b.event, b.label, b.section ?? 'Actions', (b.payload ?? []).join(' ') || '-'])])
+      ? table([['event', 'label', 'section', 'payload'], ...i.buttons.map((b) => [b.event, b.label, b.section ?? 'Actions', [...(b.payload ?? []), ...Object.entries(b.adjust ?? {}).map(([k, d]) => `${k}${d > 0 ? '+' : ''}${d}`)].join(' ') || '-'])])
       : '  (none beyond Take / Update / Next / Out)',
   );
   lines.push('');

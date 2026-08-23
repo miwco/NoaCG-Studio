@@ -41,9 +41,11 @@ import ProductionDataWorkspace from './ProductionDataWorkspace';
 import ProductionAudienceWorkspace from './ProductionAudienceWorkspace';
 import { loadGraphics, templateForSavedGraphic } from '../../model/library';
 import {
+  adjustWords,
   controlSections,
   eventButtons,
   eventLegality,
+  eventPayload,
   fieldDescriptors,
   formatMachineState,
   isEventLegal,
@@ -257,6 +259,11 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         // field on purpose), and replacing the baseline with it marked every other field as
         // unsent — an amber "3 changes not on air yet" about values that were on air.
         if (item.msg.t === 'update') next = { ...next, [item.graphic]: { ...next[item.graphic], ...item.msg.data } };
+        // An accepted event's payload lands through the same field path (the hosted log merges
+        // it the same way), so a goal's +1 is part of what air shows - and what the next press
+        // counts from. (If the guard dropped the event this runs slightly ahead of the graphic;
+        // the greyed buttons make that the rare case, and the log stays self-consistent.)
+        else if (item.msg.t === 'event' && item.msg.payload) next = { ...next, [item.graphic]: { ...next[item.graphic], ...item.msg.payload } };
         else if (item.msg.t === 'stop' && next[item.graphic]) {
           // Taken off air: forget it, or the next rebuild would restore a graphic nobody is
           // running any more.
@@ -1296,14 +1303,25 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   const airValues = (): Record<string, string> => (airCue ? cueView(airCue).values : {});
 
   /** Fire a machine event on the live graphic. Payload values ride from the ON-AIR cue, and
-   *  land only if the machine accepts the event (the structural guard). */
+   *  land only if the machine accepts the event (the structural guard). An `adjust` field (a
+   *  goal's +1 on that side's score) rides moved by its delta from what AIR shows - the same
+   *  base the ± live-number bump counts from - and the new figure is mirrored into the on-air
+   *  cue, so the cue and the air cannot drift apart and ⟳ Take / ✎ Update never regress it. */
   const fireEvent = async (button: ControlButton) => {
     if (!selectedGraphic || !selectedLayerLive) return;
     flushDraft();
     const values = airValues();
-    const payload: Record<string, string> = {};
-    for (const key of button.payload ?? []) payload[key] = values[key] ?? '';
-    const msg = button.payload?.length
+    const payload = eventPayload(button, (key) =>
+      button.adjust && key in button.adjust ? (airedData[selectedGraphic]?.[key] ?? values[key] ?? '0') : values[key],
+    );
+    const adjusted = Object.fromEntries(Object.keys(button.adjust ?? {}).map((key) => [key, payload?.[key] ?? '']));
+    if (Object.keys(adjusted).length > 0 && airCue) {
+      // Into the draft when the on-air cue is the one being edited (its box repaints at once),
+      // straight into the record otherwise - either way the cue holds the figure air shows.
+      if (editingIsLive) editDraft({ values: adjusted });
+      else setShows(updateShowCue(id, airCue.id, { values: { ...airCue.values, ...adjusted } }));
+    }
+    const msg = payload
       ? { t: 'event' as const, event: button.event, payload }
       : { t: 'event' as const, event: button.event };
     await runVerb([[{ graphic: selectedGraphic, msg }]], `Event ${button.event}`);
@@ -1893,6 +1911,10 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                             ? 'The graphic is not on air — Take the cue first'
                             : !legal
                               ? `"${b.event}" has no arrow out of the current state, so the graphic would drop it`
+                              : b.adjust
+                                ? // An adjust press moves a figure WITH the event (a goal's +1),
+                                  // counted from what air shows - the hint says which and by how much.
+                                  `Fires "${b.event}" on air and moves ${adjustWords(b, (key) => descriptors.find((d) => d.key === key)?.label)} with it`
                               : b.payload?.length
                                 ? // The payload in the OPERATOR'S words, not as `f7`. This is
                                   // what makes an action self-explanatory: the acceptance pass

@@ -15,6 +15,16 @@
 // The main group carries no authored transitions at all: a scoreboard has no reveal sequence,
 // it just comes on air and stays. Everything interesting is beside the default path, which is
 // the shape the goals document's scorebug test describes.
+//
+// A GOAL IS AN EVENT THAT ALSO MOVES A NUMBER (owner, 2026-08-23, said twice while running a
+// match: "no reason to play the goal animation if the number doesn't change"). Rule 1 still
+// holds - the score is data and the flag group has no state for "home leads" - but the +1 must
+// ride the SAME press as the flag, never arrive as a second update the operator has to
+// remember. The control's `adjust` carries it: the surface sends the event with that side's
+// score moved by one as its payload, so the machine applies the new figure exactly when it
+// accepts the flag (and drops both if it does not), the command log holds the absolute score
+// for recovery, and the operator's field box reads the new value the moment the flag goes up.
+// Nothing in the template counts; a snap into "Flag" replays a pose and bumps nothing.
 
 import { paletteById } from '../../model/wizard';
 import { sb01 } from '../scoreboards/sb01';
@@ -26,7 +36,7 @@ import type { GraphicType } from './graphicType';
 export const scoreboardType: GraphicType = {
   id: 'scoreboard',
   name: 'Scoreboard',
-  description: 'The score strip: teams, scores, a clock that holds, and flags that come and go.',
+  description: 'The score strip: teams and scores, a goal press that raises the flag and moves the score, and a full-time call.',
   frequency: 5,
   structure: {
     prefix: 'scoreboard',
@@ -50,7 +60,13 @@ export const scoreboardType: GraphicType = {
   ],
   machine: {
     parallel: [
-      // The FLAG: a penalty marker that appears and clears, independent of everything else.
+      // The FLAG: the goal marker. A goal on either side raises it (and the control's `adjust`
+      // moves that side's score with the same press); `clearFlag` takes it down. Two states,
+      // not one per side - WHICH side scored is the number that changed, never a state - and
+      // the goal arrows exist from BOTH states: a second goal while the flag is still up is
+      // the self-transition, which replays the flag-in and bumps again instead of being
+      // dropped. (A marker with no side to credit would be a flag that plays and changes
+      // nothing, which is the complaint this type exists to answer; there is none.)
       {
         id: 'flag',
         initial: 'none',
@@ -80,7 +96,12 @@ export const scoreboardType: GraphicType = {
                 },
               },
             },
-            edges: [{ from: 'none', to: 'shown', trigger: 'operator', event: 'flag' }],
+            edges: [
+              { from: 'none', to: 'shown', trigger: 'operator', event: 'goalA' },
+              { from: 'shown', to: 'shown', trigger: 'operator', event: 'goalA' },
+              { from: 'none', to: 'shown', trigger: 'operator', event: 'goalB' },
+              { from: 'shown', to: 'shown', trigger: 'operator', event: 'goalB' },
+            ],
           },
         ],
       },
@@ -114,10 +135,14 @@ export const scoreboardType: GraphicType = {
       },
     ],
   },
+  // A goal raises the flag AND moves that side's score by one, on the same press (`adjust`):
+  // the panel sends the event carrying the new figure, and the machine applies both together
+  // or neither. The ± live-number steppers stay the correction road (a disallowed goal).
   controls: [
-    { event: 'flag', label: 'Flag', section: 'Flag', order: 1 },
-    { event: 'clearFlag', label: 'Clear flag', section: 'Flag', order: 2 },
-    { event: 'final', label: 'Full time', section: 'Result', order: 3 },
+    { event: 'goalA', label: 'Goal A', section: 'Goal', order: 1, adjust: { scoreA: 1 } },
+    { event: 'goalB', label: 'Goal B', section: 'Goal', order: 2, adjust: { scoreB: 1 } },
+    { event: 'clearFlag', label: 'Clear flag', section: 'Goal', order: 3 },
+    { event: 'final', label: 'Full time', section: 'Result', order: 4 },
   ],
   capabilities: {
     maxLines: 1,

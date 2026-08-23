@@ -119,10 +119,21 @@ export function ografContract(manifest: unknown, { includeHidden = false } = {})
     };
     if (typeof vendor?.section === 'string' && vendor.section.length) button.section = vendor.section;
     if (vendor?.destructive === true) button.destructive = true;
+    // The adjust deltas (a goal's +1) ride the vendor object; the field they move is ALSO a
+    // schema property (the exporter writes both), so it is taken OUT of the plain payload keys -
+    // one road per field, as the machine's own shape gate requires.
+    const adjust: Record<string, number> = {};
+    if (isRecord(vendor?.adjust)) {
+      for (const [key, delta] of Object.entries(vendor.adjust)) {
+        if (key && typeof delta === 'number' && Number.isFinite(delta) && delta !== 0) adjust[key] = delta;
+      }
+    }
+    if (Object.keys(adjust).length) button.adjust = adjust;
     // The payload keys are the action schema's properties - the same flat {key: value} map
     // `customAction({id, payload})` takes and `ControlMessage.payload` carries.
     const actionSchema = isRecord(raw.schema) ? raw.schema : null;
-    const payloadKeys = actionSchema && isRecord(actionSchema.properties) ? Object.keys(actionSchema.properties) : [];
+    const payloadKeys = (actionSchema && isRecord(actionSchema.properties) ? Object.keys(actionSchema.properties) : [])
+      .filter((key) => !(key in adjust));
     if (payloadKeys.length) button.payload = payloadKeys;
     buttons.push(button);
   }

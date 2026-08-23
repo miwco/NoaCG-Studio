@@ -1,9 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { settleDurableWrites } from './_durable';
 
-// The Graphics section's organisation layer (acceptance-round asks): multi-select with a
-// bulk bar, and FLAT folders — GraphicDoc.folder, one level, additive-optional (no version
-// bump), deliberately not the retired packages. Everything here drives the real UI over the
+// The Graphics section's organisation layer (docs/SAVED_CONTENT_MODEL.md §6): multi-select
+// with a bulk bar, and FLAT folders — GraphicDoc.folder, one level, additive-optional (no
+// version bump), deliberately not the retired packages. Since the 2026-08-23 owner walk the
+// folders GROUP the view rather than filtering a flat one, and every "+ Production" door is
+// one shared picker whose direction is measured. Everything here drives the real UI over the
 // real model layer; the seeds go through createGraphic like any save.
 
 async function seedLibrary(page: Page, names: string[]): Promise<void> {
@@ -58,10 +60,10 @@ test('multi-select: checkbox + shift-click range, select all, and one-confirm bu
   await expect(page.getByTestId('bulk-note')).toContainText('Deleted 4');
 });
 
-test('flat folders: bulk move, chips filter, unfile, and the folder view becomes a production', async ({ page }) => {
+test('folders GROUP the table: rows first, unfiled under them, opening one shows it alone', async ({ page }) => {
   await seedLibrary(page, ['Strap A', 'Strap B', 'Ticker C']);
-  // Folders are CARDS in the card grid and CHIPS in the table (re-design/handoff.md §5b/§5c);
-  // this walk is the chip half, so it starts by switching the view.
+  // Folders are one thing in two presentations — cards in the card grid, ROWS in the table
+  // (docs/SAVED_CONTENT_MODEL.md §6). This walk is the table half, so it switches the view.
   await page.getByTestId('library-view-list').click();
   const boxes = page.getByTestId('select-graphic');
 
@@ -72,47 +74,64 @@ test('flat folders: bulk move, chips filter, unfile, and the folder view becomes
   await page.getByTestId('bulk-new-folder-name').fill('Match Night');
   await page.getByTestId('bulk-new-folder').click();
 
-  // Chips derive from the data; the folder chip filters the list.
-  await expect(page.getByTestId('folder-chips')).toBeVisible();
-  await page.getByTestId('folder-chip-Match Night').click();
-  await expect(page.getByTestId('select-graphic')).toHaveCount(2);
+  // THE GROUPING. The folder is listed, and only the graphic in NO folder is listed under it —
+  // the owner's finding was a folder that organised nothing you could see, because every
+  // graphic stayed in one flat list below the chips.
+  const folder = page.getByTestId('folder-item-Match Night');
+  await expect(folder).toContainText('2 graphics');
+  await expect(page.locator('.lib-row')).toHaveCount(1);
+  const folderBox = (await folder.boundingBox())!;
+  const firstRow = (await page.locator('.lib-row').first().boundingBox())!;
+  expect(folderBox.y).toBeLessThan(firstRow.y);
 
   // The folder survives a reload (additive-optional field, persisted with the record). So
   // does the VIEW — it is a device preference (model/prefs.ts), not session state.
   await page.reload();
   await expect(page.getByTestId('home-page')).toBeVisible();
-  await page.getByTestId('folder-chip-Match Night').click();
-  await expect(page.getByTestId('select-graphic')).toHaveCount(2);
+  await expect(page.getByTestId('library-thead')).toBeVisible();
 
-  // A folder view is one click from a production carrying exactly its graphics.
-  await page.getByTestId('folder-to-production').click();
-  await expect(page.getByTestId('production-page')).toBeVisible();
-  // Counted off the RUNDOWN — every pool graphic arrives with one cue, and the rundown is the
-  // only list of what a production holds (docs/PLAYOUT_DASHBOARD.md §5).
-  await expect(page.getByTestId('cue-list').locator('.pd-cue')).toHaveCount(2);
+  // OPENING one shows its contents alone, with the band gone and the way back on screen.
+  await page.getByTestId('folder-item-Match Night').getByTestId('open-folder').click();
+  await expect(page.getByTestId('folder-head')).toContainText('Match Night');
+  await expect(page.getByTestId('folder-items')).toHaveCount(0);
+  await expect(page.locator('.lib-row')).toHaveCount(2);
+  await page.getByTestId('folder-back').click();
+  await expect(page.getByTestId('folder-items')).toBeVisible();
+  await expect(page.locator('.lib-row')).toHaveCount(1);
 
-  // Back on the section: unfiling empties the folder and its chip disappears with the data.
-  await page.goto('/app#/home/graphics');
-  await page.getByTestId('folder-chip-Match Night').click();
+  // A SEARCH dissolves the grouping: the question is about the whole library, so a filed
+  // graphic must answer it. Clearing the query restores the grouping.
+  await page.getByTestId('home-search').fill('Strap');
+  await expect(page.getByTestId('folder-items')).toHaveCount(0);
+  await expect(page.locator('.lib-row')).toHaveCount(2);
+  await page.getByTestId('home-search').fill('');
+  await expect(page.getByTestId('folder-items')).toBeVisible();
+
+  // Unfiling empties the folder, and the folder goes with the data — there is no record.
+  await page.getByTestId('folder-item-Match Night').getByTestId('open-folder').click();
   await page.getByTestId('select-graphic').nth(0).click();
   await page.getByTestId('select-graphic').nth(1).click({ modifiers: ['Shift'] });
   await page.getByTestId('bulk-move-folder').click();
   await page.getByTestId('bulk-unfile').click();
-  await expect(page.getByTestId('folder-chips')).toHaveCount(0);
+  // ...and the view walks back out of the place that no longer exists, rather than sitting in
+  // an "empty folder" indistinguishable from a real one.
+  await expect(page.getByTestId('folder-head')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="folder-item-"]')).toHaveCount(0);
+  await expect(page.locator('.lib-row')).toHaveCount(3);
 });
 
-test('folder CARDS: name one, drag a graphic into it, filter by it, and rename it', async ({ page }) => {
+test('folder CARDS: name one, drag a graphic in, open it, and rename it from inside', async ({ page }) => {
   await seedLibrary(page, ['Strap A', 'Strap B', 'Ticker C']);
 
   // A folder is only a name on its graphics, so an empty one has nothing to persist — the
   // dashed card names it and holds it until something lands in it. The band stands with no
   // folders at all, because that card is how the first one is made.
-  await expect(page.getByTestId('folder-cards')).toBeVisible();
-  await expect(page.locator('[data-testid^="folder-card-"]')).toHaveCount(0);
+  await expect(page.getByTestId('folder-items')).toBeVisible();
+  await expect(page.locator('[data-testid^="folder-item-"]')).toHaveCount(0);
   await page.getByTestId('new-folder').click();
   await page.getByTestId('new-folder-name').fill('Match Night');
   await page.getByTestId('new-folder-name').press('Enter');
-  const card = page.getByTestId('folder-card-Match Night');
+  const card = page.getByTestId('folder-item-Match Night');
   await expect(card).toContainText('0 graphics');
 
   // Drag a card onto it. ONE DataTransfer carries the gesture, so the row's real dragstart
@@ -124,20 +143,23 @@ test('folder CARDS: name one, drag a graphic into it, filter by it, and rename i
   await card.dispatchEvent('drop', { dataTransfer: dt });
   await expect(card).toContainText('1 graphic');
   await expect(page.getByTestId('bulk-note')).toContainText('Moved 1');
+  // Grouping again: the dragged graphic left the root listing for the folder.
+  await expect(page.locator('.lib-row--grid')).toHaveCount(2);
 
-  // The card filters, exactly as the chip does.
+  // Opening it shows that graphic alone; the head is the way back.
   await card.click();
   await expect(page.locator('.lib-row--grid')).toHaveCount(1);
   await expect(page.getByTestId('folder-to-production')).toBeVisible();
-  await card.click(); // clicking the active folder clears the filter
-  await expect(page.locator('.lib-row--grid')).toHaveCount(3);
 
-  // Renaming a folder rewrites the name on its members — there is no folder record.
-  await card.getByTestId('row-menu').click();
+  // The folder's own verbs live on the HEAD too, because the band is not on screen at this
+  // level — rename reachable only by walking back out is a dead end you have to know already.
+  await page.getByTestId('folder-head').getByTestId('row-menu').click();
   await page.getByTestId('rename-folder').click();
   await page.getByTestId('folder-rename-input').fill('Cup Final');
   await page.getByTestId('folder-rename-input').press('Enter');
-  await expect(page.getByTestId('folder-card-Cup Final')).toContainText('1 graphic');
+  await expect(page.getByTestId('folder-head')).toContainText('Cup Final');
+  await page.getByTestId('folder-back').click();
+  await expect(page.getByTestId('folder-item-Cup Final')).toContainText('1 graphic');
   // The rename is a durable write, and a durable write is ACCEPTED synchronously and lands a
   // moment later (src/model/durableStore.ts) - so a reload fired the instant the mutator
   // returns aborts it, and the reloaded page shows the OLD folder name, or none. The
@@ -145,7 +167,7 @@ test('folder CARDS: name one, drag a graphic into it, filter by it, and rename i
   // failing here on 2026-08-08.
   await settleDurableWrites(page);
   await page.reload();
-  await expect(page.getByTestId('folder-card-Cup Final')).toContainText('1 graphic');
+  await expect(page.getByTestId('folder-item-Cup Final')).toContainText('1 graphic');
 });
 
 test('bulk add to a NEW production pools the selection and lands on its page', async ({ page }) => {
@@ -159,5 +181,97 @@ test('bulk add to a NEW production pools the selection and lands on its page', a
   await page.getByTestId('bulk-new-production-name').fill('Evening Bulletin');
   await page.getByTestId('bulk-new-production').click();
   await expect(page.getByTestId('production-page')).toBeVisible();
+  await expect(page.getByTestId('cue-list').locator('.pd-cue')).toHaveCount(3);
+});
+
+test('the bulk "+ Production" picker opens UPWARD, fully on screen', async ({ page }) => {
+  // The owner's report was "the pop-up goes underneath my view field": the bulk bar floats at
+  // the bottom of the viewport by design, so a menu that always opened downward was off-screen
+  // — bulk add looked broken while it was in fact adding every graphic.
+  // Enough rows that the bar is pinned at the bottom rather than riding a short page.
+  await seedLibrary(page, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']);
+  await page.getByTestId('select-graphic').nth(0).click();
+  await page.getByTestId('bulk-add-production').click();
+
+  const menu = page.getByTestId('bulk-production-menu');
+  await expect(menu).toBeVisible();
+  // The DECISION is measured, so assert on it and on the geometry it claims to produce.
+  // `toBeVisible()` is blind to a box hanging past the fold, which is the whole defect.
+  await expect(menu).toHaveAttribute('data-placement', 'up');
+  const box = (await menu.boundingBox())!;
+  const height = page.viewportSize()!.height;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(height);
+  // And it is actually reachable there — a box inside the viewport can still sit under
+  // something. The hit test is what a click would find.
+  const onTop = await menu.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + 8));
+  });
+  expect(onTop).toBe(true);
+
+  // The bulk FOLDER menu shares the same shell, so it flips on the same measurement. The
+  // backdrop takes the first press (any outside click closes the standing menu — that is what
+  // it is for), so this is two presses by design, not a stray one.
+  await page.locator('.lib-menu-backdrop').click();
+  await expect(menu).toHaveCount(0);
+  await page.getByTestId('bulk-move-folder').click();
+  await expect(page.getByTestId('bulk-folder-menu')).toHaveAttribute('data-placement', 'up');
+});
+
+test('a "+ Production" pick CLOSES the picker and confirms on the button', async ({ page }) => {
+  // It used to show a ✓ inside the menu for two seconds and stay open, hiding the library
+  // behind a popover that had already done its job (owner walk 2026-08-23).
+  await seedLibrary(page, ['One', 'Two', 'Three']);
+  await page.getByTestId('select-graphic').nth(0).click();
+  await page.getByTestId('bulk-add-production').click();
+  await page.getByTestId('bulk-new-production-name').fill('Evening Bulletin');
+  await page.getByTestId('bulk-new-production').click();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+
+  await page.goto('/app#/home/graphics');
+  const row = page.locator('.lib-row', { hasText: 'Two' });
+  await row.getByTestId('add-to-production').click();
+  await expect(page.getByTestId('add-to-production-menu')).toBeVisible();
+  await page.getByTestId('add-to-production-menu').getByRole('menuitem').first().click();
+
+  await expect(page.getByTestId('add-to-production-menu')).toHaveCount(0);
+  // The confirmation moves to the button, which is still on screen afterwards.
+  await expect(row.getByTestId('production-added')).toBeVisible();
+  // Re-opening marks the production it now sits in — the picker reads the live model.
+  await row.getByTestId('add-to-production').click();
+  await expect(page.getByTestId('add-to-production-menu')).toContainText('in it');
+});
+
+test('a folder pools WHOLE into an existing production, through the bulk verb', async ({ page }) => {
+  await seedLibrary(page, ['Strap A', 'Strap B', 'Ticker C']);
+  // One production to pool into, made from a single graphic.
+  await page.getByTestId('select-graphic').nth(2).click();
+  await page.getByTestId('bulk-add-production').click();
+  await page.getByTestId('bulk-new-production-name').fill('Match Day');
+  await page.getByTestId('bulk-new-production').click();
+  await expect(page.getByTestId('cue-list').locator('.pd-cue')).toHaveCount(1);
+
+  // File the other two, then add the folder itself.
+  await page.goto('/app#/home/graphics');
+  await page.getByTestId('select-graphic').nth(0).click();
+  await page.getByTestId('select-graphic').nth(1).click({ modifiers: ['Shift'] });
+  await page.getByTestId('bulk-move-folder').click();
+  await page.getByTestId('bulk-new-folder-name').fill('Straps');
+  await page.getByTestId('bulk-new-folder').click();
+  const folder = page.getByTestId('folder-item-Straps');
+  await expect(folder).toContainText('2 graphics');
+
+  await folder.getByTestId('folder-to-production').click();
+  await page.getByTestId('folder-production-menu').getByRole('menuitem').first().click();
+  // The SAME report the bulk bar gives — one pooling verb, one wording, one partial-failure
+  // story (src/components/home/sections/GraphicsSection.tsx addListTo).
+  await expect(page.getByTestId('bulk-note')).toContainText('Added 2 to "Match Day"');
+  await expect(page.getByTestId('folder-production-menu')).toHaveCount(0);
+
+  await page.goto('/app#/home/productions');
+  await page.locator('[data-testid^="production-row-"]', { hasText: 'Match Day' })
+    .getByTestId('open-production')
+    .click();
   await expect(page.getByTestId('cue-list').locator('.pd-cue')).toHaveCount(3);
 });
