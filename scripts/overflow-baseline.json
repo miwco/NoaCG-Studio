@@ -2865,5 +2865,20 @@
   "clip": [
    ".alert-mask:y"
   ]
+ },
+ "dc01": {
+  "off": [],
+  "clip": [
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y"
+  ]
+ },
+ "ss21": {
+  "off": [],
+  "clip": [
+   ".starting-soon-mask:y"
+  ]
  }
 }

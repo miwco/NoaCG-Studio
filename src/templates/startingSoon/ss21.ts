@@ -187,7 +187,10 @@ function clockPainted(secondsLeft, totalSeconds) {
 .starting-soon-pool {
   position: absolute;
   left: 52%;
-  top: 26%;
+  /* Placed so the hold-loop's 4% breath stays ON CANVAS. The category's own ambient field keeps
+     an \`inset: 3%\` for exactly this reason: a full-bleed layer that scales is a layer that
+     leaves the frame, and the overflow sweep counts that as an escape. */
+  top: 34%;
   width: calc(900px * var(--scale));
   height: calc(560px * var(--scale));
   margin: calc(-280px * var(--scale)) 0 0 calc(-450px * var(--scale));  /* centre it on that point */
@@ -260,6 +263,11 @@ function clockPainted(secondsLeft, totalSeconds) {
 /* The countdown repaints every second, so it carries BOTH halves of the numerals contract. */
 .starting-soon-clock {
   ${NUMERIC_FIGURES}
+  /* The 0.92 leading below is what makes a 208px figure read as a slab rather than a line of
+     type, and it means the mask hides ~20px of descent space the digits never use. The overflow
+     sweep records that as a self-clip and its baseline carries the row: a reveal mask hiding
+     what is outside its own line is the by-design case that gate exists to tell apart from a
+     shaved glyph, and this mask only ever holds digits and a colon. */
   font-size: calc(208px * var(--scale) * var(--type-scale));
   font-weight: 600;
   line-height: 0.92;

@@ -292,6 +292,10 @@ function boardOffAir() { holdClocks(); }
    is set by the engine (accent while running, --penalty-color when docked or spent). */
 .scoreboard-time {
   ${NUMERIC_FIGURES}
+  /* The tight leading below means the mask hides ~3px of the line box's descent space, which the
+     overflow sweep records as a self-clip — correctly, and by design here: this mask only ever
+     holds digits and a colon, none of which put ink below the baseline. The reveal masks are
+     what the sweep's own header calls the by-design case, and the row is in its baseline. */
   font-size: calc(96px * var(--scale) * var(--type-scale));
   font-weight: 700;
   line-height: 1.04;
