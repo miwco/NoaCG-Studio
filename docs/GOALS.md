@@ -171,6 +171,35 @@ one question - their building runs a strict network, so which ports and hosts it
 that when they report it; do not design for it in advance.
 
 
+## NEXT - coding agents make NoaCG graphics (the agent door)
+
+**Shipped 2026-08-22** (`docs/AGENT_CLI.md`, `docs/AGENT_SAVE.md`; the archive entry has the
+detail): a user's Claude Code, Codex or any MCP client designs a graphic the way it works best and
+NoaCG is the BRIDGE - the contract, the tools (`noacg` CLI + MCP server, the `/bridge` page), the
+validation and the destination (`noacg save` into the library with a scoped key). The workspace is
+one folder that is an OGraf package and the SPX package; the skill is contract-only by default.
+
+*The measured round ran 2026-08-22 and was blind-read and decided 2026-08-23
+(`benchmarks/agent/rounds/2026-08-22/VERDICT.md`): all 25 cells airable, arms visually
+indistinguishable, the skill stays contract-only with free authoring as the default, and
+"actions come from a type" is the one sharpened rule.*
+
+- [ ] **Publish** - `npm publish` of `noacg`, the marketplace entry live. Owner's call.
+- [ ] **Agent-authored machines - the owner gate is now armed.** All five novel-brief cells
+      authored a working machine from scratch (operator buttons, zero category code, validator
+      clean). Decide whether the skill blesses an authored machine when no type fits, and what
+      extra validation that path needs.
+- [ ] **What the funded tiers can borrow** - diff the round's winning cells against Lite/Pro on
+      the same briefs; which closed-loop fixes can the platform enforce deterministically.
+- **Future, so the directions are not forgotten:** arbitrary graphic backends (graphic-authored
+  actions + machines, validated; the control layer already renders any explicit machine);
+  OGraf-native graphics in the library (package hosting + an OGraf host in preview/output);
+  `/output` as an OGraf renderer (Server API, stable 2026-08-13); `noacg add --production`
+  (`productions:attach`); live playout as its own consented permission; remote MCP on the site
+  over Supabase OAuth 2.1; a design-agent ecosystem (the look pluggable, the contract NoaCG's);
+  `--replace <id>`, Realtime on `documents`, `noacg export <target>`, a browserless `types`,
+  keychain storage, a sandboxed bench iframe.
+
 ## NEXT - AI that anyone can afford
 
 Three execution tiers behind the one "Create with AI" door. They differ by **capability**, and the

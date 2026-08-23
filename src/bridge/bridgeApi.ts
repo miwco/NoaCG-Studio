@@ -24,6 +24,7 @@ import { readOgrafPackage, type OgrafPackageRead, type PackageFiles } from '../e
 import type { FieldDescriptor } from '../model/fieldModel';
 import { newGraphicDoc, type GraphicDocBase } from '../model/graphicDoc';
 import { importZipTemplate, type ImportedTemplateResult } from '../model/importTemplate';
+import { replaceDefinitionInHtml } from '../model/spxDefinition';
 import type { SpxTemplate } from '../model/types';
 import { paletteById, type WizardOptions, type Zone9 } from '../model/wizard';
 import { packGraphicEntry, type PackGraphicFile } from '../packs/graphicsPack';
@@ -76,7 +77,7 @@ export interface BridgeTypeSummary {
   prefix: string;
   fields: Array<{ key: string; label: string; kind: string; value: string; role: string; ftype: string; options?: Array<{ label: string; value: string }> }>;
   /** The operator events the type's machine carries (its buttons), with declared labels. */
-  events: Array<{ event: string; label: string; section?: string; payload?: string[] }>;
+  events: Array<{ event: string; label: string; section?: string; payload?: string[]; adjust?: Record<string, number> }>;
   designs: Array<{ id: string; name: string; description: string; styleTag: string }>;
   /** Whether `scaffold({type, design:'neutral'})` is available for this type. */
   neutral: boolean;
@@ -104,6 +105,7 @@ function summarize(type: GraphicType): BridgeTypeSummary {
       label: c?.label ?? event,
       ...(c?.section ? { section: c.section } : {}),
       ...(c?.payload?.length ? { payload: c.payload } : {}),
+      ...(c?.adjust && Object.keys(c.adjust).length ? { adjust: c.adjust } : {}),
     };
   });
   return {
@@ -243,7 +245,26 @@ export function scaffold(req: ScaffoldRequest): ScaffoldResult {
     notes.push('No explicit machine: the implicit lifecycle machine (Take/Update/Next/Out) drives it.');
   }
   notes.push('Keep every `id="fN"` the SPX definition declares, the `.<prefix>-box` / `-mask` structure and the :root variables; restyle everything else.');
-  return { template: req.name ? { ...template, name: req.name } : template, notes };
+  return { template: req.name ? withName(template, req.name) : template, notes };
+}
+
+/**
+ * Name a scaffolded template IN ITS SOURCES, not only on the record. The package's name is read
+ * back from the html (`<title>`, then the SPX definition's `description`) every time the bridge
+ * re-reads the folder - `noacg validate` regenerates from exactly that read - so a name that sat
+ * only on `template.name` was lost on the first round trip: the regenerated package took the
+ * design's own name, wrote a SECOND `<slug>.html` + `<slug>.ograf.json` beside the first, and the
+ * folder stopped being one graphic. Found by walking a scaffolded package through validate
+ * (2026-08-22); pinned by e2e/bridge.spec.ts.
+ */
+function withName(template: SpxTemplate, name: string): SpxTemplate {
+  const settings = { ...template.settings, description: name };
+  const titleText = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let html = replaceDefinitionInHtml(template.html, settings, template.fields);
+  html = /<title[^>]*>[^<]*<\/title>/i.test(html)
+    ? html.replace(/(<title[^>]*>)[^<]*(<\/title>)/i, `$1${titleText}$2`)
+    : html.replace(/<head([^>]*)>/i, `<head$1>\n  <title>${titleText}</title>`);
+  return { ...template, name, settings, html };
 }
 
 // ── Normalize (an authored ANIMATION region -> NoaCG's keyframe data) ────────

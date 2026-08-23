@@ -395,24 +395,34 @@ test('the scoreboard passes the scorebug test: data moves nothing, parallel grou
     // element that is not in the markup. It has been dropped from the type (the sports pack's
     // scorebug and match board carry the real one), which is why the walk is two groups now —
     // independence is what the check is about, and two independent groups prove it.
-    w.noacgDispatch('flag');
+    //
+    // A goal carries the NEW SCORE as its payload (the control surface computes it from the
+    // control's 'adjust'; here the test plays the surface): the field lands only because the
+    // machine accepted the event, on the same press that raised the flag.
+    w.noacgDispatch('goalA', { f1: '15' });
     w.noacgDispatch('final');
     const settledState = groups();
     await sleep(300);
+    const scoreAfterGoal = w.document.getElementById('f1').textContent;
 
-    // The guard drops a repeat - there is no 'flag' arrow leaving 'shown'.
-    w.noacgDispatch('flag');
-    const repeatDropped = groups().flag === 'shown';
+    // A second goal while the flag is still up is the SELF-transition: accepted, so its payload
+    // lands - a payload on a dropped event never does, which makes the landing the proof the
+    // arrow was taken. (The hand-written acceptance scoreboard in _machines.ts keeps the
+    // one-way flag whose repeat IS dropped; the guard is proven there.)
+    w.noacgDispatch('goalB', { f3: '8' });
+    await sleep(120);
+    const scoreBAfterRepeat = w.document.getElementById('f3').textContent;
     w.noacgDispatch('clearFlag');
     await sleep(300);
-    return { dataMovedNothing, score, settledState, repeatDropped, cleared: groups().flag, final: groups().result };
+    return { dataMovedNothing, score, settledState, scoreAfterGoal, scoreBAfterRepeat, cleared: groups().flag, final: groups().result };
   })()`);
   expect(result).toMatchObject({
     dataMovedNothing: true,
     score: '14',
     // Pointers move synchronously at dispatch, before any animation settles.
     settledState: { flag: 'shown', result: 'final' },
-    repeatDropped: true,
+    scoreAfterGoal: '15',
+    scoreBAfterRepeat: '8',
     cleared: 'none',
     final: 'final',
   });

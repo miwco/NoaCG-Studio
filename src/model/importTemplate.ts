@@ -211,7 +211,16 @@ function toDataUrl(mime: string, bytes: Uint8Array): string {
 /** Import an SPX-style zip: locate the html, pull in css/js files and binary assets. */
 export async function importZipTemplate(fileName: string, data: ArrayBuffer): Promise<ImportedTemplateResult> {
   const zip = await JSZip.loadAsync(data);
-  const files = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+  // Entry names are read with '/' separators whatever the archiver wrote. Windows PowerShell
+  // 5.1's Compress-Archive writes BACKSLASHES into zip entry names (a known quirk, fixed in
+  // PowerShell 7); Explorer's "Compressed folder", zip, 7-Zip and every exporter here write '/'.
+  // A student zipping a graphic package with either has to land the same way - found walking
+  // the agent door's package through this door on Windows (2026-08-22). The original name is
+  // kept only to read the entry.
+  const stored = new Map<string, string>();
+  for (const name of Object.keys(zip.files)) stored.set(name.replace(/\\/g, '/'), name);
+  const entryOf = (n: string) => zip.file(stored.get(n) ?? n);
+  const files = [...stored.keys()].filter((n) => !zip.files[stored.get(n)!].dir);
 
   // The entry point: prefer an index.html anywhere (shallowest first), else any .html —
   // never a bundled operator page. Our own packages name the template after the graphic
@@ -227,7 +236,7 @@ export async function importZipTemplate(fileName: string, data: ArrayBuffer): Pr
   const inBase = (n: string) => n.startsWith(base) && n !== entry;
   const rel = (n: string) => n.slice(base.length);
 
-  const read = (n: string) => zip.file(n)!.async('string');
+  const read = (n: string) => entryOf(n)!.async('string');
   const html = await read(entry);
 
   // CSS files referenced the standard way (any others are concatenated too).
@@ -276,7 +285,7 @@ export async function importZipTemplate(fileName: string, data: ArrayBuffer): Pr
   for (const n of files) {
     const ext = n.split('.').pop()?.toLowerCase() ?? '';
     if (inBase(n) && ASSET_MIME[ext]) {
-      assets.push({ path: rel(n), data: toDataUrl(ASSET_MIME[ext], await zip.file(n)!.async('uint8array')) });
+      assets.push({ path: rel(n), data: toDataUrl(ASSET_MIME[ext], await entryOf(n)!.async('uint8array')) });
     }
   }
 
@@ -284,7 +293,7 @@ export async function importZipTemplate(fileName: string, data: ArrayBuffer): Pr
   // and its `v_noacg` block is the ONE place the graphic's TYPE travels - the SPX files have no
   // slot for it. Read it when present; everything else above stays exactly as it was, so a
   // foreign zip (no manifest, or somebody else's manifest with no `v_noacg`) imports as before.
-  const noacg = await readNoacgBlock(zip, files, base);
+  const noacg = await readNoacgBlock((n) => entryOf(n)?.async('string') ?? null, files, base);
 
   return {
     ...importHtmlTemplate(fileName.replace(/\.zip$/i, '') || rel(entry), html, {
@@ -295,14 +304,18 @@ export async function importZipTemplate(fileName: string, data: ArrayBuffer): Pr
 }
 
 /** The `v_noacg` block of the shallowest `*.ograf.json` beside the entry page, or null. */
-async function readNoacgBlock(zip: JSZip, files: string[], base: string): Promise<NoacgPackageInfo | null> {
+async function readNoacgBlock(
+  readText: (name: string) => Promise<string> | null,
+  files: string[],
+  base: string,
+): Promise<NoacgPackageInfo | null> {
   const manifests = files
     .filter((n) => n.startsWith(base) && n.toLowerCase().endsWith('.ograf.json'))
     .sort((a, b) => a.split('/').length - b.split('/').length);
   if (!manifests.length) return null;
   let manifest: unknown;
   try {
-    manifest = JSON.parse(await zip.file(manifests[0])!.async('string'));
+    manifest = JSON.parse((await readText(manifests[0])) ?? '');
   } catch {
     return null;
   }
@@ -317,7 +330,7 @@ async function readNoacgBlock(zip: JSZip, files: string[], base: string): Promis
       const path = block.source && typeof (block.source as Record<string, unknown>)[key] === 'string'
         ? `${base}${(block.source as Record<string, string>)[key]}`
         : null;
-      return path ? ((await zip.file(path)?.async('string')) ?? '') : '';
+      return path ? ((await readText(path)) ?? '') : '';
     };
     const [h, c, j] = await Promise.all([readSource('html'), readSource('css'), readSource('js')]);
     stale = sourceHash({ html: h, css: c, js: j }) !== declared;

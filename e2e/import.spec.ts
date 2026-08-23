@@ -146,6 +146,62 @@ test('import round-trip: an exported Starter zip re-imports as the same code', a
   expect(after.fps).toBe(before.fps);
 });
 
+test('import zip: a NoaCG graphic package (the agent door\'s dual package) keeps its name and TYPE through the Import door', async ({ page }) => {
+  // The package an external agent edits (docs/AGENT_CLI.md): SPX-layout sources + a generated
+  // OGraf manifest whose `v_noacg` names the graphic type. Zipped, it is the offline road into
+  // the studio - "no account? zip the folder, use the Import door" - so the door has to read
+  // the type off the manifest (a foreign zip lands as `blank`) and the name off the sources.
+  // Built by the bridge, the same exporter `noacg scaffold` / `noacg validate` call.
+  await page.goto('/bridge');
+  await page.waitForFunction(() => (window as unknown as { __noacgBridgeReady?: boolean }).__noacgBridgeReady === true);
+  const base64 = await page.evaluate(async () => {
+    const bridge = (window as unknown as { noacgBridge: { scaffold(req: unknown): { template: unknown }; exportPackage(t: unknown): Promise<Uint8Array> } }).noacgBridge;
+    const { template } = bridge.scaffold({ type: 'scoreboard', design: 'neutral', name: 'Football scoreboard' });
+    const bytes = await bridge.exportPackage(template);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  });
+  const zipBuffer = Buffer.from(base64, 'base64');
+  const zip = await JSZip.loadAsync(zipBuffer);
+  const names = Object.keys(zip.files).filter((n) => !zip.files[n].dir);
+  expect(names.some((n) => n.endsWith('football_scoreboard.ograf.json')), `no manifest in ${names.join(', ')}`).toBe(true);
+
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="ai"]').click();
+  await page.locator('.wz-drop input[type="file"]').setInputFiles({ name: 'football-scoreboard.zip', mimeType: 'application/zip', buffer: zipBuffer });
+  await page.getByRole('button', { name: /Open as code \(no AI\)/ }).click();
+  await expect(page.locator('.wz-modal')).toBeHidden();
+  const opened = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const t = useTemplateStore.getState().template;
+    return { name: t.name, type: t.type, fields: t.fields.map((f) => f.field), hasMachine: /"machine"\s*:/.test(t.js) };
+  });
+  expect(opened.name).toBe('Football scoreboard');
+  expect(opened.type, 'the type rides in the manifest\'s v_noacg, never forced to blank').toBe('scoreboard');
+  expect(opened.fields).toEqual(['f0', 'f1', 'f2', 'f3']);
+  expect(opened.hasMachine, 'the type machine travels inside js/template.js').toBe(true);
+  await expect(page.locator('.topbar .tpl-name')).toHaveText('Football scoreboard');
+
+  // The same package zipped by Windows PowerShell 5.1's Compress-Archive, which writes entry
+  // names with BACKSLASHES (Explorer and every other archiver write '/'). A student's zip has to
+  // land identically - it did not, until the importer normalised entry names (2026-08-22).
+  const backslashed = new JSZip();
+  for (const n of names) backslashed.file(n.replace(/\//g, '\\'), await zip.file(n)!.async('uint8array'));
+  const viaPowerShell = await page.evaluate(async (base64) => {
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const { importZipTemplate } = await import('/src/model/importTemplate.ts');
+    const { template, noacg } = await importZipTemplate('football-scoreboard.zip', bytes.buffer);
+    return { name: template.name, type: template.type, fields: template.fields.length, assets: template.assets.map((a) => a.path), stale: noacg?.stale };
+  }, await backslashed.generateAsync({ type: 'base64' }));
+  expect(viaPowerShell).toMatchObject({ name: 'Football scoreboard', type: 'scoreboard', fields: 4, stale: false });
+  expect(viaPowerShell.assets).toContain('fonts/inter.woff2');
+});
+
 test('import zip: only the scripts the page loads reach the JS pane', async ({ page }) => {
   // A real vendor pack ships ONE folder holding several templates plus every library any of
   // them uses. Concatenating every .js under that folder merged sibling designs (identical

@@ -191,7 +191,17 @@ searchable): the bundled OFL library; **the ~1,900 Google Fonts families** (mode
 says a download shows the browser's IP to Google first); upload (woff2/woff/ttf/otf ->
 CustomFont, embedded in template.assets + every export); and Local Font Access (Chromium only,
 permission-gated), EMBEDDED exactly like an upload so playout never depends on the machine's
-fonts. The **Animation step** is the standard one.
+fonts. The **Animation step** is the standard one - with ONE difference for this category:
+its cards are the UNIVERSAL in/out bank (`components/MotionPresetPicker.tsx` over
+`blocks/motionPresets.ts` - ten unit motions) in place of the category's four whole-unit
+presets, which the bank stands in for (`draft.ts` `isWholeUnitPreset` hides their cards; the
+SVG layer stagger stays beside them); a pick lives in `draft.animation.motionIn/motionOut` and
+is written AT BUILD by `withUniversalMotion` (the default maps design-fade -> fade, so an
+undecided design lands on the same data the card it shows lit would write), through the same
+engine the saved graphic's control page applies after - so the wizard preview, the created
+graphic and the page that reads it back agree by construction (`usesUniversalMotion` is the one
+switch; every other category keeps its tuned bank here and meets the universal one on the
+control page). Pinned by e2e/motion-presets.spec.ts.
 The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
 non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** -
@@ -227,6 +237,18 @@ What is OFFERED is decided in assets/svgImport.ts, and three rules there are loa
 `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
 hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
 the measured shapes read as a line of type, and never filtered.
+**EVERY detected text row starts ON** - the `f:` prefix names a field and guarantees it, and
+never turns the unmarked rows off (only a PICTURE, which defaults off, is switched on by it).
+The step has a measured HEIGHT BUDGET like the Entry step's: the artwork is capped to a share
+of the window (`--map-svg-cap`, a height applied as a max WIDTH at the artwork's own aspect -
+letterboxing would break `measureOutline`'s scale) and sits in a STICKY band beside the
+sentence that says what to do, so the checklist starts above the fold and the hover highlight
+still has something to point at. Editing a row's sample WRITES IT INTO THAT ARTWORK the way
+`update()` writes it on air, which is what makes a real length testable here.
+The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
+does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
+inferred from geometry - the shipped lower third is a full-frame artboard and the shipped
+scorebug is a small floating object, so any size rule mislabels one of them.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),

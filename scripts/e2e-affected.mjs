@@ -120,6 +120,10 @@ const MAP = [
   [/^src\/templates\/types\/neutralDesign/, ['bridge.spec.ts']],
   [/^src\/control\/ografContract/, ['ograf-contract.spec.ts', 'bridge.spec.ts']],
   [/^cli\//, []],
+  // The plugin marketplace entry (root .claude-plugin/) and the agent round's brief bank +
+  // results (benchmarks/agent/): read by `claude plugin` and by scripts/agent-round-bench.mjs,
+  // never by a spec.
+  [/^(\.claude-plugin\/|benchmarks\/agent\/)/, []],
   // The OUTPUT EMBED is an export file about the cloud output, so it belongs to the production
   // suite rather than to the package specs the rule above lists (rules union, never shadow).
   [/^src\/export\/outputEmbed/, ['productions.spec.ts']],
@@ -138,7 +142,11 @@ const MAP = [
   // The browser-output renderer (docs/CLOUD_PLAYOUT.md): its own MPA entry + the stage module.
   [/^src\/output\//, ['productions.spec.ts', 'snap-recovery.spec.ts']],
   [/^output\.html$/, ['productions.spec.ts']],
-  [/^src\/blocks\//, ['anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
+  // The universal in/out bank and its picker (blocks/motionPresets.ts, MotionPresetPicker.tsx):
+  // mounted on the control page and the wizard's Animation step, so it rides on both of those
+  // rules below as well - listed here by name so an engine edit runs its own spec first.
+  [/^(src\/blocks\/motionPresets\.ts|src\/components\/MotionPresetPicker\.tsx)$/, ['motion-presets.spec.ts']],
+  [/^src\/blocks\//, ['motion-presets.spec.ts', 'anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
   // creative-routing rides along because ROUTING and SATISFACTION resolve live against the
   // catalog and the type registry (src/templates/structuralAnchor.ts): a structure the
   // catalog gains or loses moves a route, which is the decay rule the spec enforces.
@@ -195,7 +203,7 @@ const MAP = [
   // the header. Splitting the logo and Home into two controls changed both of its walks while
   // every spec named after the wizard stayed green, which is this list's own failure mode
   // again - a header change running nothing that leaves the header.
-  [/^src\/components\/wizard\//, ['wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'wizard-entry-fit.spec.ts', 'wizard-finish.spec.ts', 'wizard-kit.spec.ts', 'wizard-shell.spec.ts', 'library.spec.ts', 'flows.spec.ts', 'ux.spec.ts', 'import.spec.ts', 'import-graphic.spec.ts', 'import-prepare.spec.ts', 'import-canvas.spec.ts', 'import-stretch.spec.ts', 'import-analysis.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'text-tools.spec.ts', 'project.spec.ts', 'video-project.spec.ts', 'video-hyperframes.spec.ts', 'pro.spec.ts', 'storage-full.spec.ts', 'wizard-setup-fields.spec.ts', 'google-fonts.spec.ts', 'design-rules-product.spec.ts']],
+  [/^src\/components\/wizard\//, ['motion-presets.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'wizard-entry-fit.spec.ts', 'wizard-finish.spec.ts', 'wizard-kit.spec.ts', 'wizard-shell.spec.ts', 'library.spec.ts', 'flows.spec.ts', 'ux.spec.ts', 'import.spec.ts', 'import-graphic.spec.ts', 'import-prepare.spec.ts', 'import-canvas.spec.ts', 'import-stretch.spec.ts', 'import-analysis.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'text-tools.spec.ts', 'project.spec.ts', 'video-project.spec.ts', 'video-hyperframes.spec.ts', 'pro.spec.ts', 'storage-full.spec.ts', 'wizard-setup-fields.spec.ts', 'google-fonts.spec.ts', 'design-rules-product.spec.ts']],
   // WHAT HAPPENS WHEN A WRITE FAILS is its own contract (e2e/storage-full.spec.ts) and it cuts
   // across the storage layer, the two save paths over it, and the surface that announces the
   // failure. It is mapped separately because the failure mode it guards - a door that saves
@@ -236,7 +244,7 @@ const MAP = [
   // wizard-kit rides along: the kit's export door lands on ProductionPage and asks it to open
   // THE production export dialog (templateStore `pendingProductionExport`), so a change to
   // that page can break a wizard flow whose name says nothing about productions.
-  [/^src\/components\/(home|save)\//, ['library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts']],
+  [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts']],
   // The graphics-pack door: the format/importer, the shipped pack + its sources and build
   // script, and the shared multi-template save path (also the wizard kit's, hence
   // wizard-kit rides along on templateSet changes).

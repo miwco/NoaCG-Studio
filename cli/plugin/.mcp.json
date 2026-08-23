@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "noacg": {
+      "command": "npx",
+      "args": ["-y", "noacg", "mcp"]
+    }
+  }
+}

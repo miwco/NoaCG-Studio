@@ -26,7 +26,7 @@ break that spec, not the page.
   NoaCG-specific thing a manifest may carry is the standard's own extension mechanism:
   `v_`-prefixed vendor fields. Every export writes a per-property `v_noacg.kind` hint inside
   `schema` (the control kind the property came from, since the JSON-schema type is a 3-way
-  collapse) and a per-action `v_noacg` (the button's section / destructive flag); the **dual
+  collapse) and a per-action `v_noacg` (the button's section / destructive flag / adjust deltas); the **dual
   graphic package** (`src/export/noacgPackage.ts`, docs/AGENT_CLI.md) additionally writes a root
   `v_noacg` block naming the graphic TYPE, the editable SPX-layout SOURCES shipped beside the
   component, and their content hash. Any renderer ignores all of it; NoaCG's reader
@@ -248,6 +248,23 @@ With those fixed, driven entirely through the external server's API:
   without the `v_` prefix, a missing `main`, a `default` typed against its property, a `null`
   where a number belongs, an unknown constraint key, a fractional duration and `stepCount: -2`
   were each rejected with the expected message.
+
+### 2026-08-22: the dual package, in the same renderer
+
+The agent door's workspace (`docs/AGENT_CLI.md` - one folder that is the SPX package AND an OGraf
+package, the manifest carrying `v_noacg`) was put through the same server: scaffolded and validated
+by the `noacg` CLI against a dev server, zipped, uploaded through the zip endpoint, the renderer
+page opened in a browser, every action driven through the HTTP control API. Upload `200` and the
+graphic listed as `noacg-football-scoreboard`; the served manifest carried `name`, three
+`customActions` (then `flag`, `clearFlag`, `final`; the scoreboard type now exports `goalA`/`goalB`/`clearFlag`/`final`, the goals carrying their score as a schema property and the `+1` as `v_noacg.adjust`) and the `v_noacg` block untouched; `load` with data,
+`updateAction`, `playAction`, all three custom actions, `stopAction` and `clear` answered `200`;
+the unknown action answered `400` with our message; the frame showed the updated score in the
+bundled Inter, so the package-relative font resolved from inside the package. The SPX-layout
+sources beside the manifest are simply ignored by the renderer, as the design intends. The walk
+also found the bug the gate could not: a scaffold named with `--name` carried the design's own
+name in its sources, so the first `validate` regenerated under a second slug and the folder held
+two manifests - fixed at the source (the name now lives in `<title>` and the definition), with the
+CLI removing a previous name's generated pair when the graphic is retitled.
 
 Two things this round could **not** settle. The renderer drops a Graphic's instance when the layer
 is cleared, so it never calls an action after `dispose()` - the `409` for that case remains our own

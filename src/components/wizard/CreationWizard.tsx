@@ -1501,18 +1501,19 @@ export default function CreationWizard() {
                     result.width > res.width || result.height > res.height
                       ? Math.min(res.width / result.width, res.height / result.height)
                       : 1;
-                  // The `f:` prefix rule (plan §2): when ANY layer opted in by name, only
-                  // those default ON; otherwise every detected text is ON — zero clicks.
-                  const anyMarked = result.candidates.some((c) => c.marked);
                   patch({
                     designSvg: {
                       ...result,
                       width: Math.round(result.width * fit),
                       height: Math.round(result.height * fit),
                     },
+                    // EVERY detected text starts ON (plan §2, zero clicks). The `f:` prefix
+                    // says "this is definitely a field" and names it — it never says "and
+                    // nothing else is": one layer exported as `f:Competition` used to turn the
+                    // other six off, which reads as detection having missed them.
                     svgFields: result.candidates.map((c) => ({
                       candidateId: c.id,
-                      on: anyMarked ? c.marked : true,
+                      on: true,
                       title: c.label,
                       sample: c.sample,
                       numeric: c.numeric,
@@ -1544,6 +1545,12 @@ export default function CreationWizard() {
                     // re-pickable, and a file that looks like nothing in particular proposes
                     // nothing at all.
                     svgBehaviour: proposeQuizBinding(result),
+                    // THE HUG (plan §3) starts OFF with the widest rectangle already proposed:
+                    // a banner's background is the widest rectangle on it. Off rather than
+                    // inferred because no geometry separates a lower third from a scorebug —
+                    // our own samples draw the banner on a FULL-FRAME artboard and the scorebug
+                    // as a small floating object, so either rule mislabels one of them.
+                    svgStretch: { on: false, shapeId: result.shapes[0]?.id ?? null },
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).
                     svgFonts: result.fonts.map((f) => ({
@@ -1577,7 +1584,7 @@ export default function CreationWizard() {
                   setMode('svg');
                 }}
                 onClearSvg={() => {
-                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgBehaviour: null, svgFonts: [], variantId: null, category: null });
+                  patch({ designSvg: null, svgFields: [], svgImages: [], svgOutlines: [], svgBehaviour: null, svgStretch: { on: false, shapeId: null }, svgFonts: [], variantId: null, category: null });
                   setMode('design');
                 }}
                 templateFile={importedFile}
@@ -1613,6 +1620,7 @@ export default function CreationWizard() {
                     svgImages: [],
                     svgOutlines: [],
                     svgBehaviour: null,
+                    svgStretch: { on: false, shapeId: null },
                     svgFonts: [],
                     designArt,
                     importedImages,

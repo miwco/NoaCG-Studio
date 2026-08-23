@@ -96,4 +96,12 @@ test('a full quota never parks the user in the canvas silently: Home’s + Produ
   // even ongoing productions".
   await expect(page.getByTestId('storage-alert')).toBeVisible();
   await expect(page.getByTestId('storage-alert-error')).toContainText(/storage is full/i);
+
+  // The picker CLOSES on a successful pick (home/ProductionPicker), so a refused one must not
+  // look the same: it stays standing, still holding the typed name, and shows no ✓. Otherwise
+  // the menu snapping shut beside a failure alert says two opposite things at once.
+  await page.getByTestId('storage-alert-close').click();
+  await expect(page.getByTestId('add-to-production-menu')).toBeVisible();
+  await expect(page.getByTestId('add-to-new-production-name')).toHaveValue('Saturday Show');
+  await expect(page.getByTestId('production-added')).toHaveCount(0);
 });

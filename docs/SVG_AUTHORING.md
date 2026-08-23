@@ -81,7 +81,9 @@ you drew them:
 
 **Optional sugar:** prefix a layer name with `f:` or `field:` (`f:Competition`) to mark it
 editable by name; the prefix is stripped from the label. Useful for an organisation that wants
-one shared convention - never required.
+one shared convention - never required, and it does not switch the other layers off: every text
+layer is offered ticked either way. On a PICTURE layer the prefix does more, because a picture
+is offered unticked by default - inside a design it is usually part of the artwork.
 
 ## 4. Fonts - the one thing that can differ on air
 
@@ -105,9 +107,23 @@ upload instead, rather than offering a download that could only fail.
 Two consequences worth designing around:
 
 - Prefer a family you can supply as a file, or one of the bundled/Google faces.
-- SVG text does not wrap or clip. When an operator types a longer value than the design was set
-  for, the generated code condenses that one line to the width you drew (`textLength`), and only
-  then. A value that fits leaves your typography untouched.
+- SVG text does not wrap or clip, so the generated code answers a too-long value in a fixed
+  order: **it fills the shape you drew the line in, then wraps into the room that shape has,
+  then shrinks to 55% of your type size, and then says the copy is too long.** Nothing is cut
+  and the artwork is never reshaped to make words fit.
+  What that means when you draw: the line's budget is the **panel behind it**, out to a right
+  margin mirroring the left one you left - so a name drawn short inside a wide banner may grow
+  to most of that banner at full size. Wrapping uses only the room already there: the distance
+  from the line down to whatever you drew below it, inside that same panel. A name with a role
+  directly under it can never wrap; a question alone on a board wraps to two or three lines as
+  it shrinks. Leave vertical room where you want wrapping, and don't where you don't.
+- **Or let the panel grow instead.** On the mapping step, "when the text is too long" can be
+  answered with **grow** rather than shrink, and you pick which rectangle grows (the widest one
+  is proposed). It widens to the right at the type's full size, anything you drew past its right
+  edge travels with it, and it stops inside the frame's safe margin - past that the line shrinks
+  as usual. This is what a lower third wants; a board or a scoreboard wants the default, because
+  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow: a freeform
+  shape has no width to change.
 
 ## 5. If the text was converted to outlines
 

@@ -2694,6 +2694,25 @@ details:not([open]) > *:not(summary) { display: none; }
 .wz-anim-dirs button { flex: 1; padding: 4px 0; font-size: 14px; line-height: 1; }
 .wz-anim-dirs button.active { border-color: var(--accent); color: var(--accent); }
 
+/* THE UNIVERSAL IN/OUT PICKER (components/MotionPresetPicker.tsx). Ten cards is twice the
+   category grid above, and it also has to fit under a control page's preview, so the cards are
+   the same kind (border, radius, amber when selected - `.wz-anim`) cut to a tighter cell: a
+   name and a one-line hint, four across at desktop width. The hint clamps to two lines so a
+   longer description never makes its row taller than its neighbours. */
+.motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.motion-card { padding: 8px 10px; gap: 2px; }
+.motion-card strong { font-size: 13px; }
+.motion-card .hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.motion-picker h3 .muted { font-weight: 400; }
+
 /* Step 6: finish — name it, read back what was built, then take one of the two doors.
    THE STEP'S HEIGHT IS ITS BUDGET, because the doors are the last thing on it: everything
    above them that spends a line pushes the only two controls the step exists for below the
@@ -5233,11 +5252,33 @@ h2 + .lib-row,
 }
 /* A card is ~240px wide and "+ Production" does not fit beside Open and the ⋯ — it clipped to
    "+ Produ", which is worse than no word at all. On a card it is the icon alone (its title
-   and the popover are unchanged); the list view, which has the room, keeps the label. */
-.lib-row--grid .lib-actions [data-testid='add-to-production'] {
+   and the popover are unchanged); the list view, which has the room, keeps the label.
+   The FOLDER card obeys the same rule for the same reason: with the label on, "Match Night"
+   ellipsized to 48px of a 270px card, which is the one thing that card exists to say. */
+.lib-row--grid .lib-actions [data-testid='add-to-production'],
+.lib-folder-item--grid [data-testid='folder-to-production'] {
   font-size: 0;
   padding: 6px 9px;
 }
+/* THE "✓ Added" FLASH (home/ProductionPicker). It sits OVER the label instead of replacing
+   it, so the button keeps its resting width and nothing beside it moves for the two seconds it
+   shows. Its spans carry their own font-size because the rule above renders this same button
+   icon-only on a card — inheriting that 0 made a successful pick look like nothing happened.
+   On an icon-only button the tick alone says it, and the word drops with the label. */
+.lib-picker-btn { position: relative; }
+.lib-picker-label { display: inline-flex; align-items: center; gap: 6px; }
+.lib-picker-btn.is-confirming .lib-picker-label { visibility: hidden; }
+.lib-picker-confirm {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lib-added-mark { font-size: 12px; color: var(--accent); font-weight: 700; }
+.lib-added-word { font-size: 12px; margin-left: 5px; }
+.lib-row--grid .lib-actions .lib-added-word,
+.lib-folder-item--grid .lib-added-word { display: none; }
 /* The card is a column of full-width bands: without this the flex column centres each one to
    its own content width and the name floats mid-card. */
 .lib-row--grid > * { align-self: stretch; text-align: left; }
@@ -5265,6 +5306,12 @@ h2 + .lib-row,
    TYPE, EDITED and FOLDER then sat ~200px right of the values under them. */
 .lib-list {
   --lib-cols: 100px minmax(0, 1fr) 110px 96px minmax(0, 160px) 190px 32px;
+}
+/* Without the FOLDER cell the track goes too — a column left standing over cells that no
+   longer exist slides every heading right of its values, the §5c defect this template was
+   introduced to fix. See GraphicRow's `showFolder` for when the cell is worth its space. */
+.lib-list--nofolder {
+  --lib-cols: 100px minmax(0, 1fr) 110px 96px 190px 32px;
 }
 .lib-list .lib-row--list,
 .lib-thead { display: grid; grid-template-columns: var(--lib-cols); gap: 12px; align-items: center; }
@@ -5338,9 +5385,11 @@ h2 + .lib-row,
   color: var(--void);
   font-weight: 700;
 }
-/* ── THE FOLDERS BAND (re-design/handoff.md §5b), the card grid's presentation ────────────
-   A folder is a place you put graphics, so it is a card you can drop them on — as chips they
-   read as another filter row, which is exactly what the type facets above them already are. */
+/* ── THE FOLDERS BAND (re-design/handoff.md §5b; docs/SAVED_CONTENT_MODEL.md §6) ──────────
+   A folder is a place you put graphics, so it is a thing you can drop them on and open — as
+   chips they read as another filter row, which is exactly what the type facets above them
+   already are, and they left the graphics themselves in one flat list underneath. Since the
+   2026-08-23 owner walk the band leads BOTH views: cards in the card grid, rows in the table. */
 .lib-band-head { display: flex; align-items: baseline; gap: 12px; margin: 4px 0 8px; }
 .lib-band-head h3 {
   margin: 0;
@@ -5352,13 +5401,14 @@ h2 + .lib-row,
   color: var(--text-faint);
 }
 .lib-band-head .hint { margin: 0; margin-left: auto; }
-.lib-folder-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.lib-folder-card {
+/* CARDS in the card grid, ROWS in the table — one component (home/FolderItem), two skins, so
+   a folder can never do less in one view than in the other. */
+.lib-folder-items { display: grid; gap: 12px; margin-bottom: 20px; }
+.lib-folder-items--grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+/* The table's folders are full-width rows above the graphics, tight enough that eight of them
+   still leave the first graphic on the fold. */
+.lib-folder-items--list { grid-template-columns: 1fr; gap: 6px; }
+.lib-folder-item {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr) max-content;
   align-items: center;
@@ -5369,17 +5419,22 @@ h2 + .lib-row,
   background: var(--bg-panel);
   cursor: pointer;
 }
-.lib-folder-card:hover { border-color: var(--border-strong); }
-.lib-folder-card.active { border-color: var(--accent); background: var(--accent-bg); }
+.lib-folder-item--list { padding: 8px 12px; border-radius: 4px; }
+.lib-folder-item:hover { border-color: var(--border-strong); }
 /* The drop state has to be unmistakable while a graphic is in the air over it. */
-.lib-folder-card.dropping { border-color: var(--accent); background: var(--accent-tint); }
+.lib-folder-item.dropping { border-color: var(--accent); background: var(--accent-tint); }
 /* Its OWN class, never `.lib-info`: the phone media query gives that one a grid-area in the
-   ROW layout, which this card does not have — the name jumped to a line of its own there. */
+   ROW layout, which this item does not have — the name jumped to a line of its own there. */
 .lib-folder-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .lib-folder-info strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lib-folder-info .muted { font-size: 11.5px; }
+.lib-folder-info .lib-name-link { padding: 0; text-align: left; }
+/* A list row reads left-to-right, so its count rides beside the name rather than under it. */
+.lib-folder-item--list .lib-folder-info { flex-direction: row; align-items: baseline; gap: 10px; }
 .lib-folder-mark { display: inline-flex; color: var(--accent); }
-/* The dashed "+ New folder" card: same box, no fill — it is a place, not a thing yet. */
+/* "+ Production" and ⋯ — the folder's own verbs, in the same order a graphic row carries them. */
+.lib-folder-actions { display: flex; align-items: center; gap: 6px; }
+/* The dashed "+ New folder" item: same box, no fill — it is a place, not a thing yet. */
 .lib-folder-new {
   grid-template-columns: 1fr;
   justify-items: center;
@@ -5390,9 +5445,11 @@ h2 + .lib-row,
 .lib-folder-new input { width: 100%; }
 .lib-folder-new .link-inline { color: var(--text-dim); text-decoration: none; }
 .lib-folder-new:hover .link-inline { color: var(--accent); }
+/* The breadcrumb inside an open folder: the amber mark plus the name, so "where am I" is
+   answered by the same glyph that got you here. */
+.lib-folder-crumb { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); }
+.lib-folder-crumb strong { color: var(--text); }
 
-.lib-folders { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
-.lib-folder-chip,
 .lib-type-chip {
   display: inline-flex;
   align-items: center;
@@ -5404,7 +5461,6 @@ h2 + .lib-row,
   background: transparent;
   color: var(--text-dim);
 }
-.lib-folder-chip.active,
 .lib-type-chip.active { border-color: var(--accent); color: var(--text); background: rgba(246, 166, 35, 0.08); }
 .lib-folder-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 /* The bulk bar sticks over the list while a selection exists — actions stay reachable on a
@@ -5468,7 +5524,17 @@ h2 + .lib-row,
   border-radius: 8px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
   padding: 4px;
+  /* A library of thirty productions must not build a menu taller than the screen — no
+     placement can save one of those, so it scrolls inside itself instead. The cap is also
+     what home/LibMenu measures, so the decision and the drawing agree. */
+  max-height: min(56vh, 420px);
+  overflow-y: auto;
 }
+/* THE FLIPPED PLACEMENT. Which way a menu opens is measured, never assumed (home/LibMenu):
+   the bulk bar floats at the bottom of the viewport by design and the last row of a long
+   library is there by arithmetic, so downward is off-screen for both. The 4px here is the GAP
+   that module measures with. */
+.lib-menu--up { top: auto; bottom: calc(100% + 4px); }
 .lib-menu button {
   display: flex;
   align-items: center;
@@ -5595,6 +5661,22 @@ h2 + .lib-row,
    flat row otherwise. Operator-sized like the transport above it: these are pressed live. */
 .control-page-events { padding: 4px 14px 12px; background: var(--panel); }
 .control-page-events button { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+/* MOTION — the universal in/out picker under the transport (GraphicControlPage). A disclosure
+   whose closed line names what the graphic does now; open, the picker's cards take the room
+   the stage lends them. Same panel ground as the transport and events so it reads as one
+   control strip, not a second page. */
+.control-motion { border-top: 1px solid var(--border); background: var(--panel); }
+.control-motion > summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 13px;
+  list-style: none;
+  user-select: none;
+}
+.control-motion > summary::before { content: '▸'; display: inline-block; width: 14px; color: var(--text-dim); }
+.control-motion[open] > summary::before { content: '▾'; }
+.control-motion > summary::-webkit-details-marker { display: none; }
+.control-motion-body { padding: 0 14px 14px; }
 /* The operator's "where is it" chip — the editor's .simulator-state, sized for the transport
    row it sits in (this bar is deliberately bigger than the editor's; see the operator-sized
    cues). Pushed right so it reads as status, not as another button. */
@@ -5761,7 +5843,18 @@ h2 + .lib-row,
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  /* The cap §1 already promised this popover and it never had: six link rows with their ▸
+     explanations open, then the publish pair, measures 647px — taller than a 1366×768 laptop's
+     window, and no placement saves one of those, so it scrolls inside itself instead. It is
+     also what home/LibMenu measures, so the decision and the drawing agree. */
+  max-height: min(76vh, 620px);
+  overflow-y: auto;
 }
+/* THE FLIPPED PLACEMENT, the rule every home/LibMenu surface owes the shell (which measures the
+   6px gap above rather than restating it). In practice this panel hangs off a header pinned to
+   the TOP of the page, so the measurement keeps choosing down and the cap above is what puts the
+   tail back on screen — the rule is here so the shell is never half-wired on this surface. */
+.pd-links--up { top: auto; bottom: calc(100% + 6px); }
 
 /* ── Body: the stage column + the cue rail ─────────────────────────────────── */
 /* `1 0 auto`, never `flex: 1`: the shorthand's `min-height: 0` + shrink is exactly what let the
@@ -6909,7 +7002,13 @@ h2 + .lib-row,
   /* The actions have their own full-width line here, so the table's right-alignment would
      strand them against the edge with half a row of empty space beside them. */
   .lib-list .lib-row--list .lib-actions { justify-content: flex-start; }
-  .lib-folder-cards { grid-template-columns: 1fr; }
+  .lib-folder-items--grid { grid-template-columns: 1fr; }
+  /* A phone-width folder ROW has no room for the name, the count and a labelled verb on one
+     line — the name clipped, which is the one thing the row is for. Stack the info and let the
+     verb be its icon, exactly as the card does at 270px. */
+  .lib-folder-item--list .lib-folder-info { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .lib-folder-item--list [data-testid='folder-to-production'] { font-size: 0; padding: 6px 9px; }
+  .lib-folder-item--list .lib-added-word { display: none; }
   /* No drag on a touch screen, so the hint would name a gesture this device does not have. */
   .lib-band-head .hint { display: none; }
   /* The header row wraps here: the search gets its own full-width line under the title, and

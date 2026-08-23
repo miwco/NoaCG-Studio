@@ -41,9 +41,11 @@ import ProductionDataWorkspace from './ProductionDataWorkspace';
 import ProductionAudienceWorkspace from './ProductionAudienceWorkspace';
 import { loadGraphics, templateForSavedGraphic } from '../../model/library';
 import {
+  adjustWords,
   controlSections,
   eventButtons,
   eventLegality,
+  eventPayload,
   fieldDescriptors,
   formatMachineState,
   isEventLegal,
@@ -93,6 +95,7 @@ import {
   pictureLabel,
 } from '../../templates/picture';
 import BrandLogo from '../BrandLogo';
+import LibMenu from './LibMenu';
 import { copyLink } from './copyLink';
 import { IconDownload, IconLink, IconTv } from '../icons';
 
@@ -257,6 +260,11 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
         // field on purpose), and replacing the baseline with it marked every other field as
         // unsent — an amber "3 changes not on air yet" about values that were on air.
         if (item.msg.t === 'update') next = { ...next, [item.graphic]: { ...next[item.graphic], ...item.msg.data } };
+        // An accepted event's payload lands through the same field path (the hosted log merges
+        // it the same way), so a goal's +1 is part of what air shows - and what the next press
+        // counts from. (If the guard dropped the event this runs slightly ahead of the graphic;
+        // the greyed buttons make that the rare case, and the log stays self-consistent.)
+        else if (item.msg.t === 'event' && item.msg.payload) next = { ...next, [item.graphic]: { ...next[item.graphic], ...item.msg.payload } };
         else if (item.msg.t === 'stop' && next[item.graphic]) {
           // Taken off air: forget it, or the next rebuild would restore a graphic nobody is
           // running any more.
@@ -1296,14 +1304,25 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   const airValues = (): Record<string, string> => (airCue ? cueView(airCue).values : {});
 
   /** Fire a machine event on the live graphic. Payload values ride from the ON-AIR cue, and
-   *  land only if the machine accepts the event (the structural guard). */
+   *  land only if the machine accepts the event (the structural guard). An `adjust` field (a
+   *  goal's +1 on that side's score) rides moved by its delta from what AIR shows - the same
+   *  base the ± live-number bump counts from - and the new figure is mirrored into the on-air
+   *  cue, so the cue and the air cannot drift apart and ⟳ Take / ✎ Update never regress it. */
   const fireEvent = async (button: ControlButton) => {
     if (!selectedGraphic || !selectedLayerLive) return;
     flushDraft();
     const values = airValues();
-    const payload: Record<string, string> = {};
-    for (const key of button.payload ?? []) payload[key] = values[key] ?? '';
-    const msg = button.payload?.length
+    const payload = eventPayload(button, (key) =>
+      button.adjust && key in button.adjust ? (airedData[selectedGraphic]?.[key] ?? values[key] ?? '0') : values[key],
+    );
+    const adjusted = Object.fromEntries(Object.keys(button.adjust ?? {}).map((key) => [key, payload?.[key] ?? '']));
+    if (Object.keys(adjusted).length > 0 && airCue) {
+      // Into the draft when the on-air cue is the one being edited (its box repaints at once),
+      // straight into the record otherwise - either way the cue holds the figure air shows.
+      if (editingIsLive) editDraft({ values: adjusted });
+      else setShows(updateShowCue(id, airCue.id, { values: { ...airCue.values, ...adjusted } }));
+    }
+    const msg = payload
       ? { t: 'event' as const, event: button.event, payload }
       : { t: 'event' as const, event: button.event };
     await runVerb([[{ graphic: selectedGraphic, msg }]], `Event ${button.event}`);
@@ -1893,6 +1912,10 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                             ? 'The graphic is not on air — Take the cue first'
                             : !legal
                               ? `"${b.event}" has no arrow out of the current state, so the graphic would drop it`
+                              : b.adjust
+                                ? // An adjust press moves a figure WITH the event (a goal's +1),
+                                  // counted from what air shows - the hint says which and by how much.
+                                  `Fires "${b.event}" on air and moves ${adjustWords(b, (key) => descriptors.find((d) => d.key === key)?.label)} with it`
                               : b.payload?.length
                                 ? // The payload in the OPERATOR'S words, not as `f7`. This is
                                   // what makes an action self-explanatory: the acceptance pass
@@ -2109,87 +2132,86 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                   >
                     ⋯
                   </button>
-                  {menuCueId === cue.id && (
-                    <>
-                      <div
-                        className="lib-menu-backdrop"
+                  {/* The rundown SCROLLS, so the last cue's ⋯ is at the bottom of the rail by
+                      arithmetic — the same defect the library's bulk bar had, on the surface an
+                      operator uses live. The shell measures which way to open. */}
+                  <LibMenu
+                    open={menuCueId === cue.id}
+                    onClose={() => {
+                      setArmedRemove(null);
+                      setMenuCueId(null);
+                    }}
+                    testid="cue-actions-menu"
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        flushDraft();
+                        const v = cueView(cue);
+                        const { shows: next, cueId } = addShowCue(show.id, cue.sourceId, {
+                          label: `${v.label} copy`,
+                          values: v.values,
+                          note: v.note || undefined,
+                        });
+                        setShows(next);
+                        setMenuCueId(null);
+                        if (cueId) selectCue(cueId);
+                      }}
+                    >
+                      Duplicate
+                    </button>
+                    {/* Removing the LAST cue removes the graphic too, so the label says so
+                        rather than letting it be discovered. A picture graphic carries the
+                        uploads themselves, which is the one removal that destroys content
+                        with no copy in the library — it asks twice, naming the count. */}
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        if (siblingCues === 1 && pictures > 0 && armedRemove !== 'cue') {
+                          setArmedRemove('cue');
+                          return;
+                        }
+                        void removeCue(cue);
+                        setArmedRemove(null);
+                        setMenuCueId(null);
+                      }}
+                      title={
+                        siblingCues === 1
+                          ? `The last cue on ${cueGraphic ?? 'this graphic'} — the graphic leaves the production with it`
+                          : 'Remove this cue; the graphic and its other cues stay'
+                      }
+                      data-testid="delete-cue"
+                    >
+                      {armedRemove === 'cue'
+                        ? `Also deletes ${pictures} picture${pictures === 1 ? '' : 's'} — confirm?`
+                        : siblingCues === 1
+                          ? 'Remove cue and graphic'
+                          : 'Remove cue'}
+                    </button>
+                    {/* One gesture for getting a graphic out of the production. Offered only
+                        where it differs from the item above: with a single cue, that one
+                        already takes the graphic. */}
+                    {siblingCues > 1 && (
+                      <button
+                        role="menuitem"
                         onClick={() => {
+                          if (armedRemove !== 'graphic') {
+                            setArmedRemove('graphic');
+                            return;
+                          }
+                          void removeGraphic(cue.sourceId);
                           setArmedRemove(null);
                           setMenuCueId(null);
                         }}
-                      />
-                      <div className="lib-menu" role="menu">
-                        <button
-                          role="menuitem"
-                          onClick={() => {
-                            flushDraft();
-                            const v = cueView(cue);
-                            const { shows: next, cueId } = addShowCue(show.id, cue.sourceId, {
-                              label: `${v.label} copy`,
-                              values: v.values,
-                              note: v.note || undefined,
-                            });
-                            setShows(next);
-                            setMenuCueId(null);
-                            if (cueId) selectCue(cueId);
-                          }}
-                        >
-                          Duplicate
-                        </button>
-                        {/* Removing the LAST cue removes the graphic too, so the label says so
-                            rather than letting it be discovered. A picture graphic carries the
-                            uploads themselves, which is the one removal that destroys content
-                            with no copy in the library — it asks twice, naming the count. */}
-                        <button
-                          role="menuitem"
-                          onClick={() => {
-                            if (siblingCues === 1 && pictures > 0 && armedRemove !== 'cue') {
-                              setArmedRemove('cue');
-                              return;
-                            }
-                            void removeCue(cue);
-                            setArmedRemove(null);
-                            setMenuCueId(null);
-                          }}
-                          title={
-                            siblingCues === 1
-                              ? `The last cue on ${cueGraphic ?? 'this graphic'} — the graphic leaves the production with it`
-                              : 'Remove this cue; the graphic and its other cues stay'
-                          }
-                          data-testid="delete-cue"
-                        >
-                          {armedRemove === 'cue'
-                            ? `Also deletes ${pictures} picture${pictures === 1 ? '' : 's'} — confirm?`
-                            : siblingCues === 1
-                              ? 'Remove cue and graphic'
-                              : 'Remove cue'}
-                        </button>
-                        {/* One gesture for getting a graphic out of the production. Offered only
-                            where it differs from the item above: with a single cue, that one
-                            already takes the graphic. */}
-                        {siblingCues > 1 && (
-                          <button
-                            role="menuitem"
-                            onClick={() => {
-                              if (armedRemove !== 'graphic') {
-                                setArmedRemove('graphic');
-                                return;
-                              }
-                              void removeGraphic(cue.sourceId);
-                              setArmedRemove(null);
-                              setMenuCueId(null);
-                            }}
-                            title={`Remove ${cueGraphic ?? 'this graphic'} from the production, with every cue prepared against it`}
-                            data-testid="delete-graphic"
-                          >
-                            {armedRemove === 'graphic'
-                              ? `Remove ${siblingCues} cues${pictures > 0 ? ` and ${pictures} pictures` : ''} — confirm?`
-                              : `Remove graphic and its ${siblingCues} cues`}
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
+                        title={`Remove ${cueGraphic ?? 'this graphic'} from the production, with every cue prepared against it`}
+                        data-testid="delete-graphic"
+                      >
+                        {armedRemove === 'graphic'
+                          ? `Remove ${siblingCues} cues${pictures > 0 ? ` and ${pictures} pictures` : ''} — confirm?`
+                          : `Remove graphic and its ${siblingCues} cues`}
+                      </button>
+                    )}
+                  </LibMenu>
                 </div>
               </div>
             );
@@ -2520,177 +2542,178 @@ function ProductionLinks({
       <button onClick={onToggle} aria-expanded={open} data-testid="production-links-toggle">
         <IconLink /> Links{unpublishedChanges ? ' •' : ''}
       </button>
-      {open && (
-        <>
-          <div className="lib-menu-backdrop" onClick={onToggle} />
-          <div className="pd-links" data-testid="production-links">
+      {/* Same shell as the library's row menus (home/LibMenu). What was off-screen here is the
+          panel's own TAIL: six link rows with their ▸ explanations open, then Publish/Unpublish,
+          is taller than a short laptop window, and this popover had no `max-height` at all. So
+          the repair is the cap `.pd-links` now carries rather than the flip — hanging off a
+          header pinned to the top of the page, down stays the better side. It is on the shell
+          anyway, because the measurement must not fork per popover. */}
+      <LibMenu open={open} onClose={onToggle} surface="pd-links" role="none" testid="production-links">
+        <LinkRow
+          label="Output URL"
+          testId="output-url"
+          help={
+            <>
+              Add this once as a browser source (OBS / vMix) or a CasparCG HTML template. It keeps
+              working across re-publishes; graphics and cues update in place.
+            </>
+          }
+        >
+          <code className="prod-url">{outputUrl}</code>
+          <button onClick={() => outputUrl && onCopy('output', outputUrl)} data-testid="copy-output-url">
+            {copied === 'output' ? '✓ Copied' : 'Copy'}
+          </button>
+        </LinkRow>
+        {/* THE SAME OUTPUT, AS A FILE. An SPX rundown lists template files out of
+            ASSETS/templates and has nowhere to paste a URL, so the row above reaches every
+            playout host except the one this project treats as canonical. The file wraps this
+            production's output URL in a full-frame iframe (export/outputEmbed.ts): SPX plays
+            the item, NoaCG cues what is inside it.
+            QUIET, and directly under the URL it is a second form of: it belongs to the one
+            host that cannot take the link, so as a full-size row with its own paragraph it
+            read as a fourth capability and pushed the control page below the fold. */}
+        <LinkRow
+          label="SPX template"
+          testId="spx-template"
+          quiet
+          help={
+            <>
+              For playout that loads template <em>files</em> instead of URLs - SPX, or a CasparCG
+              template folder. Drop it into SPX&rsquo;s <code>ASSETS/templates</code> and add it to a
+              rundown: Play puts the output up, Stop takes it down, and you cue the graphics from here
+              or the control page. It carries the output link, so keep it as private as the link itself.
+            </>
+          }
+        >
+          {/* NOT `.mono` as a class: `.prod-link-row > .mono` is the 92px LABEL column, so
+              wearing it made the file name a second label and left the row's ▸ short of the
+              column every other row's sits in. The mono FACE comes from the rule below. */}
+          <span className="prod-link-file">{embedFileName}</span>
+          {/* "Download", not "⬇ Download": it sits in a column with two Copy buttons, and the
+              glyph made this one row a pixel taller than its neighbours. */}
+          <button className="prod-link-quiet-action" onClick={onDownloadEmbed} data-testid="download-output-embed">
+            Download
+          </button>
+        </LinkRow>
+        <LinkRow
+          label="Control page"
+          testId="control-url"
+          help={
+            <>
+              Operate from a phone or tablet, no account needed. Keep the link private: holding it is
+              the permission to operate.
+            </>
+          }
+        >
+          <code className="prod-url">{controlUrl}</code>
+          <button onClick={() => controlUrl && onCopy('control', controlUrl)} data-testid="copy-control-url">
+            {copied === 'control' ? '✓ Copied' : 'Copy'}
+          </button>
+        </LinkRow>
+        {/* The AUDIENCE link is the one link here meant to be given away — read out on air,
+            put on a slide, printed on a QR code. It is listed last and described as public
+            so it can never be mistaken for the control page above it. Its help opens by
+            DEFAULT for that reason: every other row explains a thing that is private, and a
+            collapsed "public" is the one omission on this panel that could air. */}
+        {joinUrl && (
+          <>
             <LinkRow
-              label="Output URL"
-              testId="output-url"
+              label="Audience link"
+              testId="join-url"
+              openByDefault
               help={
                 <>
-                  Add this once as a browser source (OBS / vMix) or a CasparCG HTML template. It keeps
-                  working across re-publishes; graphics and cues update in place.
+                  Public — share it with the room. Viewers send questions and vote here; nothing they
+                  send goes on air until you approve it and take it, on the Audience tab.
                 </>
               }
             >
-              <code className="prod-url">{outputUrl}</code>
-              <button onClick={() => outputUrl && onCopy('output', outputUrl)} data-testid="copy-output-url">
-                {copied === 'output' ? '✓ Copied' : 'Copy'}
+              <code className="prod-url">{joinUrl}</code>
+              <button onClick={() => onCopy('join', joinUrl)} data-testid="copy-join-url">
+                {copied === 'join' ? '✓ Copied' : 'Copy'}
               </button>
             </LinkRow>
-            {/* THE SAME OUTPUT, AS A FILE. An SPX rundown lists template files out of
-                ASSETS/templates and has nowhere to paste a URL, so the row above reaches every
-                playout host except the one this project treats as canonical. The file wraps this
-                production's output URL in a full-frame iframe (export/outputEmbed.ts): SPX plays
-                the item, NoaCG cues what is inside it.
-                QUIET, and directly under the URL it is a second form of: it belongs to the one
-                host that cannot take the link, so as a full-size row with its own paragraph it
-                read as a fourth capability and pushed the control page below the fold. */}
+            {/* A READABLE NAME, because this is the one URL that gets said out loud. The
+                first publish already derived one from the production's name (control/
+                joinName.ts), so this field is for CHANGING it rather than for having a link
+                at all. It validates nothing: every rule lives on the column in migration
+                0035, and the answer to "is it free?" is the claim itself (hostedControl
+                claimJoinName says why there is no availability check). */}
             <LinkRow
-              label="SPX template"
-              testId="spx-template"
+              label="Readable name"
+              testId="join-name"
               quiet
               help={
                 <>
-                  For playout that loads template <em>files</em> instead of URLs - SPX, or a CasparCG
-                  template folder. Drop it into SPX&rsquo;s <code>ASSETS/templates</code> and add it to a
-                  rundown: Play puts the output up, Stop takes it down, and you cue the graphics from here
-                  or the control page. It carries the output link, so keep it as private as the link itself.
+                  The name above came from this production&rsquo;s name when you first published.
+                  Changing it makes the old audience link stop working — do it before you share it,
+                  not mid-show.
                 </>
               }
-            >
-              {/* NOT `.mono` as a class: `.prod-link-row > .mono` is the 92px LABEL column, so
-                  wearing it made the file name a second label and left the row's ▸ short of the
-                  column every other row's sits in. The mono FACE comes from the rule below. */}
-              <span className="prod-link-file">{embedFileName}</span>
-              {/* "Download", not "⬇ Download": it sits in a column with two Copy buttons, and the
-                  glyph made this one row a pixel taller than its neighbours. */}
-              <button className="prod-link-quiet-action" onClick={onDownloadEmbed} data-testid="download-output-embed">
-                Download
-              </button>
-            </LinkRow>
-            <LinkRow
-              label="Control page"
-              testId="control-url"
-              help={
-                <>
-                  Operate from a phone or tablet, no account needed. Keep the link private: holding it is
-                  the permission to operate.
-                </>
+              under={
+                nameNote ? (
+                  <p
+                    className={nameNote.startsWith('✓') ? 'status-ok' : 'status-bad'}
+                    data-testid="join-name-note"
+                  >
+                    {nameNote}
+                  </p>
+                ) : null
               }
             >
-              <code className="prod-url">{controlUrl}</code>
-              <button onClick={() => controlUrl && onCopy('control', controlUrl)} data-testid="copy-control-url">
-                {copied === 'control' ? '✓ Copied' : 'Copy'}
+              <input
+                type="text"
+                value={nameDraft}
+                placeholder="friday-night-live"
+                onChange={(e) => onNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onClaimName();
+                }}
+                data-testid="join-name-input"
+              />
+              <button onClick={onClaimName} disabled={busy} data-testid="join-name-claim">
+                Use this name
               </button>
             </LinkRow>
-            {/* The AUDIENCE link is the one link here meant to be given away — read out on air,
-                put on a slide, printed on a QR code. It is listed last and described as public
-                so it can never be mistaken for the control page above it. Its help opens by
-                DEFAULT for that reason: every other row explains a thing that is private, and a
-                collapsed "public" is the one omission on this panel that could air. */}
-            {joinUrl && (
+          </>
+        )}
+        {/* The PRESENTER link is a third capability with a third audience: not the operator's
+            control page and emphatically not the public one. It carries no moderation and no
+            tally — only the two questions the Audience tab points at, in the presenter's own
+            hand. Listed after the audience link and described by who it is FOR, because the
+            one mistake that matters here is reading the wrong URL out on air. */}
+        {presenterUrl && (
+          <LinkRow
+            label="Presenter link"
+            testId="presenter-url"
+            help={
               <>
-                <LinkRow
-                  label="Audience link"
-                  testId="join-url"
-                  openByDefault
-                  help={
-                    <>
-                      Public — share it with the room. Viewers send questions and vote here; nothing they
-                      send goes on air until you approve it and take it, on the Audience tab.
-                    </>
-                  }
-                >
-                  <code className="prod-url">{joinUrl}</code>
-                  <button onClick={() => onCopy('join', joinUrl)} data-testid="copy-join-url">
-                    {copied === 'join' ? '✓ Copied' : 'Copy'}
-                  </button>
-                </LinkRow>
-                {/* A READABLE NAME, because this is the one URL that gets said out loud. The
-                    first publish already derived one from the production's name (control/
-                    joinName.ts), so this field is for CHANGING it rather than for having a link
-                    at all. It validates nothing: every rule lives on the column in migration
-                    0035, and the answer to "is it free?" is the claim itself (hostedControl
-                    claimJoinName says why there is no availability check). */}
-                <LinkRow
-                  label="Readable name"
-                  testId="join-name"
-                  quiet
-                  help={
-                    <>
-                      The name above came from this production&rsquo;s name when you first published.
-                      Changing it makes the old audience link stop working — do it before you share it,
-                      not mid-show.
-                    </>
-                  }
-                  under={
-                    nameNote ? (
-                      <p
-                        className={nameNote.startsWith('✓') ? 'status-ok' : 'status-bad'}
-                        data-testid="join-name-note"
-                      >
-                        {nameNote}
-                      </p>
-                    ) : null
-                  }
-                >
-                  <input
-                    type="text"
-                    value={nameDraft}
-                    placeholder="friday-night-live"
-                    onChange={(e) => onNameDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') onClaimName();
-                    }}
-                    data-testid="join-name-input"
-                  />
-                  <button onClick={onClaimName} disabled={busy} data-testid="join-name-claim">
-                    Use this name
-                  </button>
-                </LinkRow>
+                For the presenter&rsquo;s own phone or tablet — it shows what they are on now and what
+                comes next, and nothing else. Choose those with 🎤 Now and ⇢ Next on the Audience tab.
               </>
-            )}
-            {/* The PRESENTER link is a third capability with a third audience: not the operator's
-                control page and emphatically not the public one. It carries no moderation and no
-                tally — only the two questions the Audience tab points at, in the presenter's own
-                hand. Listed after the audience link and described by who it is FOR, because the
-                one mistake that matters here is reading the wrong URL out on air. */}
-            {presenterUrl && (
-              <LinkRow
-                label="Presenter link"
-                testId="presenter-url"
-                help={
-                  <>
-                    For the presenter&rsquo;s own phone or tablet — it shows what they are on now and what
-                    comes next, and nothing else. Choose those with 🎤 Now and ⇢ Next on the Audience tab.
-                  </>
-                }
-              >
-                <code className="prod-url">{presenterUrl}</code>
-                <button onClick={() => onCopy('presenter', presenterUrl)} data-testid="copy-presenter-url">
-                  {copied === 'presenter' ? '✓ Copied' : 'Copy'}
-                </button>
-              </LinkRow>
-            )}
-            {unpublishedChanges && (
-              <p className="status-warn" data-testid="publish-freshness">
-                The production changed after the last publish — the output and control pages run the older
-                snapshot until you publish changes.
-              </p>
-            )}
-            <div className="row">
-              <button className="primary" onClick={onPublish} disabled={busy} data-testid="production-republish">
-                ⟳ Publish changes
-              </button>
-              <button onClick={onUnpublish} disabled={busy} data-testid="production-unpublish">
-                Unpublish
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+            }
+          >
+            <code className="prod-url">{presenterUrl}</code>
+            <button onClick={() => onCopy('presenter', presenterUrl)} data-testid="copy-presenter-url">
+              {copied === 'presenter' ? '✓ Copied' : 'Copy'}
+            </button>
+          </LinkRow>
+        )}
+        {unpublishedChanges && (
+          <p className="status-warn" data-testid="publish-freshness">
+            The production changed after the last publish — the output and control pages run the older
+            snapshot until you publish changes.
+          </p>
+        )}
+        <div className="row">
+          <button className="primary" onClick={onPublish} disabled={busy} data-testid="production-republish">
+            ⟳ Publish changes
+          </button>
+          <button onClick={onUnpublish} disabled={busy} data-testid="production-unpublish">
+            Unpublish
+          </button>
+        </div>
+      </LibMenu>
     </div>
   );
 }

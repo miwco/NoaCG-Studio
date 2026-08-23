@@ -92,18 +92,21 @@ const CASES: TypeCase[] = [
   },
   {
     // Three independent pointers instead of eight combined states. The chip names all three, and
-    // a match does not un-finish.
+    // a match does not un-finish. A goal is legal from BOTH flag states (a second goal while the
+    // flag is still up replays it and bumps again - the self-transition), so the goal buttons
+    // never grey while the graphic is up; only Clear flag follows the flag.
     variantId: 'sb03',
     name: 'scoreboard',
-    buttons: ['flag', 'clearFlag', 'final'],
+    buttons: ['goalA', 'goalB', 'clearFlag', 'final'],
     settled: 'main: Enter · flag: No flag · result: Live',
-    legalAtRest: ['flag', 'final'],
+    legalAtRest: ['goalA', 'goalB', 'final'],
     walk: [
-      { press: 'flag', state: 'main: Enter · flag: Flag · result: Live', legal: ['clearFlag', 'final'] },
-      { press: 'clearFlag', state: 'main: Enter · flag: No flag · result: Live', legal: ['flag', 'final'] },
-      { press: 'final', state: 'main: Enter · flag: No flag · result: Final', legal: ['flag'] },
+      { press: 'goalA', state: 'main: Enter · flag: Flag · result: Live', legal: ['goalA', 'goalB', 'clearFlag', 'final'] },
+      { press: 'goalB', state: 'main: Enter · flag: Flag · result: Live', legal: ['goalA', 'goalB', 'clearFlag', 'final'] },
+      { press: 'clearFlag', state: 'main: Enter · flag: No flag · result: Live', legal: ['goalA', 'goalB', 'final'] },
+      { press: 'final', state: 'main: Enter · flag: No flag · result: Final', legal: ['goalA', 'goalB'] },
       // Stop rests every group at its INITIAL state, which is what makes `final` offerable again.
-      { press: 'stop', state: 'main: Off · flag: No flag · result: Live', legal: ['flag', 'final'] },
+      { press: 'stop', state: 'main: Off · flag: No flag · result: Live', legal: ['goalA', 'goalB', 'final'] },
     ],
   },
   {
@@ -241,10 +244,10 @@ test('event buttons carry the sections the type declared', async ({ page }) => {
   // with no grouping and no order cue.
   await openControlPage(page, 'sb03', 'Control sections');
   const sections = page.locator('.ctl-event-section');
-  await expect(sections).toHaveCount(2); // the scoreboard declares Flag and Result
-  await expect(sections.nth(0).locator('h4')).toHaveText('Flag');
+  await expect(sections).toHaveCount(2); // the scoreboard declares Goal and Result
+  await expect(sections.nth(0).locator('h4')).toHaveText('Goal');
   await expect(sections.nth(1).locator('h4')).toHaveText('Result');
   // The buttons live INSIDE their section, not beside the transport.
-  await expect(sections.nth(0).getByTestId('control-event-flag')).toBeVisible();
+  await expect(sections.nth(0).getByTestId('control-event-goalA')).toBeVisible();
   await expect(sections.nth(1).getByTestId('control-event-final')).toBeVisible();
 });

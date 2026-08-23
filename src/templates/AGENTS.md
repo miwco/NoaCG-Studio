@@ -510,6 +510,19 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   `e2e/catalog/footprint-stability.spec.ts`, which selects on the marker rather than a list, so a
   category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
   stabilise a board, it changes which dimension moves.
+- **A STAGED DESIGN SHIPS THE SIZE ITS CSS DECLARES - the shrink is the OPERATOR'S, never the
+  design's own words.** The stage puts no floor under a `line-height` (**a LINE MASK still does** -
+  `overflow: hidden` sized to the line box against a ~1.2em glyph box, so a tight leading clips
+  letters instead of shrinking them; lt64 at 1.05 loses 4px off the name. Different mechanism,
+  different instrument: `overflow-sweep`, not this one). That was
+  not true until 2026-08-23: the reserve was a LINE BOX and the overflow test read a CONTENT box
+  (the face's glyph box, ~1.2em whatever line-height says), so any line with the tighter
+  line-height of the two shrank against its own default sample at load - 200 of 290 staged
+  designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
+  instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. A MULTICOL block is the one line the
+  reserve is never pinned on - a definite height makes it spill sideways into hidden overflow
+  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). Measurements and the traps
+  behind it: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract
 

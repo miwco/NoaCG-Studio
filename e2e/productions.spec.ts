@@ -153,6 +153,107 @@ test('the rundown is the only list: the last cue takes its graphic with it', asy
   await expect.poll(poolCount).toBe(0);
 });
 
+test('the LAST cue\'s ⋯ menu opens upward, inside the rundown that would otherwise clip it', async ({ page }) => {
+  // The library's row menus were fixed on the 2026-08-23 owner walk ("the pop-up goes underneath
+  // my view field"); this surface has the same defect and is the one an operator uses LIVE. It is
+  // worse here than on Home: the rundown is its own scroll container (`.pd-cues`), so the last
+  // row's menu is cut off by the LIST while it still clears the bottom of the screen — which is
+  // why home/LibMenu measures against clipping ancestors and not just the viewport.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  await page.getByTestId('dock-tab-control').click();
+  const section = page.locator('.panel-section', { hasText: 'Productions' });
+  await section.getByPlaceholder('New production name').fill('Long Rundown');
+  await section.getByRole('button', { name: 'Create', exact: true }).click();
+  await section.getByRole('button', { name: '+ Add current' }).click();
+  await section.getByTestId('open-production-page').click();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+
+  // Enough cues that the rundown scrolls and the last row sits at the bottom of its list.
+  const rows = page.getByTestId('cue-list').locator('.pd-cue');
+  for (let i = 0; i < 14; i += 1) await page.getByTestId('add-cue').click();
+  await expect(rows).toHaveCount(15);
+  await rows.last().scrollIntoViewIfNeeded();
+
+  await rows.last().getByTestId('cue-menu').click();
+  const menu = page.getByTestId('cue-actions-menu');
+  await expect(menu).toHaveAttribute('data-placement', 'up');
+
+  // The DECISION is measured, so assert on the geometry it claims to produce as well —
+  // `toBeVisible()` is blind both to a box past the fold and to one clipped by an ancestor.
+  const box = (await menu.boundingBox())!;
+  const list = (await page.getByTestId('cue-list').boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(list.y);
+  expect(box.y + box.height).toBeLessThanOrEqual(list.y + list.height);
+  // And it is reachable there: a box inside the list can still sit under something. The hit
+  // test is what a click would find.
+  const onTop = await menu.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + 8));
+  });
+  expect(onTop).toBe(true);
+
+  // A row at the TOP of the list has room below it and must NOT flip — the measurement has to
+  // answer both ways, or a shell hard-coded to "always up" would pass this spec too.
+  await page.locator('.lib-menu-backdrop').click();
+  await expect(menu).toHaveCount(0);
+  await rows.first().scrollIntoViewIfNeeded();
+  await rows.first().getByTestId('cue-menu').click();
+  await expect(page.getByTestId('cue-actions-menu')).toHaveAttribute('data-placement', 'down');
+});
+
+test('the links panel stays whole on a short screen — it caps and scrolls itself', async ({ page }) => {
+  // The other hand-rolled popover on this page. It hangs off a header pinned to the TOP, so the
+  // flip is never the answer here: what fell off the bottom was the panel's own tail (the
+  // Publish/Unpublish row), because it had no height cap at all — while §1 of the dashboard's
+  // layout rules already said this popover scrolls itself when tall.
+  // 560px is a 1366×768 laptop once Windows and the browser have taken their share.
+  await page.setViewportSize({ width: 1280, height: 560 });
+  await createProject(page, { category: 'Lower thirds', name: 'Hairline' });
+  await page.getByTestId('dock-tab-control').click();
+  const section = page.locator('.panel-section', { hasText: 'Productions' });
+  await section.getByPlaceholder('New production name').fill('Short Screen');
+  await section.getByRole('button', { name: 'Create', exact: true }).click();
+  await section.getByRole('button', { name: '+ Add current' }).click();
+  await section.getByTestId('open-production-page').click();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+
+  // Publishing is offline here, so seed every slug a real publish mints. ALL of them: the panel
+  // is only over-tall once the audience plane is on it (six rows plus the publish pair), and
+  // seeding just the hosted/output pair measures a panel that always fitted.
+  await page.evaluate(async () => {
+    const { loadShows, setShowHostedSlug, setShowOutputSlug, setShowAudienceSlugs } = await import(
+      '/src/model/shows.ts'
+    );
+    const id = loadShows()[0].id;
+    setShowHostedSlug(id, 'demo-slug');
+    setShowOutputSlug(id, 'demo-output');
+    setShowAudienceSlugs(id, { joinSlug: 'demo-join', presenterSlug: 'demo-presenter' });
+  });
+  await settleDurableWrites(page);
+  await page.reload();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+
+  await page.getByTestId('production-links-toggle').click();
+  const panel = page.getByTestId('production-links');
+  await expect(panel).toBeVisible();
+
+  // Open every row's ▸ explanation. Collapsed, the panel was never the problem; the tall case is
+  // exactly the one somebody reaches when they do not yet know which link is which.
+  const toggles = page.locator('.prod-link-help-toggle');
+  for (let i = 0; i < (await toggles.count()); i += 1) {
+    const toggle = toggles.nth(i);
+    if ((await toggle.textContent()) === '▸') await toggle.click();
+  }
+
+  const box = (await panel.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(560);
+  // Nothing was dropped to achieve that: the tail is inside the panel, one scroll away.
+  await page.getByTestId('production-republish').scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('production-republish')).toBeVisible();
+});
+
 test('the production page fits one 1080p screen, and the preview takes only the room left over', async ({ page }) => {
   // Acceptance round 2, 2026-08-05: "the preview video is way too big — I want the whole page
   // to fit on one screen". Fitting the preview on WIDTH alone gave it 862px of a 1027px column

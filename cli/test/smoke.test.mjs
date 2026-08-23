@@ -65,6 +65,18 @@ test('scaffold -> validate -> inspect -> screenshot on a neutral scoreboard', { 
   assert.equal(vj.ok, true, `validate not ok: ${JSON.stringify(vj.validation?.merged?.errors)}`);
   assert.equal(v.code, 0);
 
+  // The regenerate must keep the folder ONE graphic: the name given at scaffold lives in the
+  // sources, so the re-read package keeps its slug - exactly one manifest, one source html, and a
+  // second validate changes nothing. (A scaffold whose sources carried the design's own name once
+  // came back as a second <slug>.html + .ograf.json beside the first, 2026-08-22.)
+  const once = await fs.readdir(pkg);
+  assert.deepEqual(once.filter((f) => f.endsWith('.ograf.json')), ['football_scoreboard.ograf.json'], `manifests after validate: ${once.join(', ')}`);
+  assert.deepEqual(once.filter((f) => f.endsWith('.html') && f !== 'controlpanel.html'), ['football_scoreboard.html'], `html after validate: ${once.join(', ')}`);
+  const again = await run(['validate', pkg, '--json', '--no-bench']);
+  assert.equal(again.code, 0, again.stderr);
+  assert.deepEqual(JSON.parse(again.stdout).sourceChanges, [], 'a second validate must be a no-op on the sources');
+  assert.deepEqual((await fs.readdir(pkg)).sort(), once.sort(), 'a second validate must not add or remove files');
+
   const i = await run(['inspect', pkg, '--json']);
   const ij = JSON.parse(i.stdout);
   assert.equal(ij.inspection.descriptors.length, 4);

@@ -87,23 +87,27 @@ function customActions(template: SpxTemplate): Array<Record<string, unknown>> {
     id: button.event,
     name: button.label,
     ...(button.section ? { description: `${button.section} — fires the "${button.event}" event.` } : {}),
-    // The button's grouping and its destructive flag have no standard carrier; they ride the
-    // per-action vendor object so a NoaCG reader (control/ografContract.ts) rebuilds the
-    // operator surface exactly, and any other renderer ignores it.
-    ...(button.section || button.destructive
+    // The button's grouping, its destructive flag and its adjust deltas have no standard
+    // carrier; they ride the per-action vendor object so a NoaCG reader
+    // (control/ografContract.ts) rebuilds the operator surface exactly, and any other renderer
+    // ignores it. An ADJUSTED field (a goal's +1) is ALSO a payload property of the action's
+    // schema: a generic OGraf host offers it as an input to the action, which is honest - the
+    // action takes a new score - and a NoaCG host computes it from the delta instead.
+    ...(button.section || button.destructive || button.adjust
       ? {
           v_noacg: {
             ...(button.section ? { section: button.section } : {}),
             ...(button.destructive ? { destructive: true } : {}),
+            ...(button.adjust ? { adjust: button.adjust } : {}),
           },
         }
       : {}),
-    ...(button.payload?.length
+    ...(button.payload?.length || button.adjust
       ? {
           schema: {
             type: 'object',
             properties: Object.fromEntries(
-              button.payload.map((key) => {
+              [...(button.payload ?? []), ...Object.keys(button.adjust ?? {})].map((key) => {
                 const field = byId.get(key);
                 return [
                   key,

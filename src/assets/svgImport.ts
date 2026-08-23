@@ -24,8 +24,9 @@ export interface SvgTextCandidate {
   /** The node's current text content — the sample value the field starts with. */
   sample: string;
   /** True when the layer name carried the optional `f:` / `field:` prefix — the power-user
-   *  sugar that marks a layer editable by name. When ANY candidate carries it, only the
-   *  prefixed ones default ON; with none, every detected text defaults ON. */
+   *  sugar that marks a layer editable by name. For TEXT it is a guarantee, not a filter:
+   *  every detected text defaults ON either way. For a PICTURE, which defaults OFF (inside a
+   *  design a picture is usually the artwork), the prefix is what turns it on. */
   marked: boolean;
   /** A numeric-looking sample proposes ftype "number" (a score, a count, a year). */
   numeric: boolean;
@@ -87,6 +88,31 @@ export interface SvgGroupCandidate {
   hidden: boolean;
 }
 
+/**
+ * One `<rect>` offered as the PANEL that grows with its text (docs/SVG_IMPORT_PLAN.md §3, the
+ * hug). A lower third's banner should be as wide as the name on it; a quiz board declares a
+ * stage and must never resize. The markup cannot say which this is, and neither can the
+ * artboard size - the shipped lower-third sample is a full-frame artboard with a small banner
+ * drawn into it, while the scorebug is a small floating object that must stay put - so the
+ * mapping step ASKS, and this is the list it asks over.
+ *
+ * Rectangles only in v1: growing a shape means changing one number (`width`), and a panel
+ * drawn as a `<path>` would need its outline rewritten, which is a different feature with a
+ * different risk. The geometry travels because the mapping step ranks and labels by it, and
+ * `DOMParser` has no layout to measure with.
+ */
+export interface SvgShapeCandidate {
+  /** Stable marker id ("s0", "s1", …) — the value of data-noacg-candidate on the rect. */
+  id: string;
+  /** Operator-facing label, prefilled from the layer name like a text candidate's. */
+  label: string;
+  /** The rectangle as drawn, in the artwork's own units. */
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** One font family the SVG references, as written in its own markup. */
 export interface SvgFontRef {
   /** VERBATIM, as the markup asks for it ("ArchivoBlack-Bold"). Every `@font-face` the
@@ -115,6 +141,8 @@ export interface SvgImportResult {
   outlines: SvgOutlineCandidate[];
   /** Named groups offered as BEHAVIOUR LAYERS (drawn states), in document order. */
   groups: SvgGroupCandidate[];
+  /** Rectangles offered as the PANEL that grows with its text, widest first. */
+  shapes: SvgShapeCandidate[];
   /** Every font family the markup references, in first-seen order. */
   fonts: SvgFontRef[];
   /** What sanitization removed, in user-facing words. Empty for a clean file. */
@@ -573,6 +601,35 @@ function candidateSample(el: Element, fontSize: (element: Element) => number): s
   );
 }
 
+/**
+ * WHERE A BOUND `<text>` SITS ONCE ITS RUNS ARE GONE.
+ *
+ * Illustrator writes a kerned headline as one tspan per run and puts the position on the RUNS,
+ * leaving the `<text>` around them with no `x` and no `y` at all. That text is what a merged
+ * field binds (see `textCandidates`), and `update()` writes textContent — which replaces the
+ * runs and, with them, the only coordinates the line had: the headline snaps to the SVG's
+ * origin, off the panel the designer drew it on. On the owner's first walk that read as a
+ * field that "didn't affect anything", because the words landed above the top edge.
+ *
+ * So the run's position is HOISTED onto the text at import: two attributes, on a node that had
+ * neither, changing nothing about how the file draws (a tspan's own `x`/`y` still wins) and
+ * everything about where the operator's text lands. Taken from the FIRST run, which is where a
+ * start-anchored line begins — the same assumption `groupRuns` measures gaps with. A
+ * centre-anchored line lands a little left of where it was drawn, and still on its own
+ * baseline, which is the difference between a graphic to nudge and a graphic with its headline
+ * missing.
+ */
+function hoistRunPosition(el: Element): void {
+  if (el.tagName.toLowerCase() !== 'text') return;
+  if (el.hasAttribute('x') || el.hasAttribute('y')) return;
+  const first = leafTspans(el)[0];
+  if (!first) return;
+  for (const axis of ['x', 'y'] as const) {
+    const value = first.getAttribute(axis);
+    if (value !== null && value.trim() !== '') el.setAttribute(axis, value);
+  }
+}
+
 /** Did the author ask for whitespace to be taken literally, here or on an ancestor? */
 function spacePreserved(el: Element): boolean {
   let node: Element | null = el;
@@ -592,6 +649,10 @@ const GLYPH_TAGS = new Set(['path', 'polygon']);
 /** Cap on the outline rows offered — past this a file is an icon set, not outlined copy,
  *  and a hundred anonymous rows would bury the few that are text. */
 const MAX_OUTLINE_CANDIDATES = 24;
+
+/** Cap on the panel rectangles offered. A design with more rectangles than this is a chart or
+ *  a table, and its panel is not among the twentieth-widest of them. */
+const MAX_SHAPE_CANDIDATES = 12;
 
 /**
  * Groups that may be OUTLINED TEXT (plan §1.A): the `<g>`s whose children are all glyph
@@ -741,6 +802,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
   const candidates: SvgTextCandidate[] = nodes.map((el, i) => {
     const id = `t${i}`;
     el.setAttribute(SVG_CANDIDATE_ATTR, id);
+    hoistRunPosition(el);
     // A tspan's own name is rarely set; the nearest named thing is usually its <text> or the
     // group Illustrator made of the layer.
     const name = candidateName(el, svg);
@@ -794,10 +856,39 @@ export function importSvgMarkup(source: string): SvgImportResult {
       return { id, label, hidden: isHiddenSubtree(el, svg) };
     });
 
+  // PANEL SHAPES: the rectangles a graphic could grow (plan §3, the hug). Tagged after every
+  // binding kind, so a marker is never taken from something that becomes a field — a rect is
+  // none of those, but the order is the rule rather than the exception. WIDEST FIRST: the
+  // background of a banner is the widest rectangle in it, and the picker should lead with the
+  // shape the reader means nine times out of ten.
+  const shapes: SvgShapeCandidate[] = Array.from(svg.querySelectorAll('rect'))
+    .filter((el) => !el.hasAttribute(SVG_CANDIDATE_ATTR))
+    .filter((el) => isOffered(el, svg))
+    .map((el) => ({ el: el as Element, w: numAttr(el, 'width') ?? 0, h: numAttr(el, 'height') ?? 0 }))
+    .filter((r) => r.w > 0 && r.h > 0)
+    .sort((a, b) => b.w - a.w)
+    .slice(0, MAX_SHAPE_CANDIDATES)
+    .map(({ el, w, h }, i) => {
+      const id = `s${i}`;
+      el.setAttribute(SVG_CANDIDATE_ATTR, id);
+      const { label } = stripFieldPrefix(candidateName(el, svg));
+      return {
+        id,
+        label: label || `Rectangle ${i + 1}`,
+        x: numAttr(el, 'x') ?? 0,
+        y: numAttr(el, 'y') ?? 0,
+        width: w,
+        height: h,
+      };
+    });
+
   // A layer name is a designer's private note ("Name" on three different straps) and becomes an
   // OPERATOR'S label. Three rows reading "Name", and a control page with three identical inputs,
   // is a file the reader has to decode by clicking. Numbered in document order, and only where
   // the name actually repeats — the common file numbers nothing.
+  // Shapes are deliberately NOT numbered with the rest: they share a name with the group they
+  // sit in ("Panel"), so numbering the whole set would start the rectangle list at "Panel 2".
+  // The picker prints each one's size beside its name, which is what tells them apart anyway.
   numberRepeats([...candidates, ...images, ...outlines, ...groups]);
 
   // Text inside a SYMBOL is drawn (a <use> paints a copy of it) but cannot be bound, so it is
@@ -817,6 +908,7 @@ export function importSvgMarkup(source: string): SvgImportResult {
     images,
     outlines,
     groups,
+    shapes,
     fonts: fontInventory(svg),
     notices,
   };

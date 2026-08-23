@@ -18,6 +18,7 @@ import { anyPresetById, type AnimPhase } from '../../blocks/presetRegistry';
 import { parseAnimData } from '../../blocks/animData';
 import { writeAnimData } from '../../templates/shared/animRuntime';
 import { applyPresetData, presetDonor } from '../../blocks/presetApply';
+import { applyMotionPreset, motionPresetById, type MotionPick, type MotionPresetId } from '../../blocks/motionPresets';
 import { resolveEasing } from '../../model/easings';
 import type {
   AnimPresetId,
@@ -173,6 +174,24 @@ export interface SvgOutlineDraft {
   looksLikeText: boolean | null;
 }
 
+/**
+ * THE HUG (docs/SVG_IMPORT_PLAN.md §3), as the mapping step holds it: does one rectangle grow
+ * so a longer value fits at full size, and which rectangle is it?
+ *
+ * **Off by default, and asked rather than guessed.** The owner's ruling is that a lower third's
+ * banner should be as wide as the name on it, while a quiz board and a scorebug declare a stage
+ * and must not move - and no geometry separates those two. The shipped samples prove it: the
+ * lower third is drawn on a FULL-FRAME artboard (so "smaller than the frame" calls it a board),
+ * and the scorebug is a small floating object (so the same rule calls it a banner). Both
+ * readings are wrong, so the step asks, with the widest rectangle already proposed.
+ */
+export interface SvgStretchDraft {
+  /** ON = the picked rectangle widens with its text; OFF = today's behaviour, nothing moves. */
+  on: boolean;
+  /** Candidate id ("sN") of the rectangle that grows. Null = none picked, which reads as off. */
+  shapeId: string | null;
+}
+
 /** How one font family the SVG references resolves (plan §4). */
 export interface SvgFontDraft {
   /** The family name the artwork asks for, verbatim — what every emitted `@font-face` is
@@ -244,6 +263,13 @@ export interface WizardDraft {
     outPresetId: AnimPresetId | null;
     /** What a preset click changes: both phases (default), entrance, or exit. */
     direction: AnimPhase;
+    /** The UNIVERSAL in/out motion (blocks/motionPresets.ts), per phase - the imported-design
+     *  flow's Animation step picks these instead of the category's four whole-unit presets.
+     *  null = undecided: the phase takes the mapped whole-unit default (see universalPick), or
+     *  keeps its category preset when that one is not a whole-unit motion (the SVG layer
+     *  stagger). Written at build through the same engine the control page uses after. */
+    motionIn: MotionPresetId | null;
+    motionOut: MotionPresetId | null;
     speed: AnimSpeed;
     easing: EasingId;
     /** SPX multi-step reveal. `null` = the user has not decided, so the picked design's own
@@ -293,6 +319,10 @@ export interface WizardDraft {
   /** The BEHAVIOUR bound to the artwork, or null for the ordinary in/out graphic the importer
    *  has always produced. Proposed from the layer names at drop, and freely re-picked. */
   svgBehaviour: SvgQuizDraft | null;
+  /** Does the graphic HUG its text — one rectangle widening so a longer value fits at full
+   *  size (plan §3)? Off is the graphic that declares a STAGE, which is every board and
+   *  every scorebug; on is the lower third whose banner is as wide as the name on it. */
+  svgStretch: SvgStretchDraft;
   /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
    *  the mapping step offers the Google fetch or an upload for the rest. An entry with
    *  neither source is UNRESOLVED — created anyway, with a warning. */
@@ -339,7 +369,7 @@ export function initialDraft(): WizardDraft {
     typeScale: 1,
     zone: null,
     nudge: { x: 0, y: 0 },
-    animation: { presetId: null, outPresetId: null, direction: 'both', speed: 1, easing: 'auto', steps: null },
+    animation: { presetId: null, outPresetId: null, direction: 'both', motionIn: null, motionOut: null, speed: 1, easing: 'auto', steps: null },
     importedImages: [],
     logoAssetPath: null,
     logoEnabled: null,
@@ -353,6 +383,7 @@ export function initialDraft(): WizardDraft {
     svgImages: [],
     svgOutlines: [],
     svgBehaviour: null,
+    svgStretch: { on: false, shapeId: null },
     svgFonts: [],
     legibility: {},
   };
@@ -456,6 +487,14 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
             .filter((f) => f.on && f.box)
             .map((f) => ({ candidateId: f.candidateId })),
           behaviour: svgBehaviourOption(draft) ?? undefined,
+          // The hug travels only when it is both ON and pointed at a shape that still exists:
+          // a half-answered picker must never become a graphic that resizes at random.
+          stretch:
+            draft.svgStretch.on &&
+            draft.svgStretch.shapeId &&
+            draft.designSvg.shapes.some((s) => s.id === draft.svgStretch.shapeId)
+              ? { candidateId: draft.svgStretch.shapeId }
+              : undefined,
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,
@@ -801,14 +840,78 @@ export function buildDraftTemplate(
   }
   const inId = draft.animation.presetId ?? variant.animationPresets[0];
   const outId = draft.animation.outPresetId;
-  if (!outId || outId === inId) return template;
-  const outPreset = anyPresetById(outId);
-  const easeOut = resolveEasing(draft.animation.easing, outPreset.autoEase).easeOut;
+  if (outId && outId !== inId) {
+    const outPreset = anyPresetById(outId);
+    const easeOut = resolveEasing(draft.animation.easing, outPreset.autoEase).easeOut;
+    const data = parseAnimData(template.js);
+    // No data block (a hand-written variant) — nothing to mix onto.
+    const donor = data && presetDonor(template, data, outId, { easeOut });
+    const mixed = data && donor && applyPresetData(data, donor, 'out', 'all');
+    const js = mixed && writeAnimData(template.js, mixed);
+    if (js) template = { ...template, js };
+  }
+  return withUniversalMotion(template, draft, variant);
+}
 
+/**
+ * The whole-unit category presets an imported design creates from, and the universal motion
+ * each one IS. The wizard's Animation step shows the universal bank for that category (ten
+ * cards instead of four), so a design that has not picked one still has to land on the same
+ * data the card it shows lit would write - otherwise the control page, reading the data back,
+ * would light nothing for a graphic the wizard said was "Fade".
+ */
+const WHOLE_UNIT_AS_UNIVERSAL: Partial<Record<AnimPresetId, MotionPresetId>> = {
+  'design-fade': 'fade',
+  'design-slide': 'rise',
+  'design-pop': 'pop',
+  'design-blur': 'blur',
+};
+
+/** A category preset the universal bank stands in for (the Animation step hides its card). */
+export function isWholeUnitPreset(id: AnimPresetId): boolean {
+  return WHOLE_UNIT_AS_UNIVERSAL[id] !== undefined;
+}
+
+/** Whether a variant's Animation step picks from the universal bank (blocks/motionPresets.ts)
+ *  rather than its category's own choreographies. An imported design is one picture, so its
+ *  category bank was already the whole-unit kind - the universal bank is that, ten ways. */
+export function usesUniversalMotion(variant: TemplateVariant): boolean {
+  return variant.category === 'imported-design';
+}
+
+/** The universal motion each phase of the draft resolves to: the explicit pick, else the
+ *  mapped whole-unit default; undefined keeps the category preset (the SVG layer stagger). */
+export function universalPick(draft: WizardDraft, variant: TemplateVariant): MotionPick {
+  const inId = draft.animation.presetId ?? variant.animationPresets[0];
+  const outId = draft.animation.outPresetId ?? inId;
+  const pick: MotionPick = {};
+  const mIn = draft.animation.motionIn ?? WHOLE_UNIT_AS_UNIVERSAL[inId];
+  const mOut = draft.animation.motionOut ?? WHOLE_UNIT_AS_UNIVERSAL[outId];
+  if (mIn) pick.in = mIn;
+  if (mOut) pick.out = mOut;
+  return pick;
+}
+
+/** Write the draft's universal motion onto the built template - the same engine the control
+ *  page applies after creation, so the wizard preview, the created graphic and the picker
+ *  that reads it back agree by construction. */
+function withUniversalMotion(template: SpxTemplate, draft: WizardDraft, variant: TemplateVariant): SpxTemplate {
+  if (!usesUniversalMotion(variant)) return template;
+  const pick = universalPick(draft, variant);
+  if (!pick.in && !pick.out) return template;
   const data = parseAnimData(template.js);
-  if (!data) return template; // no data block (a hand-written variant) — nothing to mix onto
-  const donor = presetDonor(template, data, outId, { easeOut });
-  const mixed = donor && applyPresetData(data, donor, 'out', 'all');
-  const js = mixed && writeAnimData(template.js, mixed);
+  if (!data) return template;
+  // 'auto' keeps each motion's tuned curve; a named easing overrides both phases, as it
+  // does for the category presets.
+  const tuned = (id: MotionPresetId) => {
+    const m = motionPresetById(id);
+    return { easeIn: m.in.ease, easeOut: m.out.ease };
+  };
+  const eases = {
+    easeIn: pick.in ? resolveEasing(draft.animation.easing, tuned(pick.in)).easeIn : undefined,
+    easeOut: pick.out ? resolveEasing(draft.animation.easing, tuned(pick.out)).easeOut : undefined,
+  };
+  const next = applyMotionPreset(template, data, pick, eases);
+  const js = next && writeAnimData(template.js, next);
   return js ? { ...template, js } : template;
 }

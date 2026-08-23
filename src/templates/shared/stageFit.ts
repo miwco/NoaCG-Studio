@@ -109,6 +109,38 @@ function stageLineHeight(el, cs, design) {
   return (line && !isNaN(line)) ? line : design * 1.2;
 }
 
+// ONE ROW'S CONTENT HEIGHT for this element's face - a DIFFERENT box from the one above, and the
+// distinction is the whole reason this function exists. \`line-height\` says how much room a row
+// TAKES; the FACE decides how tall its own glyph box IS, and on most of the bundled faces that is
+// about 1.2em whatever line-height says (measured: Space Grotesk 1.17, Inter 1.14, Manrope 1.24,
+// Oswald 1.29, Saira 1.35). \`scrollHeight\` reads the second box, so a row drawn with the tighter
+// line-height of the two reports an overflow that is not there and shrinks for nothing.
+//
+// Measured once per face and cached on the window, for the same reason the box list is: a board
+// rebuilds its rows on every update, and a graphic inserted into another carries a second copy of
+// this file. The probe is a zero-height, zero-leading box, so its scrollHeight is the glyph box
+// and nothing else.
+var STAGE_FACE_RATIOS = (window.__noacgStageFaceRatios = window.__noacgStageFaceRatios || {});
+function stageFaceHeight(cs, design) {
+  var key = cs.fontFamily + '|' + cs.fontWeight + '|' + cs.fontStyle;
+  var ratio = STAGE_FACE_RATIOS[key];
+  if (!ratio) {
+    var probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:0;height:0;line-height:0;white-space:nowrap;visibility:hidden';
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.fontStyle = cs.fontStyle;
+    probe.style.fontSize = '100px';
+    probe.textContent = 'Hxpg';                 // an ascender, an x-height, two descenders
+    document.body.appendChild(probe);
+    ratio = probe.scrollHeight / 100;
+    document.body.removeChild(probe);
+    if (!(ratio > 0)) ratio = 1.2;              // a face that will not measure gets the CSS default
+    STAGE_FACE_RATIOS[key] = ratio;
+  }
+  return ratio * design;
+}
+
 // EVERY LEAF TEXT ELEMENT inside the staged panel, not just the masked lines the presets
 // choreograph. A poll's option rows, a standings board's names and a queue's entries are built by
 // the design's own runtime from a textarea, so they carry no mask - and they are exactly where
@@ -182,6 +214,38 @@ function holdOneStageBox(box) {
   box.style.minHeight = room + 'px';
 }
 
+// THE WIDTH OF THE TEXT ITSELF, and deliberately NOT \`scrollWidth\`. A design's backdrop is often
+// a pseudo-element that OVERHANGS its box on purpose - ss02's slab and chip both lean -8deg, and
+// a skewed absolutely-positioned layer counts towards the element's scrollable overflow. So
+// scrollWidth reported 936 against a 920px row and the runtime read a painted lean as the
+// headline running out of its box: 92px shipped at 66px, at the design's own default words.
+// A Range over the element's own text nodes measures letters and nothing else, and on a wrapped
+// block its rects are the line boxes - so the widest ROW is what gets compared, which is the
+// number that decides whether anything is actually outside the box.
+function stageTextWidth(el) {
+  if (!document.createRange) return el.scrollWidth;
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  var rects = range.getClientRects();
+  var widest = 0;
+  for (var i = 0; i < rects.length; i++) if (rects[i].width > widest) widest = rects[i].width;
+  return widest || el.scrollWidth;
+}
+
+// The room across, on the same terms: the CONTENT box, since that is the box the text sits in.
+// Taken from the RECT and not from \`clientWidth\`, because clientWidth is rounded to whole pixels
+// and the text width beside it is not - and half a pixel on a chip 50px across is a 1% overflow
+// that is not there. Seventeen designs sat just past the fit's 0.5% tolerance on nothing else.
+// \`clientWidth\` still answers one question the rect cannot: an inline box reports 0 there, and an
+// inline box has no content width to hold anything to.
+function stageContentWidth(el, cs) {
+  if (!el.clientWidth) return 0;
+  var w = el.getBoundingClientRect().width
+    - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0)
+    - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  return w > 0 ? w : 0;
+}
+
 // THE BOX A LINE IS DRAWN IN, if it has one: the nearest ancestor that actually paints - a tile,
 // a chip, a coloured severity square. That box is FURNITURE, and furniture does not stretch to fit
 // a longer word; the words fit the furniture. Found by walking up rather than by class name, so it
@@ -214,16 +278,26 @@ function fitOneStagedLine(el) {
   var box = drawnBoxOf(el);
   var limitW = 0;
   var room = 0;
+  // WHAT THE DESIGN'S OWN SAMPLE ACTUALLY FILLED, remembered beside the reserve and used for
+  // nothing else. \`room\` is a LINE BOX and the overflow test below reads a CONTENT box; measuring
+  // the reserve in one and the excess in the other made every line whose line-height sits under
+  // its face's content ratio report an overflow at the design's OWN default text and shrink
+  // permanently, with no operator input at all. Measured 2026-08-23 across the 290 staged
+  // designs: 200 of them shipped a smaller font than their CSS declares, worst -23%, on 457 of
+  // 459 shrunk lines - a designer typing 103px and getting 79px. So the excess is measured
+  // against what this line settled at when the design was drawn: its own sample fits itself by
+  // definition, and only what the operator types PAST it shrinks.
+  var fill = 0;
 
   // THE LINE MAY BE ITS OWN BOX. On the alert strip the severity tile IS the label element - the
   // blue square is that element's own background - so looking at ANCESTORS finds only the panel,
   // which the label sits happily inside while spilling out of the colour it is painted on. The
-  // element's own scrollWidth against its own clientWidth is the honest test, and it is also the
+  // element's own TEXT against its own content box is the honest test, and it is also the
   // discriminator that leaves an auto-width chip alone: a box that grows with its text never
   // reports an overflow, so only a box with a width of its own is ever touched here.
-  if (el.clientWidth && el.scrollWidth > el.clientWidth + 2) {
-    var ecs = window.getComputedStyle(el);
-    limitW = el.clientWidth - (parseFloat(ecs.paddingLeft) || 0) - (parseFloat(ecs.paddingRight) || 0);
+  var contentW = stageContentWidth(el, cs);
+  if (contentW > 0 && stageTextWidth(el) > contentW + 2) {
+    limitW = contentW;
     // BOTH AXES COME FROM THE BOX AS DRAWN, and the height has to be the one measured at
     // calibration rather than the one it happens to have now: an auto-height element grows as it
     // wraps, so reading it live gives a ceiling that keeps rising and the line just keeps
@@ -232,7 +306,7 @@ function fitOneStagedLine(el) {
     // slot still has to shrink. The box as drawn decides which.
     room = parseFloat(el.getAttribute('data-stage-selfh') || '');
     if (!room) {
-      room = el.clientHeight - (parseFloat(ecs.paddingTop) || 0) - (parseFloat(ecs.paddingBottom) || 0);
+      room = el.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
       if (room > 0) el.setAttribute('data-stage-selfh', room);
     }
     if (!(room > 0)) room = 0;
@@ -241,6 +315,14 @@ function fitOneStagedLine(el) {
       el.style.overflowWrap = 'break-word';
       el.style.height = '';
       box = el;                                 // it governs itself; centring below still applies
+      // The same sample-fill the calibrated branch below records, on the same terms: the box as
+      // drawn decides the ROOM, and what the design's own words filled decides what "past it"
+      // means. Read after the height is cleared, so it is the content and not the pin.
+      fill = parseFloat(el.getAttribute('data-stage-selffill') || '');
+      if (!fill && !stageCalibrated) {
+        fill = el.scrollHeight;
+        if (fill) el.setAttribute('data-stage-selffill', fill);
+      }
     }
   }
 
@@ -253,7 +335,10 @@ function fitOneStagedLine(el) {
   if (box && box !== el) box = null;
 
   // The reserve, remembered from the first measurement - the design's own sample decides it.
-  if (!limitW) room = parseFloat(el.getAttribute('data-stage-room') || '');
+  if (!limitW) {
+    room = parseFloat(el.getAttribute('data-stage-room') || '');
+    fill = parseFloat(el.getAttribute('data-stage-fill') || '');
+  }
   if (!limitW && !room) {
     if (stageCalibrated) {
       // A line the design never showed us: it was BUILT by the design's own runtime after load
@@ -262,6 +347,11 @@ function fitOneStagedLine(el) {
       // design's. One row is the honest answer for a row - that is what a row is - and it is
       // what a board does with a long club name: keep the row, shrink the name.
       room = stageLineHeight(el, cs, design);
+      // ONE ROW IS ONE ROW IN BOTH BOXES. The reserve is the row's line box; what has to fit
+      // inside it is the row's glyph box, and on a face whose content ratio beats the design's
+      // line-height those are not the same number. Taking the row's own face here is what keeps
+      // a short club name at full size instead of shrinking it for a wrap that never happened.
+      fill = stageFaceHeight(cs, design);
     } else {
       el.style.height = '';                     // measure the natural block, not a reserve
       if (cs.display === 'inline') el.style.display = 'inline-block';
@@ -270,9 +360,13 @@ function fitOneStagedLine(el) {
       // design's OWN content - 37 variants did exactly that.
       // Round up: a reserve a sub-pixel short of the design's own line is a clipped design.
       room = Math.ceil(el.getBoundingClientRect().height);
+      // …and the overflow the design already had at its own sample, which is the number the
+      // shrink test needs and the rect cannot give.
+      fill = el.scrollHeight;
     }
     if (!room) return;                          // not laid out yet; a later pass will catch it
     el.setAttribute('data-stage-room', room);
+    if (fill) el.setAttribute('data-stage-fill', fill);
   }
   // A real HEIGHT, not a max-height. A cap stops the line growing and lets it SHRINK, so a
   // short value still moves the panel - just in the other direction, which is the same defect
@@ -282,26 +376,44 @@ function fitOneStagedLine(el) {
   // to full block makes it fill its parent instead of shrink-wrapping, which re-wraps the row
   // around it and clipped 9 designs sideways at their OWN content.
   if (cs.display === 'inline') el.style.display = 'inline-block';
+  // …AND NEVER ON A MULTI-COLUMN BLOCK. A definite height is what tells a multicol container to
+  // stop balancing: it fills the first column to that height, the second, and then keeps going
+  // into OVERFLOW COLUMNS to the RIGHT - outside the box, where the design's reveal mask clips
+  // them away. So the words do not bleed a hair past the bottom, they disappear sideways, and
+  // both of the probes below report a comfortable fit while it happens: scrollHeight sees no
+  // vertical overflow because there is none, and a Range's rects are line boxes INSIDE a column,
+  // each one narrower than the box. card80's two-column standfirst sat 0.25px inside its own
+  // reserve at its own sample text, so the nightly's renderer spilled a third column where this
+  // one does not (issue #36).
+  //
+  // An indefinite height is what the shrink lever needs anyway: with the height left alone the
+  // container balances into the columns the design asked for and grows DOWNWARD, which is the
+  // overflow scrollHeight can see - so the loop below shrinks the type to the reserve exactly as
+  // it does for every other line, instead of being blind to it.
+  var multicol = cs.columnCount !== 'auto' || cs.columnWidth !== 'auto';
   // HEIGHT ONLY, never overflow:hidden. The height is what holds the layout - that is the whole
   // contract. Hiding the excess as well only CUTS the words when the reserve is a sub-pixel
   // short, which the overflow gate caught on eleven designs at their OWN content; a hair of
   // bleed is a better failure than a clipped letter.
-  el.style.height = room + 'px';
+  el.style.height = multicol ? '' : room + 'px';
 
   // The bigger of the two floors wins: a design already at the floor never shrinks at all.
   var floor = Math.max(design * STAGE_FIT_MIN, Math.min(design, STAGE_FIT_FLOOR_PX));
+  // The excess is measured against the LARGER of the two: the room the design gave the line, and
+  // what the design's own words filled it with. The reserve stays the room - that is what holds
+  // the panel - but "too tall" has to mean taller than the design ever was, never taller than a
+  // box the browser was never going to keep the glyphs inside.
+  var over = Math.max(room, fill || 0);
   for (var pass = 0; pass < 4; pass++) {
-    var tallBy = room > 0 ? (el.scrollHeight / room) : 1;
-    // Sideways too: a line inside a HELD chip cannot reflow, so it runs out of the box's side
-    // rather than off its bottom. Same lever, same floor - only the axis differs.
-    // Sideways too: a line inside a fixed row cannot reflow, so it runs out of the box's side
-    // rather than off its bottom. Same lever, same floor - only the axis differs.
+    var tallBy = over > 0 ? (el.scrollHeight / over) : 1;
+    // Sideways too: a line inside a fixed row or a HELD chip cannot reflow, so it runs out of the
+    // box's side rather than off its bottom. Same lever, same floor - only the axis differs.
     // Against the BOX when there is one - a line whose own width is free grows with its text, so
-    // its scrollWidth and clientWidth agree forever and it never reports the overflow that is
-    // plainly there on screen. What it has to fit inside is the furniture around it.
+    // its own box and its text agree forever and it never reports the overflow that is plainly
+    // there on screen. What it has to fit inside is the furniture around it.
     var wideBy = 1;
-    if (limitW > 0) wideBy = (box === el ? el.scrollWidth : el.getBoundingClientRect().width) / limitW;
-    else if (el.clientWidth) wideBy = el.scrollWidth / el.clientWidth;
+    var limit = limitW > 0 ? limitW : stageContentWidth(el, window.getComputedStyle(el));
+    if (limit > 0) wideBy = stageTextWidth(el) / limit;
     if (tallBy <= 1.005 && wideBy <= 1.005) break;    // it fits - leave the size alone
     var current = parseFloat(window.getComputedStyle(el).fontSize);
     // A wrapped block's height falls with the SQUARE of the size (shorter text, shorter rows),
@@ -338,8 +450,17 @@ if (document.readyState === 'loading') {
 if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
   document.fonts.ready.then(function () {
     // Re-measure from scratch: the reserve taken against the fallback face is not this design's.
+    // EVERY remembered number goes, not just the reserve - a sample-fill or a drawn-box height
+    // measured against the fallback is the fallback's, by exactly the same argument, and a face
+    // ratio keyed on a family whose file had not arrived is measuring the substitute.
+    STAGE_FACE_RATIOS = window.__noacgStageFaceRatios = {};
     var lines = stagedLines();
-    for (var i = 0; i < lines.length; i++) lines[i].removeAttribute('data-stage-room');
+    for (var i = 0; i < lines.length; i++) {
+      lines[i].removeAttribute('data-stage-room');
+      lines[i].removeAttribute('data-stage-fill');
+      lines[i].removeAttribute('data-stage-selfh');
+      lines[i].removeAttribute('data-stage-selffill');
+    }
     var boxes = stageFitBoxes();
     for (var b = 0; b < boxes.length; b++) {
       boxes[b].removeAttribute('data-stage-room');

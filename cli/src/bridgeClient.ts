@@ -72,6 +72,8 @@ export interface ControlButton {
   label: string;
   section?: string;
   payload?: string[];
+  /** Field ids whose current value, moved by the delta, rides the event (a goal's +1). */
+  adjust?: Record<string, number>;
   destructive?: boolean;
 }
 export interface BridgeInspection {
@@ -134,7 +136,7 @@ export interface BridgeTypeSummary {
   category: string;
   prefix: string;
   fields: Array<{ key: string; label: string; kind: string; value: string; role: string; ftype: string; options?: Array<{ label: string; value: string }> }>;
-  events: Array<{ event: string; label: string; section?: string; payload?: string[] }>;
+  events: Array<{ event: string; label: string; section?: string; payload?: string[]; adjust?: Record<string, number> }>;
   designs: Array<{ id: string; name: string; description: string; styleTag: string }>;
   neutral: boolean;
   capabilities: { maxLines: number; logo: string; defaultZone: string; defaultSteps: boolean };
