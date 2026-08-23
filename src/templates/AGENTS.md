@@ -475,6 +475,13 @@ figure is the short final part, so the label is what may contain one). Say which
   the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
   motion the timeline cannot see, the control page cannot pause and the render clock cannot
   drive.
+**A REVEAL MASK IN A FLEX ROW IS A LINE THAT CAN BE SQUEEZED TO NOTHING.** A flex item normally
+refuses to shrink below its own content (`min-width: auto`), and that protection is switched OFF
+for an item whose overflow is not visible - which every `.{prefix}-mask` is. So a masked line in a
+flex row has no floor: ls07's label may not wrap (`white-space: nowrap`) and was squeezed under its
+own width and CUT - "COMMENTARY" aired as "COMMENTAR" at text size L. A masked line that cannot
+wrap states `flex: none`, and the lines that CAN wrap absorb the row instead.
+
 ## THE STAGE: which graphics may change size with the operator's text
 
 `width: fit-content` (DESIGN_LANGUAGE §5) is the catalog default and only HALF right. On a

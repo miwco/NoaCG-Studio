@@ -82,6 +82,13 @@ ${slot(o, 2, 'lower-third-caller', '        ')}
   white-space: nowrap;              /* the label never wraps — it would break the rail */
 }
 
+/* The label's own mask never shrinks. A reveal mask is overflow:hidden, and that switches OFF a
+   flex item's automatic minimum size — so the label, which may not wrap, was squeezed below its
+   own width and CUT instead. The callers wrap for a living; the label absorbs nothing. */
+.lower-third-box > .lower-third-mask {
+  flex: none;                       /* the label keeps its width; the rail gives way elsewhere */
+}
+
 /* The divider between the label and the names — the graphic's accent NODE, so the
    line-reveal preset has something real to draw. A vertical tick, not a rule. */
 .lower-third-accent {

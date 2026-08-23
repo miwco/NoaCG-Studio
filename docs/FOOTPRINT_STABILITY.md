@@ -172,3 +172,16 @@ renders at 17px the moment somebody picks S, which is the operator's choice, not
 the operator picked S is fine: they chose smaller text, the same way they choose longer words. So
 `type-floor --type-scale` stays a report and the gate stays at the default step - no S gate, and
 nothing in the catalog is re-authored to keep 20px at 0.85.
+
+**Fixed, 2026-08-23: ls07, the one that cut ink.** A reveal mask is `overflow: hidden`, and an
+overflow that is not visible switches OFF a flex item's automatic minimum size - so the label's
+mask had no floor and the flex row squeezed it under its own `white-space: nowrap` width. `flex:
+none` on that mask gives the label its width back and lets the callers, which wrap for a living,
+absorb the row. Measured after: no horizontal overflow at any step, and `catalog-render-baseline`
+did not move, so the default step renders pixel-identically.
+
+**card48 and lt51 were NOT fixed, because they clip no ink.** Their 5px and 3px are the trailing
+letter-space of tracked caps, which `scrollWidth` counts and no glyph occupies (measured: a Range
+over card48's line reports 162px against a 157px box, and its tracking is 4.8px; releasing lt51's
+mask changes zero pixels). They belong with the nineteen vertical rows above - the sweep's
+tolerance is what changes at L, not the design.
