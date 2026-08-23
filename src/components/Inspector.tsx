@@ -36,7 +36,7 @@ import { createStepFromLayer } from '../blocks/layerTimeline';
 import type { AnimPresetId } from '../model/wizard';
 import { EASINGS, resolveEasing, type EasingId } from '../model/easings';
 import { phaseIdOf } from './StepTimeline';
-import { partLocked } from './partLocks';
+import { partLocked } from './canvas/partLocks';
 
 // Timeline v2 Phase 2/4 (docs/TIMELINE_V2_PLAN.md) — the Inspector: the persistent,
 // context-sensitive panel to the right of the preview, and the third consumer of the
@@ -202,7 +202,7 @@ export default function Inspector() {
     [template.html, template.css],
   );
   const part = parts.find((p) => p.selector === selectedPart) ?? null;
-  // The canvas lock (components/partLocks.ts) — read through the same helper the overlay uses,
+  // The canvas lock (components/canvas/partLocks.ts) — read through the same helper the overlay uses,
   // so an untouched part reads the same default on both surfaces.
   const locked = partLocked(
     part?.selector ?? '',
@@ -373,7 +373,7 @@ export default function Inspector() {
         <code className="inspector-selector">{part.selector}</code>
         {/* The canvas lock, for ANY part — the general home for it, since the canvas chip only
             carries a padlock where the DEFAULT is surprising (an imported design's artwork).
-            Both read and write the same store state (components/partLocks.ts), so they agree. */}
+            Both read and write the same store state (components/canvas/partLocks.ts), so they agree. */}
         <button
           className={`inspector-lock${locked ? ' locked' : ''}`}
           onClick={() => setPartLock(part.selector, !locked)}

@@ -245,7 +245,8 @@ depends on the design."*
 
 So the question had no answer of the kind it was asking for, and **rule 5 was demoted to
 report-only** the same day - the third of the six to carry no pass/fail, beside rule 2
-(conditional by the owner's own words) and rule 3 (a ratified floor he has not re-ratified). The
+(conditional by the owner's own words) and rule 3 (a floor he DECLINED the following day, for the
+same reason rule 5 was withdrawn - docs/NOACG_PRO_PLAN.md §25.5). The
 geometry is still measured on every frame; nothing is called a defect.
 
 **The lesson is worth more than the rule was.** That second version of rule 5 was calibrated,

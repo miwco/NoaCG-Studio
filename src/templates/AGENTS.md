@@ -4,6 +4,11 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 docs/DESIGN_LANGUAGE.md before generating or judging templates. After template changes, run the
 catalog sweep for the affected category (root AGENTS.md, "Verifying changes").
 
+**Thirteen subdirectories own their own contract** - `types/`, `pack4/` and the eleven categories
+listed under "Categories" below - each an `AGENTS.md` with a thin `CLAUDE.md` importing it, loaded
+only when you work in that directory. A section that describes ONE directory belongs there, not
+here: this file is read in full by every session touching any template.
+
 **ADDING A DESIGN MOVES THREE BASELINES, and the five catalog gates only cover one of them.**
 `scripts/overflow-baseline.json` is re-recorded by the overflow sweep; `e2e/catalog-baseline.json`
 and `e2e/catalog-render-baseline.json` are re-recorded by their own spec:
@@ -319,267 +324,47 @@ tile-wall presentation, which no longer ships):
 
 A **type** declares what a graphic IS - structure contract, fields, state groups and default
 path, control events - independent of what it looks like; a **design** is one look. A type is a
-DECLARATION, not a second way to build a template: `variantsFromType` compiles one into
-ordinary TemplateVariants that go through the category assemblers below, so
-`variant.create(options)` stays the single contract the wizard, the AI, the sweeps and every
-spec speak. `catalog.ts` merges them with `mergeCatalog`, REPLACING BY ID, so a type that
-promotes an existing variant keeps that variant's id and its slot in the browse grid.
-
-**THE RULE:** *persist a machine only when the derived one is wrong.* `deriveMachine` already
-gives every template a correct one-group linear machine, so a type with no branches, parallel
-groups or event overrides compiles to NO `machine` key and emits byte-identical output. Nine
-of the twenty types are in that class - including two of the five AUDIENCE types
-(`viewer-question`, `community-request`), which is the rule showing its work at the point where
-modelling for its own sake would be most tempting: they are different GRAPHICS from each other
-(different fields, different meaning, different control page) with genuinely the same two beats
-on air. `e2e/audience-pack.spec.ts` pins exactly which two, so a later edit that quietly adds a
-machine has to say why.
-
-`TypeMachine.main.edges` is for arrows that belong to the GRAPHIC rather than to any one branch
-state - the chat highlight's self-dismiss timer from the entrance to the exit. Declaring them
-there keeps a branch's `edges` meaning "the ways in and out of THIS state".
-
-**A type declares ONE field list, which is a real limit worth knowing before reaching for one.**
-A family whose field COUNT varies across its designs cannot be a single type: the factory's
-fields gate compares each design's emitted count against the declaration, and rightly. Three
-families in the catalog are in that class and stay hand-written variants - camera frames (2-4
-fields), the sponsor strips (4 vs 6 slots) and the location cards (one has a picture slot). That
-is a legitimate state, not debt to pay off in a hurry: `card04`, `vs01` and `ig01`-`ig07` have
-always lived there. Optional type fields would fix it and are a change to this contract, not to
-a design (docs/PACK_TAXONOMY.md, "Known limitations").
-
-Fields are declared with LOGICAL keys and a `role` (`line` first, `logo` last - both enforced
-with a throw, because the order is what keeps the compiled `fN` ids in step with the assembler
-that emits them). The main group's default path is DERIVED, never declared: its length must
-equal the step count, which depends on the preset and the line count. `attachMachine` puts the
-compiled machine on after assembly and THROWS if it is off-shape - unlike `convertToDataRegion`
-it is compiling our own declaration, so degrading would ship a control page whose buttons do
-nothing. One clamp sits BEFORE that gate: a caller passing FEWER lines than the type declares
-(an AI/Lite spec asking for a one-line lower third) gets the missing lines filled in - the
-declared field still exists and stays editable, and the missing-parts throw stays reserved for a
-design that genuinely fails to emit a declared part (found by the Lite benchmark's one-line
-challenge brief). **WITH WHAT is decided by the FIELD PLAN, and the two answers are opposites:**
-a `lines` plan pads with EMPTY text (an empty value collapses via the `:empty` mask rule - a
-shorter lower third), a `fixed` plan keeps the design's OWN default, because a quiz board with
-two of its four answers blanked is not a smaller quiz, it is a broken one.
-
-**A type's line CAPACITY is derived, never below its own count of `line` fields, and the
-caller's lines are written into those fields after assembly** (`variantsFromType`,
-`withLineValues`). Both halves were load-bearing, measured 2026-08-09: nine types - the three
-answer boards and every sports board - declared 3 to 6 line fields against a hand-authored
-`capabilities.maxLines` of 1, so `specToTemplate`'s `slice(0, variant.maxLines)` threw the rest
-away before `create()` saw them; and those same fixed-contract assemblers build their fields
-from a baked content declaration rather than from `o.lines`, so they carried NONE of what a
-caller asked for. A generated quiz came back as the catalog's own planets question with four
-planets for answers. The post-pass writes value and static text together (`setFieldDefault`), so
-the control page and the pre-play frame cannot disagree; TITLES stay the type's, because a fixed
-contract's labels are what its own row dropdowns are declared against. Pinned by
-`e2e/lite-line-content.spec.ts`, registry-wide and mutation-tested.
-
-**`WizardOptions.content` is the channel for everything a LINE cannot carry** - which answer a
-quiz marks correct, how long a countdown runs, a live poll's options: all `role: 'data'` or
-`'hidden'`, none of them reachable through `lines`. It is keyed by the type's own LOGICAL keys
-(`{ correctAnswer: 'C' }`), never by `fN`, and only a type-compiled variant honours it, because
-only a type declares those keys and the kind to clamp each value against; a hand-written variant
-ignores it rather than guessing what its ids mean. **Every value is clamped to what the field
-declares and an illegal one is DROPPED** - a `select` takes only an option it offers, so a
-correct-answer field can never name a row that does not exist (which would reveal nothing, with
-no error anywhere). `DesignSpec.content` is the same data as a LIST of pairs, because a JSON
-Schema with `additionalProperties: false` cannot describe an open key set; `specToTemplate` folds
-it into the map.
-
-**The trap to know:** a timer never arms on a timeline that never ends (the arming call is
-scheduled at the timeline's end). A `repeat: -1` loop or a measured `dynamics` builder makes
-that unreachable, so `validateMachine` errors on it. This is why the ticker type is a rotator
-with its own `ticker-rotate` preset rather than the endless marquee - and, from the other side,
-why the TRANSITION type's self-clear is legal: its cover is a short finite entrance.
-
-`TypeMachine.main.edges` is the one arrow shape branches cannot express - an arrow BETWEEN two
-waypoints of the default path, since a branch's edges always have the branch at one end. The
-transition type is its only user (`{ waypoint: 0 } → { waypoint: -1 }`, trigger `timer`);
-modelling that as a branch would have meant inventing an off-path "cleared" state duplicating
-the exit, i.e. a second way to be off air.
-
-## types/neutralDesign.ts - the NEUTRAL scaffold (a type without a look)
-
-`neutralDesignFor(type)` returns a `TypeDesign` that carries the type's SEMANTICS - its fields,
-its machine and interpreter, the runtime the machine calls (the match clock), every required
-part - on a deliberately plain spine: one box, system-neutral type, the brand accent as the only
-colour. It is what an agent or a user gets when they want the type's behaviour and intend to
-design the look themselves (docs/AGENT_CLI.md; `scaffold --design neutral`). It is NOT a catalog
-design and never appears in Browse.
-
-- Built through the REAL category assemblers (`defineVariant`, `defineCardVariant`,
-  `defineBugVariant`, `defineScoreboardVariant`), so the structure spine, the `:root` contract,
-  the ANIMATION region and the four platform passes in `variantFromType` apply unchanged - the
-  neutral scaffold validates and benches like any catalog template.
-- `hasNeutralDesign(type)` is HONEST about coverage: a standard-category type qualifies only if
-  its machine calls no runtime function; a scoreboard type qualifies only if every call is the
-  match-clock/status runtime the scoreboard assembler supplies (`SCOREBOARD_RUNTIME_CALL`). A
-  type outside that (live-bug, sponsor-rotator, podium-score with its spotlight runtime) reports
-  `neutral: false` and the bridge offers its catalog designs instead - never a scaffold whose
-  machine would call functions that do not exist.
-- `neutralSpineFor(fields)` is the TYPELESS scaffold: an ad-hoc field list (label + kind)
-  becomes a `blank`-type template with the implicit lifecycle machine - one `id="fN"` element
-  per field, text kinds as lines, the rest as extra fields. The control layer renders it with
-  every field + Take/Update/Next/Out, which is the category-agnostic promise pinned by
-  `e2e/ograf-contract.spec.ts`.
+DECLARATION, not a second way to build a template: `variantsFromType` compiles one into ordinary
+TemplateVariants that go through the category assemblers, and **the rule is *persist a machine
+only when the derived one is wrong***. The full contract - the field-list limit, the field plan,
+`WizardOptions.content`, the timer trap and the neutral scaffold - moved to
+**`src/templates/types/AGENTS.md`** (with its thin `CLAUDE.md`), which loads when you work in
+that directory.
 
 ## pack4/ - the TITLE / TOPIC / INFORMATION pack
 
-36 designs over nine graphic types - openers (title-card), topic and chapter cards (topic-card),
-and the seven types `types/briefings.ts` + `types/lists.ts` add: now/next, headline + body,
-process/checklist, public notice, statement (long text + a second language), key facts, and
-recap/actions. NOTHING here is a new mechanism: the word-shaped ones build on the info-card
-assembler, the two LIST boards build on the infographic one (their content is a textarea the
-runtime renders and their motion is measured), and both go through the ordinary graphic-type
-registry.
-
-- **pack4/skin.ts** - the pack's shared style vocabulary: four `Pack4Skin` records (clean =
-  minimal, frost = glass, volt = sport, house = noacg) plus the emitters every design composes -
-  `panelCss` (the family's panel treatment), `accentCss` (its leading motif: hairline rule /
-  short stroke / top rail / glowing amber bar), `labelCss`, `dividerCss`, `measureCss` (a
-  design's own text measure, overriding the category cap - running text wants a narrower one
-  than a headline), `textLegibilityCss` (the panel-less family's halo over live video) and
-  `readableTextCss`. `decl(prop, value, comment)` is the aligned declaration formatter every
-  emitter uses - the first draft hand-padded and silently ate the semicolon of every long value.
-- **pack4/content.ts** - the pack's WORDS: each type's `TypeField[]` and every design's sample
-  text, declared ONCE. The variant reads it through `typeLines(FIELDS, SAMPLES)` and the type
-  declares the same `SAMPLES`, so the two sides the factory's samples gate compares cannot
-  drift. title-card's and topic-card's field arrays moved here for the same reason.
-- **pack4/markup.ts** - `maskLine` (index-safe, so a design handed fewer lines than it draws for
-  emits fewer), `emptyLineCss`, and `maskScoped`. TWO RULES the whole pack follows: every
-  vertical margin sits on the line's SPAN (never its mask) and every span carries `:empty {
-  display: none }`, so a field the operator clears takes NO space - that is what makes "half the
-  fields filled" a supported state and, in the process card, what keeps the CSS step counters
-  contiguous (a display:none box is skipped by counters). `maskScoped` exists because the
-  category already styles `.{prefix}-mask > span` including `text-wrap: balance`; a design that
-  wants a paragraph's wrapping has to say so at the same specificity.
-- **infoCards/pack4/*.ts** - one builder per type (titles, topics, nowNext, headline, process,
-  notice, statement); **infographics/pack4/** - `boards.ts` (facts + recap) and `listRuntimes.ts`
-  (their `rebuildInfographic()`, the dataRuntimes.ts pattern). Unlike the schedule board, a line
-  with NO pipe still renders here: a fact with no term and an action with no owner are real
-  content, not malformed rows.
-
-Two things in the pack are worth knowing before touching it:
-
-- **process-steps is the catalog's first STEPPED-by-default type** (`TemplateVariant.defaultSteps`
-  / `TypeCapabilities.defaultSteps`, honoured in `resolveOptions`). The wizard draft's steps flag
-  is tri-state now (`null` = the design decides) - a hard `false` there had been overriding every
-  design that knows better. `scripts/factory.mjs` gates steps drift alongside motion and position.
-- **notice-card is the pack's one state machine**: a PARALLEL `level` group (standard / urgent)
-  with `escalate` / `standDown` operator events fading a `.info-card-alert` wash. Parallel, not a
-  branch on the main path, because escalating must not disturb where the operator's walk has got
-  to - and because a group entered by transition or by snap restores with the rest after a
-  control-page refresh.
-
-**The second trap:** a state's entry timeline applies each track's FIRST keyframe as a hard
-`set` at time 0 (animRuntime `buildStepTimeline`), so a state can only CROSS-FADE when every
-route into it leaves the layers at the same starting pose. `alertLevelType` has four levels and
-three possible predecessors each, so its level change is a CUT plus an acknowledgement dip;
-`publicNoticeType` has two languages, exactly one predecessor per state, and a graph authored to
-keep it that way - so it fades honestly. Full reasoning in docs/PUBLIC_SERVICE_PACK.md §4.
-
-**The third trap:** a PARALLEL group resting at its initial state replays nothing (that is what
-"initial" means), so the resting pose must be established in CSS *and* in the entrance step or a
-replay keeps whatever was last on air. `alertLevelRestRefine` / `piLanguageRestRefine` are that,
-and a new parallel-group type needs its own - nothing mechanical will remind you.
+36 designs over nine graphic types; nothing in it is a new mechanism (the word-shaped ones build
+on the info-card assembler, the two LIST boards on the infographic one). Its contract - the skin
+vocabulary, the words, the markup rules and the three traps a parallel-group type pays - moved to
+**`src/templates/pack4/AGENTS.md`** (with its thin `CLAUDE.md`). The design files themselves live
+in `infoCards/pack4/` and `infographics/pack4/`.
 
 ## Categories
 
-- **lowerThirds/specialist/** - ls01…ls41, the SPECIALIST pack: lower thirds drawn for ONE
-  production rather than for any show (interview duos, host-and-guest, commentary booths,
-  athletes, esports, worship, academic, politics, analysis, music, live-and-location, creator,
-  and the BROADCAST-JOURNALISM group ls33-ls40, whose subject is the words or their status
-  rather than the person: a quotation, an interpreted line with a language tag per line, a
-  caller on the line, a location slate with a computed hour, breaking and developing marks, a
-  fact-check ruling, and the parliamentary register).
-  Mechanically ordinary - same category, assembler, preset bank, export path - and they carry NO
-  discovery metadata of their own: browse/search facets come from the ONE taxonomy
-  (model/taxonomy.ts + templates/templateMeta.ts), so a design is declared there like any other.
-  `specialist/shared.ts` holds what the pack cannot repeat per file:
-  - `slot`/`slots`/`hasLine` - place a line BY INDEX into a named slot. An absent line emits
-    NOTHING (the operator can delete any row, not just the last), so a design closes over the
-    gap instead of reserving a hole. This is what makes the pack survive missing optional roles.
-  - **The two-person contract.** `duoSplitBalanced` for PEERS (the interview straps: fewer
-    lines drop the ROLES first, so both people stay named - "two names, no titles" is a real
-    broadcast format) and `duoSplitLed` for a LEAD + SUPPORT pair (host-and-guest: the lead is
-    completed BEFORE the second person appears, so dropping to two lines never re-reads the
-    guest's own role as the host's name). Picking the wrong one is a silent content bug, not a
-    layout one. `duoGridCss` writes the structural half once: content-sized `auto` columns
-    (a symmetric grid pads a short name out to a long one's width), `min-width: 0` on each
-    column (a grid item refuses to shrink by default - that is what pushes long names off the
-    safe area), a per-column cap so an extreme value wraps in its OWN column, and
-    `align-items: start`. Browser-verified with a 55-character name beside a two-character one.
-  - `liveClockJs` / `zoneClockJs` - design-owned clock runtime (emitted OUTSIDE the marked
-    region via `runtimeExtraJs`, DOM-ready guarded, the corner-bug doctrine). The zone clock
-    reads a UTC offset from a HIDDEN input-only field on every tick, so one template is any
-    city's clock.
-  **THE ACCENT RULE this pack pinned:** a design declaring `hasAccent: true` must emit its
-  `.lower-third-accent` node UNCONDITIONALLY. The animation data keyframes it by selector, so an
-  accent that comes and goes with a field leaves the timeline addressing an element that is not
-  there - `validateTemplate`'s `anim-data-target` warning catches it, and it caught six designs
-  here. Make the CONTENT conditional, never the node.
-  **AND THE CLIP RULE:** bounding an atomic token cell (a squad number, a party tag) needs the
-  bound on the SPAN - `max-width` + `white-space: nowrap` + `text-overflow: ellipsis`.
-  `overflow: hidden` on the WRAPPER clips the PAINT but not the layout box, and the runtime
-  bench measures layout - so the token still collided with the name beside it.
-- **lowerThirds/** - lt01…lt62 on shared.ts (prefix 'lower-third', `dataRegion: true` - the
-  first category to create as NOACG_ANIM data blocks) + animPresets.ts (the shared marked-region
-  GSAP preset bank, prefix-parameterized - it animates any category's `.{prefix}-box` structure;
-  on a data category the preset's emit is converted at create, and blocks/presetApply.ts derives
-  keyframes from the same emitters after). The bank leads with the **Slide family**
-  (`makeSlidePreset`: slide-up/-down/-left/-right - one choreography, four directions of travel,
-  ids adjacent + `SLIDE_FAMILY`/`isSlidePreset` so pickers group them: the wizard renders ONE
-  Slide card with a direction picker, the Inspector one optgroup), then line-reveal, mask-wipe,
-  pop-spring, snap-stinger, blur-in, fade, flip-3d.
-- **infoCards/** - card01…card71 (prefix 'info-card', `dataRegion: true`). The standard contract's
-  other line-based family: they use the same 9-preset bank as lower thirds and convert exactly like
-  them, steps and all (a » press per body line becomes a middle step with its `reveals`).
-  Four jobs in one category: card01…card09 are INFORMATION cards (a heading with lines under it);
-  card10-card37 are the TITLE / TOPIC / INFORMATION pack (see pack4/ below), each a thin variant
-  record over a shared per-type builder in `infoCards/pack4/`; card38-card49 are the COMMERCE
-  cards (product / offer / listing / QR / location / sponsor strips), which is why
-  `shared/standard.ts` exports **`maskLine`/`maskLines`** beside `lineMasksFor` - the generic
-  name/title/extra ladder gives every line past the second the same class, and a card whose lines
-  are a product name, a price and a struck-through was-price needs to name each one for what it
-  is; and card50…card58 are SET-PIECE cards whose layout carries a convention older than
-  television - a reading, a lyric (now + next), a quotation, a translation, an order of service,
-  and the ceremony cards; card59…card71 are the editorial/cinematic information-system siblings
-  (typed title, now/next, headline, notice and statement designs plus hand-authored results,
-  sponsor, caption and location shapes). On the commerce cards, values that could vary by shop, currency or
-  format are FIELDS and vanish with `:empty` when blank (the savings chip, the promo code, the
-  deadline, the status line, the unit mark) - no state, nothing for a replay to leak.
-  **The grid trap:** `cardLineMasks` wraps every line in a `.info-card-mask` div, so on a design
-  that lays the box out as a grid or flex container the ITEMS are the masks, not the `#fN` spans.
-  Placement rules target the masks (`.info-card-mask:nth-child(N)`), type rules target the spans -
-  see card57.
-  **The rail trap:** `.info-card-accent` is absolutely positioned at the root's left edge and the
-  box is painted AFTER it, so a design whose box has a BACKGROUND must reserve the strip
-  (`margin-left: var(--accent-weight)`) or the panel covers the rail completely (card56, card58).
-  A panel-less design (card01) needs only padding.
-- **endCredits/** - cr01…cr12 (prefix 'credits') + creditsPresets.ts (credits-roll /
-  credits-loop / credits-board / credits-pages / credits-crawl) + **creditsMotion.ts**;
-  data-driven: a hidden #f0 textarea holds "Role | Name" lines, template JS parses and rebuilds
-  #credits-track, ends with logo + year (.credits-end). DATA BLOCKS via convertToDataRegion.
-  **The category is LISTS, not just credits** - the same data model at a different speed is a
-  credit roll, a name wall, a donor board, a sponsor acknowledgement, a graduation roll or a
-  schedule. Choosing a design is choosing that speed, which is what the index groups by.
-  **Three line kinds, one rule each** (parseCredits): `Role | Name` is a credit; a pipe-less line
-  that OPENS a section is that section's heading; any other pipe-less line is a plain `entry`
-  (a name on a wall, a thank-you, an untimed note). The heading rule is POSITIONAL on purpose -
-  a wall is one heading followed by names, a roll's sections already open with theirs, so both
-  read correctly from the same text with nothing to mark up. **A row builder must answer all
-  three kinds**; a design that only handles 'heading' and 'credit' renders `undefined` for a
-  bare name.
-  `credits-board` is the one format with NO motion: the list fades up and holds. It exists
-  because rolling a schedule or a wall past the audience means the line they need is the one
-  that just left, and it is the reason a board design lays `.credits-page` out in normal flow
-  where a paged design stacks them absolutely.
-  `credits-loop` is the seamless repeat, for the long tail after a show. `creditsLoop()` wraps
-  the track's content in one `.credits-loop-run`, appends as many `.credits-loop-clone` copies as
-  the viewport needs, and travels exactly one run's height - a bare `repeat: -1` would snap the
-  list back to the top, which everyone watching a wall of names is watching closely enough to see.
+**A category whose contract outgrew a paragraph carries its own `AGENTS.md`** beside its
+code (with the thin `CLAUDE.md`), loaded only when you work in that directory. A new design
+writes its lesson there, never back into this file - which is what keeps every session's
+instruction chain affordable (`npm run check:shared-instructions` prints the headroom).
+
+- **lowerThirds/** - lt01…lt62 plus the ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
+- **infoCards/** - card01…card71, the standard contract's other line-based family ->
+  `infoCards/AGENTS.md`
+- **endCredits/** - cr01…cr12, the LIST category (rolls, walls, boards) -> `endCredits/AGENTS.md`
+- **startingSoon/** - ss01…ss20, every screen shown while the show is NOT happening ->
+  `startingSoon/AGENTS.md`
+- **scoreboards/** - sb01…sb25, the sports boards and `shared/matchClock.ts` ->
+  `scoreboards/AGENTS.md`
+- **cornerBug/** - bug01…bug36, the IDENTITY family -> `cornerBug/AGENTS.md`
+- **infographics/** - ig01…ig39, where every motion is MEASURED -> `infographics/AGENTS.md`
+- **importedDesign/** - imp01 + svg01, the user's own artwork and the BEHAVIOUR pilot ->
+  `importedDesign/AGENTS.md`
+- **audience/** - what the people watching sent in, five forms -> `audience/AGENTS.md`
+- **quiz/** - qz01…qz12, the answer boards -> `quiz/AGENTS.md`
+- **competition/** - the COMPETITION PACK, 38 designs over four sub-categories ->
+  `competition/AGENTS.md`
+
+The rest are a paragraph each and stay here:
+
 - **tickers/** - tk01…tk22 (prefix 'ticker') + tickerPresets.ts (ticker-marquee / ticker-flip /
   ticker-rotate) + **tickerMotion.ts**; data-driven: #f0 lines -> #ticker-track items; marquee =
   items rendered twice, slide one set width, linear repeat:-1 (seamless loop). DATA BLOCKS via
@@ -648,23 +433,6 @@ measures.
 **Which pipe splits a line is a per-shape decision, not a convention** - the schedule board takes
 the FIRST (a show name may contain a pipe, the time cannot), the stat list takes the LAST (the
 figure is the short final part, so the label is what may contain one). Say which, in the runtime.
-- **startingSoon/** - ss01…ss20, the HOLDING SCREEN set (prefix 'starting-soon'; hold-loop preset:
-  entrance + calm .starting-soon-pulse breathing + clock via shared/clock.ts). DATA BLOCKS via
-  convertToDataRegion (self-assembled, calls it directly): the breath imports as a looping scale
-  track (gap 6) and startClock/stopClock ride the step calls (§3b); the clock runtime stays
-  outside the region.
-  **The category is every screen shown while the show is NOT happening** - before it starts,
-  between its parts, when it breaks, after it ends. A design declares three things and the
-  assembler does the rest: `lineCount` (how many #fN spans its markup carries, default 2),
-  `clock` (`minutes` | `start-time` | `none`), and any `extraFields`. The clock fields land AFTER
-  the lines, so a 2-line minutes design is f0/f1/f2 exactly as before and every existing variant
-  emits byte-identically.
-  **`clock: 'none'` is a design decision, not a gap.** A technical pause cannot promise a time
-  and a sign-off card is not waiting for anything, so those screens emit no clock fields, no
-  clock element and no clock runtime, and ship on the `hold-still` preset (the hold loop with the
-  countdown calls removed). Swapping a clock preset onto one after creation degrades to "no
-  countdown" rather than throwing: the interpreter resolves a step's `calls` by NAME and treats a
-  missing function as a no-op.
 - **gameTimers/** - gt01…gt04 (prefix 'game-timer', type 'countdown'; data blocks via
   convertToDataRegion; timer-run pop + timer-line-reveal; minutes in f1; .game-timer-done
   styles time-up). The preset's startClock()/stopClock() ride the conversion as step `calls`
@@ -673,196 +441,12 @@ figure is the short final part, so the label is what may contain one). Say which
   via `GameTimerDesign.runtimeExtraJs` (outside the region, following the clock's globals)
   and `GameTimerDesign.autoEase` (a design's hand-tuned default ease pair, used only when
   the wizard easing is 'auto' - an explicit pick still wins).
-- **scoreboards/** - sb01…sb25 (prefix 'scoreboard', data blocks via convertToDataRegion;
-  the fixed 4-field contract f0-f3 as scoreboard-masks so the standard presets drive them;
-  update() pops a score's mask when it changes on air - speed via motionSpeed()).
-  **A design may OWN its fields instead** (`SbDesign.fields`), plus `.popFields` (which fields
-  pop), `.lineCount` (how many masks the presets choreograph) and `.runtimeExtraJs`
-  (design-owned JS outside the marked region) - all optional, and a design declaring none emits
-  byte-identically to before they existed. That is what lets the SPORTS PACK's bigger boards
-  (docs/SPORTS_PACK.md) share this assembler: a match board adds a clock, a period, crests and
-  club colours, and a match-event card is not a two-team graphic at all, but all of them are
-  still scoreboards. Field contracts + the fragments that carry machinery live in
-  **scorebugShared.ts**; the team-colour lift and the period-breakdown rebuild in
-  **boardRuntimes.ts**. `clipOneLineCss()` documents a real trap: the assembler's own
-  `.scoreboard-mask > span { text-wrap: balance }` resolves to `text-wrap-mode: wrap` and
-  OUTRANKS a plain `white-space: nowrap`, so a long club name wraps and grows a fixed strip
-  mid-match while looking as though the nowrap was never written.
-  sb23-sb25 are the reference-set boards: **sb23 "Wire Bug" fills the scorebug type's EDITORIAL
-  cell** (a row of flat cells whose ground is the club colour, with the three kinds of number
-  told apart by grounds MIXED from the palette rather than written as hex - which is what keeps
-  it legible in a palette it was not drawn in), sb24 "Arena Board" draws the venue's own
-  hardware, and **sb25 "Court Board" is the one to read before inventing a field**: its
-  fouls-and-timeouts strip is the match board's existing `periods` breakdown, because
-  "FOULS | 4 | 2" already IS "label | home | away". A tally that fits the repeating field is
-  never a reason to grow the contract.
-- **shared/matchClock.ts** - the SPORTS CLOCK, design-owned JS outside the marked region (the
-  shared/clock.ts rule: playout, not motion). Counts UP or DOWN per the design's
-  `data-count`, stops itself at zero when counting down, resets to the element's own
-  `data-start` (never zero-by-assumption), and re-seeds from the clock FIELD when an operator
-  types a correction - a live clock drifts from the stadium's, and one that cannot be corrected
-  stops being trusted. **It re-seeds only on a CHANGED value**: the wire resends the cue's whole
-  value set on every Take/Update/Snap, so an unguarded re-seed pulled a running clock back to
-  its typed time on every score bump. The element's text is the PAINTED time and so differs from
-  a resend every second - the discriminator is the last value RECEIVED, which the runtime
-  remembers.
-  **TICKING IS DISPLAY, NOT STATE** (2026-08-19, docs/SPORTS_PACK.md): the clock's truth is a
-  value plus the instant it was true, and a tick is a repaint of `value ± elapsed` rather than
-  an increment. The origin rides the clock FIELD as an `@<epoch ms>` suffix
-  (`"45:00@1755600000000"`), stamped from the `clockStart` row's own server time by
-  `src/control/matchClockWire.ts`, so every renderer agrees and a browser source reopened at 67
-  minutes comes back at 67 minutes instead of at the seed. A plain value with no `@` is a HELD
-  time - which is what every existing template, export and typed correction already sends.
-  `markInPlay`/`markBreak`/`markFinal`/`markLive` are the state markers the
-- **cornerBug/** - bug01…bug36, the IDENTITY family (prefix 'corner-bug', standard assembler,
-  `dataRegion: true`, logo slot + placeholder mark). bug01-04 are the general logo bug; bug05-36
-  are the eight identity types x four families (types/identityBugs.ts): station ident, live
-  status, logo-only mark, sponsor strip, sponsor rotation, event ident, award mark, location
-  chip. Shared authoring parts live beside them - **parts.ts** (the logo slot's field, markup and
-  CSS, with a per-family placeholder mark: bars / diamond / slab / keyline / ring),
-  **statusParts.ts** (the live bug's three word sources + the class-driven look of its states),
-  **rotationParts.ts** (the one-stage stacking a rotation needs) and **bugRuntimes.ts** (the
-  design-owned JS the two machine-bearing types call by name: `bugStatusLive/Replay/Standby` and
-  `sponsorShowNext`). bug02 = house live clock via StandardDesign.runtimeExtraJs - design-owned
-  JS emitted BEFORE the marked ANIMATION region, DOM-ready guarded, survives the data conversion
-  untouched; the identity runtimes ride the same seam.
-  **Hide a data holder with a CSS RULE, never an inline `style="display: none"`**: the editor's
-  entrance reset clears inline props on the whole root subtree (PlayoutSimulator `resetGraphic`),
-  so an inline-hidden holder comes back VISIBLE on the canvas. `STATUS_SOURCE_CSS` is the pattern.
-  The general form is `DATA_SOURCE_CLASS`/`dataSourceCss` (shared/base.ts) - the `.noacg-data-source`
-  class every category's assembler emits when its markup carries one. This is a CATALOG-WIDE
-  rule, not a corner-bug one: measured 2026-08-06, the fundraiser meters leaked their goal, the
-  milestone boards leaked the whole target list, the poll board leaked its options, every
-  audience queue leaked its pending questions and sixteen match boards leaked their club-colour
-  hex - all from the same inline `display: none`. `e2e/catalog-baseline.spec.ts` now fails on
-  any `<div id="fN" style="…display: none">` in the emitted HTML. An `<img id="fN">` is the one
-  exception and is excluded there: an empty image slot hides itself inline through
-  `setFieldValue`, and `resetGraphicInline` restates that after clearing.
-- **infographics/** - ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +
-  igPresets (count-up / bars-grow / ring-fill / rows-cascade / **goal-ring** / **milestone-run**)
-  + **igMotion.ts** + **dataRuntimes.ts** (the rebuilds several designs of a type share:
-  schedule rows, bar rows, the GOAL meter in its two drawn shapes, the MILESTONE track).
-  `goal-ring` is its own preset and `infographicGoalRing` its own builder for a reason: on a
-  poll ring the middle figure IS the percent, so one number drives both; on a goal meter the
-  figure is money and the ring is raised/goal, and feeding the raised total to `ring-fill`
-  would clamp it and draw a full ring at 3 % raised. The milestone track spaces its nodes
-  EVENLY and interpolates the line BETWEEN them rather than plotting current/max - a rail
-  drawn "1 → 2 → 3 → 4" has to have its line mean a position on that rail, and even spacing is
-  what keeps four labels readable when a stretch goal is ten times the first. DATA BLOCKS via
-  convertToDataRegion. EVERY infographic's motion is MEASURED - the stat counts to the figure the
-  operator typed, each bar grows to its own `data-value`, the ring draws to that percent, and the
-  cascade runs one row per line they wrote - so none of it is a number a keyframe can hold, and it
-  all lives in the category motion runtime (see below). The region keeps only the panel entrance
-  (real, editable keyframes) and NAMES the measured part. A count-up design may or may not pair a
-  progress bar with its figure, so `PresetConfig.hasBars` tells the preset - without it a bar-less
-  design (ig01) would carry a phantom timeline layer for an element it doesn't have.
-  **ig38 "Results Rail" is the category's first SIDE PANEL** - a fixed-width column at the frame's
-  edge that stays up while an anchor talks, rather than a centre-frame board that is shown and
-  cleared - and it reuses `seatBarsRuntimeJs` for its rows. **The trap it paid for, binding on
-  anything else that reuses a repeating runtime with a different composition in mind:** that
-  runtime nests the figure's cap INSIDE the bar's fill (so the readout rides a growing tip), so a
-  design that wants the figure pinned at one edge cannot express that as a grid column - the fill
-  is the cap's containing block, not the row. The rail takes the whole TRACK out of flow across
-  the row (the wash) and pins the cap against it, and reserves the figure's lane with the row's
-  own padding, because an out-of-flow cap reserves no width. The first draft laid the row out as
-  `label | figure` and rendered every figure on top of its district's name.
-  **ig39 "Key Figures" is the other half of that lesson** - the catalog's first TWO-COLUMN STAT
-  LIST (a header band, `label | figure` rows, a footer rule with the source and the date). It is
-  what a design gets when the runtime is written for the composition instead of borrowed: label
-  and figure are SIBLINGS in `statListRuntimeJs`, so the row is a real grid and the figures share
-  an edge because they share a column. Two rules it holds beyond that, both stated in its source:
-  a figure is rendered exactly as typed (nothing parses it, because nothing derives a share from
-  it, so "€4.21bn" and "12.4 %" survive intact), and a stat column asks for **lining** numerals as
-  well as tabular ones - the editorial text serif defaults to old-style figures that ride at
-  x-height with 3, 4, 7 and 9 below the line, which put "42" lower than "18,400" beside it and
-  broke the baseline every figure shares with its label. `tabular-nums` alone does not catch that,
-  and neither does the numerals gate: it measures whether a figure's box MOVES, and old-style
-  digits are perfectly stable at the wrong height.
-  **The ELECTION NIGHT mini-pack is ig34-ig36** (the catalog's first EDITORIAL infographics, all
-  siblings of lt25 "Masthead"): a seat board whose parties are one "Party | seats" textarea, a
-  coalition majority meter, and a turnout dial. Three rules they hold, each written into the
-  runtime that owns it (dataRuntimes.ts):
-  - **A seat board's bars are scaled against the BIGGEST PARTY, not the chamber.** Chamber-scaled
-    bars are stubs (76 of 200 is a 38% bar) and the party-against-party comparison the board
-    exists to make is exactly what the stubs stop showing. The scale is a DRAWING choice: the
-    figure at each tip is the seat count they typed, never a share.
-  - **The majority is a LINE ACROSS the track, not the track's end.** Running the meter to the
-    majority would draw a full bar the moment a government is formed and have nothing left to
-    say about the seats won past it, which on a count night is most of the story. That is why
-    `majorityMeterRuntimeJs` takes THREE numbers where the goal meter takes two.
-  - **The comparison figure is optional by construction.** Clear the turnout dial's hidden
-    previous-turnout source and the swing line empties, which `:empty` removes - a first
-    election costs the operator one deletion, not a different graphic.
-  The one that builds markup (ig34) escapes operator text at the data boundary like the rest of
-  the category; the two that only DERIVE text (ig35, ig36) write `textContent`, so their operator
-  text is inert by construction rather than by escaping - each says so in its own source, because
-  "no escaping here" has to read as a decision rather than as an omission.
 - **versus/** - vs01…vs02 (prefix 'versus', type 'fullscreen', SELF-ASSEMBLED like scoreboards;
   fixed field contract f0/f1 team names, f2 event line, f3/f4 logo filelists with visible
   placeholder marks; steps '1' - the sides are simultaneous) + vsPresets.ts (vs-slam /
   vs-glide: edges-meet slides + a VS pop, real keyframes only, DATA BLOCKS via
   convertToDataRegion). Born from the AI benchmark's versus-card winners - the full-frame
   match-up that once misfitted the info-card contract (dropped card05) now owns its contract.
-- **importedDesign/** - imp01 (prefix 'imported-design', NOT browsable - the wizard's "Import
-  graphic" entry is its only way in; CategoryInfo.group 'imported'). The wizard creates it
-  BARE (an explicitly empty `lines` array, honoured by resolveOptions; the HTML/CSS carry
-  teaching comments where fields will land) and hands off to the editor's Data tab - the
-  assembler still renders explicit lines for a caller that passes them. The user's own flat artwork
-  IS the design: `.imported-design-box` holds the `<img>` art + per-line `#fwN` mask wrappers
-  (position, in the artwork's own px) around `#fN` spans (per-line type: font/size/weight/color -
-  LineSpec.style). Self-assembled from shared/base.ts, NOT assembleStandard: the auto-fit
-  `width: fit-content` cap would shrink frame-sized artwork (the box takes the artwork's width;
-  frame-sized art anchors at 0,0, cropped art gets a zone). designPresets.ts (design-fade/
-  slide/pop/blur) animates ONLY the box - artwork and text as one unit; the line presets would
-  tear text out of artwork drawn around it. Steps forced off. The `#fwN` rules are the canvas
-  placement drag's contract (blocks/designLayout.ts, which also owns addPlacedLine - the Data
-  panel's add-field emitting a new line in this exact shape); `.imported-design-art` is its own
-  registry part ("Artwork"), so the PNG and each line animate independently after creation
-  (per-layer presets retarget the box motion - blocks/presetApply.ts). SCALING MODE is
-  per-graphic (DesignArt.stretch, chosen in the wizard's Prepare step): fixed (default -
-  byte-identical emit to before the mode existed) or horizontal 9-SLICE stretch, where the art
-  becomes a border-image div - source/slice/cap-widths all in the `.imported-design-art` RULE
-  (the image ref must stay a CSS declaration, never an inline style: the editor's entrance
-  reset clears inline styles) - plus the stretch runtime (importedDesign/stretch.ts,
-  design-owned JS outside the marked region): ONE `--stretch-x` custom property drives the box
-  width, the middle band, and every [data-stretch] slot; the ladder is stretch to 4% inside
-  the frame edge, then textFit shrink, then clip. The packaged SPX css hops bucket urls to ../
-  (spxStarter cssForSubfolder; zip import strips the hop back). Contract + diagnosis:
-  docs/IMPORT_MVP.md; E2E: e2e/import-graphic.spec.ts + e2e/import-prepare.spec.ts +
-  e2e/import-stretch.spec.ts.
-  **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md,
-  the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
-  as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at import
-  (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
-  `textLength` fit; DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
-  step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
-  E2E: e2e/import-svg.spec.ts.
-  **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the
-  generic-vs-quiz-specific split in docs/GRAPHIC_BEHAVIOUR_PLAN.md §10. It reuses
-  `ANSWER_BOARD_MACHINE` (filtered, never copied) and `ANSWER_BOARD_CONTROLS` via `attachMachine`;
-  only the PAINT is new - the DESIGNER draws each moment as its own layer and the runtime toggles
-  it (`.imported-design-qstate` / `-qon`; ids `q-sel-N` / `q-cor-N` / `q-wrong-N` / `q-lock`).
-  **Classes, never inline styles:** a snap clears inline props, so the state would vanish while
-  the machine still held it. Binding is PICKERS (`DesignSvgQuizBehaviour`), layer names only an
-  accelerator. No registry until a third behaviour says what the abstraction is. Sample:
-  docs/svg-samples/quiz-board.svg; E2E: import-svg-behaviour + configured/imported-quiz-output.
-- **audience/** - the AUDIENCE graphics (prefix 'audience'): what the people watching sent in.
-  ONE assembler, FIVE forms (`AudienceForm` in shared.ts - viewer question, Q&A card, chat
-  highlight, question queue, community/prayer request), 20 designs in five per-form files
-  (`viewerQuestion.ts`, `qaCard.ts`, …), four style families each. A form declares its FIELDS and
-  the runtime it needs; everything else - the attribution rules, the long-message clamp, the
-  style contract, the export path - is written once. Deliberate deviations from the
-  one-file-per-design convention, both documented in the files: the four designs of a form live
-  together (they are one object in four skins, and side by side a drift between them is
-  reviewable), and the blocks they share come from **familyCss.ts** (panel / kicker / byline per
-  family). DATA BLOCKS via convertToDataRegion; the Q&A card's answer is a real middle step with
-  `reveals` (keyframes, not a call - so a SNAP to the answered state shows the answer).
-  Two rules the category exists to hold: **the platform is TEXT, never a logo** (one operator
-  field, so the same card serves YouTube, Zoom, a church app or slips of paper handed up from the
-  room), and **a missing name or source renders cleanly** - `audienceRuntime.ts`'s
-  `audienceAttribution()` marks the root and the CSS swaps in an `.audience-anon` element whose
-  WORD lives in the markup, so it can be translated. The queue's live row is an INDEX in runtime
-  data, never a state per question.
 - **poll/** - the LIVE VOTE board (prefix 'poll'): the poll while it is happening, as against the
   `poll` graphic TYPE in the infographic category (ig02/ig11/ig12/ig13), which is the finished
   result chart. pl01…pl04 + pollPresets ('poll-open') + **pollMotion.ts**. Data-driven like
@@ -872,8 +456,6 @@ figure is the short final part, so the label is what may contain one). Say which
   leaving and the figures arriving are ordinary keyframes, so a snap straight to the result shows
   the result. Only the winner CALL is a lifecycle call (which row wins depends on the counts, so
   it has no fixed target - the quiz reveal's posture). A tie calls nobody and says so.
-- **quiz/** - qz01…qz12 (prefix 'quiz'; f0 question, f1…fn options, hidden correct-answer and
-  selected-answer dropdowns after them).
 - **frames/** - fr01…fr15 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
   DESIGN owns its fields, because a frame's field count follows its camera count - 2 lines for
   one camera, 4 for a two-up) + framePresets.ts (frame-draw / frame-fade / frame-slide). The one
@@ -893,42 +475,6 @@ figure is the short final part, so the label is what may contain one). Say which
   the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
   motion the timeline cannot see, the control page cannot pause and the render clock cannot
   drive.
-- **competition/** - the COMPETITION PACK (docs/COMPETITION_PACK.md): 38 designs, 12 graphic
-  types, FOUR categories over ONE self-assembler (`competition/shared.ts`) - esports/ (prefix
-  'esports-score': es01-es04 series scorebugs + mr01-mr03 map/round indicators), matchup/
-  (prefix 'matchup', full-frame: mu01-mu04 match-ups with a winner pick, h201-h203 head-to-head
-  comparisons, pc01-pc03 player cards), results/ (prefix 'results-board': rs01-rs03 rosters,
-  st01-st04 standings/leaderboards/result tables, br01-br02 brackets), reveal/ (prefix
-  'reveal', full-frame: nm01-nm03 nominee reveals, vd01-vd03 verdicts, wn01-wn03 winner cards,
-  aw01-aw03 award/launch reveals). Like infographics the DESIGN owns its fields + runtime; the
-  TYPE owns the machine. Contract: `.{prefix}-box` > `-head` + `-accent` + `-body`, which is
-  exactly what compPresets.ts tweens (comp-rise / comp-impact / comp-bloom / comp-cascade - one
-  prefix-parameterized bank for all four categories, cascade STRUCTURAL because it names a
-  measured builder). compMotion.ts holds those builders (compCascade composes compBarsGrow).
-  **THE PACK'S RULE:** the moment is a state, what it is about is DATA - one `selected` state
-  plus a `winner` field, one `judged` state plus a `verdict`, one `spotlight` plus a row number.
-  A design whose Continue press fires a runtime call declares `revealSteps`, which is what keeps
-  SPX's `steps` DERIVED (the quiz precedent).
-  **What counts as a LINE is `visibleTextFields`, not the ftype**: a `number` field is a line
-  when it is drawn in a mask (the series score) and is not one when its element is a
-  `.noacg-data-source` holder (the map index, the highlighted row, the phase words). Filtering
-  on `ftype === 'textfield'` conflated the two and dropped a field from the layer list the
-  moment it stopped being typed as text.
-  DATA BLOCKS via convertToDataRegion + a refinement (§3c above): the Continue reveal is a real
-  middle step that CALLS revealAnswer() (adds .quiz-correct/.quiz-dim + pops the winner;
-  update() clears the reveal). Each answer ROW carries `quiz-option` (the shared look) AND
-  `quiz-option-N` (its own animation identity) - the entrance staggers them, and a stagger
-  lives in the keyframe model as per-row start times, which one class matching several elements
-  cannot carry. The numbered rows are registry parts, labelled by their field ("Answer B").
-  **The ROW COUNT is a parameter** (`QuizContent.answers.length` - 2, 3 or 4): a true/false
-  board, a three-way and the classic four-answer board are the same graphic with a different
-  number of rows, so the letter alphabet, the two hidden field ids and the preset's row list all
-  derive from it, and n = 4 derives exactly the strings the four-answer board always emitted
-  (byte identity, pinned by the catalog baseline). `assertRowsMatchAnswers` throws when a design
-  draws the wrong number of rows - the one thing the assembler cannot derive from the design, and
-  silent in every other check. All three boards share ONE machine (types/answerBoard.ts): because
-  the pick is DATA, halving the rows changes no state at all.
-
 ## THE STAGE: which graphics may change size with the operator's text
 
 `width: fit-content` (DESIGN_LANGUAGE §5) is the catalog default and only HALF right. On a
@@ -1007,7 +553,7 @@ flag's "Warning", a sponsor rail's "PARTNERS". Language is the obvious case, but
 is the common one. `node scripts/field-coverage.mjs` is the gate (root AGENTS.md); it drives
 every field and reports whatever did not move.
 
-Three rules keep this from fighting the rest of the model:
+Four rules keep this from fighting the rest of the model:
 - **A repeated structure stays ONE `lines` field**, never `f7`…`f26` (see the repeating-data
   system below). "Every value is editable" is about REACH, not about field count.
 - **A state's WORD is a field; the state is not.** An operator event carries state, not copy -
@@ -1017,6 +563,18 @@ Three rules keep this from fighting the rest of the model:
 - **A word source the operator can edit must repaint on `update()`**, not only when its state
   is next entered. An operator who retypes a word, sees nothing happen, and concludes the field
   is dead is the failure this costs one line to avoid (`paintPhase()` in the esports runtime).
+- **Hide a data holder with a CSS RULE, never an inline `style="display: none"`**: the editor's
+  entrance reset clears inline props on the whole root subtree (PlayoutSimulator `resetGraphic`),
+  so an inline-hidden holder comes back VISIBLE on the canvas. `STATUS_SOURCE_CSS` is the pattern.
+  The general form is `DATA_SOURCE_CLASS`/`dataSourceCss` (shared/base.ts) - the `.noacg-data-source`
+  class every category's assembler emits when its markup carries one. This is a CATALOG-WIDE
+  rule, not a corner-bug one: measured 2026-08-06, the fundraiser meters leaked their goal, the
+  milestone boards leaked the whole target list, the poll board leaked its options, every
+  audience queue leaked its pending questions and sixteen match boards leaked their club-colour
+  hex - all from the same inline `display: none`. `e2e/catalog-baseline.spec.ts` now fails on
+  any `<div id="fN" style="…display: none">` in the emitted HTML. An `<img id="fN">` is the one
+  exception and is excluded there: an empty image slot hides itself inline through
+  `setFieldValue`, and `resetGraphicInline` restates that after clearing.
 
 The deliberate exceptions are small and argued in the gate: the versus mark (it IS the graphic),
 and an image field's empty-slot placeholder (that text is the field's own empty state and the

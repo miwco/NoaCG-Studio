@@ -20,7 +20,7 @@ import { staticValidateHyperframes, HF_WARNING_RULES } from '../../video/hyperfr
 import { setActiveBridge, type VideoBridge } from '../../video/bridgeRegistry';
 import { compositionAssets, describeAssets } from '../../video/types';
 import { videoFieldValues } from '../../model/videoTypes';
-import CanvasGuides from '../CanvasGuides';
+import CanvasGuides from '../canvas/CanvasGuides';
 
 const RELOAD_DEBOUNCE_MS = 350;
 // The fit-scaled frame is inset from the stage edges so its shadow and outline read against

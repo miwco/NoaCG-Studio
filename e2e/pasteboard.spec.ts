@@ -70,7 +70,7 @@ test('the pasteboard is sized by the authored motion, and grows when the motion 
         const { useTemplateStore } = await import('/src/store/templateStore.ts');
         const { parseAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
         const { setKeyframe } = await import('/src/blocks/animEdit.ts');
-        const { computePad } = await import('/src/components/pasteboard.ts');
+        const { computePad } = await import('/src/components/canvas/pasteboard.ts');
         const s = useTemplateStore.getState();
         const data = parseAnimData(s.template.js)!;
         const settledLeft = left - computePad(s.template).padX; // doc px → canvas px
@@ -152,7 +152,7 @@ test('the pasteboard pad never enters persisted state; export stays clipped to t
   const probe = await page.evaluate(async () => {
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
-    const { computePad } = await import('/src/components/pasteboard.ts');
+    const { computePad } = await import('/src/components/canvas/pasteboard.ts');
     const tpl = useTemplateStore.getState().template;
     const { padX } = computePad(tpl);
     return {
@@ -240,7 +240,7 @@ test('preset-authored off-canvas: a slide preset entrance renders + selects on t
     const { useTemplateStore } = await import('/src/store/templateStore.ts');
     const { parseAnimData, spliceAnimData } = await import('/src/blocks/animData.ts');
     const { presetDonor, applyPresetData } = await import('/src/blocks/presetApply.ts');
-    const { computePad } = await import('/src/components/pasteboard.ts');
+    const { computePad } = await import('/src/components/canvas/pasteboard.ts');
     const s = useTemplateStore.getState();
     const data = parseAnimData(s.template.js)!;
     const donor = presetDonor(s.template, data, 'slide-up');

@@ -99,6 +99,14 @@ Phase 1 is built - manual, local, no API.
   A LIST value edits in a TEXTAREA: `<input>` sanitises newlines out of its own value, so a list
   rendered there comes back joined into one string. `reparseLeaf` reads an edit back in the type
   it already had.
+- **home/ProductionDataWorkspace** - the Tables section. **Every destructive control on a table
+  is ARMED** - the table, a COLUMN and a ROW alike: all three take typed-in values with no undo
+  behind them, off a table someone may be reading rows from during a show. One `armed` state per
+  card holds `'table' | col:<key> | row:<id>`, so arming any of them disarms the rest and two
+  pending confirms can never sit on screen together. The table's button says the word
+  ("Delete table?"); the column's and the row's swap ✕ for ✓ and carry the meaning in the amber
+  and the tooltip, because both sit in tracks sized by that button and a word would widen the
+  table under them (docs/PLAYOUT_DASHBOARD.md §2d, one surface over).
 - **ProductionPage owns the tree**, not the workspace - the one sender (`runVerb`) lives there and
   the Data tab unmounts the playout surface, so an edit made on Data would otherwise have no route
   to air. It holds the state, resolves bindings, diffs against what was last sent, and dispatches

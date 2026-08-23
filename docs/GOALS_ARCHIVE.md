@@ -1705,3 +1705,66 @@ reading "Custom", and the measured round's brief bank + runner. The WHY that dec
 let the agent design the way it works best; NoaCG is a bridge, not a second creative harness; the
 skill teaches the contract, never a look, until a measured round says otherwise. **Open:** the
 measured round itself (owner quota + blind read) and the publish - both live in `GOALS.md`.
+
+## Landed parts of live goals (moved 2026-08-22)
+
+> Moved here verbatim from `GOALS.md` when it went back over its ~200-line budget. Each of these
+> is the SHIPPED half of a goal whose remainder is still open: the work below is done and dated,
+> the open remainder stayed in `GOALS.md`. Nothing here is direction.
+
+### Behaviour attached to artwork somebody else drew - both cases work (2026-08-22)
+
+*The shipped half of "NOW" step 2. What stayed in `GOALS.md`: the owner walk, still owed.*
+
+**BOTH CASES NOW WORK, walked in a browser and pinned by `e2e/import-svg-behaviour.spec.ts`
+(2026-08-22).** The SCOREBOARD needed no code: a numeric SVG layer is already a ± stepper on
+every control surface, it acts on air without replaying the entrance, and it persists. The
+QUIZ is a deliberate pilot: the catalog answer board's machine and buttons are reused
+unchanged, and what is new is the PAINT - the designer draws each moment as its own hidden
+Illustrator layer and NoaCG decides when it is visible. Binding is pickers in the Fields
+step, prefilled from layer names, no code and no AI. The plan, the split of what was already
+generic against what is quiz-specific, and what stays deferred until a third behaviour
+exists: `docs/GRAPHIC_BEHAVIOUR_PLAN.md` §10.
+
+### The playout dashboard, accepted as it stands (2026-08-22)
+
+*What stayed in `GOALS.md`: the three open buttons (drop Preview, re-take, the SPACE question).*
+
+**Owner, 2026-08-22: the dashboard is accepted as it stands** - *"looks good for right now… the
+buttons on the right are totally fine."* The vertical-budget re-lay specified after the
+2026-08-21 read (verb bar into the column beside PROGRAM, "what is left" instead of the flat
+`26vh` monitor cap) is therefore **not current work**; it stays written down in
+`docs/PLAYOUT_DASHBOARD.md` §2 for when a real window makes it hurt again.
+
+### Why Lite and Pro were revived (owner decision, 2026-08-15)
+
+*The argument. What stayed in `GOALS.md`: the three rules it binds - the same §2 gate re-run
+unchanged, a second FAIL retires Lite for good, and the re-run is cheap.*
+
+Lite's value gate FAILED on the owner's blind ballot on 2026-08-14, and the owner reopened it the
+next day on evidence rather than appetite: every failure the ballot named was **the MARK**, and it
+hit the hand-branded DIY arm too, so the defect was the platform's and not the model's - a reading
+Pro's first hosted generation independently confirmed. Both platform fixes are merged (the
+mark-legibility gate and the mark-size rule). **The full argument, the verdict it overturned and the
+operationalized pass rule live in `docs/AI_LITE_BRAND_PLAN.md` §2/§2.1/§2.2** and are deliberately
+not restated here.
+
+**The re-run is not expensive.** `scripts/ai-lite-value-gate.mjs` builds the arms, the blind sheet
+and the verdict; the 2026-08-14 Lite arm cost **$0.0069 for 8 cells** and the other two arms are
+`variant.create()` and cost nothing. The expensive part is the owner's eyes.
+
+### MXMZ, researched (2026-08-22)
+
+*What stayed in `GOALS.md`: the one-line competitive read and the pointer to the full doc.*
+
+**MXMZ** (mxmz.com, added 2026-08-20 - named by Yle as the working model) - Dutch cloud
+broadcast-graphics SaaS out of Banijay/Southfields: design in Illustrator/Figma/Canva, import
+the SVG with **every layer auto-exposed** for animation and JSON data binding, browser timeline,
+operator playout with newsroom/sports-data integrations; 200+ channels, from ~$3k/yr. They prove
+the "your own SVG, playable" workflow at broadcast scale, so our SVG import has to match it
+(layers auto-exposed, no renaming ritual) - and beat it on what they lock away: free-forever,
+self-host, export the files anywhere, a catalog and AI they don't have. **Researched properly
+2026-08-22: `docs/COMPETITOR_MXMZ.md`.** The headline: nothing public shows them authoring LOGIC
+at all - they train the designer for a day on a keyframe timeline, keep the OPERATOR as the
+non-technical one, and hand-build a control panel per sport. Attachable behaviours are the gap
+their architecture has no place to put.

@@ -59,6 +59,17 @@ const createProject = (variantName) =>
 await page.goto(`${base}/app`);
 await page.waitForSelector('.topbar');
 
+// Decline analytics before anything is photographed. The consent banner is non-blocking by
+// design, but it parks itself over the bottom-right of the app - which at 1366x768 is exactly
+// where the cue editor is, so the first run of this script produced a frame of the surface
+// under review with a dialog across it. Through the module's own setter, never a hand-written
+// storage key, so this cannot drift from where consent actually lives.
+await page.evaluate(async () => {
+  const { setAnalyticsConsent } = await import('/src/backend/events.ts');
+  setAnalyticsConsent(false);
+});
+await page.waitForSelector('[data-testid="analytics-consent"]', { state: 'detached' });
+
 // ── The fixture: one production holding both graphics ──────────────────────────────────────
 await createProject('House Scorebug');
 const showId = await page.evaluate(async () => {

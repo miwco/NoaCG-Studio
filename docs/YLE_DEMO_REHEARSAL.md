@@ -168,11 +168,12 @@ it ends with visible ⚡ buttons).
 ### Beat 2 — CONTROL, from a phone (4 min)
 
 1. On the laptop: production page, **Playout** tab. Point at the two monitors — **PREVIEW** is
-   local to this page; **PROGRAM — ON AIR** follows the shared log, which is why it shows a
-   take somebody else made. The verb bar under them reads
-   **→ Preview `P` · ⟳ TAKE `SPACE` · ⟳ Re-take `R` · ✎ Update `U` · » Next `N` · ■ Out `0`**,
-   and TAKE becomes **■ TAKE OFF** once that cue is the live one. Top right: **▶ Start
-   production** (publish), **⬇ Export…**, **■ All out**.
+   local to this page, and **selecting a cue in the rundown is what puts it there**, so there is
+   no separate preview button to press; **PROGRAM — ON AIR** follows the shared log, which is
+   why it shows a take somebody else made. The verb block beside PROGRAM reads
+   **⟳ TAKE `SPACE`** across the top, then **⟳ Re-take `R` · ✎ Update `U`** and
+   **» Next `N` · ■ Out `0`** two to a row, and TAKE becomes **■ TAKE OFF** once that cue is
+   the live one. Top right: **▶ Start production** (publish), **⬇ Export…**, **■ All out**.
 2. Take the **bug** cue, then the **ticker** cue. Both stay up — different layers.
 3. Take the **opener** — it plays and clears itself.
 4. Walk two **name straps** with ↑/↓ and **⟳ TAKE** (`SPACE`). Each replaces the previous on

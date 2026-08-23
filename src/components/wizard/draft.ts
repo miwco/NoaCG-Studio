@@ -173,6 +173,24 @@ export interface SvgOutlineDraft {
   looksLikeText: boolean | null;
 }
 
+/**
+ * THE HUG (docs/SVG_IMPORT_PLAN.md §3), as the mapping step holds it: does one rectangle grow
+ * so a longer value fits at full size, and which rectangle is it?
+ *
+ * **Off by default, and asked rather than guessed.** The owner's ruling is that a lower third's
+ * banner should be as wide as the name on it, while a quiz board and a scorebug declare a stage
+ * and must not move - and no geometry separates those two. The shipped samples prove it: the
+ * lower third is drawn on a FULL-FRAME artboard (so "smaller than the frame" calls it a board),
+ * and the scorebug is a small floating object (so the same rule calls it a banner). Both
+ * readings are wrong, so the step asks, with the widest rectangle already proposed.
+ */
+export interface SvgStretchDraft {
+  /** ON = the picked rectangle widens with its text; OFF = today's behaviour, nothing moves. */
+  on: boolean;
+  /** Candidate id ("sN") of the rectangle that grows. Null = none picked, which reads as off. */
+  shapeId: string | null;
+}
+
 /** How one font family the SVG references resolves (plan §4). */
 export interface SvgFontDraft {
   /** The family name the artwork asks for, verbatim — what every emitted `@font-face` is
@@ -293,6 +311,10 @@ export interface WizardDraft {
   /** The BEHAVIOUR bound to the artwork, or null for the ordinary in/out graphic the importer
    *  has always produced. Proposed from the layer names at drop, and freely re-picked. */
   svgBehaviour: SvgQuizDraft | null;
+  /** Does the graphic HUG its text — one rectangle widening so a longer value fits at full
+   *  size (plan §3)? Off is the graphic that declares a STAGE, which is every board and
+   *  every scorebug; on is the lower third whose banner is as wide as the name on it. */
+  svgStretch: SvgStretchDraft;
   /** Per referenced font family: how it resolves. Bundled faces auto-match by name at drop;
    *  the mapping step offers the Google fetch or an upload for the rest. An entry with
    *  neither source is UNRESOLVED — created anyway, with a warning. */
@@ -353,6 +375,7 @@ export function initialDraft(): WizardDraft {
     svgImages: [],
     svgOutlines: [],
     svgBehaviour: null,
+    svgStretch: { on: false, shapeId: null },
     svgFonts: [],
     legibility: {},
   };
@@ -456,6 +479,14 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
             .filter((f) => f.on && f.box)
             .map((f) => ({ candidateId: f.candidateId })),
           behaviour: svgBehaviourOption(draft) ?? undefined,
+          // The hug travels only when it is both ON and pointed at a shape that still exists:
+          // a half-answered picker must never become a graphic that resizes at random.
+          stretch:
+            draft.svgStretch.on &&
+            draft.svgStretch.shapeId &&
+            draft.designSvg.shapes.some((s) => s.id === draft.svgStretch.shapeId)
+              ? { candidateId: draft.svgStretch.shapeId }
+              : undefined,
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,

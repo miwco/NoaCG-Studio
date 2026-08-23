@@ -227,6 +227,18 @@ What is OFFERED is decided in assets/svgImport.ts, and three rules there are loa
 `<tspan>` is a LINE or a KERNED RUN and only the measured GAP tells them apart (`groupRuns`);
 hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are RANKED by whether
 the measured shapes read as a line of type, and never filtered.
+**EVERY detected text row starts ON** - the `f:` prefix names a field and guarantees it, and
+never turns the unmarked rows off (only a PICTURE, which defaults off, is switched on by it).
+The step has a measured HEIGHT BUDGET like the Entry step's: the artwork is capped to a share
+of the window (`--map-svg-cap`, a height applied as a max WIDTH at the artwork's own aspect -
+letterboxing would break `measureOutline`'s scale) and sits in a STICKY band beside the
+sentence that says what to do, so the checklist starts above the fold and the hover highlight
+still has something to point at. Editing a row's sample WRITES IT INTO THAT ARTWORK the way
+`update()` writes it on air, which is what makes a real length testable here.
+The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
+does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
+inferred from geometry - the shipped lower third is a full-frame artboard and the shipped
+scorebug is a small floating object, so any size rule mislabels one of them.
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),

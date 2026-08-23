@@ -208,6 +208,28 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     if (changed) onDraft({ svgOutlines: measured });
   }, [outlines, onDraft, svg]);
 
+  // THE SAMPLE IS THE ARTWORK'S TEXT. Editing a row used to change nothing on the picture
+  // above it — the new value only appeared two steps later, which made the field read as
+  // decoration and left no way to try a length here, on the one screen that shows the design
+  // at its own size. Written the way `update()` writes it on air (textContent on the bound
+  // node), so what this step shows is what the operator will get, overflow and all. A row
+  // switched OFF goes back to the text the designer drew; a COUNTDOWN row is left alone —
+  // its field is a length in minutes, not the readout.
+  const fields = draft.svgFields;
+  const drawnText = useRef(new Map<string, string>());
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    for (const f of fields) {
+      const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${f.candidateId}"]`);
+      if (!el) continue;
+      if (!drawnText.current.has(f.candidateId)) drawnText.current.set(f.candidateId, el.textContent ?? '');
+      if (f.kind === 'countdown') continue;
+      const next = f.on ? f.sample : (drawnText.current.get(f.candidateId) ?? '');
+      if (el.textContent !== next) el.textContent = next;
+    }
+  }, [fields]);
+
   if (!svg) return null;
 
   // Text-shaped groups first, everything else after — a STABLE sort, so within each half the
@@ -318,23 +340,51 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
 
   return (
     <div className="map-svg">
-      {/* The artwork, with the hover highlight over it. */}
-      <div className="map-svg-stage-wrap">
+      {/* THE ARTWORK AND WHAT THE STEP IS FOR, side by side and STICKY. The artwork used to
+          be the whole first screen — a full-frame design at the column's width is 435px tall,
+          which left one of seven field rows inside a 1366x768 scrollport, and the step read as
+          having nothing on it. So the artwork is capped to a share of the window, the sentence
+          that says what to do sits in the room beside it rather than above it, and both stay
+          put while the checklist scrolls — the hover highlight is useless the moment the
+          artwork has scrolled off the top. The cap is a HEIGHT applied as a max WIDTH at the
+          artwork's own aspect: letterboxing the svg inside a wider box would break
+          measureOutline, which reads the scale off the root element's rect. */}
+      <div className="map-svg-stagebar">
         <div
-          className="map-svg-stage"
-          ref={stageRef}
-          data-testid="map-svg-stage"
-          // The markup is our own sanitizer's output (script/handlers/foreignObject already
-          // removed at import — assets/svgImport.ts), never raw user input.
-          dangerouslySetInnerHTML={{ __html: svg.markup }}
-        />
-        {highlight && (
+          className="map-svg-stage-wrap"
+          style={{ maxWidth: `calc(var(--map-svg-cap) * ${(svg.width / svg.height).toFixed(4)})` }}
+        >
           <div
-            className="map-svg-highlight"
-            data-testid="map-svg-highlight"
-            style={{ left: highlight.x - 4, top: highlight.y - 4, width: highlight.w + 8, height: highlight.h + 8 }}
+            className="map-svg-stage"
+            ref={stageRef}
+            data-testid="map-svg-stage"
+            // The markup is our own sanitizer's output (script/handlers/foreignObject already
+            // removed at import — assets/svgImport.ts), never raw user input.
+            dangerouslySetInnerHTML={{ __html: svg.markup }}
           />
-        )}
+          {highlight && (
+            <div
+              className="map-svg-highlight"
+              data-testid="map-svg-highlight"
+              style={{ left: highlight.x - 4, top: highlight.y - 4, width: highlight.w + 8, height: highlight.h + 8 }}
+            />
+          )}
+        </div>
+        <div className="map-svg-lead">
+          <h3>Choose what the operator can change</h3>
+          {svg.candidates.length > 0 ? (
+            <p className="hint">
+              Your artwork airs exactly as drawn. Tick the layers below that an operator should
+              be able to retype — hover a row to see which one it is, and edit its text here to
+              try a real length.
+            </p>
+          ) : (
+            <p className="hint">
+              Your artwork airs exactly as drawn. This file has no text layers to bind — what
+              that means, and the two ways forward, are below.
+            </p>
+          )}
+        </div>
       </div>
 
       {svg.candidates.length === 0 ? (
@@ -369,10 +419,6 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
               {onCount} of {draft.svgFields.length} on air as operator fields
             </span>
           </h3>
-          <p className="hint">
-            Everything ticked becomes a field the operator can retype — with your exact
-            typography. Hover a row to see which text it is.
-          </p>
           {draft.svgFields.map((f) => (
             <div
               key={f.candidateId}
@@ -573,6 +619,74 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                 </select>
               </label>
             </>
+          )}
+        </div>
+      )}
+
+      {svg.candidates.length > 0 && svg.shapes.length > 0 && (
+        /* THE HUG (docs/SVG_IMPORT_PLAN.md §3). A lower third's banner should be as wide as
+           the name on it; a quiz board and a scorebug declare a stage and must not move. No
+           geometry separates the two — our own samples draw the banner on a full-frame
+           artboard and the scorebug as a small floating object — so this asks, with the
+           widest rectangle already proposed and OFF until somebody says otherwise. */
+        <div className="panel-section" data-testid="map-svg-stretch">
+          <h3>
+            When the text is too long{' '}
+            <span className="muted">
+              {draft.svgStretch.on ? 'the panel grows' : 'the text shrinks to fit'}
+            </span>
+          </h3>
+          <p className="hint">
+            A longer value than you drew for has to go somewhere. By default the line shrinks
+            until it fits — right for a board, whose layout is the design. A lower third can
+            instead let its banner grow, so the type stays the size you drew it.
+          </p>
+          <label className="save-field">
+            <span>Too-long text</span>
+            <select
+              value={draft.svgStretch.on ? 'grow' : 'shrink'}
+              onChange={(e) =>
+                onDraft({
+                  svgStretch: {
+                    on: e.target.value === 'grow',
+                    // Turning it on with nothing picked takes the proposal rather than
+                    // leaving a switch that is on and does nothing.
+                    shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
+                  },
+                })
+              }
+              data-testid="map-svg-stretch-mode"
+            >
+              <option value="shrink">Shrinks to fit the space you drew</option>
+              <option value="grow">Grows the panel behind it</option>
+            </select>
+          </label>
+          {draft.svgStretch.on && (
+            <label
+              className="save-field"
+              onMouseEnter={() => setHoverId(draft.svgStretch.shapeId)}
+              onMouseLeave={() => setHoverId((h) => (h === draft.svgStretch.shapeId ? null : h))}
+            >
+              <span>Which panel grows</span>
+              <select
+                value={draft.svgStretch.shapeId ?? ''}
+                onChange={(e) => onDraft({ svgStretch: { on: true, shapeId: e.target.value || null } })}
+                data-testid="map-svg-stretch-shape"
+              >
+                {svg.shapes.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label} — {Math.round(s.width)} × {Math.round(s.height)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {draft.svgStretch.on && (
+            <p className="hint">
+              It widens to the right, and anything drawn past its right edge travels with it —
+              never past the frame's safe margin. Only rectangles can grow: a panel drawn as a
+              freeform shape has no width to change.
+            </p>
           )}
         </div>
       )}

@@ -340,10 +340,14 @@ test('the video strip is one line, quieter than any shipped mode', async ({ page
 test('the Import card names the file types its own drop zone takes', async ({ page }) => {
   await entryStepAt(page, 1366, 768);
   // A finished .html / .zip template goes through THIS door (ImportDesignStep's `accept` takes
-  // image/*, .html, .htm and .zip). It was named only on the AI card, so the one user who
+  // image/*, .svg, .html, .htm and .zip). It was named only on the AI card, so the one user who
   // arrives holding a finished graphic had to guess that the AI door - the door they have
   // every reason to avoid - was the way in.
   await expect(page.locator('[data-entry="import-graphic"] .hint')).toContainText('.html or .zip');
+  // And SVG is named FIRST, because it is the import the Design step calls the best one - its
+  // text layers arrive as fields on their own - and it is how artwork gets in for the September
+  // goal. A card that says only "image" reads as the raster road to anyone holding a drawing.
+  await expect(page.locator('[data-entry="import-graphic"] .hint')).toContainText('SVG');
   await expect(page.locator('[data-entry="ai"] .hint')).not.toContainText('.zip');
 });
 

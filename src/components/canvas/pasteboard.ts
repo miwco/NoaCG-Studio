@@ -27,8 +27,8 @@
 // they derive the canvas origin and scale from the rendered DOM (the guides' `canvas-bounds`
 // rect).
 
-import { parseAnimData, type AnimData } from '../blocks/animData';
-import type { SpxTemplate } from '../model/types';
+import { parseAnimData, type AnimData } from '../../blocks/animData';
+import type { SpxTemplate } from '../../model/types';
 
 /** What a graphic whose reach cannot be read gets, as a fraction of the canvas on each side —
  *  the flat pad every template used to get. */

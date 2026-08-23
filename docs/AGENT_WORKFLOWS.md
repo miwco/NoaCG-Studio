@@ -60,8 +60,18 @@ ratchets DOWN (`.codex/config.toml`), so "lower it until it fails" is not a way 
 When a chain runs short, RELOCATE rather than delete: move a section that describes one directory
 into that directory's own `AGENTS.md` (plus the thin `CLAUDE.md` importing it) and leave a pointer
 behind. The content still loads for the people editing that code, and it leaves every OTHER chain.
-`src/components/` is the worked example - `wizard/`, `video/`, `home/`, `fields/` and `style/` all
-carry their own contract, so a session editing the wizard no longer loads the video shell's.
+`src/components/` is the worked example - `wizard/`, `canvas/`, `video/`, `home/`, `fields/`,
+`style/` and `auth/` all carry their own contract, so a session editing the wizard no longer loads
+the video shell's; `src/templates/` did the same for `types/`, `pack4/` and its eleven big
+categories, and `e2e/` now owns the traps a SPEC falls into.
+
+Two things that look like relocation and are not. **Moving a section DEEPER on the same path buys
+nothing** - a chain is measured to its leaf, so pushing `wizard/`'s detail into `wizard/steps/`
+only moves which leaf is tightest. The saving comes from moving content OFF a shared ancestor into
+ONE branch, so the siblings stop paying for it. And **when the files a section describes are loose
+in the parent folder, moving THEM into a directory is the fix**, not shorter prose: that is how
+`src/components/canvas/` came to exist on 2026-08-22, after the wizard chain had 297 bytes left and
+every session editing a wizard step was loading the whole canvas gesture contract.
 
 ## Adding or changing a workflow
 
