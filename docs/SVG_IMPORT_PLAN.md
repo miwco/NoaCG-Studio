@@ -256,6 +256,115 @@ gate - not the importer - is authoritative.
 - **P3 (opt-in):** AI label proposals; Figma-specific niceties; SVG *export* of a NoaCG graphic
   is explicitly out of scope.
 
+## 6a. The imported SVG is a STARTING DESIGN, not a binding step (owner, 2026-08-23)
+
+The step ships as a binding form: tick the layers the file already has. That framing assumes the
+file contains a layer for everything the show needs, and it is the assumption the owner broke.
+**The imported SVG is a fixed 1920x1080 STAGE, not immutable artwork** - elements inside it may
+resize and reposition, and the walk is: bind what exists, replace what was outlined, ADD what was
+never drawn, and progressively declare LAYOUT RELATIONSHIPS between them.
+
+**Never universally elastic.** The author says which element may grow, in which direction, how
+far, and what travels with it. A board and any deliberately fixed composition stay fixed. AI may
+later PROPOSE a relationship ("this rectangle is probably the text background"); it is never
+required for the feature and never participates in the runtime fit.
+
+### The ordered road (owner-ruled 2026-08-23; the order is the ruling, not a preference)
+
+1. **ONE CANVAS.** Two canvases on the mapping step were two answers to one question and only the
+   preview could answer it: the inline render has no runtime, so it showed a value the ladder had
+   already wrapped and shrunk as clipped and running off the artwork - at three times the area of
+   the truthful preview beside it (measured, 1366x768). The inline render survives as a HIDDEN
+   node for `measureOutline` (that code needs the artwork RENDERED, not VISIBLE); the hover
+   highlight moves onto the preview through the rect channel the editor canvas already uses
+   (`preview/canvasControlProtocol.ts`). No canvas EDITOR is committed to by this.
+2. **ONE FITTING SYSTEM** - the enabling refactor, and **deliberately scoped small** (owner:
+   "keep step 2 tightly scoped as an enabling refactor rather than allowing it to become a larger
+   field-system cleanup"). See §6b.
+3. **ADD FIELD** - drag on the canvas, a real editable field where the file drew nothing. Cheap
+   once 2 lands: `addPlacedLine` already emits it; this is the gesture plus the canvas from 1.
+4. **VERTICAL GROWTH** - the rung the owner values most. See §6c.
+5. **THE CANVAS AS A CONTROL SURFACE** - click a layer to bind it, click a rectangle to make it
+   the growing panel, drag its direction. The relationship set from 4 stops being
+   dropdown-authored. This is the canvas-editor question proper and is taken deliberately.
+
+**Why 2 before 4, though 4 is the higher-value feature** (owner: "I don't want vertical growth
+implemented against a field distinction we're about to remove"): the growth half - moving a panel
+and reflowing followers - is DOM rects and does not care what kind an element is, but the
+*wrap-into-the-new-height-then-shrink* half is the FIT, and the fit is exactly where the two kinds
+diverge today. Built before 2, it ships twice and one copy is thrown away.
+
+## 6b. Step 2 - ONE FITTING SYSTEM, and where its line is
+
+**The defect.** An imported SVG can carry TWO fit runtimes at once, and `svg.ts` says so out loud
+("both can coexist"):
+
+- **bound SVG text** (a `<text>`/`<tspan>` in the file) -> `fitSvgText`, THE LADDER: room
+  measured from the shape behind the line, wrapping into the drawn height, the 55% floor, and
+  `noacgTextOverflow()`;
+- **placed text** (an outlined-text stand-in today, a newly added field tomorrow - `addPlacedLine`
+  emits an HTML layer AFTER `</svg>`, never inside it) -> `fitPlacedText`
+  (`templates/shared/textFit.ts`): modes `overflow`/`wrap`/`shrink` and the same 55% floor, but
+  **no room measurement, no height check, and no overflow report**.
+
+It is latent on a plain import and bites exactly on the graphics this road extends. It is already
+costing something real: **the operator overflow warning covers bound SVG text and goes silent on
+an outlined-text field**, because `fitPlacedText` has no report to ride.
+
+**IN scope.** One fit per imported-SVG graphic: placed lines in an SVG design are measured and
+fitted by the ladder, one hook in `update()` instead of two, and the warning consequently covers
+all three text origins. The real design work is the ladder's ROOM rule for a placed line - it has
+no shape drawn behind it (it was placed on empty artwork, or over shapes now hidden), so the
+honest fallback is its own slot, the way a bound line with no shape behind it keeps its drawn
+width.
+
+**OUT of scope, deliberately** - each of these is the "larger field-system cleanup" the owner
+refused, and none of them blocks step 4:
+
+- the RASTER import path keeps `fitPlacedText`. It has no SVG, no `svgFitRoom` and no panel;
+- the `lineFit` vocabulary (`overflow`/`wrap`/`shrink`) as an editor-facing control;
+- moving placed lines INSIDE the `<svg>`. Tempting - it would make them literally the same kind -
+  but it changes the emitted markup shape, the registry parts, `addPlacedLine`'s insertion
+  contract and every saved template;
+- any canvas gesture, any relationship model, any growth.
+
+The FIELD contract needs no work and never did: all three origins are already `id="fN"` plus an
+SPX DataField, so `update()` binds them identically. The split is *where the element lives* and
+*which runtime measures it* - a smaller gap than "one field model" sounds.
+
+## 6c. Step 4 - VERTICAL GROWTH, and what it has to be
+
+**Wrapping may increase the height of a designated container and reflow what is attached to it,
+before the type shrinks.** Deterministic layout, never AI.
+
+- **The relationship set is DATA, versioned.** Today's `svg.stretch` is a degenerate one-row
+  version and is not even data: it marks exactly ONE element `.imported-design-panel`
+  (`querySelector`, singular), hard-codes the direction rightward, caps at a constant
+  `PANEL_SAFE = 0.04`, and DERIVES its followers at runtime. What the owner described - element,
+  direction, distance, followers, more than one of them - is a persisted format, so principle 6
+  applies: it carries a version and a breaking change ships its migration in the same commit. It
+  is emitted as a readable, commented table the runtime loops over. Emitted as a HIDDEN model it
+  would be the second scene model the architecture forbids; emitted as data the code reads, with
+  the code still the truth, it is not.
+- **Followers are DECLARED, geometry only PROPOSES.** Horizontal growth gets away with deriving
+  them ("anything past the right edge") because that guess is usually right. Vertical does not:
+  growing a panel down moves everything below it, and "below it" contains things that should stay
+  (a strap pinned to the frame bottom) and things that should stretch rather than move. No
+  geometry rule separates those - the same shape of problem as the shrink-vs-grow default, which
+  §3 already decided not to infer. So the derived set becomes the PROPOSAL the author edits.
+- **ACCEPTANCE CRITERION, explicit (owner): deterministic convergence across editor, export and
+  SPX.** Wrap and grow are circular - line count depends on type size, available height depends
+  on growth, growth depends on line count - and the fit runs INSIDE the template, so the same
+  values must settle on the same geometry in the app preview, in an exported package, and in the
+  `/output` renderer. Testable as: identical measured geometry (panel box, per-field size, line
+  count, overflow set) on all three; the fit IDEMPOTENT (running it twice changes nothing); and
+  independent of arrival order, which is the trap §3 already paid for once - the first value
+  measured must never become the budget.
+
+**One copy change rides along:** the mapping step promises "Your artwork airs exactly as drawn."
+The markup does stay verbatim, but the sentence becomes a half-truth the moment a declared
+element can move, and it needs rewording in the same change.
+
 ## 7. What this is NOT
 
 - Not a replacement for the raster import - photographs and flattened PNGs keep the erase flow.
