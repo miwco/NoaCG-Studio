@@ -546,11 +546,25 @@ const results = await page.evaluate(async (CATEGORY) => {
     // cap with `max-width: none` and states its own width instead — a full-width band is the
     // point of it. Its declared width is then the cap the check should hold it to; without
     // this the sweep measures every band against a cap it deliberately does not obey.
+    //
+    // A FULL-FRAME BAND states no width at all: it sets `width: 100%` beside the `max-width:
+    // none`, so it takes exactly the picture it sits in and its cap is the FRAME, not the safe
+    // area. Holding it to the safe-area cap asks it to be 240px narrower than the shape it is —
+    // edge contact is the whole silhouette (lowerThirds/lt63, the catalog's one such band).
+    // Read that pair from the BOX RULE rather than from the file at large: `width: 100%` on a
+    // child — an alert's flag cap, an info-card's printed rule — says nothing about the box's
+    // own footprint, and half the opt-out designs carry one.
+    const boxRules = [...t4.css.matchAll(/^\.[a-z-]+-box\s*\{([^}]*)\}/gm)].map((m) => m[1]);
+    const fillsTheFrame = boxRules.some(
+      (rule) => /\bwidth:\s*100%/.test(rule) && /max-width:\s*none/.test(rule),
+    );
     const declaredWidth = Number((t4.css.match(/\n\s*width:\s*calc\((\d+)px \* var\(--scale\)\)/) || [])[1]);
     const optsOutOfAutoFit = /max-width:\s*none/.test(t4.css);
-    const cap = optsOutOfAutoFit && declaredWidth
-      ? declaredWidth
-      : Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
+    const cap = fillsTheFrame
+      ? t4.resolution.width
+      : optsOutOfAutoFit && declaredWidth
+        ? declaredWidth
+        : Number((t4.css.match(/max-width:\s*(?:min\(calc\()?(\d+)px/) || [])[1] ?? 830);
     // A long value passes when it stays INSIDE the box and the box stays within its cap
     // (boxW <= cap, checked below). It gets inside the box one of two ways: a heading too long
     // for one line WRAPS, or a shorter line simply FITS on one line. Requiring a wrap
