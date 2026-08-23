@@ -486,6 +486,15 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   and the full-frame frame / transition / versus. **FIXED** (declares a stage): every other
   category. Owner-ratified 2026-08-20, with the overflow answer - inside a stage text WRAPS, then
   SHRINKS to the type floor, never widens the box.
+- **THE CATEGORY LIST IS A DEFAULT, NOT A PROHIBITION** (owner-ratified 2026-08-23): *a lower
+  third may declare `stageWidth` when the composition genuinely needs a bounded stage; "leave it
+  unset" remains the default, not an absolute.* The test is whether the SHAPE is the design's or
+  the operator's. A strap cut to the guest's name is the convention and must keep hugging; a
+  design whose silhouette IS the point cannot let a long name redraw it. **`lt64` "Portrait
+  Column" is the recorded exception** and the only one today - a 380px portrait block that stops
+  being portrait the moment a hugging box widens to fit a name, so it declares a stage and
+  `e2e/catalog/footprint-stability.spec.ts` holds it there. A new exception argues itself in its
+  own source and gets added here; it does not need a category flip.
 - **The mechanism.** A design declares `stageWidth` (px at 1080p). `stageBoxCss`
   (shared/base.ts) emits the width, the `--stage-width` marker, `box-sizing` and where the slack
   goes; `stageExtraJs` (shared/stageFit.ts) emits the runtime that holds each line - and the panel

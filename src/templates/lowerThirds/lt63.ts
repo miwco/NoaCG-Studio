@@ -88,7 +88,17 @@ ${lineMasks(o, '      ')}
   width: 100%;                     /* the whole width, not the text's width */
   max-width: none;                 /* the category's wrap cap is about a plate, not about a band */
   box-sizing: border-box;          /* the safe-area padding is inside the band's own width */
-  padding: calc(15px * var(--scale)) calc(120px * var(--scale));  /* the words keep the full safe inset the band gives up */
+  /* 120px each side is the safe inset the band itself gives up, and the trailing edge carries
+     EIGHT MORE. A tracked label's layout box includes a letter-space after its final glyph -
+     ink that does not exist but width that does - so the dateline's box crossed the safe edge by
+     5.5px while its last letter sat exactly on it. Every way of measuring agrees, because it is
+     a layout fact rather than a paint one: the span's rect, a Range over its contents and a
+     Range over its last character all report the same number. The reserve is 8px because the
+     overhang is one letter-space of the label line: 0.24em of --label-tracking at 21px is
+     5.04px, and the largest text-size step (L, 1.2) takes that to 6.05px, so 8 clears the whole
+     ladder with room. Trimming a tracked label's trailing space is also what optical alignment
+     asks for, so the 8px asymmetry on a 1920-wide band is a correction, not a compromise. */
+  padding: calc(15px * var(--scale)) calc(128px * var(--scale)) calc(15px * var(--scale)) calc(120px * var(--scale));
   background: var(--panel-bg);     /* paper - the family's panel surface, so a palette repaints it */
   box-shadow: 0 calc(-1px * var(--scale)) calc(28px * var(--scale)) rgba(0, 0, 0, 0.28);  /* the band lifts off the picture without a keyline */
 }
@@ -108,6 +118,17 @@ ${lineMasks(o, '      ')}
   background: var(--accent);       /* the one accent dose */
   transform-origin: left center;   /* the entrance draws the rule from the leading edge */
   will-change: transform;          /* hints the exact property the entrance animates */
+}
+
+/* A FLEX ITEM REFUSES TO SHRINK BELOW ITS CONTENT unless it is told it may, and on a row that
+   spans the frame that refusal is what pushes the last line into the safe margin. min-width is
+   auto on a flex item, so each mask claims its min-content width and the row can total more
+   than the band's padded measure - measured with a 51-character name, the trailing line ended at
+   x=1806 against a safe edge of 1800. This is the same rule specialist/shared.ts writes into
+   duoGridCss for the two-person grids, for the same reason and with the same six-pixel shape of
+   failure; a row of columns needs it whether it is grid or flex. */
+.lower-third-box > .lower-third-mask {
+  min-width: 0;                    /* the columns may shrink, so the row stays inside the band's measure */
 }
 
 /* Every line after the first carries the rule that divides it from the line before - a printed
