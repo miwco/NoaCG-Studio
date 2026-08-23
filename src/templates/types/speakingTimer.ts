@@ -73,14 +73,22 @@ export const speakingTimerType: GraphicType = {
       // armed board hands to A because somebody has to open.
       {
         id: 'floor',
-        // ARMED IS THE INITIAL STATE, and this is the one place the machine differs from the
-        // round's own (which pointed at `speakerA` and started A's clock from the entrance
-        // timeline). A parallel group's initial state is where it RESTS — its timeline never
-        // plays at play() — so pointing at `speakerA` gave a board that came up claiming A had
-        // the floor with nothing running, and whose first Switch press handed to B. Resting at
-        // `armed` says what is actually true when a board goes up during the introductions:
-        // both clocks full, nobody speaking. The chair opens the debate with the same Switch
-        // press they use for every later handover, which is one button to learn, not two.
+        // ARMED IS THE INITIAL STATE — the one place this machine differs from the round's own,
+        // and the owner ratified it on 2026-08-23 against the alternative rendered beside it.
+        //
+        // The round pointed at `speakerA` and started A's clock from the entrance timeline. A
+        // parallel group's initial state is where it RESTS — its timeline never plays at play()
+        // — so that gave a board which came up claiming A had the floor with nothing running,
+        // and whose first Switch press handed to B. Resting at `armed` says what is actually
+        // true when a board goes up during the introductions: both clocks full, nobody
+        // speaking. The chair opens the debate with the same Switch press used for every later
+        // handover, which is one button to learn rather than two.
+        //
+        // What it buys, in the owner's terms: a board taken up thirty seconds early costs the
+        // first speaker nothing. What it costs: Take alone does not start the debate, so a
+        // chair expecting it to has one beat where the board looks inert. That trade was the
+        // decision, and it was made on the frames — do not quietly re-point this at `speakerA`
+        // because a machine "should" start on air.
         initial: 'armed',
         states: [
           {
