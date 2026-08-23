@@ -495,13 +495,6 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   being portrait the moment a hugging box widens to fit a name, so it declares a stage and
   `e2e/catalog/footprint-stability.spec.ts` holds it there. A new exception argues itself in its
   own source and gets added here; it does not need a category flip.
-- **A STAGED DESIGN MUST NOT SET A LINE-HEIGHT BELOW ITS FACE'S CONTENT BOX.** `fitStagedText`
-  reserves the row height a line renders at and then shrinks any line whose `scrollHeight`
-  exceeds that reserve - so a tight line-height makes the design shrink against its OWN sample,
-  before an operator types anything. Measured on lt64 (Sora, 46px): 1.02 ships 41.9px, 1.1 ships
-  43.4px, 1.15 ships 44.7px, and 1.2 is the first value that ships the 46px the design asks for.
-  The same mechanism one axis over is what clips TURNED text, where line-height is the column
-  thickness rather than the row gap.
 - **The mechanism.** A design declares `stageWidth` (px at 1080p). `stageBoxCss`
   (shared/base.ts) emits the width, the `--stage-width` marker, `box-sizing` and where the slack
   goes; `stageExtraJs` (shared/stageFit.ts) emits the runtime that holds each line - and the panel
