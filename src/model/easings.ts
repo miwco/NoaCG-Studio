@@ -7,6 +7,33 @@
 // - Safe defaults: Easy Ease / Ease Out. Back = snappy pop with a small overshoot.
 // - Bounce and Elastic are playful options only — never defaults.
 // - Linear is only for continuous motion (tickers, timers, progress bars).
+//
+// MEASURED, 2026-08-23 (the owner: "I never use the dropdown menu because I feel like it
+// doesn't change the easing"). The wizard's imported-SVG Animation step was driven for every
+// one of the thirteen options the dropdown offers, and the composed preview read back: first
+// the emitted NOACG_ANIM, then the RENDERED computed style at ten fixed frame times across the
+// entrance, seeked through the template's own buildInTimeline(). What it found:
+//
+//  1. The choice REACHES the keyframes every time — the ease string is stamped into the
+//     landing keyframe exactly as picked. Nothing is dropped on the way in. So the complaint
+//     is not a broken control; it is a control whose effect is not visible.
+//  2. Two entries are LITERAL DUPLICATES on an entrance: `cubic` and `ease-out` both emit
+//     `power2.out` (identical rendered value at all ten frames — they differ only on the
+//     exit), and `sine` is byte-identical to `auto` on any motion whose tuned entrance ease
+//     is already `sine.out` (Fade).
+//  3. On a CLAMPED property the overshoot eases have nowhere to go. On Fade (opacity only):
+//     `back` clamps at 1 and reads as nothing but a faster fade; `bounce` renders 0.91 → 0.77
+//     → 0.93, a flicker rather than a bounce; `elastic` is at opacity 1 by the first sampled
+//     frame — the fade is gone. Same story on Wipe, where the ease drives an inset()
+//     percentage that cannot go negative. This is the owner's own question ("How can you do a
+//     back ease or bounce ease with a fade?") answered in numbers.
+//  4. On a DISPLACEMENT motion the out-direction family is real but too small to read: against
+//     Rise's tuned `power3.out`, the largest rendered difference across the whole entrance was
+//     4.1 px for ease-out/cubic, 3.6 px for circ, 6.3 px for expo and 5.8 px for back — on a
+//     1080-line frame, half a percent. Only the WRONG-direction curves (easy-ease, ease-in,
+//     ease-in-out, linear) moved enough to see, and those are the ones the doctrine above
+//     tells an entrance not to use. The cause is not the curve list: it is that the universal
+//     bank only travelled 40 px, so no curve had anywhere to happen (blocks/motionPresets.ts).
 
 export type EasingId =
   | 'auto'
@@ -119,7 +146,11 @@ export const EASINGS: EasingPreset[] = [
   {
     id: 'elastic',
     name: 'Elastic',
-    gsapIn: 'elastic.out(1, 0.4)',
+    // The period was 0.4, which the measurement above caught rendering as a single frame's
+    // glitch rather than a spring: on a 0.55 s entrance it had already settled by the first
+    // sampled frame (opacity 1.00 at t = 0.055 s), with one -10 px flick on the way. 0.7 is
+    // slow enough that the oscillation is the thing you see.
+    gsapIn: 'elastic.out(1, 0.7)',
     gsapOut: 'power2.in',
     description: 'Springs past and oscillates into place. Playful — not a default.',
     tag: 'playful',

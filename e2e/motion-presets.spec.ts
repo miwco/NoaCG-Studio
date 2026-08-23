@@ -83,11 +83,11 @@ test('control page: the Motion section rewrites the entrance and exit on the gra
   // steps: a clean swap, so two picks never blend.
   expect(anim.inLayers.sort()).toEqual(['.lower-third-accent', '.lower-third-box']);
   expect(anim.outLayers.sort()).toEqual(['.lower-third-accent', '.lower-third-box']);
-  expect(anim.box.in).toEqual({ opacity: [[0, 0], [0.55, 1]], y: [[0, 40], [0.55, 0]] });
+  expect(anim.box.in).toEqual({ opacity: [[0, 0], [0.8, 1]], y: [[0, 110], [0.8, 0]] });
   expect(anim.accent.in).toEqual(anim.box.in);
-  expect(anim.box.out).toEqual({ opacity: [[0, 1], [0.35, 0]], y: [[0, 0], [0.35, 24]] });
-  expect(anim.inDuration).toBe(0.55);
-  expect(anim.outDuration).toBe(0.35);
+  expect(anim.box.out).toEqual({ opacity: [[0, 1], [0.45, 0]], y: [[0, 0], [0.45, 80]] });
+  expect(anim.inDuration).toBe(0.8);
+  expect(anim.outDuration).toBe(0.45);
 
   // Out only: the exit changes, the entrance keeps Rise - "rise in, fade out" without a timeline.
   await page.getByTestId('motion-direction-out').click();
@@ -95,9 +95,9 @@ test('control page: the Motion section rewrites the entrance and exit on the gra
   await expect(summary).toContainText('In: Rise · Out: Fade');
   await settleDurableWrites(page);
   anim = await savedAnim(page, id);
-  expect(anim.box.in).toEqual({ opacity: [[0, 0], [0.55, 1]], y: [[0, 40], [0.55, 0]] });
-  expect(anim.box.out).toEqual({ opacity: [[0, 1], [0.38, 0]] });
-  expect(anim.outDuration).toBe(0.38);
+  expect(anim.box.in).toEqual({ opacity: [[0, 0], [0.8, 1]], y: [[0, 110], [0.8, 0]] });
+  expect(anim.box.out).toEqual({ opacity: [[0, 1], [0.45, 0]] });
+  expect(anim.outDuration).toBe(0.45);
 
   // The speed knob is NOACG_ANIM.speed - one number, every phase.
   await page.getByTestId('control-speed-1.5').click();
@@ -187,7 +187,7 @@ test('engine: a motion rewrite keeps lifecycle calls, ambient loops and layers o
   expect(r.loopsBefore.length).toBeGreaterThan(0);
   expect(r.playStyle).toBeNull();
   expect(r.outsideKept).toEqual({ opacity: [{ time: 0, value: 0 }, { time: 1.2, value: 1 }] });
-  // The step stretches to the kept motion's reach (1.2 s) rather than the preset's 0.55 s.
+  // The step stretches to the kept motion's reach (1.2 s) rather than the preset's 0.8 s.
   expect(r.inDuration).toBe(1.2);
   expect(r.misses).toEqual([]);
 });
@@ -236,5 +236,5 @@ test('wizard: an imported SVG picks from the same ten motions on its Animation s
     return { inLayers: Object.keys(d.steps[0].layers), x: d.steps[0].layers['.imported-design-box']?.x?.map((k) => k.value) };
   }, id);
   expect(unit.inLayers).toEqual(['.imported-design-box']);
-  expect(unit.x).toEqual([60, 0]);
+  expect(unit.x).toEqual([170, 0]);
 });
