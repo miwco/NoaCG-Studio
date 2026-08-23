@@ -140,16 +140,35 @@ renders at 17px the moment somebody picks S, which is the operator's choice, not
   That is the ladder's arithmetic, not a defect list - but it says the catalog is authored AT the
   floor with no headroom, so picking S puts most of it under 20px. Whether S should be allowed to,
   or the floor should ride the ladder, is a product decision nobody has taken.
-- **Containment at L: 22 designs clip 3-10px that do not clip at M**, across nine categories, and
-  they are ONE mechanism - a reveal mask or name box whose height is `calc(Npx * var(--scale))`
-  while the glyph box inside it grows with `--type-scale` (`.lower-third-mask` on lt03/lt14/lt51/
-  lt55/ls07/ls11/ls14/ls17/ls19, `.info-card-mask` on card25/card48/card51, `.corner-bug-mask` on
-  bug03/bug30/bug31/bug35, plus `.scoreboard-team` sb05, `.scoreboard-mask`/`.scoreboard-name` sb18,
-  `.frame-mask` fr11, `.matchup-mask` h203, `.results-board-mask` tt02, `.reveal-mask` nm03). This is
-  lt64's line-mask clip one level out: the fit routine is not involved, so `stage-fit-sweep` reads
-  clean while text loses its descenders.
+- **Containment at L: 22 designs report a clip they do not report at M - and they are TWO
+  mechanisms, one of them not about the ladder at all.** Read them apart before fixing either:
+  - **THREE ARE THE LADDER, and they are the real ones**: a line whose BOX width does not follow
+    `--type-scale` while its text does, so the word is cut sideways. `.lower-third-mask` on ls07
+    ("Commentary": fits at S and M, **32px cut at L**), `.info-card-mask` on card48 ("PRESENTED BY",
+    5px) and `.lower-third-mask` on lt51 ("Anchor · Evening News", 3px). Measured against the same
+    render with the mask released, ls07's differing pixels start exactly ON the mask's right edge -
+    ink, not leading.
+  - **THE OTHER NINETEEN ARE PROPORTIONAL AND EXIST AT EVERY STEP**, hidden at M by the sweep's own
+    2px tolerance: the mask takes its height from the LINE box (`line-height`) while the span inside
+    reports the face's ~1.2em CONTENT box, so a design with `line-height` under that ratio overflows
+    by a fixed fraction of its type at any size (lt14 2/2/4px at S/M/L, sb18's `.scoreboard-mask`
+    6/8/10px at `line-height: 1`). Same mechanism as lt64's line mask, one level out - the fit
+    routine is not involved, which is why `stage-fit-sweep` reads clean through all of it.
+  - **AND MOSTLY IT CLIPS NOTHING VISIBLE.** Toggling `overflow` on the settled render and diffing
+    the pixels: sb18 (10px) and fr11 (4px) lose **zero** ink - the overflow is the face's empty
+    ascent/descent metric. lt14 loses **one antialias row** of its descenders. So the vertical family
+    is a measurement finding, not an on-air one, and the priority order is the three ladder cases
+    first. **Toggle `overflow` on ONE settled render, never diff two renders**: a released mask stops
+    being a formatting context and the text re-lays out (card48's difference sits INSIDE the box and
+    starts left of it - that is re-layout, not revealed ink), and two separate renders desynchronise
+    any looping animation, which reads as a huge diff that is entirely the loop.
 - **Containment at S: cr03 clips `.credits-box:y`** - a fixed 950px stage that paginates, packing one
   row too many once the type shrinks.
 - **A CRAWL IS MEASURED MID-TRAVEL, so read ticker and credit-reel rows twice before believing
   them.** tk01, tk12 and cr06 report new escapes at S and tk05 at L purely because narrower items
   cover a different distance inside the sweep's fixed settle - reproducible, and not a defect.
+
+**The floor does NOT ride the ladder (owner, 2026-08-23).** A line that renders under 20px because
+the operator picked S is fine: they chose smaller text, the same way they choose longer words. So
+`type-floor --type-scale` stays a report and the gate stays at the default step - no S gate, and
+nothing in the catalog is re-authored to keep 20px at 0.85.

@@ -508,8 +508,9 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). **The TEXT-SIZE LADDER
   is an axis, not a constant**: `stage-fit-sweep`, `type-floor` and `overflow-sweep` all take
   `--type-scale s|m|l`, because only `font-size` reads `--type-scale` and a box sized off the other
-  knob changes SHAPE as the operator moves it - measured 2026-08-23, 22 designs clip 3-10px at L
-  while they are clean at M. Measurements and the traps behind it: `docs/FOOTPRINT_STABILITY.md`.
+  knob changes SHAPE as the operator moves it - measured 2026-08-23: ls07, card48 and lt51 cut a
+  word sideways at L (ls07 by 32px) while nineteen more report a vertical clip that is proportional,
+  present at every step and mostly empty leading. Measurements: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract
 
