@@ -495,7 +495,10 @@ Three derivation rules, all template-driven (no category is ever consulted):
   boards, goal meters — with no per-graphic code.
 - A number field an ⚡ event carries as PAYLOAD is excluded (the podium's spotlight index, a
   focused row): it is set by its own action, and a second road to it would air a value without
-  the state that gives it meaning.
+  the state that gives it meaning. A field an ⚡ event ADJUSTS (a scoreboard's goal moving that
+  side's score by one, `docs/CONTROL_LAYER.md`) is NOT excluded: the goal is the road a score
+  normally takes and the stepper is its correction - a disallowed goal comes off here, and the
+  next goal counts from the corrected figure.
 - The buttons enable only while the edited cue is the one on air — the same legality wording as
   the ⚡ buttons ("Take the cue first").
 

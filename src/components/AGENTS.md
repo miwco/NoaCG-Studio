@@ -293,6 +293,10 @@ written into the template.
   read-only shell (the timeline's convert chip arms editing). It is a dockable panel (default:
   the active tab of the RIGHT dock); any NEW selection reveals it, and an explicit close holds
   while the selection is unchanged (see AppShell).
+- **MotionPresetPicker** - the UNIVERSAL in/out picker (ten unit motions, blocks/motionPresets.ts):
+  presentational, hosts hold the state - the wizard's Animation step for an imported design
+  (wizard/) and a saved graphic's control page (home/). The no-code surface for the 80% case;
+  the timeline above stays the Advanced editor. Contract in src/blocks/AGENTS.md.
 - **LegacyTimeline** (Phase 8) - the READ-ONLY chart of a legacy region the importer REFUSES:
   measured motion written inline (`x: -track.scrollWidth`), or a loop it would have to guess at.
   Such a template can never be auto-converted, and regenerating it would discard its owner's
@@ -349,8 +353,9 @@ e2e/layout.spec.ts.
   on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
   simulator; renders the state machine's EVENT BUTTONS (controlModel eventButtons - labels/
   sections/payloads from `machine.controls`, payload values from sampleData via
-  store.sendEvent), GREYED by `isEventLegal` against store.machineGroups exactly as a hosted
-  control page greys them; downloads controlpanel.html; hosts a SLIM Productions block
+  store.sendEvent, an `adjust` press writing its new figure back into sampleData), GREYED by
+  `isEventLegal` against store.machineGroups exactly as a hosted control page greys them;
+  downloads controlpanel.html; hosts a SLIM Productions block
   (docs/GOALS.md "Student release" step 8: create/pick a production + "+ Add current" + the
   link to its page - the layer stack, export, publishing and links all live on
   ProductionPage, so two surfaces cannot drift); adds the Google-Sheets live-data block.

@@ -121,6 +121,17 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   Its topbar carries **"+ Production"** (the shared home/ProductionPicker): this is where a
   graphic gets test-played, and "put it in the show" was reachable only by going back to Home
   and finding its row again.
+  **MOTION** - the no-code IN/OUT picker (`components/MotionPresetPicker.tsx` over
+  `blocks/motionPresets.ts`, the owner's animation road step 1, 2026-08-23): a `<details>`
+  under the transport, CLOSED by default (the stage shares the column's height), its summary
+  naming what the graphic does now - "In: Rise · Out: Fade · Normal" - read back from the
+  TEMPLATE'S DATA every render (`currentMotionPreset`), never from component state; a catalog
+  choreography or a timeline edit honestly reads "its own". Open: the ten cards + the wizard's
+  Direction row (In and out / In only / Out only) + the speed knob (NOACG_ANIM.speed). A pick
+  is ONE deterministic data edit saved through the same `patch` the entries use; the rebuilt
+  document then DEMOS it once (play, hold, stop, re-settle - `demoAfterLoad`, no on-air tally)
+  where a plain reload still lands parked. Absent only when the graphic has no NOACG_ANIM
+  block. Pinned by e2e/motion-presets.spec.ts.
 
 ## Production data (docs/PRODUCTION_DATA_PLAN.md)
 

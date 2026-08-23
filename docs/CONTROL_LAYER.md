@@ -69,9 +69,23 @@ A template's playout behaviour travels INSIDE the template, and nowhere else:
 
 - `machine.controls` (blocks/animData.ts `MachineControl`) is ADDITIVE OPTIONAL metadata
   INSIDE `NOACG_ANIM`: label, section, order, `payload` (field ids whose current values ride
-  the event), `destructive`. It travels in the template, so exported and hosted panels keep
-  their labels with no registry to ask. Graphic types declare it as `TypeControlEvent`
-  (logical payload keys); `compileControls` resolves them to `fN` ids at attach.
+  the event), `adjust` (field ids whose current value MOVED by a delta rides the event - a
+  goal's `{f1: 1}`), `destructive`. It travels in the template, so exported and hosted panels
+  keep their labels with no registry to ask. Graphic types declare it as `TypeControlEvent`
+  (logical payload/adjust keys); `compileControls` resolves them to `fN` ids at attach.
+- **An `adjust` is a payload the SURFACE computes** (`controlModel.ts eventPayload` - the one
+  rule, inlined verbatim in `controlPanelHtml.ts`): `current + delta` rides as an ordinary
+  payload value, so the figure lands exactly when the machine accepts the event and not
+  otherwise, the log holds the ABSOLUTE value for recovery, and the runtime needs nothing new
+  (a template-side counter would bump on a snap, and could not keep the operator's field box
+  or the cue in step). Every surface then writes the new figure back into its own field
+  state - the cue draft, the shared staging buffer, the sample data, the panel's box - the way
+  its ± stepper does, or the next press would move from the stale value; the production page
+  also folds an event's payload into `airedData` so "what air shows" is what a goal counts
+  from. The scoreboard type's `goalA`/`goalB` are the first users (owner, 2026-08-23: "no
+  reason to play the goal animation if the number doesn't change"); the ± steppers stay the
+  correction road, so an adjusted field is NOT excluded from the live-numbers block the way a
+  payload field is.
 - Every authored operator event gets a button even undeclared (label = the event name).
   An undeclared `next` is skipped — the lifecycle » Next already fires it. A declared entry
   whose event no arrow carries is dropped and `validateMachine` warns; a payload key no

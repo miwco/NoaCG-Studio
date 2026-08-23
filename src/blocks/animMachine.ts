@@ -286,6 +286,8 @@ export interface ControlButton {
   label: string;
   section?: string;
   payload?: string[];
+  /** Field ids whose current value, moved by the delta, rides the event (a goal's +1). */
+  adjust?: Record<string, number>;
   destructive?: boolean;
 }
 
@@ -314,6 +316,7 @@ export function machineControls(machine: AnimMachine): ControlButton[] {
     const button: ControlButton = { event, label: c?.label ?? event };
     if (c?.section !== undefined) button.section = c.section;
     if (c?.payload !== undefined) button.payload = c.payload;
+    if (c?.adjust !== undefined) button.adjust = c.adjust;
     if (c?.destructive !== undefined) button.destructive = c.destructive;
     return button;
   });

@@ -113,10 +113,15 @@ the graphic only on Update or Play.
 - **Fields:** `f0`/`f2` team names (text), `f1`/`f3` scores (**number steppers** - a goal is one
   press, not a select-and-retype). All four reached the DOM.
 - **Machine:** three groups - `main` (walk only), `flag` (none/shown), `result` (live/final).
-- **Events:** ⚡ Flag · Clear flag · Full time.
-- **Walk, measured:** flag toggles both ways with exactly one of the pair live at a time; `Full
-  time` is one-way and greys itself afterwards (a match does not un-finish); ■ Stop rests every
-  group at its initial state, so `result` returns to `live`.
+- **Events:** ⚡ Goal A · Goal B · Clear flag · Full time. (Since 2026-08-23; the plain ⚡ Flag
+  was retired when the owner, running a match live, pressed it twice expecting the score to move:
+  a goal raises the flag AND carries that side's score +1 as its payload - the control's
+  `adjust`, `docs/CONTROL_LAYER.md`.)
+- **Walk, measured:** a goal raises the flag and moves the score on one press, from either flag
+  state (a second goal replays the flag - the self-arrow - and counts from the new figure);
+  Clear flag takes the marker down and moves nothing; `Full time` is one-way and greys itself
+  afterwards (a match does not un-finish); ■ Stop rests every group at its initial state, so
+  `result` returns to `live`. Pinned by `e2e/production-controls.spec.ts` ("a scoreboard GOAL").
 - **Missing:** no clock - deliberately. This type's four designs draw no clock, and the sports
   pack's own scorebug and match board carry the three-state clock group instead
   (`types/sportsBugs.ts`). An operator wanting a running clock needs one of those boards, and
