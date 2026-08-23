@@ -477,7 +477,6 @@ export const VARIANT_META: Record<string, DeclaredTemplateMeta> = {
   // reason - none of the three ends on the 'organization' the category fallback assumes.
   lt63: { category: 'lower-third', subtype: 'speaker', structures: ['strip', 'name-role'], positionalSemantics: ['name', 'role', 'location'] },
   lt64: { category: 'lower-third', subtype: 'speaker', structures: ['side-panel', 'multi-line'], positionalSemantics: ['topic', 'name', 'role', 'organization'] },
-  lt65: { category: 'lower-third', subtype: 'name-tag', structures: ['side-panel', 'name-role'], positionalSemantics: ['name', 'role', 'topic'] },
   card80: { category: 'title', subtype: 'segment-title', structures: ['multi-line'], positionalSemantics: ['topic', 'headline', 'description', 'source'] },
   card81: { category: 'title', subtype: 'session-title', structures: ['multi-line'], positionalSemantics: ['topic', 'headline', 'description'] },
   // The index ("03") is an ORDINAL, and the semantic vocabulary has no ordinal: 'topic' is the
