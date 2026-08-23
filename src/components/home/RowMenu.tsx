@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import LibMenu from './LibMenu';
 import { IconDots } from '../icons';
 
 export interface RowMenuItem {
@@ -19,7 +20,9 @@ export interface RowMenuItem {
  * Seven visible buttons per row was a control surface only its author could scan.
  *
  * A plain popover, not a portal: the row grid keeps `overflow: visible` and the menu is
- * positioned against the button. The full-viewport backdrop closes it on any outside press.
+ * positioned against the button. The shell (home/LibMenu) owns the backdrop and, since the
+ * 2026-08-23 owner walk, which WAY it opens — the last row of a long library is at the bottom
+ * of the viewport, where a downward menu has nowhere to go.
  */
 export default function RowMenu({ items, label = 'More actions' }: { items: RowMenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false);
@@ -34,28 +37,23 @@ export default function RowMenu({ items, label = 'More actions' }: { items: RowM
       >
         <IconDots />
       </button>
-      {open && (
-        <>
-          <div className="lib-menu-backdrop" onClick={() => setOpen(false)} />
-          <div className="lib-menu" role="menu">
-            {items.map((item) => (
-              <button
-                key={item.label + (item.testid ?? '')}
-                role="menuitem"
-                className={item.destructive ? 'lib-menu-destructive' : undefined}
-                onClick={() => {
-                  item.onClick();
-                  if (!item.keepOpen) setOpen(false);
-                }}
-                data-testid={item.testid}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      <LibMenu open={open} onClose={() => setOpen(false)}>
+        {items.map((item) => (
+          <button
+            key={item.label + (item.testid ?? '')}
+            role="menuitem"
+            className={item.destructive ? 'lib-menu-destructive' : undefined}
+            onClick={() => {
+              item.onClick();
+              if (!item.keepOpen) setOpen(false);
+            }}
+            data-testid={item.testid}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+      </LibMenu>
     </div>
   );
 }

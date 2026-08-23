@@ -33,7 +33,11 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   name | type | edited | folder | actions, where `.lib-thead` and every row share ONE
   `--lib-cols` template whose two trailing columns are FIXED, because the heading cells are
   empty and `max-content` collapsed them to nothing, sliding every heading right of the values
-  under it. Both carry Open, the "+ Production" popover and the `home/RowMenu` ⋯ overflow
+  under it. The FOLDER cell and its track drop together (`showFolder` /
+  `.lib-list--nofolder`): it is on only during a SEARCH, the one level that crosses folders -
+  at the root every row is unfiled and inside a folder every row is in it, so the column
+  printed one value twelve times. Dropping the cell without the track is the §5c defect.
+  Both carry Open, the "+ Production" popover and the `home/RowMenu` ⋯ overflow
   (control panel / export / rename / duplicate / publish / two-step delete).
   **SELECTION HAS NO CHECKBOXES** (handoff §5b): the item takes the click, shift-click extends
   over the VISIBLE order, a press on the container's own background clears, and `.lib-select`
@@ -42,11 +46,30 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   resting row is that checkbox column drawn faintly), and still what a shift-click lands on.
   The bulk bar renders AFTER the items, which is what lets `sticky; bottom` float it over the
   list - above them its natural place is the top, so it never lifts off.
-  FOLDERS are one thing in two presentations: CARDS in the card grid (drop targets, ⋯ =
-  rename / production / remove) and the chip row in the table. Every folder verb is
+  **FOLDERS GROUP THE VIEW** (docs/SAVED_CONTENT_MODEL.md §6, revised on the 2026-08-23 owner
+  walk): `home/FolderItem` first - cards in the grid, rows in the table, ONE component so a
+  folder can never do less in one view than in the other - then the graphics filed in none of
+  them; opening one shows its contents alone under a breadcrumb carrying ← All graphics, the
+  folder's ⋯ and its "+ Production". The band is not on screen at that level, which is why the
+  head carries those verbs rather than sending you back out for them. A SEARCH stands the band
+  down and lists every match across folders (the flat list is what an answer to "where is X"
+  needs; it is what the chip row wrongly did at rest). Every folder verb is
   `setGraphicsFolder` over its members - there is no folder record - so a folder holding
   nothing cannot persist, and a newly named one lives in component state until something is
-  moved into it.
+  moved into it. Emptying the folder you are STANDING IN walks you back to the root; a view
+  parked inside a place that no longer exists reads exactly like an empty folder.
+- **home/ProductionPicker** - THE "+ Production" door, shared by a library row, a folder, the
+  bulk bar and `GraphicControlPage`. It CLOSES on a successful pick and flashes ✓ on the
+  BUTTON, which is still on screen; a FAILED add keeps it open, because `onAdd` answers whether
+  the write actually landed and a closing menu would report a save that did not happen. A
+  folder and the bulk bar pool through ONE verb (`addListTo` -> `poolAll`), so the honest
+  partial-failure report cannot fork per door.
+- **home/LibMenu** - the popover SHELL: backdrop, `.lib-menu`, and which WAY it opens. Direction
+  is MEASURED in a layout effect (host rect + the menu's own height against the viewport),
+  never assumed - the bulk bar floats at the bottom of the screen by design and the last row of
+  a long library is there by arithmetic, so a downward menu was off-screen for both and bulk
+  "+ Production" looked broken while it was working. A menu too tall for either side stays down
+  and scrolls inside itself. Every `.lib-menu` on Home goes through it.
   Icons are inline SVG from `components/icons.tsx` - no
   pictographic emoji on these surfaces (monochrome verb glyphs stay). Local-first, no auth
   gate - sign-in only adds sync. `#/package/*` is a retired route that lands on Home.
@@ -80,6 +103,13 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   opts.entries). Entry mutations compose through a read-fresh `patch(cur => …)` - two edits in
   one tick must never overwrite each other. An entry's ✕ is ARMED (two-step, like Home's
   graphic delete): typed-in data with no undo behind it, on a row someone drives live.
+  The word ENTRY is DEFINED where it is used (`entries-explainer`) - one saved set of field
+  values, played to take it on air, saved as you type. The paragraph under it says what the
+  SURFACE is; neither answers the other's question, and a first visit needs the definition
+  first (owner walk 2026-08-23: he had to guess).
+  Its topbar carries **"+ Production"** (the shared home/ProductionPicker): this is where a
+  graphic gets test-played, and "put it in the show" was reachable only by going back to Home
+  and finding its row again.
 
 ## Production data (docs/PRODUCTION_DATA_PLAN.md)
 

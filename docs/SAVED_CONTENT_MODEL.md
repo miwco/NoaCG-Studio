@@ -140,3 +140,39 @@ entries are authored on the RECORD, not on the code.
 format stamp for future breaking changes); the retired `Packet` keeps `version: 2` for the
 v1 extraction (doctrine: STATE_MACHINE_SCHEMA §5). Additive fields never bump; sync kind
 `'graphic'` ships with Supabase migration `0009_graphic_kind.sql`.
+
+## 6. Folders — the library's grouping layer
+
+**Status: presentation revised 2026-08-23** after the first real bulk use (22 agent-made
+graphics saved into one folder and staged as a production). The DATA has not changed since it
+shipped; what changed is that folders now group the view instead of filtering a flat one.
+
+- **The data**: `GraphicDoc.folder?: string` — ONE optional, additive field, one level deep, no
+  folder record anywhere. A folder IS the set of graphics naming it, so every folder verb is
+  `setGraphicsFolder` over its members: renaming rewrites the name on each, removing clears it
+  (the graphics are unfiled, never deleted), and an emptied folder ceases to exist by itself.
+  Additive-optional means **no version bump and no migration** (§5), and a folder a user names
+  but has not filled yet has nothing to persist — it lives in component state until something
+  is moved into it, and is gone on reload. A folder is deliberately NOT the retired package: no
+  export unit, no embedded copies, no second place a graphic can live.
+- **The presentation** (`components/home/sections/GraphicsSection` + `home/FolderItem`):
+  **folders come first, then the graphics filed in none of them.** Opening a folder shows its
+  contents alone, under a breadcrumb carrying the way back, the folder's own ⋯ (rename /
+  remove) and its "+ Production". Both views group — cards in the card grid, rows in the table
+  — off ONE component, so a folder can never do less in one view than in the other.
+  Until this walk the folders were a CHIP ROW over a flat list of the whole library, which the
+  owner overruled on sight: *"no point with a folder if I see all the graphics as a list."*
+- **A SEARCH FLATTENS IT.** Typing a name is a question about the whole library, so while a
+  query stands the band stands down and every match is listed across folders, with the table's
+  FOLDER column switched on to say where each hit lives. That column is off at every other
+  level, where the answer is already known and it printed one value down the whole page.
+- **A folder pools whole.** "+ Production" on a folder adds every graphic it holds to a chosen
+  or new production, through the same `poolAll` the bulk bar uses — including its honest
+  partial-failure report ("N of M were added before storage ran out"), because the honesty of
+  that report is the part that must not fork per door.
+- **Every "+ Production" door is one component** (`home/ProductionPicker`): a library row, a
+  folder, a bulk selection, and the open graphic's control panel. It CLOSES on a successful
+  pick and moves the ✓ to the button; a FAILED add keeps it open, because a durable write is
+  confirmed after the call returns (§1) and a closing menu would report a save that did not
+  happen. Which WAY it opens is measured against the viewport, not assumed
+  (`home/LibMenu`) — the bulk bar floats at the bottom of the screen by design.

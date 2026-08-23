@@ -4,13 +4,14 @@ import { syncSampleData } from '../../store/templateStore';
 import { useExportUi } from '../ExportWindow';
 import { deleteGraphic, duplicateGraphic, updateGraphic, type GraphicDoc } from '../../model/library';
 import { graphicKindLabel } from '../../model/types';
-import { addGraphicToShow, createShowNamedChecked, loadShows, productionsContaining } from '../../model/shows';
+import { addGraphicToShow, createShowNamedChecked } from '../../model/shows';
 import { raiseStorageAlert } from '../../store/storageAlert';
 import { commitDurableWrites } from '../../model/durableStore';
 import { useAdvancedMode } from '../useAdvancedMode';
 import GraphicThumb from './GraphicThumb';
+import ProductionPicker from './ProductionPicker';
 import RowMenu, { type RowMenuItem } from './RowMenu';
-import { IconControl, IconCopy, IconDownload, IconFolder, IconGlobe, IconPencil, IconPlus, IconTrash, IconTv } from '../icons';
+import { IconControl, IconCopy, IconDownload, IconFolder, IconGlobe, IconPencil, IconTrash } from '../icons';
 
 /** A saved graphic's thumbnail shows the data an operator last selected, when there is one.
  *  Exported because the dashboard's shelf renders the same graphic and must show it the same
@@ -34,6 +35,7 @@ export default function GraphicRow({
   selected,
   onToggleSelect,
   view = 'list',
+  showFolder = true,
 }: {
   g: GraphicDoc;
   onOpen: (g: GraphicDoc) => void;
@@ -47,6 +49,12 @@ export default function GraphicRow({
   /** Card ('grid') or table row ('list') — the same item, two containers, one behaviour
    *  (re-design/handoff.md §5b/§5c). Defaults to the row every other section renders. */
   view?: 'grid' | 'list';
+  /** The table's FOLDER column. Off wherever the answer is already known — at the root every
+   *  row is unfiled and inside a folder every row is in it, so the column printed one value
+   *  twelve times. It earns its 160px during a SEARCH, which is the one view that crosses
+   *  folders. The column track is dropped in the same breath (`.lib-list--nofolder`), or the
+   *  headings would slide off the values under them. */
+  showFolder?: boolean;
 }) {
   const navigate = useRouter((s) => s.navigate);
   const openExport = useExportUi((s) => s.openExport);
@@ -57,12 +65,10 @@ export default function GraphicRow({
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (deleteTimer.current) clearTimeout(deleteTimer.current); }, []);
 
-  // ── The "+ Production" popover: the row's door into the unit that airs. ──
+  // ── The "+ Production" popover: the row's door into the unit that airs. The picker itself
+  //    is SHARED (home/ProductionPicker) — a folder, a bulk selection and the control panel all
+  //    open the same one, so "it closes on a successful pick" is one rule, not four. ──
   const [addOpen, setAddOpen] = useState(false);
-  const [newProdName, setNewProdName] = useState('');
-  const [addedTo, setAddedTo] = useState<string | null>(null);
-  const productions = addOpen ? loadShows() : [];
-  const containing = addOpen ? new Set(productionsContaining(g.id).map((s) => s.id)) : new Set<string>();
   /** Returns whether the graphic actually reached the production. A FAILED add used to leave
    *  the ✓ off and say nothing else, so on a full quota the button simply did nothing - the
    *  acceptance pass reported it as "I can't add anything to even ongoing productions". */
@@ -81,8 +87,6 @@ export default function GraphicRow({
       onChanged();
       return false;
     }
-    setAddedTo(showId);
-    setTimeout(() => setAddedTo((c) => (c === showId ? null : c)), 2000);
     onChanged();
     return true;
   };
@@ -90,7 +94,7 @@ export default function GraphicRow({
   /** Create a production and put this graphic in it - both halves checked, because on a full
    *  quota the row never persists and the navigation would land on a production that is not
    *  there. */
-  const addToNewProduction = async (rawName: string) => {
+  const addToNewProduction = async (rawName: string): Promise<boolean> => {
     const { show, error: written } = createShowNamedChecked(rawName);
     const error = written ?? (await commitDurableWrites());
     if (error) {
@@ -99,12 +103,11 @@ export default function GraphicRow({
         error,
         outcome: 'The graphic itself is unchanged in your library.',
       });
-      return;
+      return false;
     }
     const ok = await addTo(show.id, show.name);
-    setNewProdName('');
-    setAddOpen(false);
     if (ok) navigate({ view: 'production', id: show.id });
+    return ok;
   };
 
   const commitRename = () => {
@@ -250,67 +253,33 @@ export default function GraphicRow({
           <span className="lib-cell lib-cell-mono" data-testid="row-edited">
             {new Date(g.updatedAt).toLocaleDateString()}
           </span>
-          <span className="lib-cell" data-testid="row-folder">
-            {g.folder ? (
-              <span className="lib-folder-tag"><IconFolder /> {g.folder}</span>
-            ) : (
-              <span className="muted" aria-hidden="true">—</span>
-            )}
-          </span>
+          {showFolder && (
+            <span className="lib-cell" data-testid="row-folder">
+              {g.folder ? (
+                <span className="lib-folder-tag"><IconFolder /> {g.folder}</span>
+              ) : (
+                <span className="muted" aria-hidden="true">—</span>
+              )}
+            </span>
+          )}
         </>
       )}
       <div className="lib-actions">
         <button className="primary" onClick={() => onOpen(g)} title={advanced ? 'Open in the editor' : 'Open — preview, edit data, operate'} data-testid="open-graphic">
           Open
         </button>
-        <div className="lib-menu-host">
-          <button
-            onClick={() => setAddOpen((o) => !o)}
-            title="Add this graphic to a production"
-            aria-expanded={addOpen}
-            data-testid="add-to-production"
-          >
-            <IconPlus /> Production
-          </button>
-          {addOpen && (
-            <>
-              <div className="lib-menu-backdrop" onClick={() => setAddOpen(false)} />
-              <div className="lib-menu" role="menu" data-testid="add-to-production-menu">
-                {productions.length === 0 && <p className="hint">No productions yet — name one below.</p>}
-                {productions.map((s) => (
-                  <button
-                    key={s.id}
-                    role="menuitem"
-                    onClick={() => void addTo(s.id, s.name)}
-                    title={containing.has(s.id) ? 'Already in this production — adds/updates its copy' : `Add to "${s.name}"`}
-                  >
-                    <IconTv />
-                    {addedTo === s.id ? '✓ Added' : s.name}
-                    {containing.has(s.id) && addedTo !== s.id ? <span className="muted"> · in it</span> : null}
-                  </button>
-                ))}
-                <div className="lib-menu-new">
-                  <input
-                    value={newProdName}
-                    placeholder="New production…"
-                    onChange={(e) => setNewProdName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newProdName.trim()) void addToNewProduction(newProdName);
-                    }}
-                    data-testid="add-to-new-production-name"
-                  />
-                  <button
-                    disabled={!newProdName.trim()}
-                    onClick={() => void addToNewProduction(newProdName)}
-                    data-testid="add-to-new-production"
-                  >
-                    Create
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        <ProductionPicker
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          markGraphicId={g.id}
+          buttonTitle="Add this graphic to a production"
+          buttonTestid="add-to-production"
+          menuTestid="add-to-production-menu"
+          newNameTestid="add-to-new-production-name"
+          newSubmitTestid="add-to-new-production"
+          onAdd={(showId, showName) => addTo(showId, showName)}
+          onCreate={(name) => addToNewProduction(name)}
+        />
       </div>
       <RowMenu items={menu} />
     </div>
