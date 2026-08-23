@@ -228,6 +228,34 @@ test('a saved graphic\'s control panel: entries create, play with the active ent
   await expect(page.getByTestId('home-page')).toBeVisible();
 });
 
+test('the control panel says what an ENTRY is, and pools the graphic into a production from there', async ({ page }) => {
+  // Owner walk 2026-08-23, two findings on one surface: he had to guess what an entry was, and
+  // after test-playing a graphic here he looked for "+ Production" and found only a trip back
+  // to Home. Both are answered where the question is asked.
+  await createProject(page, 'Hairline');
+  await saveAs(page, 'Cup Final Strap');
+  await openControlPanel(page, 'Cup Final Strap');
+
+  // The DEFINITION, in place — not a description of the surface, which the line under it does.
+  await expect(page.getByTestId('entries-explainer')).toContainText('one saved set of field values');
+
+  // "+ Production" mints one and lands on its page with the graphic pooled.
+  await page.getByTestId('control-add-production').click();
+  await expect(page.getByTestId('control-production-menu')).toBeVisible();
+  await page.getByTestId('control-new-production-name').fill('Cup Final');
+  await page.getByTestId('control-new-production').click();
+  await expect(page.getByTestId('production-page')).toBeVisible();
+  await expect(page.getByTestId('cue-list').locator('.pd-cue')).toHaveCount(1);
+
+  // Back on the panel, the SAME picker now offers that production and marks the graphic as
+  // already in it — the door is the shared component, not a second implementation.
+  await page.goBack();
+  await expect(page.getByTestId('graphic-control-page')).toBeVisible();
+  await page.getByTestId('control-add-production').click();
+  await expect(page.getByTestId('control-production-menu')).toContainText('Cup Final');
+  await expect(page.getByTestId('control-production-menu')).toContainText('in it');
+});
+
 test('switching entries re-settles the SAME preview document instead of reloading it', async ({ page }) => {
   // An operator steps a rundown by switching entries, and the preview used to be KEYED on the
   // active entry — so every switch tore the document down and rebuilt it: GSAP re-parsed, fonts
@@ -624,7 +652,22 @@ test('the list view is a real table: headings over their own columns, and the to
     expect(Math.abs(headBox.x - cellBox.x)).toBeLessThan(2);
   }
   await expect(row.getByTestId('row-type')).toHaveText('Lower third');
-  await expect(row.getByTestId('row-folder')).toHaveText('—');
+
+  // The FOLDER column is OFF at the root, where every row is unfiled by construction
+  // (docs/SAVED_CONTENT_MODEL.md §6) — it printed one dash down the whole page. It comes back
+  // for a SEARCH, the one level that crosses folders, and the TRACK comes back with it: a cell
+  // dropped without its column slides every heading right of the values under it (§5c).
+  await expect(head.locator('span')).toHaveCount(6);
+  await expect(row.getByTestId('row-folder')).toHaveCount(0);
+  await page.getByTestId('home-search').fill('Opening');
+  await expect(head.locator('span')).toHaveCount(7);
+  const searchRow = page.locator('.lib-row--list').first();
+  await expect(searchRow.getByTestId('row-folder')).toHaveText('—');
+  const folderHead = (await head.locator('span').nth(4).boundingBox())!;
+  const folderCell = (await searchRow.getByTestId('row-folder').boundingBox())!;
+  expect(Math.abs(folderHead.x - folderCell.x)).toBeLessThan(2);
+  await page.getByTestId('home-search').fill('');
+  await expect(page.getByTestId('library-thead').locator('span')).toHaveCount(6);
 
   // The choice is a device preference, so it survives a reload rather than resetting to cards.
   await page.reload();

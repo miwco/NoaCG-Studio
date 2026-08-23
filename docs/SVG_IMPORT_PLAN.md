@@ -102,6 +102,30 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   is how one file came to squish in the editor and run clean past the artwork on air. The drawn
   text is remembered as the page parses (before `update()` can be called) and the budget is
   re-MEASURED, not re-taken, once the real typeface has loaded.
+- **THE FIT LADDER** (owner-ruled 2026-08-23, shipped, after the owner walked the hug): a value
+  longer than the design was drawn for is answered in ONE fixed order - **fill the panel, grow it
+  only where the author opted in, wrap into the room the design already has, shrink to the
+  readability floor, then report the field.** The artwork is never reshaped to make copy fit and
+  the copy is never cut to hide that it does not.
+  Each rung was a measured defect on the owner's own walk:
+  - **The budget was the DRAWN TEXT'S width, not the room.** A name drawn 402px wide inside a
+    1040px banner began shrinking at its 403rd pixel with 588px of banner standing empty - and
+    that same 588px gap survived every value, at every length, because it was never in the sum.
+    The budget is now the shape drawn behind the line, out to a right margin mirroring the left
+    inset. A line with no shape behind it keeps the drawn width, which is the honest fallback.
+  - **The same wrong budget was what the HUG grew against**, so a banner started widening at the
+    fourth character of a three-letter name - spending the growth before any of the design's own
+    space. Growth now measures against the room.
+  - **There was no floor**: a 400-character value shrank to 3.7px, which reads on air as the text
+    having disappeared. It stops at 55% of the drawn size, the raster import's floor
+    (`shared/textFit.ts` `FIT_MIN_RATIO`), and sets `noacgTextOverflow()` instead.
+  - **Wrapping** uses only room the artwork already has: from the line down to the nearest thing
+    drawn below it inside its panel. How many lines that is depends on the SIZE (a 112px board
+    panel holds one 44px line and three 24px ones), so the ladder re-asks on every pass, and a
+    block that does not fit loses a LINE rather than printing through the layer below it. A name
+    with a role under it can never wrap; a question alone on a board wraps as it shrinks.
+  - **`noacgTextOverflow()`** returns the field ids that could not be made to fit. **The operator
+    surface that reads it is NOT built yet** - see the OPEN item at the end of this section.
 - **THE HUG** (owner-directed 2026-08-22, shipped): shrinking is right for a graphic that
   declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE STAGE") and
   wrong for a lower third, where "the text should decide how big the banner is". An imported SVG
@@ -123,6 +147,14 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   left alone rather than moved wrongly. A follower travels by its transform ATTRIBUTE, so a
   layer the timeline animates in its own right (a per-layer stagger) stays where its animation
   puts it.
+- **OPEN - THE OVERFLOW WARNING.** The runtime knows which values could not be made to fit
+  (`noacgTextOverflow()`), and nothing shows it to the operator yet: the owner's ruling is that
+  copy past the floor is **warned about or refused, never clipped and never allowed to reshape
+  the artwork**, and only the first half of that is built. It belongs on the operator surfaces
+  where the value is typed - the playout dashboard's cue editor first - and by the parity rule
+  (docs/CONTROL_PANEL_PARITY.md §4) the in-app production page and the exported controller
+  need it in the same change. The monitors already poll the graphic once a second
+  (`components/home/PayloadStage.tsx`), which is the seam to read it through.
 - **Animation:** the standard marked ANIMATION region animating the wrapper (entrance/exit
   presets work day one; the timeline dock reads the CODE as always). Phase 2: per-layer stagger -
   top-level named `<g>`s offered as animation units.
