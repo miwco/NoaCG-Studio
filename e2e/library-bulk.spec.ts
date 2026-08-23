@@ -222,6 +222,13 @@ test('the bulk "+ Production" picker opens UPWARD, fully on screen', async ({ pa
   // Escape closes the standing menu — the keyboard route the backdrop never offered.
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('bulk-folder-menu')).toHaveCount(0);
+
+  // And a plain press on something outside the menu's host still closes it. The count beside
+  // the popovers is the target: same bar, outside the host, and it does nothing when clicked.
+  await page.getByTestId('bulk-add-production').click();
+  await expect(menu).toBeVisible();
+  await page.locator('.lib-bulkbar strong').click();
+  await expect(menu).toHaveCount(0);
 });
 
 test('a "+ Production" pick CLOSES the picker and confirms on the button', async ({ page }) => {

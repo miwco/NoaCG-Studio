@@ -254,6 +254,13 @@ test('the links panel stays whole on a short screen — it caps and scrolls itse
   // Nothing was dropped to achieve that: the tail is inside the panel, one scroll away.
   await page.getByTestId('production-republish').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('production-republish')).toBeVisible();
+
+  // Escape closes it. Worth pinning HERE because this popover's other closing routes are only
+  // reachable against a real backend (the e2e/configured specs dismiss it after a live publish),
+  // and nothing in CI runs those — so without this the shell could stop closing `pd-links` and
+  // every gate would still be green.
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
 });
 
 test('the production page fits one 1080p screen, and the preview takes only the room left over', async ({ page }) => {
