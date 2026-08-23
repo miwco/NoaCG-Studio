@@ -19,8 +19,16 @@
 // through --scale and --type-scale - it reads the computed value with the runtime's inline
 // override lifted, so no CSS parsing is involved and every cascade rule still applies).
 //
+// THE TEXT-SIZE LADDER IS AN AXIS, not a constant. The catalog ships S/M/L = 0.85/1/1.2
+// (`TYPE_SIZE_STEPS`, src/model/styleVocabulary.ts) and only `font-size` consumes
+// `--type-scale`, so a design that sizes a BOX off the same variable while its padding stays
+// fixed changes shape as the ladder moves - and it can fit at M and overflow at S or L. The
+// alerts flag was exactly that: ~2px over at M, ~7px at S, invisible to every instrument here
+// because every instrument measured M. `--type-scale s|m|l` renders the pass at that step
+// instead, resolved from the ladder itself rather than a copy of its numbers.
+//
 // It REPORTS; it gates nothing.
-//   node scripts/stage-fit-sweep.mjs [category] [--json out.json] [--all] [--ids a,b,c]
+//   node scripts/stage-fit-sweep.mjs [category] [--type-scale s|m|l] [--json out.json] [--all] [--ids a,b,c]
 // `--all` lists every shrunk line rather than the worst one per design; `--ids` narrows to a
 // handful, for reading the raw per-line arithmetic out of the JSON.
 import { writeFileSync } from 'node:fs';
@@ -33,7 +41,18 @@ const jsonOut = jsonAt >= 0 ? argv[jsonAt + 1] : null;
 const ALL = argv.includes('--all');
 const idsAt = argv.indexOf('--ids');
 const IDS = idsAt >= 0 ? argv[idsAt + 1].split(',') : null;
-const only = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--json' && argv[i - 1] !== '--ids') || null;
+const stepAt = argv.indexOf('--type-scale');
+// The LABEL is validated here; the NUMBER is resolved in the page from `TYPE_SIZE_STEPS` itself,
+// so this script cannot hold a stale copy of the ladder the catalog actually ships.
+const STEP = stepAt >= 0 ? String(argv[stepAt + 1] || '').toUpperCase() : null;
+if (stepAt >= 0 && !/^[SML]$/.test(STEP)) {
+  console.error(`--type-scale takes one of s, m, l (got "${argv[stepAt + 1] ?? ''}").`);
+  process.exit(2);
+}
+const only =
+  argv.find(
+    (a, i) => !a.startsWith('--') && argv[i - 1] !== '--json' && argv[i - 1] !== '--ids' && argv[i - 1] !== '--type-scale',
+  ) || null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
@@ -44,7 +63,18 @@ await page.evaluate(async () => {
   window.__cat = await import('/src/templates/catalog.ts');
   window.__comp = await import('/src/preview/composeDocument.ts');
   window.__wiz = await import('/src/model/wizard.ts');
+  window.__style = await import('/src/model/styleVocabulary.ts');
 });
+
+// The step, read off the ladder the wizard offers rather than typed in again here. `null` means
+// "no option passed at all", so a default run composes exactly the document it always did.
+const typeScale = STEP
+  ? await page.evaluate((label) => {
+      const step = window.__style.TYPE_SIZE_STEPS.find((s) => s.l === label);
+      if (!step) throw new Error(`TYPE_SIZE_STEPS has no step "${label}" - has the ladder changed?`);
+      return step.s;
+    }, STEP)
+  : null;
 
 // STAGED IS ASKED OF THE EMITTED CODE, never of the source. A design is staged when the
 // assembler actually emitted the runtime - the same marker `stageExtraJs` tests for - so a
@@ -71,14 +101,18 @@ if (!targets.length) {
 }
 
 await page.evaluate(() => {
-  window.__scanStageFit = async (ids) => {
+  window.__scanStageFit = async (ids, typeScale) => {
     document.body.innerHTML = '';
+    // The step goes through `create`, not through a CSS override on the finished document: the
+    // wizard's own path is the one that has to be measured, and a design that declares no
+    // `--type-scale` at all (an imported one) then honestly stays where it is.
+    const opts = typeScale == null ? {} : { typeScale };
     const frames = ids.map((id) => {
       const v = window.__cat.variantById(id);
       const f = document.createElement('iframe');
       f.style.cssText = 'width:1920px;height:1080px;border:0;position:fixed;left:-5000px;top:0';
       try {
-        f.srcdoc = window.__comp.composeDocument(v.create({}));
+        f.srcdoc = window.__comp.composeDocument(v.create(opts));
       } catch (e) {
         f.dataset.err = String((e && e.message) || e);
       }
@@ -179,8 +213,8 @@ const rows = [];
 for (let i = 0; i < targets.length; i += BATCH) {
   const slice = targets.slice(i, i + BATCH);
   const res = await page.evaluate(
-    (ids) => window.__scanStageFit(ids),
-    slice.map((t) => t.id),
+    ({ ids, ts }) => window.__scanStageFit(ids, ts),
+    { ids: slice.map((t) => t.id), ts: typeScale },
   );
   for (const r of res) {
     const t = slice.find((x) => x.id === r.id);
@@ -209,7 +243,8 @@ for (const r of scanned) {
   if (hits.length) bad.push({ ...r, hits });
 }
 
-console.log(`\n=== STAGE FIT AT THE DESIGN'S OWN SAMPLE${only ? ` - ${only}` : ''} ===`);
+const stepLabel = STEP ? `text size ${STEP} (--type-scale ${typeScale})` : 'text size M (the default)';
+console.log(`\n=== STAGE FIT AT THE DESIGN'S OWN SAMPLE${only ? ` - ${only}` : ''} - ${stepLabel} ===`);
 console.log(`${scanned.length} staged designs scanned, ${totalLines} staged lines.`);
 if (errored.length) {
   console.log(`${errored.length} failed to render: ${errored.map((e) => `${e.id} (${e.error})`).join(', ')}`);
@@ -254,6 +289,6 @@ for (const [cat, n] of [...byCat.entries()].sort((a, b) => b[1] - a[1])) {
 }
 
 if (jsonOut) {
-  writeFileSync(jsonOut, JSON.stringify({ category: only, rows }, null, 1));
+  writeFileSync(jsonOut, JSON.stringify({ category: only, typeScale: typeScale ?? 1, typeStep: STEP ?? 'M', rows }, null, 1));
   console.log(`\nwrote ${jsonOut}`);
 }

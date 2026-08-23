@@ -70,9 +70,9 @@ test('unpublishing and publishing again keeps every capability URL', async ({ pa
 
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  // Publishing opens the links popover over everything; the backdrop closes it, clicked at a
-  // CORNER because the popover deliberately sits above it (quiz-output.spec.ts says why).
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
+  // Publishing opens the links popover; Escape closes it (quiz-output.spec.ts says why there
+  // is nothing to click).
+  await page.keyboard.press('Escape');
 
   const first = await capabilities();
   expect(first.control).toBeTruthy();
@@ -93,7 +93,7 @@ test('unpublishing and publishing again keeps every capability URL', async ({ pa
 
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Escape');
 
   expect(await capabilities()).toEqual(first);
 

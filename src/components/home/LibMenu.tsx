@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 /** The breathing room kept against the viewport edge. The GAP between the button and its menu
  *  is not a constant here: it is MEASURED off the drawn menu (see below), so a surface with a
@@ -97,21 +97,52 @@ export default function LibMenu({
     setUp(!fitsBelow && fitsAbove);
   }, [open]);
 
+  // ── AN OUTSIDE PRESS CLOSES IT — listened for, never caught by a covering element.
+  // This used to be a full-viewport backdrop div, which closed the menu by SWALLOWING the
+  // press: whatever the operator was actually reaching for never received it. Between two
+  // popovers on one bar that reads as a dead button — the bulk bar's Folder took two presses,
+  // the first only dismissing the Production menu (owner walk 2026-08-23).
+  // A document listener has no such shadow, so one press closes the standing menu AND does
+  // what it was aimed at. The HOST is inside: the trigger owns its own open state, and closing
+  // here would race its toggle into reopening what the press meant to shut.
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: Event) => {
+      const host = menuRef.current?.parentElement;
+      const target = e.target;
+      if (!host || !(target instanceof Element) || host.contains(target)) return;
+      // A press inside a MODAL is not an outside press on this popover. A dialog is drawn ABOVE
+      // the menu and owns that click, and the menu is the context the operator returns to when
+      // it closes — dismissing a "could not save" alert must not also shut the picker that was
+      // reporting the failure (e2e/storage-full.spec.ts). The old backdrop got this right by
+      // accident, being under the dialog rather than over it.
+      if (target.closest('.gallery-backdrop, [aria-modal="true"]')) return;
+      onClose();
+    };
+    // CAPTURE, so the close lands before the pressed control's own React handler runs and the
+    // two are never observed in the other order.
+    const key = (e: KeyboardEvent) => {
+      // Escape belongs to the topmost surface, so a dialog over the menu answers it first.
+      if (e.key === 'Escape' && !document.querySelector('[aria-modal="true"]')) onClose();
+    };
+    document.addEventListener('pointerdown', outside, true);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', outside, true);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
-    <>
-      {/* The full-viewport backdrop closes on any outside press — including one on the sticky
-          topbar, which is why it outranks that z-index (styles.css says so). */}
-      <div className="lib-menu-backdrop" onClick={onClose} />
-      <div
-        ref={menuRef}
-        className={`${surface}${up ? ` ${surface}--up` : ''}${className ? ` ${className}` : ''}`}
-        role={role}
-        data-placement={up ? 'up' : 'down'}
-        data-testid={testid}
-      >
-        {children}
-      </div>
-    </>
+    <div
+      ref={menuRef}
+      className={`${surface}${up ? ` ${surface}--up` : ''}${className ? ` ${className}` : ''}`}
+      role={role}
+      data-placement={up ? 'up' : 'down'}
+      data-testid={testid}
+    >
+      {children}
+    </div>
   );
 }

@@ -58,10 +58,9 @@ test('a published scorebug takes a score bump and a running clock on the real ou
   await expect(page.getByTestId('production-page')).toBeVisible();
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  // Publishing opens the links popover; clicking the backdrop is how it closes - AT A CORNER,
-  // because the popover sits above the backdrop and a centre click lands on the popover (see
-  // quiz-output.spec.ts for the whole story).
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
+  // Publishing opens the links popover; Escape closes it (quiz-output.spec.ts says why there
+  // is nothing to click).
+  await page.keyboard.press('Escape');
   await expect(page.getByTestId('production-links')).toBeHidden();
 
   const outputSlug = await page.evaluate(async (name) => {

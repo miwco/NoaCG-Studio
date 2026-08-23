@@ -498,8 +498,12 @@ test('phone width: every row action is reachable, the text stays two lines, the 
     expect(box.x).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width).toBeLessThanOrEqual(390);
   }
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
-  await expect(page.getByTestId('export-graphic')).toHaveCount(0); // outside press closes it
+  // Escape closes it. At this width the open menu covers most of its own row, so there is no
+  // stable "harmless outside pixel" to aim at here — that half of the shell's closing contract
+  // is pinned where it actually matters, moving between two popovers in one press
+  // (library-bulk.spec.ts, productions.spec.ts).
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('export-graphic')).toHaveCount(0);
 
   // Name and metadata are single ellipsized lines, not a wrapped stack.
   const nameBox = (await row.locator('.lib-info strong').boundingBox())!;

@@ -475,6 +475,13 @@ figure is the short final part, so the label is what may contain one). Say which
   the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
   motion the timeline cannot see, the control page cannot pause and the render clock cannot
   drive.
+**A REVEAL MASK IN A FLEX ROW IS A LINE THAT CAN BE SQUEEZED TO NOTHING.** A flex item normally
+refuses to shrink below its own content (`min-width: auto`), and that protection is switched OFF
+for an item whose overflow is not visible - which every `.{prefix}-mask` is. So a masked line in a
+flex row has no floor: ls07's label may not wrap (`white-space: nowrap`) and was squeezed under its
+own width and CUT - "COMMENTARY" aired as "COMMENTAR" at text size L. A masked line that cannot
+wrap states `flex: none`, and the lines that CAN wrap absorb the row instead.
+
 ## THE STAGE: which graphics may change size with the operator's text
 
 `width: fit-content` (DESIGN_LANGUAGE §5) is the catalog default and only HALF right. On a
@@ -514,8 +521,12 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
   instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. A MULTICOL block is the one line the
   reserve is never pinned on - a definite height makes it spill sideways into hidden overflow
-  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). Measurements and the traps
-  behind it: `docs/FOOTPRINT_STABILITY.md`.
+  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). **The TEXT-SIZE LADDER
+  is an axis, not a constant**: `stage-fit-sweep`, `type-floor` and `overflow-sweep` all take
+  `--type-scale s|m|l`, because only `font-size` reads `--type-scale` and a box sized off the other
+  knob changes SHAPE as the operator moves it - measured 2026-08-23: ls07, card48 and lt51 cut a
+  word sideways at L (ls07 by 32px) while nineteen more report a vertical clip that is proportional,
+  present at every step and mostly empty leading. Measurements: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract
 

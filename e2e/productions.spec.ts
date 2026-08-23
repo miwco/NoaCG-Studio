@@ -195,11 +195,13 @@ test('the LAST cue\'s ⋯ menu opens upward, inside the rundown that would other
 
   // A row at the TOP of the list has room below it and must NOT flip — the measurement has to
   // answer both ways, or a shell hard-coded to "always up" would pass this spec too.
-  await page.locator('.lib-menu-backdrop').click();
-  await expect(menu).toHaveCount(0);
+  // Reaching it takes ONE press with a menu already standing: the shell listens for the outside
+  // press instead of covering the page with a backdrop, so it never eats the click an operator
+  // aimed at the next cue.
   await rows.first().scrollIntoViewIfNeeded();
   await rows.first().getByTestId('cue-menu').click();
-  await expect(page.getByTestId('cue-actions-menu')).toHaveAttribute('data-placement', 'down');
+  await expect(menu).toHaveCount(1);
+  await expect(menu).toHaveAttribute('data-placement', 'down');
 });
 
 test('the links panel stays whole on a short screen — it caps and scrolls itself', async ({ page }) => {
@@ -252,6 +254,13 @@ test('the links panel stays whole on a short screen — it caps and scrolls itse
   // Nothing was dropped to achieve that: the tail is inside the panel, one scroll away.
   await page.getByTestId('production-republish').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('production-republish')).toBeVisible();
+
+  // Escape closes it. Worth pinning HERE because this popover's other closing routes are only
+  // reachable against a real backend (the e2e/configured specs dismiss it after a live publish),
+  // and nothing in CI runs those — so without this the shell could stop closing `pd-links` and
+  // every gate would still be green.
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
 });
 
 test('the production page fits one 1080p screen, and the preview takes only the room left over', async ({ page }) => {

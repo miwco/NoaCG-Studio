@@ -279,7 +279,7 @@ export interface WizardOptions {
   customFont?: CustomFont;
   /** Whole-graphic size multiplier written as --scale (S 0.8 · M 1 · L 1.25 — StyleStep's SIZES). */
   sizeScale?: number;
-  /** Text-only size multiplier written as --type-scale (S 0.9 · M 1 · L 1.15). */
+  /** Text-only size multiplier written as --type-scale (S 0.85 · M 1 · L 1.2 — TYPE_SIZE_STEPS). */
   typeScale?: number;
   zone?: Zone9;
   /** Pixel offsets added after zone anchoring. */
