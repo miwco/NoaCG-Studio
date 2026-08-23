@@ -285,6 +285,22 @@ export interface BrowseContext {
    *  visitor cannot use is noise, and an empty-state count that includes it would lie.
    *  Empty offline and whenever the lookup fails, so the free catalog stays whole. */
   hiddenIds?: readonly string[];
+  /**
+   * This query is ONE TERM OF A BRIEF, not a person's search — the AI shortlist asking "which
+   * designs does this word reach" (ai/retrieval.ts), one term at a time.
+   *
+   * It turns off `namedAliasScore`, and only that. That bonus exists so a person typing a
+   * design's own name sees it first, which is a RANKED-LIST concern: retrieval shows no list
+   * and no first page. It multiplies each score by the term's idf and compares the products
+   * against a relative relevance cut, so an absolute bonus on one design does not merely
+   * reorder - it raises the bar every other design is measured against, and a design that
+   * cleared the cut stops clearing it. Measured: it dropped a worship brief from two designs
+   * above the cut to one, and `e2e/ai-retrieval.spec.ts` is the gate that said so.
+   *
+   * Declared on the unusual caller rather than the ordinary one, so browse surfaces get the
+   * fix by default and the one consumer with a different question opts out of it explicitly.
+   */
+  briefTerm?: boolean;
 }
 
 const BRAND_BOOST = 8;
@@ -306,7 +322,7 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
       const alias = aliasScore(meta, q);
       // A query must land somewhere — tokens in the index, or an alias hit.
       if (text === 0 && alias === 0) return;
-      score += text + alias + namedAliasScore(meta, q);
+      score += text + alias + (context.briefTerm ? 0 : namedAliasScore(meta, q));
     }
     const { boost, bestFor } = formatBoost(meta, filters);
     score += boost;
