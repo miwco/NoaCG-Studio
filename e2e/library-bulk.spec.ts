@@ -120,6 +120,47 @@ test('folders GROUP the table: rows first, unfiled under them, opening one shows
   await expect(page.locator('.lib-row')).toHaveCount(3);
 });
 
+test('search is GLOBAL: it says which folder each match came from, and gives the folder back', async ({ page }) => {
+  // The owner ratified the scope on 2026-08-23: folders are the browsing structure, search is
+  // a question about the WHOLE library. Two obligations come with that — a match has to say
+  // where it lives, or a flat answer loses the structure it crossed; and clearing the query has
+  // to put you back where you were standing, or every search costs a walk back in.
+  // The CARD grid is the default view (model/prefs libraryView), so it is what this walks.
+  await seedLibrary(page, ['Strap A', 'Strap B', 'Ticker C']);
+  const boxes = page.getByTestId('select-graphic');
+  await boxes.nth(0).click();
+  await page.getByTestId('bulk-move-folder').click();
+  await page.getByTestId('bulk-new-folder-name').fill('Match Night');
+  await page.getByTestId('bulk-new-folder').click();
+
+  // Stand INSIDE the folder — the case where a global search costs the most if it forgets.
+  await page.getByTestId('folder-item-Match Night').getByTestId('open-folder').click();
+  await expect(page.getByTestId('folder-head')).toContainText('Match Night');
+  await expect(page.locator('.lib-row')).toHaveCount(1);
+
+  // The search crosses out of it: the unfiled Ticker is an answer to "Strap or Ticker" too.
+  await page.getByTestId('home-search').fill('r');
+  await expect(page.getByTestId('folder-head')).toHaveCount(0);
+  await expect(page.locator('.lib-row')).toHaveCount(3);
+
+  // WHERE THE MATCH LIVES. On a card, not only in the table's column — the card is what most
+  // people are looking at. Exactly one of the three is filed, so exactly one tag shows.
+  const tag = page.getByTestId('row-folder');
+  await expect(tag).toHaveCount(1);
+  await expect(tag).toContainText('Match Night');
+  // It is a PILL, sized by its word. Stretched by the card's flex column it becomes a
+  // full-width bar and stops reading as a tag at all — the defect a visibility check misses.
+  const tagBox = (await tag.boundingBox())!;
+  const cardBox = (await page.locator('.lib-row', { hasText: 'Strap A' }).first().boundingBox())!;
+  expect(tagBox.width).toBeLessThan(cardBox.width * 0.75);
+
+  // Clearing it gives the folder back, rather than dropping you at the root.
+  await page.getByTestId('home-search').fill('');
+  await expect(page.getByTestId('folder-head')).toContainText('Match Night');
+  await expect(page.locator('.lib-row')).toHaveCount(1);
+  await expect(page.getByTestId('row-folder')).toHaveCount(0);
+});
+
 test('folder CARDS: name one, drag a graphic in, open it, and rename it from inside', async ({ page }) => {
   await seedLibrary(page, ['Strap A', 'Strap B', 'Ticker C']);
 

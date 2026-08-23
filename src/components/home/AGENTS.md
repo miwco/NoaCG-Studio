@@ -37,6 +37,8 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   `.lib-list--nofolder`): it is on only during a SEARCH, the one level that crosses folders -
   at the root every row is unfiled and inside a folder every row is in it, so the column
   printed one value twelve times. Dropping the cell without the track is the §5c defect.
+  The CARD carries the same fact as a pill under the name, which has to `align-self: flex-start`
+  or the column's stretch turns a tag into a full-width bar.
   Both carry Open, the "+ Production" popover and the `home/RowMenu` ⋯ overflow
   (control panel / export / rename / duplicate / publish / two-step delete).
   **SELECTION HAS NO CHECKBOXES** (handoff §5b): the item takes the click, shift-click extends
@@ -53,7 +55,11 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   folder's ⋯ and its "+ Production". The band is not on screen at that level, which is why the
   head carries those verbs rather than sending you back out for them. A SEARCH stands the band
   down and lists every match across folders (the flat list is what an answer to "where is X"
-  needs; it is what the chip row wrongly did at rest). Every folder verb is
+  needs; it is what the chip row wrongly did at rest) - and it is GLOBAL from inside a folder
+  too, owner-ratified 2026-08-23. It therefore owes two things: each match says where it lives
+  (`showFolder` - the table's column AND the card's tag, since the card grid is the default
+  view), and `folderFilter` is RETAINED rather than cleared, so clearing the query puts you back
+  in the folder you searched from. Every folder verb is
   `setGraphicsFolder` over its members - there is no folder record - so a folder holding
   nothing cannot persist, and a newly named one lives in component state until something is
   moved into it. Emptying the folder you are STANDING IN walks you back to the root; a view

@@ -5243,7 +5243,13 @@ h2 + .lib-row,
 /* Name over metadata, then ONE actions row. The ⋯ is the card's fifth child, so in a column
    it dropped to a line of its own; pulling it up beside the buttons is what keeps the card
    four bands tall (picture, name, actions) instead of five. */
-.lib-row--grid .lib-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+/* `margin-top: auto` LANDS THE ACTIONS ON THE CARD'S FLOOR. The grid stretches every card in a
+   row to one height, so an equal box was never the problem — but the content inside stopped
+   wherever it ran out, and a card carrying one line less floated its buttons 29px above its
+   neighbours' (measured with the search folder tag, the first thing to make two cards differ).
+   Bottom-aligned, the row of Open buttons reads as one line across the grid whatever each card
+   happens to say above it. */
+.lib-row--grid .lib-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-top: auto; }
 .lib-row--grid .lib-actions > * { min-width: 0; }
 .lib-row--grid > .lib-menu-host {
   position: absolute;
@@ -5282,6 +5288,9 @@ h2 + .lib-row,
 /* The card is a column of full-width bands: without this the flex column centres each one to
    its own content width and the name floats mid-card. */
 .lib-row--grid > * { align-self: stretch; text-align: left; }
+/* The search result's folder tag. A PILL is sized by its word, so it has to opt out of the
+   column's stretch — stretched it becomes a full-width bar and stops reading as a tag. */
+.lib-row--grid .lib-folder-tag { align-self: flex-start; margin-top: 4px; }
 /* The pip floats over the thumbnail's top-left corner instead of taking a column. */
 .lib-row--grid .lib-select { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(10, 12, 16, 0.7); }
 .lib-row--grid .lib-select[aria-pressed='true'] { background: var(--accent); }
