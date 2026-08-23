@@ -494,6 +494,14 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   `e2e/catalog/footprint-stability.spec.ts`, which selects on the marker rather than a list, so a
   category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
   stabilise a board, it changes which dimension moves.
+- **A STAGED DESIGN SHIPS THE SIZE ITS CSS DECLARES - the shrink is the OPERATOR'S, never the
+  design's own words.** Pick whatever `line-height` the design wants; it costs nothing. That was
+  not true until 2026-08-23: the reserve was a LINE BOX and the overflow test read a CONTENT box
+  (the face's glyph box, ~1.2em whatever line-height says), so any line with the tighter
+  line-height of the two shrank against its own default sample at load - 200 of 290 staged
+  designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
+  instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. Measurements and the two traps
+  behind it: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract
 
