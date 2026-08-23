@@ -266,9 +266,10 @@ test('wizard: the easing list is what the picked motion can render, and an impos
   const options = () => easing.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
 
   // Fade animates opacity only, which the renderer clamps at 1: the three displacement curves
-  // are absent, and the short list is Auto plus four time-shaping curves.
+  // are absent. Soft is absent too, for the other rule - Fade's tuned entrance IS `sine.out`,
+  // so offering Soft beside Auto would be offering the same curve twice.
   await page.getByTestId('motion-fade').click();
-  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'linear']);
+  expect(await options()).toEqual(['auto', 'ease-out', 'expo', 'linear']);
 
   // Slide up moves the graphic, so overshoot has somewhere to go and the same list grows by
   // exactly the three that need it. Nothing else changes — this is one rule, not two lists.
@@ -283,7 +284,7 @@ test('wizard: the easing list is what the picked motion can render, and an impos
   await expect(easing).toHaveValue('bounce');
   await page.getByTestId('motion-fade').click();
   await expect(easing).toHaveValue('auto');
-  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'linear']);
+  expect(await options()).toEqual(['auto', 'ease-out', 'expo', 'linear']);
 
   // A curve the new motion CAN show is kept — the fallback fires on impossibility, not on
   // every motion click.

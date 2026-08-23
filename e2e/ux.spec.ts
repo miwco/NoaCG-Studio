@@ -128,9 +128,12 @@ test('wizard: direction control mixes a different exit preset at create', async 
   // Default direction: one matched style for the entrance AND the exit.
   await expect(page.locator('.wz-step button.active', { hasText: 'In and out' })).toBeVisible();
   // Switch only the exit; the direction hint reflects the mix. The slide family is one
-  // card with a direction-of-travel picker — ↓ picks the slide-down exit.
+  // card with a direction-of-travel picker — ↓ picks the slide-down exit. Scoped to the
+  // TRAVEL box: the universal bank's Slide family draws its own arrows in the same
+  // vocabulary (and the same class) further down the step, so a bare `.wz-anim-dirs`
+  // matches two ↓ buttons that pick two different things.
   await page.getByRole('button', { name: 'Out only' }).click();
-  await page.locator('.wz-anim-dirs button', { hasText: '↓' }).click();
+  await page.locator('.wz-anim-travel .wz-anim-dirs button', { hasText: '↓' }).click();
   await expect(page.locator('.wz-step .hint').first()).toContainText('Out Slide down');
   await awaitPreviewRebuild(page, async () => {
     await finishIntoEditor(page);

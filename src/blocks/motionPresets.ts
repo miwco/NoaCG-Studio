@@ -281,8 +281,16 @@ export function motionIsUnclamped(preset: MotionPreset): boolean {
  * own choreographies, which move whole boxes AND their parts) and asks nothing of the filter.
  */
 export function easingsForMotions(ids: readonly (MotionPresetId | null | undefined)[]): EasingPreset[] {
-  const unclamped = ids.every((id) => !id || motionIsUnclamped(motionPresetById(id)));
-  return EASINGS.filter((e) => e.simple && (unclamped || e.needs === 'time'));
+  const presets = ids.filter((id): id is MotionPresetId => !!id).map(motionPresetById);
+  const unclamped = presets.every(motionIsUnclamped);
+  // …and a curve that IS one of these motions' own tuned pair is Auto under a second name.
+  // Fade's tuned entrance is `sine.out`, so "Soft" on a Fade measured 0.00 different from
+  // Auto at every frame of the entrance — the complaint this whole list exists to answer,
+  // reproduced inside the answer. Exact string equality, deliberately: a similarity threshold
+  // would be a number nobody could defend.
+  const isAutoAgain = (e: EasingPreset) =>
+    presets.some((p) => e.gsapIn === p.in.ease && e.gsapOut === p.out.ease);
+  return EASINGS.filter((e) => e.simple && (unclamped || e.needs === 'time') && !isAutoAgain(e));
 }
 
 /** Whether a choice survives the motion(s) it sits beside — the picker falls back to 'auto'

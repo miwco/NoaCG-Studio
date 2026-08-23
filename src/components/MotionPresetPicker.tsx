@@ -142,8 +142,11 @@ export default function MotionPresetPicker({
                   </strong>
                   <span className="hint">{family.hint}</span>
                 </button>
+                {/* `wz-anim-dirs` for the LOOK (the same control as the design's own Travel
+                    box), `motion-dirs` so a locator can tell the two apart — they can be on the
+                    step together and they pick different things. */}
                 {family.directions.length > 0 && (
-                  <div className="wz-anim-dirs" role="group" aria-label={`${family.name} direction`}>
+                  <div className="wz-anim-dirs motion-dirs" role="group" aria-label={`${family.name} direction`}>
                     {family.directions.map((d) => (
                       <button
                         key={d.id}

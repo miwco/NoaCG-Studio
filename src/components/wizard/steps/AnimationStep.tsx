@@ -301,8 +301,7 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
                 onToggle={(e) => setMoreOpen(e.currentTarget.open)}
               >
                 <summary>
-                  Simple motion{' '}
-                  <span className="muted">move the whole graphic as one block — works on any design</span>
+                  Simple motion <span className="muted">move the whole graphic as one block</span>
                 </summary>
                 <MotionPresetPicker
                   hideDirection
@@ -319,7 +318,11 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
         )}
       </div>
 
-      <div className="row" style={{ alignItems: 'flex-start', gap: 24 }}>
+      {/* Speed beside Easing, and WRAPPING: the form column halves the moment a design is
+          picked, and at 1366 the two sections need 534 px of a ~488 px column - measured with
+          the Easing select running off the right edge, which is a poor place for the control
+          this step was rebuilt around. Wrapping drops it under Speed instead of clipping it. */}
+      <div className="row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
         <div className="panel-section">
           <h3>Speed <span className="muted">entrance and exit</span></h3>
           <div className="row" style={{ gap: 6 }}>
@@ -335,13 +338,21 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
           </div>
         </div>
 
-        <div className="panel-section" style={{ minWidth: 260 }}>
+        {/* 200, not 260: at 260 the pair asked for 534 px of a 488 px column and the wrap above
+            pushed Easing onto its own row, below the fold - the one control this step exists to
+            make usable, out of sight. Measured: Speed takes 228 of the row's 448, so 200 still
+            missed by 4 px. 180 fits, and the select grows into whatever is left. The wrap above
+            still catches anything narrower. */}
+        <div className="panel-section" style={{ minWidth: 180, flex: '1 1 180px' }}>
           <h3>Easing <span className="muted">the feel of the motion</span></h3>
           <select
             value={draft.animation.easing}
             onChange={(e) => onDraft({ animation: { easing: e.target.value as EasingId } })}
           >
-            <option value="auto">Auto — the motion's own tuned curve (recommended)</option>
+            {/* Short enough to READ BACK inside a 196 px select — the longer wording was
+                truncated mid-word, which is the wrong place to hide what "Auto" means. The
+                hint under the select carries the sentence. */}
+            <option value="auto">Auto — recommended</option>
             {easeOptions.map((e) => (
               <option key={e.id} value={e.id} title={e.description}>{e.plain}</option>
             ))}
@@ -357,7 +368,7 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
           <p className="hint" style={{ marginTop: 6 }}>
             {activeEasing
               ? activeEasing.description
-              : 'Entrances settle smoothly (Ease Out family); exits leave quickly (Ease In family).'}
+              : 'Each motion arrives on the curve it was tuned with — quick in, settling softly.'}
           </p>
         </div>
       </div>
