@@ -3,9 +3,13 @@
 //
 // The absence this answers is docs/CATALOG_WORK_QUEUE.md §1: 99 of 103 lower thirds render as
 // `strap/thin`, and the category assumes a HORIZONTAL strap so completely that nothing in it is
-// taller than it is wide. This is the other orientation. It is the shape a vertical or square
-// crop actually wants - a strap across a 9:16 frame eats a third of the picture - and the shape
-// a talk format wants when the subject sits to one side and the other side is dead air.
+// taller than it is wide. This is the other orientation, and it is the shape a talk format wants
+// when the subject sits to one side and the other side is dead air.
+//
+// IT IS ALSO INTENDED for vertical and square crops, where a strap spanning the width of a 9:16
+// frame takes a far larger share of the picture than the same strap does at 16:9. Read that as
+// the design's INTENT, not as a demonstrated result - see the 9:16 note at the foot of this
+// header for exactly how far it has been checked.
 //
 // TWO decisions carry it:
 //

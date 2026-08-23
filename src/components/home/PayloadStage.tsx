@@ -27,8 +27,12 @@ const PayloadStage = forwardRef<
     testId?: string;
     /** Machine-state replies from the stage's documents (the stage already collects them —
      *  posted after every applied command). A host that renders event buttons greys them
-     *  against this; omitting the prop costs nothing. */
-    onState?: (graphic: string, state: PreviewMachineState | null) => void;
+     *  against this; omitting the prop costs nothing.
+     *
+     *  `overflow` rides the same reply: the field ids the graphic could not make fit even at
+     *  its readability floor, so a host with field boxes can warn before the value airs
+     *  (docs/SVG_IMPORT_PLAN.md §3). Empty for every graphic that fits. */
+    onState?: (graphic: string, state: PreviewMachineState | null, overflow: string[]) => void;
     /**
      * Fired every time a FRESH stage exists — first mount and every rebuild.
      *
@@ -78,7 +82,7 @@ const PayloadStage = forwardRef<
     stage.current = built;
     plays.current = 0;
     root.setAttribute('data-plays', '0');
-    built.onState((graphic, state) => onStateRef.current?.(graphic, state));
+    built.onState((graphic, state, over) => onStateRef.current?.(graphic, state, over));
 
     // RE-ASK FOR MACHINE STATE, once a second, exactly as the published /output renderer has
     // always done (src/output/main.ts). The stage posts a single `{cmd:'state'}` after each

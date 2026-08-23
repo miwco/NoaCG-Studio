@@ -12,6 +12,7 @@ import {
   formatMachineState,
   isEventLegal,
   machineStateNames,
+  overflowNote,
   type ControlButton,
 } from '../../control/controlModel';
 import { renderControlPanelHtml } from '../../control/controlPanelHtml';
@@ -197,6 +198,8 @@ export default function GraphicControlPage({ id }: { id: string }) {
   // noacgMachineState() read, since the iframe carries no allow-same-origin.
   const legality = useMemo(() => (doc ? eventLegality(doc.template.js) : {}), [doc]);
   const [machineState, setMachineState] = useState<PreviewMachineState | null>(null);
+  /** The field ids the graphic reported as too long to fit (`noacgTextOverflow()`). */
+  const [overflow, setOverflow] = useState<string[]>([]);
   useEffect(() => {
     // EVERY template answers noacgMachineState() (a machine-less one through its derived
     // machine, kept honest by noacgTrackPath) — so the poll runs for all of them: the on-air
@@ -204,7 +207,14 @@ export default function GraphicControlPage({ id }: { id: string }) {
     const onMessage = (ev: MessageEvent) => {
       if (ev.source !== iframeRef.current?.contentWindow) return;
       const msg = ev.data;
-      if (msg && typeof msg === 'object' && msg.type === PREVIEW_STATE_TYPE) setMachineState(msg.state);
+      if (!msg || typeof msg !== 'object' || msg.type !== PREVIEW_STATE_TYPE) return;
+      setMachineState(msg.state);
+      // …and the same reply's other half: which values the graphic could not make fit (the
+      // owner's warn ruling, docs/SVG_IMPORT_PLAN.md §3). This surface pushes values only on
+      // ⟳ Update / ▶ Play by design, so the warning is about what was SENT — which is exactly
+      // the claim worth making here: the graphic on air cannot hold that copy.
+      const over = Array.isArray(msg.overflow) ? msg.overflow.map(String) : [];
+      setOverflow((prev) => (prev.join(',') === over.join(',') ? prev : over));
     };
     window.addEventListener('message', onMessage);
     const tick = () => postCmd({ cmd: 'state' });
@@ -220,6 +230,11 @@ export default function GraphicControlPage({ id }: { id: string }) {
   // justified against. One formatter, shared with the production and hosted pages.
   const stateNames = useMemo(() => (doc ? machineStateNames(doc.template.js) : {}), [doc]);
   const stateLabel = formatMachineState(stateNames, machineState);
+  const overflowSet = new Set(overflow.filter((key) => descriptors.some((d) => d.key === key)));
+  const overflowMessage = overflowNote(
+    [...overflowSet],
+    Object.fromEntries(descriptors.map((d) => [d.key, d.label])),
+  );
   /** The operator PLAYED something here and has not stopped it. Machine state alone cannot
    *  carry the tally: the load-time SETTLE parks the preview at its on-air pose, which walks
    *  the derived machine to its entered state — so "state ≠ off" is true before anyone
@@ -774,12 +789,19 @@ export default function GraphicControlPage({ id }: { id: string }) {
                   data-testid="entry-label"
                 />
               </label>
+              {/* TOO LONG TO FIT, reported by the graphic in the preview above (the owner's
+                  warn ruling, docs/SVG_IMPORT_PLAN.md §3). It describes what was last SENT,
+                  which on this surface is what ⟳ Update / ▶ Play put there. */}
+              {overflowMessage && (
+                <p className="ctl-over-note" data-testid="entry-overflow">{overflowMessage}</p>
+              )}
               {descriptors.map((d) => (
                 <FieldRow
                   key={d.key}
                   descriptor={d}
                   value={String(active.values[d.key] ?? d.defaultValue ?? '')}
                   onChange={(v) => setEntryValue(active, d.key, String(v))}
+                  overflow={overflowSet.has(d.key)}
                   testIdPrefix="entry-field"
                 />
               ))}

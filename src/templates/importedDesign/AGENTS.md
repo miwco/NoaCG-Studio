@@ -42,7 +42,8 @@ as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at
 (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
 the FIT LADDER (owner ruling 2026-08-23, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
 panel, grow it only where the author opted in, wrap into the room the design already has, shrink
-to 55%, then report the field** (`noacgTextOverflow()`; no operator surface reads it YET). Three
+to 55%, then report the field** (`noacgTextOverflow()`, read by every operator surface where a
+value is typed - the warning rides the machine-state answer, `control/controlModel.ts`). Three
 rules there are load-bearing and each was a measured defect: the budget is the ROOM the shape
 behind the line offers, NOT the width of the text the designer typed (that left 588px of a
 1040px banner permanently unused); wrapping uses only room already drawn - from the line to the

@@ -24,6 +24,10 @@ import {
   eventLegality,
   fieldDescriptors,
   machineStateNames,
+  OVERFLOW_FIELD_HINT,
+  OVERFLOW_FIELD_MARK,
+  OVERFLOW_NOTE_MANY,
+  OVERFLOW_NOTE_ONE,
   type ControlButton,
 } from './controlModel';
 import type { RemoteControlConfig } from './realtimeControl';
@@ -213,6 +217,13 @@ function renderPanelPage(title: string, graphics: EmittedGraphic[]): string {
   .field { padding:10px 0; border-bottom:1px solid var(--line); }
   .field:last-child { border-bottom:none; }
   .field > label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--dim); margin-bottom:6px; }
+  /* TOO LONG TO FIT: the value cannot be shown whole, so the box says so and the panel repeats
+     it once at the top. Red — this is the picture being wrong, not a step left to take. */
+  .over-note { margin:6px 0 0; font-size:12px; font-weight:700; color:#e06c75; }
+  /* The box mark drops the label row's uppercase tracking on purpose: read in the same
+     letterforms as the field NAME it sits beside, a warning looks like part of the name. */
+  .field > label .over-mark { color:#e06c75; font-weight:700; font-size:11px; text-transform:none; letter-spacing:0; }
+  .field-over input, .field-over textarea, .field-over select { border-color:#e06c75; }
   input, textarea, select, button { font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px 10px; }
   input, textarea, select { width:100%; }
   textarea { min-height:96px; resize:vertical; }
@@ -433,7 +444,14 @@ GRAPHICS.forEach(function (g) {
   }
 
   function buildControl(c) {
-    var wrap = el('div', { class: 'field' }, [el('label', {}, [c.label])]);
+    // The box carries its key and a hidden TOO LONG mark, painted by paintOverflow() below —
+    // rebuilding a control to show a warning would take the focus out of the box being typed
+    // into, which is the one place an operator is looking when it appears.
+    var overMark = el('b', { class: 'over-mark', title: ${jsonForScript(OVERFLOW_FIELD_HINT)} }, [
+      ' \\u26A0 ' + ${jsonForScript(OVERFLOW_FIELD_MARK)},
+    ]);
+    overMark.style.display = 'none';
+    var wrap = el('div', { class: 'field', 'data-key': c.key }, [el('label', {}, [c.label, overMark])]);
     var v = state[c.key];
     if (c.kind === 'number') {
       var input = el('input', { type: 'number', class: 'num-input' });
@@ -638,6 +656,9 @@ GRAPHICS.forEach(function (g) {
     while (fieldHost.firstChild) fieldHost.removeChild(fieldHost.firstChild);
     g.controls.forEach(function (c) { fieldHost.appendChild(buildControl(c)); });
     if (g.controls.length === 0) fieldHost.appendChild(el('p', {}, ['This graphic has no editable fields.']));
+    // Loading an entry rebuilds every box, so the marks have to be put back — otherwise a
+    // too-long entry loads looking clean until the graphic answers again a second later.
+    paintOverflow();
   }
   if (g.entries.length > 0) {
     var entrySel = el('select', {});
@@ -658,6 +679,38 @@ GRAPHICS.forEach(function (g) {
     entriesWrap.appendChild(el('div', { class: 'row' }, [entrySel, entryLoad, entryPlay]));
     card.appendChild(entriesWrap);
   }
+  // ── TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3) ──────────────────
+  // The graphic reports which values it could not make fit even at its readability floor
+  // (noacgTextOverflow(), riding the same answer as the machine state). It is said here, on the
+  // panel where the value is typed, because the alternative is finding out on air: the copy is
+  // never cut and the artwork is never reshaped to hide it. Same warning, same words, as every
+  // other operator surface (docs/CONTROL_PANEL_PARITY.md §4).
+  var overflow = [];
+  var overNote = el('p', { class: 'over-note' });
+  overNote.style.display = 'none';
+  card.appendChild(overNote);
+  function paintOverflow() {
+    var labels = {};
+    g.controls.forEach(function (c) { labels[c.key] = c.label; });
+    // A field this panel draws no box for cannot be shortened here, so warning about it would
+    // only puzzle the operator.
+    var shown = [];
+    for (var i = 0; i < overflow.length; i++) {
+      if (labels[overflow[i]] !== undefined && shown.indexOf(overflow[i]) === -1) shown.push(overflow[i]);
+    }
+    overNote.textContent = shown.length === 1
+      ? '\\u26A0 ' + labels[shown[0]] + ' ' + ${jsonForScript(OVERFLOW_NOTE_ONE)}
+      : '\\u26A0 ' + shown.length + ' ' + ${jsonForScript(OVERFLOW_NOTE_MANY)};
+    overNote.style.display = shown.length ? 'block' : 'none';
+    var boxes = fieldHost.children;
+    for (var b = 0; b < boxes.length; b++) {
+      var key = boxes[b].getAttribute('data-key');
+      var bad = !!key && shown.indexOf(key) !== -1;
+      boxes[b].className = bad ? 'field field-over' : 'field';
+      var mark = boxes[b].querySelector('.over-mark');
+      if (mark) mark.style.display = bad ? 'inline' : 'none';
+    }
+  }
   rebuildFields();
   card.appendChild(fieldHost);
 
@@ -677,8 +730,14 @@ GRAPHICS.forEach(function (g) {
 
   if (ch) ch.onmessage = function (ev) {
     var m = ev.data || {};
-    // The graphic answers every message (and 'hello') with its machine state.
-    if (m.t === 'state' && m.state) { machineState = m.state; log.state = m.state; persistLog(); paintState(); noteAnswer(); }
+    // The graphic answers every message (and 'hello') with its machine state — and, in the same
+    // row, the values it could not make fit. A graphic that answers only one of the two still
+    // answers: "over" rides alongside "state", never inside it.
+    if (m.t === 'state') {
+      if (m.over !== undefined) { overflow = m.over || []; paintOverflow(); }
+      if (m.state) { machineState = m.state; log.state = m.state; persistLog(); paintState(); }
+      if (m.state || m.over !== undefined) noteAnswer();
+    }
     // A rebooted graphic (browser-source refresh, crash) announces itself: rebuild it from
     // the log — the latest data first (the data half of reset), then snap to the last known
     // state (the visual half; timers arm, recovery semantics). First boot has nothing

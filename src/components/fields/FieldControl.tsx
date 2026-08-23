@@ -10,6 +10,7 @@
 
 import { useRef, useState } from 'react';
 import { clampToField, type FieldDescriptor, type FieldValue } from '../../model/fieldModel';
+import { OVERFLOW_FIELD_HINT, OVERFLOW_FIELD_MARK } from '../../control/controlModel';
 
 /** One pickable image for an `image` field. */
 export interface FieldImage {
@@ -235,21 +236,34 @@ export interface FieldRowProps extends FieldControlProps {
   badge?: string;
   /** Names the row's test ids: `<prefix>-<key>` on the control, `<prefix>-reset-<key>` on Reset. */
   testIdPrefix?: string;
+  /** THIS VALUE DOES NOT FIT — the graphic reported it through `noacgTextOverflow()` after its
+   *  fit ladder ran out of room (controlModel.ts's overflow vocabulary). Marked on the row that
+   *  holds it, because a summary alone does not say WHICH box to shorten. */
+  overflow?: boolean;
 }
 
 /**
  * A labelled field: the control plus its identity and a per-field Reset back to the authored
  * default (shown only once the value actually differs from it).
  */
-export function FieldRow({ badge, testIdPrefix, ...props }: FieldRowProps) {
+export function FieldRow({ badge, testIdPrefix, overflow, ...props }: FieldRowProps) {
   const { descriptor: d, value, onChange } = props;
   const changed = String(value) !== String(d.defaultValue);
 
   return (
-    <div className="field-row">
+    <div className={`field-row${overflow ? ' field-row-over' : ''}`}>
       <div className="field-meta">
         <label style={{ margin: 0 }}>{d.label}</label>
         <span className="row" style={{ gap: 6 }}>
+          {overflow && (
+            <span
+              className="field-over"
+              title={OVERFLOW_FIELD_HINT}
+              data-testid={testIdPrefix ? `${testIdPrefix}-over-${d.key}` : undefined}
+            >
+              ⚠ {OVERFLOW_FIELD_MARK}
+            </span>
+          )}
           {changed && (
             <button
               className="field-reset"

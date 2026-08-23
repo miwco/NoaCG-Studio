@@ -44,7 +44,13 @@ A template's playout behaviour travels INSIDE the template, and nowhere else:
 - **`control/controlModel.ts`** is the vocabulary: `fieldDescriptors` (SPX fields → the shared
   `FieldDescriptor`s), `eventButtons` (the machine's buttons via `blocks/animMachine.ts
   machineControls`), `eventLegality` (event → group → the states it fires from — the
-  structural guard, precomputed), and the `ControlMessage` protocol.
+  structural guard, precomputed), the `ControlMessage` protocol, and the OVERFLOW WARNING's
+  words (`overflowNote`, `OVERFLOW_FIELD_MARK`, `OVERFLOW_FIELD_HINT` — a value the graphic
+  could not make fit, said the same way on every surface where a value is typed;
+  docs/SVG_IMPORT_PLAN.md §3 for the ruling behind it, docs/CONTROL_PANEL_PARITY.md §4 for the
+  surface-by-surface state). A graphic reports it through `noacgTextOverflow()` and it rides the
+  MACHINE-STATE answer rather than a channel of its own: every surface already polls for state,
+  so this costs one field on a message that was already in flight.
 - Three surfaces render that vocabulary and must stay in step:
   1. the in-app **Control tab** (`components/ControlPanel.tsx`, React),
   2. the standalone **`controlpanel.html`** (`control/controlPanelHtml.ts`, vanilla JS —
