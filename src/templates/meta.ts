@@ -108,6 +108,22 @@ export const TYPE_META: Record<string, DeclaredTemplateMeta> = {
     semantics: { label: 'headline', minutes: 'duration' },
     extraCapabilities: ['countdown', 'pause-resume'],
   },
+  // A TIMER, not a scoreboard. The speaking-timer type rides the scoreboard ASSEMBLER — the
+  // one built for design-owned fields and a two-sided board — but what a chair reaches for it
+  // by is a clock, so this is where that disagreement is settled. `assembler !== browse
+  // category` is exactly what this file exists for (docs/TEMPLATE_TAXONOMY_PROPOSAL.md §18).
+  'speaking-timer': {
+    category: 'timer', subtype: 'speaking-timer', structures: ['two-person', 'strip'],
+    semantics: {
+      round: 'topic',
+      sideA: 'team', speakerA: 'name',
+      sideB: 'team', speakerB: 'name',
+      clockA: 'duration', clockB: 'duration',
+      allowance: 'duration', allowanceWord: 'description',
+      penalty: 'duration',
+    },
+    extraCapabilities: ['countdown', 'operator-states', 'pause-resume'],
+  },
   'topic-card': {
     category: 'topic', subtype: 'topic', structures: ['multi-line'],
     semantics: { heading: 'headline', line1: 'description', line2: 'description' },
