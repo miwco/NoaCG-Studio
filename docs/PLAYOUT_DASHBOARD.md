@@ -67,6 +67,12 @@ Two columns. **The PAGE is the only scroller; every block on it is content-sized
     panic control), the monitors, and the cue rail.
   - **Two exceptions, both because they have nowhere else to go:** the cue list inside the
     sticky rail (a forty-cue rundown), and the `⋯` / links popovers.
+  - **Both popovers go through `home/LibMenu`**, the shell Home's row menus use, so which WAY
+    they open is MEASURED rather than assumed and each caps its own height. It measures against
+    clipping ancestors, not only the fold: the cue list is its own scroller, so the last cue's
+    `⋯` was cut off by the LIST while still clearing the bottom of the screen. Adding a popover
+    to this page means using that shell and giving its class a `--up` rule, never hand-rolling
+    `.lib-menu-backdrop` again (which is how both of these came to open downward only).
   - The phone breakpoint keeps its own viewport-locked shell, because its verb bar is pinned to
     the bottom of the screen; `.pd-body` is the scroller under it. Same idea, one level down.
 

@@ -5808,7 +5808,18 @@ h2 + .lib-row,
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  /* The cap §1 already promised this popover and it never had: six link rows with their ▸
+     explanations open, then the publish pair, measures 647px — taller than a 1366×768 laptop's
+     window, and no placement saves one of those, so it scrolls inside itself instead. It is
+     also what home/LibMenu measures, so the decision and the drawing agree. */
+  max-height: min(76vh, 620px);
+  overflow-y: auto;
 }
+/* THE FLIPPED PLACEMENT, the rule every home/LibMenu surface owes the shell (which measures the
+   6px gap above rather than restating it). In practice this panel hangs off a header pinned to
+   the TOP of the page, so the measurement keeps choosing down and the cap above is what puts the
+   tail back on screen — the rule is here so the shell is never half-wired on this surface. */
+.pd-links--up { top: auto; bottom: calc(100% + 6px); }
 
 /* ── Body: the stage column + the cue rail ─────────────────────────────────── */
 /* `1 0 auto`, never `flex: 1`: the shorthand's `min-height: 0` + shrink is exactly what let the
