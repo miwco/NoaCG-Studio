@@ -503,7 +503,9 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   (the face's glyph box, ~1.2em whatever line-height says), so any line with the tighter
   line-height of the two shrank against its own default sample at load - 200 of 290 staged
   designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
-  instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. Measurements and the two traps
+  instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. A MULTICOL block is the one line the
+  reserve is never pinned on - a definite height makes it spill sideways into hidden overflow
+  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). Measurements and the traps
   behind it: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract

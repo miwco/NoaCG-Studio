@@ -11,7 +11,7 @@ contract describes. `noacg inspect <dir>` prints exactly that panel.
 |---|---|
 | a `DataField` (`f0…`) | one INPUT - text, a line list (textarea), a number stepper, an image picker, a dropdown, a toggle, a colour; `hidden` fields show in the studio's Data panel, not on the operator page |
 | the lifecycle | ⟳ Take (`play`), ✎ Update (`update`), » Next (`next`), ■ Out (`stop`), ■■ All out |
-| an operator EVENT of the state machine (`NOACG_ANIM.machine`) | one ⚡ BUTTON, labelled/grouped by `machine.controls`; a payload names the fields the press sends; buttons grey when the machine's current state has no arrow for that event |
+| an operator EVENT of the state machine (`NOACG_ANIM.machine`) | one ⚡ BUTTON, labelled/grouped by `machine.controls`; a payload names the fields the press sends, an adjust names a number field the press moves by a delta (a scoreboard's Goal A sends the event AND scoreA +1 together); buttons grey when the machine's current state has no arrow for that event |
 | the machine's states | a state chip, a snap-to-state recovery picker |
 
 A graphic with no explicit machine (most) gets the implicit one: its fields, the lifecycle verbs,

@@ -162,7 +162,7 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
 - **animData.ts** - the schema + the literal's read/write. AnimData = version/root/speed/steps
   **/machine?** (the STATE MACHINE, format version 2 - docs/STATE_MACHINE_SCHEMA.md);
   `machine.controls` (MachineControl[]) is the ADDITIVE OPTIONAL control-surface metadata -
-  label/section/order/payload-field-ids/destructive per operator event, travelling INSIDE the
+  label/section/order/payload-field-ids/adjust-deltas/destructive per operator event, travelling INSIDE the
   template so exported control pages keep their labels (docs/CONTROL_LAYER.md);
   a step = name/duration/ease/reveals?/hides?/calls?/dynamics?/loops?/layers (durations and keyframe times
   are speed-relative: playback divides by `speed`; `reveals` names the layers that FIRST become

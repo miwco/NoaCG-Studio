@@ -117,7 +117,15 @@ ${maskLines([
 /* The standfirst - running text in a real two-column measure, which is the card's whole point.
    Two overrides of the category's own span rule are needed and both are load-bearing:
    display:block because an inline-block never fragments across columns, and the balanced
-   wrapping is turned off because multicol does its own balancing. */
+   wrapping is turned off because multicol does its own balancing.
+
+   NEVER GIVE THIS BLOCK A HEIGHT. A definite height tells a multicol container to stop
+   balancing: it fills column one to that height, then column two, then spills the rest into
+   overflow columns to the RIGHT - out of the mask above, which hides them, so long copy loses
+   words sideways instead of reflowing. Left indefinite it balances into the two columns and
+   grows downward, and the stage fit shrinks the type back to the room this card was drawn
+   with. The stage runtime knows the rule (shared/stageFit.ts, "NEVER ON A MULTI-COLUMN
+   BLOCK"); this note is here so an edit to the card does not reintroduce it by hand. */
 .info-card-mask > .info-card-standfirst {
   display: block;  /* multicol only fragments block-level content */
   margin-top: calc(20px * var(--scale));  /* clear air under the headline */

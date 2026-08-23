@@ -82,6 +82,55 @@ export function eventButtons(js: string): ControlButton[] {
   return machine ? machineControls(machine) : [];
 }
 
+/** A number field's value moved by a delta — the ONE arithmetic behind every "+1" a control
+ *  surface performs (the ± live-number steppers and an event's `adjust`). Anything that does
+ *  not read as an integer counts from 0, so an empty score box bumps to 1, not to NaN. */
+export function adjustedValue(current: string | number | undefined, delta: number): string {
+  return String((parseInt(String(current ?? ''), 10) || 0) + delta);
+}
+
+/**
+ * The field values a button's press carries — THE one rule every surface that fires an event
+ * uses, so the production page, the hosted page, the editor's Control tab and the exported
+ * panel cannot disagree about what rides (`controlPanelHtml.ts` inlines the same rule, since
+ * it ships without this module):
+ *
+ * - `payload` fields ride at their CURRENT value (the pick, the focused row);
+ * - `adjust` fields ride at their current value MOVED by the declared delta (a goal's +1 on
+ *   that side's score) - the write rides the event and is applied only if the machine accepts
+ *   it, never as a bare update that the guard could not refuse.
+ *
+ * `valueOf` is the surface's own answer for "what does this field read right now" (its staged
+ * box, its on-air record); `undefined` means the surface has no value, and a payload field then
+ * stays off the wire so the graphic keeps what it has (a bare `''` once wiped a quiz pick), while
+ * an adjust field counts from 0. Returns `undefined` when nothing rides, so a bare event fires
+ * bare. The keys of `button.adjust` are ALSO what the surface must write back into its own
+ * field state after sending, the way its live-number stepper does - or the next press would
+ * move from the stale value.
+ */
+export function eventPayload(
+  button: Pick<ControlButton, 'payload' | 'adjust'>,
+  valueOf: (key: string) => string | number | undefined,
+): Record<string, string> | undefined {
+  const payload: Record<string, string> = {};
+  for (const key of button.payload ?? []) {
+    const value = valueOf(key);
+    if (value !== undefined) payload[key] = String(value);
+  }
+  for (const [key, delta] of Object.entries(button.adjust ?? {})) {
+    payload[key] = adjustedValue(valueOf(key), delta);
+  }
+  return Object.keys(payload).length > 0 ? payload : undefined;
+}
+
+/** What an `adjust` press does, in the OPERATOR'S words ("Score A +1"), for the button hints -
+ *  `labelOf` resolves a field id to its label, the way every surface words a payload. */
+export function adjustWords(button: Pick<ControlButton, 'adjust'>, labelOf: (key: string) => string | undefined): string {
+  return Object.entries(button.adjust ?? {})
+    .map(([key, delta]) => `${labelOf(key) ?? key} ${delta > 0 ? '+' : ''}${delta}`)
+    .join(', ');
+}
+
 /**
  * The buttons grouped by their author-declared SECTION, in first-seen order, with everything
  * undeclared under "Actions".

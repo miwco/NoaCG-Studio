@@ -4,9 +4,11 @@ import { useRouter } from '../../app/router';
 import { graphicById, newEntry, updateGraphic, type ControlEntry, type GraphicDoc } from '../../model/library';
 import { commitDurableWrites } from '../../model/durableStore';
 import {
+  adjustWords as adjustWordsFor,
   fieldDescriptors,
   eventButtons,
   eventLegality,
+  eventPayload,
   formatMachineState,
   isEventLegal,
   machineStateNames,
@@ -116,6 +118,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
    *  "carrying Audience results" is the whole explanation, "carrying f7" is none of it. */
   const payloadWords = (b: ControlButton): string =>
     (b.payload ?? []).map((key) => descriptors.find((d) => d.key === key)?.label ?? key).join(', ');
+  const adjustWords = (b: ControlButton): string => adjustWordsFor(b, (key) => descriptors.find((d) => d.key === key)?.label);
   const eventSections = useMemo(() => {
     const sections: [string, ControlButton[]][] = [];
     for (const b of buttons) {
@@ -224,6 +227,10 @@ export default function GraphicControlPage({ id }: { id: string }) {
    *  action started it AND the machine has not returned to off (a stop press, a self-clear
    *  timer, or an exit event all land the machine back on off, clearing the tally). */
   const [aired, setAired] = useState(false);
+  /** The figures an ⚡ `adjust` press put on air while NO entry was active (a goal's +1 on a
+   *  graphic with no entries): the next press counts from here rather than from the default
+   *  again. Cleared by anything that airs a whole value set (Play, ⟳ Update). */
+  const [adjusted, setAdjusted] = useState<Record<string, string>>({});
   /** The lifecycle group is `main` on every template (a derived machine has only it); a
    *  parallel group's own state (an alert level, a language) says nothing about being up. */
   const machineOff = !!machineState && !!machineState.groups &&
@@ -279,10 +286,44 @@ export default function GraphicControlPage({ id }: { id: string }) {
 
   const sendUpdate = (values: Record<string, string>) => {
     postCmd({ cmd: 'update', data: JSON.stringify(mergedValues(values)) });
+    setAdjusted({});
   };
 
   const playEntry = (entry: ControlEntry | null) => {
     postCmd({ cmd: 'play', data: JSON.stringify(mergedValues(entry?.values ?? {})) });
+    setAdjusted({});
+    setAired(true);
+  };
+
+  /** Fire a machine event. A payload rides from the ACTIVE ENTRY; an `adjust` field (a goal's
+   *  +1) rides moved by its delta from what is on air - the entry's value, else the last figure
+   *  a press here put up, else the graphic's default - and the new figure is written back into
+   *  the entry (or remembered for the no-entry case) so the next press counts from it. */
+  const fireEvent = (b: ControlButton) => {
+    // A PAYLOAD ONLY RIDES WHEN THERE IS SOMETHING TO SEND. The values a payload carries live in
+    // an ENTRY on this surface, and a freshly saved graphic has none - so building the payload
+    // from `active?.values[key] ?? ''` sent an EMPTY string for every payload field, which the
+    // machine then applied: pressing ⚡ Select answer on a graphic with no entries wiped the
+    // pick instead of making one. The guard is about the EVENT, never about the value, so
+    // nothing downstream was going to catch that. With no entry the event fires bare and the
+    // graphic keeps the field values it already has on air - the same thing the exported panel
+    // does, where the payload comes from field boxes that always hold a value.
+    const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
+    const payload = eventPayload(b, (key) => {
+      const entryValue = active?.values[key];
+      if (entryValue !== undefined) return String(entryValue);
+      if (b.adjust && key in b.adjust) return adjusted[key] ?? descriptorByKey.get(key)?.defaultValue;
+      return undefined;
+    });
+    postCmd({ cmd: 'dispatch', event: b.event, payload: payload ?? {} });
+    for (const key of Object.keys(b.adjust ?? {})) {
+      const value = payload?.[key];
+      if (value === undefined) continue;
+      if (active) setEntryValue(active, key, value);
+      else setAdjusted((m) => ({ ...m, [key]: value }));
+    }
+    // An accepted event can be what airs the graphic (an arrow out of off); the machine-off
+    // check above clears the tally if it was not.
     setAired(true);
   };
 
@@ -581,37 +622,17 @@ export default function GraphicControlPage({ id }: { id: string }) {
                           key={b.event}
                           className={b.destructive ? 'ctl-event-destructive' : undefined}
                           disabled={!legal}
-                          onClick={() => {
-                            // A PAYLOAD ONLY RIDES WHEN THERE IS SOMETHING TO SEND. The values
-                            // a payload carries live in an ENTRY on this surface, and a freshly
-                            // saved graphic has none - so building the payload from
-                            // `active?.values[key] ?? ''` sent an EMPTY string for every payload
-                            // field, which the machine then applied: pressing ⚡ Select answer on
-                            // a graphic with no entries wiped the pick instead of making one.
-                            // The guard is about the EVENT, never about the value, so nothing
-                            // downstream was going to catch that.
-                            // With no entry the event now fires bare and the graphic keeps the
-                            // field values it already has on air - the same thing the exported
-                            // panel does, where the payload comes from field boxes that always
-                            // hold a value.
-                            const payload: Record<string, string> = {};
-                            for (const key of b.payload ?? []) {
-                              const value = active?.values[key];
-                              if (value !== undefined) payload[key] = String(value);
-                            }
-                            postCmd({ cmd: 'dispatch', event: b.event, payload });
-                            // An accepted event can be what airs the graphic (an arrow out of
-                            // off); the machine-off check above clears the tally if it was not.
-                            setAired(true);
-                          }}
+                          onClick={() => fireEvent(b)}
                           title={
                             !legal
                               ? `"${b.event}" has no arrow out of the current state, so the graphic would drop it`
-                              : b.payload?.length
-                                ? active
-                                  ? `Fires "${b.event}" with ${payloadWords(b)} from “${active.label}”`
-                                  : `Fires "${b.event}". ${payloadWords(b)} ride this event from the ACTIVE ENTRY — with none selected the graphic keeps its current values.`
-                                : `Fire "${b.event}"`
+                              : b.adjust
+                                ? `Fires "${b.event}" and moves ${adjustWords(b)} with it`
+                                : b.payload?.length
+                                  ? active
+                                    ? `Fires "${b.event}" with ${payloadWords(b)} from “${active.label}”`
+                                    : `Fires "${b.event}". ${payloadWords(b)} ride this event from the ACTIVE ENTRY — with none selected the graphic keeps its current values.`
+                                  : `Fire "${b.event}"`
                           }
                           data-testid={`control-event-${b.event}`}
                         >

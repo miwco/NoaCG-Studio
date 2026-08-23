@@ -26,7 +26,7 @@ break that spec, not the page.
   NoaCG-specific thing a manifest may carry is the standard's own extension mechanism:
   `v_`-prefixed vendor fields. Every export writes a per-property `v_noacg.kind` hint inside
   `schema` (the control kind the property came from, since the JSON-schema type is a 3-way
-  collapse) and a per-action `v_noacg` (the button's section / destructive flag); the **dual
+  collapse) and a per-action `v_noacg` (the button's section / destructive flag / adjust deltas); the **dual
   graphic package** (`src/export/noacgPackage.ts`, docs/AGENT_CLI.md) additionally writes a root
   `v_noacg` block naming the graphic TYPE, the editable SPX-layout SOURCES shipped beside the
   component, and their content hash. Any renderer ignores all of it; NoaCG's reader
@@ -256,7 +256,7 @@ package, the manifest carrying `v_noacg`) was put through the same server: scaff
 by the `noacg` CLI against a dev server, zipped, uploaded through the zip endpoint, the renderer
 page opened in a browser, every action driven through the HTTP control API. Upload `200` and the
 graphic listed as `noacg-football-scoreboard`; the served manifest carried `name`, three
-`customActions` (`flag`, `clearFlag`, `final`) and the `v_noacg` block untouched; `load` with data,
+`customActions` (then `flag`, `clearFlag`, `final`; the scoreboard type now exports `goalA`/`goalB`/`clearFlag`/`final`, the goals carrying their score as a schema property and the `+1` as `v_noacg.adjust`) and the `v_noacg` block untouched; `load` with data,
 `updateAction`, `playAction`, all three custom actions, `stopAction` and `clear` answered `200`;
 the unknown action answered `400` with our message; the frame showed the updated score in the
 bundled Inter, so the package-relative font resolved from inside the package. The SPX-layout

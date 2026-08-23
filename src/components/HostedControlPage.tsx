@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  adjustWords,
   controlSections,
   eventButtons,
   eventLegality,
+  eventPayload,
   fieldDescriptors,
   formatMachineState,
   isEventLegal,
@@ -929,15 +931,30 @@ function HostedCueEditor({
                     disabled={!isEventLegal(legality, e.event, liveState)}
                     className={e.destructive ? 'ctl-event-destructive' : undefined}
                     onClick={() => {
-                      const payload: Record<string, string> = {};
-                      for (const key of e.payload ?? []) payload[key] = valueOf(key);
+                      const payload = eventPayload(e, valueOf);
+                      // An `adjust` field (a goal's +1) rode moved by its delta: stage the new
+                      // figure into the shared buffer at once (the live-number bump's rule, so
+                      // every open page follows and the next press counts from it).
+                      const adjusted = Object.keys(e.adjust ?? {}).filter((key) => payload?.[key] !== undefined);
+                      if (adjusted.length > 0 && payload) {
+                        const staged = Object.fromEntries(adjusted.map((key) => [key, payload[key]]));
+                        setEcho((v) => ({ ...v, ...staged }));
+                        setEntryId('');
+                        if (timer.current) clearTimeout(timer.current);
+                        void stageHostedData(slug, cue.graphic, staged).catch((err: Error) => onError(err.message));
+                        onPreview({ ...currentValues(), ...staged });
+                      }
                       void sendHostedControl(
                         slug,
                         cue.graphic,
-                        e.payload?.length ? { t: 'event', event: e.event, payload } : { t: 'event', event: e.event },
+                        payload ? { t: 'event', event: e.event, payload } : { t: 'event', event: e.event },
                       ).catch((err: Error) => onError(err.message));
                     }}
-                    title={`Fires "${e.event}" — only where the graph allows it`}
+                    title={
+                      e.adjust
+                        ? `Fires "${e.event}" and moves ${adjustWords(e, (key) => descriptorByKey.get(key)?.label)} with it — only where the graph allows it`
+                        : `Fires "${e.event}" — only where the graph allows it`
+                    }
                   >
                     ⚡ {e.label}
                   </button>

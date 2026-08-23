@@ -627,6 +627,10 @@ var stepButtons = [];
 // The clock field's box, for the same reason: a clock verb repaints the banked time into it
 // rather than rebuilding the editor around it.
 var clockBox = null;
+// Every NUMBER field's box by key, for the same reason again: an ⚡ event that ADJUSTS a
+// figure (a scoreboard's goal moving that side's score) repaints the new value into the box
+// rather than rebuilding the editor around it.
+var numberBoxes = {};
 
 // THE ± LIVE NUMBERS AFFORDANCE (docs/PLAYOUT_DASHBOARD.md §7c): the pair acts on air, so it
 // enables only while the edited cue is the one on air.
@@ -679,6 +683,7 @@ function paintEditor() {
   fields.innerHTML = '';
   stepButtons = [];
   clockBox = null;
+  numberBoxes = {};
   var values = cueValues(cue);
   (g ? g.controls : []).forEach(function (c) {
     var box = document.createElement('div');
@@ -772,6 +777,7 @@ function paintEditor() {
       input.type = 'number';
       input.value = values[c.key] !== undefined ? values[c.key] : '';
       input.oninput = function () { stage(input.value); };
+      numberBoxes[c.key] = input;
       var numRow = document.createElement('div');
       numRow.className = 'numrow';
       var makeStep = function (dir, label) {
@@ -856,11 +862,27 @@ function paintEditor() {
     var btn = document.createElement('button');
     btn.textContent = '⚡ ' + e.label;
     btn.onclick = function () {
+      // The SAME rule as controlModel.ts eventPayload (this page ships without it): payload
+      // fields ride at the cue's current value; adjust fields (a goal's +1) ride moved by their
+      // delta, counted from the cue's current value (anything that does not read as an integer
+      // counts from 0), staged into the draft and repainted into the box in the same breath -
+      // the press aired it, so it is what the next press counts from and what ⟳ TAKE re-sends.
       var payload = null;
       (e.payload || []).forEach(function (key) {
         var v = cueValues(cue)[key];
         if (v !== undefined) { payload = payload || {}; payload[key] = v; }
       });
+      var adjust = e.adjust || {};
+      for (var ak in adjust) {
+        if (!Object.prototype.hasOwnProperty.call(adjust, ak)) continue;
+        var cur = cueValues(cue)[ak];
+        var moved = String((parseInt(String(cur == null ? '' : cur), 10) || 0) + adjust[ak]);
+        payload = payload || {};
+        payload[ak] = moved;
+        if (!drafts[cue.id]) drafts[cue.id] = {};
+        drafts[cue.id][ak] = moved;
+        if (numberBoxes[ak]) numberBoxes[ak].value = moved;
+      }
       var eventRow = { graphic: cue.graphic, stream: 'program', msg: payload ? { t: 'event', event: e.event, payload: payload } : { t: 'event', event: e.event } };
       // A CLOCK VERB writes the clock's own value around its event row, in one batch so the
       // relay's order is the order the renderer applies. The value is also STAGED into the cue's
