@@ -244,7 +244,10 @@ const MAP = [
   // wizard-kit rides along: the kit's export door lands on ProductionPage and asks it to open
   // THE production export dialog (templateStore `pendingProductionExport`), so a change to
   // that page can break a wizard flow whose name says nothing about productions.
-  [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts']],
+  // import-svg-behaviour rides along too: the cue editor's TOO LONG warning
+  // (docs/SVG_IMPORT_PLAN.md §3) is drawn by ProductionPage and only an IMPORTED graphic
+  // reports one, so that spec is the only thing that would catch it going quiet.
+  [/^src\/components\/(home|save)\//, ['motion-presets.spec.ts', 'library.spec.ts', 'library-bulk.spec.ts', 'hosted-control.spec.ts', 'productions.spec.ts', 'production-controls.spec.ts', 'production-data.spec.ts', 'production-persistence.spec.ts', 'playout-drills.spec.ts', 'storage-full.spec.ts', 'wizard-kit.spec.ts', 'control-panel-types.spec.ts', 'pack-import.spec.ts', 'import-svg-behaviour.spec.ts']],
   // The graphics-pack door: the format/importer, the shipped pack + its sources and build
   // script, and the shared multi-template save path (also the wizard kit's, hence
   // wizard-kit rides along on templateSet changes).

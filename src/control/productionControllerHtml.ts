@@ -18,6 +18,12 @@
 // disagree about a graphic's controls.
 
 import type { EmittedGraphic } from './controlPanelHtml';
+import {
+  OVERFLOW_FIELD_HINT,
+  OVERFLOW_FIELD_MARK,
+  OVERFLOW_NOTE_MANY,
+  OVERFLOW_NOTE_ONE,
+} from './controlModel';
 import { MATCH_CLOCK_PAGE_JS } from './matchClockPageJs';
 
 /** One cue as the controller ships it: prepared data for one graphic of the pool. */
@@ -191,6 +197,13 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
   .editor.live .ed-kicker { color:var(--air); }
   .ed-name { font-size:14px; font-weight:600; }
   .ed-fate { font-size:12px; color:var(--dim); }
+  /* TOO LONG TO FIT. Red, not the amber beside it: an unsent change is a step still to take,
+     this is the picture already being wrong. */
+  .ed-over { font-size:12px; font-weight:700; color:#e06c75; }
+  /* The box mark drops the label row's uppercase tracking on purpose: read in the same
+     letterforms as the field NAME it sits beside, a warning looks like part of the name. */
+  .field > label .over-mark { color:#e06c75; font-weight:700; font-size:11px; text-transform:none; letter-spacing:0; }
+  .field-over input, .field-over textarea, .field-over select { border-color:#e06c75; }
   .fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:8px 14px; }
   .field label { display:block; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
     color:var(--dim); margin-bottom:3px; }
@@ -324,6 +337,7 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
         <span class="ed-kicker" id="ed-kicker"></span>
         <span class="ed-name" id="ed-name"></span>
         <span class="ed-fate" id="ed-fate"></span>
+        <span class="ed-over" id="ed-over" style="display:none"></span>
       </div>
       <div class="fields" id="editor-fields"></div>
       <div class="events" id="editor-events"></div>
@@ -380,6 +394,9 @@ function clockEffectFor(g, cue, event, at) {
 // ── Monitors: every pool graphic stacked by its LAYER number, per stream. The iframes are
 // ordinary package graphics addressed with ?stream=, so what PREVIEW shows is the real
 // runtime, not a simulation. ──
+// Each stream's frames by graphic name, so the overflow poll below can ask the running graphic
+// what did not fit. They are ordinary same-origin pages served by the relay beside this one.
+var stageFrames = { preview: {}, program: {} };
 function buildStage(hostId, stream) {
   var host = document.getElementById(hostId);
   PAYLOAD.graphics.forEach(function (g) {
@@ -388,6 +405,7 @@ function buildStage(hostId, stream) {
     f.title = g.name;
     f.style.zIndex = String(g.layer);
     host.appendChild(f);
+    if (stageFrames[stream]) stageFrames[stream][g.name] = f;
   });
   function fit() {
     var scale = host.clientWidth / W;
@@ -399,6 +417,36 @@ function buildStage(hostId, stream) {
 }
 buildStage('stage-pvw', 'preview');
 buildStage('stage-pgm', 'program');
+
+// ── TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3) ────────────────────
+// A graphic whose fit ladder ran out of room — panel filled, wrapped into the height the design
+// has, shrunk to the readability floor — names the fields it could not hold through
+// noacgTextOverflow(). The copy is never cut and the artwork is never reshaped to hide it, so
+// the only thing left is to SAY SO, on the surface where the value is typed
+// (docs/CONTROL_PANEL_PARITY.md §4: this page, the in-app cockpit and the hosted page together).
+//
+// Asked of the monitors directly rather than reported over the relay: these frames are ordinary
+// same-origin pages this page built, the relay log is a COMMAND log with no report direction,
+// and a warning is worth exactly one function call a second. Opened over file://, where the
+// frames are opaque and the relay is absent, the read throws and the page carries on with no
+// warning — which is where it stood before.
+var overflowBy = { preview: {}, program: {} };
+function readOverflow() {
+  var moved = false;
+  for (var stream in stageFrames) {
+    for (var name in stageFrames[stream]) {
+      var next = [];
+      try {
+        var w = stageFrames[stream][name].contentWindow;
+        if (w && typeof w.noacgTextOverflow === 'function') next = w.noacgTextOverflow() || [];
+      } catch (e) { next = []; }
+      var prev = overflowBy[stream][name] || [];
+      if (prev.join(',') !== next.join(',')) { overflowBy[stream][name] = next; moved = true; }
+    }
+  }
+  if (moved) paintOverflow();
+}
+setInterval(readOverflow, 1000);
 
 // ── State: selection, drafts, and the per-stream tally (graphic -> cue id). ──
 var selectedId = PAYLOAD.cues.length ? PAYLOAD.cues[0].id : null;
@@ -631,6 +679,36 @@ var clockBox = null;
 // figure (a scoreboard's goal moving that side's score) repaints the new value into the box
 // rather than rebuilding the editor around it.
 var numberBoxes = {};
+// Every field's box and its hidden TOO LONG mark, for the same reason once more: the warning
+// arrives from a poll, and rebuilding a box to show it would take the focus out of the input
+// the operator is typing into at exactly the moment they need to shorten it.
+var overBoxes = {};
+
+/** WHICH VALUES DO NOT FIT, for the cue the editor is pointed at — the monitor showing it is
+ *  the one that knows: PROGRAM while the cue is on air, PREVIEW while it is staged. */
+function paintOverflow() {
+  var note = document.getElementById('ed-over');
+  if (!note) return;
+  var cue = cueById(editorCueId);
+  var g = cue ? graphicByName(cue.graphic) : null;
+  var onAir = cue && pgmLive[cue.graphic] === cue.id;
+  var reported = (cue ? (overflowBy[onAir ? 'program' : 'preview'][cue.graphic] || []) : []);
+  var labels = {};
+  (g ? g.controls : []).forEach(function (c) { labels[c.key] = c.label; });
+  var shown = [];
+  for (var i = 0; i < reported.length; i++) {
+    if (labels[reported[i]] !== undefined && shown.indexOf(reported[i]) === -1) shown.push(reported[i]);
+  }
+  note.textContent = shown.length === 1
+    ? '\\u26A0 ' + labels[shown[0]] + ' ' + ${jsonForScript(OVERFLOW_NOTE_ONE)}
+    : '\\u26A0 ' + shown.length + ' ' + ${jsonForScript(OVERFLOW_NOTE_MANY)};
+  note.style.display = shown.length ? 'inline' : 'none';
+  for (var key in overBoxes) {
+    var bad = shown.indexOf(key) !== -1;
+    overBoxes[key].box.className = bad ? 'field field-over' : 'field';
+    overBoxes[key].mark.style.display = bad ? 'inline' : 'none';
+  }
+}
 
 // THE ± LIVE NUMBERS AFFORDANCE (docs/PLAYOUT_DASHBOARD.md §7c): the pair acts on air, so it
 // enables only while the edited cue is the one on air.
@@ -676,7 +754,7 @@ function paintEditor() {
   paintSteppers(onAir);
 
   // Same cue as last time: the header above is the whole update. Leave the inputs alone.
-  if (editorCueId === cue.id) return;
+  if (editorCueId === cue.id) { paintOverflow(); return; }
   editorCueId = cue.id;
 
   var fields = document.getElementById('editor-fields');
@@ -684,6 +762,7 @@ function paintEditor() {
   stepButtons = [];
   clockBox = null;
   numberBoxes = {};
+  overBoxes = {};
   var values = cueValues(cue);
   (g ? g.controls : []).forEach(function (c) {
     var box = document.createElement('div');
@@ -691,6 +770,15 @@ function paintEditor() {
     var label = document.createElement('label');
     // The field's ID rides with its name here too, so this page and FIELDS.md agree.
     label.textContent = c.key.toUpperCase() + ' · ' + c.label;
+    // …plus the TOO LONG mark, hidden until the graphic reports this value as unfittable. One
+    // line at the top of a long field list does not say which box to shorten.
+    var overMark = document.createElement('b');
+    overMark.className = 'over-mark';
+    overMark.title = ${jsonForScript(OVERFLOW_FIELD_HINT)};
+    overMark.textContent = ' \\u26A0 ' + ${jsonForScript(OVERFLOW_FIELD_MARK)};
+    overMark.style.display = 'none';
+    label.appendChild(overMark);
+    overBoxes[c.key] = { box: box, mark: overMark };
     box.appendChild(label);
     // Editing a field STAGES it. Off air it airs on ⟳ TAKE, on air on ✎ Update — which is what
     // the header above has always promised, and what the other two operator surfaces do. This
@@ -825,8 +913,10 @@ function paintEditor() {
     box.appendChild(input);
     fields.appendChild(box);
   });
-  // The pairs just built have never seen the tally: paint them before they are looked at.
+  // The pairs just built have never seen the tally: paint them before they are looked at. The
+  // boxes have never seen the overflow report either, for the same reason.
   paintSteppers(onAir);
+  paintOverflow();
 
   // The graphic's OPERATOR EVENTS (its state machine's buttons) — the capability module the
   // machine declares; a graphic with none shows none. Interactive graphics (polls, Q&A, chat)

@@ -13,9 +13,11 @@ the code's own comments.
 value renders it: the SPX Data panel, the SPX Control panel, and the video Content panel. They
 differ only in the DESCRIPTORS they pass (model/fieldModel.ts `FieldDescriptor`) and where the
 value lives - never in what a number/colour/image control looks like or how it behaves. `FieldRow`
-adds the label, the optional id badge, and the per-field **Reset** to the descriptor's
-`defaultValue` (shown only once the value differs). Controls emit their kind's natural type - a
-number for `number`, a string otherwise.
+adds the label, the optional id badge, the per-field **Reset** to the descriptor's
+`defaultValue` (shown only once the value differs), and the **TOO LONG** mark (`overflow`) a
+control surface sets when the graphic reports that value as unfittable
+(`control/controlModel.ts`, docs/CONTROL_PANEL_PARITY.md §4). Controls emit their kind's natural
+type - a number for `number`, a string otherwise.
 **SpxFieldRow.tsx** is the SPX binding both SPX panels share (sampleData + asset upload; values
 stringify at that boundary because SPX sample data is a flat string map); the video panel binds
 its own store the same way.

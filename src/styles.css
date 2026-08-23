@@ -589,6 +589,9 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .ctl-thumb { width: 32px; height: 32px; flex: 0 0 auto; object-fit: contain;
   background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; }
 .field-reset { font-size: 11px; padding: 2px 6px; }
+/* The per-graphic control page's overflow summary — the dashboard's `.pd-over-note` in this
+   panel's own type size (docs/CONTROL_PANEL_PARITY.md §4: one warning, four surfaces). */
+.ctl-over-note { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--danger); }
 /* Add-a-field: the type select would otherwise claim the row's full width (inputs default to
    width:100%) and crush the label box to nothing in a narrow dock. */
 .field-add-row select { flex: 0 1 auto; width: auto; }
@@ -1060,6 +1063,17 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .field-row { margin-bottom: 12px; }
 .field-row .field-meta { display: flex; justify-content: space-between; align-items: baseline; }
 .field-row .field-id { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+
+/* TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3): the graphic reported
+   this value through noacgTextOverflow() after its fit ladder ran out of room. RED, not the
+   amber every other operator note wears - amber on this surface means "a state to act on"
+   (the unsent-changes note sits inches away), and this is the graphic saying the picture will
+   be wrong. The box wears it too: a line of text at the top of a tall band does not say which
+   of six inputs to shorten. */
+.field-row .field-over { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--danger); white-space: nowrap; }
+.field-row-over input,
+.field-row-over textarea,
+.field-row-over select { border-color: var(--danger); }
 
 /* The style-contract controls (components/style/): one colour control with its alpha, and the
    shape rows beside it. The variable name sits UNDER the label rather than opposite it — a
@@ -6165,6 +6179,8 @@ h2 + .lib-row,
    surface says it. Amber, not red: this is a state to act on, not a fault. */
 .pd-actions-help { margin: 2px 0 8px; font-size: 11px; line-height: 1.5; }
 .pd-unsent-note { color: var(--accent); font-weight: 600; }
+/* …and the one note on this surface that IS a fault: a value the graphic could not fit. */
+.pd-over-note { color: var(--danger); font-weight: 600; }
 .pd-verb.pd-unsent { border-color: var(--accent); color: var(--text); position: relative; }
 .pd-unsent-dot {
   position: absolute;
@@ -6250,6 +6266,14 @@ h2 + .lib-row,
   color: var(--text-dim);
 }
 .pd-field input { width: 100%; }
+/* The hosted page's own box mark (the in-app editor gets it from FieldRow). Same red, same
+   words — docs/CONTROL_PANEL_PARITY.md §4. */
+/* The mark drops the label row's uppercase tracking on purpose: read in the same letterforms
+   as the field NAME it sits beside, a warning looks like part of the name. */
+.pd-field .field-over { color: var(--danger); font-weight: 700; text-transform: none; letter-spacing: 0; }
+.pd-field-over input,
+.pd-field-over textarea,
+.pd-field-over select { border-color: var(--danger); }
 .pd-field-layer { max-width: 130px; }
 /* THE GUTTER GOES AWAY BEFORE THE FIELDS DO. A band heading in a 92px left column is worth its
    width only while the fields beside it still have room; below this the heading sits on top of

@@ -124,8 +124,8 @@ is its own graphic type so the derived machine/timeline stays the standard linea
     panel holds one 44px line and three 24px ones), so the ladder re-asks on every pass, and a
     block that does not fit loses a LINE rather than printing through the layer below it. A name
     with a role under it can never wrap; a question alone on a board wraps as it shrinks.
-  - **`noacgTextOverflow()`** returns the field ids that could not be made to fit. **The operator
-    surface that reads it is NOT built yet** - see the OPEN item at the end of this section.
+  - **`noacgTextOverflow()`** returns the field ids that could not be made to fit, and every
+    operator surface where a value is typed reads it - see THE OVERFLOW WARNING below.
 - **THE HUG** (owner-directed 2026-08-22, shipped): shrinking is right for a graphic that
   declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE STAGE") and
   wrong for a lower third, where "the text should decide how big the banner is". An imported SVG
@@ -147,14 +147,29 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   left alone rather than moved wrongly. A follower travels by its transform ATTRIBUTE, so a
   layer the timeline animates in its own right (a per-layer stagger) stays where its animation
   puts it.
-- **OPEN - THE OVERFLOW WARNING.** The runtime knows which values could not be made to fit
-  (`noacgTextOverflow()`), and nothing shows it to the operator yet: the owner's ruling is that
-  copy past the floor is **warned about or refused, never clipped and never allowed to reshape
-  the artwork**, and only the first half of that is built. It belongs on the operator surfaces
-  where the value is typed - the playout dashboard's cue editor first - and by the parity rule
-  (docs/CONTROL_PANEL_PARITY.md §4) the in-app production page and the exported controller
-  need it in the same change. The monitors already poll the graphic once a second
-  (`components/home/PayloadStage.tsx`), which is the seam to read it through.
+- **THE OVERFLOW WARNING** (shipped 2026-08-23) - the second half of the owner's ruling: copy
+  past the floor is **warned about, never clipped and never allowed to reshape the artwork**.
+  The runtime names the fields (`noacgTextOverflow()`); the surfaces where a value is TYPED say
+  so, in one vocabulary (`control/controlModel.ts` `overflowNote` + `OVERFLOW_FIELD_MARK` /
+  `OVERFLOW_FIELD_HINT`): one summary line at the top of the cue editor and a mark on the box
+  itself, because a summary alone does not say which of six inputs to shorten.
+  - **It rides the machine-state answer**, not a channel of its own. Every operator surface
+    already asks its graphic for state once or twice a second, so the reply carries `overflow`
+    beside `state` (`preview/previewProtocol.ts`, `output/stage.ts`, and the exported graphic's
+    BroadcastChannel reply in `control/receiverScript.ts`). A template that answers one of the
+    two questions and not the other still answers the one it has.
+  - **The monitor showing the cue is the one asked.** The in-app cockpit and the hosted page
+    both keep PREVIEW's report apart from PROGRAM's: an editor pointed at the live cue must warn
+    about what is on air, one pointed at a staged cue about what a TAKE would put up. Reading one
+    for both would warn about a cue nobody is typing into.
+  - **All five surfaces in the same change** (docs/CONTROL_PANEL_PARITY.md §4): the in-app
+    production page, the hosted control page, the exported production controller, the exported
+    standalone `controlpanel.html`, and `#/control/<id>`. The exported controller asks its own
+    monitor frames directly - they are same-origin pages it built, and the relay log is a COMMAND
+    log with no report direction. Opened over `file://` the frames are opaque and no warning is
+    available, which is where that surface stood before.
+  - Pinned by `e2e/import-svg-behaviour.spec.ts` ("copy the design cannot hold is WARNED about"),
+    verified red first by making the document report nothing.
 - **Animation:** the standard marked ANIMATION region animating the wrapper (entrance/exit
   presets work day one; the timeline dock reads the CODE as always). Phase 2: per-layer stagger -
   top-level named `<g>`s offered as animation units.

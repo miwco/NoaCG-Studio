@@ -275,7 +275,12 @@ window.addEventListener('unhandledrejection', function (ev) {
     } else if (msg.cmd === 'state') {
       try {
         var s = window.noacgMachineState ? window.noacgMachineState() : null;
-        parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s }, '*');
+        // …and, in the same reply, WHICH VALUES DID NOT FIT (previewProtocol.ts's
+        // PreviewStateMessage.overflow). Its own try/catch: a template answering one of the
+        // two questions must still answer the one it has.
+        var over = null;
+        try { over = window.noacgTextOverflow ? window.noacgTextOverflow() : null; } catch (e2) {}
+        parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s, overflow: over }, '*');
       } catch (e) {}
     }
   });
@@ -309,7 +314,12 @@ window.addEventListener('unhandledrejection', function (ev) {
     } else if (msg.cmd === 'state') {
       try {
         var s = window.noacgMachineState ? window.noacgMachineState() : null;
-        parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s }, '*');
+        // …and, in the same reply, WHICH VALUES DID NOT FIT (previewProtocol.ts's
+        // PreviewStateMessage.overflow). Its own try/catch: a template answering one of the
+        // two questions must still answer the one it has.
+        var over = null;
+        try { over = window.noacgTextOverflow ? window.noacgTextOverflow() : null; } catch (e2) {}
+        parent.postMessage({ type: ${JSON.stringify(PREVIEW_STATE_TYPE)}, state: s, overflow: over }, '*');
       } catch (e) {}
     } else if (msg.cmd === 'sim-play') {
       try { runSimCommand(window, { action: 'sim-play', data: msg.data }); } catch (e) {}
