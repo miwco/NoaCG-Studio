@@ -527,6 +527,70 @@ test('± LIVE NUMBERS on the EXPORTED controller: the bump is a partial, carryin
   await air.close();
 });
 
+test('a GOAL on the EXPORTED controller carries the new score as the event\'s payload', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // The third renderer of the one-control doctrine (docs/CONTROL_PANEL_PARITY.md): the exported
+  // controller ships without controlModel.ts, so it carries its own copy of the adjust rule.
+  // Asserted on the WIRE, like the bump above - one row, the event with the moved figure as
+  // its payload, and the controller's own box moved with it.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const b64 = await page.evaluate(async () => {
+    const { variantById } = await import('/src/templates/catalog.ts');
+    const { createGraphic } = await import('/src/model/library.ts');
+    const shows = await import('/src/model/shows.ts');
+    const { buildShowZipFor } = await import('/src/export/showExport.ts');
+    const tpl = variantById('sb03')!.create({});
+    const { doc } = createGraphic(tpl, { name: 'House Score' });
+    const show = shows.createShowNamed('Derby');
+    shows.addGraphicToShow(show.id, tpl, { graphicId: doc!.id });
+    const fresh0 = shows.loadShows().find((s) => s.id === show.id)!;
+    shows.updateShowCue(show.id, fresh0.cues![0].id, { label: 'Kick-off' });
+    const fresh = shows.loadShows().find((s) => s.id === show.id)!;
+    return (await buildShowZipFor(fresh, 'html-overlay')).generateAsync({ type: 'base64' });
+  });
+  const zip = await JSZip.loadAsync(b64, { base64: true });
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    if (!zip.files[n].dir && /\.(html|json)$/.test(n)) files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+  }
+  const manifest = JSON.parse(files.get('payload.json')!) as { graphics: { file: string }[] };
+  const { serve, rows } = relayServe(files);
+  const origin = 'http://derby-host.local';
+  const air = await context.newPage();
+  await routeOrigin(air, origin, serve);
+  await air.goto(`${origin}/${manifest.graphics[0].file}?stream=program`, { waitUntil: 'load' });
+  const ctl = await context.newPage();
+  await routeOrigin(ctl, origin, serve);
+  await ctl.goto(`${origin}/controller.html`, { waitUntil: 'load' });
+  await expect(ctl.locator('#mode')).toContainText('SHOW');
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f1')).toHaveText('0', { timeout: 10_000 });
+
+  const programEvents = () =>
+    rows.filter((r) => r.stream === 'program' && (r.msg as { t: string }).t === 'event')
+      .map((r) => r.msg as { event: string; payload?: Record<string, string> });
+  const goalA = ctl.locator('#editor-events').getByRole('button', { name: '⚡ Goal A' });
+  await goalA.click();
+  await expect.poll(() => programEvents().length).toBe(1);
+  expect(programEvents()[0]).toEqual({ t: 'event', event: 'goalA', payload: { f1: '1' } });
+  await expect(air.locator('#f1')).toHaveText('1', { timeout: 10_000 });
+  // The box moved with the press, and the second goal counts from it.
+  await expect(ctl.locator('.field', { hasText: /^F1 · / }).locator('input[type="number"]')).toHaveValue('1');
+  await goalA.click();
+  await expect.poll(() => programEvents().length).toBe(2);
+  expect(programEvents()[1].payload).toEqual({ f1: '2' });
+  await expect(air.locator('#f1')).toHaveText('2', { timeout: 10_000 });
+  // The other side is untouched, and a ⟳ re-take carries the goals rather than regressing them.
+  await expect(air.locator('#f3')).toHaveText('0');
+  await ctl.locator('#v-update').click();
+  await expect(air.locator('#f1')).toHaveText('2', { timeout: 10_000 });
+
+  await ctl.close();
+  await air.close();
+});
+
 // ── THE MATCH CLOCK ACROSS A RENDERER RELOAD (docs/SPORTS_PACK.md) ────────────────────────────
 // A clock is the one value that keeps moving with nobody commanding it, so a log of what was
 // SENT cannot rebuild it. The hosted /output renderer has attached a time origin since
