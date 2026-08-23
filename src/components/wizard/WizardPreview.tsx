@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { composeDocument } from '../../preview/composeDocument';
 import { postPreviewCmd, PREVIEW_BOX_TYPE, type PreviewCmd } from '../../preview/previewProtocol';
+import {
+  CANVAS_RECTS_TYPE,
+  postCanvasCmd,
+  type CanvasRect,
+  type CanvasRectsMessage,
+} from '../../preview/canvasControlProtocol';
 import type { SpxTemplate } from '../../model/types';
+
+/** Screen px of breathing room between a highlighted layer and its box. */
+const HL_PAD = 4;
 
 interface Props {
   template: SpxTemplate;
@@ -12,6 +21,16 @@ interface Props {
   /** Import graphic's Prepare step: override the FIRST field's pushed value, so the
    *  content-width slider drives the emitted stretch runtime live. Null = the samples. */
   demoText?: string | null;
+  /**
+   * The SVG mapping step's hover highlight (docs/SVG_IMPORT_PLAN.md §6a step 1): a CSS
+   * selector inside the running document to outline, or null for none. The preview is that
+   * step's ONE canvas — it is the only surface carrying the emitted fit runtime, so it is the
+   * only one that can answer "what does this value actually look like" — and this is how a
+   * checklist row still says which layer it means. Setting it installs composeDocument's
+   * `canvasControl` channel, which pushes the tracked rect every frame; nothing reaches into
+   * the iframe (it carries no allow-same-origin, like every other preview surface).
+   */
+  highlightSelector?: string | null;
 }
 
 /**
@@ -28,7 +47,16 @@ interface Props {
  * own box back (`spx-preview-box`) after any command that can move it — the same wire shape
  * GraphicThumb and MiniPreview read for their settle-once cards.
  */
-export default function WizardPreview({ template, replayKey = 0, demoOut = false, demoText = null }: Props) {
+export default function WizardPreview({
+  template,
+  replayKey = 0,
+  demoOut = false,
+  demoText = null,
+  highlightSelector,
+}: Props) {
+  // A surface that never asks for a highlight pays nothing: the rect channel is installed only
+  // for one that does (the prop present at all, even as null, is the step saying so).
+  const tracking = highlightSelector !== undefined;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
@@ -87,15 +115,24 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
     return () => ro.disconnect();
   }, []);
 
+  // The tracked layer's box in the document's own px (see the highlight block below).
+  const [hoverRect, setHoverRect] = useState<CanvasRect | null>(null);
+
   // Rebuild (debounced) when the template changes; auto-play the entrance on load.
   // Committing a new srcdoc also cancels any pending demo timers — a stop()/play()
   // scheduled against the previous document must never hit the reloading one (it
   // would blank the preview right after the user's change).
-  const doc = useMemo(() => composeDocument(template, { liveControl: true }), [template]);
+  const doc = useMemo(
+    () => composeDocument(template, { liveControl: true, ...(tracking ? { canvasControl: true } : {}) }),
+    [template, tracking],
+  );
   useEffect(() => {
     const t = setTimeout(() => {
       clearDemo();
       docGenRef.current += 1;
+      // The old document's last rect describes a layout that no longer exists — drop it
+      // rather than leaving a box hanging over the new one until its first frame arrives.
+      setHoverRect(null);
       setSrcdoc(doc);
     }, 220);
     return () => clearTimeout(t);
@@ -115,6 +152,37 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, []);
+
+  // ── The tracked highlight (preview/canvasControlProtocol.ts) ──
+  // One selector, one rect, pushed every frame by the document — so the box follows the layer
+  // through the entrance animation and through a fit that has just re-wrapped it, neither of
+  // which a one-shot measurement could see. The rect arrives in the document's own px, which
+  // IS canvas px (the iframe is the project's resolution and the stage scales it), so the
+  // overlay wears the frame's transform and needs no maths of its own.
+  useEffect(() => {
+    if (!tracking) return;
+    const onRects = (ev: MessageEvent) => {
+      if (ev.source !== frameRef.current?.contentWindow) return;
+      const msg = ev.data as CanvasRectsMessage | undefined;
+      if (!msg || msg.type !== CANVAS_RECTS_TYPE) return;
+      const rects = Object.values(msg.rects);
+      setHoverRect(rects.length ? rects[0] : null);
+    };
+    window.addEventListener('message', onRects);
+    return () => window.removeEventListener('message', onRects);
+  }, [tracking]);
+
+  // Re-sent on every selector change AND on every new document (the `track` list lives in the
+  // document, so a rebuilt one starts with nothing tracked until it is told again).
+  const trackSelector = useCallback(() => {
+    if (!tracking) return;
+    postCanvasCmd(frameRef.current?.contentWindow, {
+      cmd: 'track',
+      selectors: highlightSelector ? [highlightSelector] : [],
+    });
+    if (!highlightSelector) setHoverRect(null);
+  }, [tracking, highlightSelector]);
+  useEffect(trackSelector, [trackSelector]);
 
   const playIn = useCallback(() => {
     clearDemo();
@@ -181,6 +249,7 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
           sandbox="allow-scripts"
           srcDoc={srcdoc}
           onLoad={() => {
+            trackSelector(); // a fresh document tracks nothing until it is told again
             const gen = docGenRef.current;
             setTimeout(() => {
               if (docGenRef.current === gen) playIn(); // else a newer document has since loaded
@@ -188,6 +257,29 @@ export default function WizardPreview({ template, replayKey = 0, demoOut = false
           }}
           style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
         />}
+        {/* The highlight rides a layer wearing the FRAME's own transform, so a rect in canvas
+            px lands where the reader sees that layer at any zoom. The border and the breathing
+            room around the layer are the two things corrected back OUT of that scale, because
+            they are drawn for the reader rather than for the artwork: at the default fit a 2px
+            rule would paint half a pixel and a 4px gap would close to one. */}
+        {hoverRect && (
+          <div
+            className="wz-stage-overlay"
+            style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
+          >
+            <div
+              className="wz-stage-highlight"
+              data-testid="wz-preview-highlight"
+              style={{
+                left: hoverRect.left - HL_PAD / z,
+                top: hoverRect.top - HL_PAD / z,
+                width: hoverRect.width + (2 * HL_PAD) / z,
+                height: hoverRect.height + (2 * HL_PAD) / z,
+                borderWidth: Math.max(1, 2 / z),
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="wz-preview-bar">
         <span className="muted">

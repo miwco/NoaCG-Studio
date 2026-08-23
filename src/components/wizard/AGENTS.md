@@ -60,7 +60,11 @@ Two measured constraints:
 - **After Entry, the rail's 216px leaves the row before either pane sees it.** A WORKING left
   pane (`.wz-body-working`, the Import flow's Text step) lifts the measure cap and clamps the
   preview, or the placement canvas drops under the 700px floor `e2e/import-graphic.spec.ts`
-  holds.
+  holds. **Only a step whose left pane is a CANVAS may wear it.** The SVG mapping step did,
+  from when it drew its own artwork; its left pane is a form, and the class was taking the
+  preview down to ~275px wide - the one surface that can run the emitted fit, on the step where
+  the reader decides whether their text fits (docs/SVG_IMPORT_PLAN.md §6a step 1). Dropping it
+  puts the preview back at 614x345 on a 1366x768 laptop, four times the area.
 - **The Entry step's HEIGHT budget still binds** (`e2e/wizard-entry-fit.spec.ts`, 1366x768):
   cards share the column, and the grid's 10px came off the hero's title margin. Grow one, pay
   from another.

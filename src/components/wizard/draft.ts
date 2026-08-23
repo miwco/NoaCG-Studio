@@ -37,7 +37,7 @@ import { PALETTES, paletteById } from '../../model/wizard';
 import type { EasingId } from '../../model/easings';
 import { ensureFontFace, fontByStack, type CustomFont } from '../../model/fonts';
 import type { EraseRect, RegionInk } from '../../assets/eraseRegion';
-import { looksNumeric, type SvgImportResult } from '../../assets/svgImport';
+import { looksNumeric, SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../assets/svgImport';
 import type { ProjectLegibility } from '../../model/designRules';
 
 /** ONE applied baked-text erase: the marked rectangle (in the artwork's SOURCE pixels) and
@@ -737,7 +737,15 @@ function withDesignFieldSpecs(template: SpxTemplate, draft: WizardDraft): SpxTem
  * text arrives in the project's heading face, at the size, place, colour and alignment the
  * shapes had. The sizing rules are withEraseSeedFields's, for the same reasons it states.
  */
-function withSvgOutlineFields(template: SpxTemplate, draft: WizardDraft): SpxTemplate {
+function withSvgOutlineFields(
+  template: SpxTemplate,
+  draft: WizardDraft,
+  // PREVIEW ONLY (see WizardOptions.previewMarkers): the stand-in wears the replaced group's
+  // candidate marker, so the mapping step's hover highlight points at the live text rather
+  // than at shapes the template has hidden. The group itself gives its marker up for this
+  // (templates/importedDesign/svg.ts `bindSvgMarkup`), so exactly one node ever answers.
+  markers = false,
+): SpxTemplate {
   const svg = draft.designSvg;
   if (!svg) return template;
   let next = template;
@@ -780,7 +788,18 @@ function withSvgOutlineFields(template: SpxTemplate, draft: WizardDraft): SpxTem
       // bearings — type occupies a hair more than it paints.
       maxWidth: Math.max(64, Math.round((align === 'center' ? box.width * 2 : box.width) + fontSize * 0.12)),
     });
-    if (added) next = added.template;
+    if (!added) continue;
+    next = added.template;
+    if (markers) {
+      const wrapperId = `fw${added.fieldId.slice(1)}`;
+      next = {
+        ...next,
+        html: next.html.replace(
+          `id="${wrapperId}"`,
+          `id="${wrapperId}" ${SVG_CANDIDATE_ATTR}="${row.candidateId}"`,
+        ),
+      };
+    }
   }
   return next;
 }
@@ -795,9 +814,11 @@ export function buildDraftTemplate(
   variant: TemplateVariant,
   draft: WizardDraft,
   // The wizard PREVIEW passes stretchDemo; create() never does — see withStretchDemoLine.
-  opts: { stretchDemo?: boolean } = {},
+  // `previewMarkers` rides the same way: the mapping step's hover highlight needs a handle on
+  // the layer a row means, and only the preview carries the fit runtime (plan §6a step 1).
+  opts: { stretchDemo?: boolean; previewMarkers?: boolean } = {},
 ): SpxTemplate {
-  let template = variant.create(draftToOptions(variant, draft));
+  let template = variant.create({ ...draftToOptions(variant, draft), previewMarkers: opts.previewMarkers });
   // The name rides the built template, so it reaches the editor's topbar, the Save dialog's
   // prefill, and the export slug through ONE path rather than being applied per branch.
   const named = draftName(variant, draft);
@@ -834,7 +855,7 @@ export function buildDraftTemplate(
   }
   if (variant.category === 'imported-design') {
     template = withEraseSeedFields(template, draft);
-    template = withSvgOutlineFields(template, draft);
+    template = withSvgOutlineFields(template, draft, opts.previewMarkers);
     template = withDesignFieldSpecs(template, draft);
     if (opts.stretchDemo) template = withStretchDemoLine(template, draft);
   }
