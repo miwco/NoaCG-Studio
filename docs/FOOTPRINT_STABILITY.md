@@ -112,3 +112,44 @@ Five more readings, binding on anyone extending this:
 Nine categories are stable on both axes; what remains is an inner element growing inside a fixed
 panel, which is this same fix one level down.
 
+
+## The text-size ladder is an AXIS, and every instrument measured one step of it
+
+`--type-scale` is the operator's text-size knob (S/M/L = 0.85/1/1.2, `TYPE_SIZE_STEPS` in
+`src/model/styleVocabulary.ts`), and **only `font-size` consumes it**. So a design that sizes a BOX
+off the same variable while its padding stays fixed - or the reverse, a box on `--scale` alone
+holding text that grows with `--type-scale` - changes SHAPE as the operator moves that knob, and it
+can fit at M and clip at S or L. The alerts flag was the first one caught, by arithmetic rather than
+by measurement: its `min-width` followed `--type-scale` and its padding did not, so it sat ~2px over
+its box at M and ~7px at S, and nothing could see the S half because every instrument rendered M.
+
+`scripts/stage-fit-sweep.mjs`, `scripts/type-floor.mjs` and `scripts/overflow-sweep.mjs` all take
+`--type-scale s|m|l` now. The step goes through `create()`, the wizard's own path - not a CSS
+override on the finished document, which would also move type in an imported design that declares no
+`--type-scale` at all. The number is read from `TYPE_SIZE_STEPS` in the page, so no script holds a
+copy of the ladder. Two rules keep the gates honest: `overflow-sweep` REFUSES `--update-baseline` at
+a non-default step (a baseline recorded off-axis blesses that step's shape changes for every step),
+and `type-floor` at a non-default step REPORTS and exits 0 - a line authored at the 20px floor
+renders at 17px the moment somebody picks S, which is the operator's choice, not a catalog defect.
+
+**First reading, 2026-08-23** (291 staged designs, 505 variants):
+
+- **Stage fit is clean at every step.** Zero shrunk lines at S, M and L - the reserve/excess fix
+  holds across the ladder, not only at the step it was measured on.
+- **Type floor at S: 435 of 505 variants dip under it**, almost all of them exactly `floor x 0.85`.
+  That is the ladder's arithmetic, not a defect list - but it says the catalog is authored AT the
+  floor with no headroom, so picking S puts most of it under 20px. Whether S should be allowed to,
+  or the floor should ride the ladder, is a product decision nobody has taken.
+- **Containment at L: 22 designs clip 3-10px that do not clip at M**, across nine categories, and
+  they are ONE mechanism - a reveal mask or name box whose height is `calc(Npx * var(--scale))`
+  while the glyph box inside it grows with `--type-scale` (`.lower-third-mask` on lt03/lt14/lt51/
+  lt55/ls07/ls11/ls14/ls17/ls19, `.info-card-mask` on card25/card48/card51, `.corner-bug-mask` on
+  bug03/bug30/bug31/bug35, plus `.scoreboard-team` sb05, `.scoreboard-mask`/`.scoreboard-name` sb18,
+  `.frame-mask` fr11, `.matchup-mask` h203, `.results-board-mask` tt02, `.reveal-mask` nm03). This is
+  lt64's line-mask clip one level out: the fit routine is not involved, so `stage-fit-sweep` reads
+  clean while text loses its descenders.
+- **Containment at S: cr03 clips `.credits-box:y`** - a fixed 950px stage that paginates, packing one
+  row too many once the type shrinks.
+- **A CRAWL IS MEASURED MID-TRAVEL, so read ticker and credit-reel rows twice before believing
+  them.** tk01, tk12 and cr06 report new escapes at S and tk05 at L purely because narrower items
+  cover a different distance inside the sweep's fixed settle - reproducible, and not a defect.
