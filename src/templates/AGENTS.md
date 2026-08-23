@@ -495,7 +495,10 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
   stabilise a board, it changes which dimension moves.
 - **A STAGED DESIGN SHIPS THE SIZE ITS CSS DECLARES - the shrink is the OPERATOR'S, never the
-  design's own words.** Pick whatever `line-height` the design wants; it costs nothing. That was
+  design's own words.** The stage puts no floor under a `line-height` (**a LINE MASK still does** -
+  `overflow: hidden` sized to the line box against a ~1.2em glyph box, so a tight leading clips
+  letters instead of shrinking them; lt64 at 1.05 loses 4px off the name. Different mechanism,
+  different instrument: `overflow-sweep`, not this one). That was
   not true until 2026-08-23: the reserve was a LINE BOX and the overflow test read a CONTENT box
   (the face's glyph box, ~1.2em whatever line-height says), so any line with the tighter
   line-height of the two shrank against its own default sample at load - 200 of 290 staged

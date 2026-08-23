@@ -23,9 +23,16 @@ holds each line to the rows its design was drawn for. A design declares `stageWi
 `scripts/footprint-stability-sweep.mjs` is the instrument, `e2e/catalog/footprint-stability.spec.ts`
 the gate - it selects on the marker, never a list, so a category is covered the day it flips.
 
-**The stage fit is the OPERATOR's, never the design's own words.** A designer picks whatever
-`line-height` a design wants and it costs nothing: the size in the CSS is the size that airs at
-the design's own sample, and only text typed PAST that sample shrinks.
+**The stage fit is the OPERATOR's, never the design's own words.** The size in the CSS is the size
+that airs at the design's own sample, and only text typed PAST that sample shrinks - so the STAGE
+puts no floor under a design's `line-height`.
+
+**A LINE MASK still does, and that is a different mechanism.** Every masked line sits in a
+`.<prefix>-mask` with `overflow: hidden` sized to the line box, while the face's glyph box is
+~1.2em whatever line-height says - so a tighter leading pushes letters out of the MASK even though
+nothing pushes the panel. Measured on lt64 at 1.05: the name is clipped 4px on y, and
+`scripts/overflow-sweep.mjs` reports it as a regression while `stage-fit-sweep` reports it clean.
+Two instruments, two mechanisms; a design whose line-height is pinned should say which one pins it.
 `scripts/stage-fit-sweep.mjs` renders every staged design at its default content and compares each
 line's declared size (computed, so `--scale` and `--type-scale` are already folded in) against the
 size it actually ships at; `e2e/catalog/stage-fit-honesty.spec.ts` is the gate, at 1% tolerance.
