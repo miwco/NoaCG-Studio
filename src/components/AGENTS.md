@@ -377,6 +377,11 @@ e2e/layout.spec.ts.
   yet" warning - judged against what the WIRE says was last sent, so another operator's update
   clears it - and the production DATA-ROW picker, whose rows are published by `buildPanelSpec`
   from the shared `control/cueData.ts` matcher.
+  Since 2026-08-23 it also carries the **TOO LONG warning** (docs/SVG_IMPORT_PLAN.md §3): the
+  graphic reports which values it could not make fit, riding the machine-state answer its
+  monitors already poll for. **Keep the two monitors' reports APART** - a cue on air is judged
+  by PROGRAM's answer and a staged one by PREVIEW's; one map for both warns about a cue nobody
+  is typing into.
   **The VERB KEYS come from `components/playoutKeys.ts`**, the one keymap the in-app page reads
   too (the exported controller keeps its own copy - it ships without React). A key belongs in
   that module, never in a surface; the bar is `HostedVerbs`, a component of its own only because

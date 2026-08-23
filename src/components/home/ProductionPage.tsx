@@ -51,6 +51,7 @@ import {
   isEventLegal,
   machineStateGroups,
   machineStateNames,
+  overflowNote,
   type ControlButton,
 } from '../../control/controlModel';
 import {
@@ -78,7 +79,7 @@ import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../
 import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
-import { postPreviewCmd } from '../../preview/previewProtocol';
+import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../../preview/previewProtocol';
 import { isBackendConfigured } from '../../backend/config';
 import { useAuthState } from '../auth/useAuthState';
 import { useAuthUi } from '../auth/authUi';
@@ -223,11 +224,24 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    *  one after every applied command), and the wire's {t:'live'} report rows, which also cover
    *  what happened before this page opened. The event buttons grey against this. */
   const [machineStates, setMachineStates] = useState<Record<string, { groups?: Record<string, string> } | null>>({});
+  /** Per graphic, the field ids the PROGRAM monitor last reported as too long to fit
+   *  (`noacgTextOverflow()`). This is the ON-AIR answer, which is why it is kept apart from the
+   *  preview's below: the editor pointed at the live cue must warn about what air is showing,
+   *  not about the cue sitting on preview. Only the monitor can answer it - the fit ladder is a
+   *  measurement of the rendered graphic, and no source check can stand in for it. */
+  const [programOverflow, setProgramOverflow] = useState<Record<string, string[]>>({});
   const noteMachineState = useCallback(
-    (graphic: string, state: { groups?: Record<string, string> } | null) => {
+    (graphic: string, state: { groups?: Record<string, string> } | null, overflow?: string[]) => {
       setMachineStates((m) => {
         if (JSON.stringify(m[graphic] ?? null) === JSON.stringify(state)) return m;
         return { ...m, [graphic]: state };
+      });
+      // The wire's `live` rows carry no overflow (a report row is the renderer naming its
+      // state), so those callers pass nothing and the last monitor answer stands.
+      if (!overflow) return;
+      setProgramOverflow((m) => {
+        if ((m[graphic] ?? []).join(',') === overflow.join(',')) return m;
+        return { ...m, [graphic]: overflow };
       });
     },
     [],
@@ -726,6 +740,38 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
     const t = setTimeout(() => settlePreview(settleData), 150);
     return () => clearTimeout(t);
   }, [previewDoc, settleData, settlePreview]);
+  /**
+   * WHICH OF THE VALUES BEING TYPED DO NOT FIT — the warn half of the owner's fit ruling
+   * (docs/SVG_IMPORT_PLAN.md §3). The graphic on PREVIEW has already settled with exactly the
+   * values a Take would air, so asking IT is asking the only thing that knows: whether the copy
+   * fits is a measurement of the rendered artwork, not a property of the string.
+   *
+   * Same request/reply round trip the machine state uses, for the same reason — this iframe
+   * carries no `allow-same-origin`, so nothing here can read the document directly. It is
+   * polled rather than answered once because the answer moves without any command: a webfont
+   * arriving re-measures every budget, and the ladder re-runs.
+   */
+  const [previewOverflow, setPreviewOverflow] = useState<string[]>([]);
+  useEffect(() => {
+    if (!previewDoc) {
+      setPreviewOverflow([]);
+      return;
+    }
+    const onMessage = (ev: MessageEvent) => {
+      if (ev.source !== previewIframe.current?.contentWindow) return;
+      const msg = ev.data as PreviewStateMessage | undefined;
+      if (!msg || msg.type !== PREVIEW_STATE_TYPE) return;
+      const next = Array.isArray(msg.overflow) ? msg.overflow.map(String) : [];
+      setPreviewOverflow((prev) => (prev.join(',') === next.join(',') ? prev : next));
+    };
+    window.addEventListener('message', onMessage);
+    const tick = () => postPreviewCmd(previewIframe.current?.contentWindow, { cmd: 'state' });
+    const handle = window.setInterval(tick, 500);
+    return () => {
+      window.removeEventListener('message', onMessage);
+      window.clearInterval(handle);
+    };
+  }, [previewDoc]);
   // The frame sizes itself in CSS from the graphic's own aspect ratio; the measurement drives
   // ONE number, the inner scale. (Sizing the frame from the measurement made the observed box
   // depend on the value it produced — a late observer left a right-sized frame around a
@@ -1267,6 +1313,21 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    *  graphic the rule is not confident about. */
   const fieldGroups = groupCueFields(descriptors);
   const descriptorByKey = new Map(descriptors.map((d) => [d.key, d]));
+  /**
+   * THE VALUES THAT DO NOT FIT, for the cue the editor is actually pointed at. Two monitors
+   * answer, and which one is right depends on the editing target: editing the ON-AIR cue, the
+   * only honest report is PROGRAM's, because that is the graphic carrying those values; editing
+   * the previewed cue, it is PREVIEW's, which settled with exactly what a Take would send.
+   * Reading one of them for both would warn about a cue nobody is typing into.
+   */
+  const overflowKeys = (
+    editingIsLive ? programOverflow[selectedGraphic ?? ''] ?? [] : previewOverflow
+  ).filter((key) => descriptorByKey.has(key));
+  const overflowSet = new Set(overflowKeys);
+  const overflowMessage = overflowNote(
+    overflowKeys,
+    Object.fromEntries(descriptors.map((d) => [d.key, d.label])),
+  );
   /** What a band HEADING reads, resolved the way the field boxes under it resolve: the live tree
    *  for a bound field, then the cue's own value, then the authored default. */
   const headingValues = Object.fromEntries(
@@ -1639,6 +1700,17 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                     ? 'changes push live on ✎ Update'
                     : 'changes air on ⟳ Take'}
               </span>
+              {/* TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3). The
+                  graphic itself reports it after its fit ladder has filled the panel, wrapped,
+                  and shrunk to the readability floor - past that the copy runs over the
+                  artwork, and neither cutting it nor reshaping the design is allowed. Beside
+                  the unsent note because both answer the same operator question: is what I am
+                  looking at what will air? */}
+              {overflowMessage && (
+                <span className="pd-editor-fate pd-over-note" data-testid="cue-overflow">
+                  {overflowMessage}
+                </span>
+              )}
               {/* Phone only (the bottom bar carries TAKE/Next/Out): Update belongs beside the
                   line that names it rather than hidden from the operator entirely. */}
               {editingIsLive && (
@@ -1768,6 +1840,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
                             descriptor={{ ...d, label: `${d.key.toUpperCase()} · ${d.label}` }}
                             value={String(editingView.values[d.key] ?? d.defaultValue ?? '')}
                             onChange={(v) => editDraft({ values: { [d.key]: String(v) } })}
+                            overflow={overflowSet.has(d.key)}
                             testIdPrefix="cue-field"
                             images={cueImages}
                             imageHint={

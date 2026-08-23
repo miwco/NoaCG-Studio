@@ -162,10 +162,18 @@ shipped; what changed is that folders now group the view instead of filtering a 
   — off ONE component, so a folder can never do less in one view than in the other.
   Until this walk the folders were a CHIP ROW over a flat list of the whole library, which the
   owner overruled on sight: *"no point with a folder if I see all the graphics as a list."*
-- **A SEARCH FLATTENS IT.** Typing a name is a question about the whole library, so while a
-  query stands the band stands down and every match is listed across folders, with the table's
-  FOLDER column switched on to say where each hit lives. That column is off at every other
-  level, where the answer is already known and it printed one value down the whole page.
+- **A SEARCH FLATTENS IT — globally, and the owner ratified that scope on 2026-08-23.** Typing
+  a name is a question about the whole library, so while a query stands the band stands down and
+  every match is listed across folders, INCLUDING while you are standing inside one. Two
+  obligations come with crossing folders. **Every match says where it lives**: the table
+  switches on its FOLDER column and a card wears the same folder tag under its name (the card
+  grid is the default view, so table-only was the same as nowhere for most people). Both are off
+  at every other level, where the answer is already known and the column printed one value down
+  the whole page; an unfiled match wears no tag on a card, where a lone em dash reads as a typo
+  rather than as "nowhere". **Clearing the query gives the folder back** — `folderFilter` is
+  retained rather than cleared while a search stands, so a search costs no walk back in.
+  A "current folder" scope was considered and deliberately NOT built: it is worth adding only if
+  a library large enough to need it turns up.
 - **A folder pools whole.** "+ Production" on a folder adds every graphic it holds to a chosen
   or new production, through the same `poolAll` the bulk bar uses — including its honest
   partial-failure report ("N of M were added before storage ran out"), because the honesty of

@@ -766,7 +766,6 @@
  "sb10": {
   "off": [],
   "clip": [
-   ".scoreboard-mask:x",
    ".scoreboard-mask:y",
    ".scoreboard-mask:y",
    ".scoreboard-team:y",
@@ -834,7 +833,6 @@
   "off": [],
   "clip": [
    ".scoreboard-clock:y",
-   ".scoreboard-phase:y",
    ".scoreboard-score:y",
    ".scoreboard-score:y",
    ".scoreboard-team:y",
@@ -875,12 +873,6 @@
   ]
  },
  "card05": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
- "card01": {
   "off": [],
   "clip": [
    ".info-card-mask:y"
@@ -960,18 +952,6 @@
    ".info-card-mask:y"
   ]
  },
- "card17": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
- "card18": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
  "card19": {
   "off": [],
   "clip": [
@@ -982,12 +962,6 @@
   "off": [],
   "clip": [
    ".info-card-mask:y",
-   ".info-card-mask:y"
-  ]
- },
- "card21": {
-  "off": [],
-  "clip": [
    ".info-card-mask:y"
   ]
  },
@@ -1051,16 +1025,9 @@
    ".info-card-mask:y"
   ]
  },
- "card33": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
  "card38": {
   "off": [],
   "clip": [
-   ".info-card-mask:y",
    ".info-card-mask:y"
   ]
  },
@@ -1117,7 +1084,6 @@
  "card43": {
   "off": [],
   "clip": [
-   ".info-card-mask:y",
    ".info-card-mask:y"
   ]
  },
@@ -1132,12 +1098,6 @@
   "off": [],
   "clip": [
    ".info-card-mask:y",
-   ".info-card-mask:y"
-  ]
- },
- "card44": {
-  "off": [],
-  "clip": [
    ".info-card-mask:y"
   ]
  },
@@ -1229,12 +1189,6 @@
   ]
  },
  "ss03": {
-  "off": [],
-  "clip": [
-   ".starting-soon-mask:y"
-  ]
- },
- "ss05": {
   "off": [],
   "clip": [
    ".starting-soon-mask:y"
@@ -1878,19 +1832,7 @@
    ".results-board-mask:y"
   ]
  },
- "rs03": {
-  "off": [],
-  "clip": [
-   ".results-board-mask:y"
-  ]
- },
  "rs05": {
-  "off": [],
-  "clip": [
-   ".results-board-mask:y"
-  ]
- },
- "rs04": {
   "off": [],
   "clip": [
    ".results-board-mask:y"
@@ -2122,12 +2064,6 @@
    ".alert-mask:y"
   ]
  },
- "al05": {
-  "off": [],
-  "clip": [
-   ".alert-mask:y"
-  ]
- },
  "al06": {
   "off": [],
   "clip": [
@@ -2135,12 +2071,6 @@
   ]
  },
  "al08": {
-  "off": [],
-  "clip": [
-   ".alert-mask:y"
-  ]
- },
- "al10": {
   "off": [],
   "clip": [
    ".alert-mask:y"
@@ -2261,7 +2191,6 @@
  "sb10@image": {
   "off": [],
   "clip": [
-   ".scoreboard-mask:x",
    ".scoreboard-mask:y",
    ".scoreboard-mask:y",
    ".scoreboard-team:y",
@@ -2296,12 +2225,6 @@
   ]
  },
  "card05@image": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
- "card01@image": {
   "off": [],
   "clip": [
    ".info-card-mask:y"
@@ -2381,18 +2304,6 @@
    ".info-card-mask:y"
   ]
  },
- "card17@image": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
- "card18@image": {
-  "off": [],
-  "clip": [
-   ".info-card-mask:y"
-  ]
- },
  "card19@image": {
   "off": [],
   "clip": [
@@ -2403,12 +2314,6 @@
   "off": [],
   "clip": [
    ".info-card-mask:y",
-   ".info-card-mask:y"
-  ]
- },
- "card21@image": {
-  "off": [],
-  "clip": [
    ".info-card-mask:y"
   ]
  },
@@ -2472,10 +2377,10 @@
    ".info-card-mask:y"
   ]
  },
- "card33@image": {
+ "ss04@image": {
   "off": [],
   "clip": [
-   ".info-card-mask:y"
+   ".starting-soon-mask:y"
   ]
  },
  "ss17@image": {
@@ -2858,12 +2763,6 @@
   "clip": [
    ".stream-notification-avatar:y",
    ".stream-notification-mask:y"
-  ]
- },
- "al10@image": {
-  "off": [],
-  "clip": [
-   ".alert-mask:y"
   ]
  },
  "dc01": {

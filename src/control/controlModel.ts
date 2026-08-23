@@ -226,6 +226,40 @@ export function formatMachineState(
     .join(' · ');
 }
 
+/**
+ * THE OVERFLOW WARNING — the second half of the owner's fit ruling (2026-08-23): copy longer
+ * than the design can hold is **warned about, never clipped and never allowed to reshape the
+ * artwork** (docs/SVG_IMPORT_PLAN.md §3). The first half is the runtime's fit ladder, which
+ * fills the panel, wraps into the room the design has, shrinks to the readability floor, and
+ * then reports the field through `noacgTextOverflow()`. This is what an operator reads.
+ *
+ * It has to be the same sentence on every surface where a value is typed
+ * (docs/CONTROL_PANEL_PARITY.md §4), so the wording lives here rather than in four components.
+ * The exported HTML surfaces carry a baked copy for the reason the state formatter does: they
+ * ship without React and cannot import this module.
+ *
+ * `labels` maps field key -> the operator's own word for it; an unknown key falls back to the
+ * key, which is still better than silence.
+ */
+export const OVERFLOW_FIELD_MARK = 'Too long for the design';
+
+/** The per-field tooltip — WHY it is flagged and what to do, in one sentence. */
+export const OVERFLOW_FIELD_HINT =
+  'This value could not be made to fit even at the smallest readable size, so it runs past ' +
+  'the artwork on air. Shorten it — the design is never reshaped and the text is never cut.';
+
+/** The summary's two endings, as WORDS rather than as a formatter, so the exported surfaces can
+ *  bake them and assemble the same sentence without a second wording to keep in step. */
+export const OVERFLOW_NOTE_ONE = 'is too long for the design — shorten it';
+export const OVERFLOW_NOTE_MANY = 'values are too long for the design — shorten them';
+
+/** The editor's one-line summary, or null when everything fits. */
+export function overflowNote(keys: string[], labels: Record<string, string>): string | null {
+  if (keys.length === 0) return null;
+  if (keys.length === 1) return `⚠ ${labels[keys[0]] ?? keys[0].toUpperCase()} ${OVERFLOW_NOTE_ONE}`;
+  return `⚠ ${keys.length} ${OVERFLOW_NOTE_MANY}`;
+}
+
 /** Which states each event fires from, per group — a control surface greys a button the
  *  machine would drop (the same structural guard, precomputed so no graph code ships). */
 export function eventLegality(js: string): Record<string, Record<string, string[]>> {

@@ -589,6 +589,9 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .ctl-thumb { width: 32px; height: 32px; flex: 0 0 auto; object-fit: contain;
   background: var(--bg-3); border: 1px solid var(--border); border-radius: 6px; }
 .field-reset { font-size: 11px; padding: 2px 6px; }
+/* The per-graphic control page's overflow summary — the dashboard's `.pd-over-note` in this
+   panel's own type size (docs/CONTROL_PANEL_PARITY.md §4: one warning, four surfaces). */
+.ctl-over-note { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--danger); }
 /* Add-a-field: the type select would otherwise claim the row's full width (inputs default to
    width:100%) and crush the label box to nothing in a narrow dock. */
 .field-add-row select { flex: 0 1 auto; width: auto; }
@@ -1060,6 +1063,17 @@ body.resizing-rows { user-select: none; cursor: row-resize; }
 .field-row { margin-bottom: 12px; }
 .field-row .field-meta { display: flex; justify-content: space-between; align-items: baseline; }
 .field-row .field-id { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+
+/* TOO LONG TO FIT (owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3): the graphic reported
+   this value through noacgTextOverflow() after its fit ladder ran out of room. RED, not the
+   amber every other operator note wears - amber on this surface means "a state to act on"
+   (the unsent-changes note sits inches away), and this is the graphic saying the picture will
+   be wrong. The box wears it too: a line of text at the top of a tall band does not say which
+   of six inputs to shorten. */
+.field-row .field-over { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--danger); white-space: nowrap; }
+.field-row-over input,
+.field-row-over textarea,
+.field-row-over select { border-color: var(--danger); }
 
 /* The style-contract controls (components/style/): one colour control with its alpha, and the
    shape rows beside it. The variable name sits UNDER the label rather than opposite it — a
@@ -5243,7 +5257,13 @@ h2 + .lib-row,
 /* Name over metadata, then ONE actions row. The ⋯ is the card's fifth child, so in a column
    it dropped to a line of its own; pulling it up beside the buttons is what keeps the card
    four bands tall (picture, name, actions) instead of five. */
-.lib-row--grid .lib-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+/* `margin-top: auto` LANDS THE ACTIONS ON THE CARD'S FLOOR. The grid stretches every card in a
+   row to one height, so an equal box was never the problem — but the content inside stopped
+   wherever it ran out, and a card carrying one line less floated its buttons 29px above its
+   neighbours' (measured with the search folder tag, the first thing to make two cards differ).
+   Bottom-aligned, the row of Open buttons reads as one line across the grid whatever each card
+   happens to say above it. */
+.lib-row--grid .lib-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-top: auto; }
 .lib-row--grid .lib-actions > * { min-width: 0; }
 .lib-row--grid > .lib-menu-host {
   position: absolute;
@@ -5282,6 +5302,9 @@ h2 + .lib-row,
 /* The card is a column of full-width bands: without this the flex column centres each one to
    its own content width and the name floats mid-card. */
 .lib-row--grid > * { align-self: stretch; text-align: left; }
+/* The search result's folder tag. A PILL is sized by its word, so it has to opt out of the
+   column's stretch — stretched it becomes a full-width bar and stops reading as a tag. */
+.lib-row--grid .lib-folder-tag { align-self: flex-start; margin-top: 4px; }
 /* The pip floats over the thumbnail's top-left corner instead of taking a column. */
 .lib-row--grid .lib-select { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(10, 12, 16, 0.7); }
 .lib-row--grid .lib-select[aria-pressed='true'] { background: var(--accent); }
@@ -5506,15 +5529,15 @@ h2 + .lib-row,
 .lib-create-row input { max-width: 320px; }
 
 /* The row popovers — the ⋯ overflow menu and the "+ Production" picker. A plain absolute
-   popover against its button (the rows never clip), closed by the fixed backdrop. */
+   popover against its button (the rows never clip), closed by home/LibMenu's outside-press
+   listener. There is deliberately NO backdrop element: a covering div closes the menu by
+   eating the press, so the control the operator was aiming at needs a second one. */
 .lib-menu-host { position: relative; }
-/* Above the mobile topbar's sticky z-index 60: an outside press ANYWHERE — including on the
-   topbar — must close the menu rather than land through it. */
-.lib-menu-backdrop { position: fixed; inset: 0; z-index: 89; }
 .lib-menu {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
+  /* Above the mobile topbar's sticky z-index 60, so an open menu is never drawn under it. */
   z-index: 90;
   min-width: 200px;
   display: flex;
@@ -5834,8 +5857,8 @@ h2 + .lib-row,
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  /* Above the shared .lib-menu-backdrop (z 89): at 40 the backdrop swallowed every click
-     inside the popover — Copy, Publish changes, Unpublish all just closed it. */
+  /* The same 90 every popover uses (.lib-menu), so one shell's surfaces cannot stack
+     differently against the page's sticky chrome (.pd-header is 20). */
   z-index: 90;
   width: min(520px, 90vw);
   padding: 12px 14px;
@@ -6165,6 +6188,8 @@ h2 + .lib-row,
    surface says it. Amber, not red: this is a state to act on, not a fault. */
 .pd-actions-help { margin: 2px 0 8px; font-size: 11px; line-height: 1.5; }
 .pd-unsent-note { color: var(--accent); font-weight: 600; }
+/* …and the one note on this surface that IS a fault: a value the graphic could not fit. */
+.pd-over-note { color: var(--danger); font-weight: 600; }
 .pd-verb.pd-unsent { border-color: var(--accent); color: var(--text); position: relative; }
 .pd-unsent-dot {
   position: absolute;
@@ -6250,6 +6275,14 @@ h2 + .lib-row,
   color: var(--text-dim);
 }
 .pd-field input { width: 100%; }
+/* The hosted page's own box mark (the in-app editor gets it from FieldRow). Same red, same
+   words — docs/CONTROL_PANEL_PARITY.md §4. */
+/* The mark drops the label row's uppercase tracking on purpose: read in the same letterforms
+   as the field NAME it sits beside, a warning looks like part of the name. */
+.pd-field .field-over { color: var(--danger); font-weight: 700; text-transform: none; letter-spacing: 0; }
+.pd-field-over input,
+.pd-field-over textarea,
+.pd-field-over select { border-color: var(--danger); }
 .pd-field-layer { max-width: 130px; }
 /* THE GUTTER GOES AWAY BEFORE THE FIELDS DO. A band heading in a 92px left column is worth its
    width only while the fields beside it still have room; below this the heading sits on top of

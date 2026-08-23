@@ -112,3 +112,76 @@ Five more readings, binding on anyone extending this:
 Nine categories are stable on both axes; what remains is an inner element growing inside a fixed
 panel, which is this same fix one level down.
 
+
+## The text-size ladder is an AXIS, and every instrument measured one step of it
+
+`--type-scale` is the operator's text-size knob (S/M/L = 0.85/1/1.2, `TYPE_SIZE_STEPS` in
+`src/model/styleVocabulary.ts`), and **only `font-size` consumes it**. So a design that sizes a BOX
+off the same variable while its padding stays fixed - or the reverse, a box on `--scale` alone
+holding text that grows with `--type-scale` - changes SHAPE as the operator moves that knob, and it
+can fit at M and clip at S or L. The alerts flag was the first one caught, by arithmetic rather than
+by measurement: its `min-width` followed `--type-scale` and its padding did not, so it sat ~2px over
+its box at M and ~7px at S, and nothing could see the S half because every instrument rendered M.
+
+`scripts/stage-fit-sweep.mjs`, `scripts/type-floor.mjs` and `scripts/overflow-sweep.mjs` all take
+`--type-scale s|m|l` now. The step goes through `create()`, the wizard's own path - not a CSS
+override on the finished document, which would also move type in an imported design that declares no
+`--type-scale` at all. The number is read from `TYPE_SIZE_STEPS` in the page, so no script holds a
+copy of the ladder. Two rules keep the gates honest: `overflow-sweep` REFUSES `--update-baseline` at
+a non-default step (a baseline recorded off-axis blesses that step's shape changes for every step),
+and `type-floor` at a non-default step REPORTS and exits 0 - a line authored at the 20px floor
+renders at 17px the moment somebody picks S, which is the operator's choice, not a catalog defect.
+
+**First reading, 2026-08-23** (291 staged designs, 505 variants):
+
+- **Stage fit is clean at every step.** Zero shrunk lines at S, M and L - the reserve/excess fix
+  holds across the ladder, not only at the step it was measured on.
+- **Type floor at S: 435 of 505 variants dip under it**, almost all of them exactly `floor x 0.85`.
+  That is the ladder's arithmetic, not a defect list - but it says the catalog is authored AT the
+  floor with no headroom, so picking S puts most of it under 20px. Whether S should be allowed to,
+  or the floor should ride the ladder, is a product decision nobody has taken.
+- **Containment at L: 22 designs report a clip they do not report at M - and they are TWO
+  mechanisms, one of them not about the ladder at all.** Read them apart before fixing either:
+  - **THREE ARE THE LADDER, and they are the real ones**: a line whose BOX width does not follow
+    `--type-scale` while its text does, so the word is cut sideways. `.lower-third-mask` on ls07
+    ("Commentary": fits at S and M, **32px cut at L**), `.info-card-mask` on card48 ("PRESENTED BY",
+    5px) and `.lower-third-mask` on lt51 ("Anchor · Evening News", 3px). Measured against the same
+    render with the mask released, ls07's differing pixels start exactly ON the mask's right edge -
+    ink, not leading.
+  - **THE OTHER NINETEEN ARE PROPORTIONAL AND EXIST AT EVERY STEP**, hidden at M by the sweep's own
+    2px tolerance: the mask takes its height from the LINE box (`line-height`) while the span inside
+    reports the face's ~1.2em CONTENT box, so a design with `line-height` under that ratio overflows
+    by a fixed fraction of its type at any size (lt14 2/2/4px at S/M/L, sb18's `.scoreboard-mask`
+    6/8/10px at `line-height: 1`). Same mechanism as lt64's line mask, one level out - the fit
+    routine is not involved, which is why `stage-fit-sweep` reads clean through all of it.
+  - **AND MOSTLY IT CLIPS NOTHING VISIBLE.** Toggling `overflow` on the settled render and diffing
+    the pixels: sb18 (10px) and fr11 (4px) lose **zero** ink - the overflow is the face's empty
+    ascent/descent metric. lt14 loses **one antialias row** of its descenders. So the vertical family
+    is a measurement finding, not an on-air one, and the priority order is the three ladder cases
+    first. **Toggle `overflow` on ONE settled render, never diff two renders**: a released mask stops
+    being a formatting context and the text re-lays out (card48's difference sits INSIDE the box and
+    starts left of it - that is re-layout, not revealed ink), and two separate renders desynchronise
+    any looping animation, which reads as a huge diff that is entirely the loop.
+- **Containment at S: cr03 clips `.credits-box:y`** - a fixed 950px stage that paginates, packing one
+  row too many once the type shrinks.
+- **A CRAWL IS MEASURED MID-TRAVEL, so read ticker and credit-reel rows twice before believing
+  them.** tk01, tk12 and cr06 report new escapes at S and tk05 at L purely because narrower items
+  cover a different distance inside the sweep's fixed settle - reproducible, and not a defect.
+
+**The floor does NOT ride the ladder (owner, 2026-08-23).** A line that renders under 20px because
+the operator picked S is fine: they chose smaller text, the same way they choose longer words. So
+`type-floor --type-scale` stays a report and the gate stays at the default step - no S gate, and
+nothing in the catalog is re-authored to keep 20px at 0.85.
+
+**Fixed, 2026-08-23: ls07, the one that cut ink.** A reveal mask is `overflow: hidden`, and an
+overflow that is not visible switches OFF a flex item's automatic minimum size - so the label's
+mask had no floor and the flex row squeezed it under its own `white-space: nowrap` width. `flex:
+none` on that mask gives the label its width back and lets the callers, which wrap for a living,
+absorb the row. Measured after: no horizontal overflow at any step, and `catalog-render-baseline`
+did not move, so the default step renders pixel-identically.
+
+**card48 and lt51 were NOT fixed, because they clip no ink.** Their 5px and 3px are the trailing
+letter-space of tracked caps, which `scrollWidth` counts and no glyph occupies (measured: a Range
+over card48's line reports 162px against a 157px box, and its tracking is 4.8px; releasing lt51's
+mask changes zero pixels). They belong with the nineteen vertical rows above - the sweep's
+tolerance is what changes at L, not the design.

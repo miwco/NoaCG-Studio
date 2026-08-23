@@ -48,6 +48,39 @@ here. Make the CONTENT conditional, never the node.
 bound on the SPAN - `max-width` + `white-space: nowrap` + `text-overflow: ellipsis`.
 `overflow: hidden` on the WRAPPER clips the PAINT but not the layout box, and the runtime
 bench measures layout - so the token still collided with the name beside it.
+
+**DO NOT SET A LOWER THIRD'S TYPE VERTICALLY.** `writing-mode` is used ZERO times in this
+category and that is the correct number, not a gap. lt65 "Edge Rail" was drawn as the side-column
+silhouette the catalog lacked, passed every gate, and the owner withdrew it on sight
+(2026-08-23): *"the text is vertical, so it's the wrong way... no one would turn their head to
+read the text."* A lower third is read in about three seconds while somebody is talking; turned
+type belongs to things a reader has time with - a spine, a poster, a festival bumper. A taller
+frame does not rescue it, because vertical is vertical at every aspect, and the silhouette cannot
+be salvaged by setting the same rail horizontally: a name needs a much wider column, at which
+point the design IS lt64 "Portrait Column". **The whole shape is closed, not just that design.**
+
+**THE MEASUREMENT THAT ARGUED FOR IT WAS SOUND AND THE CONCLUSION WAS STILL WRONG**, which is the
+part worth carrying. `card-look-sweep` reported one silhouette across 96% of the category and
+`writing-mode` at zero uses; both were true. An instrument can tell you a shape is ABSENT. It
+cannot tell you the shape is WANTED, and reading the first as the second is how a session spends
+a day drawing something the catalog was right not to have. Ask what the absence is evidence OF
+before treating it as a defect - the same trap as a threshold that fits the data perfectly and
+asserts something nobody holds (`src/ai/AGENTS.md`, the withdrawn rule 5).
+
+**A HUGGING DESIGN IS BOUNDED ON ONE AXIS ONLY - THE ONE ITS TYPE RUNS ALONG**, and that outlives
+the design that found it. A strap hugs sideways and the assembler's wrap cap bounds it there, so a
+long name wraps instead of leaving the picture; nothing bounds the other axis. Any future design
+that hugs vertically - a roll, a column, a rail - states its own bound, and states it as a
+FRACTION of the frame (`vh`) rather than in px, because the anchor insets are percentages so the
+safe run is resolution-independent. The retired rail used `calc(78vh - var(--accent-weight))`:
+2 x (50% - 11%), the mid-zone case, which binds tighter than top or bottom.
+
+The gate is `e2e/catalog/long-value-containment.spec.ts`: a 51-character name through every lower
+third, measuring the TEXT against the safe area (the owner's 2026-08-23 ruling lets a decorative
+panel bleed, never a word). **Its first draft asserted the FRAME and could not fail** - every
+design in the category keeps text on the frame at 51 characters, including the one that was
+broken - which is why the threshold is where it is, and why it is mutation-tested rather than
+merely green.
 ### The shared bank - lt01…lt62
 
 lt01…lt62 on shared.ts (prefix 'lower-third', `dataRegion: true` - the

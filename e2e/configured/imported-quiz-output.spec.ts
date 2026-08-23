@@ -55,9 +55,9 @@ test('an imported quiz board publishes, runs on the real output renderer, and re
   // Publish for real.
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  // Publishing opens the links popover over a backdrop; clicking it AT A CORNER is how it closes
-  // (a centre click lands on the popover, which sits above the backdrop — library.spec.ts).
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
+  // Publishing opens the links popover; Escape closes it (quiz-output.spec.ts says why there
+  // is nothing to click).
+  await page.keyboard.press('Escape');
   await expect(page.getByTestId('production-links')).toBeHidden();
 
   const outputSlug = await page.evaluate(async (name) => {

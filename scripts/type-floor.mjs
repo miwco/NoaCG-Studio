@@ -7,12 +7,22 @@
 // machine-checked drifts back the moment a new pack lands, so the floor lives here.
 //
 // Usage (dev server must be running for this checkout — scripts/dev-port.mjs):
-//   node scripts/type-floor.mjs              # check every category, exit 1 on any violation
-//   node scripts/type-floor.mjs lower-third  # check one category
+//   node scripts/type-floor.mjs                    # check every category, exit 1 on any violation
+//   node scripts/type-floor.mjs lower-third        # check one category
 //   node scripts/type-floor.mjs --json out.json
+//   node scripts/type-floor.mjs --type-scale s     # REPORT the ladder's other steps (never a gate)
 //
-// The floor is measured on COMPUTED font-size with --scale and --type-scale at their defaults,
-// so it is the real rendered size, not the authored literal.
+// The floor is measured on COMPUTED font-size, so it is the real rendered size and not the
+// authored literal.
+//
+// THE GATE IS THE DEFAULT STEP, and only that one. The catalog ships a text-size ladder of
+// S/M/L = 0.85/1/1.2 (`TYPE_SIZE_STEPS`, src/model/styleVocabulary.ts), so a line authored at
+// the floor renders at 17 px the moment somebody picks S. That is the operator's own choice,
+// exactly like typing a longer name, and holding the catalog to a 20 px floor at S would mean
+// authoring every line at 24 - so `--type-scale s|m|l` REPORTS and exits 0 (a render error
+// still fails). What it is for is the other question: which lines sit so close to the floor
+// that one step down puts them under it, and whether any design's type moves with the ladder
+// in a way its author did not intend.
 import { readFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
@@ -62,7 +72,16 @@ const KNOWN = new Map([
 const args = process.argv.slice(2);
 const jsonAt = args.indexOf('--json');
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : null;
-const only = args.find((a) => !a.startsWith('--') && a !== jsonOut) || null;
+const stepAt = args.indexOf('--type-scale');
+// The LABEL is validated here; the NUMBER is resolved in the page from `TYPE_SIZE_STEPS` itself,
+// so this script cannot hold a stale copy of the ladder the catalog actually ships.
+const STEP = stepAt >= 0 ? String(args[stepAt + 1] || '').toUpperCase() : null;
+if (stepAt >= 0 && !/^[SML]$/.test(STEP)) {
+  console.error(`--type-scale takes one of s, m, l (got "${args[stepAt + 1] ?? ''}").`);
+  process.exit(2);
+}
+const stepArg = stepAt >= 0 ? args[stepAt + 1] : null;
+const only = args.find((a) => !a.startsWith('--') && a !== jsonOut && a !== stepArg) || null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
@@ -73,7 +92,18 @@ await page.evaluate(async () => {
   window.__cat = await import('/src/templates/catalog.ts');
   window.__comp = await import('/src/preview/composeDocument.ts');
   window.__wiz = await import('/src/model/wizard.ts');
+  window.__style = await import('/src/model/styleVocabulary.ts');
 });
+
+// The step, read off the ladder the wizard offers rather than typed in again here. `null` means
+// "no option passed at all", so the gate run composes exactly the document it always did.
+const typeScale = STEP
+  ? await page.evaluate((label) => {
+      const step = window.__style.TYPE_SIZE_STEPS.find((s) => s.l === label);
+      if (!step) throw new Error(`TYPE_SIZE_STEPS has no step "${label}" - has the ladder changed?`);
+      return step.s;
+    }, STEP)
+  : null;
 
 const targets = (
   await page.evaluate(
@@ -93,14 +123,17 @@ if (!targets.length) {
 // Renders a batch of variants off-screen at full size, plays them, then reads back every
 // text-bearing element whose computed size is under the floor.
 await page.evaluate(() => {
-  window.__scan = async (batch) => {
+  window.__scan = async (batch, typeScale) => {
     document.body.innerHTML = '';
+    // The step goes through `create`, the wizard's own path - not a CSS override on the finished
+    // document, which would also move type in a design that declares no `--type-scale` at all.
+    const opts = typeScale == null ? {} : { typeScale };
     const frames = batch.map(({ id, floor }) => {
       const v = window.__cat.variantById(id);
       const f = document.createElement('iframe');
       f.style.cssText = 'width:1920px;height:1080px;border:0;position:fixed;left:-5000px;top:0';
       try {
-        f.srcdoc = window.__comp.composeDocument(v.create({}));
+        f.srcdoc = window.__comp.composeDocument(v.create(opts));
       } catch (e) {
         f.dataset.err = String((e && e.message) || e);
       }
@@ -147,8 +180,8 @@ const rows = [];
 for (let i = 0; i < targets.length; i += 12) {
   const slice = targets.slice(i, i + 12);
   const res = await page.evaluate(
-    (b) => window.__scan(b),
-    slice.map((t) => ({ id: t.id, floor: floorFor(t.cat) })),
+    ({ batch, ts }) => window.__scan(batch, ts),
+    { batch: slice.map((t) => ({ id: t.id, floor: floorFor(t.cat) })), ts: typeScale },
   );
   res.forEach((r, k) => rows.push({ ...slice[k], floor: floorFor(slice[k].cat), ...r }));
 }
@@ -185,6 +218,7 @@ for (const r of bad) {
 
 console.log(`\nType floor — ${rows.length} variants checked${only ? ` (${only})` : ''}`);
 console.log(`  floors: corner-bug ${FLOOR['corner-bug']} px · everything else ${FLOOR.default} px`);
+console.log(`  text size: ${STEP ?? 'M'}${STEP ? ` (--type-scale ${typeScale}) — REPORT ONLY, the gate is M` : ' (the default) — this is the gate'}`);
 console.log(`  exempt categories: ${[...EXEMPT_CATEGORIES].join(', ') || 'none'}\n`);
 if (excused.length) {
   console.log(`KNOWN EXCEPTIONS (${excused.length}) — allowed, but still true:`);
@@ -201,7 +235,12 @@ if (!bad.length) {
   process.exit(errored.length ? 1 : 0);
 }
 
-console.log(`FAIL — ${bad.length}/${rows.length} variants carry text under the floor.\n`);
+console.log(
+  STEP
+    ? `${bad.length}/${rows.length} variants carry text under the floor at text size ${STEP}.` +
+        ` REPORT, not a verdict — the gate is the default step.\n`
+    : `FAIL — ${bad.length}/${rows.length} variants carry text under the floor.\n`,
+);
 console.log('  By rule (fix these once, many variants clear):');
 for (const [k, v] of [...byRule].sort((a, b) => b[1].n - a[1].n).slice(0, 30)) {
   const px = [...v.px].sort((a, b) => a - b).join('/');
@@ -213,4 +252,6 @@ for (const r of bad) {
   console.log(`  ${r.id.padEnd(9)} ${r.cat.padEnd(15)} worst ${String(worst).padStart(5)} px (floor ${r.floor})  ${r.hits.length} element(s)`);
 }
 console.log('');
-process.exit(1);
+// A non-default step never fails the build: it reports what the ladder does to type the catalog
+// authored at the floor. A RENDER ERROR still fails, at every step - that is a broken design.
+process.exit(STEP ? (errored.length ? 1 : 0) : 1);

@@ -40,36 +40,64 @@ Colour is NOT the gap (see §2 — it was buried and is now surfaced). **Shape i
 **Do not** answer this with more dark slabs in new palettes. `card-look-sweep` reports the
 footprint of anything drawn, so a new design's silhouette is checkable before review.
 
-### PARTLY DONE 2026-08-22 — three of the six drawn, scope set by the owner
+### PARTLY DONE 2026-08-23 — TWO of the six drawn, one attempted and CLOSED
 
-The owner scoped this to the three highest-contrast shapes rather than all six. Drawn:
-**lt63 "Broadsheet Band"** (full-width band), **lt64 "Portrait Column"** (tall panel) and
-**lt65 "Edge Rail"** (side column, and the catalog's first use of `writing-mode`).
+Three were drawn; the owner kept two and rejected the third on sight.
 
-Re-measured after they landed (`node scripts/card-look-sweep.mjs lower-third`, 106 designs):
+- **lt63 "Broadsheet Band"** (full-width band) — KEPT. *"This is a unique look... definitely a new
+  look, so let's keep it."*
+- **lt64 "Portrait Column"** (tall panel) — KEPT. *"Very niche, but I don't see a problem with it,
+  so we should have it if anyone wants it."*
+- ~~lt65 "Edge Rail"~~ (side column) — **WITHDRAWN AND DELETED.** *"The text is vertical, so it's
+  the wrong way... no one would turn their head to read the text."*
+
+**THE SIDE COLUMN IS CLOSED AS A SHAPE, not just as a design** — do not redraw it. A lower third
+is read in about three seconds while somebody is talking, so turned type fails at the only thing
+the graphic exists to do. A vertical frame does not help (vertical is vertical at every aspect),
+and setting the same narrow rail horizontally needs a much wider column, which is lt64. Full
+reasoning and the retired design's own measurements: `src/templates/lowerThirds/AGENTS.md`.
+
+**AN ABSENCE IS NOT AUTOMATICALLY A GAP, and this is what it cost to learn.** The side column was
+on the brief because `card-look-sweep` reported one silhouette across 96% of the category and
+`writing-mode` at zero uses catalog-wide. Both numbers were correct. Neither was evidence that the
+missing shape was WANTED — the catalog lacked turned type because turned type does not work here.
+An instrument can say a shape is absent; only a person can say it is missing. Ask what an absence
+is evidence OF before scheduling work against it. (Same family as the withdrawn taste rule 5 in
+`src/ai/AGENTS.md`: perfectly measured, and still asserting something nobody holds.)
+
+Re-measured with the two that shipped (`node scripts/card-look-sweep.mjs lower-third`):
 
 | footprint | before | after |
 |---|---|---|
-| `strap/thin` | 99 — **96%** | 99 — **93%** |
+| `strap/thin` | 99 — **96%** | 99 — **94%** |
 | `strap/mid` | 4 | 4 |
-| `strap/tall` | — | **2** |
-| `full-width/thin` | — | **1** |
+| `strap/tall` | — | **1** (lt64) |
+| `full-width/thin` | — | **1** (lt63) |
 
-**Two buckets exist that did not, and the one-silhouette share moved 96% → 93%.** That is the
-honest size of three designs against a category of 106: the shapes are now REACHABLE, and the
-share only falls as far as the count of designs carrying them. **Three shapes remain undrawn** -
-corner block, full-frame card, framed cut-out - and the table above is still the brief for them.
+**Two buckets exist that did not**, and the one-silhouette share moved 96% → 94%. That is the
+honest size of two designs against a category of 105: the shapes are now REACHABLE, and the share
+only falls as far as the count of designs carrying them.
 
-Two things this round proved that the next one should not re-learn:
+**Three shapes remain undrawn** — corner block, full-frame card, framed cut-out — and the table
+above is still the brief. The owner's standing rule is not to chase coverage: *"if the remaining
+shapes introduce genuinely useful composition options, continue; if they are mainly variations of
+what is already covered, 93% is enough."* On the evidence so far, the **framed cut-out** is the
+one that clearly adds an option nothing else reaches (it inverts figure and ground); the
+**corner block** is a genuinely different placement, since the corner is bug territory today; the
+**full-frame card** overlaps the existing title-card category and is the likeliest variation.
+
+Three things this round proved that the next one should not re-learn:
 
 - **An accent has to be big enough to READ at card size.** lt63's rule at the editorial family's
-  2px and lt65's 64px cap both registered as *no accent colour at all* on the sweep. Both were
-  under-weighted for their own geometry (a 1:960 hairline across the frame; a cap narrower than
-  the rail it caps), so both were fixed on the design's own terms - and the fix moved lt63 into
-  the azure bucket, where it belongs.
-- **A hue claim has to be checked against the sweep's own buckets, not against the eye.** Volt
-  reads as chartreuse and lands in the bucket the sweep labels `amber` - the category's fourth
-  largest. lt65 was written up as adding a rare hue and does not.
+  2px registered as *no accent colour at all* on the sweep — a 1:960 hairline across the frame.
+  Weighted for the length it crosses, it moved into the azure bucket where it belongs.
+- **A hue claim has to be checked against the sweep's own buckets, not against the eye.** The
+  retired rail's Volt reads as chartreuse and lands in the bucket the sweep labels `amber` — the
+  category's fourth largest. It was written up as adding a rare hue and did not.
+- **A design's own sample is the one input guaranteed to flatter it.** Both new designs passed
+  every catalog gate and both still had containment defects, because every gate renders the
+  sample the designer chose. `e2e/catalog/long-value-containment.spec.ts` now drives a
+  51-character name through the whole category and measures text against the safe area.
 
 **Read first:** `docs/CATALOG_VARIETY.md` (what the catalog repeats), `docs/DESIGN_LANGUAGE.md`
 (taste and motion), `src/templates/AGENTS.md` (the assembler contracts, the logo-slot rules, the

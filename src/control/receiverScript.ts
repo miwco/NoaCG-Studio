@@ -19,13 +19,19 @@ export function controlReceiverScript(templateName: string, channelName: string)
     var ch = new BroadcastChannel('${channelName}');
     var lastSent = '';
     function reply(force) {
-      if (typeof noacgMachineState !== 'function') return;
+      var hasState = typeof noacgMachineState === 'function';
+      var hasOver = typeof noacgTextOverflow === 'function';
+      if (!hasState && !hasOver) return;
       try {
-        var state = noacgMachineState();
-        var key = JSON.stringify(state);
+        var state = hasState ? noacgMachineState() : null;
+        // WHICH VALUES DID NOT FIT — the field ids this graphic could not size down far enough
+        // to hold (its fit ladder's last rung). The panel warns the operator with it; the copy
+        // is never cut and the artwork is never reshaped to hide it.
+        var over = hasOver ? noacgTextOverflow() : null;
+        var key = JSON.stringify([state, over]);
         if (!force && key === lastSent) return;
         lastSent = key;
-        ch.postMessage({ t: 'state', state: state });
+        ch.postMessage({ t: 'state', state: state, over: over });
       } catch (e) { /* state unavailable — the panel just shows no chip */ }
     }
     ch.onmessage = function (ev) {
@@ -50,8 +56,11 @@ export function controlReceiverScript(templateName: string, channelName: string)
       else if (m.t === 'snap' && typeof noacgSnap === 'function') noacgSnap(m.snap || null);
       reply(m.t === 'hello');
     };
-    // Timers advance the machine with no message to answer — a cheap watcher reports those.
-    if (typeof noacgMachineState === 'function') setInterval(function () { reply(false); }, 1000);
+    // Timers advance the machine with no message to answer, and a webfont arriving re-runs the
+    // text fit — a cheap watcher reports both.
+    if (typeof noacgMachineState === 'function' || typeof noacgTextOverflow === 'function') {
+      setInterval(function () { reply(false); }, 1000);
+    }
     // Announce the boot: a control panel that kept an event log hears this and rebuilds a
     // refreshed graphic (latest data, then snap to the last known state) — crash recovery.
     ch.postMessage({ t: 'graphic-online' });

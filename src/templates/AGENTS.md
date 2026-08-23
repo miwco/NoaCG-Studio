@@ -483,6 +483,13 @@ figure is the short final part, so the label is what may contain one). Say which
   the exit plus `exitOnNext`. **No preset schedules anything** - a setTimeout in a template is
   motion the timeline cannot see, the control page cannot pause and the render clock cannot
   drive.
+**A REVEAL MASK IN A FLEX ROW IS A LINE THAT CAN BE SQUEEZED TO NOTHING.** A flex item normally
+refuses to shrink below its own content (`min-width: auto`), and that protection is switched OFF
+for an item whose overflow is not visible - which every `.{prefix}-mask` is. So a masked line in a
+flex row has no floor: ls07's label may not wrap (`white-space: nowrap`) and was squeezed under its
+own width and CUT - "COMMENTARY" aired as "COMMENTAR" at text size L. A masked line that cannot
+wrap states `flex: none`, and the lines that CAN wrap absorb the row instead.
+
 ## THE STAGE: which graphics may change size with the operator's text
 
 `width: fit-content` (DESIGN_LANGUAGE §5) is the catalog default and only HALF right. On a
@@ -494,6 +501,15 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   and the full-frame frame / transition / versus. **FIXED** (declares a stage): every other
   category. Owner-ratified 2026-08-20, with the overflow answer - inside a stage text WRAPS, then
   SHRINKS to the type floor, never widens the box.
+- **THE CATEGORY LIST IS A DEFAULT, NOT A PROHIBITION** (owner-ratified 2026-08-23): *a lower
+  third may declare `stageWidth` when the composition genuinely needs a bounded stage; "leave it
+  unset" remains the default, not an absolute.* The test is whether the SHAPE is the design's or
+  the operator's. A strap cut to the guest's name is the convention and must keep hugging; a
+  design whose silhouette IS the point cannot let a long name redraw it. **`lt64` "Portrait
+  Column" is the recorded exception** and the only one today - a 380px portrait block that stops
+  being portrait the moment a hugging box widens to fit a name, so it declares a stage and
+  `e2e/catalog/footprint-stability.spec.ts` holds it there. A new exception argues itself in its
+  own source and gets added here; it does not need a category flip.
 - **The mechanism.** A design declares `stageWidth` (px at 1080p). `stageBoxCss`
   (shared/base.ts) emits the width, the `--stage-width` marker, `box-sizing` and where the slack
   goes; `stageExtraJs` (shared/stageFit.ts) emits the runtime that holds each line - and the panel
@@ -513,8 +529,12 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   designs, worst -23%, one typing 103px and airing 79px. `scripts/stage-fit-sweep.mjs` is the
   instrument, `e2e/catalog/stage-fit-honesty.spec.ts` the gate. A MULTICOL block is the one line the
   reserve is never pinned on - a definite height makes it spill sideways into hidden overflow
-  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). Measurements and the traps
-  behind it: `docs/FOOTPRINT_STABILITY.md`.
+  columns instead of reflowing (`e2e/catalog/multicol-containment.spec.ts`). **The TEXT-SIZE LADDER
+  is an axis, not a constant**: `stage-fit-sweep`, `type-floor` and `overflow-sweep` all take
+  `--type-scale s|m|l`, because only `font-size` reads `--type-scale` and a box sized off the other
+  knob changes SHAPE as the operator moves it - measured 2026-08-23: ls07, card48 and lt51 cut a
+  word sideways at L (ls07 by 32px) while nineteen more report a vertical clip that is proportional,
+  present at every step and mostly empty leading. Measurements: `docs/FOOTPRINT_STABILITY.md`.
 
 ## The :root style contract
 

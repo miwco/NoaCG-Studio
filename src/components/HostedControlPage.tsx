@@ -10,6 +10,9 @@ import {
   isEventLegal,
   machineStateGroups,
   machineStateNames,
+  overflowNote,
+  OVERFLOW_FIELD_HINT,
+  OVERFLOW_FIELD_MARK,
 } from '../control/controlModel';
 import { nextRow, rowsForSide } from '../control/cueData';
 import { groupCueFields, groupHeading } from '../control/cueFieldGroups';
@@ -198,6 +201,22 @@ export default function HostedControlPage({ slug }: { slug: string }) {
   }, [payload]);
 
   /** Show the selected cue on PREVIEW — local only, never the wire (§1: selection IS preview). */
+  /**
+   * WHICH VALUES DID NOT FIT, per graphic, from each monitor separately (the field ids the
+   * runtime reports through `noacgTextOverflow()` once its fit ladder has run out of room -
+   * owner ruling 2026-08-23, docs/SVG_IMPORT_PLAN.md §3).
+   *
+   * Two maps, because the two monitors are showing different things: PREVIEW carries the values
+   * being typed here, PROGRAM carries what is on air. An editor pointed at the live cue must
+   * warn about air; pointed at a staged cue, about what a TAKE would put up.
+   */
+  const [previewOverflow, setPreviewOverflow] = useState<Record<string, string[]>>({});
+  const [programOverflow, setProgramOverflow] = useState<Record<string, string[]>>({});
+  const noteOverflow = useCallback(
+    (set: typeof setPreviewOverflow) => (graphic: string, _state: unknown, keys: string[]) =>
+      set((m) => ((m[graphic] ?? []).join(',') === keys.join(',') ? m : { ...m, [graphic]: keys })),
+    [],
+  );
   const previewCue = useCallback(
     (cue: OutputCue | null, values?: Record<string, string>) => {
       if (!cue) return;
@@ -395,7 +414,12 @@ export default function HostedControlPage({ slug }: { slug: string }) {
               </h2>
               <div className="pd-screen">
                 <div className="pd-frame" style={{ aspectRatio: '16 / 9' }}>
-                  <PayloadStage ref={previewRef} payload={payload} testId="hosted-preview-stage" />
+                  <PayloadStage
+                    ref={previewRef}
+                    payload={payload}
+                    testId="hosted-preview-stage"
+                    onState={noteOverflow(setPreviewOverflow)}
+                  />
                 </div>
               </div>
             </div>
@@ -415,6 +439,7 @@ export default function HostedControlPage({ slug }: { slug: string }) {
                     payload={payload}
                     emptyLabel={liveLayers.length === 0 ? 'Nothing on air' : undefined}
                     testId="hosted-program-stage"
+                    onState={noteOverflow(setProgramOverflow)}
                   />
                 </div>
               </div>
@@ -440,6 +465,9 @@ export default function HostedControlPage({ slug }: { slug: string }) {
               layerLive={!!selectedLayerCueId}
               layer={layerOf(selectedCue.graphic)}
               liveState={resolved?.live[selectedCue.graphic]?.state ?? null}
+              overflow={
+                (selectedIsLive ? programOverflow : previewOverflow)[selectedCue.graphic] ?? []
+              }
               airedValues={airedData[selectedCue.graphic] ?? null}
               onPreview={(values) => previewCue(selectedCue, values)}
               onSnap={snapTo}
@@ -637,6 +665,7 @@ function HostedCueEditor({
   layerLive,
   layer,
   liveState,
+  overflow,
   airedValues,
   onPreview,
   onSnap,
@@ -651,6 +680,9 @@ function HostedCueEditor({
   layerLive: boolean;
   layer: number | null;
   liveState: { groups?: Record<string, string> } | null;
+  /** The field ids the monitor showing THIS cue reported as too long to fit - PROGRAM's answer
+   *  when the cue is on air, PREVIEW's while it is staged. */
+  overflow: string[];
   /** What the graphic was last told to show, or null when it is not on air. */
   airedValues: Record<string, string> | null;
   onPreview: (values: Record<string, string>) => void;
@@ -749,6 +781,13 @@ function HostedCueEditor({
   // names travel inside the template already, so nothing new is fetched or published.
   const stateNames = useMemo(() => machineStateNames(spec.js), [spec.js]);
   const stateLabel = formatMachineState(stateNames, liveState);
+  /** Only fields this surface actually draws a box for — a graphic may report an id the panel
+   *  does not offer, and a warning about a box nobody can see is worse than none. */
+  const overflowSet = new Set(overflow.filter((key) => descriptorByKey.has(key)));
+  const overflowMessage = overflowNote(
+    [...overflowSet],
+    Object.fromEntries(descriptors.map((d) => [d.key, d.label])),
+  );
 
   return (
     <div className={`pd-editor${live ? ' live' : ''}`} data-testid="hosted-cue-editor">
@@ -767,6 +806,14 @@ function HostedCueEditor({
               ? 'changes push live on ✎ Update'
               : 'changes air on ⟳ TAKE'}
         </span>
+        {/* TOO LONG TO FIT — the same warning, in the same words, as the in-app cue editor
+            (docs/CONTROL_PANEL_PARITY.md §4). The graphic on the monitor reports it; the copy
+            is never cut and the artwork is never reshaped to hide it. */}
+        {overflowMessage && (
+          <span className="pd-editor-fate pd-over-note" data-testid="hosted-cue-overflow">
+            {overflowMessage}
+          </span>
+        )}
         {stateLabel && <span className="hosted-state-chip">{stateLabel}</span>}
         <div className="spacer" />
         {spec.entries.length > 0 && (
@@ -854,8 +901,24 @@ function HostedCueEditor({
                   const d = descriptorByKey.get(key);
                   if (!d) return null;
                   return (
-                    <label key={d.key} className="pd-field">
-                      <span>{d.key.toUpperCase()} · {d.label}</span>
+                    <label
+                      key={d.key}
+                      className={`pd-field${overflowSet.has(d.key) ? ' pd-field-over' : ''}`}
+                    >
+                      <span>
+                        {d.key.toUpperCase()} · {d.label}
+                        {/* The box wears the mark too: one line at the top of a six-field band
+                            does not say which value to shorten. */}
+                        {overflowSet.has(d.key) && (
+                          <b
+                            className="field-over"
+                            title={OVERFLOW_FIELD_HINT}
+                            data-testid={`hosted-over-${d.key}`}
+                          >
+                            {' '}⚠ {OVERFLOW_FIELD_MARK}
+                          </b>
+                        )}
+                      </span>
                       <FieldControl
                         descriptor={d}
                         value={valueOf(d.key)}

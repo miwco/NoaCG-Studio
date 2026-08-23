@@ -245,6 +245,30 @@ Nine anchor zones snapped to safe areas (5 % inset at 1080p ≈ 96 px sides / 54
 use the tighter classic 120 px left inset for lower-left thirds). Zone sets the anchoring edges
 (`left/right/top/bottom` + transforms for centered zones); a nudge offset adds to them.
 
+**THE SAFE AREA BINDS INFORMATION, NOT DECORATION** (owner-ratified 2026-08-23):
+
+> Decorative bars and backgrounds may extend beyond the safe area or bleed to the frame edge.
+> Text, logos, and other essential information must remain safe.
+
+So a full-width band, an accent rule, a scrim or a panel may reach the picture's edge when the
+design means it to — `lt63` "Broadsheet Band" is the catalog's first design that does — while the
+words inside it keep the full inset. The two halves are separate decisions and a design states
+each one.
+
+The gate is `e2e/catalog/long-value-containment.spec.ts`, which drives a 51-character name
+through every lower third and measures the TEXT's extent, ignoring the panel behind it. It reads
+the safe area rather than the frame, and that threshold was chosen by measurement: at 51
+characters 106 of 106 designs keep text on the frame, so a frame assertion passes even on a
+design whose rail has left the picture — it cannot fail, which is the one thing a gate must be
+able to do. **Two measurement facts worth keeping** if this is ever re-derived: a hugging design
+is bounded on the axis its type runs along and on no other, so a turned design (`writing-mode`)
+inherits no cap at all; and a tracked label's layout box includes a letter-space after its last
+glyph — ink that does not exist but width that does — which the span's rect, a Range over its
+contents and a Range over its last character all report identically. Reserve for it in the
+design; there is no measurement that subtracts it. (The turned-type case that found the first of
+those is retired - see `src/templates/lowerThirds/AGENTS.md` - but the axis rule holds for any
+design that hugs vertically.)
+
 ## 7. Generated-code style (readability & editability)
 
 - **Simplest clear code wins.** Prefer direct HTML/CSS/JS: descriptive names, simple top-to-bottom

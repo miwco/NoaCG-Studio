@@ -52,8 +52,13 @@ export interface OutputStage {
   requestState(graphic: string): void;
   /** The latest machine state each document reported (null = none / not machine-bearing). */
   states: ReadonlyMap<string, PreviewMachineState | null>;
-  /** Called whenever a document reports a state that DIFFERS from the last one seen. */
-  onState(cb: (graphic: string, state: PreviewMachineState | null) => void): void;
+  /** The field ids each document last reported as TOO LONG to fit (`noacgTextOverflow()`, see
+   *  PreviewStateMessage.overflow). Empty for a graphic that fits, and for every template that
+   *  answers no such question. */
+  overflow: ReadonlyMap<string, string[]>;
+  /** Called whenever a document reports a state OR an overflow set that differs from the last
+   *  one seen. Both ride the one reply, so one callback carries both. */
+  onState(cb: (graphic: string, state: PreviewMachineState | null, overflow: string[]) => void): void;
   /** The graphic keys the stage hosts, in LAYER order — furthest back first. */
   graphics: string[];
   /** Hide/show the WHOLE stage — the renderer's own surface, never the graphics' own state.
@@ -111,7 +116,8 @@ export function createOutputStage(
 
   const frames = new Map<string, HTMLIFrameElement>();
   const states = new Map<string, PreviewMachineState | null>();
-  const stateCbs: ((graphic: string, state: PreviewMachineState | null) => void)[] = [];
+  const overflow = new Map<string, string[]>();
+  const stateCbs: ((graphic: string, state: PreviewMachineState | null, overflow: string[]) => void)[] = [];
   // Commands QUEUE until the iframe's document has loaded its command listener — a
   // postMessage into an unloaded srcdoc is silently lost, which is exactly what ate the boot
   // recovery burst on a renderer refresh (live commands worked; the restore did not).
@@ -160,6 +166,7 @@ export function createOutputStage(
     stage.appendChild(iframe);
     frames.set(spec.key, iframe);
     states.set(spec.key, null);
+    overflow.set(spec.key, []);
   });
 
   // State replies carry no graphic name — the SOURCE window identifies the sender.
@@ -168,11 +175,15 @@ export function createOutputStage(
     if (!data || data.type !== PREVIEW_STATE_TYPE) return;
     for (const [key, frame] of frames) {
       if (frame.contentWindow === ev.source) {
-        const prev = JSON.stringify(states.get(key) ?? null);
         const next = data.state ?? null;
-        if (JSON.stringify(next) !== prev) {
+        const nextOver = Array.isArray(data.overflow) ? data.overflow.map(String) : [];
+        const moved =
+          JSON.stringify(next) !== JSON.stringify(states.get(key) ?? null) ||
+          nextOver.join(',') !== (overflow.get(key) ?? []).join(',');
+        if (moved) {
           states.set(key, next);
-          for (const cb of stateCbs) cb(key, next);
+          overflow.set(key, nextOver);
+          for (const cb of stateCbs) cb(key, next, nextOver);
         }
         return;
       }
@@ -218,6 +229,7 @@ export function createOutputStage(
       if (loaded.has(graphic)) post(graphic, { cmd: 'state' });
     },
     states,
+    overflow,
     onState: (cb) => stateCbs.push(cb),
     graphics: payload.graphics.map((g) => g.key),
     // Opacity, not `visibility`/`display`: the documents keep compositing and their timelines

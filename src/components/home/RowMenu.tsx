@@ -20,9 +20,10 @@ export interface RowMenuItem {
  * Seven visible buttons per row was a control surface only its author could scan.
  *
  * A plain popover, not a portal: the row grid keeps `overflow: visible` and the menu is
- * positioned against the button. The shell (home/LibMenu) owns the backdrop and, since the
- * 2026-08-23 owner walk, which WAY it opens — the last row of a long library is at the bottom
- * of the viewport, where a downward menu has nowhere to go.
+ * positioned against the button. The shell (home/LibMenu) owns how it CLOSES — an outside press
+ * listened for, never swallowed by a backdrop — and, since the 2026-08-23 owner walk, which WAY
+ * it opens: the last row of a long library is at the bottom of the viewport, where a downward
+ * menu has nowhere to go.
  */
 export default function RowMenu({ items, label = 'More actions' }: { items: RowMenuItem[]; label?: string }) {
   const [open, setOpen] = useState(false);

@@ -20,6 +20,17 @@
 //   node scripts/overflow-sweep.mjs --json out.json    # dump every row for diffing
 //   node scripts/overflow-sweep.mjs --baseline b.json  # only fail on rows WORSE than a baseline
 //   node scripts/overflow-sweep.mjs --with-images      # + a pass with a mark in every image field
+//   node scripts/overflow-sweep.mjs --type-scale s     # render the pass at another text-size step
+//
+// --type-scale s|m|l renders every design at that step of the text ladder (S/M/L = 0.85/1/1.2,
+// `TYPE_SIZE_STEPS` in src/model/styleVocabulary.ts) instead of the default. Only `font-size`
+// consumes `--type-scale`, so a design that sizes a BOX off the same variable while its padding
+// stays fixed changes shape as the ladder moves - and it can fit at M and clip at S or L. The
+// alerts flag did exactly that (~2px over at M, ~7px at S) and no instrument here could see it,
+// because every instrument measured M. Diff a step against the committed M baseline and a row
+// that gains an escape or a clip is a design whose lengths do not all move together. A
+// non-default step REFUSES --update-baseline: a baseline recorded off-axis would quietly retire
+// the gate for every step including this one.
 //
 // --with-images sweeps every image-capable design a SECOND time with a picture in every
 // `filelist` field, recorded as `<id>@image` in the same baseline. A logo is the one operator
@@ -61,13 +72,32 @@ const flagVal = (name) => {
 const { at: jsonAt, val: jsonOut } = flagVal('--json');
 const { at: baseAt, val: baseArg } = flagVal('--baseline');
 const { at: writeAt, val: writeArg } = flagVal('--update-baseline');
+const { at: stepAt, val: stepArg } = flagVal('--type-scale');
+// The LABEL is validated here; the NUMBER is resolved in the page from `TYPE_SIZE_STEPS` itself,
+// so this script cannot hold a stale copy of the ladder the catalog actually ships.
+const STEP = stepAt >= 0 ? String(stepArg || '').toUpperCase() : null;
+if (stepAt >= 0 && !/^[SML]$/.test(STEP)) {
+  console.error(`--type-scale takes one of s, m, l (got "${stepArg ?? ''}").`);
+  process.exit(2);
+}
+// A baseline is the record of what escapes and clips BY DESIGN at the shipped default. Written
+// from another step of the text ladder it would bless that step's shape changes for every step,
+// this one included - the gate would still run and would no longer be measuring anything.
+// Refused HERE rather than after the sweep, so the answer costs no browser time.
+if (STEP && writeAt >= 0) {
+  console.error(
+    `Refusing to write a baseline from a --type-scale ${STEP} sweep — the gate's baseline is the ` +
+      `default text size. Re-run without --type-scale.`,
+  );
+  process.exit(2);
+}
 // --baseline / --update-baseline may be given bare to use the committed default path.
 const baseIn = baseAt >= 0 ? baseArg && !baseArg.startsWith('--') ? baseArg : DEFAULT_BASELINE : null;
 const writeOut = writeAt >= 0 ? (writeArg && !writeArg.startsWith('--') ? writeArg : DEFAULT_BASELINE) : null;
 
 // The one positional is the optional category id — skip flags and the values they consume.
 const consumed = new Set();
-for (const [at, val] of [[jsonAt, jsonOut], [baseAt, baseArg], [writeAt, writeArg]]) {
+for (const [at, val] of [[jsonAt, jsonOut], [baseAt, baseArg], [writeAt, writeArg], [stepAt, stepArg]]) {
   if (at >= 0) {
     consumed.add(at);
     if (val && !val.startsWith('--')) consumed.add(at + 1);
@@ -92,7 +122,18 @@ await page.evaluate(async () => {
   window.__cat = await import('/src/templates/catalog.ts');
   window.__comp = await import('/src/preview/composeDocument.ts');
   window.__wiz = await import('/src/model/wizard.ts');
+  window.__style = await import('/src/model/styleVocabulary.ts');
 });
+
+// The step, read off the ladder the wizard offers rather than typed in again here. `null` means
+// "no option passed at all", so a default run composes exactly the document it always did.
+const typeScale = STEP
+  ? await page.evaluate((label) => {
+      const step = window.__style.TYPE_SIZE_STEPS.find((s) => s.l === label);
+      if (!step) throw new Error(`TYPE_SIZE_STEPS has no step "${label}" - has the ladder changed?`);
+      return step.s;
+    }, STEP)
+  : null;
 
 const targets = await page.evaluate(
   (only) =>
@@ -111,8 +152,12 @@ if (!targets.length) {
 // that either escapes the frame or clips its own content.
 await page.evaluate(
   ({ FRAME_W, FRAME_H, EDGE_TOLERANCE, CLIP_TOLERANCE }) => {
-    window.__scan = async (batch) => {
+    window.__scan = async (batch, typeScale) => {
       document.body.innerHTML = '';
+      // The step goes through `create`, the wizard's own path - not a CSS override on the
+      // finished document, which would also move type in a design that declares no
+      // `--type-scale` at all (an imported one sizes each placed line from its own rule).
+      const step = typeScale == null ? {} : { typeScale };
       const frames = batch.map(({ id, mark }) => {
         const v = window.__cat.variantById(id);
         const f = document.createElement('iframe');
@@ -121,7 +166,9 @@ await page.evaluate(
         f.style.cssText = 'width:1920px;height:1080px;border:0;position:fixed;left:-5000px;top:0';
         try {
           f.srcdoc = window.__comp.composeDocument(
-            mark ? v.create({ logoEnabled: true, logoAssetPath: mark.path, importedImages: [mark] }) : v.create({}),
+            mark
+              ? v.create({ ...step, logoEnabled: true, logoAssetPath: mark.path, importedImages: [mark] })
+              : v.create(step),
           );
         } catch (e) {
           f.dataset.err = String((e && e.message) || e);
@@ -237,7 +284,10 @@ const plan = [
 const rows = [];
 for (let i = 0; i < plan.length; i += 12) {
   const slice = plan.slice(i, i + 12);
-  const res = await page.evaluate((b) => window.__scan(b), slice.map((p) => ({ id: p.t.id, mark: p.mark })));
+  const res = await page.evaluate(
+    ({ batch, ts }) => window.__scan(batch, ts),
+    { batch: slice.map((p) => ({ id: p.t.id, mark: p.mark })), ts: typeScale },
+  );
   res.forEach((r, k) => rows.push({ ...slice[k].t, ...r, id: slice[k].key }));
 }
 await browser.close();
@@ -325,6 +375,9 @@ const anyClip = rows.filter((r) => r.selfClip.length);
 
 console.log(`\nOverflow sweep — ${rows.length} variants${only ? ` (${only})` : ''}`);
 console.log(`  frame ${FRAME_W}x${FRAME_H} · edge tol ${EDGE_TOLERANCE}px · clip tol ${CLIP_TOLERANCE}px`);
+console.log(
+  `  text size: ${STEP ?? 'M'}${STEP ? ` (--type-scale ${typeScale}) — diffed against a baseline recorded at M` : ' (the default)'}`,
+);
 console.log(`  off-frame: ${anyOff.length} variant(s) · self-clip: ${anyClip.length} variant(s) (many by design — see header)\n`);
 
 if (errored.length) {

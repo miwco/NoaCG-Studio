@@ -80,6 +80,17 @@ export interface PreviewBoxMessage {
 export interface PreviewStateMessage {
   type: typeof PREVIEW_STATE_TYPE;
   state: PreviewMachineState | null;
+  /**
+   * WHICH VALUES ARE TOO LONG FOR THIS GRAPHIC — the field ids the runtime could not make fit
+   * even at its readability floor (`noacgTextOverflow()`, today the SVG import's fit ladder;
+   * docs/SVG_IMPORT_PLAN.md §3). `undefined` from a template that answers no such question.
+   *
+   * It rides the STATE message rather than `PreviewMachineState` on purpose: that object is
+   * whatever the template's own `noacgMachineState()` returned and must stay untouched, and
+   * every surface that wants the overflow is already asking for state once a second. One poll,
+   * two answers, and a template that has neither still replies `{ state: null }` as before.
+   */
+  overflow?: string[] | null;
 }
 
 /** Pushed on every animation frame by the document (composeDocument's `simulate` script), so a
