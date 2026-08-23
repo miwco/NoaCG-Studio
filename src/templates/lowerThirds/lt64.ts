@@ -120,15 +120,20 @@ ${maskLines([
   margin-top: calc(20px * var(--scale));  /* air under the label */
   font-size: calc(46px * var(--scale) * var(--type-scale));  /* display scale, sized to wrap in 380px */
   font-weight: var(--display-weight);  /* the family's heading weight */
-  /* 1.2 IS A FLOOR HERE, NOT A TASTE CHOICE, and it is the one number in this file that a stage
-     dictates. A staged panel's lines go through fitStagedText (shared/stageFit.ts), which
-     reserves the row height the design renders at and then shrinks any line whose scrollHeight
-     exceeds it. A line-height BELOW the face's own content box overflows that reserve at the
-     design's OWN sample, so the runtime shrinks the design against itself, every time, before an
-     operator has typed anything. Measured on this design: 1.02 ships 41.9px, 1.1 ships 43.4px,
-     1.15 ships 44.7px, and 1.2 is the first value that ships the 46px above. Tightening this
-     again does not tighten the stack - it shrinks the name. */
-  line-height: 1.2;                /* the face's own content box: the tightest stack that does not shrink */
+  /* 1.2 IS A FLOOR HERE, NOT A TASTE CHOICE - and the reason changed on 2026-08-23, so the number
+     stayed while its justification did not. It used to be the STAGE FIT: that runtime reserved a
+     line box and tested the excess against a content box, so any line-height under the face's own
+     content ratio overflowed at the design's own sample and the design was shrunk against itself
+     (measured then: 1.02 shipped 41.9px, 1.1 43.4px, 1.15 44.7px, 1.2 the declared 46px). That is
+     fixed - shared/stageFit.ts now measures both in the same box - and this line ships 46px at any
+     leading.
+     What still holds the floor is the LINE MASK. Every line here sits in a .lower-third-mask with
+     overflow: hidden sized to the line box, and Sora's glyph box is 1.2em whatever line-height
+     says, so a tighter value pushes the letters out of the mask rather than out of the panel.
+     Measured at 1.05: the mask clips the name by 4px on the y axis, and
+     scripts/overflow-sweep.mjs reports it as a regression. Tightening this still does not tighten
+     the stack - it cuts the tops and tails off the name. */
+  line-height: 1.2;                /* the face's own content box: the tightest stack the mask holds */
   letter-spacing: -0.02em;         /* stacked display type closes up */
   color: var(--text-color);        /* primary text colour */
 }
