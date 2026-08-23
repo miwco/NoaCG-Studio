@@ -52,7 +52,11 @@ export type EasingId =
 
 export interface EasingPreset {
   id: Exclude<EasingId, 'auto'>;
+  /** The Advanced-mode name (the Inspector's preset row) — the motion-design vocabulary. */
   name: string;
+  /** The no-code name (the wizard's Animation step, a graphic's control page): what the curve
+   *  FEELS like, for someone who has never heard "power2.out". */
+  plain: string;
   /** GSAP ease used for entrance (in) animations. */
   gsapIn: string;
   /** GSAP ease used for exit (out) animations. */
@@ -60,92 +64,154 @@ export interface EasingPreset {
   description: string;
   /** 'standard' = safe pick · 'playful' = use sparingly · 'continuous' = loops/timers only. */
   tag: 'standard' | 'playful' | 'continuous';
+  /**
+   * What the curve NEEDS in order to read — the rule the no-code list filters on
+   * (blocks/motionPresets.ts `easingsForMotion`).
+   *
+   * 'time' shapes WHEN the value gets where it is going, so it reads on any property.
+   * 'displacement' is a curve whose whole character is the value leaving its own range and
+   * coming back — an overshoot past the target, or an oscillation around it. That only exists
+   * on a property the renderer does not clamp: a transform channel. Put it on opacity, an
+   * inset() percentage or a blur radius and the character is thrown away at the clamp
+   * (measured in the header above), which is why those motions are not offered it.
+   */
+  needs: 'time' | 'displacement';
+  /**
+   * Whether the NO-CODE surfaces offer it. Everything here stays resolvable — the Inspector's
+   * Advanced picker lists all of them, and a saved template or an AI spec that names one keeps
+   * working — but the wizard's short list drops the entries the measurement in the header found
+   * indistinguishable or wrong-direction on an entrance: `cubic` (byte-identical to `ease-out`
+   * on any entrance), `circ` (3.6 px from the tuned curve across a whole Rise), and the three
+   * inOut/in-direction curves `easy-ease` / `ease-in` / `ease-in-out`, which read only because
+   * they hold the graphic still at the start — the one thing the doctrine above says an
+   * entrance must not do.
+   */
+  simple: boolean;
 }
 
 export const EASINGS: EasingPreset[] = [
   {
     id: 'easy-ease',
     name: 'Easy Ease',
+    plain: 'Gentle',
     gsapIn: 'power1.inOut',
     gsapOut: 'power1.inOut',
     description: 'Gentle S-curve at both ends — the classic smooth default.',
     tag: 'standard',
+    needs: 'time',
+    simple: false,
   },
   {
     id: 'ease-out',
     name: 'Ease Out',
+    plain: 'Smooth',
     gsapIn: 'power2.out',
     gsapOut: 'power2.out',
     description: 'Fast start that settles softly — the safe pick for entrances.',
     tag: 'standard',
+    needs: 'time',
+    simple: true,
   },
   {
     id: 'ease-in',
     name: 'Ease In',
+    plain: 'Slow start',
     gsapIn: 'power2.in',
     gsapOut: 'power2.in',
     description: 'Gentle start that accelerates — the natural pick for exits.',
     tag: 'standard',
+    needs: 'time',
+    simple: false,
   },
   {
     id: 'ease-in-out',
     name: 'Ease In-Out',
+    plain: 'Even',
     gsapIn: 'power2.inOut',
     gsapOut: 'power2.inOut',
     description: 'A stronger S-curve than Easy Ease — smooth both ends, more drive in the middle.',
     tag: 'standard',
+    needs: 'time',
+    simple: false,
   },
   {
     id: 'cubic',
     name: 'Cubic',
+    plain: 'Smooth (paired)',
     gsapIn: 'power2.out',
     gsapOut: 'power2.in',
     description: 'The cubic family with the right direction per phase: out on entry, in on exit.',
     tag: 'standard',
+    needs: 'time',
+    // Its entrance IS Ease Out's entrance (both power2.out, identical at every sampled frame);
+    // only the exit differs. Two names for one entrance is the kind of choice the short list
+    // exists to remove.
+    simple: false,
   },
   {
     id: 'sine',
     name: 'Sine',
+    plain: 'Soft',
     gsapIn: 'sine.out',
     gsapOut: 'sine.in',
     description: 'The softest curve — subtle, almost linear, but never mechanical.',
     tag: 'standard',
+    needs: 'time',
+    simple: true,
   },
   {
     id: 'circ',
     name: 'Circ',
+    plain: 'Round',
     gsapIn: 'circ.out',
     gsapOut: 'circ.in',
     description: 'Rounder than cubic — a strong arrival that eases off late.',
     tag: 'standard',
+    needs: 'time',
+    // 3.6 px from the tuned curve across a whole entrance. Real, and not a choice anyone can
+    // make on purpose.
+    simple: false,
   },
   {
     id: 'expo',
     name: 'Expo',
+    plain: 'Sharp',
     gsapIn: 'expo.out',
     gsapOut: 'expo.in',
     description: 'Dramatic: arrives very fast, settles very late. Great for reveals.',
     tag: 'standard',
+    needs: 'time',
+    simple: true,
   },
   {
     id: 'back',
     name: 'Back',
+    plain: 'Overshoot',
     gsapIn: 'back.out(1.6)',
     gsapOut: 'back.in(1.4)',
     description: 'Snappy pop with a small overshoot in, and a little anticipation out.',
     tag: 'standard',
+    needs: 'displacement',
+    simple: true,
   },
   {
     id: 'bounce',
     name: 'Bounce',
+    plain: 'Bounce',
     gsapIn: 'bounce.out',
     gsapOut: 'power2.in',
     description: 'Lands with bounces. Playful — not a default. Exits cleanly (no bounce out).',
     tag: 'playful',
+    // It never leaves [0, 1], so nothing clamps it — but its character is the value coming
+    // BACK, which needs somewhere to come back from. On opacity that is a flicker (measured:
+    // 0.91 → 0.77 → 0.93), not a bounce.
+    needs: 'displacement',
+    simple: true,
   },
   {
     id: 'elastic',
     name: 'Elastic',
+    plain: 'Spring',
     // The period was 0.4, which the measurement above caught rendering as a single frame's
     // glitch rather than a spring: on a 0.55 s entrance it had already settled by the first
     // sampled frame (opacity 1.00 at t = 0.055 s), with one -10 px flick on the way. 0.7 is
@@ -154,14 +220,22 @@ export const EASINGS: EasingPreset[] = [
     gsapOut: 'power2.in',
     description: 'Springs past and oscillates into place. Playful — not a default.',
     tag: 'playful',
+    needs: 'displacement',
+    simple: true,
   },
   {
     id: 'linear',
     name: 'Linear',
+    plain: 'Steady',
     gsapIn: 'none',
     gsapOut: 'none',
     description: 'Constant speed. Only for continuous motion: tickers, timers, progress bars.',
     tag: 'continuous',
+    needs: 'time',
+    // Kept in the short list even though the doctrine says never to default to it: it is the
+    // one curve a student can pick and immediately SEE the difference of, and "mechanical" is
+    // a legitimate thing to want once.
+    simple: true,
   },
 ];
 

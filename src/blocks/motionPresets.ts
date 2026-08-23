@@ -53,6 +53,7 @@
 // The old note here read "short travel (a rise reads as 'arriving', not as movement)". That was
 // the intent; the measurement is that at 40 px it read as neither.
 
+import { EASINGS, type EasingId, type EasingPreset } from '../model/easings';
 import type { SpxTemplate } from '../model/types';
 import type { AnimData, AnimKeyframe, AnimLayerTracks, AnimStep } from './animData';
 
@@ -179,6 +180,118 @@ export function motionPresetById(id: MotionPresetId): MotionPreset {
   const p = MOTION_PRESETS.find((x) => x.id === id);
   if (!p) throw new Error(`Unknown motion preset: ${id}`);
   return p;
+}
+
+/**
+ * THE SIX FAMILIES the picker actually draws. Ten cards was ten answers to a question that
+ * only has six: Slide's four members and Wipe's two are one motion with a DIRECTION, exactly
+ * as the wizard's own Slide family has always been (its Travel arrows, AnimationStep.tsx). The
+ * bank keeps all ten ids — a saved graphic names one, and the control page reads one back — but
+ * asking a student to choose between "Rise", "Drop", "Slide left" and "Slide right" as four
+ * separate things is asking them to do the grouping in their head.
+ *
+ * Order is the order of the grid: the calm one first, then the one most graphics want, then
+ * the energetic pair, then the two that need the right footage under them.
+ */
+export interface MotionDirection {
+  id: MotionPresetId;
+  arrow: string;
+  /** The tooltip: which way the graphic travels, said as a direction and as an origin. */
+  hint: string;
+}
+
+export interface MotionFamily {
+  id: string;
+  name: string;
+  hint: string;
+  /** What the card picks when the card itself is clicked rather than one of its arrows. */
+  fallback: MotionPresetId;
+  /** Empty for a family that is one motion. */
+  directions: MotionDirection[];
+}
+
+export const MOTION_FAMILIES: MotionFamily[] = [
+  { id: 'fade', name: 'Fade', hint: 'Dissolves up, dissolves away.', fallback: 'fade', directions: [] },
+  {
+    id: 'slide',
+    name: 'Slide',
+    hint: 'Travels in from one edge, back out the same way.',
+    fallback: 'rise',
+    directions: [
+      { id: 'rise', arrow: '↑', hint: 'Up — enters from below' },
+      { id: 'drop', arrow: '↓', hint: 'Down — enters from above' },
+      { id: 'slide-right', arrow: '→', hint: 'Right — enters from the left edge' },
+      { id: 'slide-left', arrow: '←', hint: 'Left — enters from the right edge' },
+    ],
+  },
+  { id: 'pop', name: 'Pop', hint: 'Springs up to size, shrinks away.', fallback: 'pop', directions: [] },
+  { id: 'zoom', name: 'Zoom', hint: 'Settles from larger, drifts off larger.', fallback: 'zoom', directions: [] },
+  { id: 'blur', name: 'Blur', hint: 'Focuses in from a blur, blurs away.', fallback: 'blur', directions: [] },
+  {
+    id: 'wipe',
+    name: 'Wipe',
+    hint: 'Revealed behind a moving edge, retracts.',
+    fallback: 'wipe-right',
+    directions: [
+      { id: 'wipe-right', arrow: '→', hint: 'Right — revealed left to right' },
+      { id: 'wipe-left', arrow: '←', hint: 'Left — revealed right to left' },
+    ],
+  },
+];
+
+/** Every motion belongs to exactly one family; the grid depends on that being true. */
+export function familyOf(id: MotionPresetId): MotionFamily {
+  const f = MOTION_FAMILIES.find((x) => x.fallback === id || x.directions.some((d) => d.id === id));
+  if (!f) throw new Error(`Motion ${id} is in no family — MOTION_FAMILIES has to cover the bank`);
+  return f;
+}
+
+/**
+ * The properties the renderer does NOT clamp — the transform channels, where a value is free
+ * to go past its target and come back. Everything else a motion here animates is bounded at
+ * one or both ends: `opacity` saturates at 1, an `inset()` percentage cannot be negative, a
+ * blur radius cannot. This is the whole basis of `easingsForMotion` below, so it is written as
+ * the renderer's rule rather than as a list of which motions get which curves.
+ */
+const UNCLAMPED_PROPS = new Set(['x', 'y', 'scale', 'scaleX', 'scaleY', 'rotation', 'skewX', 'skewY']);
+
+/** Whether a motion moves the graphic through space or size — i.e. whether an overshooting or
+ *  oscillating curve has anywhere to overshoot INTO. Read off the motion's own tracks. */
+export function motionIsUnclamped(preset: MotionPreset): boolean {
+  return [...Object.keys(preset.in.from), ...Object.keys(preset.out.from)].some((p) => UNCLAMPED_PROPS.has(p));
+}
+
+/**
+ * The easing choices a motion can actually SHOW — the no-code list, in the order the dropdown
+ * renders them ('auto' is not here; it is always first and always legal).
+ *
+ * Two filters, one rule each. `simple` drops the curves the measurement in model/easings.ts
+ * found indistinguishable or wrong-direction (the same list for every motion). `needs` is the
+ * per-motion half the owner asked for: a curve whose character is overshoot or oscillation is
+ * offered only on a motion with an unclamped property to spend it on, so Fade, Blur and the
+ * two Wipes stop offering Overshoot / Bounce / Spring — which on them render as, respectively,
+ * a faster fade, a flicker, and nothing at all.
+ *
+ * Takes EVERY phase the choice will land on, because one easing setting drives both: a
+ * displacement curve is offered only when it can be shown on all of them. "Rise in, Fade out"
+ * therefore behaves like Fade for this question — an Overshoot that reads on the way on and
+ * clamps on the way off is exactly the half-working control this list exists to remove.
+ *
+ * A phase that is `null` or absent is not on a universal motion (it holds one of the catalog's
+ * own choreographies, which move whole boxes AND their parts) and asks nothing of the filter.
+ */
+export function easingsForMotions(ids: readonly (MotionPresetId | null | undefined)[]): EasingPreset[] {
+  const unclamped = ids.every((id) => !id || motionIsUnclamped(motionPresetById(id)));
+  return EASINGS.filter((e) => e.simple && (unclamped || e.needs === 'time'));
+}
+
+/** Whether a choice survives the motion(s) it sits beside — the picker falls back to 'auto'
+ *  when it does not, rather than keeping a setting that is silently doing nothing. */
+export function easingLegalForMotions(
+  ids: readonly (MotionPresetId | null | undefined)[],
+  choice: EasingId,
+): boolean {
+  return choice === 'auto' || easingsForMotions(ids).some((e) => e.id === choice);
 }
 
 export type MotionPhaseName = 'in' | 'out';

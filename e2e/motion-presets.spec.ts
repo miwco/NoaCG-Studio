@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { chooseType, pickDesign } from './_browse';
 import { settleDurableWrites } from './_durable';
 import { dropSvg, SCOREBUG_SVG } from './_svg-import';
 
@@ -11,8 +12,12 @@ import { dropSvg, SCOREBUG_SVG } from './_svg-import';
 //   - a phase can be picked alone (In only / Out only) and the speed knob writes NOACG_ANIM.speed;
 //   - the engine KEEPS what it promised to keep - lifecycle calls, ambient loops, layers outside
 //     the root - and clears a styled lifecycle arrow that would otherwise play instead;
-//   - the wizard's imported-design Animation step offers the ten universal cards (plus the SVG
-//     layer stagger), and a wizard pick lands as the same data the control page reads back.
+//   - the wizard's imported-design Animation step leads with the bank, drawn as SIX family cards
+//     (plus the SVG layer stagger), and a wizard pick lands as the same data the control page
+//     reads back;
+//   - the easing dropdown offers what the picked motion can actually RENDER, and drops an
+//     impossible choice to Auto rather than keeping a setting that does nothing;
+//   - a catalog design keeps its own choreographies and meets the universal six under them.
 
 /** Save one catalog design to the library and open its control page. */
 async function openControlPage(page: Page, category: string, name: string): Promise<string> {
@@ -68,14 +73,16 @@ test('control page: the Motion section rewrites the entrance and exit on the gra
   await expect(summary).toContainText('In: its own');
   await expect(summary).toContainText('Out: its own');
   await summary.click();
+  // SIX cards, not ten: Slide's four directions and Wipe's two are arrows inside their own
+  // cell, so the grid asks one question per motion rather than one per direction of one motion.
   const cards = page.locator('.motion-card');
-  await expect(cards).toHaveCount(10);
+  await expect(cards).toHaveCount(6);
   await expect(page.locator('.motion-card[data-selected]')).toHaveCount(0);
 
-  // Pick Rise for both phases (the default direction).
+  // Pick Rise for both phases (the default direction) — the ↑ arrow of the Slide family.
   await page.getByTestId('motion-rise').click();
   await expect(summary).toContainText('In: Rise · Out: Rise');
-  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Rise/);
+  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Slide/);
   await settleDurableWrites(page);
   let anim = await savedAnim(page, id);
   // The UNIT is the root's children - the accent beside the box and the box - moving together;
@@ -111,7 +118,9 @@ test('control page: the Motion section rewrites the entrance and exit on the gra
   await expect(page.getByTestId('control-motion-summary')).toContainText('In: Rise · Out: Fade · Faster');
   await page.getByTestId('control-motion-summary').click();
   await page.getByTestId('motion-direction-in').click();
-  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Rise/);
+  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Slide/);
+  // …and the family's own arrow says WHICH slide it is — the direction survives the reload too.
+  await expect(page.getByTestId('motion-rise')).toHaveClass(/active/);
   await page.getByTestId('motion-direction-out').click();
   await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Fade/);
 });
@@ -198,16 +207,18 @@ test('wizard: an imported SVG picks from the same ten motions on its Animation s
   await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click(); // Animation
   await expect(page.getByTestId('wz-stepcount')).toContainText('4');
 
-  // The universal bank replaces the category's four whole-unit cards; the SVG layer stagger -
-  // the one card that knows this design's own layers - stays beside them.
-  await expect(page.locator('.motion-card')).toHaveCount(11);
+  // The universal bank replaces the category's four whole-unit cards and draws as SIX family
+  // cards; the SVG layer stagger - the one card that knows this design's own layers - stays
+  // beside them, so seven in total where there used to be eleven.
+  await expect(page.locator('.motion-card')).toHaveCount(7);
   await expect(page.getByTestId('wz-anim-design-stagger')).toBeVisible();
   await expect(page.locator('.wz-anim', { hasText: 'Pop' })).toHaveCount(1);
   // Fade is the default, lit for both phases before anything is picked.
   await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Fade/);
 
   await page.getByTestId('motion-slide-left').click();
-  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Slide left/);
+  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Slide/);
+  await expect(page.getByTestId('motion-slide-left')).toHaveClass(/active/);
 
   // Finish into a production, then find the saved graphic's control page.
   await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click(); // Finish
@@ -237,4 +248,99 @@ test('wizard: an imported SVG picks from the same ten motions on its Animation s
   }, id);
   expect(unit.inLayers).toEqual(['.imported-design-box']);
   expect(unit.x).toEqual([170, 0]);
+});
+
+// THE EASING DROPDOWN REACTS TO THE MOTION (session A, 2026-08-23). The owner: "I never use the
+// dropdown menu because I feel like it doesn't change the easing … How can you do a back ease or
+// bounce ease with a fade?" The measurement (model/easings.ts's header) says the choice always
+// reached the keyframes and the overshoot curves simply had nowhere to go on a clamped property.
+// These cases pin the rule that came out of it: the list is what the motion can SHOW, and a
+// choice the new motion cannot show falls back to Auto instead of sitting there doing nothing.
+test('wizard: the easing list is what the picked motion can render, and an impossible curve falls back to Auto', async ({ page }) => {
+  await page.goto('/app');
+  await dropSvg(page, SCOREBUG_SVG);
+  await page.locator('.wz-modal').getByRole('button', { name: 'Next' }).click(); // Animation
+  await expect(page.getByTestId('wz-stepcount')).toContainText('4');
+
+  const easing = page.locator('.wz-modal .panel-section', { hasText: 'Easing' }).locator('select');
+  const options = () => easing.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+
+  // Fade animates opacity only, which the renderer clamps at 1: the three displacement curves
+  // are absent, and the short list is Auto plus four time-shaping curves.
+  await page.getByTestId('motion-fade').click();
+  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'linear']);
+
+  // Slide up moves the graphic, so overshoot has somewhere to go and the same list grows by
+  // exactly the three that need it. Nothing else changes — this is one rule, not two lists.
+  await page.getByTestId('motion-rise').click();
+  // The order is the doctrine's own (safe curves, then playful, then the continuous one), so
+  // the three appear before Steady rather than appended at the end.
+  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'back', 'bounce', 'elastic', 'linear']);
+
+  // Pick one of the three, then go back to Fade: the choice cannot be rendered there, so it
+  // drops to Auto rather than persisting invisibly.
+  await easing.selectOption('bounce');
+  await expect(easing).toHaveValue('bounce');
+  await page.getByTestId('motion-fade').click();
+  await expect(easing).toHaveValue('auto');
+  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'linear']);
+
+  // A curve the new motion CAN show is kept — the fallback fires on impossibility, not on
+  // every motion click.
+  await easing.selectOption('expo');
+  await page.getByTestId('motion-zoom').click();
+  await expect(easing).toHaveValue('expo');
+});
+
+test('wizard: a catalog design keeps its own cards and offers the universal six under them', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await chooseType(page, 'Lower thirds');
+  await pickDesign(page, 'Hairline');
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Next →' }).click();
+  await expect(page.locator('.wz-anim-grid')).toBeVisible();
+
+  // The design's own choreographies lead, in their own grid. Not one of them is a whole-unit
+  // motion the universal bank duplicates (they all move a box AND stagger the lines inside it),
+  // so the bank is an addition here — folded away, and empty-handed until it is opened.
+  const fold = page.getByTestId('wz-anim-universal');
+  await expect(fold).toBeVisible();
+  // Closed: the cards are in the DOM but take no room. `toBeVisible()` is blind to the UA's
+  // display rule on a closed <details> (e2e/AGENTS.md), so this measures the height.
+  const gridHeight = () => page.locator('.motion-grid').evaluate((el) => el.getBoundingClientRect().height);
+  expect(await gridHeight()).toBe(0);
+  await fold.locator('summary').click();
+  expect(await gridHeight()).toBeGreaterThan(0);
+  await expect(page.locator('.motion-card')).toHaveCount(6);
+
+  // Picking one writes the unit motion onto THIS design — the same engine, on a category that
+  // never saw the universal bank before. Read out of the LIVE PREVIEW's own emitted data block,
+  // which is the code the Create button would hand over.
+  await page.getByTestId('motion-drop').click();
+  await expect(page.locator('.motion-card[data-selected]')).toHaveText(/Slide/);
+  await expect
+    .poll(
+      async () => {
+        try {
+          return await page
+            .frameLocator('.wz-side iframe')
+            .locator('body')
+            .evaluate(() => {
+              const anim = (window as unknown as Record<string, { steps: { layers: Record<string, Record<string, { value: unknown }[]>> }[] }>).NOACG_ANIM;
+              if (!anim) return null;
+              const layers = anim.steps[0].layers;
+              const y = layers['.lower-third-box']?.y?.map((k) => k.value);
+              // The lines' own stagger is gone from the entrance: a unit motion is a clean swap
+              // here exactly as it is on the control page.
+              const lines = Object.keys(layers).filter((s) => /#f\d/.test(s)).length;
+              return JSON.stringify({ y, lines });
+            });
+        } catch {
+          return null; // caught mid-rebuild; the poll retries against the fresh document
+        }
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(JSON.stringify({ y: [-110, 0], lines: 0 }));
 });

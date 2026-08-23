@@ -1,17 +1,28 @@
 // THE UNIVERSAL IN/OUT PICKER — the no-code way to change how a graphic comes on and goes
 // off air. One presentational component over one bank (blocks/motionPresets.ts), mounted
-// in two places: the wizard's Animation step (an imported design picks its motion before it
-// exists) and a saved graphic's control page (any data-block graphic changes its motion
-// after). Both hosts hold the state — the wizard in its draft, the control page in the
-// template itself, read back through currentMotionPreset — so this never owns a pick; it
-// shows which card each phase holds and reports a click with the phases it applies to.
+// in two places: the wizard's Animation step (a design picks its motion before it exists)
+// and a saved graphic's control page (any data-block graphic changes its motion after).
+// Both hosts hold the state — the wizard in its draft, the control page in the template
+// itself, read back through currentMotionPreset — so this never owns a pick; it shows which
+// card each phase holds and reports a click with the phases it applies to.
+//
+// SIX CARDS, not ten: Slide and Wipe draw their members as direction arrows inside the cell
+// (MOTION_FAMILIES). The bank is unchanged — every arrow picks a real preset id, and a card
+// clicked on its own picks whichever member the phase already holds — but the grid now asks
+// one question per motion instead of one per direction of one motion.
 //
 // The direction row is the wizard's own vocabulary (AnimationStep.tsx): one card for both
 // phases by default, or the entrance / the exit alone, which is how a student ends up with
 // "rise in, fade out" without a timeline.
 
 import type { ReactNode } from 'react';
-import { MOTION_PRESETS, type MotionPhaseName, type MotionPresetId } from '../blocks/motionPresets';
+import {
+  MOTION_FAMILIES,
+  MOTION_PRESETS,
+  motionPresetById,
+  type MotionPhaseName,
+  type MotionPresetId,
+} from '../blocks/motionPresets';
 import type { AnimPhase } from '../blocks/presetRegistry';
 
 export const MOTION_DIRECTIONS: { id: AnimPhase; label: string; hint: string }[] = [
@@ -96,34 +107,58 @@ export default function MotionPresetPicker({
         <p className="hint" data-testid="motion-picker-disabled">{disabledReason}</p>
       ) : (
         <div className="motion-grid">
-          {MOTION_PRESETS.map((p) => {
-            const isIn = inId === p.id;
-            const isOut = outId === p.id;
+          {MOTION_FAMILIES.map((family) => {
+            const members = family.directions.length > 0 ? family.directions.map((d) => d.id) : [family.fallback];
+            const isIn = inId !== null && members.includes(inId);
+            const isOut = outId !== null && members.includes(outId);
             const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
+            // Which member the family holds for the phase the direction names — the arrow that
+            // lights, and what the card re-picks when it is clicked with a direction already
+            // chosen (clicking "Slide" must not silently throw away "left").
+            const held = (direction === 'out' ? outId : inId) ?? (direction === 'both' ? inId : null);
+            const current = held !== null && members.includes(held) ? held : family.fallback;
+            const pick = (id: MotionPresetId) => {
+              const phases = phasesFor(direction);
+              const already = phases.every((ph) => (ph === 'in' ? inId : outId) === id);
+              if (already && onReplay) return onReplay();
+              onPick(id, phases);
+            };
             return (
-              <button
-                key={p.id}
-                className={`wz-anim motion-card ${selected ? 'selected' : ''}`}
-                onClick={() => {
-                  const phases = phasesFor(direction);
-                  const already = phases.every((ph) => (ph === 'in' ? isIn : isOut));
-                  if (already && onReplay) return onReplay();
-                  onPick(p.id, phases);
-                }}
-                title={p.description}
-                data-testid={`motion-${p.id}`}
-                data-selected={selected ? 'true' : undefined}
-              >
-                <strong>
-                  {p.name}
-                  {mixed && (isIn || isOut) && (
-                    <span className="muted" style={{ fontWeight: 400 }}>
-                      {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
-                    </span>
-                  )}
-                </strong>
-                <span className="hint">{p.hint}</span>
-              </button>
+              <div className="motion-cell" key={family.id}>
+                <button
+                  className={`wz-anim motion-card ${selected ? 'selected' : ''}`}
+                  onClick={() => pick(current)}
+                  title={motionPresetById(current).description}
+                  data-testid={`motion-${family.id}`}
+                  data-selected={selected ? 'true' : undefined}
+                >
+                  <strong>
+                    {family.name}
+                    {mixed && (isIn || isOut) && (
+                      <span className="muted" style={{ fontWeight: 400 }}>
+                        {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
+                      </span>
+                    )}
+                  </strong>
+                  <span className="hint">{family.hint}</span>
+                </button>
+                {family.directions.length > 0 && (
+                  <div className="wz-anim-dirs" role="group" aria-label={`${family.name} direction`}>
+                    {family.directions.map((d) => (
+                      <button
+                        key={d.id}
+                        className={selected && current === d.id ? 'active' : ''}
+                        onClick={() => pick(d.id)}
+                        title={d.hint}
+                        aria-label={`${family.name}: ${d.hint}`}
+                        data-testid={`motion-${d.id}`}
+                      >
+                        {d.arrow}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
           {children}

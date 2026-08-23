@@ -420,10 +420,24 @@ lifecycle arrow (play/stop with fade/push/wipe) would play INSTEAD of the keyfra
 rewrite clears it. `currentMotionPreset(template, data, phase)` READS the lit card back from the
 data (times + values per target, ease ignored - an easing is a modifier, not another motion;
 nothing is stamped into the block, so a timeline edit honestly lights nothing). Two hosts, one
-component (`components/MotionPresetPicker.tsx`): the saved graphic's control page (home/) and the
-wizard's Animation step for an imported design (wizard/draft.ts `universalPick`, applied at build
-through this same function, so the wizard preview, the created graphic and the page that reads it
-back agree by construction). Pinned by e2e/motion-presets.spec.ts.
+component (`components/MotionPresetPicker.tsx`): the saved graphic's control page (home/) and
+EVERY wizard Animation step whose built design has a unit to move (wizard/draft.ts
+`usesUniversalMotion` asks the built template, never the category; `universalPick` is applied at
+build through this same function, so the wizard preview, the created graphic and the page that
+reads it back agree by construction). Pinned by e2e/motion-presets.spec.ts.
+
+**The picker draws SIX cards, not ten** (`MOTION_FAMILIES`): Slide's four members and Wipe's two
+are one motion with a DIRECTION and render as arrows in the cell. The bank keeps all ten ids -
+every arrow picks a real one and a saved graphic names one.
+
+**`easingsForMotions(ids)` is the easing offer**, and it is a RULE over the motion's own tracks,
+never a table: `UNCLAMPED_PROPS` names the transform channels the renderer lets a value overshoot
+into, so an easing whose character IS overshoot or oscillation (`needs: 'displacement'` -
+back / bounce / elastic, model/easings.ts) is offered only on a motion that animates one of them.
+Fade, Blur and the Wipes therefore do not offer them: measured, they render as a faster fade, a
+flicker, and nothing. It takes EVERY phase the one easing setting will land on. `simple` on the
+easing is the second, motion-independent filter (the near-duplicates and wrong-direction curves);
+the Inspector's Advanced picker still lists all twelve.
 
 ## presetRegistry.ts - the preset library (what is left of animPatch)
 

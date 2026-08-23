@@ -2704,6 +2704,10 @@ details:not([open]) > *:not(summary) { display: none; }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* "Simple motion" — the universal bank folded under a design that leads with its own cards.
+   A fold rather than a second grid: the six are an addition here, not a replacement. */
+.wz-anim-universal { margin-top: 10px; }
+.wz-anim-universal > summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
 .wz-anim-dirs { display: flex; gap: 4px; }
 .wz-anim-dirs button { flex: 1; padding: 4px 0; font-size: 14px; line-height: 1; }
 .wz-anim-dirs button.active { border-color: var(--accent); color: var(--accent); }
@@ -2714,6 +2718,13 @@ details:not([open]) > *:not(summary) { display: none; }
    name and a one-line hint, four across at desktop width. The hint clamps to two lines so a
    longer description never makes its row taller than its neighbours. */
 .motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+/* One grid cell = one MOTION FAMILY: its card, and (for Slide and Wipe) the direction arrows
+   under it. The arrows are a sibling of the card rather than a child, because a button inside
+   a button is not valid HTML and Chromium drops the inner one's clicks. They reuse the Slide
+   family's own `.wz-anim-dirs` styling so the two direction pickers on this step - the design's
+   own Travel box and a universal family's arrows - read as the same control. */
+.motion-cell { display: flex; flex-direction: column; gap: 4px; }
+.motion-cell .wz-anim-dirs button { padding: 2px 0; font-size: 13px; }
 .motion-card { padding: 8px 10px; gap: 2px; }
 .motion-card strong { font-size: 13px; }
 .motion-card .hint {

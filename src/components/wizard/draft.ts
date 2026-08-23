@@ -18,7 +18,13 @@ import { anyPresetById, type AnimPhase } from '../../blocks/presetRegistry';
 import { parseAnimData } from '../../blocks/animData';
 import { writeAnimData } from '../../templates/shared/animRuntime';
 import { applyPresetData, presetDonor } from '../../blocks/presetApply';
-import { applyMotionPreset, motionPresetById, type MotionPick, type MotionPresetId } from '../../blocks/motionPresets';
+import {
+  applyMotionPreset,
+  motionPresetById,
+  motionTargets,
+  type MotionPick,
+  type MotionPresetId,
+} from '../../blocks/motionPresets';
 import { resolveEasing } from '../../model/easings';
 import type {
   AnimPresetId,
@@ -872,11 +878,23 @@ export function isWholeUnitPreset(id: AnimPresetId): boolean {
   return WHOLE_UNIT_AS_UNIVERSAL[id] !== undefined;
 }
 
-/** Whether a variant's Animation step picks from the universal bank (blocks/motionPresets.ts)
- *  rather than its category's own choreographies. An imported design is one picture, so its
- *  category bank was already the whole-unit kind - the universal bank is that, ten ways. */
-export function usesUniversalMotion(variant: TemplateVariant): boolean {
-  return variant.category === 'imported-design';
+/**
+ * Whether a design's Animation step can offer the universal bank (blocks/motionPresets.ts)
+ * BESIDE its category's own choreographies.
+ *
+ * Asked of the BUILT TEMPLATE, not of the category. The universal bank's promise is structural
+ * - it moves the root's drawn children as one unit - so the honest question is whether this
+ * design has such a unit, which only the emitted markup and its data block can answer. That is
+ * also why it is now every category's question rather than the imported design's: an imported
+ * design was never special here, it was only the first one asked (the ten motions were already
+ * proven to apply and read back on every catalog category that carries a data block -
+ * e2e/motion-presets.spec.ts). A hand-written variant with no data block, or a design whose
+ * root draws nothing directly, answers false and keeps its own cards alone.
+ */
+export function usesUniversalMotion(template: SpxTemplate | null): boolean {
+  if (!template) return false;
+  const data = parseAnimData(template.js);
+  return !!data && motionTargets(template, data).length > 0;
 }
 
 /** The universal motion each phase of the draft resolves to: the explicit pick, else the
@@ -896,7 +914,10 @@ export function universalPick(draft: WizardDraft, variant: TemplateVariant): Mot
  *  page applies after creation, so the wizard preview, the created graphic and the picker
  *  that reads it back agree by construction. */
 function withUniversalMotion(template: SpxTemplate, draft: WizardDraft, variant: TemplateVariant): SpxTemplate {
-  if (!usesUniversalMotion(variant)) return template;
+  // No structural gate here: `pick` is empty unless a universal card was actually clicked (or
+  // the design's own default maps to one), and applyMotionPreset already answers null for a
+  // template with no unit to move. Asking usesUniversalMotion again would only parse the same
+  // data block a second time to reach the same conclusion.
   const pick = universalPick(draft, variant);
   if (!pick.in && !pick.out) return template;
   const data = parseAnimData(template.js);

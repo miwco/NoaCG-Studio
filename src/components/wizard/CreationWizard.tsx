@@ -1727,6 +1727,7 @@ export default function CreationWizard() {
             {step === 4 && mode === 'design' && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
@@ -1739,6 +1740,7 @@ export default function CreationWizard() {
             {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
@@ -1805,6 +1807,7 @@ export default function CreationWizard() {
             {step === animStep && (mode === 'template' || mode === 'import') && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
