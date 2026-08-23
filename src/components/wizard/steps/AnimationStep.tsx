@@ -2,7 +2,9 @@ import { SLIDE_FAMILY, isSlidePreset } from '../../../templates/lowerThirds/anim
 import { EASINGS, type EasingId } from '../../../model/easings';
 import { ALL_PRESETS, type AnimPhase } from '../../../blocks/presetRegistry';
 import type { AnimPresetId, AnimSpeed, TemplateVariant } from '../../../model/wizard';
-import type { DraftPatch, WizardDraft } from '../draft';
+import { isWholeUnitPreset, universalPick, usesUniversalMotion, type DraftPatch, type WizardDraft } from '../draft';
+import { MOTION_PRESETS, type MotionPhaseName, type MotionPresetId } from '../../../blocks/motionPresets';
+import MotionPresetPicker from '../../MotionPresetPicker';
 
 interface Props {
   variant: TemplateVariant;
@@ -37,10 +39,16 @@ const SLIDE_DIRS: { id: AnimPresetId; arrow: string; hint: string }[] = [
 
 /** Step 5 — motion: direction, preset, speed, easing, and multi-step mode. */
 export default function AnimationStep({ variant, draft, onDraft, onReplay }: Props) {
+  // An imported design picks from the UNIVERSAL bank (blocks/motionPresets.ts) - ten unit
+  // motions in place of the category's four whole-unit presets, which the bank stands in for;
+  // its other cards (the SVG layer stagger) stay beside them. Same engine as the saved
+  // graphic's control page, so what is picked here is what that page reads back.
+  const universal = usesUniversalMotion(variant);
+  const motion = universal ? universalPick(draft, variant) : {};
   // The slide family renders as ONE card with a direction picker: a variant that lists
   // any member offers all four (the standard structure takes any direction).
   const presets = ALL_PRESETS.filter(
-    (p) => variant.animationPresets.includes(p.id) && !isSlidePreset(p.id),
+    (p) => variant.animationPresets.includes(p.id) && !isSlidePreset(p.id) && !(universal && isWholeUnitPreset(p.id)),
   );
   const hasSlide = variant.animationPresets.some(isSlidePreset);
   const presetName = (id: AnimPresetId) => ALL_PRESETS.find((p) => p.id === id)?.name ?? id;
@@ -48,7 +56,13 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
   // The entrance preset; the exit matches it unless the user mixed a different one in.
   const inActive = draft.animation.presetId ?? variant.animationPresets[0];
   const outActive = draft.animation.outPresetId ?? inActive;
-  const mixed = inActive !== outActive;
+  const mixed = universal ? (motion.in ?? inActive) !== (motion.out ?? outActive) : inActive !== outActive;
+  /** What a phase holds now, for the "Now: In X · Out Y" line - a universal motion or a card. */
+  const phaseName = (ph: MotionPhaseName) => {
+    const m = ph === 'in' ? motion.in : motion.out;
+    if (m) return MOTION_PRESETS.find((p) => p.id === m)?.name ?? m;
+    return presetName(ph === 'in' ? inActive : outActive);
+  };
 
   // Direction only applies where presets share the standard in/out structure —
   // continuous formats (credits, tickers) and clocks are one motion, not two phases.
@@ -68,18 +82,29 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
     : isInSlide && isOutSlide && inActive === outActive;
 
   const pickPreset = (id: AnimPresetId) => {
+    // A category card picked under the universal bank takes its phases back from it.
+    const clearMotion = (phases: MotionPhaseName[]): Partial<WizardDraft['animation']> =>
+      universal ? Object.fromEntries(phases.map((ph) => [ph === 'in' ? 'motionIn' : 'motionOut', null])) : {};
     if (direction === 'both') {
-      if (inActive === id && outActive === id) return onReplay();
+      if (inActive === id && outActive === id && !motion.in && !motion.out) return onReplay();
       // One style for both phases (the default): the exit follows the entrance.
-      onDraft({ animation: { presetId: id, outPresetId: null } });
+      onDraft({ animation: { presetId: id, outPresetId: null, ...clearMotion(['in', 'out']) } });
     } else if (direction === 'in') {
-      if (inActive === id) return onReplay();
+      if (inActive === id && !motion.in) return onReplay();
       // Pin the exit to its current style so only the entrance changes.
-      onDraft({ animation: { presetId: id, outPresetId: outActive } });
+      onDraft({ animation: { presetId: id, outPresetId: outActive, ...clearMotion(['in']) } });
     } else {
-      if (outActive === id) return onReplay();
-      onDraft({ animation: { outPresetId: id } });
+      if (outActive === id && !motion.out) return onReplay();
+      onDraft({ animation: { outPresetId: id, ...clearMotion(['out']) } });
     }
+  };
+
+  /** A universal card: write the motion on the phases the direction names. */
+  const pickMotion = (id: MotionPresetId, phases: MotionPhaseName[]) => {
+    const patch: Partial<WizardDraft['animation']> = {};
+    if (phases.includes('in')) patch.motionIn = id;
+    if (phases.includes('out')) patch.motionOut = id;
+    onDraft({ animation: patch });
   };
 
   // Credits have no line-reveal steps (their content is the credit list itself).
@@ -119,8 +144,8 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
             {activeDirection.hint}
             {mixed && (
               <>
-                {' '}Now: <strong>In</strong> {presetName(inActive)} · <strong>Out</strong>{' '}
-                {presetName(outActive)}.
+                {' '}Now: <strong>In</strong> {phaseName('in')} · <strong>Out</strong>{' '}
+                {phaseName('out')}.
               </>
             )}
           </p>
@@ -136,6 +161,42 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
               : '(click a preset to watch it in the preview)'}
           </span>
         </h3>
+        {universal ? (
+          <MotionPresetPicker
+            hideDirection
+            inId={motion.in ?? null}
+            outId={motion.out ?? null}
+            direction={direction}
+            onDirection={(d) => onDraft({ animation: { direction: d } })}
+            onPick={pickMotion}
+            onReplay={onReplay}
+          >
+            {presets.map((p) => {
+              const isIn = inActive === p.id && !motion.in;
+              const isOut = outActive === p.id && !motion.out;
+              const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
+              return (
+                <button
+                  key={p.id}
+                  className={`wz-anim motion-card ${selected ? 'selected' : ''}`}
+                  onClick={() => pickPreset(p.id)}
+                  title={p.description}
+                  data-testid={`wz-anim-${p.id}`}
+                >
+                  <strong>
+                    {p.name}
+                    {mixed && (isIn || isOut) && (
+                      <span className="muted" style={{ fontWeight: 400 }}>
+                        {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
+                      </span>
+                    )}
+                  </strong>
+                  <span className="hint">{p.description}</span>
+                </button>
+              );
+            })}
+          </MotionPresetPicker>
+        ) : (
         <div className="wz-anim-grid">
           {hasSlide && (
             <button
@@ -156,11 +217,11 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
             </button>
           )}
           {presets.map((p) => {
-            const isIn = inActive === p.id;
-            const isOut = outActive === p.id;
+            const isIn = inActive === p.id && !motion.in;
+            const isOut = outActive === p.id && !motion.out;
             const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
             return (
-              <button key={p.id} className={`wz-anim ${selected ? 'selected' : ''}`} onClick={() => pickPreset(p.id)}>
+              <button key={p.id} className={`wz-anim ${selected ? 'selected' : ''}`} onClick={() => pickPreset(p.id)} data-testid={`wz-anim-${p.id}`}>
                 <strong>
                   {p.name}
                   {mixed && (isIn || isOut) && (
@@ -198,6 +259,7 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
             </div>
           )}
         </div>
+        )}
       </div>
 
       <div className="row" style={{ alignItems: 'flex-start', gap: 24 }}>

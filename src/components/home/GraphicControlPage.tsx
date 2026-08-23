@@ -24,11 +24,32 @@ import { addGraphicToShow, createShowNamedChecked } from '../../model/shows';
 import { raiseStorageAlert } from '../../store/storageAlert';
 import { openGraphicById, useSaveUi } from '../../store/saveActions';
 import { setFieldDefault } from '../../blocks/edit';
+import { parseAnimData } from '../../blocks/animData';
+import {
+  applyMotionPreset,
+  currentMotionPreset,
+  motionPresetById,
+  motionTargets,
+  type MotionPick,
+  type MotionPresetId,
+} from '../../blocks/motionPresets';
+import { writeAnimData } from '../../templates/shared/animRuntime';
+import type { AnimPhase } from '../../blocks/presetRegistry';
+import MotionPresetPicker from '../MotionPresetPicker';
 import { FieldRow } from '../fields/FieldControl';
 import BrandLogo from '../BrandLogo';
 import ProductionPicker from './ProductionPicker';
 import { IconControl } from '../icons';
 import { slug } from '../../export/common';
+
+/** The speed knob's three stops — the wizard's Animation step offers the same three. */
+const MOTION_SPEEDS: { label: string; value: number }[] = [
+  { label: 'Slower', value: 0.75 },
+  { label: 'Normal', value: 1 },
+  { label: 'Faster', value: 1.5 },
+];
+const motionName = (id: MotionPresetId | null) => (id ? motionPresetById(id).name : 'its own');
+const speedName = (speed: number) => MOTION_SPEEDS.find((s) => s.value === speed)?.label ?? `${speed}×`;
 
 /**
  * The per-graphic CONTROL PANEL (route `#/control/<graphicId>`, docs/SAVED_CONTENT_MODEL.md §4):
@@ -115,6 +136,27 @@ export default function GraphicControlPage({ id }: { id: string }) {
   const postCmd = useCallback((msg: PreviewCmd) => {
     postPreviewCmd(iframeRef.current?.contentWindow, msg);
   }, []);
+
+  // THE MOTION SECTION — the no-code IN/OUT picker (blocks/motionPresets.ts) for a saved
+  // graphic. The cards that light are READ BACK from the template's data block every render
+  // (currentMotionPreset), never remembered here: the template is the source of truth, and a
+  // graphic whose motion came from the catalog or a timeline edit honestly lights nothing.
+  const anim = useMemo(() => (template ? parseAnimData(template.js) : null), [template]);
+  const motionIn = useMemo(() => (template && anim ? currentMotionPreset(template, anim, 'in') : null), [template, anim]);
+  const motionOut = useMemo(() => (template && anim ? currentMotionPreset(template, anim, 'out') : null), [template, anim]);
+  const motionUnits = useMemo(() => (template && anim ? motionTargets(template, anim).length : 0), [template, anim]);
+  const [motionDirection, setMotionDirection] = useState<AnimPhase>('both');
+  const [motionOpen, setMotionOpen] = useState(false);
+  /** Armed by a motion pick: the REBUILT document plays its new entrance once (then the exit,
+   *  then parks on air again) instead of loading parked, so the operator sees what they chose.
+   *  A plain reload — opening the page, switching entries — still lands parked. */
+  const demoAfterLoad = useRef(false);
+  const demoTimers = useRef<number[]>([]);
+  const clearDemo = useCallback(() => {
+    demoTimers.current.forEach((t) => clearTimeout(t));
+    demoTimers.current = [];
+  }, []);
+  useEffect(() => clearDemo, [clearDemo]);
 
   /** The active entry's values over the graphic's own defaults — the merge `update()` performs
    *  live, and the same data the settled preview and Play both use. */
@@ -302,6 +344,47 @@ export default function GraphicControlPage({ id }: { id: string }) {
     setNote(`✓ "${entry.label}" is now the graphic's default data — exports start with it.`);
   };
 
+  /** Show the motion once in the preview: the entrance, a hold, the exit, then park on air
+   *  again the way the page loads (the wizard's preview demo, in this page's vocabulary). */
+  const playMotionDemo = () => {
+    clearDemo();
+    postCmd({ cmd: 'play', data: activeData });
+    demoTimers.current.push(
+      window.setTimeout(() => postCmd({ cmd: 'stop' }), 1700),
+      window.setTimeout(() => postCmd({ cmd: 'settle', data: settleDataRef.current }), 2800),
+    );
+  };
+
+  /** Rewrite the entrance and/or exit with a universal motion — ONE deterministic data edit,
+   *  saved through the same patch every entry edit takes; the rebuilt preview then plays it. */
+  const pickMotion = (pick: MotionPick) => {
+    let written = false;
+    patch((cur) => {
+      const data = parseAnimData(cur.template.js);
+      const next = data && applyMotionPreset(cur.template, data, pick);
+      const js = next && writeAnimData(cur.template.js, next);
+      if (!js) return {};
+      written = true;
+      return { template: { ...cur.template, js } };
+    });
+    if (written) demoAfterLoad.current = true;
+  };
+
+  /** The speed knob (NOACG_ANIM.speed): every duration divides by it at playback. */
+  const setMotionSpeed = (speed: number) => {
+    if (anim?.speed === speed) return; // the active stop - no write, no rebuild
+    let written = false;
+    patch((cur) => {
+      const data = parseAnimData(cur.template.js);
+      if (!data || data.speed === speed) return {};
+      const js = writeAnimData(cur.template.js, { ...data, speed });
+      if (!js) return {};
+      written = true;
+      return { template: { ...cur.template, js } };
+    });
+    if (written) demoAfterLoad.current = true;
+  };
+
   const downloadPanel = () => {
     const html = renderControlPanelHtml(doc.template, null, { entries: doc.entries });
     saveAs(new Blob([html], { type: 'text/html' }), `${slug(doc.name)}_controlpanel.html`);
@@ -416,7 +499,11 @@ export default function GraphicControlPage({ id }: { id: string }) {
               title="Graphic preview"
               srcDoc={srcdoc}
               sandbox="allow-scripts"
-              onLoad={() => postCmd({ cmd: 'settle', data: activeData })}
+              onLoad={() => {
+                if (!demoAfterLoad.current) return postCmd({ cmd: 'settle', data: activeData });
+                demoAfterLoad.current = false;
+                playMotionDemo();
+              }}
               style={{
                 width: doc.template.resolution.width,
                 height: doc.template.resolution.height,
@@ -536,6 +623,61 @@ export default function GraphicControlPage({ id }: { id: string }) {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* MOTION — how the graphic comes on and goes off air, without the timeline. A
+              disclosure, closed by default: the stage above shares this column's height, and
+              the operator who came to play an entry should not find the preview a third
+              shorter for a control they did not ask for. Open, it sits beside ▶ and ■ so a pick
+              can be watched at once (the rebuilt document plays it). Absent entirely only when
+              the graphic has no NOACG_ANIM block - hand-written motion is the editor's. */}
+          {anim && (
+            <details
+              className="control-motion"
+              open={motionOpen}
+              onToggle={(e) => setMotionOpen((e.currentTarget as HTMLDetailsElement).open)}
+              data-testid="control-motion"
+            >
+              <summary data-testid="control-motion-summary">
+                <strong>Motion</strong>
+                <span className="muted">
+                  {' '}In: {motionName(motionIn)} · Out: {motionName(motionOut)} · {speedName(anim.speed)}
+                </span>
+              </summary>
+              <div className="control-motion-body">
+                <MotionPresetPicker
+                  inId={motionIn}
+                  outId={motionOut}
+                  direction={motionDirection}
+                  onDirection={setMotionDirection}
+                  onPick={(id, phases) => {
+                    const pick: MotionPick = {};
+                    for (const ph of phases) pick[ph] = id;
+                    pickMotion(pick);
+                  }}
+                  onReplay={playMotionDemo}
+                  disabledReason={
+                    motionUnits === 0
+                      ? 'Nothing to move: this graphic’s root has no elements under it, so a motion has no unit to animate. Edit it in the editor.'
+                      : null
+                  }
+                />
+                <div className="row" style={{ gap: 6, marginTop: 10, alignItems: 'center' }} role="group" aria-label="Speed">
+                  <span className="hint" style={{ marginRight: 4 }}>Speed</span>
+                  {MOTION_SPEEDS.map((s) => (
+                    <button
+                      key={s.value}
+                      className={anim.speed === s.value ? 'active' : ''}
+                      onClick={() => setMotionSpeed(s.value)}
+                      data-testid={`control-speed-${s.value}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                  <span className="hint">entrance, steps and exit together</span>
+                </div>
+              </div>
+            </details>
           )}
         </section>
 

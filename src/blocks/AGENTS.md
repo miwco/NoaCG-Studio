@@ -400,6 +400,31 @@ Its coverage is e2e/legacy-timeline.spec.ts (fixtures in e2e/_legacy.ts). The 33
 suite it replaced drove the patchers; every capability it covered has an equivalent on the step
 timeline, pinned by e2e/timeline-v2.spec.ts.
 
+## motionPresets.ts - the UNIVERSAL in/out bank (the no-code picker's engine)
+
+Ten entrance/exit motions (fade, slide L/R, rise, drop, pop, zoom, blur, wipe L/R) for ANY
+data-block graphic - catalog, wizard import, agent-door scaffold, hand-made - authored directly as
+DATA (two keyframes per property, no emitter, no importer) and applied by `applyMotionPreset(template,
+data, {in?, out?}, eases?)`, a pure `(data) => data`. It is NOT a category bank: presetRegistry's
+banks are the catalog's tuned choreographies and need the structure contract they were written
+for; a universal motion moves THE GRAPHIC AS ONE UNIT, so it can promise to work everywhere.
+**What moves** = `motionTargets`: the root's direct element children that are DRAWN (hidden
+`.noacg-data-source` holders, script/style/form sources and inline-hidden elements are skipped),
+read off the HTML every time, each addressed by the most readable UNIQUE selector (id, else a
+class no other element carries, else `root > :nth-child(n)`); the root itself never takes a
+track (the interpreter owns its opacity). **The rewrite is a clean swap of the inside-the-root
+entrance/exit** - and KEEPS `calls`, `dynamics`, `loops` (an ambient breath is behaviour, not the
+entrance), `reveals`/`hides`, and every layer whose element lives OUTSIDE the root (an inserted
+graphic); the step is paced to the motion or to the kept content's reach, never shorter. A styled
+lifecycle arrow (play/stop with fade/push/wipe) would play INSTEAD of the keyframes, so the
+rewrite clears it. `currentMotionPreset(template, data, phase)` READS the lit card back from the
+data (times + values per target, ease ignored - an easing is a modifier, not another motion;
+nothing is stamped into the block, so a timeline edit honestly lights nothing). Two hosts, one
+component (`components/MotionPresetPicker.tsx`): the saved graphic's control page (home/) and the
+wizard's Animation step for an imported design (wizard/draft.ts `universalPick`, applied at build
+through this same function, so the wizard preview, the created graphic and the page that reads it
+back agree by construction). Pinned by e2e/motion-presets.spec.ts.
+
 ## presetRegistry.ts - the preset library (what is left of animPatch)
 
 `presetsForType` / `anyPresetById` - every category's presets in one lookup - plus

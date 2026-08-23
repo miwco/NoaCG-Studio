@@ -2694,6 +2694,25 @@ details:not([open]) > *:not(summary) { display: none; }
 .wz-anim-dirs button { flex: 1; padding: 4px 0; font-size: 14px; line-height: 1; }
 .wz-anim-dirs button.active { border-color: var(--accent); color: var(--accent); }
 
+/* THE UNIVERSAL IN/OUT PICKER (components/MotionPresetPicker.tsx). Ten cards is twice the
+   category grid above, and it also has to fit under a control page's preview, so the cards are
+   the same kind (border, radius, amber when selected - `.wz-anim`) cut to a tighter cell: a
+   name and a one-line hint, four across at desktop width. The hint clamps to two lines so a
+   longer description never makes its row taller than its neighbours. */
+.motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.motion-card { padding: 8px 10px; gap: 2px; }
+.motion-card strong { font-size: 13px; }
+.motion-card .hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.motion-picker h3 .muted { font-weight: 400; }
+
 /* Step 6: finish — name it, read back what was built, then take one of the two doors.
    THE STEP'S HEIGHT IS ITS BUDGET, because the doors are the last thing on it: everything
    above them that spends a line pushes the only two controls the step exists for below the
@@ -5642,6 +5661,22 @@ h2 + .lib-row,
    flat row otherwise. Operator-sized like the transport above it: these are pressed live. */
 .control-page-events { padding: 4px 14px 12px; background: var(--panel); }
 .control-page-events button { min-height: 44px; padding: 10px 16px; font-size: 14px; }
+/* MOTION — the universal in/out picker under the transport (GraphicControlPage). A disclosure
+   whose closed line names what the graphic does now; open, the picker's cards take the room
+   the stage lends them. Same panel ground as the transport and events so it reads as one
+   control strip, not a second page. */
+.control-motion { border-top: 1px solid var(--border); background: var(--panel); }
+.control-motion > summary {
+  cursor: pointer;
+  padding: 10px 14px;
+  font-size: 13px;
+  list-style: none;
+  user-select: none;
+}
+.control-motion > summary::before { content: '▸'; display: inline-block; width: 14px; color: var(--text-dim); }
+.control-motion[open] > summary::before { content: '▾'; }
+.control-motion > summary::-webkit-details-marker { display: none; }
+.control-motion-body { padding: 0 14px 14px; }
 /* The operator's "where is it" chip — the editor's .simulator-state, sized for the transport
    row it sits in (this bar is deliberately bigger than the editor's; see the operator-sized
    cues). Pushed right so it reads as status, not as another button. */

@@ -191,7 +191,17 @@ searchable): the bundled OFL library; **the ~1,900 Google Fonts families** (mode
 says a download shows the browser's IP to Google first); upload (woff2/woff/ttf/otf ->
 CustomFont, embedded in template.assets + every export); and Local Font Access (Chromium only,
 permission-gated), EMBEDDED exactly like an upload so playout never depends on the machine's
-fonts. The **Animation step** is the standard one.
+fonts. The **Animation step** is the standard one - with ONE difference for this category:
+its cards are the UNIVERSAL in/out bank (`components/MotionPresetPicker.tsx` over
+`blocks/motionPresets.ts` - ten unit motions) in place of the category's four whole-unit
+presets, which the bank stands in for (`draft.ts` `isWholeUnitPreset` hides their cards; the
+SVG layer stagger stays beside them); a pick lives in `draft.animation.motionIn/motionOut` and
+is written AT BUILD by `withUniversalMotion` (the default maps design-fade -> fade, so an
+undecided design lands on the same data the card it shows lit would write), through the same
+engine the saved graphic's control page applies after - so the wizard preview, the created
+graphic and the page that reads it back agree by construction (`usesUniversalMotion` is the one
+switch; every other category keeps its tuned bank here and meets the universal one on the
+control page). Pinned by e2e/motion-presets.spec.ts.
 The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
 non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** -
