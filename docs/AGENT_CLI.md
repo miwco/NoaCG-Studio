@@ -194,9 +194,12 @@ production shows an input per field + Take/Update/Next/Out. No application code 
   and fixed a PowerShell-backslash zip and the scaffold-name round trip); a typeless graphic
   reads "Custom" in the library; the round's brief bank (`benchmarks/agent/v1/briefs.json`) and
   runner (`scripts/agent-round-bench.mjs`, control mode free, `--run` spends).
-- **P3, part B (the measured round):** NOT RUN - it spends the owner's Claude Code quota and needs
-  the owner's blind read. The same briefs through arms A contract-only free design, B + neutral
-  scaffold, C + catalog chassis, D + the `frontend-design` skill, E + NoaCG design notes; recorded
-  per cell (validate rounds, minutes, screenshots, final verdict, cost); the novel brief judged on
-  "operable without category code". Evidence decides what the skill recommends by default and
-  whether any design guidance is added deliberately.
+- **P3, part B (the measured round): RUN 2026-08-22, blind-read 2026-08-23, decided.** 25/25
+  cells validator-clean across arms A-E; the owner could not separate the arms visually and
+  called every graphic airable ("so much better than through the Create with AI and the API").
+  The verdict (`benchmarks/agent/rounds/2026-08-22/VERDICT.md`): the skill STAYS contract-only
+  with free authoring as the default; design-notes stays optional (arm E showed no visible gain,
+  arm D none for the highest cost); the one sharpened rule is "actions come from a type" -
+  scaffold arms carried the machine every time, free arms shipped state as fields on 4 of 7
+  typed-action cells; and all five novel-brief cells authored a WORKING machine from scratch -
+  the evidence the Future item "agent-authored machines" was waiting on (owner gate).
