@@ -142,10 +142,18 @@ const MAP = [
   // The browser-output renderer (docs/CLOUD_PLAYOUT.md): its own MPA entry + the stage module.
   [/^src\/output\//, ['productions.spec.ts', 'snap-recovery.spec.ts']],
   [/^output\.html$/, ['productions.spec.ts']],
-  // The universal in/out bank and its picker (blocks/motionPresets.ts, MotionPresetPicker.tsx):
-  // mounted on the control page and the wizard's Animation step, so it rides on both of those
-  // rules below as well - listed here by name so an engine edit runs its own spec first.
-  [/^(src\/blocks\/motionPresets\.ts|src\/components\/MotionPresetPicker\.tsx)$/, ['motion-presets.spec.ts']],
+  // The universal in/out bank (blocks/motionPresets.ts) rides the `^src/blocks/` rule below as
+  // well, so naming it here only puts its own spec first. Its PICKER rides NOTHING: it sits at
+  // `src/components/MotionPresetPicker.tsx`, which matches neither the wizard rule nor the
+  // home rule, so whatever is listed on this line is its ENTIRE coverage. That cost a red
+  // shard on 2026-08-23 - the picker grew a direction-arrow row sharing the wizard Travel
+  // box's class, and `ux.spec.ts`, which broke on the resulting ambiguous locator, was never
+  // planned. The surfaces that MOUNT the picker are therefore named here explicitly.
+  [/^src\/blocks\/motionPresets\.ts$/, ['motion-presets.spec.ts']],
+  [
+    /^src\/components\/MotionPresetPicker\.tsx$/,
+    ['motion-presets.spec.ts', 'ux.spec.ts', 'wizard-preview.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts'],
+  ],
   [/^src\/blocks\//, ['motion-presets.spec.ts', 'anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
   // creative-routing rides along because ROUTING and SATISFACTION resolve live against the
   // catalog and the type registry (src/templates/structuralAnchor.ts): a structure the
