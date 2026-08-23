@@ -425,7 +425,10 @@ function svgPaintLines(el, lines, size) {
   var x = el.getAttribute('x');
   el.textContent = '';
   for (var i = 0; i < lines.length; i++) {
-    var t = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+    // The namespace comes from the node itself rather than a literal URL: an XML namespace is
+    // not a network reference, but the export gate scans emitted code for URLs and cannot tell
+    // the two apart - and it is right not to try (pillar 3: emitted code reaches no network).
+    var t = document.createElementNS(el.namespaceURI, 'tspan');
     if (x !== null) t.setAttribute('x', x);
     t.setAttribute('dy', i === 0 ? '0' : (size * SVG_LINE_HEIGHT).toFixed(2));
     t.textContent = lines[i];
