@@ -87,7 +87,7 @@ test('a fresh operator page boots, takes its first cue, and holds it on air', as
 
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  await page.locator('.lib-menu-backdrop').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Escape');
 
   const slug = await page.evaluate(async (name) => {
     const { loadShows } = await import('/src/model/shows.ts');

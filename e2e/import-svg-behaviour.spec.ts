@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import nodePath from 'node:path';
 import JSZip from 'jszip';
 import { settleDurableWrites } from './_durable';
+import { relayServe, routeOrigin } from './_relay';
 import { bindEveryTextLayer, dropSvg, intoProduction, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
 
 // IMPORTED ARTWORK THAT BEHAVES (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
@@ -238,4 +239,103 @@ test('imported quiz: the behaviour survives the export and runs standalone from 
 
   // Nothing reached for the network or for a file the package does not carry.
   expect(missing).toEqual([]);
+});
+
+test('imported board: copy the design cannot hold is WARNED about on the cue editor, never clipped', async ({ page }) => {
+  // THE SECOND HALF OF THE OWNER'S FIT RULING (2026-08-23, docs/SVG_IMPORT_PLAN.md §3): a value
+  // longer than the design was drawn for fills the panel, wraps into the room the artwork has
+  // and shrinks to the readability floor - and past that it is WARNED ABOUT, never cut and never
+  // allowed to reshape the artwork. The ladder shipped with only the first half built: the
+  // runtime knew (noacgTextOverflow()) and no operator surface read it, so a too-long title
+  // floored at 55% and ran off the board with nothing said before air.
+  //
+  // The warning is measured on the CUE EDITOR because that is where the value is typed. It comes
+  // from the PREVIEW monitor's own report - the rendered graphic is the only thing that can
+  // answer whether copy fits, which is why no source check stands in for this.
+  await openImportDoor(page, QUIZ_SVG);
+  await intoProduction(page, 'Overflow quiz', 'Warning Night');
+  await settleDurableWrites(page);
+
+  const question = page.getByTestId('cue-field-f0');
+  const note = page.getByTestId('cue-overflow');
+
+  // A question the board holds says nothing. The guard has to be verified quiet before it is
+  // verified loud, or "it warns" would also be true of a surface that always warns.
+  await question.fill('Which city hosted the first modern Olympics?');
+  await expect(note).toHaveCount(0);
+  await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
+
+  // …and one no size can hold does. 400 characters is the value the ladder floors at 55% of the
+  // drawn size (e2e/import-svg.spec.ts measures that end of it); here the claim is that the
+  // operator is TOLD, in the box they are typing into and once at the top of the editor.
+  await question.fill('A'.repeat(400));
+  await expect(note).toContainText('too long for the design');
+  await expect(note).toContainText('Question');
+  await expect(page.getByTestId('cue-field-over-f0')).toBeVisible();
+  await shot(page, '8-overflow-warned');
+
+  // The copy is whole in the graphic - warned about, not trimmed to make the warning go away.
+  const air = page.frameLocator('[data-testid="production-preview"] iframe');
+  await expect(air.locator('#f0')).toHaveText('A'.repeat(400));
+
+  // Shortening it clears the warning, so it tracks the value rather than latching on the cue.
+  await question.fill('Which city?');
+  await expect(note).toHaveCount(0);
+  await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
+});
+
+test('imported board: the EXPORTED CONTROLLER carries the same warning, in the same words', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // PARITY IS THE POINT (docs/CONTROL_PANEL_PARITY.md §4): a warning only the in-app cockpit
+  // shows is a warning a class operating from the exported package never sees, and the package
+  // is the surface a show drops to when the network dies. This page ships without React, so its
+  // copy of the sentence is BAKED from the same constants (controlModel.ts) rather than written
+  // again - and only a driven controller can prove the baked half actually paints.
+  //
+  // It reads its own PREVIEW monitor: those frames are ordinary same-origin pages the controller
+  // built, so the answer comes from the running graphic exactly as it does in the app.
+  await openImportDoor(page, QUIZ_SVG);
+  await intoProduction(page, 'Overflow quiz', 'Relay Night');
+  await page.getByTestId('cue-field-f0').fill('A'.repeat(400));
+  await expect(page.getByTestId('cue-overflow')).toContainText('too long for the design');
+  await settleDurableWrites(page);
+
+  const b64 = await page.evaluate(async (production) => {
+    const shows = await import('/src/model/shows.ts');
+    const { buildShowZipFor } = await import('/src/export/showExport.ts');
+    const fresh = shows.loadShows().find((s) => s.name === production)!;
+    const zip = await buildShowZipFor(fresh, 'html-overlay');
+    return zip.generateAsync({ type: 'base64' });
+  }, 'Relay Night');
+
+  const zip = await JSZip.loadAsync(b64, { base64: true });
+  const files = new Map<string, string>();
+  for (const n of Object.keys(zip.files)) {
+    // The package folder is named after the production, not a fixed slug. Text files only -
+    // the relay helper serves strings, and a single-file overlay carries its assets inline.
+    if (!zip.files[n].dir && /\.(html|json)$/.test(n)) {
+      files.set(n.replace(/^[^/]+\//, ''), await zip.file(n)!.async('string'));
+    }
+  }
+  const { serve } = relayServe(files);
+  const origin = 'http://relay-overflow.local';
+
+  const ctl = await context.newPage();
+  await routeOrigin(ctl, origin, serve);
+  await ctl.goto(`${origin}/controller.html`, { waitUntil: 'load' });
+
+  // Nothing is on PREVIEW yet, so nothing is claimed. Quiet before loud, here too.
+  await expect(ctl.locator('#ed-over')).toBeHidden();
+
+  await ctl.locator('.cue').first().click();
+  await ctl.locator('#v-preview').click();
+  await expect(ctl.frameLocator('#stage-pvw iframe').locator('#f0')).toHaveText('A'.repeat(400), {
+    timeout: 10_000,
+  });
+
+  // …and once the graphic is up with the copy it cannot hold, the operator is told - by the
+  // summary and by the box, the same two places the app says it.
+  await expect(ctl.locator('#ed-over')).toContainText('too long for the design', { timeout: 10_000 });
+  await expect(ctl.locator('.field-over .over-mark')).toBeVisible();
+  await shot(ctl, '9-overflow-warned-controller');
 });

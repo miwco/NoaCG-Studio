@@ -246,6 +246,17 @@ export default function GraphicRow({
             {new Date(g.updatedAt).toLocaleDateString()}
           </span>
         )}
+        {/* WHERE THE MATCH LIVES. A search crosses folders, so a result that does not say which
+            folder it came from answers half the question — and the card is the DEFAULT view
+            (model/prefs libraryView), so table-only was the same as nowhere for most people.
+            An UNFILED match carries no tag: the table prints an em dash because a column must
+            fill its cell, while on a card a lone dash in the meta line reads as a typo, and
+            "no tag" is already the unambiguous answer once any sibling shows one. */}
+        {view === 'grid' && showFolder && g.folder && (
+          <span className="lib-folder-tag" data-testid="row-folder">
+            <IconFolder /> {g.folder}
+          </span>
+        )}
       </div>
       {view === 'list' && (
         <>
