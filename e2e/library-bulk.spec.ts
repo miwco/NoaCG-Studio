@@ -210,13 +210,18 @@ test('the bulk "+ Production" picker opens UPWARD, fully on screen', async ({ pa
   });
   expect(onTop).toBe(true);
 
-  // The bulk FOLDER menu shares the same shell, so it flips on the same measurement. The
-  // backdrop takes the first press (any outside click closes the standing menu — that is what
-  // it is for), so this is two presses by design, not a stray one.
-  await page.locator('.lib-menu-backdrop').click();
-  await expect(menu).toHaveCount(0);
+  // ONE press moves between the bar's two popovers. The shell used to close by covering the
+  // page with a backdrop, which meant the press that dismissed this menu never reached the
+  // Folder button — a dead first click on the surface the owner had just reported. So this
+  // asserts the switch happens in a SINGLE click, and that the folder menu flips on the same
+  // measurement (it shares the shell).
   await page.getByTestId('bulk-move-folder').click();
+  await expect(menu).toHaveCount(0);
   await expect(page.getByTestId('bulk-folder-menu')).toHaveAttribute('data-placement', 'up');
+
+  // Escape closes the standing menu — the keyboard route the backdrop never offered.
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('bulk-folder-menu')).toHaveCount(0);
 });
 
 test('a "+ Production" pick CLOSES the picker and confirms on the button', async ({ page }) => {

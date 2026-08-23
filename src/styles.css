@@ -5506,15 +5506,15 @@ h2 + .lib-row,
 .lib-create-row input { max-width: 320px; }
 
 /* The row popovers — the ⋯ overflow menu and the "+ Production" picker. A plain absolute
-   popover against its button (the rows never clip), closed by the fixed backdrop. */
+   popover against its button (the rows never clip), closed by home/LibMenu's outside-press
+   listener. There is deliberately NO backdrop element: a covering div closes the menu by
+   eating the press, so the control the operator was aiming at needs a second one. */
 .lib-menu-host { position: relative; }
-/* Above the mobile topbar's sticky z-index 60: an outside press ANYWHERE — including on the
-   topbar — must close the menu rather than land through it. */
-.lib-menu-backdrop { position: fixed; inset: 0; z-index: 89; }
 .lib-menu {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
+  /* Above the mobile topbar's sticky z-index 60, so an open menu is never drawn under it. */
   z-index: 90;
   min-width: 200px;
   display: flex;
@@ -5834,8 +5834,8 @@ h2 + .lib-row,
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  /* Above the shared .lib-menu-backdrop (z 89): at 40 the backdrop swallowed every click
-     inside the popover — Copy, Publish changes, Unpublish all just closed it. */
+  /* The same 90 every popover uses (.lib-menu), so one shell's surfaces cannot stack
+     differently against the page's sticky chrome (.pd-header is 20). */
   z-index: 90;
   width: min(520px, 90vw);
   padding: 12px 14px;

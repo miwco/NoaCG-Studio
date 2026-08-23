@@ -64,7 +64,7 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   the write actually landed and a closing menu would report a save that did not happen. A
   folder and the bulk bar pool through ONE verb (`addListTo` -> `poolAll`), so the honest
   partial-failure report cannot fork per door.
-- **home/LibMenu** - the popover SHELL: backdrop, the popover class, and which WAY it opens.
+- **home/LibMenu** - the popover SHELL: the popover class, how it CLOSES, and which WAY it opens.
   Direction is MEASURED in a layout effect, never assumed - the bulk bar floats at the bottom of
   the screen by design and the last row of a long library is there by arithmetic, so a downward
   menu was off-screen for both and bulk "+ Production" looked broken while it was working. What
@@ -79,8 +79,16 @@ it. Add a RULE here; leave the reasoning in the code's own comments.
   popover IS - a list of verbs is a `menu`, a disclosure panel of links and forms is not.
   **A surface owes the shell two CSS rules**: its own downward offset and a `<surface>--up`
   swapping `top` for `bottom`, plus a `max-height`. Every popover on Home AND on the production
-  dashboard goes through it; hand-rolling `.lib-menu-backdrop` is how the dashboard's two came
-  to open downward only.
+  dashboard goes through it; hand-rolling one is how the dashboard's two came to open downward
+  only.
+  **An outside press is LISTENED FOR, never caught by a covering element.** There is no backdrop
+  div and there must not be one again: a full-viewport catcher closes the menu by SWALLOWING the
+  press, so the control the operator was reaching for needs a second one - between two popovers
+  on one bar (bulk "+ Production" and Folder, the cue rundown's neighbouring `⋯`) that reads as
+  a dead button. A document `pointerdown` in the CAPTURE phase closes it instead, and the HOST is
+  treated as inside, because the trigger owns its own open state and closing here would race its
+  toggle into reopening what the press meant to shut. Escape closes too - the keyboard route the
+  backdrop never had.
   Icons are inline SVG from `components/icons.tsx` - no
   pictographic emoji on these surfaces (monochrome verb glyphs stay). Local-first, no auth
   gate - sign-in only adds sync. `#/package/*` is a retired route that lands on Home.
