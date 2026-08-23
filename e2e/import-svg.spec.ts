@@ -158,9 +158,12 @@ test('svg import: overflow-only text fit — a long value shrinks, a short one s
   });
   expect(fitted.size).toBeLessThan(parseFloat(drawnSize));
   expect(fitted.textLength).toBeNull();
-  // …and it fits: the shrunk line is no wider than the run the designer drew.
-  const budget = await name.evaluate(() => (window as unknown as { svgFitWidths: Record<string, number> }).svgFitWidths.f0);
-  expect(fitted.length).toBeLessThanOrEqual(budget + 1);
+  // …and it fits THE ROOM THE DESIGN GIVES IT — the panel it was drawn in, not the width of the
+  // designer's own words, which would leave most of a banner empty and shrink anyway.
+  const room = await name.evaluate(
+    () => (window as unknown as { svgFitRoom: Record<string, { width: number }> }).svgFitRoom.f0.width,
+  );
+  expect(fitted.length).toBeLessThanOrEqual(room + 1);
 
   // Back to a short value: the fit steps away and the typography is the designer's again.
   await nameInput.fill('Riva');
@@ -902,6 +905,7 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
       refitSvgText: () => void;
       svgFitDrawn: Record<string, string>;
       svgFitWidths: Record<string, number>;
+      svgFitRoom: Record<string, { width: number }>;
       svgFitSizes: Record<string, number>;
     };
     w.update(JSON.stringify({ f0: 'An extremely long presenter name' }));
@@ -910,17 +914,169 @@ test('svg import: the text-fit budget is the DRAWN text, whenever the first valu
     return {
       drawn: w.svgFitDrawn.f0,
       budget: w.svgFitWidths.f0,
+      room: w.svgFitRoom.f0.width,
       drawnSize: w.svgFitSizes.f0,
       size: parseFloat(getComputedStyle(node).fontSize),
       length: node.getComputedTextLength(),
     };
   });
 
-  // The budget is still Ada's width — three characters, nothing like the value now on screen —
-  // so the long value is shrunk to fit it rather than left running past the artwork.
+  // The drawn text is still Ada's — three characters, nothing like the value now on screen — so
+  // the long value is fitted against the design rather than against itself. With no shape drawn
+  // behind this line there is no room to fill, so the drawn width IS the budget, and a value far
+  // past it shrinks until the readability floor stops it.
   expect(fitted.drawn).toBe('Ada');
+  expect(fitted.budget).toBeCloseTo(fitted.room, 1);
   expect(fitted.size).toBeLessThan(fitted.drawnSize);
-  expect(fitted.length).toBeLessThanOrEqual(fitted.budget + 1);
+  expect(fitted.size).toBeGreaterThanOrEqual(fitted.drawnSize * 0.55 - 0.1);
+});
+
+// ── THE FIT LADDER (owner-ruled 2026-08-23) ──────────────────────────────────────────────
+// Fill the panel, then wrap inside the height the design already has, then shrink to the
+// readability floor, then report it. The artwork is never reshaped to make copy fit.
+//
+// The fixture is shaped like the shipped lower third: a wide panel with a short name drawn into
+// it, so the empty banner beside the name is the thing under test.
+const LADDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Panel" x="140" y="760" width="1040" height="190" rx="8" fill="#0d1017"/>
+  <text id="Name" x="190" y="840" font-size="56" fill="#ffffff">Ada</text>
+  <text id="Role" x="190" y="892" font-size="30" fill="#b7bcc4">Correspondent</text>
+</svg>`;
+
+test('svg import: a value fills the panel it was drawn in before any of it shrinks', async ({ page }) => {
+  // The budget used to be the width of the text the DESIGNER typed, so a name drawn 3 characters
+  // wide inside a 1040px banner began shrinking at its own fourth character while most of the
+  // panel stood empty. The budget is the ROOM: out to a right margin mirroring the left one.
+  await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const read = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      const w = window as unknown as {
+        update: (json: string) => void;
+        svgFitWidths: Record<string, number>;
+        svgFitRoom: Record<string, { width: number; height: number }>;
+        noacgTextOverflow: () => string[];
+      };
+      w.update(JSON.stringify({ f0: v }));
+      const panel = document.getElementById('Panel')!.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return {
+        drawnBudget: w.svgFitWidths.f0,
+        room: w.svgFitRoom.f0.width,
+        size: parseFloat(getComputedStyle(el).fontSize),
+        gapRight: panel.right - box.right,
+        overflowing: w.noacgTextOverflow(),
+      };
+    }, value);
+
+  const drawn = await read('Ada');
+  // The room is the panel's, and it is far more than the three characters drawn into it.
+  expect(drawn.room).toBeGreaterThan(drawn.drawnBudget * 2);
+
+  // A value several times the drawn one still airs at FULL SIZE, because the banner holds it.
+  const filling = await read('Alexandra Riva');
+  expect(filling.size).toBe(drawn.size);
+  expect(filling.overflowing).toEqual([]);
+
+  // Past the room it shrinks - and having shrunk, it reaches the far margin instead of stopping
+  // at the width of the designer's own three characters.
+  const long = await read('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria');
+  expect(long.size).toBeLessThan(drawn.size);
+  expect(long.gapRight).toBeLessThan(drawn.gapRight / 4);
+});
+
+test('svg import: copy too long for any size floors instead of vanishing, and says so', async ({ page }) => {
+  // Unfloored, the shrink drove a 400-character value to 3.7px - which reads on air as the text
+  // having disappeared. It stops at 55% of the drawn size, the same floor the raster import
+  // keeps, and reports the field rather than clipping the copy or reshaping the artwork.
+  await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const state = await previewFrame(page).locator('#f0').evaluate((el) => {
+    const w = window as unknown as {
+      update: (json: string) => void;
+      svgFitSizes: Record<string, number>;
+      noacgTextOverflow: () => string[];
+    };
+    w.update(JSON.stringify({ f0: 'A'.repeat(400) }));
+    return {
+      drawnSize: w.svgFitSizes.f0,
+      size: parseFloat(getComputedStyle(el).fontSize),
+      text: el.textContent,
+      overflowing: w.noacgTextOverflow(),
+    };
+  });
+
+  expect(state.size).toBeCloseTo(state.drawnSize * 0.55, 1);
+  expect(state.text).toHaveLength(400); // the copy is whole - never trimmed to fit
+  expect(state.overflowing).toEqual(['f0']);
+});
+
+test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
+  // Wrapping is allowed only into room the artwork already has: the panel's own height, down to
+  // whatever is drawn below the line. How many lines that is depends on the SIZE - a 190px panel
+  // holds one 56px line and three 30px ones - so the ladder re-asks as it shrinks.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+      <rect id="Board" x="360" y="240" width="1200" height="300" rx="8" fill="#0d1017"/>
+      <text id="Question" x="404" y="312" font-size="44" fill="#ffffff">Which city?</text>
+    </svg>`,
+    'wrap.svg',
+  );
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const wrapped = await previewFrame(page).locator('#f0').evaluate((el) => {
+    const w = window as unknown as { update: (json: string) => void; svgFitSizes: Record<string, number> };
+    w.update(
+      JSON.stringify({
+        f0: 'Which Finnish city hosted the Summer Olympic Games in the year nineteen fifty two, and which country topped the medal table',
+      }),
+    );
+    const board = document.getElementById('Board')!.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    return {
+      lines: el.children.length,
+      texts: Array.from(el.children).map((c) => c.textContent ?? ''),
+      insideBoard: box.bottom <= board.bottom + 0.5,
+      size: parseFloat(getComputedStyle(el).fontSize),
+      drawnSize: w.svgFitSizes.f0,
+    };
+  });
+
+  // More than one line, every line carrying words, and the whole block still inside the shape
+  // it was drawn in - the artwork does not grow to hold the copy.
+  expect(wrapped.lines).toBeGreaterThan(1);
+  expect(wrapped.texts.every((t) => t.trim().length > 0)).toBe(true);
+  expect(wrapped.insideBoard).toBe(true);
+  // And it wrapped rather than shrinking all the way: bigger than the floor it would have hit.
+  expect(wrapped.size).toBeGreaterThan(wrapped.drawnSize * 0.55);
+});
+
+test('svg import: a line with another drawn right below it stays on one line', async ({ page }) => {
+  // The room is measured, not assumed: the name in a two-line strap has the role directly under
+  // it, so there is nowhere to wrap into and it shrinks instead. Wrapping there would print the
+  // second line straight through somebody else's layer.
+  await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
+  await page.locator('.wz-next').click();
+  await createProject(page);
+
+  const state = await previewFrame(page).locator('#f0').evaluate((el) => {
+    const w = window as unknown as { update: (json: string) => void };
+    w.update(JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Mar' }));
+    const role = document.getElementById('f1')!.getBoundingClientRect();
+    return { lines: el.children.length, bottom: el.getBoundingClientRect().bottom, roleTop: role.top };
+  });
+
+  // No tspans: one plain line, and it stays clear of the layer below. A second line would have
+  // printed straight through the role - which is the artwork being rewritten to fit copy.
+  expect(state.lines).toBe(0);
+  expect(state.bottom).toBeLessThanOrEqual(state.roleTop + 0.5);
 });
 
 // THE HUG (docs/SVG_IMPORT_PLAN.md §3): a lower third's banner is as wide as the name on it.
@@ -979,25 +1135,33 @@ test('svg import: a hugging panel grows with its text, and what is beyond it tra
         frameRight: Math.round(document.querySelector('.imported-design-art')!.getBoundingClientRect().right),
         frameWidth: document.querySelector('.imported-design-art')!.getBoundingClientRect().width,
         size: parseFloat(getComputedStyle(el).fontSize),
+        lines: el.children.length,
       };
     }, value);
 
   const rest = await run('Ada');
   expect(rest.panelWidth).toBe(600);
 
-  // A longer name widens the panel instead of shrinking the type — the whole point of the hug —
+  // A value the panel can already hold does NOT grow it: the design's own space is spent first,
+  // which is what stops a banner from widening at the fourth character of a three-letter name.
+  const fits = await run('Alexandra');
+  expect(fits.panelWidth).toBe(600);
+  expect(fits.size).toBe(rest.size);
+
+  // Past that room the panel widens instead of shrinking the type — the whole point of the hug —
   // and the logo drawn past the panel's right edge travels with it, keeping the gap as drawn.
-  const longer = await run('Alexandra Riva');
+  const longer = await run('Alexandra Konstantinopolous-Riva');
   expect(longer.panelWidth).toBeGreaterThan(rest.panelWidth);
   expect(longer.size).toBe(rest.size);
   expect(longer.logoLeft - rest.logoLeft).toBeGreaterThan(0);
   expect(longer.logoLeft - rest.logoLeft).toBeCloseTo(longer.panelRight - rest.panelRight, 0);
 
-  // A name nothing could hold: the panel stops at the frame's safe margin and the type shrinks
-  // for whatever the cap could not give. Growing off the screen is not a fit.
-  const huge = await run('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Mar');
+  // A name nothing could hold: the panel stops at the frame's safe margin, and what the cap
+  // could not give is answered by the rest of the ladder - this panel has clear room below the
+  // line, so the value wraps into it rather than shrinking. Growing off the screen is not a fit.
+  const huge = await run('Alexandra Konstantinopolous-Riva de la Vega y Santa Maria del Mar y Consuelo de la Santisima Trinidad');
   expect(huge.panelRight).toBeLessThanOrEqual(huge.frameRight - huge.frameWidth * 0.04 + 1);
-  expect(huge.size).toBeLessThan(rest.size);
+  expect(huge.lines > 1 || huge.size < rest.size).toBe(true);
 
   // And a short value again puts the artwork back exactly as drawn.
   const back = await run('Ada');

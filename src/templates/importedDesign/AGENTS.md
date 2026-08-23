@@ -40,8 +40,16 @@ e2e/import-stretch.spec.ts.
 the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
 as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at import
 (assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
-SHRINK fit, whose budget is the DRAWN text measured in the real face - never whatever is on
-screen when it is first measured, or a playout renderer's own first update becomes the budget
+the FIT LADDER (owner ruling 2026-08-23, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
+panel, grow it only where the author opted in, wrap into the room the design already has, shrink
+to 55%, then report the field** (`noacgTextOverflow()`; no operator surface reads it YET). Three
+rules there are load-bearing and each was a measured defect: the budget is the ROOM the shape
+behind the line offers, NOT the width of the text the designer typed (that left 588px of a
+1040px banner permanently unused); wrapping uses only room already drawn - from the line to the
+nearest thing below it inside its panel, re-asked at every size, dropping a LINE rather than
+printing through the layer below; and the shrink is FLOORED, or a long value reaches 3.7px and
+reads as text that vanished. The drawn text is still measured in the real face and never
+re-taken from whatever is on screen, or a playout renderer's own first update becomes the budget
 and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense). The HUG is the
 per-graphic alternative the mapping step ASKS for (`DesignSvg.stretch` -> one `-panel` class on
 one `<rect>` + `stretchRuntimeJs`): the picked rectangle widens by the widest inside line's
