@@ -319,9 +319,11 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
       </div>
 
       {/* Speed beside Easing, and WRAPPING: the form column halves the moment a design is
-          picked, and at 1366 the two sections need 534 px of a ~488 px column - measured with
-          the Easing select running off the right edge, which is a poor place for the control
-          this step was rebuilt around. Wrapping drops it under Speed instead of clipping it. */}
+          picked, leaving this row 448 px, and at the old widths the two sections asked for more
+          than that - measured with the Easing select running off the right edge, a poor place
+          for the control this step was rebuilt around. They fit side by side now (228 + 24 +
+          the 180 below); the wrap is the backstop for anything narrower, and it drops Easing
+          under Speed rather than clipping it. */}
       <div className="row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
         <div className="panel-section">
           <h3>Speed <span className="muted">entrance and exit</span></h3>
@@ -338,7 +340,7 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
           </div>
         </div>
 
-        {/* 200, not 260: at 260 the pair asked for 534 px of a 488 px column and the wrap above
+        {/* 180, not 260: at 260 the pair asked for more than the row had and the wrap above
             pushed Easing onto its own row, below the fold - the one control this step exists to
             make usable, out of sight. Measured: Speed takes 228 of the row's 448, so 200 still
             missed by 4 px. 180 fits, and the select grows into whatever is left. The wrap above
