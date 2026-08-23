@@ -14,6 +14,7 @@
 // (benchmarks/agent/rounds/2026-08-22/VERDICT.md).
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
+import { NUMERIC_FIGURES } from '../shared/numerals';
 import { defineScoreboardVariant } from './shared';
 import { debateFloorRuntimeJs, debateFloorSpxFields } from './debateFloor';
 
@@ -211,7 +212,7 @@ function boardOffAir() { holdClocks(); }
 }
 
 .scoreboard-allowance-time {
-  font-variant-numeric: tabular-nums;  /* the chip holds still when the chair retypes it */
+  ${NUMERIC_FIGURES}
   font-size: calc(26px * var(--scale) * var(--type-scale));
   font-weight: 700;
   color: var(--text-color);
@@ -290,7 +291,7 @@ function boardOffAir() { holdClocks(); }
 /* The clocks. Tabular figures so the half does not twitch four times a second, and the colour
    is set by the engine (accent while running, --penalty-color when docked or spent). */
 .scoreboard-time {
-  font-variant-numeric: tabular-nums;
+  ${NUMERIC_FIGURES}
   font-size: calc(96px * var(--scale) * var(--type-scale));
   font-weight: 700;
   line-height: 1.04;
@@ -318,7 +319,7 @@ function boardOffAir() { holdClocks(); }
   border: calc(2px * var(--scale)) solid var(--penalty-color);
   border-radius: calc(999px * var(--scale));
   background: var(--panel-bg);
-  font-variant-numeric: tabular-nums;
+  ${NUMERIC_FIGURES}
   font-size: calc(30px * var(--scale) * var(--type-scale));
   font-weight: 700;
   color: var(--penalty-color);
