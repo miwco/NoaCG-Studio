@@ -55,10 +55,17 @@ export type InsertResult = { template: SpxTemplate; selector: string } | { error
 // file declares these twice and the later declaration wins, but they read the panels they act on
 // from a shared registry rather than a baked-in selector, so the surviving copy still fits BOTH
 // graphics. Without that, allowing them here would mean the inserted graphic silently stopped
-// being fitted - green tests, quietly wrong output.
+// being fitted - green tests, quietly wrong output. The measurement helpers beside them
+// (`stageTextWidth`, `stageContentWidth`) hold no state at all, and `stageFaceHeight` caches its
+// per-face ratios on the window for the same reason the box list lives there.
+//
+// ADDING A FUNCTION TO shared/stageFit.ts MEANS ADDING IT HERE. Leave it out and every insertion
+// involving a staged graphic is refused as "design-owned runtime" - which is what five
+// e2e/template-insert.spec.ts cases caught when the stage fit grew these three.
 const SCAFFOLD_FUNCTIONS = new Set([
   'setFieldValue', 'update', 'play', 'stop', 'next', 'motionSpeed',
-  'stageFitBoxes', 'stagedLines', 'stageLineHeight', 'fitStagedText', 'fitOneStagedLine',
+  'stageFitBoxes', 'stagedLines', 'stageLineHeight', 'stageFaceHeight', 'stageTextWidth',
+  'stageContentWidth', 'fitStagedText', 'fitOneStagedLine',
   'holdStageHeight', 'holdOneStageBox', 'drawnBoxOf',
 ]);
 

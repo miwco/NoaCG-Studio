@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "noacg-studio",
+  "description": "NoaCG Studio's Claude Code plugins: make broadcast graphics for NoaCG from a coding agent, validate them the way NoaCG does, and save them into your NoaCG library.",
+  "owner": {
+    "name": "NoaCG Studio",
+    "url": "https://noacg.studio"
+  },
+  "plugins": [
+    {
+      "name": "noacg",
+      "version": "0.2.0",
+      "description": "The noacg-graphic skill (the NoaCG contract, the tools, the loop), the /noacg:graphic command and the noacg MCP server - make a broadcast graphic and put it in your NoaCG library.",
+      "author": {
+        "name": "NoaCG Studio",
+        "url": "https://noacg.studio"
+      },
+      "source": "./cli/plugin",
+      "category": "design",
+      "homepage": "https://noacg.studio"
+    }
+  ]
+}

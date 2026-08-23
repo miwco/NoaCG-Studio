@@ -107,9 +107,14 @@ test('a dual package round-trips through the bridge and reports a stale generate
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const r = await window.noacgBridge.readPackage(bytes, 'round_trip.zip');
-    return { kind: r.kind, type: r.imported?.template.type, css: r.imported?.template.css, js: r.imported?.template.js, fields: r.imported?.template.fields.length, ografErrors: r.ograf?.errors, noacgType: r.ograf?.noacg?.type, stale: r.ograf?.stale, importStale: r.imported?.noacg?.stale };
+    return { kind: r.kind, name: r.imported?.template.name, description: r.imported?.template.settings.description, type: r.imported?.template.type, css: r.imported?.template.css, js: r.imported?.template.js, fields: r.imported?.template.fields.length, ografErrors: r.ograf?.errors, noacgType: r.ograf?.noacg?.type, stale: r.ograf?.stale, importStale: r.imported?.noacg?.stale };
   }, exported.base64);
   expect(readBack.kind).toBe('noacg');
+  // The name given at scaffold lives in the SOURCES (<title>, the definition's description), so a
+  // re-read package keeps its slug - otherwise `noacg validate` regenerates under the design's
+  // own name and the folder grows a second html + manifest (2026-08-22).
+  expect(readBack.name).toBe('Round trip');
+  expect(readBack.description).toBe('Round trip');
   expect(readBack.type).toBe('scoreboard');
   expect(readBack.ografErrors).toEqual([]);
   expect(readBack.noacgType).toBe('scoreboard');

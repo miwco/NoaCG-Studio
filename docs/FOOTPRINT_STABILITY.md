@@ -23,7 +23,48 @@ holds each line to the rows its design was drawn for. A design declares `stageWi
 `scripts/footprint-stability-sweep.mjs` is the instrument, `e2e/catalog/footprint-stability.spec.ts`
 the gate - it selects on the marker, never a list, so a category is covered the day it flips.
 
-Five readings, binding on anyone extending this:
+**The stage fit is the OPERATOR's, never the design's own words.** The size in the CSS is the size
+that airs at the design's own sample, and only text typed PAST that sample shrinks - so the STAGE
+puts no floor under a design's `line-height`.
+
+**A LINE MASK still does, and that is a different mechanism.** Every masked line sits in a
+`.<prefix>-mask` with `overflow: hidden` sized to the line box, while the face's glyph box is
+~1.2em whatever line-height says - so a tighter leading pushes letters out of the MASK even though
+nothing pushes the panel. Measured on lt64 at 1.05: the name is clipped 4px on y, and
+`scripts/overflow-sweep.mjs` reports it as a regression while `stage-fit-sweep` reports it clean.
+Two instruments, two mechanisms; a design whose line-height is pinned should say which one pins it.
+`scripts/stage-fit-sweep.mjs` renders every staged design at its default content and compares each
+line's declared size (computed, so `--scale` and `--type-scale` are already folded in) against the
+size it actually ships at; `e2e/catalog/stage-fit-honesty.spec.ts` is the gate, at 1% tolerance.
+
+That was NOT true until 2026-08-23, and the two ways it failed are both worth knowing, because
+neither is visible in the source and every gate here was green through both.
+
+- **A LINE BOX IS NOT A CONTENT BOX.** The reserve was `getBoundingClientRect().height`
+  (font-size x line-height); the shrink test read `scrollHeight`, which is the face's own glyph
+  box - about 1.2em whatever line-height says, and per face: Archivo 1.03, Inter 1.14, Space
+  Grotesk 1.17, Manrope 1.24, Oswald 1.29, Saira 1.35. Comparing the two meant any line whose
+  declared line-height sat under its face's content ratio reported `tallBy > 1` at the design's
+  OWN default text and was shrunk by `sqrt(1/tallBy)`, permanently, at load, with no operator
+  input. Measured over the registry: **200 of 290 staged designs, 457 of 459 shrunk lines, worst
+  -23%** - ig31 declaring 103px and airing 79px. The cliff is the FACE's ratio, so `grep
+  line-height` is a suspect list and never a finding. **The fix is a second calibrated number:**
+  `data-stage-fill` records what the design's own sample actually filled, the reserve stays the
+  line box (that is what holds the panel, and it is still a `height`), and the excess is measured
+  against the larger of the two. A sample fits itself by definition; only the operator's text
+  past it shrinks. A row the design never showed us gets one row's CONTENT height from a cached
+  per-face probe, so a rebuilt standings row does not shrink for a wrap that never happened.
+- **A PAINTED BACKDROP IS NOT THE TEXT.** The width axis read `scrollWidth`, and a design's slab
+  is often a pseudo-element that overhangs on purpose - ss02's chip and headline both lean
+  `skewX(-8deg)`, which counts towards scrollable overflow. So a 16px lean on a 920px row read as
+  the headline running out of its box: **92px shipped at 66px** at the design's own words. The
+  width test now measures a `Range` over the element's own text nodes against its content box, so
+  the widest ROW is compared and painted decoration is not. Take the content box from the RECT,
+  not `clientWidth`: the latter is rounded to whole pixels and the text width beside it is not,
+  which is half a pixel of phantom overflow and left seventeen designs just past the fit's 0.5%
+  tolerance on nothing at all.
+
+Five more readings, binding on anyone extending this:
 
 - **THE RESERVE IS A HEIGHT, NEVER A MAX-HEIGHT.** A cap stops a line growing and lets it
   SHRINK, so a short value still moves the panel - the same defect wearing the opposite sign

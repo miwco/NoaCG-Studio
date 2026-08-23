@@ -18,7 +18,7 @@ import { BridgeClient, type BridgeValidation, type SpxTemplate } from '../bridge
 import { ografBench } from '../ografBench.js';
 import { EXIT_FINDINGS, EXIT_OK, flagBool, flagString, UsageError, type Out, type ParsedArgs } from '../output.js';
 import { shoot } from '../screenshot.js';
-import { packageEntries, readPackageInput, unzipTo } from '../workspace.js';
+import { packageEntries, readPackageInput, removeStaleGenerated, unzipTo } from '../workspace.js';
 
 const STATE_WORD: Record<string, string> = { pass: 'PASS', warn: 'WARN', fail: 'FAIL', untested: 'UNTESTED' };
 
@@ -99,8 +99,21 @@ export async function runValidate(args: ParsedArgs, out: Out): Promise<number> {
     const changes: string[] = [];
     if (isDirectory) {
       const dir = path.resolve(input);
+      // A validate without --screenshots keeps the thumbnail an earlier one wrote: the manifest's
+      // `thumbnails` points at thumbnail.png, and regenerating without it would drop the entry
+      // while the file stayed behind.
+      if (!thumbnail) {
+        const kept = await fs.readFile(path.join(dir, 'thumbnail.png')).catch(() => null);
+        if (kept) thumbnail = { png: new Uint8Array(kept), width: template.resolution.width, height: template.resolution.height };
+      }
       const zip = await bridge.exportPackage(template, thumbnail ? { thumbnail } : {});
-      await unzipTo(zip, dir);
+      const written = await unzipTo(zip, dir);
+      const newHtml = written.find((f) => /\.html?$/i.test(f) && !f.includes('/') && !/^controlpanel\.html$/i.test(f));
+      for (const { file, kind } of await removeStaleGenerated(dir, written)) {
+        changes.push(kind === 'manifest'
+          ? `${file} (removed: the generated manifest of the package's previous name)`
+          : `${file} (removed: the package is now named by its html${newHtml ? ` - its content lives in ${newHtml}` : ''})`);
+      }
       const after = await sourcesOf(dir, template);
       for (const [file, text] of Object.entries(after)) {
         if (before[file] !== null && before[file] !== undefined && text !== before[file]) {

@@ -24,6 +24,7 @@ const TYPE_PLURAL: Partial<Record<TemplateType, string>> = {
   'public-info': 'Public info',
   'starting-soon': 'Holding screens',
   'imported-design': 'Imported',
+  blank: 'Custom',
 };
 
 /** The filter chip's word: the SAME kind vocabulary the rows show (model/types.ts
