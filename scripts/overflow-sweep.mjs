@@ -301,9 +301,18 @@ if (jsonOut) {
 // that gains a new escaped side is a regression); exact pixel offsets do not, so they are omitted.
 // A signature with no findings is dropped from the baseline entirely — the file lists only the
 // variants that legitimately escape or clip, which keeps it small and reviewable.
+//
+// ONE ENTRY PER AXIS, NEVER ONE PER COMBINATION. The comparison below is a string diff, so a
+// combined token made "lost an axis" indistinguishable from "gained a finding": cr03's stage
+// clips `.credits-box:xy` at the default text size and only `:y` at S, which is strictly better
+// and read as a regression, because the string `:y` is not the string `:xy`. Splitting them means
+// a row can only ever fail on an axis or a side it did NOT have before, which is what the gate
+// claims to measure. It also makes the baseline readable: `.credits-box:x` and `.credits-box:y`
+// are two facts about the design, not one opaque pair.
+const axisTokens = (sel, chars) => [...String(chars)].map((c) => `${sel}:${c}`);
 const sigOf = (r) => ({
-  off: r.offFrame.map((h) => `${h.sel}:${h.sides}`).sort(),
-  clip: r.selfClip.map((h) => `${h.sel}:${h.axis}`).sort(),
+  off: r.offFrame.flatMap((h) => axisTokens(h.sel, h.sides)).sort(),
+  clip: r.selfClip.flatMap((h) => axisTokens(h.sel, h.axis)).sort(),
 });
 
 if (writeOut) {

@@ -104,7 +104,8 @@
  "lt33": {
   "off": [],
   "clip": [
-   ".lower-third-mask:xy"
+   ".lower-third-mask:x",
+   ".lower-third-mask:y"
   ]
  },
  "lt34": {
@@ -391,7 +392,8 @@
  },
  "tk05": {
   "off": [
-   "#ticker-track:LR",
+   "#ticker-track:L",
+   "#ticker-track:R",
    ".ticker-item:R",
    ".ticker-item:R",
    ".ticker-item:R",
@@ -425,7 +427,8 @@
  },
  "tk20": {
   "off": [
-   "#ticker-track:LR",
+   "#ticker-track:L",
+   "#ticker-track:R",
    ".ticker-item:L",
    ".ticker-item:R",
    ".ticker-item:R",
@@ -482,7 +485,8 @@
  },
  "tk12": {
   "off": [
-   "#ticker-track:LR",
+   "#ticker-track:L",
+   "#ticker-track:R",
    ".ticker-item:R",
    ".ticker-item:R",
    ".ticker-item:R",
@@ -598,7 +602,8 @@
  },
  "tk22": {
   "off": [
-   "#ticker-track:LR",
+   "#ticker-track:L",
+   "#ticker-track:R",
    ".ticker-down:R",
    ".ticker-down:R",
    ".ticker-item:L",
@@ -653,7 +658,8 @@
  },
  "tk02": {
   "off": [
-   "#ticker-track:LR",
+   "#ticker-track:L",
+   "#ticker-track:R",
    ".ticker-item:L",
    ".ticker-item:R",
    ".ticker-item:R",
@@ -1325,7 +1331,8 @@
  "cr03": {
   "off": [],
   "clip": [
-   ".credits-box:xy"
+   ".credits-box:x",
+   ".credits-box:y"
   ]
  },
  "cr04": {
@@ -1363,7 +1370,8 @@
  },
  "cr06": {
   "off": [
-   "#credits-track:TB",
+   "#credits-track:B",
+   "#credits-track:T",
    ".credits-end:B",
    ".credits-end:B",
    ".credits-entry:B",
@@ -1373,7 +1381,8 @@
    ".credits-heading:T",
    ".credits-logo-slot:B",
    ".credits-loop-clone:B",
-   ".credits-loop-run:TB",
+   ".credits-loop-run:B",
+   ".credits-loop-run:T",
    ".credits-name:B",
    ".credits-name:B",
    ".credits-name:B",
@@ -1444,7 +1453,8 @@
  },
  "cr08": {
   "off": [
-   "#credits-track:TB",
+   "#credits-track:B",
+   "#credits-track:T",
    ".credits-end:B",
    ".credits-end:B",
    ".credits-entry:B",
@@ -1467,7 +1477,8 @@
    ".credits-logo-slot:B",
    ".credits-logo-slot:B",
    ".credits-loop-clone:B",
-   ".credits-loop-run:TB",
+   ".credits-loop-run:B",
+   ".credits-loop-run:T",
    ".credits-page:B",
    ".credits-page:B",
    ".credits-page:B",
@@ -1591,7 +1602,8 @@
  },
  "vs01": {
   "off": [
-   ".versus-glow:TB"
+   ".versus-glow:B",
+   ".versus-glow:T"
   ],
   "clip": [
    ".versus-box:y"
@@ -1614,7 +1626,8 @@
  },
  "fr03": {
   "off": [
-   ".frame-divider:TB"
+   ".frame-divider:B",
+   ".frame-divider:T"
   ],
   "clip": [
    ".frame-mask:y",
@@ -1630,12 +1643,15 @@
  },
  "tr01": {
   "off": [
+   ".transition-panel:B",
    ".transition-panel:R",
-   ".transition-panel:RB",
-   ".transition-panel:TR"
+   ".transition-panel:R",
+   ".transition-panel:R",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy",
+   ".transition-box:x",
+   ".transition-box:y",
    ".transition-mask:y"
   ]
  },
@@ -1649,10 +1665,12 @@
  },
  "tr04": {
   "off": [
-   ".transition-panel:LT",
+   ".transition-panel:L",
+   ".transition-panel:R",
    ".transition-panel:T",
    ".transition-panel:T",
-   ".transition-panel:TR"
+   ".transition-panel:T",
+   ".transition-panel:T"
   ],
   "clip": [
    ".transition-mask:y"
@@ -1660,51 +1678,88 @@
  },
  "tr11": {
   "off": [
-   ".transition-panel:LTRB",
-   ".transition-panel:TB"
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:T",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "tr12": {
   "off": [
-   ".transition-panel:LTRB",
-   ".transition-panel:LTRB",
-   "circle:LTRB",
-   "circle:TB",
-   "polygon:TB",
-   "svg:LTRB"
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:R",
+   ".transition-panel:T",
+   ".transition-panel:T",
+   "circle:B",
+   "circle:B",
+   "circle:L",
+   "circle:R",
+   "circle:T",
+   "circle:T",
+   "polygon:B",
+   "polygon:T",
+   "svg:B",
+   "svg:L",
+   "svg:R",
+   "svg:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "tr13": {
   "off": [
    ".bloom-pearl:T",
-   ".transition-panel:LTRB",
-   ".transition-panel:LTRB"
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:R",
+   ".transition-panel:T",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "tr15": {
   "off": [
-   ".transition-panel:LTB",
-   ".transition-panel:TB",
-   ".transition-panel:TB",
-   ".transition-panel:TRB",
-   ".transition-panel:TRB"
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:R",
+   ".transition-panel:T",
+   ".transition-panel:T",
+   ".transition-panel:T",
+   ".transition-panel:T",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "tr16": {
   "off": [
-   ".transition-panel:LR"
+   ".transition-panel:L",
+   ".transition-panel:R"
   ],
   "clip": [
    ".transition-box:x"
@@ -1712,18 +1767,26 @@
  },
  "tr17": {
   "off": [
-   ".transition-panel:LTRB"
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "tr18": {
   "off": [
-   ".transition-panel:LTRB"
+   ".transition-panel:B",
+   ".transition-panel:L",
+   ".transition-panel:R",
+   ".transition-panel:T"
   ],
   "clip": [
-   ".transition-box:xy"
+   ".transition-box:x",
+   ".transition-box:y"
   ]
  },
  "es01": {
@@ -2460,7 +2523,8 @@
  "cr03@image": {
   "off": [],
   "clip": [
-   ".credits-box:xy"
+   ".credits-box:x",
+   ".credits-box:y"
   ]
  },
  "cr04@image": {
@@ -2498,7 +2562,8 @@
  },
  "cr06@image": {
   "off": [
-   "#credits-track:TB",
+   "#credits-track:B",
+   "#credits-track:T",
    ".credits-end:B",
    ".credits-end:B",
    ".credits-entry:B",
@@ -2508,7 +2573,8 @@
    ".credits-heading:T",
    ".credits-logo:B",
    ".credits-loop-clone:B",
-   ".credits-loop-run:TB",
+   ".credits-loop-run:B",
+   ".credits-loop-run:T",
    ".credits-name:B",
    ".credits-name:B",
    ".credits-name:B",
@@ -2581,7 +2647,8 @@
  },
  "cr08@image": {
   "off": [
-   "#credits-track:TB",
+   "#credits-track:B",
+   "#credits-track:T",
    ".credits-end:B",
    ".credits-end:B",
    ".credits-entry:B",
@@ -2604,7 +2671,8 @@
    ".credits-logo:B",
    ".credits-logo:B",
    ".credits-loop-clone:B",
-   ".credits-loop-run:TB",
+   ".credits-loop-run:B",
+   ".credits-loop-run:T",
    ".credits-page:B",
    ".credits-page:B",
    ".credits-page:B",
@@ -2722,7 +2790,8 @@
  },
  "vs01@image": {
   "off": [
-   ".versus-glow:TB"
+   ".versus-glow:B",
+   ".versus-glow:T"
   ],
   "clip": [
    ".versus-box:y"
