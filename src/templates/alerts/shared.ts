@@ -162,12 +162,22 @@ export const ALERT_LEVEL_CSS = `/* ── The severity flag ── */
    The width follows --type-scale as well as --scale, and it has to: the blocks are absolutely
    positioned, so they contribute NOTHING to the flag's width — turning the text size up would
    grow the longest word past a slab that never grew with it, and "Emergency" would run off its
-   own flag. */
+   own flag.
+
+   260px, not 248, AND the blocks' side padding follows --type-scale too. At 248 the claim above
+   was true of the SLAB and false of the room inside it: the width scaled with the text size while
+   the padding did not, so the content box scaled sub-linearly and "EMERGENCY" needed about
+   206.5px of the 204 it had at the default size — an overflow of a pixel or two that the stage fit
+   correctly answered by shrinking the word ~1%. Two decimal places of a defect, but a real one:
+   it was the last design in the catalogue still shipping a font size its CSS does not declare
+   (e2e/catalog/stage-fit-honesty.spec.ts), it read as a 1.2% shrink on Linux against 0.5% here,
+   and at type-scale S the same arithmetic cost 7px rather than 2. Scaling both together makes the
+   headroom proportional at every step: about 9px at M, 8 at S, 11 at L. */
 .alert-flag {
   position: relative;              /* the stacking context for the level blocks */
   flex-shrink: 0;                  /* never squeezed by the text column */
   align-self: stretch;             /* the flag spans the banner's full height */
-  min-width: calc(248px * var(--scale) * var(--type-scale));  /* fits the longest level word at any text size */
+  min-width: calc(260px * var(--scale) * var(--type-scale));  /* fits the longest level word at any text size */
 }
 
 /* One level block — a full-bleed coloured slab with its word centred. All four are here at
@@ -178,7 +188,7 @@ export const ALERT_LEVEL_CSS = `/* ── The severity flag ── */
   display: flex;                   /* centre the word */
   align-items: center;             /* vertical centring */
   justify-content: center;         /* horizontal centring */
-  padding: 0 calc(22px * var(--scale)); /* keeps a long word off the slab's edges */
+  padding: 0 calc(22px * var(--scale) * var(--type-scale)); /* keeps a long word off the slab's edges - type-scaled, so the room inside grows with the word (see .alert-flag) */
   font-family: var(--font-label);  /* the family's label face */
   font-size: calc(26px * var(--scale) * var(--type-scale)); /* the flag speaks first — read before the headline */
   font-weight: 800;                /* heavy caps carry at a distance */
