@@ -392,6 +392,9 @@ GRAPHICS.forEach(function (g) {
     paintStaged();
   }
   function onChange(field, value) { state[field] = value; if (live()) sendUpdate(); else paintStaged(); }
+  // Per-field repainters for a value the PANEL moved itself (an event's adjust) - registered by
+  // the controls that can show one; a field with none simply keeps its box.
+  var repaint = {};
 
   // ── The clock verbs. CLOCK is this graphic's clock spec, or null for the graphics that carry
   // no clock — which is most of them. The arithmetic is the shared block above
@@ -436,6 +439,9 @@ GRAPHICS.forEach(function (g) {
       var input = el('input', { type: 'number', class: 'num-input' });
       input.value = v || '0';
       input.oninput = function () { onChange(c.key, input.value); };
+      // An ⚡ event that ADJUSTS this figure (a goal's +1) writes the state and asks the box to
+      // repaint - the box is the operator's only view of the number the press just aired.
+      repaint[c.key] = function () { input.value = state[c.key] || '0'; };
       var minus = el('button', { class: 'step' }, ['−']);
       var plus = el('button', { class: 'step' }, ['+']);
       // A declared step fixes the increment; a field that declares none (every SPX number
@@ -575,10 +581,24 @@ GRAPHICS.forEach(function (g) {
     eventBtns.forEach(function (entry) { entry.btn.disabled = !legalNow(entry.event); });
   }
   function sendEvent(e) {
+    // The SAME rule as controlModel.ts eventPayload (this page ships without it): payload
+    // fields ride at their current value; adjust fields (a goal's +1) ride moved by their
+    // delta, counted from the current value (anything that does not read as an integer counts
+    // from 0), and the new figure is written into the panel's own state + box - the press aired
+    // it, so it is what the next press counts from and what every later ⟳ Take re-sends.
     var payload = null;
     (e.payload || []).forEach(function (key) {
       if (state[key] !== undefined) { payload = payload || {}; payload[key] = state[key]; }
     });
+    var adjust = e.adjust || {};
+    for (var ak in adjust) {
+      if (!Object.prototype.hasOwnProperty.call(adjust, ak)) continue;
+      var moved = String((parseInt(String(state[ak] == null ? '' : state[ak]), 10) || 0) + adjust[ak]);
+      payload = payload || {};
+      payload[ak] = moved;
+      state[ak] = moved;
+      if (repaint[ak]) repaint[ak]();
+    }
     // A clock verb writes the clock's own value around the event, in the order the wire module
     // fixes: the origin BEFORE a start, the banked time AFTER a hold or a reset.
     var effect = clockEffect(e.event, Date.now());

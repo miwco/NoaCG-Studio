@@ -349,8 +349,9 @@ e2e/layout.spec.ts.
   on, hidden fields skipped as SPX skips them); live-drives the preview via store.sendControl ->
   simulator; renders the state machine's EVENT BUTTONS (controlModel eventButtons - labels/
   sections/payloads from `machine.controls`, payload values from sampleData via
-  store.sendEvent), GREYED by `isEventLegal` against store.machineGroups exactly as a hosted
-  control page greys them; downloads controlpanel.html; hosts a SLIM Productions block
+  store.sendEvent, an `adjust` press writing its new figure back into sampleData), GREYED by
+  `isEventLegal` against store.machineGroups exactly as a hosted control page greys them;
+  downloads controlpanel.html; hosts a SLIM Productions block
   (docs/GOALS.md "Student release" step 8: create/pick a production + "+ Add current" + the
   link to its page - the layer stack, export, publishing and links all live on
   ProductionPage, so two surfaces cannot drift); adds the Google-Sheets live-data block.

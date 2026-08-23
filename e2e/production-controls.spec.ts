@@ -347,6 +347,61 @@ test('± LIVE NUMBERS bumps a figure on air without publishing other staged edit
   await expect(program.locator('.scoreboard-podium-4')).toHaveClass(/scoreboard-podium-empty/);
 });
 
+test('a scoreboard GOAL raises the flag AND moves that side\'s score on the same press', async ({ page }) => {
+  // Owner, 2026-08-23, running a match live: "no reason to play the goal animation if the
+  // number doesn't change". The scoreboard type's goal controls carry an `adjust` - the press
+  // sends the event with that side's score moved by one as its payload, so the flag and the
+  // figure land together (or not at all), the cue keeps the new figure, and the next press
+  // counts from it. The ± steppers stay the correction road.
+  await createProject(page, { name: 'House Score' });
+  await productionFor(page, 'Derby');
+
+  const goalA = page.getByTestId('cue-action-goalA');
+  const goalB = page.getByTestId('cue-action-goalB');
+  await expect(goalA).toBeDisabled(); // off air: nothing to score on yet
+  await page.getByTestId('verb-take').click();
+  const program = page.frameLocator('[data-testid="program-stage"] iframe');
+  await expect(program.locator('#f1')).toHaveText('0');
+  await expect(goalA).toBeEnabled();
+
+  // Stage an edit that must NOT ride the goal: a half-typed name stays staged.
+  await page.getByTestId('cue-field-f0').fill('HOM');
+
+  await goalA.click();
+  await expect(page.getByTestId('machine-state-chip')).toContainText('Flag');
+  await expect(program.locator('#f1')).toHaveText('1');
+  await expect(program.locator('#f0')).toHaveText('HOME'); // the staged name did not air
+  // A second goal while the flag is up: still pressable (the self-arrow), counts from 1.
+  await expect(goalA).toBeEnabled();
+  await goalA.click();
+  await expect(program.locator('#f1')).toHaveText('2');
+  await expect(program.locator('#f3')).toHaveText('0'); // the other side did not move
+  // The cue holds the figure air shows, so a later ✎ Update cannot regress it.
+  await expect(page.getByTestId('cue-field-f1')).toHaveValue('2');
+
+  await goalB.click();
+  await expect(program.locator('#f3')).toHaveText('1');
+  await expect(page.getByTestId('cue-field-f3')).toHaveValue('1');
+
+  // Clear flag takes the marker down and moves nothing.
+  await page.getByTestId('cue-action-clearFlag').click();
+  await expect(page.getByTestId('machine-state-chip')).toContainText('No flag');
+  await expect(program.locator('#f1')).toHaveText('2');
+
+  // The correction road: the stepper still exists for a score, and a disallowed goal comes off.
+  await page.getByTestId('live-number-f1-down').click();
+  await expect(program.locator('#f1')).toHaveText('1');
+  // ...and the next goal counts from the corrected figure, not from a stale one.
+  await goalA.click();
+  await expect(program.locator('#f1')).toHaveText('2');
+
+  // ✎ Update publishes the whole cue: the staged name airs, the scores hold.
+  await page.getByTestId('verb-update').click();
+  await expect(program.locator('#f0')).toHaveText('HOM');
+  await expect(program.locator('#f1')).toHaveText('2');
+  await expect(program.locator('#f3')).toHaveText('1');
+});
+
 test('± LIVE NUMBERS on the EXPORTED controller: the bump is a partial, carrying that field alone', async ({ page, context }) => {
   test.setTimeout(180_000);
   // The same rule as the test above, on the surface a show drops to when the network dies -

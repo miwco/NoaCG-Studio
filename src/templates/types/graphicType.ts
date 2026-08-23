@@ -255,6 +255,10 @@ export interface TypeControlEvent {
   section?: string;
   /** Logical field keys whose values RIDE this event, applied only if it is accepted. */
   payload?: string[];
+  /** Logical field keys whose current value, MOVED by the delta, rides this event - a goal's
+   *  `{ scoreA: 1 }`. The surface computes the new figure and it rides as ordinary payload, so
+   *  the score changes exactly when the animation the event plays does, and not otherwise. */
+  adjust?: Record<string, number>;
   destructive?: boolean;
 }
 
@@ -534,6 +538,17 @@ function compileControls(type: GraphicType, machine: AnimMachine): MachineContro
         return id;
       });
       if (resolved.length > 0) control.payload = resolved;
+    }
+    if (declared.adjust !== undefined) {
+      const adjust: Record<string, number> = {};
+      for (const [key, delta] of Object.entries(declared.adjust)) {
+        const id = fieldIdFor(type.fields, key);
+        if (!id) throw new Error(`GraphicType "${type.id}": control "${declared.event}" adjusts an unknown field "${key}".`);
+        const field = type.fields.find((f) => f.key === key);
+        if (field?.kind !== 'number') throw new Error(`GraphicType "${type.id}": control "${declared.event}" adjusts "${key}", which is not a number field.`);
+        adjust[id] = delta;
+      }
+      if (Object.keys(adjust).length > 0) control.adjust = adjust;
     }
     if (declared.destructive !== undefined) control.destructive = declared.destructive;
     out.push(control);

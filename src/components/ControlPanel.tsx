@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { saveAs } from 'file-saver';
-import { eventButtons, eventLegality, fieldDescriptors, isEventLegal, type ControlButton } from '../control/controlModel';
+import { eventButtons, eventLegality, eventPayload, fieldDescriptors, isEventLegal, type ControlButton } from '../control/controlModel';
 import SpxFieldRow from './fields/SpxFieldRow';
 import { renderControlPanelHtml } from '../control/controlPanelHtml';
 import { hasLiveData, liveDataBlock, stripLiveData } from '../control/liveData';
@@ -34,6 +34,7 @@ export default function ControlPanel() {
   const sendControl = useTemplateStore((s) => s.sendControl);
   const sendEvent = useTemplateStore((s) => s.sendEvent);
   const sampleData = useTemplateStore((s) => s.sampleData);
+  const setSampleValue = useTemplateStore((s) => s.setSampleValue);
   const savedGraphicId = useTemplateStore((s) => s.saved.graphicId);
   const applyTemplate = useTemplateStore((s) => s.applyTemplate);
   const setActiveTab = useTemplateStore((s) => s.setActiveTab);
@@ -88,13 +89,15 @@ export default function ControlPanel() {
     return [...sections.entries()];
   }, [events]);
   // A button's payload rides the event with the fields' CURRENT sample values — applied by
-  // the graphic only if the machine accepts the event (the atomic multi-part change).
+  // the graphic only if the machine accepts the event (the atomic multi-part change). An
+  // `adjust` field (a goal's +1) rides moved by its delta, and the new figure is written back
+  // into the sample data so the field box reads it and the next press counts from it.
   const fireEvent = (e: ControlButton) => {
-    const payload: Record<string, string> = {};
-    for (const key of e.payload ?? []) {
-      if (sampleData[key] !== undefined) payload[key] = sampleData[key];
+    const payload = eventPayload(e, (key) => sampleData[key]);
+    sendEvent(e.event, payload);
+    for (const key of Object.keys(e.adjust ?? {})) {
+      if (payload?.[key] !== undefined) setSampleValue(key, payload[key]);
     }
-    sendEvent(e.event, Object.keys(payload).length > 0 ? payload : undefined);
   };
   const liveDataOn = hasLiveData(template.js);
   const remoteOn = hasRealtimeControl(template.js);

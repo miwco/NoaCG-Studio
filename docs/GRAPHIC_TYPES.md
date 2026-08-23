@@ -270,7 +270,7 @@ family a cell is in.
 | Poll result | 13 | ig11 House Poll | – |
 | Holding screen | 9 | ss04 House Hold | parallel `clock` |
 | Ticker | 8 | tk07 House Rotator | timer cycle + pause/resume/skip |
-| Scoreboard | 5 | sb03 House Score | parallel `flag` / `result` (the clock group moved to the sports boards that draw a clock — see the note in `types/scoreboard.ts`) |
+| Scoreboard | 5 | sb03 House Score | parallel `flag` / `result`; `goalA`/`goalB` raise the flag from either state and carry that side's score +1 as an `adjust` payload (the clock group moved to the sports boards that draw a clock — see the note in `types/scoreboard.ts`) |
 | Quiz board | — | qz02 House Quiz | branches `selected` / `locked` |
 | Now / Next | — | card21 House Now Next | – |
 | Headline card | — | card25 House Headline | – |
@@ -425,7 +425,10 @@ recording, because it was not the one the first pass predicted:
 - **Simplicity guard** — lower third: one group, three states, no machine key at all.
 - **Scorebug** — scoreboard: scores are data that move no pointer; flag and result are
   independent 2-state groups instead of combined states (the clock group lives on the sports
-  boards that draw one); simultaneous events resolve in order.
+  boards that draw one); simultaneous events resolve in order. A GOAL moves the score WITH the
+  flag on one press - not by a state per side and not by a template-side counter, but by the
+  control's `adjust` (docs/CONTROL_LAYER.md): the surface sends the event carrying the new
+  figure, the machine applies both or neither, the log holds the absolute score.
 - **Ticker** — ticker: items cycle with no operator input, and pause holds them.
 - **Millionaire** — quiz board: one `selected` state plus a `selectedAnswer` field (never one
   state per answer); after `lock` there is no `select` arrow, so a late pick is dropped with its
