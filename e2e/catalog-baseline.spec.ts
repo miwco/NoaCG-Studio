@@ -269,8 +269,23 @@ const CAPTURE = `(async () => {
         const win = frame.contentWindow, doc = frame.contentDocument;
         if (!win || !doc) throw new Error('the iframe has no document');
 
-        // Fonts change every measurement; the cap stops a missing face from hanging the run.
-        await Promise.race([doc.fonts.ready.then(() => undefined), new Promise((r) => setTimeout(r, 1500))]);
+        // FONTS FIRST, AND THE WAIT IS NOT ALLOWED TO GIVE UP QUIETLY. Every measurement here is
+        // a face measurement, and a staged design re-calibrates its fit ON fonts.ready - so a
+        // reading taken before the swap is the FALLBACK face's geometry, recorded as if it were
+        // the design's. Under a loaded machine the old 1.5s cap expired often enough to move
+        // al01's four severity slabs and fail this spec inside the full suite while it passed
+        // alone. The cap is still here so a genuinely missing face cannot hang the run, but it
+        // now THROWS: the faces are bundled and served by the dev server, so eight seconds
+        // without them is a fault to report, never a baseline to record.
+        const fontsReady = await Promise.race([
+          doc.fonts.ready.then(() => true),
+          new Promise((r) => setTimeout(() => r(false), 8000)),
+        ]);
+        if (!fontsReady) {
+          throw new Error(rec.id + ': the webfonts were not ready after 8s - a fallback-face measurement is not a baseline');
+        }
+        // The fit re-runs on that promise; give the layout it schedules a frame to land.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
         // MEASURE THE AUTHORED DESIGN, NOT AN ANIMATION PHASE.
         //
