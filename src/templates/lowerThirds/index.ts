@@ -88,6 +88,9 @@ import { lt59 } from './lt59';
 import { lt60 } from './lt60';
 import { lt61 } from './lt61';
 import { lt62 } from './lt62';
+import { lt63 } from './lt63';
+import { lt64 } from './lt64';
+import { lt65 } from './lt65';
 
 
 /** The matrix above, in browse order: the generalist straps, grouped by style family. */
@@ -125,6 +128,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt30, // Dateline — four inputs, closing on a ruled dateline in accent caps
   lt31, // Standfirst — name only on a flat ink panel, opened by a short rule
   lt59, // Byline Serif - the catalog's first serif strap, printed on paper stock
+  lt63, // Broadsheet Band - the full-width paper band; name and role share one row
   // Cinematic (the documentary voice: scrims, hairlines, wide light caps)
   lt32, // Scrim — name and role on a scrim that fades into the shot
   lt33, // Wide Caps — one name in very wide tracked caps, centred
@@ -148,6 +152,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt58, // Clean Call - minimal hairline call-to-action strap
   lt61, // Poster Slab - a condensed poster billing on a cut slab
   lt62, // House Weather - current conditions: place, tabular temperature, condition, wind
+  lt65, // Edge Rail - a narrow rail at the frame edge, the name set vertically down it
   // Modern social / glass
   lt08, // Frosted Card — backdrop-blur glass card (logo slot)
   lt09, // Gradient Pill — compact pill, name + handle inline
@@ -159,6 +164,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt48, // Glass Tag — right-anchored capsule: an accent dot and one name
   lt49, // Glass Board — logo well + four lines, the remote-guest board
   lt16, // Frost Handle — compact glass social mark (social-handle type, glass)
+  lt64, // Portrait Column - the tall side panel: a standing column with the name stacked down it
   lt56, // Frost Call — frosted call-to-action pill (call-to-action type, glass)
 ];
 

@@ -143,6 +143,26 @@ The canonical source is the one under `cli/skill/`; the in-repo dogfooding adapt
 and every shipped copy (npm, the Claude Code plugin, the Codex skill) are generated from it by
 `cli/scripts/build-skill.mjs` - never hand-copied.
 
+## Distribution (one source, every shipped copy generated)
+
+| Channel | What ships | Install |
+|---|---|---|
+| **npm** `noacg` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx noacg <cmd>` / `npm i -g noacg` |
+| **Claude Code plugin** (`cli/plugin/`, marketplace `noacg-studio` = root `.claude-plugin/marketplace.json`) | the skill copy, `/noacg:graphic`, `.mcp.json` running `npx -y noacg mcp` | `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`; from a checkout `claude --plugin-dir ./cli/plugin` |
+| **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`) | the skill copy | copy `cli/plugin/skills/noacg-graphic/` to `~/.codex/skills/`; `codex mcp add noacg -- npx -y noacg mcp` |
+| **In-repo dogfooding** | the thin adapter triple (`.agent-workflows/noacg-graphic.md`, `.claude/skills/`, `.agents/skills/`) - POINTERS at the source | already there |
+
+`cli/scripts/build-skill.mjs` writes every generated copy from `cli/skill/noacg-graphic/` and stamps
+the npm version onto the two plugin manifests and the marketplace entry; `npm run build` runs it in
+`--check` mode and fails on drift (a deleted reference must vanish from the copy too). The adapter
+triple is guarded by `scripts/check-shared-instructions.mjs` and never generated. Verified
+2026-08-22: `npm pack --dry-run` = 31 files (dist, skill, package.json, README, LICENSE); the plugin
+installed from this repository as a marketplace (`claude plugin install noacg@noacg-studio`) and
+`claude plugin details` listed the skill, the command and the MCP server at v0.2.0. Publishing
+(`npm publish` from `cli/`, and pushing the marketplace) is the owner's call; until the package is
+on npm the plugin's MCP server cannot start (`npx -y noacg` has nothing to fetch) while its skill
+and command already work.
+
 ## The category-agnostic proof
 
 The playout boundary derives every operator surface from the graphic itself - fields -> inputs,
@@ -166,6 +186,17 @@ production shows an input per field + Take/Update/Next/Out. No application code 
   Account → Agent access, and the library->air gates at hosted publish and production export.
   LANDED on its branch; offline-verified by `e2e/agent-access.spec.ts` + `e2e/production-gate.spec.ts`
   and the api unit tests; the live walk is `e2e/configured/agent-access.spec.ts`.
-- **P3:** distribution (plugin, Codex skill, npm) and the measured round (the same briefs through
-  arms A contract-only free design, B + neutral scaffold, C + catalog chassis, D + a design skill,
-  E + NoaCG design notes; blind owner read). Evidence decides what the skill recommends.
+- **P3, part A (distribution):** LANDED on its branch - the one skill generator + check, the
+  Claude Code plugin + marketplace entry, the Codex manifest + skill copy, the npm package at
+  0.2.0 (`npm pack --dry-run` clean), the plugin installed from the repo marketplace for real; the
+  two P1 leftovers closed (the dual package loaded and driven in SuperFlyTV's ograf-server -
+  `docs/OGRAF.md` - and the CLI-produced zip walked through the Import door, which also found
+  and fixed a PowerShell-backslash zip and the scaffold-name round trip); a typeless graphic
+  reads "Custom" in the library; the round's brief bank (`benchmarks/agent/v1/briefs.json`) and
+  runner (`scripts/agent-round-bench.mjs`, control mode free, `--run` spends).
+- **P3, part B (the measured round):** NOT RUN - it spends the owner's Claude Code quota and needs
+  the owner's blind read. The same briefs through arms A contract-only free design, B + neutral
+  scaffold, C + catalog chassis, D + the `frontend-design` skill, E + NoaCG design notes; recorded
+  per cell (validate rounds, minutes, screenshots, final verdict, cost); the novel brief judged on
+  "operable without category code". Evidence decides what the skill recommends by default and
+  whether any design guidance is added deliberately.

@@ -40,6 +40,37 @@ Colour is NOT the gap (see §2 — it was buried and is now surfaced). **Shape i
 **Do not** answer this with more dark slabs in new palettes. `card-look-sweep` reports the
 footprint of anything drawn, so a new design's silhouette is checkable before review.
 
+### PARTLY DONE 2026-08-22 — three of the six drawn, scope set by the owner
+
+The owner scoped this to the three highest-contrast shapes rather than all six. Drawn:
+**lt63 "Broadsheet Band"** (full-width band), **lt64 "Portrait Column"** (tall panel) and
+**lt65 "Edge Rail"** (side column, and the catalog's first use of `writing-mode`).
+
+Re-measured after they landed (`node scripts/card-look-sweep.mjs lower-third`, 106 designs):
+
+| footprint | before | after |
+|---|---|---|
+| `strap/thin` | 99 — **96%** | 99 — **93%** |
+| `strap/mid` | 4 | 4 |
+| `strap/tall` | — | **2** |
+| `full-width/thin` | — | **1** |
+
+**Two buckets exist that did not, and the one-silhouette share moved 96% → 93%.** That is the
+honest size of three designs against a category of 106: the shapes are now REACHABLE, and the
+share only falls as far as the count of designs carrying them. **Three shapes remain undrawn** -
+corner block, full-frame card, framed cut-out - and the table above is still the brief for them.
+
+Two things this round proved that the next one should not re-learn:
+
+- **An accent has to be big enough to READ at card size.** lt63's rule at the editorial family's
+  2px and lt65's 64px cap both registered as *no accent colour at all* on the sweep. Both were
+  under-weighted for their own geometry (a 1:960 hairline across the frame; a cap narrower than
+  the rail it caps), so both were fixed on the design's own terms - and the fix moved lt63 into
+  the azure bucket, where it belongs.
+- **A hue claim has to be checked against the sweep's own buckets, not against the eye.** Volt
+  reads as chartreuse and lands in the bucket the sweep labels `amber` - the category's fourth
+  largest. lt65 was written up as adding a rare hue and does not.
+
 **Read first:** `docs/CATALOG_VARIETY.md` (what the catalog repeats), `docs/DESIGN_LANGUAGE.md`
 (taste and motion), `src/templates/AGENTS.md` (the assembler contracts, the logo-slot rules, the
 three baselines a new design moves).

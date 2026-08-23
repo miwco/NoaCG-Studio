@@ -1,0 +1,44 @@
+{
+  "name": "noacg",
+  "version": "0.2.0",
+  "description": "Make broadcast graphics for NoaCG Studio from Codex: the noacg-graphic skill (the NoaCG contract, the tools, the loop - not how to design) for the noacg CLI + MCP server.",
+  "author": {
+    "name": "NoaCG Studio",
+    "url": "https://noacg.studio"
+  },
+  "homepage": "https://noacg.studio",
+  "repository": "https://github.com/miwco/NoaCG-Studio",
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "broadcast-graphics",
+    "lower-third",
+    "scoreboard",
+    "ograf",
+    "spx",
+    "casparcg",
+    "obs",
+    "vmix",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "NoaCG",
+    "shortDescription": "Make broadcast graphics for NoaCG Studio",
+    "longDescription": "Design a broadcast graphic the way you normally design, validate and screenshot it with the noacg CLI, and save it into your NoaCG Studio library - ready to operate live from NoaCG's control panel and play out in CasparCG, SPX, OBS, vMix or any OGraf renderer.",
+    "developerName": "NoaCG Studio",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Write"
+    ],
+    "websiteURL": "https://noacg.studio",
+    "privacyPolicyURL": "https://noacg.studio/privacy",
+    "termsOfServiceURL": "https://noacg.studio/terms",
+    "defaultPrompt": [
+      "Make a football scoreboard for NoaCG",
+      "Make a lower third for our evening news, for NoaCG",
+      "Turn this graphic into a NoaCG graphic I can operate live"
+    ],
+    "screenshots": [],
+    "brandColor": "#F6A623"
+  }
+}

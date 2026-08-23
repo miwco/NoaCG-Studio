@@ -3177,8 +3177,7 @@ the owner IS the gate and each verdict costs a human evening.
 `scripts/pro-taste-rejudge.mjs`. It REPORTS and does not gate, like every instrument beside it,
 and two of the six carry no pass/fail at all and say so where they are measured: rule 2 because
 the owner stated it is conditional ("sometimes it can work, and that's kind of the problem"), and
-rule 3 because the ratified secondary floor already exists in `model/designRules.ts` and
-disagrees with the owner by a factor the owner has not re-ratified. An instrument that invents a
+rule 3 because the OWNER DECLINED THE FLOOR on 2026-08-22 (§25.5). An instrument that invents a
 threshold to settle a disagreement has replaced the measurement with the opinion.
 
 ### 25.1 What the re-judge cost, and what it covered
@@ -3275,8 +3274,28 @@ small".
 
 **So the re-ratification target is now a number rather than a range: a secondary floor that
 changes anything in this corpus has to sit above 26px**, because 26px is the smallest secondary
-reading anywhere in it. That is the decision to put in front of the owner - it flags the lower
+reading anywhere in it. That was the decision put in front of the owner - it flags the lower
 third's role line on every row, and leaves the countdown's 38px label alone.
+
+#### DECIDED 2026-08-22: THE OWNER DECLINED THE FLOOR. RULE 3 STAYS REPORT-ONLY, PERMANENTLY.
+
+The question was well formed and the number was well measured, and that is exactly what makes the
+answer worth recording. **26px is a description of what this catalog happens to ship, not a
+belief about how small a secondary line may be** - and a floor read off the catalog asserts that
+the catalog is right. The owner holds no rule at that boundary, so the instrument has none to
+measure against. It keeps its reading (`SecondaryTypeReading`, below) on every frame and mints no
+finding.
+
+This is the same closure rule 5 reached the day before, arrived at from the other direction:
+there the threshold was calibrated, quiet and wrong; here it would have been calibrated, loud and
+equally unheld. The test in both cases is **whether the owner holds the RULE, not whether the
+number fits the data**. Do not re-open rule 3 with a better number - a better number is an answer
+to a question nobody is asking. Re-open it only if the owner states a secondary floor himself, at
+which point there is a rule to encode and no calibration to do.
+
+Three of the six rules now carry no pass/fail (2, 3, 5), and that is a finding about the
+instrument rather than a gap in it: what the owner's taste turned out to contain is fewer
+thresholds and more readings than the first version assumed.
 
 `SecondaryTypeReading` carries what the decision needs on every frame: `smallestPx`,
 `smallestRole`, `smallestSnippet`, `singleLine`, and `smallestFlaggedOnSize` - the last one being
@@ -3483,10 +3502,9 @@ rules 1 and 5 on the minimalist language.
 Rule 6 is untouched and still fires on every row: the mark is on the lower third, the sponsor bug
 and the topic card and never on the countdown, because `PRO_GRAPHICS.countdown` declares
 `takesMark: false` (§25.4). That is the next decision to put in front of the owner, and it is a
-registry decision rather than a composer one. Rules 2 and 3 still carry no pass/fail, and rule 3's
-ratified floor still disagrees with the owner - §25.5's re-ratification target (a secondary floor
-above 26px) is unchanged by anything here, because rule 4's 28px is an eligibility gate and not a
-floor rule 3 judges against.
+registry decision rather than a composer one. Rules 2 and 3 still carry no pass/fail; rule 3's
+never will, because the owner declined the floor on 2026-08-22 (§25.5). Rule 4's 28px stays an
+eligibility gate and was never a floor rule 3 judged against.
 
 #### 25.8.5 Acting on rule 4 - the composer meets the ratified weight floor (2026-08-21)
 
@@ -3569,7 +3587,7 @@ Put to the owner as "is the placement wrong, or is the floor?", the answer was n
 > **I cannot give you hard rules on where to place a logo. It depends on the design.**
 
 **So rule 5 now mints no finding at all** - the third of the six to carry no pass/fail, beside rule
-2 (the owner called it conditional) and rule 3 (a ratified floor he has not re-ratified). It still
+2 (the owner called it conditional) and rule 3 (a floor he declined the next day - §25.5). It still
 measures the arrangement on every frame and judges none of it: `stacked` (which arrangement the
 design chose), `besideSlackPx` (whether the width allowed the other one), `bandFill` (how much of
 its band the mark uses).

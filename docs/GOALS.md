@@ -171,6 +171,29 @@ one question - their building runs a strict network, so which ports and hosts it
 that when they report it; do not design for it in advance.
 
 
+## NEXT - coding agents make NoaCG graphics (the agent door)
+
+**Shipped 2026-08-22** (`docs/AGENT_CLI.md`, `docs/AGENT_SAVE.md`; the archive entry has the
+detail): a user's Claude Code, Codex or any MCP client designs a graphic the way it works best and
+NoaCG is the BRIDGE - the contract, the tools (`noacg` CLI + MCP server, the `/bridge` page), the
+validation and the destination (`noacg save` into the library with a scoped key). The workspace is
+one folder that is an OGraf package and the SPX package; the skill is contract-only by default.
+
+- [ ] **The measured round** (`benchmarks/agent/`, `scripts/agent-round-bench.mjs`): the same
+      briefs through arms A contract-only free design, B + neutral scaffold, C + catalog chassis,
+      D + a design skill, E + NoaCG design notes - a blind owner read decides what the skill
+      recommends by default and whether any design guidance is added deliberately. Spends the
+      owner's quota; owner says go.
+- [ ] **Publish** - `npm publish` of `noacg`, the marketplace entry live. Owner's call.
+- **Future, so the directions are not forgotten:** arbitrary graphic backends (graphic-authored
+  actions + machines, validated; the control layer already renders any explicit machine);
+  OGraf-native graphics in the library (package hosting + an OGraf host in preview/output);
+  `/output` as an OGraf renderer (Server API, stable 2026-08-13); `noacg add --production`
+  (`productions:attach`); live playout as its own consented permission; remote MCP on the site
+  over Supabase OAuth 2.1; a design-agent ecosystem (the look pluggable, the contract NoaCG's);
+  `--replace <id>`, Realtime on `documents`, `noacg export <target>`, a browserless `types`,
+  keychain storage, a sandboxed bench iframe.
+
 ## NEXT - AI that anyone can afford
 
 Three execution tiers behind the one "Create with AI" door. They differ by **capability**, and the

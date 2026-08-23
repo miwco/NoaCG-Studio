@@ -73,13 +73,14 @@ async function main(): Promise<number> {
   const args = parseArgs(argv);
   const out = new Out(args.flags.json === true);
   const name = args._[0];
+  if (args.flags.version === true || name === 'version') {
+    out.result({ ok: true, version: cliVersion() });
+    out.say(cliVersion());
+    return EXIT_OK;
+  }
   if (!name || args.flags.help === true || name === 'help') {
     out.say(USAGE);
     return name ? EXIT_OK : EXIT_USAGE;
-  }
-  if (name === '--version' || args.flags.version === true) {
-    out.say(cliVersion());
-    return EXIT_OK;
   }
   const command = COMMANDS[name];
   if (!command) {

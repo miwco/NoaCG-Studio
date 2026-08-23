@@ -1,8 +1,31 @@
 {
   "name": "noacg",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The NoaCG Studio command-line tool and MCP server: scaffold, validate, inspect, screenshot and save broadcast graphics from a coding agent's terminal, against any NoaCG deployment.",
   "license": "AGPL-3.0-only",
+  "author": "NoaCG Studio (https://noacg.studio)",
+  "homepage": "https://noacg.studio",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miwco/NoaCG-Studio.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/miwco/NoaCG-Studio/issues"
+  },
+  "keywords": [
+    "broadcast-graphics",
+    "lower-third",
+    "scoreboard",
+    "ograf",
+    "spx",
+    "casparcg",
+    "obs",
+    "vmix",
+    "mcp",
+    "claude-code",
+    "codex"
+  ],
   "type": "module",
   "bin": {
     "noacg": "./dist/index.js"
@@ -10,14 +33,19 @@
   "files": [
     "dist",
     "skill",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/build-skill.mjs && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check:skill": "node scripts/build-skill.mjs --check",
     "test": "node --test test/smoke.test.mjs",
     "prepack": "npm run build"
   },

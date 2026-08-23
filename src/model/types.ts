@@ -82,7 +82,11 @@ export const TEMPLATE_TYPE_LABELS: Record<TemplateType, string> = {
   'stream-notification': 'Notification',
   'imported-design': 'Imported',
   'picture': 'Picture',
-  'blank': 'Blank',
+  // `blank` is the NEUTRAL type: the editor's empty start, and every typeless graphic an
+  // external agent authors against the contract (docs/AGENT_CLI.md). Those are finished,
+  // operable graphics, so the word they carry beside their name is "Custom", never "Blank" -
+  // the type id stays `blank` (it is persisted, and playout loses nothing on it).
+  'blank': 'Custom',
 };
 
 /** Assembler PREFIXES whose word differs from any TemplateType id — for surfaces that only

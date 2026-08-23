@@ -81,7 +81,9 @@ you drew them:
 
 **Optional sugar:** prefix a layer name with `f:` or `field:` (`f:Competition`) to mark it
 editable by name; the prefix is stripped from the label. Useful for an organisation that wants
-one shared convention - never required.
+one shared convention - never required, and it does not switch the other layers off: every text
+layer is offered ticked either way. On a PICTURE layer the prefix does more, because a picture
+is offered unticked by default - inside a design it is usually part of the artwork.
 
 ## 4. Fonts - the one thing that can differ on air
 
@@ -106,8 +108,16 @@ Two consequences worth designing around:
 
 - Prefer a family you can supply as a file, or one of the bundled/Google faces.
 - SVG text does not wrap or clip. When an operator types a longer value than the design was set
-  for, the generated code condenses that one line to the width you drew (`textLength`), and only
-  then. A value that fits leaves your typography untouched.
+  for, the generated code shrinks that one line until it fits the width you drew - a smaller
+  line of your own type, never a squeezed one - and only then. A value that fits leaves your
+  typography untouched.
+- **Or let the panel grow instead.** On the mapping step, "when the text is too long" can be
+  answered with **grow** rather than shrink, and you pick which rectangle grows (the widest one
+  is proposed). It widens to the right at the type's full size, anything you drew past its right
+  edge travels with it, and it stops inside the frame's safe margin - past that the line shrinks
+  as usual. This is what a lower third wants; a board or a scoreboard wants the default, because
+  its layout IS the design. Draw the panel as a **rectangle** if you want it to grow: a freeform
+  shape has no width to change.
 
 ## 5. If the text was converted to outlines
 

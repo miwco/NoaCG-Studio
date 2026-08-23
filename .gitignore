@@ -32,7 +32,10 @@ spx-corpus-out/
 
 # Local MCP server config (e.g. project-scoped Supabase MCP) - points at a specific project,
 # don't ship it in the open/self-hostable repo. Auth is handled separately via OAuth.
+# The one exception is the noacg PLUGIN's server declaration (`npx -y noacg mcp`): it names no
+# project and no secret, and a plugin without it has no MCP server (docs/AGENT_CLI.md).
 .mcp.json
+!cli/plugin/.mcp.json
 
 # AI bench / comparison outputs (screenshots + generated code, regenerated on demand).
 # The out-dir is the operator's choice, so the bench patterns are deliberately broad.

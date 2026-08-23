@@ -1687,6 +1687,25 @@ monitors is called a hazard. The next dashboard session is therefore already spe
 ---
 
 
+## The agent door: coding agents make NoaCG graphics (shipped 2026-08-22)
+
+Three phases on one plan (`docs/AGENT_CLI.md` is the account, `docs/AGENT_SAVE.md` the save half):
+**P1** (main `d02251e8`) the `/bridge` page, the DUAL graphic package (one folder = the SPX package +
+a valid EBU OGraf v1 Graphic whose manifest carries a minimal `v_noacg`), the neutral + typeless
+scaffolds, `control/ografContract.ts` (any OGraf manifest -> the control layer's own shapes), the
+`noacg` CLI + MCP server and the contract-only skill; **P2** (main `00b3dc27`) `noacg save` with a
+scoped agent key minted through a loopback one-time code, `/api/me/agent-keys` + `/api/me/graphics`
+(the server never executes template code), the consent route, Settings -> Agent access, and the
+library->air gates (an invalid graphic can no longer publish or export - ratified); **P3 part A**
+the one skill generator (`cli/scripts/build-skill.mjs`, check mode in `npm run build`), the Claude
+Code plugin + marketplace entry (`cli/plugin/`, root `.claude-plugin/`), the Codex manifest + skill
+copy, npm `noacg` 0.2.0 ready to publish, the dual package loaded and driven in SuperFlyTV's
+ograf-server (`docs/OGRAF.md`), the CLI zip walked through the Import door, a typeless graphic
+reading "Custom", and the measured round's brief bank + runner. The WHY that decided every call:
+let the agent design the way it works best; NoaCG is a bridge, not a second creative harness; the
+skill teaches the contract, never a look, until a measured round says otherwise. **Open:** the
+measured round itself (owner quota + blind read) and the publish - both live in `GOALS.md`.
+
 ## Landed parts of live goals (moved 2026-08-22)
 
 > Moved here verbatim from `GOALS.md` when it went back over its ~200-line budget. Each of these
