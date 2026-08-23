@@ -66,6 +66,22 @@ neither is visible in the source and every gate here was green through both.
 
 Five more readings, binding on anyone extending this:
 
+- **…AND NEVER A HEIGHT ON A MULTI-COLUMN BLOCK.** A definite height is what tells a multicol
+  container to stop balancing: it fills column one to that height, then column two, then lays the
+  rest out in OVERFLOW COLUMNS to the RIGHT, past its own box - where the design's reveal mask
+  (`overflow: hidden`) hides them. The words do not bleed a hair past the bottom where somebody
+  would see it; they vanish, with the graphic looking finished. Both of the fit's probes call it
+  a fit while it happens: `scrollHeight` sees no vertical overflow because there genuinely is
+  none, and the Range it measures the width with returns LINE BOXES, each one sitting inside a
+  column and so narrower than the box it is spilling out of. So the height is simply not pinned
+  there - which is also what the shrink lever needs, because an indefinite height makes the
+  overflow vertical again and the ordinary square-root pass handles it. card80's two-column
+  standfirst is the catalog's only multicol today; it settled 0.25px inside its reserve at its own
+  sample, so one renderer opened a third column where another did not (issue #36) and the nightly
+  overflow sweep reported `.info-card-mask:x`. The gate is
+  `e2e/catalog/multicol-containment.spec.ts`, and it calibrates BEFORE it types: drive `update()`
+  before the webfont swap and the runtime takes its reserve from the long copy instead, everything
+  fits by construction, and the gate passes on a build that is losing words.
 - **THE RESERVE IS A HEIGHT, NEVER A MAX-HEIGHT.** A cap stops a line growing and lets it
   SHRINK, so a short value still moves the panel - the same defect wearing the opposite sign
   (alert 16px, public-info 27px, entirely at the short end).

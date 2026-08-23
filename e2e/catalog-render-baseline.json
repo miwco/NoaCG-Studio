@@ -2546,7 +2546,7 @@
     "card80": {
       "#count": "14",
       "body": "a0bfb600f70e1597",
-      "body>div.info-card[1]": "e4efeb9f3050cddd",
+      "body>div.info-card[1]": "843f0c42a4a3154d",
       "body>div.info-card[1]>div.info-card-box[1]": "859e089bbdeda26b",
       "body>div.info-card[1]>div.info-card-box[1]>div.info-card-accent[1]": "31d52405138b14a7",
       "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[1]": "93c624ecde87ef9f",
@@ -2555,8 +2555,8 @@
       "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[2]>span.info-card-headline[1]": "72b8f714ef18b6da",
       "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[3]": "5dc6ac2ded686c97",
       "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[3]>span.info-card-standfirst[1]": "51f9e610bfbe1ad4",
-      "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[4]": "080826b06465769b",
-      "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[4]>span.info-card-byline[1]": "c2860fb140d3e0fe",
+      "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[4]": "b21c4643836633bf",
+      "body>div.info-card[1]>div.info-card-box[1]>div.info-card-mask[4]>span.info-card-byline[1]": "b41c54518733e04a",
       "body>script[1]": "0956f78db471b4af",
       "body>script[2]": "0956f78db471b4af"
     },

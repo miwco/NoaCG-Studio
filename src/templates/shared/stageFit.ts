@@ -376,11 +376,26 @@ function fitOneStagedLine(el) {
   // to full block makes it fill its parent instead of shrink-wrapping, which re-wraps the row
   // around it and clipped 9 designs sideways at their OWN content.
   if (cs.display === 'inline') el.style.display = 'inline-block';
+  // …AND NEVER ON A MULTI-COLUMN BLOCK. A definite height is what tells a multicol container to
+  // stop balancing: it fills the first column to that height, the second, and then keeps going
+  // into OVERFLOW COLUMNS to the RIGHT - outside the box, where the design's reveal mask clips
+  // them away. So the words do not bleed a hair past the bottom, they disappear sideways, and
+  // both of the probes below report a comfortable fit while it happens: scrollHeight sees no
+  // vertical overflow because there is none, and a Range's rects are line boxes INSIDE a column,
+  // each one narrower than the box. card80's two-column standfirst sat 0.25px inside its own
+  // reserve at its own sample text, so the nightly's renderer spilled a third column where this
+  // one does not (issue #36).
+  //
+  // An indefinite height is what the shrink lever needs anyway: with the height left alone the
+  // container balances into the columns the design asked for and grows DOWNWARD, which is the
+  // overflow scrollHeight can see - so the loop below shrinks the type to the reserve exactly as
+  // it does for every other line, instead of being blind to it.
+  var multicol = cs.columnCount !== 'auto' || cs.columnWidth !== 'auto';
   // HEIGHT ONLY, never overflow:hidden. The height is what holds the layout - that is the whole
   // contract. Hiding the excess as well only CUTS the words when the reserve is a sub-pixel
   // short, which the overflow gate caught on eleven designs at their OWN content; a hair of
   // bleed is a better failure than a clipped letter.
-  el.style.height = room + 'px';
+  el.style.height = multicol ? '' : room + 'px';
 
   // The bigger of the two floors wins: a design already at the floor never shrinks at all.
   var floor = Math.max(design * STAGE_FIT_MIN, Math.min(design, STAGE_FIT_FLOOR_PX));
