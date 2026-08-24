@@ -22,6 +22,8 @@ import {
   paletteById,
   resolveOptions,
   type DesignSvg,
+  type DesignSvgFollower,
+  type DesignSvgGrowth,
   type ResolvedOptions,
   type TemplateVariant,
   type WizardOptions,
@@ -86,6 +88,32 @@ const NO_SVG: DesignSvg = {
  * instead (components/wizard/draft.ts `withSvgOutlineFields`), so one marker always points at
  * whatever actually airs.
  */
+/** The attribute every element a layout rule names carries. One stamp kind for the feature. */
+const LAYOUT_EL_ATTR = 'data-noacg-el';
+/** The emitted relationship table's schema (docs/SVG_IMPORT_PLAN.md §6c). Additive optional
+ *  fields never bump it; a breaking shape change bumps it and migrates on read in the SAME
+ *  commit, the doctrine docs/STATE_MACHINE_SCHEMA.md §5 states and `blocks/animData.ts` keeps. */
+const LAYOUT_VERSION = 1;
+/** How close to the frame's edge a growing element may get, as a fraction of the frame. The
+ *  hug's original constant: growing off the screen was never a fit (plan §3). */
+const PANEL_SAFE = 0.04;
+
+const growToken = (i: number) => `g${i}`;
+const followToken = (i: number, j: number) => `g${i}f${j}`;
+
+/**
+ * THE LAYOUT RELATIONSHIPS OF A DESIGN, in one shape (plan §6c).
+ *
+ * A NORMALIZING read, the same idiom `parseAnimData` uses: the hug's original one-rectangle
+ * `stretch` becomes one axis-'x' rule with derived followers - which is exactly what it always
+ * meant - so a draft, a saved wizard option or a project from before this change still builds
+ * the graphic it described, and nothing downstream ever sees two shapes.
+ */
+function layoutRules(svg: DesignSvg): DesignSvgGrowth[] {
+  if (svg.growth?.length) return svg.growth;
+  return svg.stretch ? [{ candidateId: svg.stretch.candidateId, axis: 'x' }] : [];
+}
+
 function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
@@ -143,15 +171,17 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
     el.setAttribute('class', own.join(' '));
   }
-  // THE PANEL THAT GROWS (plan §3, the hug): one class on one rectangle, which is the whole
-  // markup edit the feature needs — the runtime finds it by that class and changes its `width`.
-  if (svg.stretch) {
-    const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${svg.stretch.candidateId}"]`);
-    if (el) {
-      const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
-      if (!own.includes(`${PREFIX}-panel`)) own.push(`${PREFIX}-panel`);
-      el.setAttribute('class', own.join(' '));
-    }
+  // THE ELEMENTS A LAYOUT RELATIONSHIP NAMES (plan §6c): every participant — an element that
+  // may GROW, and anything DECLARED to travel with it — is stamped with one token, and the
+  // emitted NOACG_LAYOUT table says what each token does. One stamp kind for the whole
+  // feature, so a rule can name several elements without minting a class per role.
+  for (const [i, rule] of layoutRules(svg).entries()) {
+    const stamp = (candidateId: string, token: string) => {
+      const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+      if (el) el.setAttribute(LAYOUT_EL_ATTR, token);
+    };
+    stamp(rule.candidateId, growToken(i));
+    rule.followers?.forEach((f: DesignSvgFollower, j: number) => stamp(f.candidateId, followToken(i, j)));
   }
   // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
   // each one on and off. Before the markers are stripped — that is what they are for.
@@ -529,7 +559,7 @@ function svgBlockWidth(el) {
 // reshaped to make copy fit - a panel grows only where the author opted into it (stretchSvgPanel
 // below), and past the floor the value is reported as too long rather than clipped.
 function fitSvgText() {
-  if (typeof stretchSvgPanel === 'function') stretchSvgPanel();
+  if (typeof growSvgLayout === 'function') growSvgLayout();
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
     var el = nodes[i];
@@ -611,7 +641,54 @@ if (document.fonts && document.fonts.ready) {
  * because a group between the artwork's root and a layer may carry a transform, and comparing
  * raw attribute numbers across two such spaces is how a banner ends up growing the wrong way.
  */
-function stretchRuntimeJs(): string {
+/**
+ * THE RELATIONSHIP TABLE, emitted as data the runtime below loops over (plan §6c).
+ *
+ * It is DATA, and versioned, because it is a persisted format: the author declares which
+ * element grows, which way, how far and what travels with it, and principle 6 applies to
+ * anything a saved template carries. Emitted as a HIDDEN model it would be the second scene
+ * model the architecture forbids; emitted as a commented literal the code reads - and the code
+ * still the truth - it is not. A reader can delete a row and the relationship is gone.
+ */
+function layoutDataJs(svg: DesignSvg, labelOf: (candidateId: string) => string): string {
+  const rules = layoutRules(svg);
+  const rows = rules.map((rule, i) => {
+    const axis = rule.axis ?? 'x';
+    const way = axis === 'x' ? 'wider' : 'taller';
+    const followers = rule.followers?.length
+      ? `,\n      followers: [${rule.followers
+          .map((f: DesignSvgFollower, j: number) => `{ el: '${followToken(i, j)}', mode: '${f.mode ?? 'move'}' }`)
+          .join(', ')}]`
+      : '';
+    const note = rule.followers?.length
+      ? `${rule.followers.length} layer(s) travel with it`
+      : 'whatever is drawn past its moving edge travels with it';
+    return `    // "${labelOf(rule.candidateId)}" grows ${way}; ${note}.
+    { el: '${growToken(i)}', axis: '${axis}', safe: ${PANEL_SAFE}${followers} }`;
+  });
+  return `
+// ── Layout relationships (SVG) ────────────────────────────────────────────────
+// WHICH ELEMENT MAY GROW, WHICH WAY, HOW FAR, AND WHAT TRAVELS WITH IT.
+//
+// Nothing here is elastic by default: a graphic with an empty table never moves, which is what
+// every board and every scorebug wants. Each row names one element by the data-noacg-el stamp
+// it carries in the artwork above, the axis it may grow on, and how close to the frame's edge
+// it may get (\`safe\`, a fraction of the frame). A row with its own \`followers\` list moves
+// exactly those layers; a row without one falls back to measuring what sits past the growing
+// edge, which is a fair guess sideways and a poor one downwards - so a vertical rule is
+// normally written with its followers spelled out.
+//
+// Delete a row and that element stops growing. Edit \`axis\` and it grows the other way.
+var NOACG_LAYOUT = {
+  version: ${LAYOUT_VERSION},
+  rules: [
+${rows.join(',\n')}
+  ]
+};
+`;
+}
+
+function growthRuntimeJs(): string {
   return `
 // ── Panel hug (SVG) ───────────────────────────────────────────────────────────
 // The panel below grows with its text: a longer value widens it instead of shrinking the type,
@@ -623,12 +700,14 @@ function stretchRuntimeJs(): string {
 // One limit worth knowing: a follower travels by its transform ATTRIBUTE, and a CSS transform
 // beats an attribute — so a layer the timeline animates in its own right (a per-layer stagger,
 // say) stays where its animation puts it instead of travelling with the edge.
-var PANEL_SAFE = 0.04;                          // keep the grown panel 4% inside the frame edge
-var svgPanelWidth = null;                       // the panel's DRAWN width, in its own units
-var svgPanelFollowers = [];                     // { el, base } — what travels with the far edge
-var svgPanelTexts = [];                         // the bound lines drawn inside the panel
+// Per rule, measured at rest and rebuilt on every pass: the element's drawn size, what travels
+// with its edge, and the bound lines inside it. Indexed by the rule's position in the table.
+var svgGrowRest = [];
 
-function svgPanelNode() { return document.querySelector('.${PREFIX}-art .${PREFIX}-panel'); }
+/** The element a table row names, by the stamp it carries in the artwork. */
+function svgLayoutEl(token) {
+  return document.querySelector('.${PREFIX}-art [${LAYOUT_EL_ATTR}="' + token + '"]');
+}
 
 /** Screen px per unit of the space an element's own measurements are written in — the CTM of
  *  the space a drawn layer's transform lives in, and for a PLACED line the painted-to-layout
@@ -639,46 +718,86 @@ function svgUserScale(el) {
   return ctm && ctm.a ? ctm.a : 1;
 }
 
+/** The attribute a rule's axis grows: sideways it is the element's width, downwards its
+ *  height. Both are plain attributes on a rect, which is what v1 handles (plan §3). */
+function svgGrowAttr(rule) { return rule.axis === 'y' ? 'height' : 'width'; }
+
 /** Put the artwork back exactly as drawn, so every measurement starts from the design. */
-function svgPanelRest() {
-  var panel = svgPanelNode();
-  if (!panel) return null;
-  if (svgPanelWidth === null) svgPanelWidth = parseFloat(panel.getAttribute('width')) || 0;
-  panel.setAttribute('width', String(svgPanelWidth));
-  for (var i = 0; i < svgPanelFollowers.length; i++) {
-    var f = svgPanelFollowers[i];
-    if (f.base === null) f.el.removeAttribute('transform');
-    else f.el.setAttribute('transform', f.base);
+function svgLayoutRest() {
+  for (var i = 0; i < NOACG_LAYOUT.rules.length; i++) {
+    var rule = NOACG_LAYOUT.rules[i];
+    var rest = svgGrowRest[i];
+    var el = svgLayoutEl(rule.el);
+    if (!el) continue;
+    if (!rest) { rest = svgGrowRest[i] = { drawn: null, followers: [], texts: [] }; }
+    var attr = svgGrowAttr(rule);
+    if (rest.drawn === null) rest.drawn = parseFloat(el.getAttribute(attr)) || 0;
+    el.setAttribute(attr, String(rest.drawn));
+    for (var j = 0; j < rest.followers.length; j++) {
+      var f = rest.followers[j];
+      if (f.mode === 'grow') {
+        if (f.base === null) f.el.removeAttribute(attr);
+        else f.el.setAttribute(attr, f.base);
+      } else if (f.base === null) f.el.removeAttribute('transform');
+      else f.el.setAttribute('transform', f.base);
+    }
   }
   svgFitExtra = {};
-  return panel;
 }
 
-// WHAT TRAVELS. A shape drawn entirely past the panel's right edge has to move with it or the
-// gap the designer left would close. A GROUP that straddles the edge is looked inside instead
-// of moved whole — half of it belongs on each side. A straddling SHAPE is left alone: it is
-// either the panel itself or something drawn across the boundary, and moving it would tear the
-// artwork. A rotated or skewed space is skipped for the same reason.
-function svgCollectFollowers(node, right, out) {
+// WHAT TRAVELS, when the table does not say. A shape drawn entirely past the growing edge has
+// to move with it or the gap the designer left would close. A GROUP that straddles the edge is
+// looked inside instead of moved whole — half of it belongs on each side. A straddling SHAPE is
+// left alone: it is either the growing element itself or something drawn across the boundary,
+// and moving it would tear the artwork. A rotated or skewed space is skipped for the same
+// reason.
+//
+// This is a fair guess SIDEWAYS and a poor one DOWNWARDS: below a panel sit things that should
+// move, things that should stretch, and things pinned to the frame that must stay, and no
+// measurement separates them (plan §6c). So a rule that means it lists its followers, and this
+// is only what an unlisted one falls back to.
+function svgCollectFollowers(node, grower, edge, axis, out) {
   var kids = node.children;
   for (var i = 0; i < kids.length; i++) {
     var el = kids[i];
-    if (el.classList && el.classList.contains('${PREFIX}-panel')) continue;
+    if (el === grower || (el.contains && el.contains(grower))) continue;
     var box = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
     if (!box || (box.width === 0 && box.height === 0)) continue;
-    if (box.left >= right - 0.5) {
+    var near = axis === 'y' ? box.top : box.left;
+    var far = axis === 'y' ? box.bottom : box.right;
+    if (near >= edge - 0.5) {
       var ctm = el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
       if (ctm && (ctm.b || ctm.c)) continue;    // rotated/skewed: not ours to move
-      out.push({ el: el, base: el.getAttribute('transform') });
-    } else if (box.right > right + 0.5 && el.children && el.children.length) {
-      svgCollectFollowers(el, right, out);
+      out.push({ el: el, base: el.getAttribute('transform'), mode: 'move' });
+    } else if (far > edge + 0.5 && el.children && el.children.length) {
+      svgCollectFollowers(el, grower, edge, axis, out);
     }
   }
 }
 
-/** Which bound lines live inside the panel: the ones that START inside it, on its own rows. */
-function svgPanelInside(panel) {
-  var box = panel.getBoundingClientRect();
+/** The followers of one rule: the DECLARED list when there is one, else the derivation. */
+function svgFollowersOf(rule, el, edge) {
+  var axis = rule.axis === 'y' ? 'y' : 'x';
+  var out = [];
+  if (rule.followers && rule.followers.length) {
+    for (var i = 0; i < rule.followers.length; i++) {
+      var node = svgLayoutEl(rule.followers[i].el);
+      if (!node) continue;
+      var mode = rule.followers[i].mode === 'grow' ? 'grow' : 'move';
+      var base = mode === 'grow' ? node.getAttribute(svgGrowAttr(rule)) : node.getAttribute('transform');
+      out.push({ el: node, base: base, mode: mode });
+    }
+    return out;
+  }
+  var art = document.querySelector('.${PREFIX}-art');
+  if (art) svgCollectFollowers(art, el, edge, axis, out);
+  return out;
+}
+
+/** Which bound lines live inside the growing element: the ones that START inside it, on its
+ *  own rows. They are what drives the growth — the copy the element has to hold. */
+function svgLinesInside(el) {
+  var box = el.getBoundingClientRect();
   var nodes = svgFitNodes();
   var out = [];
   for (var i = 0; i < nodes.length; i++) {
@@ -689,17 +808,24 @@ function svgPanelInside(panel) {
   return out;
 }
 
-function stretchSvgPanel() {
-  var panel = svgPanelRest();
+function growSvgLayout() {
+  svgLayoutRest();
+  for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) growOneRule(NOACG_LAYOUT.rules[r], r);
+}
+
+function growOneRule(rule, index) {
+  var panel = svgLayoutEl(rule.el);
   if (!panel) return;
   var art = document.querySelector('.${PREFIX}-art');
   if (!art) return;
+  var rest = svgGrowRest[index];
+  var box = panel.getBoundingClientRect();
 
   // The layers that move and the lines that drive the growth are read off the artwork AT REST,
   // so an operator value already on screen can never change who is inside the panel.
-  svgPanelFollowers = [];
-  svgCollectFollowers(art, panel.getBoundingClientRect().right, svgPanelFollowers);
-  svgPanelTexts = svgPanelInside(panel);
+  rest.followers = svgFollowersOf(rule, panel, rule.axis === 'y' ? box.bottom : box.right);
+  rest.texts = svgLinesInside(panel);
+  var svgPanelTexts = rest.texts;
 
   // THE DEFICIT: how far past the ROOM THE PANEL ALREADY OFFERS the widest line now runs, in
   // screen px. Measured against the room and not against the drawn text, or a banner would
@@ -716,20 +842,38 @@ function stretchSvgPanel() {
   }
   if (!(need > 0)) return;
 
-  // THE CAP: the panel's far edge stays inside the frame's safe margin. Anything the cap
-  // withholds is what fitSvgText() shrinks.
+  // THE CAP: the growing edge stays inside the frame's safe margin. Anything the cap withholds
+  // is what fitSvgText() answers - by shrinking, which is why growing off the screen is never
+  // the fit.
   var frame = art.getBoundingClientRect();
-  var grant = Math.min(need, Math.max(0, frame.right - frame.width * PANEL_SAFE - panel.getBoundingClientRect().right));
+  var live = panel.getBoundingClientRect();
+  var room = rule.axis === 'y'
+    ? frame.bottom - frame.height * rule.safe - live.bottom
+    : frame.right - frame.width * rule.safe - live.right;
+  var grant = Math.min(need, Math.max(0, room));
   if (!(grant > 0)) return;
 
-  panel.setAttribute('width', String(svgPanelWidth + grant / svgUserScale(panel)));
-  for (var j = 0; j < svgPanelFollowers.length; j++) {
-    var f = svgPanelFollowers[j];
-    var shift = grant / svgUserScale(f.el);
-    f.el.setAttribute('transform', 'translate(' + shift.toFixed(2) + ',0)' + (f.base ? ' ' + f.base : ''));
+  var attr = svgGrowAttr(rule);
+  panel.setAttribute(attr, String(rest.drawn + grant / svgUserScale(panel)));
+  for (var j = 0; j < rest.followers.length; j++) {
+    var f = rest.followers[j];
+    var step = grant / svgUserScale(f.el);
+    if (f.mode === 'grow') {
+      // A background band behind a growing block STRETCHES by the same amount instead of
+      // sliding out from under it.
+      f.el.setAttribute(attr, String((parseFloat(f.base) || 0) + step));
+    } else {
+      var move = rule.axis === 'y' ? '0,' + step.toFixed(2) : step.toFixed(2) + ',0';
+      f.el.setAttribute('transform', 'translate(' + move + ')' + (f.base ? ' ' + f.base : ''));
+    }
   }
-  for (var k = 0; k < svgPanelTexts.length; k++) {
-    svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+  // Sideways, the growth is extra WIDTH for the lines inside - the budget the fit adds to its
+  // room. Downwards it is extra HEIGHT, which is not a budget but somewhere to WRAP into, and
+  // the fit re-measures its own room for that rather than being told a number here.
+  if (rule.axis !== 'y') {
+    for (var k = 0; k < svgPanelTexts.length; k++) {
+      svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+    }
   }
 }`;
 }
@@ -869,7 +1013,11 @@ ${quizBehaviourCss}
       `${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
     ) +
     SVG_FIT_JS +
-    (svg.stretch ? `\n${stretchRuntimeJs()}` : '') +
+    // The relationship TABLE and the runtime that loops it ride together, and only for a design
+    // that declares one: a board emits neither and cannot move (plan §6c).
+    (layoutRules(svg).length > 0
+      ? `\n${layoutDataJs(svg, (id) => svg.fields.find((f) => f.candidateId === id)?.title ?? 'Layer')}${growthRuntimeJs()}`
+      : '') +
     '\n' +
     (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '') +
     (quiz ? `\n${quizBehaviourJs(quiz, artworkFields.length)}` : '');

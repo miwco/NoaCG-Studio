@@ -1421,13 +1421,14 @@ test('svg import: a hugging panel grows with its text, and what is beyond it tra
   await createProject(page);
 
   const frame = previewFrame(page);
-  // ONE class on ONE rectangle is the whole markup edit; the runtime finds it by that class.
-  await expect(frame.locator('rect.imported-design-panel')).toHaveAttribute('width', '600');
+  // ONE stamp per participant is the whole markup edit; the emitted NOACG_LAYOUT table says
+  // what each stamp does, and the runtime loops that table (docs/SVG_IMPORT_PLAN.md §6c).
+  await expect(frame.locator('rect[data-noacg-el="g0"]')).toHaveAttribute('width', '600');
 
   const run = (value: string) =>
     frame.locator('#f0').evaluate((el, v) => {
       (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
-      const panel = document.querySelector('rect.imported-design-panel')!;
+      const panel = document.querySelector('rect[data-noacg-el="g0"]')!;
       const logo = document.getElementById('Logo')!;
       return {
         panelWidth: Math.round(parseFloat(panel.getAttribute('width')!)),

@@ -344,23 +344,59 @@ export interface DesignSvg {
   /** The BEHAVIOUR the author bound to this artwork, if any (docs/GRAPHIC_BEHAVIOUR_PLAN.md).
    *  Absent means the ordinary in/out graphic the importer has always produced. */
   behaviour?: DesignSvgBehaviour;
-  /** THE HUG (plan §3): the rectangle that widens so a longer value fits at full size.
-   *  Absent = the graphic declares a STAGE and nothing moves, which is every board, every
-   *  scorebug, and everything the importer produced before this existed. */
+  /**
+   * THE LAYOUT RELATIONSHIPS (plan §6c): which elements may grow, which way, and what travels
+   * with them. Absent or empty = the graphic declares a STAGE and nothing moves, which is
+   * every board, every scorebug, and everything the importer produced before this existed.
+   *
+   * `stretch` is the ONE-RECTANGLE, always-horizontal shape this replaced (plan §3, the hug).
+   * It is still read so a draft or a saved wizard option from before this change still builds
+   * the graphic it described - `layoutRules` normalizes the two into one shape, and nothing
+   * downstream sees the old one.
+   */
+  growth?: DesignSvgGrowth[];
+  /** @deprecated The hug's original one-rectangle form; read through `layoutRules`. */
   stretch?: DesignSvgStretch;
 }
 
 /**
- * The hug: one rectangle grows with its text (docs/SVG_IMPORT_PLAN.md §3).
+ * ONE LAYOUT RELATIONSHIP: an element that may grow, which way, how far, and what travels
+ * with its moving edge (docs/SVG_IMPORT_PLAN.md §6c).
  *
- * ONE shape, because a lower third has one banner and a rule that grew several would need to
- * say how they relate. Everything else the runtime needs it measures on the live artwork -
- * which text sits inside the panel, what sits beyond its far edge and must travel with it -
- * so nothing here has to be recomputed when the operator's value changes.
+ * **Never universally elastic** (owner, 2026-08-23): the author says which element may grow.
+ * A board and any deliberately fixed composition carry no rules at all, which is every graphic
+ * the importer produced before this existed.
  */
+/** @deprecated The hug's original shape: one rectangle, always widening, followers derived.
+ *  Superseded by `DesignSvgGrowth[]`; `layoutRules` reads it as one axis-'x' rule. */
 export interface DesignSvgStretch {
-  /** The rectangle's data-noacg-candidate marker value in the markup. */
   candidateId: string;
+}
+
+export interface DesignSvgGrowth {
+  /** The element's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+  /** Which way it grows. 'x' widens it (the lower third's banner, the hug of plan §3);
+   *  'y' makes it taller so a wrapped value has somewhere to go. Absent = 'x'. */
+  axis?: 'x' | 'y';
+  /**
+   * What travels with the moving edge, DECLARED. Absent = derived from geometry at runtime
+   * ("anything past the growing edge"), which is what the horizontal hug has always done and
+   * is usually right sideways. It is NOT right downwards: below a panel sits a mix of things
+   * that should move, things that should stretch, and things pinned to the frame that must
+   * stay - and no geometry rule separates them, so a vertical rule declares its set and the
+   * derivation is only ever the proposal the author edited (plan §6c).
+   */
+  followers?: DesignSvgFollower[];
+}
+
+/** One declared follower of a growth rule. */
+export interface DesignSvgFollower {
+  /** The element's data-noacg-candidate marker value in the markup. */
+  candidateId: string;
+  /** 'move' translates it by the growth; 'grow' stretches it by the same amount instead,
+   *  which is what a background band behind a growing block wants. Absent = 'move'. */
+  mode?: 'move' | 'grow';
 }
 
 /**
