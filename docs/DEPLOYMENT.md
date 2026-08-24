@@ -224,6 +224,50 @@ suites 13 s. The remaining large phase is Vercel's own per-function TypeScript c
 it only in `build` means Vercel never runs it. The test for "must" is narrow: it either
 inspects the built output, or it catches a failure that is invisible on the dashboard.
 
+## Auth email: confirmations, SMTP, and one trap
+
+The studio signs people in with **email + password** (`signInWithPassword`) or **Google
+OAuth** - never magic links (`src/backend/auth.ts`). That matters: with confirmations off,
+the email + password path needs no working mail at all, and Google needs none ever. The only
+remaining mail dependency is **password reset** (`resetPasswordForEmail`).
+
+**Email confirmation is off** (decided 2026-08-24): during the student push the point is that
+someone can make an account and start working, and we do not need to prove they own the
+address. What that costs, so it is a decision and not an accident:
+
+- Anyone can sign up with **someone else's** address. Turning confirmations back on later
+  does not retroactively verify those accounts, and a squatted real address is a takeover
+  vector against a future reset flow.
+- Password reset still sends mail. A student who forgets their password is stuck if mail is
+  broken or rate-limited, confirmations or not.
+
+**Supabase's built-in email sender is a testing facility, not a service.** It sends from a
+Supabase address rather than ours, and it is hard-capped at a handful of messages per hour -
+a cap the docs say is *only* changeable by attaching custom SMTP. Custom SMTP means pointing
+Supabase at an email provider we hold an account with (Resend, SendGrid, AWS SES, Postmark,
+Mailgun); Supabase then authenticates to that provider and sends as `noacg.studio`. We do not
+run a mail server - the provider does.
+
+Setting it up, when reset mail needs to be reliable:
+
+1. Verify `noacg.studio` as a sending domain with the provider - SPF/DKIM DNS records. **This
+   is the step with lead time.** Start it weeks before a production date, not days.
+2. Take the provider's SMTP credentials: host, port 587, username, password.
+3. Dashboard -> Authentication -> Emails -> SMTP Settings: enable, paste, set sender address
+   and name.
+4. Dashboard -> Authentication -> Rate Limits: attaching custom SMTP defaults to **30 new
+   users per hour**, which is exactly one class arriving at once. Raise it deliberately.
+5. Turn **off link tracking** at the provider - it rewrites Supabase's single-use confirmation
+   and reset links and breaks them.
+
+### Trap: never run `supabase config push`
+
+`supabase/config.toml` is the **local dev** config. Its `site_url` is
+`http://localhost:5174`, and the CLI offers `config push` with no `pull` and no diff - so a
+push overwrites the linked production project's site URL with localhost and breaks every
+OAuth redirect and password-reset link in production. Auth settings on the hosted project are
+changed in the **dashboard**; the toml is kept in step by hand, as a record of intent.
+
 ## Where to look when production stops updating
 
 1. **The rolling issues** (above) - if the machinery works, the answer is already filed.

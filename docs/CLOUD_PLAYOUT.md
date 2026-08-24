@@ -612,6 +612,41 @@ last-known-good). Choose concrete providers only after licensing/cost review.
   (the renderer rebuilds itself from `live`); the announce round-trip is a BroadcastChannel
   affordance and stays there.
 
+## Concurrency budget (what many simultaneous productions cost)
+
+Nothing here has been load-tested - these are the transport facts plus arithmetic against the
+Supabase plan limits, recorded on 2026-08-24 so the ceilings are known before they are hit.
+**A real answer is a k6 run against a staging project, not this table.**
+
+What holds a connection, per live production:
+
+| surface | transport | cost |
+|---|---|---|
+| `/output` renderer | Realtime WebSocket on `control-<showId>` + `control_output_tail` gap-fill + `control_output_seen` every 60 s | 1 Realtime connection |
+| operator control page | same Realtime channel | 1 Realtime connection |
+| `/join` audience pages | **HTTP polling, never Realtime** (`src/audience/audienceData.ts` - an authorization decision, not a performance one: the capability model cannot be expressed to Realtime row filters) | 0 Realtime connections; 1 request per 5 s per viewer (inbox 4 s, tally 2 s, jittered, paused while hidden) |
+
+That split is what makes the audience cheap on Realtime and expensive on PostgREST. At **100
+simultaneous productions**, on the Pro plan with the spend cap ENABLED (500 concurrent
+connections, 500 messages/s, 500 channel joins/s):
+
+- **Realtime connections: ~200-300 of 500.** Fits, with under 2x headroom. A fourth persistent
+  per-production surface would break it. Disabling the spend cap raises the ceiling to 10,000
+  but also opts the org into overage billing.
+- **Realtime messages: ~20/s of 500.** Playout events are operator-driven and sparse. Not a
+  concern even if the cap counts per-subscriber deliveries rather than sends.
+- **Audience polling: ~600 req/s** (100 productions x 30 viewers / 5 s) against PostgREST on a
+  Micro compute instance. **This is the first thing that breaks, and it is a compute problem,
+  not a Realtime one.** The lever is a compute add-on; the included $10 credits cover Micro
+  only.
+- **Boot payload egress:** 100 renderers booting a heavy show is ~690 MB in a burst (see the
+  payload-size limit below - one existing row is 6.9 MB, the average is 244 kB). Trivial
+  against the 250 GB/month egress quota even with reloads, but a 7 MB fetch over a venue's
+  wifi is dead air before the first frame. Latency, not quota, is the reason to slim it.
+
+Order of concern if the target ever becomes real: (1) audience poll volume vs compute size,
+(2) Realtime connection count vs the 500 cap, (3) payload size vs time-to-first-frame.
+
 ## Known limits (deliberate, documented)
 
 - **The `control_events` anon SELECT** (`0008:60-61`, `using (true)`) lets any holder of the
