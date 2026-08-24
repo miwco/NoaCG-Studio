@@ -65,7 +65,7 @@ export type InsertResult = { template: SpxTemplate; selector: string } | { error
 const SCAFFOLD_FUNCTIONS = new Set([
   'setFieldValue', 'update', 'play', 'stop', 'next', 'motionSpeed',
   'stageFitBoxes', 'stagedLines', 'stageLineHeight', 'stageFaceHeight', 'stageTextWidth',
-  'stageContentWidth', 'fitStagedText', 'fitOneStagedLine',
+  'stageContentWidth', 'stageLayoutHeight', 'fitStagedText', 'fitOneStagedLine', 'stageUnpin',
   'holdStageHeight', 'holdOneStageBox', 'drawnBoxOf',
 ]);
 
