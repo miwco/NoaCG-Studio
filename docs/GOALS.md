@@ -333,8 +333,9 @@ Real work, deliberately not now. Each has a plan doc; none is current until it i
   password-reset delivery is unreliable until a real provider is attached; the SPF/DKIM
   verification is the part with weeks of lead time. **Google sign-in**: the code and the
   button already ship, and `[auth.external.google]` is wired - what is missing is a Google
-  Cloud OAuth client and its credentials on the hosted project. Owner asked for both
-  2026-08-24; step-by-step for each is written down, waiting to be executed.
+  Cloud OAuth client and its credentials on the hosted project. The button is HIDDEN
+  (`GOOGLE_SIGN_IN_ENABLED`) until then, so provisioning ends with flipping that flag. Owner
+  asked for both 2026-08-24; step-by-step for each is written down, waiting to be executed.
 - **Video/animation projects** - the parallel Beta shell stays where it is until the north star
   lands.
 - **The dedicated preview channel, Home polish** - postponed by the student release, still wanted.

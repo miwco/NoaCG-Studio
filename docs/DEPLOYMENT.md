@@ -311,8 +311,11 @@ Step by step, when the time comes:
 9. Verify with `curl https://kprolrchuldgfrzspthy.supabase.co/auth/v1/settings -H "apikey:
    <publishable key>"` - `"google"` flips to `true` - then sign in for real.
 
-Until step 7 lands, the button is dead in production. Either provision it or hide the button;
-leaving a visible control that always errors is the worst of the three.
+**The button is hidden until this is done.** `GOOGLE_SIGN_IN_ENABLED` in
+`src/components/auth/SignInDialog.tsx` is `false`, which hides the button and its `or`
+divider together; the handler and the OAuth wiring stay in place because nothing about them
+is wrong. **Flip it to `true` in the same change as step 7** - the two belong together, and
+flipping it early puts the always-erroring button back in front of users.
 
 ### Trap: never run `supabase config push`
 
