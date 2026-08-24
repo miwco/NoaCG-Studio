@@ -197,10 +197,15 @@ export interface SvgOutlineDraft {
  * readings are wrong, so the step asks, with the widest rectangle already proposed.
  */
 export interface SvgStretchDraft {
-  /** ON = the picked rectangle widens with its text; OFF = today's behaviour, nothing moves. */
+  /** ON = the picked rectangle grows with its text; OFF = today's behaviour, nothing moves. */
   on: boolean;
   /** Candidate id ("sN") of the rectangle that grows. Null = none picked, which reads as off. */
   shapeId: string | null;
+  /** Which way it grows (docs/SVG_IMPORT_PLAN.md §6c). 'x' widens it, so the type stays the
+   *  size it was drawn - the lower third's banner. 'y' makes it taller, so a long value WRAPS
+   *  into new height instead of shrinking - what a board or a card wants, where the panel has
+   *  room below it and the type may not get smaller. Absent = 'x', the hug as it shipped. */
+  axis?: 'x' | 'y';
 }
 
 /** How one font family the SVG references resolves (plan §4). */
@@ -498,13 +503,13 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
             .filter((f) => f.on && f.box)
             .map((f) => ({ candidateId: f.candidateId })),
           behaviour: svgBehaviourOption(draft) ?? undefined,
-          // The hug travels only when it is both ON and pointed at a shape that still exists:
-          // a half-answered picker must never become a graphic that resizes at random.
-          stretch:
+          // A growth rule travels only when it is both ON and pointed at a shape that still
+          // exists: a half-answered picker must never become a graphic that resizes at random.
+          growth:
             draft.svgStretch.on &&
             draft.svgStretch.shapeId &&
             draft.designSvg.shapes.some((s) => s.id === draft.svgStretch.shapeId)
-              ? { candidateId: draft.svgStretch.shapeId }
+              ? [{ candidateId: draft.svgStretch.shapeId, axis: draft.svgStretch.axis ?? 'x' }]
               : undefined,
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,

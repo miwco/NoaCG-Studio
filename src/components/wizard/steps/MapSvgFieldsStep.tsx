@@ -424,15 +424,20 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
       <div className="map-svg-lead">
         <h3>Choose what the operator can change</h3>
         {svg.candidates.length > 0 ? (
+          /* The promise used to be "your artwork airs exactly as drawn", and the markup does
+             still ship verbatim. But it became a half-truth the moment a declared element could
+             move (plan §6c): a panel the author tells to grow WILL change size on air, and only
+             because they asked for it. The sentence now says what is actually guaranteed. */
           <p className="hint">
-            Your artwork airs exactly as drawn. Tick the layers below that an operator should
-            be able to retype — hover a row to see which layer it is in the preview, and type a
-            real length into its text to watch the graphic take it.
+            Your artwork ships exactly as you drew it, and nothing moves unless you say so. Tick
+            the layers below that an operator should be able to retype — hover a row to see which
+            layer it is in the preview, and type a real length into its text to watch the graphic
+            take it.
           </p>
         ) : (
           <p className="hint">
-            Your artwork airs exactly as drawn. This file has no text layers to bind — what
-            that means, and the two ways forward, are below.
+            Your artwork ships exactly as you drew it. This file has no text layers to bind —
+            what that means, and the two ways forward, are below.
           </p>
         )}
       </div>
@@ -688,32 +693,40 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
           <h3>
             When the text is too long{' '}
             <span className="muted">
-              {draft.svgStretch.on ? 'the panel grows' : 'the text shrinks to fit'}
+              {!draft.svgStretch.on
+                ? 'the text shrinks to fit'
+                : draft.svgStretch.axis === 'y'
+                  ? 'the panel gets taller'
+                  : 'the panel gets wider'}
             </span>
           </h3>
           <p className="hint">
             A longer value than you drew for has to go somewhere. By default the line shrinks
             until it fits — right for a board, whose layout is the design. A lower third can
-            instead let its banner grow, so the type stays the size you drew it.
+            instead let its banner grow WIDER, so the type stays the size you drew it; a panel
+            with room beneath it can grow TALLER, and the value wraps into the new height
+            before any of it shrinks.
           </p>
           <label className="save-field">
             <span>Too-long text</span>
             <select
-              value={draft.svgStretch.on ? 'grow' : 'shrink'}
+              value={!draft.svgStretch.on ? 'shrink' : draft.svgStretch.axis === 'y' ? 'grow-y' : 'grow-x'}
               onChange={(e) =>
                 onDraft({
                   svgStretch: {
-                    on: e.target.value === 'grow',
+                    on: e.target.value !== 'shrink',
                     // Turning it on with nothing picked takes the proposal rather than
                     // leaving a switch that is on and does nothing.
                     shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
+                    axis: e.target.value === 'grow-y' ? 'y' : 'x',
                   },
                 })
               }
               data-testid="map-svg-stretch-mode"
             >
               <option value="shrink">Shrinks to fit the space you drew</option>
-              <option value="grow">Grows the panel behind it</option>
+              <option value="grow-x">Grows the panel wider</option>
+              <option value="grow-y">Grows the panel taller, and the text wraps</option>
             </select>
           </label>
           {draft.svgStretch.on && (

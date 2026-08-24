@@ -324,7 +324,8 @@ var svgFitDrawn = {};                           // id -> the text the designer d
 var svgFitWidths = {};                          // id -> that text's width, in the real face
 var svgFitSizes = {};                           // id -> the font size it was drawn at, in px
 var svgFitRoom = {};                            // id -> { width, lines } the design offers it
-var svgFitExtra = {};                           // id -> room a growing panel gave this line
+var svgFitExtra = {};                           // id -> WIDTH a growing panel gave this line
+var svgFitExtraH = {};                          // id -> HEIGHT a growing panel may still give it
 var svgFitOver = {};                            // id -> true when even the floor could not fit
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
@@ -575,6 +576,12 @@ function fitSvgText() {
 
     var size = drawnSize;
     var floor = drawnSize * SVG_FIT_FLOOR;
+    // WHERE A GROWING PANEL PUTS ITS CEILING. Sideways, growth is more BUDGET (above). Downwards
+    // it is not a budget at all - it is somewhere to WRAP into, so it raises the ceiling this
+    // block may fill and the panel is then grown to whatever the settled block actually needed
+    // (growSvgHeights below). The ceiling is the MAXIMUM the rule could ever give, measured at
+    // rest, so the wrap never chases a height that is itself still moving.
+    var ceiling = room.height + (svgFitExtraH[el.id] || 0);
     // WRAP AND SHRINK TOGETHER. How many lines fit is a function of the SIZE - the quiz board's
     // 112px panel holds one line of 44px type and three of 24px - so every pass re-asks. While
     // more lines are still reachable the size comes down in small steps, because the next step
@@ -582,7 +589,7 @@ function fitSvgText() {
     // one line, the exact ratio settles it in one move.
     for (var pass = 0; pass < 8; pass++) {
       el.style.fontSize = size === drawnSize ? '' : size.toFixed(2) + 'px';
-      var maxLines = Math.max(1, Math.floor(room.height / (size * SVG_LINE_HEIGHT)));
+      var maxLines = Math.max(1, Math.floor(ceiling / (size * SVG_LINE_HEIGHT)));
       // HEIGHT IS CHECKED, NOT CALCULATED, and a block that does not fit loses a LINE rather
       // than keeping one that prints through the layer below it. A wrapped block starts at the
       // first line's baseline and grows down, so the line count is arithmetic with an ascender
@@ -595,18 +602,19 @@ function fitSvgText() {
       for (var n = maxLines; n >= 1; n--) {
         svgPaintLines(el, n > 1 ? svgWrapLines(el, value, budget, n) : [value], size);
         width = svgBlockWidth(el);
-        tall = room.height > 0 && !!el.getBBox
-          && el.getBBox().y + el.getBBox().height > room.top + room.height + 0.5;
+        tall = ceiling > 0 && !!el.getBBox
+          && el.getBBox().y + el.getBBox().height > room.top + ceiling + 0.5;
         if (!tall) break;
       }
       if (width <= budget + 0.5 && !tall) break;
       if (size <= floor + 0.01) { svgFitOver[el.id] = true; break; }
-      var canGrowLines = Math.floor(room.height / (floor * SVG_LINE_HEIGHT)) > maxLines;
+      var canGrowLines = Math.floor(ceiling / (floor * SVG_LINE_HEIGHT)) > maxLines;
       var ratio = width > budget ? budget / width : 0.94;
       size = Math.max(floor, canGrowLines || tall ? size * 0.9 : size * ratio);
     }
     el.classList.toggle('${PREFIX}-overflow', !!svgFitOver[el.id]);
   }
+  if (typeof growSvgHeights === 'function') growSvgHeights();
 }
 
 /**
@@ -621,7 +629,18 @@ function noacgTextOverflow() {
   return out;
 }
 
-function refitSvgText() { measureSvgBudgets(); measureSvgRoom(); fitSvgText(); }
+// THE ROOM IS THE DESIGN'S, NEVER THE LAST PASS'S. A re-measure has to start from the artwork
+// AT REST: measured while a panel is still grown from the previous pass, the room reads as
+// bigger than the designer drew, the block looks like it already fits, and the growth is
+// quietly dropped - the same fit answering the same value differently on its second run. That
+// is the one thing this may not do (docs/SVG_IMPORT_PLAN.md §6c), so every re-measure rests
+// first and the pass is a pure function of the value and the design.
+function refitSvgText() {
+  if (typeof svgLayoutRest === 'function') svgLayoutRest();
+  measureSvgBudgets();
+  measureSvgRoom();
+  fitSvgText();
+}
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', refitSvgText);
 } else {
@@ -811,6 +830,7 @@ function svgLinesInside(el) {
 function growSvgLayout() {
   svgLayoutRest();
   for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) growOneRule(NOACG_LAYOUT.rules[r], r);
+  svgOfferHeights();
 }
 
 function growOneRule(rule, index) {
@@ -826,6 +846,9 @@ function growOneRule(rule, index) {
   rest.followers = svgFollowersOf(rule, panel, rule.axis === 'y' ? box.bottom : box.right);
   rest.texts = svgLinesInside(panel);
   var svgPanelTexts = rest.texts;
+  // A DOWNWARD rule grows AFTER the fit, from the height the settled block actually needed
+  // (growSvgHeights). All this pass owes it is who travels and which lines are inside.
+  if (rule.axis === 'y') return;
 
   // THE DEFICIT: how far past the ROOM THE PANEL ALREADY OFFERS the widest line now runs, in
   // screen px. Measured against the room and not against the drawn text, or a banner would
@@ -853,8 +876,16 @@ function growOneRule(rule, index) {
   var grant = Math.min(need, Math.max(0, room));
   if (!(grant > 0)) return;
 
+  svgApplyGrowth(rule, panel, rest, grant);
+  for (var k = 0; k < svgPanelTexts.length; k++) {
+    svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+  }
+}
+
+/** Grow one element by \`grant\` screen px along its axis, and take its followers with it. */
+function svgApplyGrowth(rule, el, rest, grant) {
   var attr = svgGrowAttr(rule);
-  panel.setAttribute(attr, String(rest.drawn + grant / svgUserScale(panel)));
+  el.setAttribute(attr, String(rest.drawn + grant / svgUserScale(el)));
   for (var j = 0; j < rest.followers.length; j++) {
     var f = rest.followers[j];
     var step = grant / svgUserScale(f.el);
@@ -867,13 +898,63 @@ function growOneRule(rule, index) {
       f.el.setAttribute('transform', 'translate(' + move + ')' + (f.base ? ' ' + f.base : ''));
     }
   }
-  // Sideways, the growth is extra WIDTH for the lines inside - the budget the fit adds to its
-  // room. Downwards it is extra HEIGHT, which is not a budget but somewhere to WRAP into, and
-  // the fit re-measures its own room for that rather than being told a number here.
-  if (rule.axis !== 'y') {
-    for (var k = 0; k < svgPanelTexts.length; k++) {
-      svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
+}
+
+// ── GROWING DOWNWARDS ─────────────────────────────────────────────────────────
+// Wrap and grow are circular: how many lines a value takes depends on the type size, how much
+// height is available depends on the growth, and the growth depends on the line count. Iterating
+// that would settle differently in the editor, in an exported package and under SPX, which is
+// the one thing this may not do.
+//
+// So it is not iterated. The ceiling a block may fill is the MOST the rule could ever give,
+// measured on the artwork at rest (svgOfferHeights, before the fit); the fit wraps and shrinks
+// inside that fixed ceiling exactly as it always did; and then the panel is grown by what the
+// SETTLED block actually needed. One measure, one fit, one apply - the same answer every time,
+// in any order, and running it twice changes nothing because every pass starts from rest.
+function svgOfferHeights() {
+  svgFitExtraH = {};
+  var art = document.querySelector('.${PREFIX}-art');
+  if (!art) return;
+  var frame = art.getBoundingClientRect();
+  for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) {
+    var rule = NOACG_LAYOUT.rules[r];
+    if (rule.axis !== 'y') continue;
+    var el = svgLayoutEl(rule.el);
+    if (!el) continue;
+    var most = Math.max(0, frame.bottom - frame.height * rule.safe - el.getBoundingClientRect().bottom);
+    var texts = svgLinesInside(el);
+    for (var i = 0; i < texts.length; i++) {
+      svgFitExtraH[texts[i].id] = most / svgUserScale(texts[i]);
     }
+  }
+}
+
+function growSvgHeights() {
+  var art = document.querySelector('.${PREFIX}-art');
+  if (!art) return;
+  var frame = art.getBoundingClientRect();
+  for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) {
+    var rule = NOACG_LAYOUT.rules[r];
+    if (rule.axis !== 'y') continue;
+    var el = svgLayoutEl(rule.el);
+    var rest = svgGrowRest[r];
+    if (!el || !rest) continue;
+    // HOW FAR THE SETTLED BLOCK RUNS PAST THE HEIGHT THE DESIGNER DREW. Measured in the
+    // artwork's own units through getBBox, which ignores transforms - so an entrance in flight
+    // cannot change the answer.
+    var need = 0;
+    for (var i = 0; i < rest.texts.length; i++) {
+      var t = rest.texts[i];
+      var room = svgFitRoom[t.id];
+      if (!room || !t.getBBox) continue;
+      var bottom = t.getBBox().y + t.getBBox().height;
+      var over = (bottom - (room.top + room.height)) * svgUserScale(t);
+      if (over > need) need = over;
+    }
+    var most = Math.max(0, frame.bottom - frame.height * rule.safe - el.getBoundingClientRect().bottom);
+    var grant = Math.min(need, most);
+    if (!(grant > 0)) continue;
+    svgApplyGrowth(rule, el, rest, grant);
   }
 }`;
 }

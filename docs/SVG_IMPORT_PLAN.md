@@ -429,6 +429,34 @@ before the type shrinks.** Deterministic layout, never AI.
 The markup does stay verbatim, but the sentence becomes a half-truth the moment a declared
 element can move, and it needs rewording in the same change.
 
+**Status 2026-08-24 - the format, the growth and the convergence are shipped; authoring is the
+minimum.** `NOACG_LAYOUT` (version 1) is a commented table in the design-owned JS - deliberately
+NOT in `NOACG_ANIM`, which the timeline rewrites. Each row names one element by its
+`data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE optional field,
+so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
+used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
+NORMALIZING read - the old one-rectangle `stretch` becomes one axis-'x' row - so nothing
+downstream sees two shapes. One stamp per participant replaced `.imported-design-panel`, which a
+class per role could not scale past one rule.
+
+**How the circularity was answered: it is not iterated.** The ceiling a block may fill is the MOST
+its rule could ever give, measured at rest BEFORE the fit (`svgOfferHeights`); the fit wraps and
+shrinks inside that fixed ceiling exactly as before; then the panel grows by what the SETTLED
+block needed (`growSvgHeights`). One measure, one fit, one apply. Sideways stays the other way
+round - growth is extra BUDGET, so it happens before the fit - and that asymmetry is the whole
+reason the two halves sit on opposite sides of it.
+
+**The acceptance criterion caught a real defect, which is why it is the criterion.** `refitSvgText`
+re-measured the room BEFORE resetting the layout, so a second pass measured against a panel still
+grown by the first: the block looked like it already fitted the drawn height and the growth was
+silently dropped (122 -> 110). `document.fonts.ready` fires exactly that path, so on air the
+graphic would have grown and then collapsed when the webfont landed. Every re-measure now rests
+first, which is what makes a pass a function of the VALUE and the DESIGN and nothing else.
+
+**Still authored the narrow way:** the mapping step asks shrink / wider / taller for ONE picked
+rectangle. Declared followers and several rules are what the format now expresses and the step
+does not yet ask for - that is step 5's surface, and the runtime is ready for it.
+
 ## 7. What this is NOT
 
 - Not a replacement for the raster import - photographs and flattened PNGs keep the erase flow.

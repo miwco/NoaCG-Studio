@@ -1317,6 +1317,124 @@ test('svg import: a drawn field can be renamed and removed, and cancelling draws
   expect(fields).toEqual(['f0:Headline', 'f1:Text 2']);
 });
 
+// ── VERTICAL GROWTH (docs/SVG_IMPORT_PLAN.md §6c) ────────────────────────────────────────
+// A panel with room beneath it can get TALLER so a long value wraps into new height, instead of
+// shrinking inside the height it was drawn at. The board below is drawn small on a tall frame,
+// so the growth has somewhere to go and the caption underneath has to travel with it.
+// The board is drawn for ONE line - tight enough that a second one does not fit inside the
+// height the designer gave it, which is exactly when growing down is the answer.
+const GROW_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="1200" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="260" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Footer" x="300" y="340" width="1200" height="60" rx="8" fill="#f6a623"/>
+</svg>`;
+
+test('svg import: a panel told to grow taller wraps into the new height instead of shrinking', async ({ page }) => {
+  await dropSvgMarkup(page, GROW_DOWN_SVG, 'grow-down.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
+      const board = document.querySelector('rect[data-noacg-el="g0"]')!;
+      const footer = document.getElementById('Footer')!;
+      const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
+      return {
+        boardHeight: Math.round(parseFloat(board.getAttribute('height')!)),
+        boardBottom: Math.round(board.getBoundingClientRect().bottom),
+        footerTop: Math.round(footer.getBoundingClientRect().top),
+        frameBottom: Math.round(art.bottom),
+        frameHeight: art.height,
+        size: parseFloat(getComputedStyle(el).fontSize),
+        lines: el.children.length,
+        over: (window as unknown as { noacgTextOverflow: () => string[] }).noacgTextOverflow(),
+      };
+    }, value);
+
+  const rest = await run('Which city?');
+  expect(rest.boardHeight).toBe(110);
+
+  // A value the drawn board already holds does not move it - the design's own space first.
+  const fits = await run('Which city hosted?');
+  expect(fits.boardHeight).toBe(110);
+  expect(fits.size).toBe(rest.size);
+
+  // Past that, the board gets TALLER and the value WRAPS at full size. Shrinking is what this
+  // rule exists to avoid: the type stays as drawn and the panel finds the room.
+  const long = await run('Which city hosted the first modern Olympic Games of the modern era?');
+  expect(long.boardHeight).toBeGreaterThan(rest.boardHeight);
+  expect(long.lines).toBeGreaterThan(1);
+  expect(long.size).toBe(rest.size);
+  expect(long.over).toEqual([]);
+  // …and the caption drawn below it travelled, keeping the gap the designer left.
+  expect(long.footerTop - rest.footerTop).toBeCloseTo(long.boardBottom - rest.boardBottom, 0);
+
+  // Growing off the frame is not a fit: the board stops at the safe margin and the rest of the
+  // ladder answers what the cap could not give.
+  const huge = await run('Which city hosted the first modern Olympic Games '.repeat(60));
+  expect(huge.boardBottom).toBeLessThanOrEqual(huge.frameBottom - huge.frameHeight * 0.04 + 1);
+  expect(huge.size).toBeLessThan(rest.size);
+
+  // And a short value again puts the artwork back exactly as drawn.
+  const back = await run('Which city?');
+  expect(back.boardHeight).toBe(110);
+  expect(back.footerTop).toBe(rest.footerTop);
+});
+
+test('svg import: growing downwards settles on ONE geometry, whatever order the values arrive in', async ({ page }) => {
+  // THE OWNER'S ACCEPTANCE CRITERION (plan §6c). Wrap and grow are circular - the line count
+  // depends on the size, the available height on the growth, the growth on the line count - and
+  // the fit runs INSIDE the template, so the same values must settle on the same geometry in the
+  // editor, in an exported package and under SPX. That is only true if the fit is a function of
+  // the VALUE and the DESIGN, never of whatever the artwork happens to look like right now.
+  //
+  // Measured here as the two properties that make it so: running it twice changes nothing, and
+  // the answer does not depend on what was on screen before.
+  await dropSvgMarkup(page, GROW_DOWN_SVG, 'grow-down.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  await createProject(page);
+
+  const LONG = 'Which city hosted the first modern Olympic Games of the modern era?';
+  const geometry = async (values: string[]) =>
+    previewFrame(page)
+      .locator('#f0')
+      .evaluate((el, vs) => {
+        const w = window as unknown as {
+          update: (json: string) => void;
+          refitSvgText: () => void;
+          noacgTextOverflow: () => string[];
+        };
+        for (const v of vs) w.update(JSON.stringify({ f0: v }));
+        const read = () => ({
+          board: Math.round(parseFloat(document.querySelector('rect[data-noacg-el="g0"]')!.getAttribute('height')!)),
+          footer: Math.round(document.getElementById('Footer')!.getBoundingClientRect().top),
+          size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 100) / 100,
+          lines: el.children.length,
+          over: w.noacgTextOverflow().join(','),
+        });
+        const first = read();
+        w.refitSvgText(); // the same pass the webfonts fire — running it twice must change nothing
+        return { first, again: read() };
+      }, values);
+
+  // IDEMPOTENT: a second pass over a settled graphic moves nothing.
+  const direct = await geometry([LONG]);
+  expect(direct.again).toEqual(direct.first);
+  expect(direct.first.lines).toBeGreaterThan(1);
+
+  // ORDER-INDEPENDENT: the same value reached through a short one, a longer one, and an
+  // enormous one settles on exactly the geometry it reaches directly. The trap the ladder
+  // already paid for once is a budget taken from the first value that happened to arrive.
+  const viaShort = await geometry(['Hi', LONG]);
+  const viaHuge = await geometry(['Which city hosted the first modern Olympics '.repeat(12), LONG]);
+  expect(viaShort.first).toEqual(direct.first);
+  expect(viaHuge.first).toEqual(direct.first);
+});
+
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
   // Wrapping is allowed only into room the artwork already has: the panel's own height, down to
   // whatever is drawn below the line. How many lines that is depends on the SIZE - a 190px panel
@@ -1403,7 +1521,7 @@ test('svg import: the panel hug is offered, off, with the widest rectangle propo
   // resizes is a control with no effect.
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
 
-  await mode.selectOption('grow');
+  await mode.selectOption('grow-x');
   const shape = page.getByTestId('map-svg-stretch-shape');
   // Widest first, and it is the proposal: a banner's background is the widest rectangle on it.
   await expect(shape.locator('option')).toHaveText([
@@ -1417,7 +1535,7 @@ test('svg import: the panel hug is offered, off, with the widest rectangle propo
 test('svg import: a hugging panel grows with its text, and what is beyond it travels', async ({ page }) => {
   await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
   await page.locator('.wz-next').click();
-  await page.getByTestId('map-svg-stretch-mode').selectOption('grow');
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-x');
   await createProject(page);
 
   const frame = previewFrame(page);
