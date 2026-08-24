@@ -244,10 +244,26 @@ webfonts arrive immediately or 900ms late. It is deliberately platform-free - it
 against itself, never against a recorded number - so it guards on every runner, while
 `catalog-render-baseline` can only compare on the platform that recorded it (win32 today).
 
-**Measured effect on the catalog: 13 of 509 variants, 78 elements** - al01/al02/al04/al12 (four
-severity tiles each, 188 -> 189), card62, card76, gt02, gt03 (clock 412-418 -> a steady 400), sb23, sb25
-(245.4 -> 213), ss15 (372 -> 312), ss20, tt02. **Every one of them reserves LESS room than before**,
-and every new number is the design's own layout box: these panels were reserving room for a
-transform. Whole-catalog font-timing sensitivity went from "some variant moves on every pairing" to
-zero. The win32 `catalog-render-baseline` therefore has 13 variants to re-record, and the healthy
-diff is exactly that list - a reserve getting smaller, nothing else.
+**Two different lists, two different questions.** The commit above lists the variants its own
+instrument (the determinism spec) found sensitive to font-arrival timing - al01/al02/al04/al12,
+card62, card76, gt02, gt03, sb23, sb25, ss15, ss20, tt02. The `catalog-render-baseline` re-record
+answers a different question - which ids actually moved against ONE recorded reference frame on
+win32 - and that list is: al01 (188 -> 189), al02 (202 -> 203), al04 (179 -> 180), al12
+(239 -> 245), gt02 (156 -> 155), gt03 (418 -> 400), sb23 (60 -> 59), sb25 (245 -> 213), ss11
+(371 -> 304), ss20 (456 -> 453), ig10 (297 -> 291), card62 (317 -> 279), tt02 (454 -> 440). card76
+and ss15 sit in the first list but did not move against the recorded baseline; ss11 and ig10 moved
+against the baseline without showing up in the first list. Neither list is wrong - they measure
+different things - so a mismatch between them is not a regression.
+
+Re-recording the baseline with the PRE-fix `src/templates/shared/stageFit.ts` reproduced the
+committed baseline byte-for-byte, which is the cheap proof a platform-bound diff is attributable to
+one file, not to machine load. The baseline stores HASHES, not values - the JSON diff shows only
+which ids moved, and the actual rects live in `test-results/.../rendered/<id>.txt`.
+
+**"Every one of them reserves less room than before" is false for al01/al02/al04/al12**, which
+reserve MORE room (188 -> 189, 202 -> 203, 179 -> 180, 239 -> 245): the fallback-face floor
+(the second bullet above) had been holding those four artificially low, and the fix let them settle
+at their true layout height. The rest do reserve less - gt03's clock and sb25 lose the transform
+padding, and the others drop the accumulated pinning error. The win32 `catalog-render-baseline`
+therefore has these 13 variants to re-record, matched against the list above, not the determinism
+instrument's list.
