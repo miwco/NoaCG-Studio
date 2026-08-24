@@ -192,6 +192,25 @@ hosted receiver into each graphic at export (the saved snapshot stays clean).
   (data, then snap), then follows the log. The hosted page re-reads the row on load. Staging
   and live reports ride the log as meta rows (`t:'staged'|'live'`) so every open page follows
   without polling; those are never applied as graphic commands.
+- **On the hosted half an RPC either ANSWERED — possibly with nothing — or FAILED, and the two
+  never collapse into one value** (`hostedReceiver.ts`; `untilAnswered` in `hostedControl.ts`,
+  which `output/main.ts` boots through). "No such production" and "the request never arrived"
+  are indistinguishable as a null, and both used to be read as the first. One dropped
+  `control_show_by_slug` left a hosted graphic dead for a whole show — no show id, no
+  subscription, and nothing that would ever ask again — and the renderer painted its wrong-URL
+  card over a live airing. So the boot resolve retries for good, backing off to a 10 s ceiling:
+  neither surface has anything to degrade to, and nobody is watching a browser source to reload
+  it. Only an ANSWER of no row is obeyed, because that is what a revoked capability says. The
+  renderer's catch-up read retries a few times and then stands down — it has the report baseline
+  to stand on, and the follow's own refill re-reads the gap. `control_report` deliberately does
+  NOT retry: a report is a snapshot of a moment, and a late one landing over a newer one would
+  make recovery rebuild an older picture than the graphic had reached.
+- **A hole in the log is filled FROM the log, never papered over by the row that revealed it.**
+  Applying that row first pushes the cursor past the gap, so the tail's older rows come back and
+  are dropped as duplicates: the gap closes on paper while the commands inside it never run.
+  `followControlLog` carried this rule; the hosted receiver did not, so a dropped socket could
+  eat a `play` and leave a graphic updating its fields off air. Its tail also PAGES now (500 rows
+  a call, 40 pages), so a long outage recovers in full rather than in its first page.
 - **The local half recovers from the LOG instead of a report** (`localReceiver.ts`: replay from
   the last `play` for this graphic and stream, off air, then settle) — and it reads that log
   ONCE, so a lost fetch on the way in is retried, never believed. A failed read is not a short
@@ -200,6 +219,22 @@ hosted receiver into each graphic at export (the saved snapshot stays clean).
   whole show, because a source in OBS routinely loads before the launcher is double-clicked.
   Only a 404 means static hosting and inertness. Pinned by local-relay.spec.ts, which drops one
   request of each kind on purpose.
+- **The local READ is bounded by a baseline of its own.** `relay-log.jsonl` is appended to and
+  never rotated, so starting at row 0 meant re-reading every show the package had ever run —
+  20 000 rows at 500 a fetch before the graphic may paint. There is no report channel here, so
+  the block keeps the same kind of baseline itself, in localStorage on the relay's origin (what
+  survives a browser source reloading, which is the outage being recovered from): the values it
+  has merged, how far it has read, and the row the current airing began at. The boot read starts
+  at that play. Versioned — an unknown version, or a cursor ahead of the relay's head (the log
+  was reset), is ignored and the old full walk runs. It is a CACHE of the log and never a
+  substitute: every row after the bound is still read and replayed, so a stale baseline costs
+  nothing.
+- **What is pinned offline, and what is not.** The receiver blocks are generated JS talking to
+  two addresses, so both halves' boot discipline is driven in-spec: `local-relay.spec.ts` (the
+  local half, one request of each kind dropped on purpose, and the bound), `hosted-control.spec.ts`
+  (the hosted receiver's dropped resolve and its hole), `productions.spec.ts` (`untilAnswered`
+  itself). The renderer's own wiring of that walk needs a real backend and belongs to the
+  live-verify checklist below.
 - The graphic reports AFTER applying (debounced): harvest the definition's fields from the
   DOM + `noacgMachineState()` → `control_report`.
 

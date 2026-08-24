@@ -532,30 +532,82 @@ export function withLiveCue(map: LiveCueMap, graphic: string, cue: string | null
   return map[graphic] === cue ? map : { ...map, [graphic]: cue };
 }
 
-/** Resolve the RENDERER's view by the output capability — payload + live snapshot only. */
-export async function controlOutputBySlug(outputSlug: string): Promise<ResolvedOutputShow | null> {
+/**
+ * AN RPC EITHER ANSWERED - possibly with nothing - OR FAILED, and the two must never collapse
+ * into one value. "No such production" and "the request never arrived" look identical as a null,
+ * and a caller that concludes from a failure puts a live graphic off air: the renderer's boot
+ * used to paint its wrong-URL card over a real airing because one resolve was dropped. The RPCs
+ * the RECOVERY path depends on therefore answer with this, and their callers retry.
+ */
+export type RpcAnswer<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/** Options for `untilAnswered`. `limit` of 0 (the default) retries for good. */
+export interface UntilAnsweredOptions {
+  /** The first backoff, doubling per attempt. */
+  first?: number;
+  /** The backoff ceiling — it keeps knocking at this rate. */
+  max?: number;
+  /** How many attempts in total; 0 means never give up. */
+  limit?: number;
+  onRetry?: (attempts: number, error: string) => void;
+  /** Injected so a spec can drive the walk without spending its own seconds. */
+  wait?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Call until it ANSWERS, backing off between attempts, and hand back the answer (or the last
+ * failure once `limit` is reached). Retrying for good is the right default where there is no
+ * fallback to degrade to: a browser source that never resolves its production has nothing else
+ * to try, so giving up means dark until a human notices.
+ */
+export async function untilAnswered<T>(
+  attempt: () => Promise<RpcAnswer<T>>,
+  opts: UntilAnsweredOptions = {},
+): Promise<RpcAnswer<T>> {
+  const first = opts.first ?? 500;
+  const max = opts.max ?? 10_000;
+  const limit = opts.limit ?? 0;
+  const wait = opts.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  for (let tries = 0; ; tries += 1) {
+    const answer = await attempt();
+    if (answer.ok) return answer;
+    if (limit > 0 && tries + 1 >= limit) return answer;
+    opts.onRetry?.(tries + 1, answer.error);
+    await wait(Math.min(max, first * 2 ** tries));
+  }
+}
+
+/** Resolve the RENDERER's view by the output capability — payload + live snapshot only.
+ *  A null VALUE means the capability is gone (unpublished or rotated); a failure means the
+ *  question was never answered, and the caller must ask again rather than conclude. */
+export async function controlOutputBySlug(outputSlug: string): Promise<RpcAnswer<ResolvedOutputShow | null>> {
   const sb = await getSupabase();
-  if (!sb) return null;
+  if (!sb) return { ok: false, error: 'no backend client' };
   const { data, error } = await sb.rpc('control_output_by_slug', { p_output_slug: outputSlug });
-  if (error) return null;
+  if (error) return { ok: false, error: error.message };
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
+  if (!row) return { ok: true, value: null };
   return {
-    id: row.id as string,
-    title: row.title as string,
-    output: readOutputPayload(row.output),
-    live: (row.live ?? {}) as LiveReportMap,
-    lastEventId: Number(row.last_event_id ?? 0),
+    ok: true,
+    value: {
+      id: row.id as string,
+      title: row.title as string,
+      output: readOutputPayload(row.output),
+      live: (row.live ?? {}) as LiveReportMap,
+      lastEventId: Number(row.last_event_id ?? 0),
+    },
   };
 }
 
-/** The renderer's gap fill — control_tail addressed by the output capability. */
-export async function controlOutputTail(outputSlug: string, afterId: number): Promise<ControlEventRow[]> {
+/** The renderer's gap fill — control_tail addressed by the output capability. An empty ANSWER
+ *  means the log holds nothing after that row; a failure means nothing is known, which is not
+ *  the same as "nothing was missed" and must never be read as it. */
+export async function controlOutputTail(outputSlug: string, afterId: number): Promise<RpcAnswer<ControlEventRow[]>> {
   const sb = await getSupabase();
-  if (!sb) return [];
+  if (!sb) return { ok: false, error: 'no backend client' };
   const { data, error } = await sb.rpc('control_output_tail', { p_output_slug: outputSlug, p_after: afterId });
-  if (error) return [];
-  return (data ?? []) as ControlEventRow[];
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, value: (data ?? []) as ControlEventRow[] };
 }
 
 /** The renderer's applied-state report (the output-slug sibling of control_report). */

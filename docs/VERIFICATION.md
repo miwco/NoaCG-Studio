@@ -58,6 +58,24 @@ change touching one prints a line telling you to run that suite. It is reported,
 starting it would bring up a dev server on the real `.env`, which is what the offline pin exists
 to prevent.
 
+**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC).** Per-change selection
+still cannot reach it, so nothing commit-driven ever will; a schedule can. It runs the whole
+`e2e/configured/` suite (~6 min, one worker) against the real backend as the throwaway test
+account and files its own rolling issue - separate from `nightly.yml` because it is the only job
+here that can go red for a reason outside the repository (expired account, paused project,
+rotated key), and that must not be able to red the main nightly verdict.
+
+**Its exit code is not its verdict, by construction.** Every spec calls
+`test.skip(!haveCreds, …)`, so with the credentials unset the run executes nothing and exits 0 -
+a job checking only the exit code would be permanently, silently green, which is the exact hole
+that let five specs sit on main unverified. So the workflow (a) refuses to start when any of the
+five secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **zero
+tests skipped and at least `MIN_TESTS` (32) ran**. The five secrets are `E2E_EMAIL`,
+`E2E_PASSWORD`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` -
+the throwaway `synctest…` account and a test/staging project, never the owner's. When the suite
+grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard weaker. The run
+summary lists every test that actually executed - read that, not the exit code.
+
 ## A clean merge is not proof the integration worked
 
 `git merge` decides whether two diffs touch the same LINES. It has no opinion about whether the

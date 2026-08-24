@@ -16,6 +16,7 @@ import {
   controlOutputSeen,
   controlOutputTail,
   followControlLog,
+  untilAnswered,
   type ControlEventRow,
 } from '../control/hostedControl';
 import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, rowInstant, type ClockSpec } from '../control/matchClockWire';
@@ -84,7 +85,16 @@ async function boot(): Promise<void> {
     unavailable('This build runs offline — browser output needs the cloud backend.');
     return;
   }
-  const resolved = await controlOutputBySlug(outputSlug);
+  // THE RESOLVE IS THE ONE REQUEST THE WHOLE AIRING HANGS ON: show id, log baseline and every
+  // graphic's last report arrive together, and nothing downstream can start without them. It
+  // used to be asked once, with a failure indistinguishable from "no such production" - so one
+  // dropped request painted the wrong-URL card over a live production and left it there. Only an
+  // ANSWER decides now; a failure is retried for good, because a browser source has nothing to
+  // degrade to and no one to tell.
+  const answer = await untilAnswered(() => controlOutputBySlug(outputSlug), {
+    onRetry: (attempts, error) => dbg('production', `resolving… (${attempts} failed: ${error})`),
+  });
+  const resolved = answer.ok ? answer.value : null;
   if (!resolved) {
     unavailable('This link is invalid or the production was unpublished.');
     return;
@@ -228,11 +238,24 @@ async function boot(): Promise<void> {
   // Only lifecycle commands are worth hiding for; a missed `update` is a text swap with nothing
   // to watch, and nothing missed at all hides nothing, so an ordinary reopen still paints at
   // once. Paged, because the tail RPC answers CONTROL_TAIL_PAGE rows at a time. ──
+  //
+  // A page that FAILED is not an empty one: reading a dropped request as "nothing was missed" is
+  // how the local half used to bring a live board back blank, so each page is retried. Unlike
+  // the local half this one has somewhere to stand if the retries run out - the report baseline
+  // is already rebuilt below - so it stops after a few and says so on the debug overlay; the
+  // follow's own refill re-reads the same gap on subscribe, on air rather than hidden.
   const missed: ControlEventRow[] = [];
   for (let page = 0; page < MAX_CATCH_UP_PAGES; page += 1) {
-    const rows = await controlOutputTail(outputSlug, missed.length > 0 ? missed[missed.length - 1].id : followFrom);
-    missed.push(...rows);
-    if (rows.length < CONTROL_TAIL_PAGE) break;
+    const tail = await untilAnswered(
+      () => controlOutputTail(outputSlug, missed.length > 0 ? missed[missed.length - 1].id : followFrom),
+      { limit: 6, onRetry: (attempts, error) => dbg('catch-up', `log read failed (${attempts}): ${error}`) },
+    );
+    if (!tail.ok) {
+      dbg('catch-up', 'log unread — the follow will fill it');
+      break;
+    }
+    missed.push(...tail.value);
+    if (tail.value.length < CONTROL_TAIL_PAGE) break;
   }
   const animates = missed.some(
     (row) =>
@@ -281,7 +304,13 @@ async function boot(): Promise<void> {
     // Everything up to here is applied — including the catch-up rows replayed above, which is
     // why this is the applied cursor and not the baseline the catch-up started from.
     from: lastAppliedId,
-    tail: (after) => controlOutputTail(outputSlug, after),
+    // The retry lives HERE rather than inside followControlLog: the shared follow takes a plain
+    // list, and a failed read that came back empty would end its refill walk early. Five tries,
+    // then the next hole in the live stream starts the walk again.
+    tail: async (after) => {
+      const tail = await untilAnswered(() => controlOutputTail(outputSlug, after), { limit: 5 });
+      return tail.ok ? tail.value : [];
+    },
     onRow: apply,
   });
   dbg('realtime', 'following');

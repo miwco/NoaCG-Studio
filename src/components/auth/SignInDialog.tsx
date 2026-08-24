@@ -13,6 +13,18 @@ import { useModalGate } from '../spaceKey';
  * toggle. Signup is open (migration 0006); the server-side hook can re-close it to the
  * allowlist later without touching this dialog.
  */
+/**
+ * Google sign-in is BUILT but not PROVISIONED: the hosted project reports
+ * `"google": false` from /auth/v1/settings, so the button can only ever error. It is hidden
+ * rather than deleted — the code path, `[auth.external.google]` and the OAuth redirect are all
+ * finished and correct, and the only missing piece is a Google Cloud OAuth client.
+ *
+ * FLIP THIS TO `true` in the same change that enables the provider on the hosted project.
+ * The provisioning steps are docs/DEPLOYMENT.md, "Google sign-in"; step 7 there is the one
+ * that makes this line safe to change.
+ */
+const GOOGLE_SIGN_IN_ENABLED: boolean = false;
+
 export default function SignInDialog() {
   const open = useAuthUi((s) => s.signInOpen);
   const reason = useAuthUi((s) => s.reason);
@@ -139,11 +151,15 @@ export default function SignInDialog() {
           </p>
         )}
 
-        <button className="primary auth-google" onClick={google} disabled={busy}>
-          Continue with Google
-        </button>
+        {GOOGLE_SIGN_IN_ENABLED && (
+          <>
+            <button className="primary auth-google" onClick={google} disabled={busy}>
+              Continue with Google
+            </button>
 
-        <div className="auth-or"><span>or</span></div>
+            <div className="auth-or"><span>or</span></div>
+          </>
+        )}
 
         <form onSubmit={submit}>
           <label htmlFor="auth-email">Email</label>

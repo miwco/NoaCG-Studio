@@ -197,6 +197,134 @@ at once and CI already builds each of them, previews are **opt-in**:
 Vercel build for every non-`main` branch unless the head commit message contains
 `[preview]`. `main` always builds - the script fails open (builds) on any error.
 
+## What Vercel builds (and why it is not `npm run build`)
+
+`vercel.json`'s `buildCommand` runs **`npm run build:vercel`**, not the full `npm run build`.
+The two are deliberately different:
+
+- **`npm run build` is the gate.** Typecheck (`tsc` twice), `eslint`, `depcruise`, the ~30
+  `node --test` suites, the repo-shape and shared-instruction checks. It runs on the laptop
+  and in CI, and CI gates the merge - so by the time a commit reaches `main` that whole
+  chain has already passed on that exact commit.
+- **`npm run build:vercel` is the deploy.** It produces the artifact and keeps only the
+  checks CI cannot substitute for: `check-vercel-config` and `check-function-budget` (both
+  refuse the deployment BEFORE it exists, so a failure shows nowhere on the Vercel dashboard
+  - each froze production once), `check-api-route-depth`, and `check-client-secrets` run
+  twice - once on source, once against the built `dist`, which is the only place the real
+  output is inspected.
+
+Why: Vercel bills Build CPU minutes against the plan's monthly credit, and re-running a
+chain CI already passed cost about 78 s of every ~238 s production build - roughly a third
+of the monthly credit for zero added safety. Measured on the 2026-08-23 production build:
+`tsc` + `tsc -p tsconfig.api.json` + `eslint` + `depcruise` were 65 s, the `node --test`
+suites 13 s. The remaining large phase is Vercel's own per-function TypeScript compile of
+`api/` (~89 s for 11 functions) which is the builder's, not ours, and has no skip flag.
+
+**If you add a check that must run at deploy time, add it to `build:vercel` too** - putting
+it only in `build` means Vercel never runs it. The test for "must" is narrow: it either
+inspects the built output, or it catches a failure that is invisible on the dashboard.
+
+## Auth email: confirmations, SMTP, and one trap
+
+The studio signs people in with **email + password** (`signInWithPassword`) or **Google
+OAuth** - never magic links (`src/backend/auth.ts`). That matters: with confirmations off,
+the email + password path needs no working mail at all, and Google needs none ever. The only
+remaining mail dependency is **password reset** (`resetPasswordForEmail`).
+
+**Email confirmation is off** - decided and verified live on 2026-08-24
+(`GET /auth/v1/settings` returns `"mailer_autoconfirm": true`). During the student push the point is that
+someone can make an account and start working, and we do not need to prove they own the
+address. What that costs, so it is a decision and not an accident:
+
+- Anyone can sign up with **someone else's** address. Turning confirmations back on later
+  does not retroactively verify those accounts, and a squatted real address is a takeover
+  vector against a future reset flow.
+- Password reset still sends mail. A student who forgets their password is stuck if mail is
+  broken or rate-limited, confirmations or not.
+
+### Confirmations off + Google = the password quietly stops working
+
+**Automatic** identity linking is always on and is NOT the "Allow manual linking" toggle (that
+one gates `linkIdentity`/`unlinkIdentity`, which this codebase does not call; it is off).
+Supabase links identities that share an email address, and because auto-linking to an
+*unverified* address would enable pre-account-takeover, the guard is that linking **removes
+any unconfirmed identities** on that user.
+
+With confirmations off, every email/password identity we mint is unconfirmed. So once Google
+sign-in is provisioned:
+
+> A student signs up with `x@arcada.fi` + password, then later clicks "Continue with Google"
+> on the same address. Supabase links Google to the same user - the account and all their
+> work survive - **and deletes the unconfirmed email identity, so their password stops
+> working.**
+
+Documented Supabase behaviour, not a bug, but it reads as one from the student's side. The
+mirror case: signing up with email after having used Google on that address returns a
+deliberately obfuscated response and sends nothing, to block user enumeration. Turning
+confirmations back on is what removes this sharp edge.
+
+**Supabase's built-in email sender is a testing facility, not a service.** It sends from a
+Supabase address rather than ours, and it is hard-capped at a handful of messages per hour -
+a cap the docs say is *only* changeable by attaching custom SMTP. Custom SMTP means pointing
+Supabase at an email provider we hold an account with (Resend, SendGrid, AWS SES, Postmark,
+Mailgun); Supabase then authenticates to that provider and sends as `noacg.studio`. We do not
+run a mail server - the provider does.
+
+Setting it up, when reset mail needs to be reliable:
+
+1. Verify `noacg.studio` as a sending domain with the provider - SPF/DKIM DNS records. **This
+   is the step with lead time.** Start it weeks before a production date, not days.
+2. Take the provider's SMTP credentials: host, port 587, username, password.
+3. Dashboard -> Authentication -> Emails -> SMTP Settings: enable, paste, set sender address
+   and name.
+4. Dashboard -> Authentication -> Rate Limits: attaching custom SMTP defaults to **30 new
+   users per hour**, which is exactly one class arriving at once. Raise it deliberately.
+5. Turn **off link tracking** at the provider - it rewrites Supabase's single-use confirmation
+   and reset links and breaks them.
+
+## Google sign-in (the button ships; the provider is not provisioned)
+
+**State on 2026-08-24, read from the live project** (`GET /auth/v1/settings` returns
+`"google": false`): Google is **not enabled** on the hosted project, while
+`SignInDialog.tsx` renders "Continue with Google" unconditionally. Anyone clicking it today
+gets an error. The code side is complete - `signInWithGoogle`, the button, and
+`[auth.external.google]` reading `SUPABASE_AUTH_GOOGLE_CLIENT_ID` /
+`SUPABASE_AUTH_GOOGLE_SECRET` - so this is provisioning work only, done in two consoles.
+
+Step by step, when the time comes:
+
+1. **Google Cloud Console** -> create or pick a project for NoaCG.
+2. **OAuth consent screen**: type External; app name, our support email, the logo; scopes
+   `email`, `profile`, `openid`. While it is in Testing only listed test accounts can sign in
+   - publish it before a class, or every student bounces.
+3. **Credentials -> Create credentials -> OAuth client ID -> Web application.**
+4. **Authorized JavaScript origins**: `https://noacg.studio`.
+5. **Authorized redirect URI**: `https://kprolrchuldgfrzspthy.supabase.co/auth/v1/callback` -
+   Supabase's callback, *not* our own URL. This is the field people get wrong.
+6. Copy the **client ID** and **client secret**.
+7. **Supabase Dashboard -> Authentication -> Sign In / Providers -> Google**: enable, paste
+   both, save.
+8. **Supabase -> Authentication -> URL Configuration**: Site URL `https://noacg.studio`, and
+   the redirect allow-list must cover where the app actually lives. `OAUTH_REDIRECT` in
+   `src/backend/auth.ts` is `origin + pathname`, deliberately not the bare origin - so the
+   allowed URL is `https://noacg.studio/app`, not `https://noacg.studio`.
+9. Verify with `curl https://kprolrchuldgfrzspthy.supabase.co/auth/v1/settings -H "apikey:
+   <publishable key>"` - `"google"` flips to `true` - then sign in for real.
+
+**The button is hidden until this is done.** `GOOGLE_SIGN_IN_ENABLED` in
+`src/components/auth/SignInDialog.tsx` is `false`, which hides the button and its `or`
+divider together; the handler and the OAuth wiring stay in place because nothing about them
+is wrong. **Flip it to `true` in the same change as step 7** - the two belong together, and
+flipping it early puts the always-erroring button back in front of users.
+
+### Trap: never run `supabase config push`
+
+`supabase/config.toml` is the **local dev** config. Its `site_url` is
+`http://localhost:5174`, and the CLI offers `config push` with no `pull` and no diff - so a
+push overwrites the linked production project's site URL with localhost and breaks every
+OAuth redirect and password-reset link in production. Auth settings on the hosted project are
+changed in the **dashboard**; the toml is kept in step by hand, as a record of intent.
+
 ## Where to look when production stops updating
 
 1. **The rolling issues** (above) - if the machinery works, the answer is already filed.
