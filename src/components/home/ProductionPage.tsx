@@ -2521,17 +2521,22 @@ function ProductionShell({
  * is the manual route that has always worked and still does.
  */
 function CasparAirRow({ outputUrl }: { outputUrl: string | null }) {
-  const [settings] = useState(loadCasparSettings);
   const [busy, setBusy] = useState<'air' | 'stop' | null>(null);
   const [result, setResult] = useState<CasparResult | null>(null);
 
+  // Read on every render, and again at the moment of the click, rather than latching a copy at
+  // mount: Settings is a modal that can be opened and changed without this page unmounting, and
+  // a latched copy would quietly send the command to the OLD server while the row displayed the
+  // old channel. It is a parse of a few hundred bytes, against a control that airs a graphic.
+  const settings = loadCasparSettings();
   if (!casparConfigured(settings)) return null;
 
   const run = async (what: 'air' | 'stop') => {
+    const now = loadCasparSettings();
     setBusy(what);
     setResult(null);
     try {
-      setResult(what === 'air' ? await airOnCaspar(settings, outputUrl!) : await stopOnCaspar(settings));
+      setResult(what === 'air' ? await airOnCaspar(now, outputUrl!) : await stopOnCaspar(now));
     } finally {
       setBusy(null);
     }

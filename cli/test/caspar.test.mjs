@@ -174,6 +174,20 @@ test('a foreign origin is refused with no CORS headers at all, so a guessed toke
   });
 });
 
+test('presence answers ANY origin, so "not running" is never said about an agent that is', async () => {
+  // A cross-origin refusal is opaque to the page that made it, so an origin-refused /health
+  // would read to the studio exactly like nothing listening - and send someone to start an
+  // agent they already have running, just for another deployment. Presence is readable;
+  // everything behind it still is not.
+  await withAgent(async (base) => {
+    const health = await fetch(`${base}/health`, { headers: { Origin: 'https://another-noacg.example' } });
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get('access-control-allow-origin'), 'https://another-noacg.example');
+    // …and it still says nothing about the studio, the token or the playout server.
+    assert.deepEqual(await health.json(), { ok: true, agent: 'noacg-caspar', v: 1 });
+  });
+});
+
 test('a forged Host header is refused, so a name resolving to 127.0.0.1 cannot reach in', async () => {
   await withAgent(async (base) => {
     // `fetch` will not send a forged Host - it is a forbidden header name, so undici drops it

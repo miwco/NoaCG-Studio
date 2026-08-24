@@ -319,6 +319,23 @@ export function createAgentServer(options: AgentOptions, log: (line: string) => 
       send(403, { ok: false, error: 'This agent answers on 127.0.0.1 only.' }, false);
       return;
     }
+
+    const url = (req.url ?? '/').split('?')[0];
+
+    // PRESENCE, before the origin check and without a token, and readable by ANY origin.
+    //
+    // That ordering is deliberate. A cross-origin refusal is opaque to the page that made it -
+    // JavaScript cannot tell "403, wrong origin" from "nothing is listening" - so an agent that
+    // refused this route by origin would make the studio say "run `noacg caspar agent`" to
+    // somebody whose agent is already running and merely started for a different deployment.
+    // The reply carries presence and a protocol version and nothing else: no token, no studio,
+    // no word about the playout server. Any local page could learn as much by watching how long
+    // a refused connection takes, so answering plainly costs nothing and buys a true diagnosis.
+    if (url === '/health' && req.method === 'GET') {
+      send(200, { ok: true, agent: 'noacg-caspar', v: AGENT_V }, true);
+      return;
+    }
+
     const allowed = originAllowed(origin, options.origins);
     if (!allowed) {
       log(`refused origin ${origin ?? '(none)'}`);
@@ -327,15 +344,6 @@ export function createAgentServer(options: AgentOptions, log: (line: string) => 
     }
     if (req.method === 'OPTIONS') {
       send(204, null, true);
-      return;
-    }
-
-    const url = (req.url ?? '/').split('?')[0];
-
-    // The one route without a token, so the studio can tell "no agent" from "wrong token".
-    // It says nothing about the studio, the server, or the token.
-    if (url === '/health' && req.method === 'GET') {
-      send(200, { ok: true, agent: 'noacg-caspar', v: AGENT_V }, true);
       return;
     }
 

@@ -169,8 +169,8 @@ package's relay and launcher: the project ships one local helper, not a family o
 | Property | How |
 |---|---|
 | Loopback only | Binds `127.0.0.1`. `--host` with anything but a loopback address is refused at startup, with the reason. |
-| Token required | A random 32-hex token per run (or `--token`), in `Authorization: Bearer`. Compared in constant time. `/health` is the one route without it, so the UI can tell "no agent" from "wrong token". |
-| Origin allowlist | Only the configured NoaCG origin (`--origin`, default `https://noacg.studio` plus `localhost`/`127.0.0.1` dev ports). Any other origin gets 403 and **no** CORS headers, so a stray tab cannot read a reply even if it guessed the token. |
+| Token required | A stored per-machine token (or `--token`), in `Authorization: Bearer`. Compared in constant time. `/health` is the one route without it, so the UI can tell "no agent" from "wrong token". |
+| Origin allowlist | Only the configured NoaCG origin (`--origin`, default `https://noacg.studio` plus `localhost`/`127.0.0.1` dev ports). Any other origin gets 403 and **no** CORS headers, so a stray tab cannot read a reply even if it guessed the token. `/health` is the deliberate exception - see below. |
 | No DNS rebinding | The `Host` header must itself be loopback. A name that resolves to `127.0.0.1` from a page's own domain does not get in. |
 | No AMCP passthrough of unknown shape | `/amcp` takes one line, rejects embedded CRLF, and caps the response. |
 
@@ -179,10 +179,23 @@ Routes, all JSON:
 | Route | Token | Does |
 |---|---|---|
 | `GET /health` | no | `{ agent: 'noacg-caspar', v: 1 }` - presence only, nothing about the studio |
+
+**Why `/health` answers any origin.** A cross-origin refusal is *opaque* to the page that made
+it: JavaScript cannot tell "403, wrong origin" from "nothing is listening there". An agent that
+refused this route by origin would therefore make the panel say *"run `noacg caspar agent`"* to
+somebody whose agent is already running, and merely started for a different deployment. The reply
+carries presence and a protocol version - no token, no studio, no word about the playout server -
+and any local page could learn as much from how fast a refused connection comes back. Everything
+behind it is still origin-checked and token-gated.
 | `POST /status` | yes | opens AMCP, sends `VERSION`, returns the code and lines |
 | `POST /amcp` | yes | sends one arbitrary AMCP line |
 | `POST /play` | yes | `PLAY <channel>-<layer> [HTML] "<url>"` |
 | `POST /stop` | yes | `STOP <channel>-<layer>` |
+
+**Release note.** The command was added to the `noacg` package at version **0.2.0**, before that
+version was published to npm - so `caspar` ships in 0.2.0 rather than waiting for a later one.
+Anyone on an earlier published CLI does not have it; the Settings panel's "agent not running"
+diagnosis is what they see, and `npx noacg@latest caspar agent` is the fix.
 
 ### AMCP, precisely
 

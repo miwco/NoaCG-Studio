@@ -59,11 +59,11 @@ interface StoredCaspar extends Partial<CasparSettings> {
  */
 export function loadCasparSettings(): CasparSettings {
   try {
-    const raw = JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}') as StoredCaspar;
+    const { v, ...raw } = JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}') as StoredCaspar;
     // An unknown FUTURE version degrades honestly rather than being half-read: fall back to
     // the defaults and leave the stored row alone, so an older build never eats newer data.
-    if (typeof raw.v === 'number' && raw.v > STORE_V) return { ...CASPAR_DEFAULTS };
-    return { ...CASPAR_DEFAULTS, ...raw, v: undefined } as CasparSettings;
+    if (typeof v === 'number' && v > STORE_V) return { ...CASPAR_DEFAULTS };
+    return { ...CASPAR_DEFAULTS, ...raw };
   } catch {
     return { ...CASPAR_DEFAULTS };
   }
