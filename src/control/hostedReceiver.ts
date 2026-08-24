@@ -61,12 +61,36 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   var lastId = 0;      // the last log row applied — the tail cursor
   var showId = null;
 
+  // AN RPC EITHER ANSWERED OR FAILED, and this block must never confuse the two. A dropped
+  // request says nothing about the show, so it is reported AS a failure (the ok flag) and the
+  // caller retries; concluding from it is what used to leave a hosted graphic dead for a whole
+  // airing - see the boot below, and docs/CONTROL_LAYER.md's hosted-half rule.
   function rpc(name, args) {
     return fetch(REST + name, {
       method: 'POST',
       headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify(args)
-    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }).then(function (r) {
+      if (!r.ok) return { ok: false, value: null };   // 4xx/5xx: an error page is not a log
+      return r.json().then(
+        function (v) { return { ok: true, value: v }; },
+        function () { return { ok: false, value: null }; }   // answered, but not with JSON
+      );
+    }).catch(function () { return { ok: false, value: null }; });
+  }
+
+  // Call until it ANSWERS, backing off. A limit of 0 keeps knocking for good, which is what the
+  // boot resolve needs: without the show id there is no subscription to fall back to, so giving
+  // up means dark until somebody notices and reloads the browser source.
+  var RETRY_MS = 500, RETRY_MAX = 10000;
+  function rpcRetry(name, args, limit, done, tries) {
+    tries = tries || 0;
+    rpc(name, args).then(function (r) {
+      if (r.ok) { done(true, r.value); return; }
+      if (limit && tries + 1 >= limit) { done(false, null); return; }
+      setTimeout(function () { rpcRetry(name, args, limit, done, tries + 1); },
+        Math.min(RETRY_MAX, RETRY_MS * Math.pow(2, tries)));
+    });
   }
 
   // Apply one command through the graphic's own globals — the same mapping as every receiver.
@@ -99,6 +123,11 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
     } catch (e) { /* report what we could */ }
     return data;
   }
+  // The one call on this block that deliberately does NOT retry. A report is a SNAPSHOT of a
+  // moment, and a retry would land it after a newer one has already been written - recovery
+  // would then rebuild an older picture than the one this graphic had actually reached. A lost
+  // report costs nothing on its own: the next command schedules another, and the log holds
+  // everything the stale baseline is missing.
   function scheduleReport() {
     clearTimeout(reportTimer);
     reportTimer = setTimeout(function () {
@@ -107,14 +136,31 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
     }, 800);
   }
 
-  // Back-fill the gap after (re)connecting, in log order, then continue live.
+  // Back-fill the gap after (re)connecting, in log order, then continue live. The tail RPC
+  // answers TAIL_PAGE rows at a time, so one call only ever recovers that much of a gap: keep
+  // pulling while pages come back full (every page advances the cursor, so the walk ends).
+  // One walk at a time - a second would re-read the same rows and apply them twice.
+  var TAIL_PAGE = 500;        // the RPC's own limit (migration 0008)
+  var MAX_TAIL_PAGES = 40;    // runaway guard, the same ceiling the renderer's catch-up uses
+  var tailing = false;
   function fillTail() {
-    rpc('control_tail', { p_slug: SLUG, p_graphic: GRAPHIC, p_after: lastId }).then(function (rows) {
-      if (!rows) return;
-      for (var i = 0; i < rows.length; i++) {
-        if (rows[i].id > lastId) { lastId = rows[i].id; apply(rows[i].msg); }
-      }
-    });
+    if (tailing) return;
+    tailing = true;
+    var pages = 0;
+    var step = function () {
+      // Five failures and we stop rather than spin: the socket is up by now, and the next row
+      // that arrives with a hole in front of it starts this walk again.
+      rpcRetry('control_tail', { p_slug: SLUG, p_graphic: GRAPHIC, p_after: lastId }, 5, function (ok, rows) {
+        if (!ok || !rows) { tailing = false; return; }
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].id > lastId) { lastId = rows[i].id; apply(rows[i].msg); }
+        }
+        pages += 1;
+        if (rows.length >= TAIL_PAGE && pages < MAX_TAIL_PAGES) { step(); return; }
+        tailing = false;
+      });
+    };
+    step();
   }
 
   // ── Realtime: follow new log rows (Postgres Changes on control_events). ──
@@ -141,7 +187,11 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
       var rec = m.payload && m.payload.data && m.payload.data.record;
       if (!rec || rec.graphic !== GRAPHIC) return;
       if (rec.id <= lastId) return;          // replayed or already tail-filled
-      if (rec.id > lastId + 1) fillTail();   // a hole — recover order from the log
+      // A HOLE: rows are missing in front of this one, so recover them from the log and let the
+      // walk deliver this row too. Applying it here first would push the cursor PAST the gap,
+      // and the tail's older rows would then be dropped as duplicates - the gap would close on
+      // paper while the commands in it never ran (the rule followControlLog already carries).
+      if (rec.id > lastId + 1) { fillTail(); return; }
       lastId = Math.max(lastId, rec.id);
       apply(rec.msg);
     };
@@ -151,8 +201,19 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   }
 
   // ── Boot: resolve the page, REBUILD from our own last report, then go live. ──
-  rpc('control_show_by_slug', { p_slug: SLUG }).then(function (rows) {
-    var row = rows && rows[0];
+  //
+  // THIS RESOLVE IS THE ONE REQUEST THE WHOLE AIRING HANGS ON. It hands over the show id (no
+  // id, no subscription), the log baseline and the last report, so a graphic that never gets an
+  // answer is not degraded - it is dead, silently, for as long as the show lasts. It used to be
+  // asked exactly once, with a failure swallowed into null and read as "no such production",
+  // which is what a REVOKED slug answers: one dropped request on the plane published
+  // productions actually run on, and the graphic never connected again.
+  //
+  // So a failure is retried for good (rpcRetry with no limit), and only an ANSWER decides.
+  // An answer with no row does mean the capability is gone - unpublished or rotated - and that
+  // one is honoured by staying quiet, which is this block's contract for a slug it may not use.
+  rpcRetry('control_show_by_slug', { p_slug: SLUG }, 0, function (ok, rows) {
+    var row = ok && rows && rows[0];
     if (!row) return;
     showId = row.id;
     lastId = row.last_event_id || 0;
