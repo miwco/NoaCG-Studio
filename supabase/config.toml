@@ -44,7 +44,13 @@ enable_anonymous_sign_ins = false
 
 [auth.email]
 enable_signup = true
-enable_confirmations = true
+# Confirmations OFF (2026-08-24): a student makes an account and starts working; we do not
+# need to prove they own the address yet. Sign-in is email+password or Google, never a magic
+# link, so no mail is needed to get in - only password reset sends anything.
+# THIS FILE IS LOCAL DEV ONLY. The hosted project is changed in the dashboard, and
+# `supabase config push` must never be run - it would push site_url=localhost to production.
+# Rationale and the SMTP story: docs/DEPLOYMENT.md, "Auth email".
+enable_confirmations = false
 
 [auth.external.google]
 enabled = true
