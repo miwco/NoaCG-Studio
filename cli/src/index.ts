@@ -23,6 +23,7 @@ import { runLogin } from './commands/login.js';
 import { runLogout } from './commands/logout.js';
 import { runWhoami } from './commands/whoami.js';
 import { runSave } from './commands/save.js';
+import { runCaspar } from './commands/caspar.js';
 import { runMcp } from './mcp.js';
 
 const USAGE = `noacg v${cliVersion()} - make broadcast graphics for NoaCG Studio from your terminal.
@@ -44,6 +45,10 @@ Usage: noacg <command> [options]   (add --json to any command for machine-readab
   whoami                         Which key this machine holds, and whether it is still valid.
   save <dir|zip> [--name N] [--folder F] [--no-bench]
                                  Validate, then put the graphic in your NoaCG library.
+  caspar agent|status|send|play|stop
+                                 Talk AMCP to a CasparCG server (docs/CASPARCG_CONNECT.md).
+                                 "agent" holds the socket a browser cannot, on 127.0.0.1 only,
+                                 so Settings -> Playout can reach it; the rest need no browser.
   mcp                            Run as an MCP server over stdio.
 
 Environment: NOACG_URL (default https://noacg.studio), NOACG_BROWSER (a Chromium executable),
@@ -66,6 +71,7 @@ const COMMANDS: Record<string, Command> = {
   logout: runLogout,
   whoami: runWhoami,
   save: runSave,
+  caspar: runCaspar,
 };
 
 async function main(): Promise<number> {
