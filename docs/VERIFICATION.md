@@ -69,12 +69,26 @@ rotated key), and that must not be able to red the main nightly verdict.
 `test.skip(!haveCreds, …)`, so with the credentials unset the run executes nothing and exits 0 -
 a job checking only the exit code would be permanently, silently green, which is the exact hole
 that let five specs sit on main unverified. So the workflow (a) refuses to start when any of the
-five secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **zero
-tests skipped and at least `MIN_TESTS` (32) ran**. The five secrets are `E2E_EMAIL`,
-`E2E_PASSWORD`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` -
-the throwaway `synctest…` account and a test/staging project, never the owner's. When the suite
-grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard weaker. The run
-summary lists every test that actually executed - read that, not the exit code.
+four secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **nothing
+skipped outside `ALLOWED_SKIPS`, and at least `MIN_TESTS` (31) ran**. The four secrets are
+`E2E_EMAIL`, `E2E_PASSWORD`, `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` - the throwaway
+`synctest…` account. When the suite grows, raise `MIN_TESTS` in the same commit; a stale value
+only makes the guard weaker. The run summary lists every test that actually executed - read
+that, not the exit code.
+
+**One spec is deliberately not covered: `moderator.spec.ts`.** It needs
+`SUPABASE_SERVICE_ROLE_KEY` to grant and revoke the test account's moderator role, and that key
+bypasses RLS entirely - full read/write on every table. This repository is public and `.env`
+points at the PRODUCTION Supabase project, so shipping that key to Actions would hand a
+production RLS-bypass credential to everyone with repo write access, permanently, to gain one
+test. It is therefore absent, and that one spec is the sole entry in `ALLOWED_SKIPS`; every
+other skip still fails the job. **What goes unverified nightly**: that the 🛡 Moderate button
+appears for a moderator, that the takedown queue states status in the shared product vocabulary
+(`live` / `taken down`, never the table's own words), that the queue's preview ships its settle
+bootstrap so a moderator is not judging a black rectangle, and that a removed item actually
+leaves the public gallery listing. Run it by hand with `npm run test:e2e:live` after touching
+community moderation. The real fix is a dedicated staging Supabase project, which would also
+stop the suite writing rows into production - not a longer allowlist.
 
 ## A clean merge is not proof the integration worked
 

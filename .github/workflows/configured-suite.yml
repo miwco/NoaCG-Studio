@@ -30,10 +30,19 @@
 #   1. A preflight that fails BEFORE anything is installed when a required secret is missing, and
 #      names it. Cheap, unambiguous, and it fires on the very first run if the secrets were never
 #      added.
-#   2. A post-run assertion on the JSON report: zero skipped, and at least MIN_TESTS actually
-#      executed. The count guard catches what the preflight cannot — a credential that is present
-#      but not usable, a spec file that stops being collected, a new gate added inside a spec.
-#      Raise MIN_TESTS when the suite grows; a stale value only makes the guard weaker.
+#   2. A post-run assertion on the JSON report: nothing skipped outside ALLOWED_SKIPS, and at
+#      least MIN_TESTS actually executed. The count guard catches what the preflight cannot — a
+#      credential that is present but not usable, a spec file that stops being collected, a new
+#      gate added inside a spec. Raise MIN_TESTS when the suite grows; a stale value only makes
+#      the guard weaker.
+#
+# THE ONE PERMITTED SKIP, AND WHY. moderator.spec.ts needs SUPABASE_SERVICE_ROLE_KEY, which
+# bypasses RLS entirely — full read/write on every table. This repository is PUBLIC and points at
+# the PRODUCTION Supabase project, so putting that key in Actions would hand a production
+# RLS-bypass credential to everyone with repo write access, permanently, for one test out of 32.
+# The key is therefore deliberately absent and that ONE spec is allowed to skip; every other skip
+# still fails the job. What this gives up is named in docs/VERIFICATION.md — it is real coverage,
+# not a formality, so the honest fix is a dedicated staging project, not a longer allowlist.
 
 name: configured-suite
 
@@ -65,19 +74,21 @@ jobs:
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-      # Only moderator.spec.ts needs it, but it is REQUIRED here rather than optional: an optional
-      # secret would let that spec skip itself, and a skipped spec is exactly what this workflow
-      # exists to make impossible.
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      # What the suite declares today (16 spec files, 32 tests). Guard 2 above.
-      MIN_TESTS: 32
+      # NOT SET, DELIBERATELY: SUPABASE_SERVICE_ROLE_KEY. See "the one permitted skip" below.
+      #
+      # What the suite declares today is 32 tests across 16 spec files; one of them
+      # (moderator.spec.ts) needs the service-role key and is allowed to skip, so 31 must run.
+      MIN_TESTS: 31
+      # The ONLY spec permitted to skip, and the only reason it may. Every other skip is a
+      # failure. Keep this list empty-by-default: an entry here is coverage being given up.
+      ALLOWED_SKIPS: moderator.spec.ts
     steps:
       # Before checkout-and-install, so a repository without the secrets fails in seconds with a
       # message saying what to add, rather than after five minutes of npm ci.
       - name: Require the configured-mode secrets
         run: |
           missing=""
-          for name in E2E_EMAIL E2E_PASSWORD VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+          for name in E2E_EMAIL E2E_PASSWORD VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
             eval "value=\${$name}"
             [ -n "$value" ] || missing="${missing} ${name}"
           done
@@ -85,7 +96,7 @@ jobs:
             echo "::error title=Configured suite has no credentials::Missing repository secret(s):${missing}. Every spec in e2e/configured/ gates on these and would SKIP itself, so the run would pass having executed nothing. Add them (throwaway test account + test Supabase project) under Settings -> Secrets and variables -> Actions."
             exit 1
           fi
-          echo "All five configured-mode secrets are present."
+          echo "All four configured-mode secrets are present."
 
       - uses: actions/checkout@v5
 
@@ -145,8 +156,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           status=0
-          if [ "$skipped" -ne 0 ]; then
-            echo "::error title=Tests skipped::${skipped} test(s) skipped. Every spec here gates on the credentials, so a skip means a secret is present but not usable (wrong project, disabled account) - not a passing run."
+          # WHICH spec skipped, not just how many. A count alone would let the permitted
+          # moderator skip cover for an unrelated one going quiet.
+          unexpected_skips="$(jq -r --arg allowed "$ALLOWED_SKIPS" '
+            ($allowed | split(" ")) as $ok
+            | [.. | objects | select(has("specs")) | .specs[]]
+            | map(select(([.tests[]?.results[]?.status] | last) == "skipped"))
+            | map(.file) | unique | map(select(. as $f | ($ok | index($f)) | not))
+            | join(" ")' configured-report.json)"
+          if [ -n "$unexpected_skips" ]; then
+            echo "::error title=Unexpected skip::These spec files skipped and are not on the allowlist:${unexpected_skips}. Only ${ALLOWED_SKIPS} may skip (it needs the service-role key, which is deliberately not in CI). Any other skip means a secret is present but not usable - a wrong project, a disabled account - and is not a passing run."
             status=1
           fi
           if [ "$ran" -lt "$MIN_TESTS" ]; then
