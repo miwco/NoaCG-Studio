@@ -382,6 +382,69 @@ test('the /output page answers honestly offline and builds a stage from a payloa
   await expect(page.frameLocator('iframe[title="Lower third"]').locator('#f0')).toHaveText('Recovered after refresh');
 });
 
+test('a dropped recovery RPC is retried, and only an answer is ever concluded from', async ({ page }) => {
+  // THE RULE THE RENDERER'S BOOT AND THE HOSTED RECEIVER BOTH RUN ON (docs/CONTROL_LAYER.md):
+  // an RPC either answered - possibly with nothing - or failed, and the two must not collapse.
+  // The renderer used to resolve its production ONCE and read a dropped request as "no such
+  // production", painting its wrong-URL card over a live airing; the catch-up read the same
+  // failure as "nothing was missed". Both now retry, and the walk they retry with is pure, so
+  // it can be measured here rather than only against a real backend.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const result = await page.evaluate(async () => {
+    const { untilAnswered } = await import('/src/control/hostedControl.ts');
+
+    // A failure is retried until it answers, backing off by doubling.
+    const waits: number[] = [];
+    let calls = 0;
+    const answer = await untilAnswered<string | null>(
+      async () => (++calls < 4 ? { ok: false, error: 'dropped' } : { ok: true, value: 'the show' }),
+      { wait: async (ms) => void waits.push(ms) },
+    );
+
+    // The backoff has a ceiling and then keeps knocking at it - a browser source with no
+    // fallback must not back off into next week.
+    const capped: number[] = [];
+    await untilAnswered(async () => ({ ok: false, error: 'down' }), {
+      limit: 8,
+      wait: async (ms) => void capped.push(ms),
+    });
+
+    // An ANSWER of nothing is the revoked capability, and that one is honoured at once.
+    let asked = 0;
+    const none = await untilAnswered<string | null>(
+      async () => {
+        asked += 1;
+        return { ok: true, value: null };
+      },
+      { wait: async () => {} },
+    );
+
+    // A bounded caller (the catch-up, which has the report baseline to stand on) gives up and
+    // says WHY, rather than handing on an empty list that reads as "nothing was missed".
+    let tries = 0;
+    const gaveUp = await untilAnswered(
+      async () => {
+        tries += 1;
+        return { ok: false, error: 'log unread' };
+      },
+      { limit: 3, wait: async () => {} },
+    );
+
+    return { calls, answer, waits, capped, asked, none, tries, gaveUp };
+  });
+
+  expect(result.answer).toEqual({ ok: true, value: 'the show' });
+  expect(result.calls, 'the two dropped requests must be asked again').toBe(4);
+  expect(result.waits).toEqual([500, 1000, 2000]);
+  expect(result.capped[result.capped.length - 1]).toBe(10_000);
+  expect(result.none).toEqual({ ok: true, value: null });
+  expect(result.asked, 'an answer is final, however empty').toBe(1);
+  expect(result.tries).toBe(3);
+  expect(result.gaveUp).toEqual({ ok: false, error: 'log unread' });
+});
+
+
 test('every graphic gets its own playout layer, typed, and it is what the output stacks', async ({ page }) => {
   // docs/PLAYOUT_DASHBOARD.md §5. Layers used to be DERIVED from pool position and moved with
   // ↑/↓ arrows, which made the layer an accident of ordering. They are now numbers: distinct by
