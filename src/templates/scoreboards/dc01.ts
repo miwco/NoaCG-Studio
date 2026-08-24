@@ -63,12 +63,11 @@ export const dc01: TemplateVariant = defineScoreboardVariant(
     fields: debateFloorSpxFields(),
     matchClock: false,          // this board runs its own two clocks — see debateFloor.ts
     runtimeExtraJs: `${debateFloorRuntimeJs()}
-// The assembler calls this after every update(), which is where a retyped clock or a changed
-// allowance arrives. The engine re-anchors its running count to what now stands on screen; it
-// never repaints, because the chair's text is the chair's.
-function rebuildScoreboard() { debateAdoptTypedClock(); }
+// A retyped clock, a resend of the cue's own allowance and the wire's origin-stamped running
+// time all arrive through update(), and the engine tells them apart per FIELD — so this board
+// needs no rebuildScoreboard() hook; speakingClockUpdate() is the one it answers.
 
-// …and this one when the board goes off air. Nobody holds the floor once the graphic is down,
+// This one runs when the board goes off air. Nobody holds the floor once the graphic is down,
 // and the tick must not outlive the thing it paints.
 function boardOffAir() { holdClocks(); }
 `,
@@ -85,7 +84,7 @@ function boardOffAir() { holdClocks(); }
         <!-- The allowance chip — the figure the clocks reset TO, so the audience reads the
              same number the chair typed and nobody has to be told what Reset will do. -->
         <div class="scoreboard-allowance">
-          <div class="scoreboard-mask"><span id="f7" class="scoreboard-allowance-time">05:00</span></div>
+          <div class="scoreboard-mask"><span id="f7" class="scoreboard-allowance-time" data-speaking="allowance">05:00</span></div>
           <div class="scoreboard-mask"><span id="f8" class="scoreboard-allowance-word">EACH</span></div>
         </div>
       </div>
@@ -97,7 +96,10 @@ function boardOffAir() { holdClocks(); }
           <div class="scoreboard-rail scoreboard-rail-a"></div>
           <div class="scoreboard-mask"><span id="f1" class="scoreboard-role">${o.lines[1]?.sample || 'PROPOSITION'}</span></div>
           <div class="scoreboard-mask"><span id="f2" class="scoreboard-name">${o.lines[2]?.sample || 'MAYA OKONKWO'}</span></div>
-          <div class="scoreboard-mask"><span id="f5" class="scoreboard-time">05:00</span></div>
+          <!-- data-speaking is the wire's whole contract for a two-clock board: it is how
+               control/matchClockWire.ts finds these clocks without knowing anything about the
+               type registry or the machine. -->
+          <div class="scoreboard-mask"><span id="f5" class="scoreboard-time" data-speaking="a">05:00</span></div>
         </div>
 
         <!-- The centre line, and the penalty badge that flashes on it. -->
@@ -109,7 +111,7 @@ function boardOffAir() { holdClocks(); }
           <div class="scoreboard-rail scoreboard-rail-b"></div>
           <div class="scoreboard-mask"><span id="f3" class="scoreboard-role">${o.lines[3]?.sample || 'OPPOSITION'}</span></div>
           <div class="scoreboard-mask"><span id="f4" class="scoreboard-name">${o.lines[4]?.sample || 'LUCAS BERG'}</span></div>
-          <div class="scoreboard-mask"><span id="f6" class="scoreboard-time">05:00</span></div>
+          <div class="scoreboard-mask"><span id="f6" class="scoreboard-time" data-speaking="b">05:00</span></div>
         </div>
       </div>
     </div>
@@ -118,7 +120,7 @@ function boardOffAir() { holdClocks(); }
     <div class="scoreboard-accent"></div>
 
     <!-- Input only: how many seconds one penalty costs. Nothing paints it. -->
-    <div id="f9" class="noacg-data-source">10</div>`,
+    <div id="f9" class="noacg-data-source" data-speaking="penalty">10</div>`,
     css: `/* The board itself — a flat panel, no blur: a school hall's camera has enough to do. */
 .scoreboard {
   /* A PENALTY IS A SEMANTIC COLOUR, not a palette one. It has to read as "seconds were taken

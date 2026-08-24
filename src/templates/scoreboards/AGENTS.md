@@ -41,6 +41,15 @@ DIFFERENT number of clocks would otherwise ship ~250 lines that can never find a
 paint; and `boardOffAir()`, called from `stop()`, is how a design that STARTED something gets
 told the graphic is down, so a clock it began does not keep ticking after the board is off.
 Both are guarded and both are absent from every other board, which emit exactly what they did.
+**ITS TWO CLOCKS ARE ON THE WIRE, and the design's markup is the whole contract.** The running
+one's value carries the instant it was true (`"03:12@<epoch ms>"`), exactly as the single match
+clock's does, so a renderer rebuilding from a report snapshot mid-speech comes back at the right
+second instead of at the allowance. `data-speaking="a" | "b" | "allowance" | "penalty"` on the
+four elements is how `control/matchClockWire.ts` finds them — **which of the two is running is
+never asked of the machine: the STAMP is the pointer**, at most one clock carries one, and
+`switch` moves it. `speakingClockUpdate(key, value)` (the guarded per-field hook in `shared.ts`,
+beside `matchClockUpdate`) is the engine's half, and it tells the three kinds of arriving value
+apart the way the match clock does — stamped, plain, and a resend of the cue's own text.
 **Its two halves are `flex: 1 1 0`, never a px basis** - the owner's 2026-08-23 ruling that a
 two-sided board gives both sides equal space and wraps a long name inside its own half rather
 than sizing the graphic by it (benchmarks/agent/rounds/2026-08-22/VERDICT.md).
