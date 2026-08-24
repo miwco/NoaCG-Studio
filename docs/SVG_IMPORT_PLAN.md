@@ -294,6 +294,29 @@ required for the feature and never participates in the runtime fit.
    field-system cleanup"). See §6b.
 3. **ADD FIELD** - drag on the canvas, a real editable field where the file drew nothing. Cheap
    once 2 lands: `addPlacedLine` already emits it; this is the gesture plus the canvas from 1.
+   **Status 2026-08-24 - shipped.** "＋ Draw a field on the artwork" arms a marquee on the
+   preview; the box comes back as FRACTIONS of the artwork's own rect (`WizardPreview` never
+   learns what a design px is) and the mapping step turns it into a `DesignFieldSpec`, which
+   `buildDraftTemplate` already applied for this category - so the drawn line is an ordinary
+   placed field from birth and the preview, the editor and every export agree by construction.
+   Three decisions worth keeping:
+   - **A drawn field is a `shrink` line, never a `wrap` one.** `applyPlacedFieldSpecs` gives a
+     dragged box CSS wrap, which is right on RASTER artwork and wrong here: the ladder measures
+     `data-fit="shrink"` (§6b), so a wrapping line would be the one field the operator's
+     too-long warning cannot see - the defect step 2 just removed, re-entering by a new door.
+     `DesignFieldSpec.fit` carries the answer and raster keeps its default.
+   - **The drawn box IS the type's em box** (`lineHeight: 1`), so the numbers dragged are the
+     numbers in the emitted rule. A CLICK is a drag of no size and reads as "put a field here",
+     with a field-shaped default - never a two-pixel field nobody can see or select.
+   - **The artwork is tracked for the whole step, not only while armed.** Its rect arrives on
+     the document's next FRAME, so arming the channel at the moment of the gesture left the
+     first drag after the button with nothing to measure against, and the field silently did
+     not appear.
+   The step reports its drop HANDLER up rather than a flag, because only it holds the SVG - and
+   that handler's identity changes with every keystroke, so it lives in a REF with a boolean in
+   state. Held as state it made every report a render and React stopped the wizard with
+   "Maximum update depth exceeded" **while every assertion still passed**, which is why the
+   loop has an assertion of its own in `e2e/import-svg.spec.ts`.
 4. **VERTICAL GROWTH** - the rung the owner values most. See §6c.
 5. **THE CANVAS AS A CONTROL SURFACE** - click a layer to bind it, click a rectangle to make it
    the growing panel, drag its direction. The relationship set from 4 stops being

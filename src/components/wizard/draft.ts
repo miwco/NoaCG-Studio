@@ -94,6 +94,11 @@ export interface DesignFieldSpec {
   width?: number;
   /** The image slot's height in design px (image only). */
   height?: number;
+  /** How a long value meets the slot; absent = 'wrap', the dragged box's own behaviour on
+   *  RASTER artwork. An imported SVG asks for 'shrink' instead: that design runs ONE fit and
+   *  the ladder measures a `data-fit="shrink"` line (docs/SVG_IMPORT_PLAN.md §6b), so a
+   *  wrapping line there would be the one field the operator's too-long warning cannot see. */
+  fit?: 'wrap' | 'shrink';
   /** A bundled font id, or null = the design's default font (--font-heading). */
   fontId: string | null;
   fontSize: number;

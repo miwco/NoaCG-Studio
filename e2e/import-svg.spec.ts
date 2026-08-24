@@ -1151,6 +1151,172 @@ test('svg import: the operator is WARNED about an outlined-text field that canno
   await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
 });
 
+// ── ADD A FIELD WHERE THE FILE DREW NOTHING (docs/SVG_IMPORT_PLAN.md §6a step 3) ──────────
+// The imported SVG is a fixed STAGE, not immutable artwork. The mapping step used to be a pure
+// BINDING form, which assumes the file contains a layer for everything the show needs; it does
+// not, and the answer is to draw the missing line ON the artwork rather than to send a reader
+// who has never opened the editor into it.
+//
+// Full-frame on purpose: with the artwork covering the canvas, a fraction of the draw surface
+// IS that fraction of the design, so the assertions below can say where the field landed.
+const STAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect x="0" y="0" width="1920" height="1080" fill="#0d1017"/>
+  <text id="Headline" x="160" y="300" font-size="72" fill="#ffffff">Tonight</text>
+</svg>`;
+
+/** Drag a box over the preview, in fractions of the canvas. */
+async function drawField(page: Page, from: [number, number], to: [number, number]) {
+  const surface = page.getByTestId('wz-preview-draw');
+  const b = (await surface.boundingBox())!;
+  await page.mouse.move(b.x + b.width * from[0], b.y + b.height * from[1]);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width * to[0], b.y + b.height * to[1], { steps: 8 });
+  await expect(page.getByTestId('wz-preview-marquee')).toBeVisible();
+  await page.mouse.up();
+}
+
+test('svg import: a field drawn on the artwork becomes a real field, where it was drawn', async ({ page }) => {
+  // THE ARMED STEP MUST NOT SPIN. The step re-reports its drop handler on every render, because
+  // the closure reads the draft — so holding that FUNCTION in the wizard's state made each
+  // report a state change, each a render, each a fresh identity, and React stopped the wizard
+  // with "Maximum update depth exceeded" while the tool was armed. Every assertion below still
+  // passed through it, which is exactly why the loop needs an assertion of its own.
+  const loops: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Maximum update depth/.test(m.text())) loops.push(m.text());
+  });
+  page.on('pageerror', (e) => {
+    if (/Maximum update depth/.test(e.message)) loops.push(e.message);
+  });
+
+  await dropSvgMarkup(page, STAGE_SVG, 'stage.svg');
+  await page.locator('.wz-next').click();
+
+  // Nothing is armed until the reader says so — the canvas is for reading the graphic, and a
+  // stray drag on it must not mint a field.
+  await expect(page.getByTestId('map-svg-added')).toContainText('nothing added');
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toBeVisible();
+  // From (25%, 50%) to (55%, 56%) of a 1920x1080 stage: x 480, y 540, 576 wide, ~65 tall.
+  await drawField(page, [0.25, 0.5], [0.55, 0.56]);
+
+  // One row, and the tool disarms itself: drawing a field is one gesture, not a mode the
+  // reader has to remember to leave.
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+  await page.locator('[data-testid^="map-svg-added-title-"]').fill('Subtitle');
+  await page.locator('[data-testid^="map-svg-added-sample-"]').fill('Live from the studio');
+  // Typing is what drove the loop hardest — every keystroke is a new draft and a new closure.
+  expect(loops).toEqual([]);
+
+  await createProject(page);
+
+  const state = await page.evaluate(async () => {
+    const [{ useTemplateStore }, { getTemplateParts }, { validateTemplate }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/model/structure.ts'),
+      import('/src/validation/validateTemplate.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    return {
+      fields: t.fields.map((f) => `${f.field}:${f.ftype}:${f.title}:${f.value}`),
+      html: t.html,
+      css: t.css,
+      js: t.js,
+      parts: getTemplateParts(t.html, t.fields).map((p) => `${p.selector}|${p.kind}`),
+      valid: validateTemplate(t).ok,
+    };
+  });
+
+  // A REAL field, after the artwork's own bound layer — the drawn line is an ordinary placed
+  // line, emitted AFTER `</svg>` like every other one, and it validates like any template.
+  expect(state.fields).toEqual([
+    'f0:textfield:Headline:Tonight',
+    'f1:textfield:Subtitle:Live from the studio',
+  ]);
+  const svgEnd = state.html.lastIndexOf('</svg>');
+  expect(state.html.slice(svgEnd)).toMatch(
+    /<div class="imported-design-mask" id="fw1"\s*>\s*<span id="f1" data-fit="shrink"\s*>\s*Live from the studio\s*<\/span>/,
+  );
+  expect(state.parts).toContain('#f1|line');
+  expect(state.valid).toBe(true);
+
+  // …WHERE IT WAS DRAWN. The box is the type's own em box (line-height 1), so the numbers the
+  // reader dragged are the numbers in the rule rather than a guess away from them.
+  const left = Number(/#fw1 \{[^}]*left: calc\((\d+)px/.exec(state.css)![1]);
+  const top = Number(/#fw1 \{[^}]*top: calc\((\d+)px/.exec(state.css)![1]);
+  const maxWidth = Number(/#fw1 \{[^}]*max-width: calc\((\d+)px/.exec(state.css)![1]);
+  const fontSize = Number(/#f1 \{[^}]*font-size: calc\((\d+)px/.exec(state.css)![1]);
+  expect(Math.abs(left - 480)).toBeLessThan(14);
+  expect(Math.abs(top - 540)).toBeLessThan(14);
+  expect(Math.abs(maxWidth - 576)).toBeLessThan(20);
+  expect(Math.abs(fontSize - 65)).toBeLessThan(14);
+
+  // ONE FIT (plan §6b): the drawn field is a `shrink` line, so the LADDER measures it and the
+  // operator's too-long warning can see it. A wrapping line would be the one field it cannot.
+  expect(state.js).toContain('function fitSvgText');
+  expect(state.js).not.toContain('function fitPlacedText');
+  expect(state.css).toMatch(/#f1 \{[^}]*white-space: nowrap;/);
+
+  const reported = await previewFrame(page).locator('#f1').evaluate((el) => {
+    const w = window as unknown as {
+      update: (json: string) => void;
+      svgFitRoom: Record<string, { width: number; height: number }>;
+      noacgTextOverflow: () => string[];
+    };
+    w.update(JSON.stringify({ f1: 'A'.repeat(400) }));
+    return { room: w.svgFitRoom.f1, size: parseFloat(getComputedStyle(el).fontSize), over: w.noacgTextOverflow() };
+  });
+  // Its room is the slot it was DRAWN with, and it does not wrap — the room rule for a placed
+  // line, now reached through a field nobody had drawn before.
+  expect(reported.room.height).toBe(0);
+  expect(reported.room.width).toBeGreaterThan(0);
+  expect(reported.over).toEqual(['f1']);
+});
+
+test('svg import: a drawn field can be renamed and removed, and cancelling draws nothing', async ({ page }) => {
+  await dropSvgMarkup(page, STAGE_SVG, 'stage.svg');
+  await page.locator('.wz-next').click();
+
+  // Arming and then changing your mind leaves the artwork exactly as it was.
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toBeVisible();
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+  await expect(page.getByTestId('map-svg-added')).toContainText('nothing added');
+
+  await page.getByTestId('map-svg-add-field').click();
+  await drawField(page, [0.2, 0.7], [0.5, 0.76]);
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+
+  // A CLICK is a drag of no size. It reads as "put a field here", not as a two-pixel field
+  // nobody could see or select.
+  await page.getByTestId('map-svg-add-field').click();
+  const surface = page.getByTestId('wz-preview-draw');
+  const b = (await surface.boundingBox())!;
+  await page.mouse.move(b.x + b.width * 0.3, b.y + b.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page.getByTestId('map-svg-added')).toContainText('2 added');
+
+  // Removing one takes it off the artwork too — nothing about the file changed either way.
+  const removes = page.locator('[data-testid^="map-svg-added-remove-"]');
+  await expect(removes).toHaveCount(2);
+  await removes.first().click();
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+
+  await createProject(page);
+  const fields = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.fields.map((f) => `${f.field}:${f.title}`);
+  });
+  // The clicked one survived, sized from the design rather than from the gesture — and it kept
+  // the name it was given, which the next add would not have re-issued.
+  expect(fields).toEqual(['f0:Headline', 'f1:Text 2']);
+});
+
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
   // Wrapping is allowed only into room the artwork already has: the panel's own height, down to
   // whatever is drawn below the line. How many lines that is depends on the SIZE - a 190px panel
