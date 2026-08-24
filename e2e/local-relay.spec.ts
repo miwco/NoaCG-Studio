@@ -348,7 +348,15 @@ test('a reloaded browser source reads the log from where it left off, not from r
   // its shape is pinned here rather than only implied by the behaviour below.
   const readBaseline = () =>
     air.evaluate(() => localStorage.getItem('noacg.relay.baseline.House Match Board.program'));
-  await expect.poll(readBaseline, { timeout: 10_000 }).not.toBeNull();
+  // Wait for the baseline to have CAUGHT UP WITH THE BUMP, not merely to exist. It is written on
+  // a debounce and the boot itself writes one, so "the key is there" is true well before the goal
+  // is in it - which is a 88-vs-89 flake that passed on this laptop and failed in CI.
+  await expect
+    .poll(async () => JSON.parse((await readBaseline()) ?? '{}').data?.f1 ?? null, {
+      timeout: 15_000,
+      message: 'the bumped score must reach the merged half of the baseline',
+    })
+    .toBe('89');
   const baseline = JSON.parse((await readBaseline())!) as {
     v: number;
     from: number;
@@ -356,7 +364,6 @@ test('a reloaded browser source reads the log from where it left off, not from r
     data: Record<string, string>;
   };
   expect(baseline.v).toBe(1);
-  expect(baseline.data.f1, 'the bumped score is in the merged half of the baseline').toBe('89');
 
   // Which row the airing began at - the log itself, read the way the receiver reads it.
   const play = rows.filter((r) => r.graphic === 'House Match Board' && r.stream === 'program' && (r.msg as { t: string }).t === 'play').pop();
@@ -401,9 +408,14 @@ test('a baseline that describes a log which no longer exists is thrown away, not
   await ctl.locator('#v-take').click();
   await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
 
+  // Wait for the baseline to name the AIRING, not merely to exist: the boot writes one of its own
+  // with nothing on air, and reading `from` out of that one measures the wrong moment.
   const key = 'noacg.relay.baseline.House Match Board.program';
-  await expect.poll(() => air.evaluate((k) => localStorage.getItem(k), key), { timeout: 10_000 }).not.toBeNull();
-  const from = JSON.parse((await air.evaluate((k) => localStorage.getItem(k), key))!).from as number;
+  const read = () => air.evaluate((k) => localStorage.getItem(k), key);
+  await expect
+    .poll(async () => (JSON.parse((await read()) ?? '{}').from as number | undefined) ?? 0, { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const from = JSON.parse((await read())!).from as number;
   // The whole point of the test is that a DIFFERENT row sits at that number in the new log.
   expect(from, 'the airing must not begin at the very first row').toBeGreaterThan(1);
 
