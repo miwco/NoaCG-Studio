@@ -231,7 +231,8 @@ OAuth** - never magic links (`src/backend/auth.ts`). That matters: with confirma
 the email + password path needs no working mail at all, and Google needs none ever. The only
 remaining mail dependency is **password reset** (`resetPasswordForEmail`).
 
-**Email confirmation is off** (decided 2026-08-24): during the student push the point is that
+**Email confirmation is off** - decided and verified live on 2026-08-24
+(`GET /auth/v1/settings` returns `"mailer_autoconfirm": true`). During the student push the point is that
 someone can make an account and start working, and we do not need to prove they own the
 address. What that costs, so it is a decision and not an accident:
 
@@ -259,6 +260,38 @@ Setting it up, when reset mail needs to be reliable:
    users per hour**, which is exactly one class arriving at once. Raise it deliberately.
 5. Turn **off link tracking** at the provider - it rewrites Supabase's single-use confirmation
    and reset links and breaks them.
+
+## Google sign-in (the button ships; the provider is not provisioned)
+
+**State on 2026-08-24, read from the live project** (`GET /auth/v1/settings` returns
+`"google": false`): Google is **not enabled** on the hosted project, while
+`SignInDialog.tsx` renders "Continue with Google" unconditionally. Anyone clicking it today
+gets an error. The code side is complete - `signInWithGoogle`, the button, and
+`[auth.external.google]` reading `SUPABASE_AUTH_GOOGLE_CLIENT_ID` /
+`SUPABASE_AUTH_GOOGLE_SECRET` - so this is provisioning work only, done in two consoles.
+
+Step by step, when the time comes:
+
+1. **Google Cloud Console** -> create or pick a project for NoaCG.
+2. **OAuth consent screen**: type External; app name, our support email, the logo; scopes
+   `email`, `profile`, `openid`. While it is in Testing only listed test accounts can sign in
+   - publish it before a class, or every student bounces.
+3. **Credentials -> Create credentials -> OAuth client ID -> Web application.**
+4. **Authorized JavaScript origins**: `https://noacg.studio`.
+5. **Authorized redirect URI**: `https://kprolrchuldgfrzspthy.supabase.co/auth/v1/callback` -
+   Supabase's callback, *not* our own URL. This is the field people get wrong.
+6. Copy the **client ID** and **client secret**.
+7. **Supabase Dashboard -> Authentication -> Sign In / Providers -> Google**: enable, paste
+   both, save.
+8. **Supabase -> Authentication -> URL Configuration**: Site URL `https://noacg.studio`, and
+   the redirect allow-list must cover where the app actually lives. `OAUTH_REDIRECT` in
+   `src/backend/auth.ts` is `origin + pathname`, deliberately not the bare origin - so the
+   allowed URL is `https://noacg.studio/app`, not `https://noacg.studio`.
+9. Verify with `curl https://kprolrchuldgfrzspthy.supabase.co/auth/v1/settings -H "apikey:
+   <publishable key>"` - `"google"` flips to `true` - then sign in for real.
+
+Until step 7 lands, the button is dead in production. Either provision it or hide the button;
+leaving a visible control that always errors is the worst of the three.
 
 ### Trap: never run `supabase config push`
 

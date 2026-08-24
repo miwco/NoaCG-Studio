@@ -326,6 +326,15 @@ Real work, deliberately not now. Each has a plan doc; none is current until it i
   audience plane** (`docs/INTERACTIVE_PLAYOUT_PLAN.md`, "Backlog for the audience plane") - both
   owner-requested 2026-08-08, both held while the plain join page is still being accepted. Each is
   a capability-disclosure or an architecture decision wearing a feature's clothes.
+- **Account infrastructure before real students** (`docs/DEPLOYMENT.md`, "Auth email" and
+  "Google sign-in") - two provisioning jobs, no code in either, both owner-only because they
+  need accounts we hold rather than anything in this repo. **Custom SMTP**: the built-in
+  Supabase sender is a testing facility capped at a handful of mails an hour, so
+  password-reset delivery is unreliable until a real provider is attached; the SPF/DKIM
+  verification is the part with weeks of lead time. **Google sign-in**: the code and the
+  button already ship, and `[auth.external.google]` is wired - what is missing is a Google
+  Cloud OAuth client and its credentials on the hosted project. Owner asked for both
+  2026-08-24; step-by-step for each is written down, waiting to be executed.
 - **Video/animation projects** - the parallel Beta shell stays where it is until the north star
   lands.
 - **The dedicated preview channel, Home polish** - postponed by the student release, still wanted.
