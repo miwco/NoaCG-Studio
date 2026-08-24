@@ -162,8 +162,18 @@ renders at 17px the moment somebody picks S, which is the operator's choice, not
     being a formatting context and the text re-lays out (card48's difference sits INSIDE the box and
     starts left of it - that is re-layout, not revealed ink), and two separate renders desynchronise
     any looping animation, which reads as a huge diff that is entirely the loop.
-- **Containment at S: cr03 clips `.credits-box:y`** - a fixed 950px stage that paginates, packing one
-  row too many once the type shrinks.
+- **Containment at S: cr03 was NOT a finding, and the reason was the instrument.** It reads
+  `.credits-box:xy` at the default step and `.credits-box:y` at S - strictly LESS - and the
+  baseline compared whole strings, so `:y` was "not in" `[':xy']` and an improvement failed the
+  gate. Signatures are now one entry per axis and per side, so a row can only fail on an axis it
+  did not have before (mutation-tested: delete `.credits-box:y` from the baseline and the sweep
+  fails on it). Measured while chasing it, and worth keeping: **the stage clips nothing anybody
+  can see.** The 14px vertical is the two PARKED pages and the end card resting at their entrance
+  offset (`translate(0, 14px)`, `opacity: 0`) - the pose the pages preset animates from. The 8px
+  horizontal is the heading chip's `skewX(-8deg)` `::before`: turning that one transform off drops
+  `scrollWidth` from 1208 back to 1200 exactly. Both are decoration and neither is a glyph, which
+  is the same "`scrollWidth` counts a skewed painted pseudo-element" trap the width fix above
+  started from.
 - **A CRAWL IS MEASURED MID-TRAVEL, so read ticker and credit-reel rows twice before believing
   them.** tk01, tk12 and cr06 report new escapes at S and tk05 at L purely because narrower items
   cover a different distance inside the sweep's fixed settle - reproducible, and not a defect.

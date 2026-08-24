@@ -9,7 +9,7 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## scoreboards/ - the two-team boards
 
-sb01…sb25 (prefix 'scoreboard', data blocks via convertToDataRegion;
+sb01…sb25 plus **dc01** (prefix 'scoreboard', data blocks via convertToDataRegion;
 the fixed 4-field contract f0-f3 as scoreboard-masks so the standard presets drive them;
 update() pops a score's mask when it changes on air - speed via motionSpeed()).
 **A design may OWN its fields instead** (`SbDesign.fields`), plus `.popFields` (which fields
@@ -32,6 +32,18 @@ hardware, and **sb25 "Court Board" is the one to read before inventing a field**
 fouls-and-timeouts strip is the match board's existing `periods` breakdown, because
 "FOULS | 4 | 2" already IS "label | home | away". A tally that fits the repeating field is
 never a reason to grow the contract.
+**dc01 "Debate Floor" is here because a debate is a two-sided contest**, and it is where this
+assembler's stretch is furthest: the speaking-timer type (types/speakingTimer.ts) browses as a
+TIMER, not a scoreboard (`TYPE_META` in templates/meta.ts settles that - the assembler and the
+browse category answer different questions), and it declines two of the assembler's defaults.
+`matchClock: false` opts out of the shared single-clock runtime, because a board that runs a
+DIFFERENT number of clocks would otherwise ship ~250 lines that can never find an element to
+paint; and `boardOffAir()`, called from `stop()`, is how a design that STARTED something gets
+told the graphic is down, so a clock it began does not keep ticking after the board is off.
+Both are guarded and both are absent from every other board, which emit exactly what they did.
+**Its two halves are `flex: 1 1 0`, never a px basis** - the owner's 2026-08-23 ruling that a
+two-sided board gives both sides equal space and wraps a long name inside its own half rather
+than sizing the graphic by it (benchmarks/agent/rounds/2026-08-22/VERDICT.md).
 ### shared/matchClock.ts - the SPORTS CLOCK
 
 It lives in `shared/` and is documented here because the match boards are what drive it.

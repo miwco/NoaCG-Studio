@@ -31,6 +31,7 @@ import {
   viewerQuestionType,
 } from './audience';
 import { countdownType, holdingScreenType } from './clocks';
+import { speakingTimerType } from './speakingTimer';
 import { esportsScoreType, mapRoundType } from './esports';
 import { headToHeadType, matchupType, playerCardType } from './matchups';
 import { bracketType, rosterType, standingsType, timingTowerType } from './competitionBoards';
@@ -68,6 +69,7 @@ export const TYPES: GraphicType[] = [
   signOffType,        // the closing card - one hold, no authored machine
   tickerType,         //  8/60
   scoreboardType,     //  5/60 — but the type that proves parallel groups
+  speakingTimerType,  // the debating board: two clocks, one floor (agent round 2026-08-22)
   podiumScoreType,    // the game-show board: per-contestant steppers + the roster's spotlight arc
   quizBoardType,      // the flagship
   // ── The title / topic / information pack ──
