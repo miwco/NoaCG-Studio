@@ -327,6 +327,122 @@ test('a relay browser source reloaded mid-show comes back on air, with the score
   await air.close();
 });
 
+test('a reloaded browser source reads the log from where it left off, not from row 0', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // THE REPLAY was bounded by the last play; the READ under it was not. Recovery fetched the log
+  // from ROW 0 every time - and relay-log.jsonl is appended to and never rotated, so row 0 is not
+  // this show, it is every show this package has ever run, up to 20,000 rows at 500 a fetch
+  // before the graphic may paint. The hosted plane never pays that: a renderer starts from its
+  // own last report. The local half now keeps the same kind of baseline itself, on the relay's
+  // origin, and reads from the play it names.
+  const origin = 'http://relay-bound.local';
+  const { air, ctl, rows } = await cupTiePackage(page, context, origin);
+
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+  await ctl.locator('.field', { hasText: /^F1 · / }).locator('button.step', { hasText: '+' }).click();
+  await expect(air.locator('#f1')).toHaveText('89', { timeout: 10_000 });
+
+  // The baseline is written on a debounce after the rows land, and it is a PERSISTED format, so
+  // its shape is pinned here rather than only implied by the behaviour below.
+  const readBaseline = () =>
+    air.evaluate(() => localStorage.getItem('noacg.relay.baseline.House Match Board.program'));
+  // Wait for the baseline to have CAUGHT UP WITH THE BUMP, not merely to exist. It is written on
+  // a debounce and the boot itself writes one, so "the key is there" is true well before the goal
+  // is in it - which is a 88-vs-89 flake that passed on this laptop and failed in CI.
+  await expect
+    .poll(async () => JSON.parse((await readBaseline()) ?? '{}').data?.f1 ?? null, {
+      timeout: 15_000,
+      message: 'the bumped score must reach the merged half of the baseline',
+    })
+    .toBe('89');
+  const baseline = JSON.parse((await readBaseline())!) as {
+    v: number;
+    from: number;
+    cursor: number;
+    data: Record<string, string>;
+  };
+  expect(baseline.v).toBe(1);
+
+  // Which row the airing began at - the log itself, read the way the receiver reads it.
+  const play = rows.filter((r) => r.graphic === 'House Match Board' && r.stream === 'program' && (r.msg as { t: string }).t === 'play').pop();
+  expect(play, 'the take must have put a play row on the wire').toBeTruthy();
+  expect(baseline.from).toBe(play!.id);
+
+  // Watch what the reloaded source actually asks for. A route added later wins, and falls back
+  // to the relay underneath it, so this observes without replacing anything.
+  const reads: number[] = [];
+  await air.route(`${origin}/relay/log*`, (route) => {
+    reads.push(Number(new URL(route.request().url()).searchParams.get('after') ?? '0'));
+    return route.fallback();
+  });
+
+  await air.reload({ waitUntil: 'load' });
+  await expect
+    .poll(() => airState(air).then((s) => s.score), { timeout: 20_000, message: 'the bound must not cost the recovery' })
+    .toBe('89');
+  await expect.poll(() => airState(air).then((s) => s.opacity), { timeout: 15_000 }).toBe('1');
+
+  // THE BOUND: the boot read starts one row before the play, so the airing comes back in full
+  // and nothing older than it is fetched at all. Row 0 - the old behaviour - would be a 0 here.
+  expect(reads.length, 'the reloaded source must have read the log').toBeGreaterThan(0);
+  expect(reads[0]).toBe(play!.id - 1);
+
+  await ctl.close();
+  await air.close();
+});
+
+test('a baseline that describes a log which no longer exists is thrown away, not trusted', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // THE BOUND IS A CACHE, and a cache needs to know when it is stale. Row numbers alone cannot
+  // say: a relay whose relay-log.jsonl was deleted starts counting from 1 again, and once the
+  // new show passes the old cursor the saved numbers look perfectly plausible while meaning
+  // different rows. So the read starts one row BEFORE the airing's play precisely so that row
+  // comes back and can be checked - and when it is not that play, the baseline is dropped and
+  // the old full walk runs.
+  const origin = 'http://relay-reset.local';
+  const { air, ctl, rows } = await cupTiePackage(page, context, origin);
+
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+
+  // Wait for the baseline to name the AIRING, not merely to exist: the boot writes one of its own
+  // with nothing on air, and reading `from` out of that one measures the wrong moment.
+  const key = 'noacg.relay.baseline.House Match Board.program';
+  const read = () => air.evaluate((k) => localStorage.getItem(k), key);
+  await expect
+    .poll(async () => (JSON.parse((await read()) ?? '{}').from as number | undefined) ?? 0, { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const from = JSON.parse((await read())!).from as number;
+  // The whole point of the test is that a DIFFERENT row sits at that number in the new log.
+  expect(from, 'the airing must not begin at the very first row').toBeGreaterThan(1);
+
+  // The log is replaced: same relay, same head, brand-new numbering. This graphic aired at row
+  // 1 in it and its score is 3 - and row `from` now belongs to somebody else entirely.
+  const fresh = [
+    { id: 1, graphic: 'House Match Board', stream: 'program', msg: { t: 'play' } },
+    { id: 2, graphic: 'House Match Board', stream: 'program', msg: { t: 'update', data: { f1: '3' } } },
+  ];
+  for (let id = 3; id <= from + 1; id += 1) {
+    fresh.push({ id, graphic: 'Other Board', stream: 'program', msg: { t: 'update', data: { f0: 'x' } } });
+  }
+  rows.length = 0;
+  rows.push(...fresh);
+
+  await air.reload({ waitUntil: 'load' });
+
+  // The full walk finds the play at row 1 and the score after it, so the board comes back ON AIR
+  // reading 3. Trusting the stale baseline would start at row `from`, find no play at all, and
+  // leave a live board dark while its fields quietly updated underneath.
+  await expect(air.locator('.scoreboard')).toHaveCSS('opacity', '1', { timeout: 20_000 });
+  await expect(air.locator('#f1')).toHaveText('3', { timeout: 10_000 });
+
+  await ctl.close();
+  await air.close();
+});
+
 test('one lost relay request at boot does not cost the airing', async ({ page, context }) => {
   test.setTimeout(180_000);
   // RECOVERY READS THE LOG ONCE, so every fetch on the way in is the only chance it gets - and
