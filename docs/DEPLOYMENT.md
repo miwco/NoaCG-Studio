@@ -242,6 +242,27 @@ address. What that costs, so it is a decision and not an accident:
 - Password reset still sends mail. A student who forgets their password is stuck if mail is
   broken or rate-limited, confirmations or not.
 
+### Confirmations off + Google = the password quietly stops working
+
+**Automatic** identity linking is always on and is NOT the "Allow manual linking" toggle (that
+one gates `linkIdentity`/`unlinkIdentity`, which this codebase does not call; it is off).
+Supabase links identities that share an email address, and because auto-linking to an
+*unverified* address would enable pre-account-takeover, the guard is that linking **removes
+any unconfirmed identities** on that user.
+
+With confirmations off, every email/password identity we mint is unconfirmed. So once Google
+sign-in is provisioned:
+
+> A student signs up with `x@arcada.fi` + password, then later clicks "Continue with Google"
+> on the same address. Supabase links Google to the same user - the account and all their
+> work survive - **and deletes the unconfirmed email identity, so their password stops
+> working.**
+
+Documented Supabase behaviour, not a bug, but it reads as one from the student's side. The
+mirror case: signing up with email after having used Google on that address returns a
+deliberately obfuscated response and sends nothing, to block user enumeration. Turning
+confirmations back on is what removes this sharp edge.
+
 **Supabase's built-in email sender is a testing facility, not a service.** It sends from a
 Supabase address rather than ours, and it is hard-capped at a handful of messages per hour -
 a cap the docs say is *only* changeable by attaching custom SMTP. Custom SMTP means pointing
