@@ -878,6 +878,15 @@
    ".scoreboard-mask:y"
   ]
  },
+ "dc01": {
+  "off": [],
+  "clip": [
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y",
+   ".scoreboard-mask:y"
+  ]
+ },
  "card05": {
   "off": [],
   "clip": [
@@ -1213,6 +1222,12 @@
   ]
  },
  "ss20": {
+  "off": [],
+  "clip": [
+   ".starting-soon-mask:y"
+  ]
+ },
+ "ss21": {
   "off": [],
   "clip": [
    ".starting-soon-mask:y"
@@ -2832,21 +2847,6 @@
   "clip": [
    ".stream-notification-avatar:y",
    ".stream-notification-mask:y"
-  ]
- },
- "dc01": {
-  "off": [],
-  "clip": [
-   ".scoreboard-mask:y",
-   ".scoreboard-mask:y",
-   ".scoreboard-mask:y",
-   ".scoreboard-mask:y"
-  ]
- },
- "ss21": {
-  "off": [],
-  "clip": [
-   ".starting-soon-mask:y"
   ]
  }
 }
