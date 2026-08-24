@@ -36,6 +36,13 @@ interface Props {
    * SVG. Null disarms. CreationWizard just hands the handler to the canvas.
    */
   onArmDraw: (handler: ((box: { x: number; y: number; w: number; h: number }) => void) | null) => void;
+  /**
+   * THE CANVAS AS A CONTROL SURFACE (docs/SVG_IMPORT_PLAN.md §6a step 5). Reported the same way
+   * as the draw handler and for the same reason: the canvas answers WHICH layer was picked, and
+   * only this step knows what picking one means. `drag` is the direction of a click-drag, which
+   * is how a rectangle is told which way to grow without hunting for a second control.
+   */
+  onArmPick: (handler: ((candidateId: string, drag: 'x' | 'y' | null) => void) | null) => void;
 }
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -155,7 +162,7 @@ function measureOutline(
  * channel the editor canvas already uses (`preview/canvasControlProtocol.ts`) — the wizard
  * preview iframe deliberately carries no allow-same-origin, so nothing reaches into it.
  */
-export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }: Props) {
+export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, onArmPick }: Props) {
   const svg = draft.designSvg;
   const stageRef = useRef<HTMLDivElement>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -238,6 +245,68 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
     onArmDraw(drawArmed ? placeDrawnField : null);
   }, [drawArmed, placeDrawnField, onArmDraw]);
   useEffect(() => () => onArmDraw(null), [onArmDraw]);
+
+  // ── PICKING A LAYER ON THE ARTWORK (docs/SVG_IMPORT_PLAN.md §6a step 5) ──
+  // The checklist and the canvas are two views of one decision, and pointing at the thing itself
+  // is the one that needs no reading. What a pick MEANS depends on what was picked - a text layer
+  // becomes a field, a rectangle becomes the panel that grows - so the canvas reports which layer
+  // and this decides, exactly as it does for a drawn box.
+  const pickLayer = useCallback(
+    (candidateId: string, drag: 'x' | 'y' | null) => {
+      const text = draft.svgFields.find((f) => f.candidateId === candidateId);
+      if (text) {
+        onDraft({
+          svgFields: draft.svgFields.map((f) =>
+            f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+          ),
+        });
+        return;
+      }
+      const picture = draft.svgImages.find((f) => f.candidateId === candidateId);
+      if (picture) {
+        onDraft({
+          svgImages: draft.svgImages.map((f) =>
+            f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+          ),
+        });
+        return;
+      }
+      const outline = draft.svgOutlines.find((f) => f.candidateId === candidateId);
+      if (outline) {
+        // Only a MEASURED group can be replaced - the same rule its checkbox keeps, since the
+        // stand-in needs the box. Picking an unmeasurable one does nothing rather than pretending.
+        if (outline.box) {
+          onDraft({
+            svgOutlines: draft.svgOutlines.map((f) =>
+              f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+            ),
+          });
+        }
+        return;
+      }
+      // A RECTANGLE is the panel that grows, and a DRAG says which way. Picking the one that is
+      // already growing, with no direction, turns it off again - the gesture is its own undo.
+      if (!svg?.shapes.some((s) => s.id === candidateId)) return;
+      const isPanel = draft.svgStretch.on && draft.svgStretch.shapeId === candidateId;
+      if (isPanel && !drag) {
+        onDraft({ svgStretch: { ...draft.svgStretch, on: false } });
+        return;
+      }
+      onDraft({
+        svgStretch: {
+          on: true,
+          shapeId: candidateId,
+          axis: drag ?? (isPanel ? draft.svgStretch.axis : undefined) ?? 'x',
+        },
+      });
+    },
+    [draft.svgFields, draft.svgImages, draft.svgOutlines, draft.svgStretch, svg, onDraft],
+  );
+
+  useEffect(() => {
+    onArmPick(pickLayer);
+  }, [pickLayer, onArmPick]);
+  useEffect(() => () => onArmPick(null), [onArmPick]);
 
   const patchAdded = (id: string, patch: Partial<DesignFieldSpec>) =>
     onDraft({ designFields: draft.designFields.map((f) => (f.id === id ? { ...f, ...patch } : f)) });

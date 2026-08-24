@@ -261,6 +261,16 @@ because the artwork's rect arrives a frame later and arming it at the gesture lo
 drag. The step reports its drop HANDLER up, not a flag - and the wizard holds that handler in a
 REF with only a boolean in state, or every re-report is a render and React stops the wizard with
 "Maximum update depth exceeded" while every assertion still passes.
+**THE ARTWORK IS ALSO THE CONTROL SURFACE** (plan §6a step 5): every offered layer is tracked
+(`WizardPreview` `pickable` + `onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
+the iframe has no allow-same-origin and nothing reaches in. Tie-break is the editor canvas's:
+innermost by depth, then smallest box. The canvas answers WHICH layer; the step decides what a
+pick means (text/picture/outline toggles its binding; a rectangle becomes the growing panel, and
+a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the growing panel
+with no drag turns it off). The handler is held in a REF, never state - see the draw handler
+above for what state costs. **A pointer is a ONE-SHOT and the rects arrive a frame after the
+document commits**, so anything driving this canvas must wait for a layer to ANSWER, not for the
+surface to exist (`awaitPickable`). Followers are NOT yet pickable - that is the open half.
 The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
 does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
 inferred from geometry - the shipped lower third is a full-frame artboard and the shipped

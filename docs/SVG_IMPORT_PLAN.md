@@ -321,6 +321,27 @@ required for the feature and never participates in the runtime fit.
 5. **THE CANVAS AS A CONTROL SURFACE** - click a layer to bind it, click a rectangle to make it
    the growing panel, drag its direction. The relationship set from 4 stops being
    dropdown-authored. This is the canvas-editor question proper and is taken deliberately.
+   **Status 2026-08-25 - the gestures are shipped; declared followers are not.** The preview
+   iframe carries no allow-same-origin, so nothing reaches in to ask what is under a pointer -
+   and it does not need to: every offered layer is TRACKED and the hit-test runs on the APP side
+   against the pushed rects, which is the core design move `canvasControlProtocol.ts` already
+   states. The tie-break is the editor canvas's own - innermost by ancestor depth, then smallest
+   box - so a name drawn on a banner answers for itself rather than for the banner.
+   - **The canvas says WHICH layer; the step says what that MEANS.** Same split as the drawn box
+     (step 3): a text, picture or outlined-text layer toggles its binding, a rectangle becomes
+     the growing panel, and a DRAG on it names the axis (dominant direction, a 24 canvas-px
+     threshold so it reads the same at every zoom). Picking the panel that is already growing,
+     with no direction, turns it off - every gesture is its own undo.
+   - **The handler lives in a REF**, the lesson step 3 paid for: a function reported up from the
+     step and held in state re-renders on every report and spins React.
+   - **A pointer is a ONE-SHOT, and the rects are not there yet when the step opens.** The
+     document commits on a debounce and the first rect push lands on its next animation frame,
+     so a pointer arriving before that finds nothing under it and never asks again. That is a
+     property of the surface, not of the test: anything driving this canvas has to wait for a
+     layer to actually answer (`awaitPickable` in the spec) rather than for the surface to exist.
+   **Still dropdown-authored:** the FOLLOWERS of a growth rule. §6c's "geometry proposes, the
+   author edits" has its format (step 4) and now its gestures, but nothing yet asks which layers
+   travel - so a real graphic still gets the derived guess. That is the remaining work here.
 
 **Why 2 before 4, though 4 is the higher-value feature** (owner: "I don't want vertical growth
 implemented against a field distinction we're about to remove"): the growth half - moving a panel
