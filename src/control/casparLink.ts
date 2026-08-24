@@ -174,8 +174,12 @@ async function callAgent(
   try {
     const response = await fetch(`${settings.agentUrl.replace(/\/+$/, '')}${path}`, {
       method: body ? 'POST' : 'GET',
-      // Both of these force a CORS preflight, which is deliberate: the agent refuses the
-      // preflight for any origin it does not know, so a stray tab never gets to send the call.
+      // A POST carries both a JSON content type and an Authorization header, and either alone
+      // forces a CORS preflight - which is the point. The agent refuses the preflight for any
+      // origin it does not know, so a stray tab never gets to send the command at all. The
+      // GET (/health) is deliberately plain and unauthenticated: it is the presence probe, and
+      // it is answered for every origin so that "not running" is never said about an agent that
+      // is running for another deployment.
       headers: body
         ? { 'content-type': 'application/json', authorization: `Bearer ${settings.agentToken}` }
         : {},
@@ -214,13 +218,16 @@ async function reachAgent(settings: CasparSettings): Promise<CasparResult | null
   const gated = localNetworkGateApplies(window.location.origin, settings.agentUrl);
   const permission = gated ? await localNetworkPermission() : 'granted';
   if (gated && permission !== 'granted') {
-    return {
-      state: 'permission',
-      detail:
-        permission === 'denied'
-          ? `Your browser is blocking this site from reaching your local network. Allow "local network access" for ${window.location.host} in the site settings (the icon left of the address), then test again.`
-          : 'Your browser is asking whether this site may reach your local network - answer the prompt at the top of the window, then test again.',
-    };
+    // Three different situations, and only one of them has a prompt to answer. Telling a
+    // Safari user to look for a permission bubble that browser never shows would send them
+    // hunting for a control that does not exist.
+    const detail =
+      permission === 'denied'
+        ? `Your browser is blocking this site from reaching your local network. Allow "local network access" for ${window.location.host} in the site settings (the icon left of the address), then test again.`
+        : permission === 'prompt'
+          ? 'Your browser is asking whether this site may reach your local network - answer the prompt at the top of the window, then test again.'
+          : 'This browser does not let a secure page reach an address on your own machine, and offers no permission to grant (Safari behaves this way). Use Chrome or Edge here, or air the production from a terminal with `noacg caspar play`.';
+    return { state: 'permission', detail };
   }
   // Past the permission check, so a hang here is the agent's silence and not a waiting prompt.
   if ('timedOut' in health) {
