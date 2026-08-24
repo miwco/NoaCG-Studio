@@ -136,9 +136,11 @@ jobs:
             echo ""
             echo "${ran} ran, ${skipped} skipped, ${unexpected} failed, ${flaky} flaky."
             echo ""
+            # Read the RESULT status, not `.ok` - a skipped spec reports ok:true, which is the
+            # very confusion this workflow exists to remove.
             jq -r '[.. | objects | select(has("specs")) | .specs[]]
                    | .[]
-                   | "- `\(.file)` — \(.title): " + (if .ok then "passed" else "FAILED" end)' \
+                   | "- `\(.file)` — \(.title): \([.tests[]?.results[]?.status] | last // "not run")"' \
               configured-report.json | sort
           } >> "$GITHUB_STEP_SUMMARY"
 
