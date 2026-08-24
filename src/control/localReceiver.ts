@@ -68,14 +68,17 @@ export function localReceiverJs(graphicName: string): string {
   // came back invisible, reading 88 and 10:00, with nine rows sitting unread in the log.
   //
   // The log IS the history, so recovery needs no report channel and no new protocol — it needs
-  // a BOUNDED replay. Two things bound it, and both matter:
+  // a BOUNDED replay. Three things bound it, and all three matter:
   //
   //   - it starts at the LAST "play" for this graphic and stream, so what is re-run is the
   //     current airing rather than the whole show. A graphic never played, or stopped since,
   //     is supposed to be blank and is left alone;
   //   - it runs OFF AIR. Replayed commands are ordinary commands and they animate, so a
   //     visible replay would put the outage's history on screen — recovery is never watchable.
-  //     The page hides itself, replays, lets the motion settle, and comes back.
+  //     The page hides itself, replays, lets the motion settle, and comes back;
+  //   - it reads the log ONCE, so every fetch on the way in is retried rather than believed.
+  //     A failed read is not a short log and a silent relay is not a missing one — see the
+  //     retry discipline below, which is what stops one lost request costing a whole show.
   //
   // The opacity goes on documentElement deliberately: the runtime's own entrance reset clears
   // inline styles across the GRAPHIC's root subtree, which would strip a hide set inside it.
@@ -83,21 +86,42 @@ export function localReceiverJs(graphicName: string): string {
   var MAX_PAGES = 40;           // the tail RPC answers 500 rows at a time — the same ceiling
                                 // the hosted renderer's catch-up walk uses
 
-  function readLog(after, acc, pages, done) {
-    if (pages >= MAX_PAGES) { done(acc); return; }
+  // EVERY FETCH ON THE BOOT PATH RETRIES, because each one is the only chance it gets. A read
+  // that failed used to be handed on as a SHORT LOG, and a short log says exactly what an empty
+  // one says: this graphic never aired. Measured by dropping a single request at the reload —
+  // a board live at 89 came back at 88 and off air, and stayed there through eight seconds of a
+  // perfectly healthy relay. So a failure is now reported AS a failure (the ok flag below) and
+  // the caller retries, rather than drawing a conclusion out of half a log.
+  var BACKOFF_MS = 400, BACKOFF_MAX = 5000;
+  function backoff(tries) { return Math.min(BACKOFF_MAX, BACKOFF_MS * (tries + 1)); }
+
+  function readLog(after, acc, pages, tries, done) {
+    if (pages >= MAX_PAGES) { done(acc, true); return; }
+    function again() {
+      if (tries >= 5) { done(acc, false); return; }
+      setTimeout(function () { readLog(after, acc, pages, tries + 1, done); }, backoff(tries));
+    }
     fetch('/relay/log?after=' + after)
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (data) {
-        if (!data || !data.rows) { done(acc); return; }
+        if (!data || !data.rows) { again(); return; }   // answered, but not with a log
         for (var i = 0; i < data.rows.length; i++) acc.push(data.rows[i]);
-        if (data.rows.length < 500) done(acc);
-        else readLog(acc[acc.length - 1].id, acc, pages + 1, done);
+        if (data.rows.length < 500) done(acc, true);
+        else readLog(acc[acc.length - 1].id, acc, pages + 1, 0, done);
       })
-      .catch(function () { done(acc); });
+      .catch(again);
   }
 
-  function recover(head) {
-    readLog(0, [], 0, function (all) {
+  function recover(head, tries) {
+    readLog(0, [], 0, 0, function (all, ok) {
+      if (!ok) {
+        // The log IS the history, so a read that never answered must not be read as "nothing
+        // ever aired" — that answer puts a live graphic back blank, which is the outage this
+        // whole block exists to prevent. Try the read again; following from the head is the
+        // last resort, taken only once retrying is hopeless.
+        if (tries < 5) { setTimeout(function () { recover(head, tries + 1); }, backoff(tries)); return; }
+        cursor = head; setInterval(poll, 400); return;
+      }
       var mine = [];
       for (var i = 0; i < all.length; i++) {
         var r = all[i];
@@ -139,20 +163,31 @@ export function localReceiverJs(graphicName: string): string {
       // the inline styles the DATA layer owns (an empty image field hides itself with one).
       if (typeof update === 'function') update(JSON.stringify(data));
 
-      // Follow live from the head we read, then come back on air once the replay has settled.
-      cursor = head;
+      // Follow live from the last row the REPLAY actually covered, never from the head the ping
+      // answered: that head is older by everything that arrived while the log was being read,
+      // and re-delivering those rows would run the play a second time, on air, as a re-entrance.
+      cursor = all[all.length - 1].id;
       setInterval(poll, 400);
       setTimeout(function () { root.style.opacity = prior; }, SETTLE_MS);
     });
   }
 
-  fetch('/relay/ping')
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
-      if (!d || !d.ok) return; // plain static hosting — stay quiet
-      recover(d.head || 0);
-    })
-    .catch(function () { /* no relay here */ });
+  // The probe tells apart the two things that used to look identical here. An ANSWER that is
+  // not a relay's (the 404 plain static hosting gives) means there is no relay on this origin
+  // and never will be: stay quiet, which is this block's inert contract. NO ANSWER means nobody
+  // was listening YET — a browser source opened before the launcher was double-clicked, which
+  // is the order a student does it in. That one used to sit dead for the whole show; it now
+  // keeps knocking, one request every few seconds, and joins the moment the relay answers.
+  function probe(tries) {
+    fetch('/relay/ping')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.ok) return; // plain static hosting — stay quiet
+        recover(d.head || 0, 0);
+      })
+      .catch(function () { setTimeout(function () { probe(tries + 1); }, backoff(tries)); });
+  }
+  probe(0);
 })();
 ${CLOSE}`;
 }

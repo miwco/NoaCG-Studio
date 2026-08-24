@@ -233,8 +233,20 @@ test('the production controller: preview shows the cue without airing it, Take a
 // The log IS the history, so the fix is a BOUNDED replay rather than a new report channel:
 // start at the last `play` for this graphic and stream, run it off air, settle, come back.
 
+/**
+ * A relay that can be made to LOSE a request, so a spec can drop one on purpose. `drop` is
+ * asked for every request the source makes and answers with the path to fail, which is the
+ * one thing a busy machine and a relay that has not started yet do to a fetch.
+ */
+function dropping(serve: (r: Route) => unknown, drop: () => string | null) {
+  return (route: Route) => {
+    const path = new URL(route.request().url()).pathname;
+    return path === drop() ? route.abort('failed') : serve(route);
+  };
+}
+
 /** Build the Cup Tie package once and serve it over an in-spec relay. */
-async function cupTiePackage(page: Page, context: BrowserContext, origin: string) {
+async function cupTiePackage(page: Page, context: BrowserContext, origin: string, drop?: () => string | null) {
   await page.goto('/app');
   await page.keyboard.press('Escape');
   const b64 = await page.evaluate(async () => {
@@ -259,7 +271,7 @@ async function cupTiePackage(page: Page, context: BrowserContext, origin: string
   const manifest = JSON.parse(files.get('payload.json')!) as { graphics: { file: string }[] };
   const { serve, rows } = relayServe(files);
   const air = await context.newPage();
-  await routeOrigin(air, origin, serve);
+  await routeOrigin(air, origin, drop ? dropping(serve, drop) : serve);
   await air.goto(`${origin}/${manifest.graphics[0].file}?stream=program`, { waitUntil: 'load' });
   const ctl = await context.newPage();
   await routeOrigin(ctl, origin, serve);
@@ -310,6 +322,55 @@ test('a relay browser source reloaded mid-show comes back on air, with the score
   const behind = (t: string) => 10 * 60 - ((parseInt(t.split(':')[0], 10) || 0) * 60 + (parseInt(t.split(':')[1], 10) || 0));
   expect(behind(back.clock!)).toBeGreaterThanOrEqual(5);          // never back at the 10:00 seed
   expect(behind(back.clock!)).toBeLessThanOrEqual(5 + elapsed + 2);
+
+  await ctl.close();
+  await air.close();
+});
+
+test('one lost relay request at boot does not cost the airing', async ({ page, context }) => {
+  test.setTimeout(180_000);
+  // RECOVERY READS THE LOG ONCE, so every fetch on the way in is the only chance it gets - and
+  // both of them used to treat a failure as an ANSWER. A log read that never returned was handed
+  // on as a short log, and a short log says exactly what an empty one says: this graphic never
+  // aired, leave it blank. A ping that never returned was read as "no relay on this origin",
+  // which is the 404 a plain static host gives, and the block went quiet for good.
+  //
+  // Neither is exotic. A busy machine loses a fetch; a student's OBS scene loads its browser
+  // source before they double-click the relay launcher, so the FIRST ping is answered by
+  // nobody. Measured against the old code, one dropped request either way brought a board that
+  // was live at 89 back at 88 and off air - and it stayed there through eight seconds of a
+  // relay that was by then perfectly healthy. The test is that walk, twice, one request dropped.
+  let lose: string | null = null;
+  const { air, ctl } = await cupTiePackage(page, context, 'http://relay-lossy.local', () => lose);
+
+  await ctl.locator('.cue', { hasText: 'Kick-off' }).click();
+  await ctl.locator('#v-take').click();
+  await expect(air.locator('#f5')).toHaveText('10:00', { timeout: 10_000 });
+  await ctl.locator('.field', { hasText: /^F1 · / }).locator('button.step', { hasText: '+' }).click();
+  await expect(air.locator('#f1')).toHaveText('89', { timeout: 10_000 });
+
+  // THE LOG READ IS LOST. The relay answers the probe, then fails the read the recovery
+  // depends on - and is healthy again a second and a half later, which the retry must find.
+  lose = '/relay/log';
+  await air.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(1_500);
+  lose = null;
+  await expect
+    .poll(() => airState(air).then((s) => s.score), { timeout: 20_000, message: 'a lost log read must not lose the airing' })
+    .toBe('89');
+  await expect.poll(() => airState(air).then((s) => s.opacity), { timeout: 15_000 }).toBe('1');
+
+  // THE PROBE IS LOST - the relay is not answering at all when the source loads, the way it is
+  // not answering before the launcher has been double-clicked. The source must join late, not
+  // give up: nothing else will ever tell it the relay arrived.
+  lose = '/relay/ping';
+  await air.reload({ waitUntil: 'load' });
+  await page.waitForTimeout(1_500);
+  lose = null;
+  await expect
+    .poll(() => airState(air).then((s) => s.score), { timeout: 20_000, message: 'a source that loaded before the relay answered must still join' })
+    .toBe('89');
+  await expect.poll(() => airState(air).then((s) => s.opacity), { timeout: 15_000 }).toBe('1');
 
   await ctl.close();
   await air.close();

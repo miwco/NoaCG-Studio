@@ -27,6 +27,7 @@ import { sb22 } from './sb22';
 import { sb23 } from './sb23';
 import { sb24 } from './sb24';
 import { sb25 } from './sb25';
+import { dc01 } from './dc01';
 
 export const SCOREBOARDS: TemplateVariant[] = [
   sb01, // Match Strip — sport leaning slab (sibling lt05/lt06)
@@ -60,6 +61,8 @@ export const SCOREBOARDS: TemplateVariant[] = [
   // ── The podium board: game-show contestant scores (types/podiumScore.ts) ──
   sb21, // Volt Podiums — sport slab, four name-over-points columns, spotlight (sibling sb01)
   sb22, // House Podiums — noacg void strip, amber chip columns, spotlight (sibling sb03)
+  // ── The speaking timer: a debate's two clocks (types/speakingTimer.ts) ──
+  dc01, // Debate Floor — minimal flat panel, two equal halves, the floor rail (sibling lt01)
 ];
 
 export function scoreboardById(id: string): TemplateVariant | undefined {

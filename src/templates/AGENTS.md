@@ -449,13 +449,21 @@ figure is the short final part, so the label is what may contain one). Say which
   match-up that once misfitted the info-card contract (dropped card05) now owns its contract.
 - **poll/** - the LIVE VOTE board (prefix 'poll'): the poll while it is happening, as against the
   `poll` graphic TYPE in the infographic category (ig02/ig11/ig12/ig13), which is the finished
-  result chart. pl01…pl04 + pollPresets ('poll-open') + **pollMotion.ts**. Data-driven like
+  result chart. pl01…pl05 + pollPresets ('poll-open') + **pollMotion.ts**. Data-driven like
   tickers: a hidden #f1 textarea holds "Label | count" lines and the runtime renders the rows, so
   the bar widths AND the row count are the operator's content - measured motion, in
   `pollBarsGrow`. The result is a real middle step carrying that builder; the VOTE NOW badge
   leaving and the figures arriving are ordinary keyframes, so a snap straight to the result shows
   the result. Only the winner CALL is a lifecycle call (which row wins depends on the counts, so
   it has no fixed target - the quiz reveal's posture). A tie calls nobody and says so.
+  **pl05 "Floor Vote" is the one that is NOT a card**, and its two overrides are worth knowing
+  before drawing another band here: the assembler caps every poll panel's `max-width` at 46% of
+  frame, which is right for a mid-left card and silently beat pl05's declared 1560px stage -
+  leaving the chart column no width and no visible bars at all - and `.poll` sets
+  `text-align: center`, which a band reading from its left edge does not want. Its rows are a
+  three-column grid (label, track, figure) rather than the category's label-over-bar stack, so
+  the label column is FIXED: a chart whose bars begin at different x cannot be compared at a
+  glance, which is the only thing a vote board is for.
 - **frames/** - fr01…fr15 (prefix 'frame', type 'frame', SELF-ASSEMBLED like infographics: the
   DESIGN owns its fields, because a frame's field count follows its camera count - 2 lines for
   one camera, 4 for a two-up) + framePresets.ts (frame-draw / frame-fade / frame-slide). The one
@@ -510,6 +518,17 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   `e2e/catalog/footprint-stability.spec.ts`, which selects on the marker rather than a list, so a
   category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
   stabilise a board, it changes which dimension moves.
+- **THE RESERVE IS A LAYOUT NUMBER, AND IT IS SHIPPED** - the runtime writes it into the template as
+  an inline `height` / `min-height` that stays there, so a reserve measured wrong is what the graphic
+  puts on air. Three ways it was a measurement of the MOMENT instead of the design, all found
+  2026-08-24 by chasing `catalog-baseline` failing under load with a DIFFERENT element set each run
+  (docs/FOOTPRINT_STABILITY.md, last section): read off the VISUAL rect, so an animated ancestor's
+  transform landed in it (gt03 reserved 418px for a 400px clock); the `fonts.ready` recalibration
+  keeping the panel `min-height` it was re-measuring, so the fallback face floored the real one; and
+  that same pass re-measuring while the OTHER lines were still pinned from the previous one. **A rect
+  is the visual box - never measure a reserve with one.** The gate is
+  `e2e/stage-fit-determinism.spec.ts` (default suite, platform-free, mutation-tested): a reserve must
+  come back the same across recalibrations and whatever the webfonts do.
 - **A STAGED DESIGN SHIPS THE SIZE ITS CSS DECLARES - the shrink is the OPERATOR'S, never the
   design's own words.** The stage puts no floor under a `line-height` (**a LINE MASK still does** -
   `overflow: hidden` sized to the line box against a ~1.2em glyph box, so a tight leading clips

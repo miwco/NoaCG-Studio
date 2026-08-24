@@ -80,9 +80,9 @@ test('svg import: mapping — labels from layer names, all on by default, edits 
     await expect(page.getByTestId(`map-svg-row-${id}`).locator('input[type=checkbox]')).toBeChecked();
   }
 
-  // Hovering a row highlights the exact text it binds, on the step's own artwork render.
+  // Hovering a row highlights the exact text it binds — on the PREVIEW, the step's one canvas.
   await page.getByTestId('map-svg-row-t1').hover();
-  await expect(page.getByTestId('map-svg-highlight')).toBeVisible();
+  await expect(page.getByTestId('wz-preview-highlight')).toBeVisible();
 
   // The typefaces resolve honestly: the bundled match ships, the unknown face warns.
   await expect(page.getByTestId('map-svg-font-Archivo')).toContainText('Bundled');
@@ -409,13 +409,21 @@ test('svg import: a kerned headline is ONE field, and two labels on one baseline
   const headline = page.getByTestId('map-svg-stage').locator('[data-noacg-candidate="t0"]');
   await expect(headline).toHaveAttribute('x', '40');
   await expect(headline).toHaveAttribute('y', '120');
-  const drawnAt = await headline.boundingBox();
+  // Judged where the reader judges it — in the preview, running the real update(). Measured
+  // AGAINST THE FOOTNOTE drawn at the same x, so the entrance animation (which moves the whole
+  // box) cancels out and what is left is the headline's own place inside the artwork.
+  const offsetFromFootnote = async () => {
+    const frame = page.frameLocator('.wz-side iframe');
+    const [a, b] = await Promise.all([frame.locator('#f0').boundingBox(), frame.locator('#f1').boundingBox()]);
+    return { x: a!.x - b!.x, y: a!.y - b!.y };
+  };
+  await expect(page.frameLocator('.wz-side iframe').locator('#f0')).toHaveText('Alexandra Riva');
+  const drawnAt = await offsetFromFootnote();
   await page.getByTestId('map-svg-sample-t0').fill('Mika Virtanen');
-  await expect(headline).toHaveText('Mika Virtanen');
-  const typedAt = await headline.boundingBox();
-  expect(Math.abs(typedAt!.x - drawnAt!.x)).toBeLessThan(1);
+  await expect(page.frameLocator('.wz-side iframe').locator('#f0')).toHaveText('Mika Virtanen');
+  await expect.poll(async () => Math.abs((await offsetFromFootnote()).x - drawnAt.x)).toBeLessThan(1);
   // The baseline is the same; the box top can differ by a glyph's ascender between two words.
-  expect(Math.abs(typedAt!.y - drawnAt!.y)).toBeLessThan(4);
+  expect(Math.abs((await offsetFromFootnote()).y - drawnAt.y)).toBeLessThan(4);
 });
 
 test('svg import: layer names that repeat are numbered, so no two fields read the same', async ({ page }) => {
@@ -690,9 +698,13 @@ test('svg import: outlined text — a glyph-shaped group becomes a placed live f
   await expect(tick).not.toBeChecked();
   await expect(tick).toBeEnabled(); // measured on the step's own render
   await page.getByTestId('map-svg-outline-o0').hover();
-  await expect(page.getByTestId('map-svg-highlight')).toBeVisible();
+  await expect(page.getByTestId('wz-preview-highlight')).toBeVisible();
   await tick.check();
   await page.getByTestId('map-svg-outline-sample-o0').fill('Ada');
+  // Ticked, the shapes are hidden and the live stand-in wears the row's marker instead — so
+  // exactly one node answers the hover, and it is the one that actually airs.
+  await page.getByTestId('map-svg-outline-o0').hover();
+  await expect(page.getByTestId('wz-preview-highlight')).toBeVisible();
 
   await createProject(page);
 
@@ -830,7 +842,12 @@ test('svg import: a clock-shaped layer can bind as a countdown — the node tick
 // rows were real, ticked and working, and three graphics were imported without anybody
 // noticing they were there. Geometry, not visibility: a row clipped away by a scrolling
 // ancestor still reports `toBeVisible()`, which is exactly how it shipped.
-for (const [width, height] of [[1366, 768], [1280, 720]] as const) {
+//
+// The artwork has since left the step entirely (plan §6a step 1 — the preview is the one
+// canvas), so the budget got easier and the numbers below are re-measured, not inherited: the
+// scorebug's seven rows all fit on a 768-tall window, six of seven on a 720-tall one. Three
+// fitted before, at either size.
+for (const [width, height, rowsExpected] of [[1366, 768, 7], [1280, 720, 6]] as const) {
   test(`svg import: the mapping step's checklist is on screen at ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto('/app');
@@ -858,8 +875,10 @@ for (const [width, height] of [[1366, 768], [1280, 720]] as const) {
     // scrollport on arrival — nothing about the job is discovered by scrolling.
     expect(fold.heading).toBeLessThan(fold.portBottom);
     expect(fold.firstRowBottom).toBeLessThanOrEqual(fold.portBottom + 0.5);
-    // And enough of the list to read as a list: one visible row looks like a stray control.
-    expect(fold.rowsOnScreen).toBeGreaterThanOrEqual(Math.min(3, fold.rowCount));
+    // With the artwork gone from the step, the checklist arrives whole (or all but its last
+    // row on the shortest laptop) instead of the three rows the sticky band could afford.
+    expect(fold.rowCount).toBe(7);
+    expect(fold.rowsOnScreen).toBe(rowsExpected);
 
     // Every detected layer arrives ticked. The scorebug exports one layer as `f:Competition`,
     // which used to switch the other six off.
@@ -867,17 +886,28 @@ for (const [width, height] of [[1366, 768], [1280, 720]] as const) {
     expect(await boxes.count()).toBeGreaterThan(1);
     for (const box of await boxes.all()) await expect(box).toBeChecked();
 
-    // Scrolled to the bottom of the checklist, the artwork is still on screen — the hover
-    // highlight it carries is the step's answer to "which layer is this", and it cannot answer
-    // anything from above the scrollport.
-    await page.locator('.wz-step').evaluate((el) => { el.scrollTop = el.scrollHeight; });
-    const stuck = await page.evaluate(() => {
+    // THE ONE CANVAS. The step's own render of the markup is still there — measureOutline
+    // needs the artwork laid out — but it is OFF SCREEN, and the preview is what the reader
+    // judges the import on. Two canvases answering the same question differently is the
+    // defect this step's road opens with (plan §6a step 1).
+    // The frame arrives a debounce after the step does (WizardPreview commits its srcdoc at
+    // 220 ms), so wait for it rather than reading a null out of the evaluate.
+    await expect(page.locator('.wz-stage iframe')).toBeVisible();
+    const canvases = await page.evaluate(() => {
       const port = document.querySelector('.wz-step')!.getBoundingClientRect();
-      const art = document.querySelector('.map-svg-stage-wrap')!.getBoundingClientRect();
-      return { inside: art.top >= port.top - 0.5 && art.bottom <= port.bottom + 0.5, height: art.height };
+      const inline = document.querySelector('[data-testid="map-svg-stage"]')!.getBoundingClientRect();
+      const frame = document.querySelector('.wz-stage iframe')!.getBoundingClientRect();
+      return {
+        inlineOnScreen: inline.right > port.left && inline.left < port.right,
+        inlineRendered: inline.width > 0 && inline.height > 0,
+        previewArea: Math.round(frame.width * frame.height),
+      };
     });
-    expect(stuck.height).toBeGreaterThan(80);
-    expect(stuck.inside).toBe(true);
+    expect(canvases.inlineOnScreen).toBe(false);
+    expect(canvases.inlineRendered).toBe(true);
+    // And the truthful canvas is no longer the small one: it used to be 260x146 beside a
+    // 464x261 render that could not run the fit.
+    expect(canvases.previewArea).toBeGreaterThan(464 * 261);
   });
 }
 
@@ -1170,10 +1200,12 @@ test('svg import: a hugging panel grows with its text, and what is beyond it tra
   expect(back.size).toBe(rest.size);
 });
 
-test('svg import: retyping a sample repaints the mapping artwork', async ({ page }) => {
-  // The step shows the design at its own size, which is the one place a real value can be
-  // tried for length — and editing a row used to change nothing there, so the field read as
-  // decoration. Written the way update() writes it on air: textContent on the bound node.
+test('svg import: retyping a sample repaints the PREVIEW, not a second canvas', async ({ page }) => {
+  // A real value has to be tryable on this step — it is where lengths are decided — and the
+  // canvas that answers is the PREVIEW, because it is the only one running the emitted fit
+  // (plan §6a step 1). The step's own render of the markup stays off screen and stays exactly
+  // as the designer drew it: it exists for measureOutline, and a second painted canvas is what
+  // was showing values as clipped that the ladder had already made fit.
   await dropSvgMarkup(
     page,
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
@@ -1184,12 +1216,64 @@ test('svg import: retyping a sample repaints the mapping artwork', async ({ page
   await page.locator('.wz-next').click();
 
   const drawn = page.getByTestId('map-svg-stage').locator('[data-noacg-candidate="t0"]');
+  const live = page.frameLocator('.wz-side iframe').locator('#f0');
+  await expect(drawn).toHaveText('Alexandra Riva');
+  await expect(live).toHaveText('Alexandra Riva');
+
+  await page.getByTestId('map-svg-sample-t0').fill('Zephyrine');
+  await expect(live).toHaveText('Zephyrine');
   await expect(drawn).toHaveText('Alexandra Riva');
 
-  await page.getByTestId('map-svg-sample-t0').fill('A considerably longer name');
-  await expect(drawn).toHaveText('A considerably longer name');
-
-  // Switched off, the layer goes back to the text the designer drew — the graphic keeps it.
+  // Switched off, the layer is not a field any more and the graphic keeps the drawn text.
   await page.getByTestId('map-svg-row-t0').locator('input[type=checkbox]').uncheck();
+  await expect(page.frameLocator('.wz-side iframe').locator('[data-noacg-candidate="t0"]')).toHaveText(
+    'Alexandra Riva',
+  );
   await expect(drawn).toHaveText('Alexandra Riva');
+});
+
+test('svg import: hovering a checklist row highlights that layer in the preview', async ({ page }) => {
+  // "Which layer is this" is the only question the step really has to answer, and it is now
+  // answered on the one canvas (plan §6a step 1): the preview keeps the import-time candidate
+  // markers, composeDocument's canvasControl channel pushes the tracked layer's rect every
+  // frame, and the highlight rides a layer wearing the frame's own transform. Nothing reaches
+  // into the iframe — it carries no allow-same-origin, like every other preview surface.
+  await dropSvgMarkup(
+    page,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+      <text id="Home" x="20" y="60" font-size="30" fill="#fff">Rovers</text>
+      <text id="Away" x="20" y="150" font-size="30" fill="#fff">City</text>
+    </svg>`,
+    'hover.svg',
+  );
+  await page.locator('.wz-next').click();
+  await expect(page.frameLocator('.wz-side iframe').locator('#f1')).toHaveText('City');
+
+  const highlight = page.getByTestId('wz-preview-highlight');
+  await expect(highlight).toHaveCount(0);
+
+  // The lower layer: the box lands over it, not over the one above.
+  await page.getByTestId('map-svg-row-t1').hover();
+  await expect(highlight).toBeVisible();
+  const over = async (fieldId: string) => {
+    const [hl, target] = await Promise.all([
+      highlight.boundingBox(),
+      page.frameLocator('.wz-side iframe').locator(fieldId).boundingBox(),
+    ]);
+    if (!hl || !target) return false;
+    const cx = target.x + target.width / 2;
+    const cy = target.y + target.height / 2;
+    return cx > hl.x && cx < hl.x + hl.width && cy > hl.y && cy < hl.y + hl.height;
+  };
+  expect(await over('#f1')).toBe(true);
+  expect(await over('#f0')).toBe(false);
+
+  // And it follows the hover to the other row rather than staying where it was.
+  await page.getByTestId('map-svg-row-t0').hover();
+  await expect.poll(() => over('#f0')).toBe(true);
+  expect(await over('#f1')).toBe(false);
+
+  // Off the list, nothing is lit.
+  await page.getByTestId('map-svg-fields').locator('h3').hover();
+  await expect(highlight).toHaveCount(0);
 });

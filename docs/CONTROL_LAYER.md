@@ -192,6 +192,14 @@ hosted receiver into each graphic at export (the saved snapshot stays clean).
   (data, then snap), then follows the log. The hosted page re-reads the row on load. Staging
   and live reports ride the log as meta rows (`t:'staged'|'live'`) so every open page follows
   without polling; those are never applied as graphic commands.
+- **The local half recovers from the LOG instead of a report** (`localReceiver.ts`: replay from
+  the last `play` for this graphic and stream, off air, then settle) — and it reads that log
+  ONCE, so a lost fetch on the way in is retried, never believed. A failed read is not a short
+  log and an unanswered probe is not a missing relay: the first said "this graphic never aired"
+  and left a live board blank, the second said "no relay on this origin" and went quiet for a
+  whole show, because a source in OBS routinely loads before the launcher is double-clicked.
+  Only a 404 means static hosting and inertness. Pinned by local-relay.spec.ts, which drops one
+  request of each kind on purpose.
 - The graphic reports AFTER applying (debounced): harvest the definition's fields from the
   DOM + `noacgMachineState()` → `control_report`.
 

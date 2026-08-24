@@ -278,6 +278,17 @@ required for the feature and never participates in the runtime fit.
    node for `measureOutline` (that code needs the artwork RENDERED, not VISIBLE); the hover
    highlight moves onto the preview through the rect channel the editor canvas already uses
    (`preview/canvasControlProtocol.ts`). No canvas EDITOR is committed to by this.
+   **Status 2026-08-23 - shipped.** The markup renders off screen at its own width (so
+   `measureOutline`'s k is 1); the preview keeps the import-time `data-noacg-candidate` markers
+   under ONE preview-only build flag (`WizardOptions.previewMarkers`, the precedent being
+   `buildDraftTemplate`'s `stretchDemo`), scoped to the mapping step so the Finish step's preview
+   is still byte-for-byte the created code; a REPLACED outline group gives its marker up to the
+   live stand-in that replaces it, so exactly one node ever answers a hover. The step also stops
+   wearing `.wz-body-working` - its left pane is a form, and the class was clamping the preview
+   to ~275px. Measured at 1366x768: the preview goes 260x146 -> 614x345, and all seven of the
+   scorebug's rows are on screen at once (three before). The step's copy is unchanged: the
+   markup still ships verbatim, so "airs exactly as drawn" is still true - it gets reworded at
+   step 4, where a declared element can move.
 2. **ONE FITTING SYSTEM** - the enabling refactor, and **deliberately scoped small** (owner:
    "keep step 2 tightly scoped as an enabling refactor rather than allowing it to become a larger
    field-system cleanup"). See §6b.

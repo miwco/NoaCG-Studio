@@ -306,6 +306,14 @@ export interface WizardOptions {
   /** The SVG that IS the graphic (the Import Graphic flow's SVG road,
    *  docs/SVG_IMPORT_PLAN.md): sanitized markup with its chosen text layers to bind. */
   designSvg?: DesignSvg;
+  /**
+   * PREVIEW ONLY: keep the import-time `data-noacg-candidate` bookkeeping markers in the
+   * emitted markup, so the mapping step's hover highlight has a handle on the layer a
+   * checklist row means (plan §6a step 1 - the preview IS the step's one canvas, because it
+   * is the only one carrying the fit runtime). The wizard preview passes it; `create()` on
+   * the way to a real project never does, so a saved or exported graphic is unchanged.
+   */
+  previewMarkers?: boolean;
 }
 
 /**
@@ -491,6 +499,8 @@ export interface ResolvedOptions {
   markPlacement: MarkPlacement | null;
   designArt: DesignArt | null;
   designSvg: DesignSvg | null;
+  /** See `WizardOptions.previewMarkers` — preview-only, never on the create path. */
+  previewMarkers: boolean;
 }
 
 // ── Template variants ────────────────────────────────────────────────────────
@@ -696,6 +706,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     markPlacement: variant.markPlacement ?? null,
     designArt: options.designArt ?? null,
     designSvg: options.designSvg ?? null,
+    previewMarkers: options.previewMarkers ?? false,
   };
 }
 

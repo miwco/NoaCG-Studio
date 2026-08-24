@@ -207,7 +207,9 @@ export function createOutputStage(
         post(graphic, { cmd: 'next' });
         break;
       case 'event':
-        post(graphic, { cmd: 'dispatch', event: msg.event, payload: msg.payload });
+        // `at` rides along: a graphic that runs its own clock anchors it to the row's instant
+        // rather than to this renderer's Date.now(), so every renderer agrees (controlModel.ts).
+        post(graphic, { cmd: 'dispatch', event: msg.event, payload: msg.payload, at: msg.at });
         break;
       case 'snap':
         // Recovery semantics stated explicitly — the wire field means opposite things to the

@@ -1697,6 +1697,21 @@ kbd {
   box-shadow: 0 10px 50px rgba(0,0,0,0.55);
   transition: transform 0.25s ease;  /* the zoom toggle glides instead of jumping */
 }
+/* The hover highlight layer (WizardPreview's `highlightSelector`): the frame's twin, wearing
+   the same size and transform, so a rect measured inside the document lands over the layer the
+   reader is looking at. Never interactive — it sits above the frame and must not eat a click. */
+.wz-stage-overlay {
+  position: absolute; top: 50%; left: 50%;
+  pointer-events: none;
+  transition: transform 0.25s ease;  /* moves with the frame's zoom, not after it */
+}
+.wz-stage-highlight {
+  position: absolute;
+  border-style: solid;
+  border-color: var(--accent, #f6a623);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
 /* The action-safe area, 5% in — drawn on the STAGE rather than in the document, so it costs
    the preview nothing and can never reach an export. */
 .wz-stage::after {
