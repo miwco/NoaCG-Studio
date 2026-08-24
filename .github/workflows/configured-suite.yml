@@ -36,13 +36,20 @@
 #      gate added inside a spec. Raise MIN_TESTS when the suite grows; a stale value only makes
 #      the guard weaker.
 #
-# THE ONE PERMITTED SKIP, AND WHY. moderator.spec.ts needs SUPABASE_SERVICE_ROLE_KEY, which
-# bypasses RLS entirely — full read/write on every table. This repository is PUBLIC and points at
-# the PRODUCTION Supabase project, so putting that key in Actions would hand a production
-# RLS-bypass credential to everyone with repo write access, permanently, for one test out of 32.
-# The key is therefore deliberately absent and that ONE spec is allowed to skip; every other skip
-# still fails the job. What this gives up is named in docs/VERIFICATION.md — it is real coverage,
-# not a formality, so the honest fix is a dedicated staging project, not a longer allowlist.
+# THE TWO PERMITTED SKIPS, AND WHY. Both need SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS
+# entirely — full read/write on every table. This repository is PUBLIC and points at the
+# PRODUCTION Supabase project, so putting that key in Actions would hand a production RLS-bypass
+# credential to everyone with repo write access, permanently, to gain two tests out of 32. The key
+# is therefore deliberately absent and those two specs skip; every other skip still fails the job.
+#
+#   - moderator.spec.ts   needs it to grant/revoke the test account's moderator role.
+#   - agent-access.spec.ts needs it SERVER-side: api/_lib/agentAccessStore.ts mints and honours
+#     agent keys with it, and answers 503 without. That one is a capability the deployment lacks,
+#     so the spec asks the server and skips rather than failing — a configured CLIENT is not
+#     enough, which is why `haveCreds` alone was the wrong gate.
+#
+# What this gives up is named in docs/VERIFICATION.md — real coverage, not a formality, so the
+# honest fix is a dedicated staging project with its own service key, never a longer allowlist.
 
 name: configured-suite
 
@@ -76,12 +83,14 @@ jobs:
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       # NOT SET, DELIBERATELY: SUPABASE_SERVICE_ROLE_KEY. See "the one permitted skip" below.
       #
-      # What the suite declares today is 32 tests across 16 spec files; one of them
-      # (moderator.spec.ts) needs the service-role key and is allowed to skip, so 31 must run.
-      MIN_TESTS: 31
-      # The ONLY spec permitted to skip, and the only reason it may. Every other skip is a
-      # failure. Keep this list empty-by-default: an entry here is coverage being given up.
-      ALLOWED_SKIPS: moderator.spec.ts
+      # What the suite declares today is 32 tests across 16 spec files. TWO need the service-role
+      # key and are allowed to skip (see below), so 30 must run.
+      MIN_TESTS: 30
+      # The ONLY specs permitted to skip, and the only reason either may: both need
+      # SUPABASE_SERVICE_ROLE_KEY, which is deliberately absent. Every other skip fails the job.
+      # Keep this list short - an entry here is coverage being given up, not a formality. Both
+      # entries disappear the day a staging project supplies a service key of its own.
+      ALLOWED_SKIPS: moderator.spec.ts agent-access.spec.ts
     steps:
       # Before checkout-and-install, so a repository without the secrets fails in seconds with a
       # message saying what to add, rather than after five minutes of npm ci.

@@ -76,19 +76,26 @@ skipped outside `ALLOWED_SKIPS`, and at least `MIN_TESTS` (31) ran**. The four s
 only makes the guard weaker. The run summary lists every test that actually executed - read
 that, not the exit code.
 
-**One spec is deliberately not covered: `moderator.spec.ts`.** It needs
-`SUPABASE_SERVICE_ROLE_KEY` to grant and revoke the test account's moderator role, and that key
-bypasses RLS entirely - full read/write on every table. This repository is public and `.env`
-points at the PRODUCTION Supabase project, so shipping that key to Actions would hand a
-production RLS-bypass credential to everyone with repo write access, permanently, to gain one
-test. It is therefore absent, and that one spec is the sole entry in `ALLOWED_SKIPS`; every
-other skip still fails the job. **What goes unverified nightly**: that the 🛡 Moderate button
-appears for a moderator, that the takedown queue states status in the shared product vocabulary
-(`live` / `taken down`, never the table's own words), that the queue's preview ships its settle
-bootstrap so a moderator is not judging a black rectangle, and that a removed item actually
-leaves the public gallery listing. Run it by hand with `npm run test:e2e:live` after touching
-community moderation. The real fix is a dedicated staging Supabase project, which would also
-stop the suite writing rows into production - not a longer allowlist.
+**Two specs are deliberately not covered**, both because they need `SUPABASE_SERVICE_ROLE_KEY` -
+a key that bypasses RLS entirely, full read/write on every table. This repository is public and
+`.env` points at the PRODUCTION Supabase project, so shipping that key to Actions would hand a
+production RLS-bypass credential to everyone with repo write access, permanently, to gain two
+tests. It is therefore absent and those two are the whole of `ALLOWED_SKIPS`; every other skip
+still fails the job.
+
+- **`moderator.spec.ts`** needs it to grant and revoke the test account's moderator role.
+  Unverified nightly: that the 🛡 Moderate button appears for a moderator, that the takedown
+  queue states status in the shared product vocabulary (`live` / `taken down`, never the
+  table's own words), that its preview ships the settle bootstrap so a moderator is not judging
+  a black rectangle, and that a removed item actually leaves the public gallery listing.
+- **`agent-access.spec.ts`** needs it SERVER-side - `api/_lib/agentAccessStore.ts` mints and
+  honours agent keys with it and answers 503 without - so the whole consent → code → redeem →
+  save → revoke walk is unverified. It asks the server and SKIPS rather than failing, because a
+  configured client is not enough to run it; `haveCreds` alone was the wrong gate.
+
+Run both by hand with `npm run test:e2e:live` after touching moderation or agent access. The
+real fix is a dedicated staging Supabase project with its own service key, which would also stop
+the suite writing rows into production every night - never a longer allowlist.
 
 ## A clean merge is not proof the integration worked
 

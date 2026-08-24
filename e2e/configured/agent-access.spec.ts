@@ -63,8 +63,29 @@ test.describe('agent access (configured)', () => {
   test.skip(!haveCreds, 'needs E2E_EMAIL/E2E_PASSWORD');
   test.setTimeout(120_000);
 
-  test('consent -> loopback code -> redeem -> save 201 -> deep link -> revoke -> 401', async ({ page, baseURL }) => {
+  test('consent -> loopback code -> redeem -> save 201 -> deep link -> revoke -> 401', async ({ page, request, baseURL }) => {
     const origin = baseURL!.replace(/\/+$/, '');
+
+    // The agent-key routes are SERVER-side: api/_lib/agentAccessStore.ts needs
+    // SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) to mint and honour keys, and answers 503
+    // "this NoaCG has no account backend" without it. A configured CLIENT is therefore not enough
+    // to run this walk, which is why haveCreds alone was the wrong gate: CI supplies the four
+    // client-side secrets deliberately WITHOUT the service-role key (it bypasses RLS entirely and
+    // this repository is public), so the spec failed there for a missing CAPABILITY rather than a
+    // regression. Ask the server what it can do instead of inferring it from the environment -
+    // the same question the Settings surface asks, so a skip here means a real user on this
+    // deployment would find the feature absent too. Restore the key (a staging project's, never
+    // production's) and the walk runs again with no change here.
+    //
+    // Asked in the BODY, not as a describe-level `test.skip(callback)`: that overload is
+    // `ConditionBody = (args) => boolean`, synchronous, so an async probe there would hand it a
+    // Promise - always truthy - and skip the walk unconditionally, for every deployment,
+    // silently. The imperative form takes a real awaited boolean.
+    const probe = await request.get(`${origin}/api/me/agent-keys`).catch(() => null);
+    test.skip(
+      probe?.status() === 503,
+      'this deployment has no agent-key backend (no SUPABASE_SERVICE_ROLE_KEY)',
+    );
     await signIn(page);
     await dismissWizard(page);
     await settleSync(page);
