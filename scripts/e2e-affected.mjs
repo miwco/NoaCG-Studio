@@ -328,6 +328,15 @@ const MAP = [
   // These files are assertions over catalog output, not shared application foundations.
   // Refreshing them should verify the catalog baseline without expanding to every UI flow.
   [/^e2e\/catalog(?:-render)?-baseline\.json$/, ['catalog-baseline.spec.ts']],
+  // CASPARCG CONNECT (docs/CASPARCG_CONNECT.md). The browser half is one file, and the two
+  // surfaces it grows are already mapped elsewhere for their own reasons - SettingsDialog to
+  // analytics/auth, ProductionPage into the productions set - so those rules are UNION'd with
+  // this one rather than replaced. Without this row a change to the link contract would run
+  // specs that pin the panels' other contents and never the four diagnosis states, which are
+  // the whole point of the feature.
+  [/^src\/control\/casparLink\.ts$/, ['caspar-connect.spec.ts']],
+  [/^src\/components\/SettingsDialog\.tsx$/, ['caspar-connect.spec.ts']],
+  [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
 ];
 
 // Anything matching these runs the FULL suite - shared foundations with fan-out everywhere.

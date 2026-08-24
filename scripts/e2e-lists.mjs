@@ -14,6 +14,11 @@ export const FOCUS = [
   'analytics.spec.ts',
   'advanced-mode.spec.ts',
   'auth.spec.ts',
+  // CasparCG Connect is a NICE-TO-HAVE over routes that already air (docs/CASPARCG_CONNECT.md),
+  // so it earns a place here for one reason only: it puts a control on the production page and a
+  // section in Settings, both of which ARE student-critical surfaces. What it protects during the
+  // sprint is that those two surfaces keep working, not that CasparCG does.
+  'caspar-connect.spec.ts',
   'control.spec.ts',
   'cross-tab.spec.ts',
   'data-api.spec.ts',

@@ -2566,7 +2566,9 @@ function CasparAirRow({ outputUrl }: { outputUrl: string | null }) {
         )
       }
     >
-      <span className="prod-link-file">{settings.host} · {casparAddress(settings)}</span>
+      <span className="prod-link-file" data-testid="caspar-air-target">
+        {settings.host} · {casparAddress(settings)}
+      </span>
       <button onClick={() => void run('air')} disabled={!outputUrl || busy !== null} data-testid="caspar-put-on-air">
         {busy === 'air' ? 'Sending…' : 'Put on air'}
       </button>
