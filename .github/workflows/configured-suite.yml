@@ -1,0 +1,210 @@
+# THE CONFIGURED (AUTHENTICATED) SUITE — the one tier nothing ran automatically.
+#
+# `e2e/configured/` needs a real Supabase backend and a signed-in account, so it is the only
+# suite in the repo that no automation touched. ci.yml plans from scripts/e2e-affected.mjs, and
+# that script IGNORES `e2e/configured/**` on purpose (the suite is opt-in and needs secrets);
+# nightly.yml runs `npm run test:e2e`, which is the OFFLINE config and a different testDir. So
+# these 32 specs — account, community, moderation, feedback, analytics, the Pro wizard, and the
+# four hosted-playout walks the student release is judged on — were verified only when somebody
+# remembered to type `npm run test:e2e:live` on a laptop that happened to have an .env. Five of
+# them sat on main looking broken for weeks with nothing able to say otherwise.
+#
+# NIGHTLY, not weekly. The suite costs ~6 minutes on one worker, and the surfaces it covers
+# (quiz-output, scorebug-output, imported-quiz-output, hosted-control-recovery) are the ones the
+# 2026-09-12 production depends on. A week-old signal on those is worth very little; a
+# one-day-old one names the merge that broke them. It runs on its own schedule and files its own
+# rolling issue rather than joining nightly.yml, because it is the only job here that can go red
+# for a reason OUTSIDE the repository — an expired test account, a paused Supabase project, a
+# rotated key — and that must not be able to red the main nightly verdict.
+#
+# 01:10 UTC, i.e. 50 minutes behind nightly.yml's 00:20. GitHub creates a scheduled event 1-3.5
+# hours after its cron minute and never catches up (measured 2026-08-07, see nightly.yml), so in
+# practice the two overlap anyway and that is fine — separate runners, separate verdicts. The gap
+# only keeps the two rolling issues from being filed in the same minute.
+#
+# THE FAILURE MODE THIS WORKFLOW IS BUILT AROUND. Every spec here calls
+# `test.skip(!haveCreds, …)`. With E2E_EMAIL / E2E_PASSWORD unset the run executes NOTHING and
+# exits 0 — so a job that checks only the exit code is permanently, silently green, which is
+# precisely the hole this workflow exists to close. Two guards, both mandatory:
+#
+#   1. A preflight that fails BEFORE anything is installed when a required secret is missing, and
+#      names it. Cheap, unambiguous, and it fires on the very first run if the secrets were never
+#      added.
+#   2. A post-run assertion on the JSON report: zero skipped, and at least MIN_TESTS actually
+#      executed. The count guard catches what the preflight cannot — a credential that is present
+#      but not usable, a spec file that stops being collected, a new gate added inside a spec.
+#      Raise MIN_TESTS when the suite grows; a stale value only makes the guard weaker.
+
+name: configured-suite
+
+on:
+  schedule:
+    - cron: '10 1 * * *'
+  workflow_dispatch: {}
+
+# One at a time. A manual run while the scheduled one is in flight must queue behind it: both
+# sign in as the SAME throwaway account and write real rows to the same Supabase project.
+concurrency:
+  group: configured-suite
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write # the rolling-issue steps
+
+jobs:
+  configured:
+    name: Configured E2E (authenticated, real backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The throwaway `synctest…` test account and the test/staging Supabase project — never the
+      # owner's account, never a tenant with real users. The specs write real rows and clean up
+      # after themselves.
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # Only moderator.spec.ts needs it, but it is REQUIRED here rather than optional: an optional
+      # secret would let that spec skip itself, and a skipped spec is exactly what this workflow
+      # exists to make impossible.
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # What the suite declares today (16 spec files, 32 tests). Guard 2 above.
+      MIN_TESTS: 32
+    steps:
+      # Before checkout-and-install, so a repository without the secrets fails in seconds with a
+      # message saying what to add, rather than after five minutes of npm ci.
+      - name: Require the configured-mode secrets
+        run: |
+          missing=""
+          for name in E2E_EMAIL E2E_PASSWORD VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+            eval "value=\${$name}"
+            [ -n "$value" ] || missing="${missing} ${name}"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Configured suite has no credentials::Missing repository secret(s):${missing}. Every spec in e2e/configured/ gates on these and would SKIP itself, so the run would pass having executed nothing. Add them (throwaway test account + test Supabase project) under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "All five configured-mode secrets are present."
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: ./.github/actions/playwright-chromium
+
+      # playwright.live.config.ts starts its own Vite dev server and, unlike the offline config,
+      # does NOT override the Supabase variables — so the env block above is what puts the app in
+      # configured mode as well as what signs the specs in.
+      #
+      # The config's reporter is `list`; the json reporter is added here because the assertion
+      # below needs a machine-readable count. `|| true` so a red suite still reaches that
+      # assertion — the real exit code is recovered from the report.
+      - name: Configured E2E suite
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: configured-report.json
+        run: npm run test:e2e:live -- --reporter=list,json || true
+
+      # THE STEP THAT MAKES THIS JOB A VERDICT. A green exit code from this suite means nothing on
+      # its own; only the counts do.
+      - name: Assert the suite actually ran
+        id: assert
+        run: |
+          if [ ! -f configured-report.json ]; then
+            echo "::error title=No report::Playwright wrote no JSON report - the run never started."
+            echo "green=false" >> "$GITHUB_OUTPUT"
+            echo "summary=no JSON report - the run never started" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          expected=$(jq -r '.stats.expected // 0' configured-report.json)
+          unexpected=$(jq -r '.stats.unexpected // 0' configured-report.json)
+          flaky=$(jq -r '.stats.flaky // 0' configured-report.json)
+          skipped=$(jq -r '.stats.skipped // 0' configured-report.json)
+          ran=$((expected + unexpected + flaky))
+          echo "Ran ${ran} tests (${expected} passed, ${unexpected} failed, ${flaky} flaky), ${skipped} skipped."
+
+          # Name every test the run actually executed. Verifying this workflow means reading THIS
+          # list, not the exit code.
+          {
+            echo "### Configured suite — tests executed"
+            echo ""
+            echo "${ran} ran, ${skipped} skipped, ${unexpected} failed, ${flaky} flaky."
+            echo ""
+            jq -r '[.. | objects | select(has("specs")) | .specs[]]
+                   | .[]
+                   | "- `\(.file)` — \(.title): " + (if .ok then "passed" else "FAILED" end)' \
+              configured-report.json | sort
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          status=0
+          if [ "$skipped" -ne 0 ]; then
+            echo "::error title=Tests skipped::${skipped} test(s) skipped. Every spec here gates on the credentials, so a skip means a secret is present but not usable (wrong project, disabled account) - not a passing run."
+            status=1
+          fi
+          if [ "$ran" -lt "$MIN_TESTS" ]; then
+            echo "::error title=Too few tests ran::${ran} test(s) executed, expected at least ${MIN_TESTS}. The suite is no longer covering what it used to; a run this small is not a verdict."
+            status=1
+          fi
+          if [ "$unexpected" -ne 0 ] || [ "$flaky" -ne 0 ]; then
+            echo "::error title=Configured suite is red::${unexpected} failed, ${flaky} flaky."
+            status=1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "green=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "green=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "summary=${ran} ran, ${skipped} skipped, ${unexpected} failed, ${flaky} flaky" >> "$GITHUB_OUTPUT"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: configured-report
+          path: |
+            configured-report.json
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # The rolling-issue pattern every alarm here follows (docs/DEPLOYMENT.md): one open issue,
+      # one comment per newly red run, closed by the next green one.
+      - name: File / update the rolling issue
+        if: ${{ always() && steps.assert.outputs.green != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SUMMARY: ${{ steps.assert.outputs.summary }}
+        run: |
+          TITLE="Configured (authenticated) E2E suite is red"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="$(printf 'The configured suite failed at %s.\n\n%s\n\nThis tier signs in as the throwaway test account and talks to the real Supabase project, so it can also go red for reasons outside the repository - an expired account, a paused project, a rotated key. Check those before bisecting.\n\nRun: %s' \
+            "${{ github.sha }}" "${SUMMARY:-preflight failed - see the run log}" "$RUN_URL")"
+          EXISTING="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -z "$EXISTING" ]; then
+            gh issue create --title "$TITLE" --body "$BODY"
+          else
+            gh issue comment "$EXISTING" --body "Still red. $BODY"
+          fi
+
+      - name: Close the rolling issue
+        if: ${{ steps.assert.outputs.green == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TITLE="Configured (authenticated) E2E suite is red"
+          EXISTING="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --comment "Configured suite green again at ${{ github.sha }} (${{ steps.assert.outputs.summary }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+      - name: Fail the run when the suite was not a clean verdict
+        if: ${{ steps.assert.outputs.green != 'true' }}
+        run: exit 1
