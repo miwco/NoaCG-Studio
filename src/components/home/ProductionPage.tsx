@@ -76,6 +76,14 @@ import {
   type ResolvedControlShow,
 } from '../../control/hostedControl';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
+import {
+  airOnCaspar,
+  casparAddress,
+  casparConfigured,
+  loadCasparSettings,
+  stopOnCaspar,
+  type CasparResult,
+} from '../../control/casparLink';
 import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
@@ -2502,6 +2510,73 @@ function ProductionShell({
  * help COLLAPSES per row, and a row can be `quiet` — present, findable, but not competing with
  * the links people copy every show.
  */
+/**
+ * THE ONE BUTTON (docs/CASPARCG_CONNECT.md §2). One `PLAY <channel>-<layer> [HTML] "<output
+ * URL>"` is the entire live link: from there every cue, take, update and recovery flows through
+ * the durable command log the /output page already follows, which is why there is no per-take
+ * CG traffic here.
+ *
+ * It appears only once a server is configured under Settings -> Playout. Unconfigured, the row
+ * would be a dead control on the busiest surface in the app - and the URL row directly above it
+ * is the manual route that has always worked and still does.
+ */
+function CasparAirRow({ outputUrl }: { outputUrl: string | null }) {
+  const [settings] = useState(loadCasparSettings);
+  const [busy, setBusy] = useState<'air' | 'stop' | null>(null);
+  const [result, setResult] = useState<CasparResult | null>(null);
+
+  if (!casparConfigured(settings)) return null;
+
+  const run = async (what: 'air' | 'stop') => {
+    setBusy(what);
+    setResult(null);
+    try {
+      setResult(what === 'air' ? await airOnCaspar(settings, outputUrl!) : await stopOnCaspar(settings));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <LinkRow
+      label="CasparCG"
+      testId="caspar-air"
+      help={
+        <>
+          Loads the output URL above onto channel <code>{casparAddress(settings)}</code> of{' '}
+          <code>{settings.host}</code>, through the agent running on this machine. Do it once at the
+          start of the production and leave it up - the graphics are cued from this page, not by
+          re-loading the layer. Change the server under Settings &rarr; Playout.
+        </>
+      }
+      under={
+        result && (
+          <span
+            className={result.state === 'ok' ? 'status-ok' : 'status-bad'}
+            data-testid="caspar-air-result"
+            data-state={result.state}
+          >
+            {result.state === 'ok' ? `✓ On ${casparAddress(settings)}` : result.detail}
+          </span>
+        )
+      }
+    >
+      <span className="prod-link-file">{settings.host} · {casparAddress(settings)}</span>
+      <button onClick={() => void run('air')} disabled={!outputUrl || busy !== null} data-testid="caspar-put-on-air">
+        {busy === 'air' ? 'Sending…' : 'Put on air'}
+      </button>
+      <button
+        className="prod-link-quiet-action"
+        onClick={() => void run('stop')}
+        disabled={busy !== null}
+        data-testid="caspar-take-off-air"
+      >
+        {busy === 'stop' ? 'Stopping…' : 'Take off'}
+      </button>
+    </LinkRow>
+  );
+}
+
 function LinkRow({
   label,
   help,
@@ -2637,6 +2712,9 @@ function ProductionLinks({
             {copied === 'output' ? '✓ Copied' : 'Copy'}
           </button>
         </LinkRow>
+        {/* The same URL, loaded for you. Directly under the row it acts on, because it IS that
+            row's other verb - not a separate capability. */}
+        <CasparAirRow outputUrl={outputUrl} />
         {/* THE SAME OUTPUT, AS A FILE. An SPX rundown lists template files out of
             ASSETS/templates and has nowhere to paste a URL, so the row above reaches every
             playout host except the one this project treats as canonical. The file wraps this
