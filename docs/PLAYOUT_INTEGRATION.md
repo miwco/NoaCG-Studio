@@ -145,6 +145,36 @@ CG 1-20 ADD 1 "https://<your-noacg-host>/output?production=<slug>" 1
 - The page recovers by itself. If the machine loses the network, or you restart the layer, it
   rebuilds whatever was on air, without replaying the animations on screen.
 
+### Letting NoaCG load the layer for you
+
+The command above is the whole live link, so NoaCG can send it instead of you typing it into the
+CasparCG Client. **Settings -> Playout** holds one server for the whole studio - host, AMCP port,
+channel and layer - and the production page then grows a **CasparCG** row beside its output URL
+with **Put on air** and **Take off**.
+
+It needs one thing running on the machine you operate from, because a browser cannot open a raw
+TCP socket and AMCP is one:
+
+```bash
+noacg caspar agent
+```
+
+Leave that terminal open. It prints an address and a token to paste into the Playout section, and
+it listens on `127.0.0.1` only - CasparCG itself may be any machine on the studio LAN, exactly as
+with the Client. **Test connection** round-trips a real AMCP `VERSION` and shows the server's own
+version string.
+
+Two practical notes:
+
+- On the hosted studio, Chrome asks once whether `noacg.studio` may reach your local network.
+  Answer it and the setting sticks. A self-hosted NoaCG on the studio LAN is never asked.
+  Safari refuses this outright - there, use the terminal route below.
+- Everything works without any of this. `noacg caspar play --url "<output URL>"` sends the same
+  command with no browser involved at all, and loading the URL by hand in the CasparCG Client
+  remains exactly as supported as it was.
+
+Full detail, including what was measured and what is deliberately not built: **`docs/CASPARCG_CONNECT.md`**.
+
 ### Playing an exported file
 
 Export a graphic with the **CasparCG export** target and you get one self-contained `.html`.
@@ -257,6 +287,9 @@ Fonts travel in the folder, so a machine without the typeface installed still re
 | Output URL shows "not available" | Wrong slug, or the production was unpublished | Re-copy the URL from the production page. Unpublishing kills the URL on purpose. |
 | Cloud output goes blank after a network drop | It is rebuilding | Wait — it recovers on its own, without replaying animations on screen. If it does not, reload the layer. |
 | Operator takes a cue and nothing airs | The page is in **Rehearse**, not **Show** | Check the mode strip on the production page. Rehearsal drives a local copy on purpose. |
+| Settings → Playout says the agent is not running | `noacg caspar agent` is not up, or is on another port | Start it and re-copy the address it prints. It must run on the machine with the browser, not on the playout box. |
+| It says your browser is asking about local network access | Chrome gates a hosted page reaching `127.0.0.1` | Answer the prompt at the top of the window. If it was dismissed, allow "local network access" for the site in the icon left of the address bar. |
+| It says CasparCG did not answer | Nothing is listening on that host and AMCP port | `noacg caspar status` makes the same call from the terminal and takes the browser out of the question. |
 | Fonts wrong on the playout machine | An export that could not embed its font | Re-export; NoaCG fails the export rather than shipping a missing face, so this should not happen with a current build. |
 
 ## 8. What has actually been tested
@@ -274,7 +307,9 @@ than one that admits the gaps.
   `file://` pages can never pair, see §4).
 - **Not yet verified on hardware**: a CasparCG channel restart under a live output URL; vMix;
   CasparCG 2.4/2.5 (the engine versions in §3 come from the CasparCG changelog, not from a
-  machine we have run).
+  machine we have run); and **the CasparCG connection of §3** - its AMCP wire is verified against
+  a fake listener and its browser half against a fake agent, but no command has yet reached a real
+  server (`docs/CASPARCG_CONNECT.md` §6).
 
 The maintainer's own acceptance checklist is `docs/ACCEPTANCE_SPX_CASPARCG.md`, and
 `docs/CLOUD_PLAYOUT.md` §8 carries the live-verify steps for the browser output.

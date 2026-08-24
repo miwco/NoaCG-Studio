@@ -52,6 +52,8 @@ npx noacg save ./football-scoreboard
 | `login [--name N] [--no-browser] [--key <noacg_ak_…>]` | Get a scoped agent key for this machine: opens the NoaCG consent page, receives a one-time code on a loopback listener, redeems it. The key can only create graphics in your library; revoke it in Settings → Account → Agent access or with `logout`. `NOACG_AGENT_KEY` for CI. |
 | `logout [--local]` / `whoami` | Revoke + forget this machine's key / show which key is held and whether it is still valid. |
 | `save <dir\|zip> [--name N] [--folder F] [--no-bench]` | Validate (gate + bench), refuse on errors, then put the graphic in your NoaCG library and print its `#/graphic/<id>` link. Save = the library, never a production. |
+| `caspar agent [--port 8899] [--token T] [--origin URL]…` | Hold the AMCP socket a browser cannot: a loopback-only HTTP surface that lets NoaCG's **Settings → Playout** panel drive a CasparCG server. Binds `127.0.0.1` and refuses anything else; needs a token; refuses origins that are not your NoaCG. Leave it running. |
+| `caspar status\|send\|play\|stop [--server HOST] [--amcp-port 5250]` | The same AMCP with no browser at all: check a server, send one command, or put a production's output URL on a channel (`play --url <output URL> --channel 1 --layer 20`). |
 
 Add `--json` to any command for one JSON object on stdout. Exit codes: 0 clean, 1 findings or
 refused, 2 usage/IO error. Environment: `NOACG_URL` (default `https://noacg.studio`; a dev server
