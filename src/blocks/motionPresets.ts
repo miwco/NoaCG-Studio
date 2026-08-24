@@ -28,10 +28,32 @@
 // is what plays.
 //
 // Values follow the catalog's own taste (templates/lowerThirds/animPresets.ts, the imported
-// design's whole-unit bank): short travel (a rise reads as "arriving", not as movement),
-// Out-direction eases on entrances, In-direction eases on exits that run ~35 % faster
-// (docs/DESIGN_LANGUAGE.md §4).
+// design's whole-unit bank): Out-direction eases on entrances, In-direction eases on exits
+// that run ~45 % faster (docs/DESIGN_LANGUAGE.md §4).
+//
+// MEASURED, 2026-08-23 (the owner, after animating an imported SVG: "I used the wipe-write
+// animation and didn't really see a difference … the speed, I don't notice the difference and
+// everything looks too similar"). The wizard's Animation step was driven for real and the
+// composed preview read back frame by frame (the method and the easing half of the result are
+// in model/easings.ts). The motion half:
+//
+//  - The Speed knob REACHES the data (NOACG_ANIM.speed lands as 0.75 / 1 / 1.5 and the
+//    interpreter genuinely time-scales by it). It was invisible because of what it scaled: at
+//    a 0.55 s entrance, Slower/Normal/Faster meant 0.73 / 0.55 / 0.37 s — a 0.18 s step, and
+//    the WHOLE range sat at or under the doctrine's 0.5 s floor, so every setting read as
+//    "fast". The base durations below were lengthened (in ≈ 0.8 s, out ≈ 0.45 s) so the same
+//    0.75/1.5 knob now spans ≈ 1.07 / 0.80 / 0.53 s — three settings inside the doctrine's
+//    0.5–1.4 s band instead of three shades of the same one.
+//  - "Everything looks too similar" and "no curve changes anything" were ONE fault: travel.
+//    The bank moved 40 px (y) / 60 px (x) on a 1920×1080 frame — under 4 % — so neither the
+//    motion nor the curve shaping it had room to read, and every out-direction ease landed
+//    within 4–6 px of every other. Travel was widened to ~10 % of the frame, which is what
+//    gives an easing choice something to be visible IN.
+//
+// The old note here read "short travel (a rise reads as 'arriving', not as movement)". That was
+// the intent; the measurement is that at 40 px it read as neither.
 
+import { EASINGS, type EasingId, type EasingPreset } from '../model/easings';
 import type { SpxTemplate } from '../model/types';
 import type { AnimData, AnimKeyframe, AnimLayerTracks, AnimStep } from './animData';
 
@@ -77,80 +99,80 @@ export const MOTION_PRESETS: MotionPreset[] = [
     hint: 'Dissolves up, dissolves away.',
     name: 'Fade',
     description: 'Dissolves up, dissolves away. The calmest choice — no movement at all.',
-    in: { duration: 0.55, ease: 'sine.out', from: { opacity: 0 }, to: { opacity: 1 } },
-    out: { duration: 0.38, ease: 'sine.in', from: { opacity: 1 }, to: { opacity: 0 } },
+    in: { duration: 0.8, ease: 'sine.out', from: { opacity: 0 }, to: { opacity: 1 } },
+    out: { duration: 0.45, ease: 'sine.in', from: { opacity: 1 }, to: { opacity: 0 } },
   },
   {
     id: 'slide-left',
     hint: 'In from the right, back out that way.',
     name: 'Slide left',
     description: 'Glides in from the right edge and slips back out that way.',
-    in: { duration: 0.55, ease: 'power3.out', from: { x: 60, opacity: 0 }, to: { x: 0, opacity: 1 } },
-    out: { duration: 0.35, ease: 'power2.in', from: { x: 0, opacity: 1 }, to: { x: 44, opacity: 0 } },
+    in: { duration: 0.8, ease: 'power3.out', from: { x: 170, opacity: 0 }, to: { x: 0, opacity: 1 } },
+    out: { duration: 0.45, ease: 'power2.in', from: { x: 0, opacity: 1 }, to: { x: 140, opacity: 0 } },
   },
   {
     id: 'slide-right',
     hint: 'In from the left, back out that way.',
     name: 'Slide right',
     description: 'Glides in from the left edge and slips back out that way.',
-    in: { duration: 0.55, ease: 'power3.out', from: { x: -60, opacity: 0 }, to: { x: 0, opacity: 1 } },
-    out: { duration: 0.35, ease: 'power2.in', from: { x: 0, opacity: 1 }, to: { x: -44, opacity: 0 } },
+    in: { duration: 0.8, ease: 'power3.out', from: { x: -170, opacity: 0 }, to: { x: 0, opacity: 1 } },
+    out: { duration: 0.45, ease: 'power2.in', from: { x: 0, opacity: 1 }, to: { x: -140, opacity: 0 } },
   },
   {
     id: 'rise',
     hint: 'Up from below, sinks back down.',
     name: 'Rise',
     description: 'Rises into place from below and sinks back down to leave. Quiet and universal.',
-    in: { duration: 0.55, ease: 'power3.out', from: { y: 40, opacity: 0 }, to: { y: 0, opacity: 1 } },
-    out: { duration: 0.35, ease: 'power2.in', from: { y: 0, opacity: 1 }, to: { y: 24, opacity: 0 } },
+    in: { duration: 0.8, ease: 'power3.out', from: { y: 110, opacity: 0 }, to: { y: 0, opacity: 1 } },
+    out: { duration: 0.45, ease: 'power2.in', from: { y: 0, opacity: 1 }, to: { y: 80, opacity: 0 } },
   },
   {
     id: 'drop',
     hint: 'Down from above, lifts back up.',
     name: 'Drop',
     description: 'Settles in from above and lifts back up to leave. Headline-like.',
-    in: { duration: 0.55, ease: 'power3.out', from: { y: -40, opacity: 0 }, to: { y: 0, opacity: 1 } },
-    out: { duration: 0.35, ease: 'power2.in', from: { y: 0, opacity: 1 }, to: { y: -24, opacity: 0 } },
+    in: { duration: 0.8, ease: 'power3.out', from: { y: -110, opacity: 0 }, to: { y: 0, opacity: 1 } },
+    out: { duration: 0.45, ease: 'power2.in', from: { y: 0, opacity: 1 }, to: { y: -80, opacity: 0 } },
   },
   {
     id: 'pop',
     hint: 'Springs up to size, shrinks away.',
     name: 'Pop',
     description: 'Springs up to size with a soft overshoot, shrinks away. Energetic — sport, entertainment.',
-    in: { duration: 0.5, ease: 'back.out(1.5)', from: { scale: 0.86, opacity: 0 }, to: { scale: 1, opacity: 1 } },
-    out: { duration: 0.34, ease: 'power2.in', from: { scale: 1, opacity: 1 }, to: { scale: 0.94, opacity: 0 } },
+    in: { duration: 0.7, ease: 'back.out(1.5)', from: { scale: 0.72, opacity: 0 }, to: { scale: 1, opacity: 1 } },
+    out: { duration: 0.42, ease: 'power2.in', from: { scale: 1, opacity: 1 }, to: { scale: 0.86, opacity: 0 } },
   },
   {
     id: 'zoom',
     hint: 'Settles from larger, drifts off larger.',
     name: 'Zoom',
     description: 'Settles down from slightly larger, drifts away larger. Cinematic; best on full-frame graphics.',
-    in: { duration: 0.6, ease: 'power3.out', from: { scale: 1.12, opacity: 0 }, to: { scale: 1, opacity: 1 } },
-    out: { duration: 0.4, ease: 'power2.in', from: { scale: 1, opacity: 1 }, to: { scale: 1.06, opacity: 0 } },
+    in: { duration: 0.9, ease: 'power3.out', from: { scale: 1.24, opacity: 0 }, to: { scale: 1, opacity: 1 } },
+    out: { duration: 0.5, ease: 'power2.in', from: { scale: 1, opacity: 1 }, to: { scale: 1.14, opacity: 0 } },
   },
   {
     id: 'blur',
     hint: 'Focuses in from a blur, blurs away.',
     name: 'Blur',
     description: 'Resolves out of a soft blur, dissolves back into one. Filmic; best over calm footage.',
-    in: { duration: 0.6, ease: 'power2.out', from: { filter: 'blur(14px)', opacity: 0 }, to: { filter: 'blur(0px)', opacity: 1 } },
-    out: { duration: 0.4, ease: 'power2.in', from: { filter: 'blur(0px)', opacity: 1 }, to: { filter: 'blur(10px)', opacity: 0 } },
+    in: { duration: 0.85, ease: 'power2.out', from: { filter: 'blur(26px)', opacity: 0 }, to: { filter: 'blur(0px)', opacity: 1 } },
+    out: { duration: 0.5, ease: 'power2.in', from: { filter: 'blur(0px)', opacity: 1 }, to: { filter: 'blur(18px)', opacity: 0 } },
   },
   {
     id: 'wipe-right',
     hint: 'Revealed left to right, retracts.',
     name: 'Wipe right',
     description: 'Revealed left to right, as if a mask slid off; retracts back the same way.',
-    in: { duration: 0.55, ease: 'power3.out', from: { clipPath: 'inset(0% 100% 0% 0%)' }, to: { clipPath: SHOWN } },
-    out: { duration: 0.35, ease: 'power2.in', from: { clipPath: SHOWN }, to: { clipPath: 'inset(0% 100% 0% 0%)' } },
+    in: { duration: 0.75, ease: 'power3.out', from: { clipPath: 'inset(0% 100% 0% 0%)' }, to: { clipPath: SHOWN } },
+    out: { duration: 0.45, ease: 'power2.in', from: { clipPath: SHOWN }, to: { clipPath: 'inset(0% 100% 0% 0%)' } },
   },
   {
     id: 'wipe-left',
     hint: 'Revealed right to left, retracts.',
     name: 'Wipe left',
     description: 'Revealed right to left, as if a mask slid off; retracts back the same way.',
-    in: { duration: 0.55, ease: 'power3.out', from: { clipPath: 'inset(0% 0% 0% 100%)' }, to: { clipPath: SHOWN } },
-    out: { duration: 0.35, ease: 'power2.in', from: { clipPath: SHOWN }, to: { clipPath: 'inset(0% 0% 0% 100%)' } },
+    in: { duration: 0.75, ease: 'power3.out', from: { clipPath: 'inset(0% 0% 0% 100%)' }, to: { clipPath: SHOWN } },
+    out: { duration: 0.45, ease: 'power2.in', from: { clipPath: SHOWN }, to: { clipPath: 'inset(0% 0% 0% 100%)' } },
   },
 ];
 
@@ -158,6 +180,126 @@ export function motionPresetById(id: MotionPresetId): MotionPreset {
   const p = MOTION_PRESETS.find((x) => x.id === id);
   if (!p) throw new Error(`Unknown motion preset: ${id}`);
   return p;
+}
+
+/**
+ * THE SIX FAMILIES the picker actually draws. Ten cards was ten answers to a question that
+ * only has six: Slide's four members and Wipe's two are one motion with a DIRECTION, exactly
+ * as the wizard's own Slide family has always been (its Travel arrows, AnimationStep.tsx). The
+ * bank keeps all ten ids — a saved graphic names one, and the control page reads one back — but
+ * asking a student to choose between "Rise", "Drop", "Slide left" and "Slide right" as four
+ * separate things is asking them to do the grouping in their head.
+ *
+ * Order is the order of the grid: the calm one first, then the one most graphics want, then
+ * the energetic pair, then the two that need the right footage under them.
+ */
+export interface MotionDirection {
+  id: MotionPresetId;
+  arrow: string;
+  /** The tooltip: which way the graphic travels, said as a direction and as an origin. */
+  hint: string;
+}
+
+export interface MotionFamily {
+  id: string;
+  name: string;
+  hint: string;
+  /** What the card picks when the card itself is clicked rather than one of its arrows. */
+  fallback: MotionPresetId;
+  /** Empty for a family that is one motion. */
+  directions: MotionDirection[];
+}
+
+export const MOTION_FAMILIES: MotionFamily[] = [
+  { id: 'fade', name: 'Fade', hint: 'Dissolves up, dissolves away.', fallback: 'fade', directions: [] },
+  {
+    id: 'slide',
+    name: 'Slide',
+    hint: 'Travels in from one edge, back out the same way.',
+    fallback: 'rise',
+    directions: [
+      { id: 'rise', arrow: '↑', hint: 'Up — enters from below' },
+      { id: 'drop', arrow: '↓', hint: 'Down — enters from above' },
+      { id: 'slide-right', arrow: '→', hint: 'Right — enters from the left edge' },
+      { id: 'slide-left', arrow: '←', hint: 'Left — enters from the right edge' },
+    ],
+  },
+  { id: 'pop', name: 'Pop', hint: 'Springs up to size, shrinks away.', fallback: 'pop', directions: [] },
+  { id: 'zoom', name: 'Zoom', hint: 'Settles from larger, drifts off larger.', fallback: 'zoom', directions: [] },
+  { id: 'blur', name: 'Blur', hint: 'Focuses in from a blur, blurs away.', fallback: 'blur', directions: [] },
+  {
+    id: 'wipe',
+    name: 'Wipe',
+    hint: 'Revealed behind a moving edge, retracts.',
+    fallback: 'wipe-right',
+    directions: [
+      { id: 'wipe-right', arrow: '→', hint: 'Right — revealed left to right' },
+      { id: 'wipe-left', arrow: '←', hint: 'Left — revealed right to left' },
+    ],
+  },
+];
+
+/** Every motion belongs to exactly one family; the grid depends on that being true. */
+export function familyOf(id: MotionPresetId): MotionFamily {
+  const f = MOTION_FAMILIES.find((x) => x.fallback === id || x.directions.some((d) => d.id === id));
+  if (!f) throw new Error(`Motion ${id} is in no family — MOTION_FAMILIES has to cover the bank`);
+  return f;
+}
+
+/**
+ * The properties the renderer does NOT clamp — the transform channels, where a value is free
+ * to go past its target and come back. Everything else a motion here animates is bounded at
+ * one or both ends: `opacity` saturates at 1, an `inset()` percentage cannot be negative, a
+ * blur radius cannot. This is the whole basis of `easingsForMotion` below, so it is written as
+ * the renderer's rule rather than as a list of which motions get which curves.
+ */
+const UNCLAMPED_PROPS = new Set(['x', 'y', 'scale', 'scaleX', 'scaleY', 'rotation', 'skewX', 'skewY']);
+
+/** Whether a motion moves the graphic through space or size — i.e. whether an overshooting or
+ *  oscillating curve has anywhere to overshoot INTO. Read off the motion's own tracks. */
+export function motionIsUnclamped(preset: MotionPreset): boolean {
+  return [...Object.keys(preset.in.from), ...Object.keys(preset.out.from)].some((p) => UNCLAMPED_PROPS.has(p));
+}
+
+/**
+ * The easing choices a motion can actually SHOW — the no-code list, in the order the dropdown
+ * renders them ('auto' is not here; it is always first and always legal).
+ *
+ * Two filters, one rule each. `simple` drops the curves the measurement in model/easings.ts
+ * found indistinguishable or wrong-direction (the same list for every motion). `needs` is the
+ * per-motion half the owner asked for: a curve whose character is overshoot or oscillation is
+ * offered only on a motion with an unclamped property to spend it on, so Fade, Blur and the
+ * two Wipes stop offering Overshoot / Bounce / Spring — which on them render as, respectively,
+ * a faster fade, a flicker, and nothing at all.
+ *
+ * Takes EVERY phase the choice will land on, because one easing setting drives both: a
+ * displacement curve is offered only when it can be shown on all of them. "Rise in, Fade out"
+ * therefore behaves like Fade for this question — an Overshoot that reads on the way on and
+ * clamps on the way off is exactly the half-working control this list exists to remove.
+ *
+ * A phase that is `null` or absent is not on a universal motion (it holds one of the catalog's
+ * own choreographies, which move whole boxes AND their parts) and asks nothing of the filter.
+ */
+export function easingsForMotions(ids: readonly (MotionPresetId | null | undefined)[]): EasingPreset[] {
+  const presets = ids.filter((id): id is MotionPresetId => !!id).map(motionPresetById);
+  const unclamped = presets.every(motionIsUnclamped);
+  // …and a curve that IS one of these motions' own tuned pair is Auto under a second name.
+  // Fade's tuned entrance is `sine.out`, so "Soft" on a Fade measured 0.00 different from
+  // Auto at every frame of the entrance — the complaint this whole list exists to answer,
+  // reproduced inside the answer. Exact string equality, deliberately: a similarity threshold
+  // would be a number nobody could defend.
+  const isAutoAgain = (e: EasingPreset) =>
+    presets.some((p) => e.gsapIn === p.in.ease && e.gsapOut === p.out.ease);
+  return EASINGS.filter((e) => e.simple && (unclamped || e.needs === 'time') && !isAutoAgain(e));
+}
+
+/** Whether a choice survives the motion(s) it sits beside — the picker falls back to 'auto'
+ *  when it does not, rather than keeping a setting that is silently doing nothing. */
+export function easingLegalForMotions(
+  ids: readonly (MotionPresetId | null | undefined)[],
+  choice: EasingId,
+): boolean {
+  return choice === 'auto' || easingsForMotions(ids).some((e) => e.id === choice);
 }
 
 export type MotionPhaseName = 'in' | 'out';

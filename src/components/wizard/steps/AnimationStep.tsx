@@ -1,14 +1,26 @@
+import { useMemo, useState } from 'react';
 import { SLIDE_FAMILY, isSlidePreset } from '../../../templates/lowerThirds/animPresets';
+import type { SpxTemplate } from '../../../model/types';
 import { EASINGS, type EasingId } from '../../../model/easings';
 import { ALL_PRESETS, type AnimPhase } from '../../../blocks/presetRegistry';
 import type { AnimPresetId, AnimSpeed, TemplateVariant } from '../../../model/wizard';
 import { isWholeUnitPreset, universalPick, usesUniversalMotion, type DraftPatch, type WizardDraft } from '../draft';
-import { MOTION_PRESETS, type MotionPhaseName, type MotionPresetId } from '../../../blocks/motionPresets';
+import {
+  MOTION_PRESETS,
+  easingLegalForMotions,
+  easingsForMotions,
+  type MotionPhaseName,
+  type MotionPresetId,
+} from '../../../blocks/motionPresets';
 import MotionPresetPicker from '../../MotionPresetPicker';
 
 interface Props {
   variant: TemplateVariant;
   draft: WizardDraft;
+  /** The draft built as real template code — the same object the live preview renders. The
+   *  universal bank's offer is a STRUCTURAL question about this design (has it a unit to
+   *  move?), so it is asked of the built markup rather than of the category. */
+  template: SpxTemplate | null;
   onDraft: (patch: DraftPatch) => void;
   /** Replays the animation in the live preview (for re-clicking the active preset). */
   onReplay: () => void;
@@ -38,12 +50,19 @@ const SLIDE_DIRS: { id: AnimPresetId; arrow: string; hint: string }[] = [
 ];
 
 /** Step 5 — motion: direction, preset, speed, easing, and multi-step mode. */
-export default function AnimationStep({ variant, draft, onDraft, onReplay }: Props) {
-  // An imported design picks from the UNIVERSAL bank (blocks/motionPresets.ts) - ten unit
-  // motions in place of the category's four whole-unit presets, which the bank stands in for;
-  // its other cards (the SVG layer stagger) stay beside them. Same engine as the saved
-  // graphic's control page, so what is picked here is what that page reads back.
-  const universal = usesUniversalMotion(variant);
+export default function AnimationStep({ variant, template, draft, onDraft, onReplay }: Props) {
+  // The "Simple motion" fold, when the design leads with its own cards: open from the start if
+  // the graphic already holds a universal motion, so re-entering the step shows the live pick
+  // rather than hiding it behind a closed summary.
+  const [moreOpen, setMoreOpen] = useState(
+    draft.animation.motionIn !== null || draft.animation.motionOut !== null,
+  );
+  // EVERY design that has a unit to move picks from the UNIVERSAL bank (blocks/motionPresets.ts)
+  // beside its own cards — the six families below stand in for the category's own whole-unit
+  // motions, and the choreographies that animate PARTS (a line out of its mask, an accent
+  // drawing, an SVG's layers staggering) stay beside them. Same engine as the saved graphic's
+  // control page, so what is picked here is what that page reads back.
+  const universal = useMemo(() => usesUniversalMotion(template), [template]);
   const motion = universal ? universalPick(draft, variant) : {};
   // The slide family renders as ONE card with a direction picker: a variant that lists
   // any member offers all four (the standard structure takes any direction).
@@ -52,6 +71,13 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
   );
   const hasSlide = variant.animationPresets.some(isSlidePreset);
   const presetName = (id: AnimPresetId) => ALL_PRESETS.find((p) => p.id === id)?.name ?? id;
+  // Is the universal bank this design's MAIN picker, or an extra beside its own cards? A
+  // property of the DESIGN, never of the current pick, so the step's layout does not rearrange
+  // itself under a click: the bank leads when the design has no choreographies of its own, or
+  // when the ones it does have are the whole-unit kind the bank stands in for (the imported
+  // design, whose four design-* presets map straight onto it).
+  const universalPrimary =
+    universal && (!(hasSlide || presets.length > 0) || isWholeUnitPreset(variant.animationPresets[0]));
 
   // The entrance preset; the exit matches it unless the user mixed a different one in.
   const inActive = draft.animation.presetId ?? variant.animationPresets[0];
@@ -104,6 +130,14 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
     const patch: Partial<WizardDraft['animation']> = {};
     if (phases.includes('in')) patch.motionIn = id;
     if (phases.includes('out')) patch.motionOut = id;
+    // A curve the new motion cannot show falls back to Auto rather than staying set and doing
+    // nothing — the dropdown that "feels like it doesn't change the easing" is exactly what an
+    // invisibly-kept choice produces.
+    const next: [MotionPresetId | null, MotionPresetId | null] = [
+      (phases.includes('in') ? id : motion.in) ?? null,
+      (phases.includes('out') ? id : motion.out) ?? null,
+    ];
+    if (!easingLegalForMotions(next, draft.animation.easing)) patch.easing = 'auto';
     onDraft({ animation: patch });
   };
 
@@ -118,10 +152,84 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
       variant.category,
     );
 
-  const standard = EASINGS.filter((e) => e.tag === 'standard');
-  const playful = EASINGS.filter((e) => e.tag === 'playful');
-  const continuous = EASINGS.filter((e) => e.tag === 'continuous');
+  // THE EASING LIST REACTS TO THE MOTION (the owner, 2026-08-23: "How can you do a back ease
+  // or bounce ease with a fade? … the list wouldn't be that long and the options could make
+  // sense"). The rule and the measurement behind it are in blocks/motionPresets.ts
+  // easingsForMotions: a curve is offered only where its character can be rendered. One easing
+  // setting drives both phases, so both are asked.
+  const easePhases = [motion.in ?? null, motion.out ?? null] as const;
+  const easeOptions = easingsForMotions(easePhases);
   const activeEasing = EASINGS.find((e) => e.id === draft.animation.easing);
+
+  // THE DESIGN'S OWN CARDS — its category choreographies, plus the Slide family as one card
+  // with its Travel arrows. Built once and rendered in whichever grid the branch below picks,
+  // so the two layouts can never drift into showing different sets.
+  const ownCards = [
+    hasSlide ? (
+      <button
+        key="slide"
+        className={`wz-anim ${universalPrimary ? 'motion-card ' : ''}${slideSelected ? 'selected' : ''}`}
+        onClick={() => pickPreset(slideActive ?? SLIDE_FAMILY[0])}
+      >
+        <strong>
+          Slide
+          {mixed && (isInSlide || isOutSlide) && (
+            <span className="muted" style={{ fontWeight: 400 }}>
+              {' '}· {isInSlide && isOutSlide ? 'in + out' : isInSlide ? 'in' : 'out'}
+            </span>
+          )}
+        </strong>
+        <span className="hint">Glides in from one side and slips back out the same way.</span>
+      </button>
+    ) : null,
+    ...presets.map((p) => {
+      const isIn = inActive === p.id && !motion.in;
+      const isOut = outActive === p.id && !motion.out;
+      const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
+      return (
+        <button
+          key={p.id}
+          className={`wz-anim ${universalPrimary ? 'motion-card ' : ''}${selected ? 'selected' : ''}`}
+          onClick={() => pickPreset(p.id)}
+          title={p.description}
+          data-testid={`wz-anim-${p.id}`}
+        >
+          <strong>
+            {p.name}
+            {mixed && (isIn || isOut) && (
+              <span className="muted" style={{ fontWeight: 400 }}>
+                {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
+              </span>
+            )}
+          </strong>
+          <span className="hint">{p.description}</span>
+        </button>
+      );
+    }),
+    // TRAVEL is its own cell (re-design/handoff.md §2e), not a strip hanging under the Slide
+    // card. The preset grid leaves a hole — five presets in two columns — and the arrows were
+    // spending vertical room beside it while that hole sat empty, on a step measured at 235px
+    // of overflow with Speed, Easing and "Reveal in steps" below the fold. Rendered last so it
+    // falls into the hole; it only exists when the design offers Slide at all, and clicking an
+    // arrow still PICKS Slide in that direction, exactly as it did under the card.
+    hasSlide ? (
+      <div key="travel" className="wz-anim-travel" role="group" aria-label="Slide direction">
+        <p className="dlg-caption">Travel</p>
+        <div className="wz-anim-dirs">
+          {SLIDE_DIRS.map((d) => (
+            <button
+              key={d.id}
+              className={slideActive === d.id ? 'active' : ''}
+              onClick={() => pickPreset(d.id)}
+              title={d.hint}
+            >
+              {d.arrow}
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null,
+  ].filter(Boolean);
 
   return (
     <div>
@@ -161,7 +269,7 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
               : '(click a preset to watch it in the preview)'}
           </span>
         </h3>
-        {universal ? (
+        {universalPrimary ? (
           <MotionPresetPicker
             hideDirection
             inId={motion.in ?? null}
@@ -171,98 +279,52 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
             onPick={pickMotion}
             onReplay={onReplay}
           >
-            {presets.map((p) => {
-              const isIn = inActive === p.id && !motion.in;
-              const isOut = outActive === p.id && !motion.out;
-              const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
-              return (
-                <button
-                  key={p.id}
-                  className={`wz-anim motion-card ${selected ? 'selected' : ''}`}
-                  onClick={() => pickPreset(p.id)}
-                  title={p.description}
-                  data-testid={`wz-anim-${p.id}`}
-                >
-                  <strong>
-                    {p.name}
-                    {mixed && (isIn || isOut) && (
-                      <span className="muted" style={{ fontWeight: 400 }}>
-                        {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
-                      </span>
-                    )}
-                  </strong>
-                  <span className="hint">{p.description}</span>
-                </button>
-              );
-            })}
+            {ownCards}
           </MotionPresetPicker>
         ) : (
-        <div className="wz-anim-grid">
-          {hasSlide && (
-            <button
-              className={`wz-anim ${slideSelected ? 'selected' : ''}`}
-              onClick={() => pickPreset(slideActive ?? SLIDE_FAMILY[0])}
-            >
-              <strong>
-                Slide
-                {mixed && (isInSlide || isOutSlide) && (
-                  <span className="muted" style={{ fontWeight: 400 }}>
-                    {' '}· {isInSlide && isOutSlide ? 'in + out' : isInSlide ? 'in' : 'out'}
-                  </span>
-                )}
-              </strong>
-              <span className="hint">
-                Glides in from one side and slips back out the same way.
-              </span>
-            </button>
-          )}
-          {presets.map((p) => {
-            const isIn = inActive === p.id && !motion.in;
-            const isOut = outActive === p.id && !motion.out;
-            const selected = direction === 'in' ? isIn : direction === 'out' ? isOut : isIn && isOut;
-            return (
-              <button key={p.id} className={`wz-anim ${selected ? 'selected' : ''}`} onClick={() => pickPreset(p.id)} data-testid={`wz-anim-${p.id}`}>
-                <strong>
-                  {p.name}
-                  {mixed && (isIn || isOut) && (
-                    <span className="muted" style={{ fontWeight: 400 }}>
-                      {' '}· {isIn && isOut ? 'in + out' : isIn ? 'in' : 'out'}
-                    </span>
-                  )}
-                </strong>
-                <span className="hint">{p.description}</span>
-              </button>
-            );
-          })}
-          {/* TRAVEL is its own cell (re-design/handoff.md §2e), not a strip hanging under the
-              Slide card. The preset grid leaves a hole — five presets in two columns — and the
-              arrows were spending vertical room beside it while that hole sat empty, on a step
-              measured at 235px of overflow with Speed, Easing and "Reveal in steps" below the
-              fold. Rendered last so it falls into the hole; it only exists when the design
-              offers Slide at all, and clicking an arrow still PICKS Slide in that direction,
-              exactly as it did under the card. */}
-          {hasSlide && (
-            <div className="wz-anim-travel" role="group" aria-label="Slide direction">
-              <p className="dlg-caption">Travel</p>
-              <div className="wz-anim-dirs">
-                {SLIDE_DIRS.map((d) => (
-                  <button
-                    key={d.id}
-                    className={slideActive === d.id ? 'active' : ''}
-                    onClick={() => pickPreset(d.id)}
-                    title={d.hint}
-                  >
-                    {d.arrow}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          <>
+            <div className="wz-anim-grid">{ownCards}</div>
+            {universal && (
+              // SECOND, AND FOLDED. This design has choreographies of its own, and they are
+              // the taste it was drawn with - a measurement of every catalog preset (the
+              // classification behind blocks/motionPresets.ts) found that not one of them is a
+              // whole-unit motion the universal bank duplicates: they all move a box AND
+              // stagger what is inside it. So the universal six are an ADDITION here, not a
+              // replacement, and burying six extra cards in the same grid would have made the
+              // step longer for everyone to serve the student who wants "just slide the whole
+              // thing on". One fold keeps both true. It opens by itself once a universal
+              // motion is what the graphic holds.
+              <details
+                className="wz-anim-universal"
+                data-testid="wz-anim-universal"
+                open={moreOpen}
+                onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+              >
+                <summary>
+                  Simple motion <span className="muted">move the whole graphic as one block</span>
+                </summary>
+                <MotionPresetPicker
+                  hideDirection
+                  inId={motion.in ?? null}
+                  outId={motion.out ?? null}
+                  direction={direction}
+                  onDirection={(d) => onDraft({ animation: { direction: d } })}
+                  onPick={pickMotion}
+                  onReplay={onReplay}
+                />
+              </details>
+            )}
+          </>
         )}
       </div>
 
-      <div className="row" style={{ alignItems: 'flex-start', gap: 24 }}>
+      {/* Speed beside Easing, and WRAPPING: the form column halves the moment a design is
+          picked, leaving this row 448 px, and at the old widths the two sections asked for more
+          than that - measured with the Easing select running off the right edge, a poor place
+          for the control this step was rebuilt around. They fit side by side now (228 + 24 +
+          the 180 below); the wrap is the backstop for anything narrower, and it drops Easing
+          under Speed rather than clipping it. */}
+      <div className="row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
         <div className="panel-section">
           <h3>Speed <span className="muted">entrance and exit</span></h3>
           <div className="row" style={{ gap: 6 }}>
@@ -278,33 +340,37 @@ export default function AnimationStep({ variant, draft, onDraft, onReplay }: Pro
           </div>
         </div>
 
-        <div className="panel-section" style={{ minWidth: 260 }}>
+        {/* 180, not 260: at 260 the pair asked for more than the row had and the wrap above
+            pushed Easing onto its own row, below the fold - the one control this step exists to
+            make usable, out of sight. Measured: Speed takes 228 of the row's 448, so 200 still
+            missed by 4 px. 180 fits, and the select grows into whatever is left. The wrap above
+            still catches anything narrower. */}
+        <div className="panel-section" style={{ minWidth: 180, flex: '1 1 180px' }}>
           <h3>Easing <span className="muted">the feel of the motion</span></h3>
           <select
             value={draft.animation.easing}
             onChange={(e) => onDraft({ animation: { easing: e.target.value as EasingId } })}
           >
-            <option value="auto">Auto — the preset's tuned curves (recommended)</option>
-            <optgroup label="Standard">
-              {standard.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Playful (use sparingly)">
-              {playful.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </optgroup>
-            <optgroup label="Continuous motion only">
-              {continuous.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </optgroup>
+            {/* Short enough to READ BACK inside a 196 px select — the longer wording was
+                truncated mid-word, which is the wrong place to hide what "Auto" means. The
+                hint under the select carries the sentence. */}
+            <option value="auto">Auto — recommended</option>
+            {easeOptions.map((e) => (
+              <option key={e.id} value={e.id} title={e.description}>{e.plain}</option>
+            ))}
+            {/* A curve the draft still holds from a motion that CAN show it: keep it selectable
+                so switching back and forth does not silently rewrite the pick. Picking a motion
+                that cannot show it is what drops it to Auto (pickMotion below). */}
+            {draft.animation.easing !== 'auto' && !easeOptions.some((e) => e.id === draft.animation.easing) && (
+              <option value={draft.animation.easing}>
+                {EASINGS.find((e) => e.id === draft.animation.easing)?.plain ?? draft.animation.easing}
+              </option>
+            )}
           </select>
           <p className="hint" style={{ marginTop: 6 }}>
             {activeEasing
               ? activeEasing.description
-              : 'Entrances settle smoothly (Ease Out family); exits leave quickly (Ease In family).'}
+              : 'Each motion arrives on the curve it was tuned with — quick in, settling softly.'}
           </p>
         </div>
       </div>

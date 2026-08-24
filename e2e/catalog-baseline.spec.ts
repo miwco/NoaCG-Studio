@@ -312,6 +312,15 @@ const CAPTURE = `(async () => {
 
         // Never play. Just make sure nothing GSAP may have touched at load carries inline
         // styles into the measurement.
+        //
+        // NOTE WHAT THIS DOES NOT CLEAR, because a failure here sent someone the wrong way once:
+        // clearProps takes back what GSAP wrote, and a design's OWN runtime writes inline styles
+        // too - the stage fit pins each line's height and the panel's min-height (stageFit.ts).
+        // Those are part of what the graphic ships and are measured here deliberately. So a
+        // DRIFTING element set under load is not this block failing to clean up; it is that
+        // reserve being measured differently on two runs, which is what
+        // e2e/stage-fit-determinism.spec.ts guards (docs/FOOTPRINT_STABILITY.md, last section).
+        // Re-recording would bake in whichever half of that race won.
         try {
           if (win.gsap) {
             win.gsap.globalTimeline.pause();

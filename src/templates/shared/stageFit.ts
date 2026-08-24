@@ -80,6 +80,39 @@ var STAGE_FIT_MIN = 0.55;        // never shrink below 55% of the size the desig
 var STAGE_FIT_FLOOR_PX = 20;
 var stageCalibrated = false;     // true once the design's own sample has been measured
 
+// A RESERVE IS A LAYOUT NUMBER, AND A RECT IS THE VISUAL BOX - the two stop agreeing the moment
+// anything above the line is TRANSFORMED. \`getBoundingClientRect\` reports the box after every
+// ancestor transform has been applied, so a line inside a CSS-animated badge is measured through
+// whatever that animation was doing on the frame the fit happened to run. Both halves of that were
+// shipping (measured 2026-08-23/24, on the run that made e2e/catalog-baseline.spec.ts flake with a
+// DRIFTING element set - nothing about the graphics had moved, the measurement had):
+//
+//   - gt03's badge SCALES as it pops, so its clock reserved 412px, 417px and 418px across three
+//     runs for an element that is 400px in layout - the reserve was the pop, frozen at whatever
+//     moment the fit landed on.
+//   - gt04's badge only TRANSLATES, which should cost nothing - but the rect still comes back
+//     through the composited matrix, so its height alternates between 399.9999694824219 and
+//     400.0000305175781 from frame to frame, and \`Math.ceil\` turns that into 400 or 401.
+//
+// So the reserve is read off the LAYOUT box instead. \`getComputedStyle().height\` is the used
+// height in px - sub-pixel, and blind to transforms, which is exactly the difference that matters
+// (\`offsetHeight\` is blind to them too but rounds to a whole pixel, and a reserve rounded DOWN is
+// a clipped design). It is the content box unless the element says otherwise, so the padding and
+// border are added back to keep this the border box the rest of this file measures in.
+//
+// Snapped to 1/64 px, Blink's own layout unit, so a used value that comes back with a float tail
+// still lands on one number every time. A genuine sub-pixel reserve (188.5) is untouched and still
+// rounds up to a whole 189 where the caller asks for that.
+function stageLayoutHeight(el, cs) {
+  var h = parseFloat(cs.height);
+  if (!(h >= 0)) return Math.round(el.getBoundingClientRect().height * 64) / 64;  // not laid out
+  if (cs.boxSizing !== 'border-box') {
+    h += (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) +
+      (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+  }
+  return Math.round(h * 64) / 64;
+}
+
 // THE PANELS THIS RUNTIME LOOKS AFTER, kept in a shared list rather than baked into each
 // function as one selector.
 //
@@ -197,7 +230,9 @@ function holdOneStageBox(box) {
   var room = parseFloat(box.getAttribute('data-stage-room') || '');
   if (!room) {
     box.style.height = '';
-    room = box.getBoundingClientRect().height;
+    // The panel's own reserve reads the layout box for the same reason its lines do: a panel
+    // whose content animates would otherwise reserve whatever that animation was mid-way through.
+    room = stageLayoutHeight(box, window.getComputedStyle(box));
     if (!room) return;
     box.setAttribute('data-stage-room', room);
   }
@@ -259,6 +294,20 @@ function drawnBoxOf(el) {
     if (parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderLeftWidth) > 0) return p;
   }
   return null;
+}
+
+// Everything this runtime pins on a line, taken back off. Used by the recalibration below, which
+// has to put every line back to the design's own CSS BEFORE it measures any of them - the fit runs
+// in document order, so anything still pinned is a sibling whose height is about to decide the
+// reserve of the line being measured.
+function stageUnpin(el) {
+  el.style.fontSize = '';
+  el.style.maxWidth = '';
+  el.style.height = '';
+  el.style.whiteSpace = '';
+  el.style.overflowWrap = '';
+  el.style.textAlign = '';
+  el.style.display = '';
 }
 
 function fitOneStagedLine(el) {
@@ -359,7 +408,9 @@ function fitOneStagedLine(el) {
       // leaves out the box's own bottom padding, which under-reserves and then clips at the
       // design's OWN content - 37 variants did exactly that.
       // Round up: a reserve a sub-pixel short of the design's own line is a clipped design.
-      room = Math.ceil(el.getBoundingClientRect().height);
+      // Off the LAYOUT height, so the round-up answers the design and not whatever an animated
+      // ancestor was doing on this frame - see the note on stageLayoutHeight above.
+      room = Math.ceil(stageLayoutHeight(el, cs));
       // …and the overflow the design already had at its own sample, which is the number the
       // shrink test needs and the rect cannot give.
       fill = el.scrollHeight;
@@ -460,11 +511,28 @@ if (document.fonts && document.fonts.ready && document.fonts.ready.then) {
       lines[i].removeAttribute('data-stage-fill');
       lines[i].removeAttribute('data-stage-selfh');
       lines[i].removeAttribute('data-stage-selffill');
+      // …AND WHAT THE FIRST PASS PINNED, on EVERY line, before ANY line is re-measured. Each line
+      // clears its own before measuring itself, which is not the same thing: the lines are fitted
+      // in order, so while line 1 is being measured lines 2..n are still holding the FALLBACK
+      // pass's heights, and a row pinned half a pixel off its natural height moves the box the
+      // line above it is measured in. Measured on the alert strip: its severity tiles reserved 188
+      // with the siblings still pinned and 189 from a clean sheet - a whole pixel of the shipped
+      // reserve decided by leftovers.
+      stageUnpin(lines[i]);
     }
     var boxes = stageFitBoxes();
     for (var b = 0; b < boxes.length; b++) {
       boxes[b].removeAttribute('data-stage-room');
       boxes[b].style.height = '';
+      // …AND THE RESERVE ITSELF, which is the one number the first version of this forgot. The
+      // panel's reserve is written as a \`min-height\`, so leaving it in place while re-measuring
+      // makes the fallback pass a FLOOR under the real one: the panel can only ever come back the
+      // same or taller, and what it keeps is whatever the substitute face happened to fill. Which
+      // face the first pass saw is decided by whether the woff2 had arrived by DOMContentLoaded -
+      // a property of the machine's load, not of the design - so this is how a timing difference
+      // became a shipped reserve. Measured on the alert strip: 189px held against a real 188.5px,
+      // and its four severity tiles, sized inside that panel, moved with it.
+      boxes[b].style.minHeight = '';
     }
     fitStagedText();
     // Calibration is over: from here the design's own content has been seen, and anything that

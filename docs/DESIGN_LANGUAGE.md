@@ -173,6 +173,16 @@ The animation **is** the taste. Rules:
     progress bars, seamless loops.
   - The full preset list: Linear, Easy Ease, Ease In, Ease Out, Ease In-Out, Back, Bounce,
     Elastic, Expo, Cubic, Sine, Circ — each mapped to direction-correct GSAP curves per phase.
+    That is the ADVANCED list (the Inspector's picker). The no-code surfaces offer a short one,
+    filtered by two rules (`simple` and `needs`, `src/model/easings.ts`; the measurement is in
+    that file's header): near-duplicates and in-direction curves are dropped from an entrance
+    picker, and **a curve whose character is overshoot or oscillation is only offered on a
+    motion that animates an unclamped property**. Back, Bounce and Elastic on an opacity-only
+    fade are not "playful" — they are a faster fade, a flicker and a snap, because opacity
+    saturates at 1. Same for an `inset()` percentage and a blur radius.
+  - **A curve needs travel to be a curve.** Two eases differing by 4 px over a whole entrance
+    are one ease with two names. If a motion's travel is under ~5 % of the frame, the easing
+    control above it is decoration — widen the motion, do not lengthen the list.
 - **Durations:** in = 0.5–1.4 s total; out = 0.3–0.5 s. Respect `animSpeed` (divide durations).
   Above ~0.9 s an entrance reads as deliberate broadcast pacing — production packages commonly
   run 1.0–1.4 s (ratified 2026-08-02, docs/SPX_EXAMPLES_CORPUS.md); keep fast-feel graphics

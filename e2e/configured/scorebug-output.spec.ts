@@ -72,6 +72,12 @@ test('a published scorebug takes a score bump and a running clock on the real ou
   const output = await context.newPage();
   output.on('console', (m) => console.log('[output]', m.type(), m.text()));
   output.on('pageerror', (e) => console.log('[output pageerror]', e.message));
+  // The browser only reports a failed request as a bare "status 400" in the console, with no URL —
+  // which reads as an unexplained backend error in an otherwise green run. Name the request, so a
+  // non-2xx on this page is diagnosable from the log alone.
+  output.on('response', (r) => {
+    if (r.status() >= 400) console.log('[output http]', r.status(), r.request().method(), r.url());
+  });
   await output.goto(`/output?production=${encodeURIComponent(outputSlug!)}&debug=1`);
   const graphic = output.frameLocator('iframe');
 

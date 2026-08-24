@@ -24,6 +24,9 @@ import './mapSvgFields.css';
 interface Props {
   draft: WizardDraft;
   onDraft: (patch: DraftPatch) => void;
+  /** Which layer the checklist is pointing at, for the PREVIEW's highlight (the step's one
+   *  canvas — CreationWizard owns the state because the canvas is beside the step, not in it). */
+  onHover: (candidateId: string | null) => void;
 }
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -133,37 +136,33 @@ function measureOutline(
  * hovering a row highlights the exact text it binds, because "which layer is this" is the
  * only question the step really has to answer.
  *
- * The artwork rendered here is the SANITIZED markup itself (candidate markers still in
- * place), not the live template preview: the wizard's preview iframe deliberately carries no
- * allow-same-origin, so nothing outside it can reach its nodes to highlight them.
+ * ONE CANVAS, AND IT IS THE PREVIEW (docs/SVG_IMPORT_PLAN.md §6a step 1). This step used to
+ * draw the sanitized markup beside the preview and answer the same question twice — and only
+ * the preview could answer it, because only the preview runs the emitted fit: a value the
+ * ladder had already wrapped and shrunk showed here as clipped and running off the artwork,
+ * at three times the area of the truthful picture next to it. So the markup is still RENDERED
+ * (measureOutline reads `getBoundingClientRect`, which is zero inside a `display: none`
+ * subtree) but off screen, and the hover highlight moved onto the preview through the rect
+ * channel the editor canvas already uses (`preview/canvasControlProtocol.ts`) — the wizard
+ * preview iframe deliberately carries no allow-same-origin, so nothing reaches into it.
  */
-export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
+export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
   const svg = draft.designSvg;
   const stageRef = useRef<HTMLDivElement>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
-  const [highlight, setHighlight] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [fontBusy, setFontBusy] = useState<string | null>(null);
   const [fontError, setFontError] = useState<string | null>(null);
   const uploadFor = useRef<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // The hover highlight: measure the hovered layer's box in the rendered artwork. Measured
-  // from the live rect (not getBBox) so the stage's own scaling is already accounted for.
+  // The hover highlight is drawn on the PREVIEW, so the hovered layer is reported up rather
+  // than measured here — and reported as a candidate id, because that marker is what the
+  // preview's markup keeps (WizardOptions.previewMarkers). Cleared when the step unmounts:
+  // an outline left lit over a graphic nobody is choosing layers for any more is a lie.
   useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage || !hoverId) {
-      setHighlight(null);
-      return;
-    }
-    const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${hoverId}"]`);
-    if (!el) {
-      setHighlight(null);
-      return;
-    }
-    const box = el.getBoundingClientRect();
-    const frame = stage.getBoundingClientRect();
-    setHighlight({ x: box.x - frame.x, y: box.y - frame.y, w: box.width, h: box.height });
-  }, [hoverId]);
+    onHover(hoverId);
+  }, [hoverId, onHover]);
+  useEffect(() => () => onHover(null), [onHover]);
 
   // WHICH FAMILIES GOOGLE ACTUALLY HAS. The index is a local module (no network), so the step
   // can answer this before anyone clicks: offering "Get from Google Fonts" for a licensed face
@@ -208,27 +207,12 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
     if (changed) onDraft({ svgOutlines: measured });
   }, [outlines, onDraft, svg]);
 
-  // THE SAMPLE IS THE ARTWORK'S TEXT. Editing a row used to change nothing on the picture
-  // above it — the new value only appeared two steps later, which made the field read as
-  // decoration and left no way to try a length here, on the one screen that shows the design
-  // at its own size. Written the way `update()` writes it on air (textContent on the bound
-  // node), so what this step shows is what the operator will get, overflow and all. A row
-  // switched OFF goes back to the text the designer drew; a COUNTDOWN row is left alone —
-  // its field is a length in minutes, not the readout.
-  const fields = draft.svgFields;
-  const drawnText = useRef(new Map<string, string>());
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    for (const f of fields) {
-      const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${f.candidateId}"]`);
-      if (!el) continue;
-      if (!drawnText.current.has(f.candidateId)) drawnText.current.set(f.candidateId, el.textContent ?? '');
-      if (f.kind === 'countdown') continue;
-      const next = f.on ? f.sample : (drawnText.current.get(f.candidateId) ?? '');
-      if (el.textContent !== next) el.textContent = next;
-    }
-  }, [fields]);
+  // THE SAMPLE IS THE ARTWORK'S TEXT — and the artwork that says so is the PREVIEW. Editing a
+  // row rebuilds the draft template, so the value lands the way `update()` writes it on air,
+  // through the emitted fit: a long name that the ladder wraps and shrinks is SHOWN wrapped
+  // and shrunk, which is the only honest answer to "will this fit". This step therefore
+  // repaints nothing itself; the offscreen render stays exactly as the designer drew it, which
+  // is what measureOutline needs it for.
 
   if (!svg) return null;
 
@@ -340,51 +324,37 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
 
   return (
     <div className="map-svg">
-      {/* THE ARTWORK AND WHAT THE STEP IS FOR, side by side and STICKY. The artwork used to
-          be the whole first screen — a full-frame design at the column's width is 435px tall,
-          which left one of seven field rows inside a 1366x768 scrollport, and the step read as
-          having nothing on it. So the artwork is capped to a share of the window, the sentence
-          that says what to do sits in the room beside it rather than above it, and both stay
-          put while the checklist scrolls — the hover highlight is useless the moment the
-          artwork has scrolled off the top. The cap is a HEIGHT applied as a max WIDTH at the
-          artwork's own aspect: letterboxing the svg inside a wider box would break
-          measureOutline, which reads the scale off the root element's rect. */}
-      <div className="map-svg-stagebar">
+      {/* THE OFFSCREEN RENDER. Not a canvas any more — the preview beside the step is the one
+          canvas (see the component note) — but `measureOutline` needs the artwork LAID OUT,
+          and `getBoundingClientRect()` is all zeroes inside a `display: none` subtree. So it
+          renders off screen at the artwork's own width, which also makes the measurement
+          exact: k is 1, with no rounding from a fitted-down box. Hidden from assistive tech
+          and untabbable; nothing here is for reading. */}
+      <div className="map-svg-measure" aria-hidden="true">
         <div
-          className="map-svg-stage-wrap"
-          style={{ maxWidth: `calc(var(--map-svg-cap) * ${(svg.width / svg.height).toFixed(4)})` }}
-        >
-          <div
-            className="map-svg-stage"
-            ref={stageRef}
-            data-testid="map-svg-stage"
-            // The markup is our own sanitizer's output (script/handlers/foreignObject already
-            // removed at import — assets/svgImport.ts), never raw user input.
-            dangerouslySetInnerHTML={{ __html: svg.markup }}
-          />
-          {highlight && (
-            <div
-              className="map-svg-highlight"
-              data-testid="map-svg-highlight"
-              style={{ left: highlight.x - 4, top: highlight.y - 4, width: highlight.w + 8, height: highlight.h + 8 }}
-            />
-          )}
-        </div>
-        <div className="map-svg-lead">
-          <h3>Choose what the operator can change</h3>
-          {svg.candidates.length > 0 ? (
-            <p className="hint">
-              Your artwork airs exactly as drawn. Tick the layers below that an operator should
-              be able to retype — hover a row to see which one it is, and edit its text here to
-              try a real length.
-            </p>
-          ) : (
-            <p className="hint">
-              Your artwork airs exactly as drawn. This file has no text layers to bind — what
-              that means, and the two ways forward, are below.
-            </p>
-          )}
-        </div>
+          className="map-svg-stage"
+          ref={stageRef}
+          data-testid="map-svg-stage"
+          style={{ width: svg.width }}
+          // The markup is our own sanitizer's output (script/handlers/foreignObject already
+          // removed at import — assets/svgImport.ts), never raw user input.
+          dangerouslySetInnerHTML={{ __html: svg.markup }}
+        />
+      </div>
+      <div className="map-svg-lead">
+        <h3>Choose what the operator can change</h3>
+        {svg.candidates.length > 0 ? (
+          <p className="hint">
+            Your artwork airs exactly as drawn. Tick the layers below that an operator should
+            be able to retype — hover a row to see which layer it is in the preview, and type a
+            real length into its text to watch the graphic take it.
+          </p>
+        ) : (
+          <p className="hint">
+            Your artwork airs exactly as drawn. This file has no text layers to bind — what
+            that means, and the two ways forward, are below.
+          </p>
+        )}
       </div>
 
       {svg.candidates.length === 0 ? (
@@ -581,6 +551,10 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                       ))}
                     </select>
                   </label>
+                  {/* The three drawn states travel together: they either sit beside the answer
+                      or take their own line as a set of three. Individually wrapped, the
+                      narrow column left "Wrong" alone under the other two. */}
+                  <div className="map-svg-quiz-states">
                   {(['selected', 'correct', 'wrong'] as const).map((state) => (
                     <label className="save-field" key={state}>
                       <span>{state === 'selected' ? 'Picked' : state === 'correct' ? 'Right' : 'Wrong'}</span>
@@ -600,6 +574,7 @@ export default function MapSvgFieldsStep({ draft, onDraft }: Props) {
                       </select>
                     </label>
                   ))}
+                  </div>
                 </div>
               ))}
               <label className="save-field">

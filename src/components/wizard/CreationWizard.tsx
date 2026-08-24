@@ -20,6 +20,7 @@ import { FONTS, fontNameKey } from '../../model/fonts';
 import { commitStagedSelection } from '../../ai/preferences';
 import { formatTemplate } from '../../format/formatCode';
 import { paletteById } from '../../model/wizard';
+import { SVG_CANDIDATE_ATTR } from '../../assets/svgImport';
 import WizardPreview from './WizardPreview';
 import BrandLogo from '../BrandLogo';
 import { BetaFeedbackButton } from '../feedback/BetaFeedback';
@@ -222,6 +223,10 @@ export default function CreationWizard() {
   // Prepare step's content-width slider (Import graphic, stretch mode): preview-only demo
   // text pushed into the live preview — never part of the draft or the created template.
   const [stretchDemo, setStretchDemo] = useState<string | null>(null);
+  // SVG mapping step: which layer the checklist is pointing at. It lives here rather than in
+  // the step because the highlight is drawn on the PREVIEW — the step's one canvas, and the
+  // only one carrying the fit runtime (docs/SVG_IMPORT_PLAN.md §6a step 1).
+  const [svgHoverId, setSvgHoverId] = useState<string | null>(null);
   // ── THE KIT HALF of the Browse step (one graphic, or the whole set) ──
   // Its picker state lives here, not in the step, for the same reason `browseFilters` does:
   // Back must return to the set exactly as it was left.
@@ -433,10 +438,20 @@ export default function CreationWizard() {
   const variant = draft.variantId ? variantById(draft.variantId) : undefined;
 
   // The live preview always renders the draft as real template code. Design mode's preview
-  // may additionally carry the stretch-demo line (preview-only; create() builds without it).
+  // may additionally carry the stretch-demo line (preview-only; create() builds without it),
+  // and the SVG mapping step's keeps the import-time candidate markers so its checklist can
+  // point at a layer in the running document. Both are scoped to the step that needs them, and
+  // both modes rebuild without them at create (applyDraftProject) — Create is reachable from
+  // any step, so the scoping is what the reader SEES, never what decides what ships.
   const previewTemplate = useMemo(
-    () => (variant ? buildDraftTemplate(variant, draft, { stretchDemo: mode === 'design' }) : null),
-    [variant, draft, mode],
+    () =>
+      variant
+        ? buildDraftTemplate(variant, draft, {
+            stretchDemo: mode === 'design',
+            previewMarkers: mode === 'svg' && step === 2,
+          })
+        : null,
+    [variant, draft, mode, step],
   );
   // Can the user's own mark still be seen in the package they picked? Only asked when the draft
   // actually carries one - the check mounts a frame, and a graphic with no logo cannot fail it.
@@ -868,9 +883,12 @@ export default function CreationWizard() {
    */
   const applyDraftProject = async (skipNavigation?: boolean, keepGalleryOpen?: boolean): Promise<SpxTemplate | null> => {
     if (!previewTemplate || !variant) return null;
-    // Design mode rebuilds WITHOUT the preview-only stretch-demo line; every other mode's
-    // preview is exactly the created code already.
-    await applyGenerated(mode === 'design' ? buildDraftTemplate(variant, draft) : previewTemplate, skipNavigation, keepGalleryOpen);
+    // The two modes whose preview carries preview-only extras rebuild without them — design's
+    // stretch-demo line, and the SVG mapping step's candidate markers. Create is reachable from
+    // any step (Skip to finish), so this cannot be left to the step the reader happens to be on.
+    // Every other mode's preview is exactly the created code already.
+    const previewOnly = mode === 'design' || mode === 'svg';
+    await applyGenerated(previewOnly ? buildDraftTemplate(variant, draft) : previewTemplate, skipNavigation, keepGalleryOpen);
     // An imported design creates BARE and hands off to the editor's Data tab — that is
     // where its fields are added, as real placed layers (docs/IMPORT_MVP.md). DEFERRED a
     // tick: in the default studio no editor renders under the wizard, so AppShell mounts on
@@ -1333,10 +1351,12 @@ export default function CreationWizard() {
         {/* Body: step content (+ live preview from step 2). The Text step (design mode, step 3)
             is the one step whose LEFT pane is a WORKING surface — fields are placed and dragged
             on the artwork there — so it takes the room and the preview steps back; every other
-            step splits evenly. */}
+            step splits evenly. The SVG mapping step used to claim the same room, from when it
+            drew its own canvas; its left pane is a FORM, and taking the preview's width was
+            taking it from the one canvas that can answer the step's question. */}
         <div
           className={`wz-body ${showPreview ? 'with-preview' : ''}${
-            (mode === 'design' && step === 3) || (mode === 'svg' && step === 2) ? ' wz-body-working' : ''
+            mode === 'design' && step === 3 ? ' wz-body-working' : ''
           }`}
         >
           {/* The entry is a MENU, not the first committed step of every possible walk. Until
@@ -1727,6 +1747,7 @@ export default function CreationWizard() {
             {step === 4 && mode === 'design' && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
@@ -1734,11 +1755,12 @@ export default function CreationWizard() {
             )}
             {/* The SVG walk's one setup step: which text layers the operator can edit. */}
             {step === 2 && mode === 'svg' && draft.designSvg && (
-              <MapSvgFieldsStep draft={draft} onDraft={patch} />
+              <MapSvgFieldsStep draft={draft} onDraft={patch} onHover={setSvgHoverId} />
             )}
             {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
@@ -1805,6 +1827,7 @@ export default function CreationWizard() {
             {step === animStep && (mode === 'template' || mode === 'import') && variant && (
               <AnimationStep
                 variant={variant}
+                template={previewTemplate}
                 draft={draft}
                 onDraft={patch}
                 onReplay={() => setReplayKey((k) => k + 1)}
@@ -1936,6 +1959,9 @@ export default function CreationWizard() {
                 replayKey={replayKey}
                 demoOut={demoOut}
                 demoText={mode === 'design' ? stretchDemo : null}
+                {...(mode === 'svg' && step === 2
+                  ? { highlightSelector: svgHoverId ? `[${SVG_CANDIDATE_ATTR}="${svgHoverId}"]` : null }
+                  : {})}
               />
             </aside>
           )}

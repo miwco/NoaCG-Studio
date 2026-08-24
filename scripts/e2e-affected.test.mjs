@@ -349,3 +349,17 @@ test('shard count never leaves a plan with no runner, and never exceeds the ceil
   assert.equal(shardsFor({ mode: 'full', specs: [] }, { minutes: {} }), 1);
   assert.ok(shardsFor({ mode: 'subset', specs: Object.keys(readTable().minutes) }) <= MAX_SHARDS);
 });
+
+// THE RULE: a component that lives outside every directory rule must name its own surfaces.
+// `MotionPresetPicker.tsx` sits directly under src/components/, which no wide rule covers, so
+// its line in MAP is the whole of its coverage - and a line that names only the component's own
+// spec is indistinguishable from one that is right. On 2026-08-23 it was the former: the picker
+// grew a direction-arrow row in the wizard Travel box's class and ux.spec.ts, which walks that
+// step, went red on a shard nothing had planned.
+test('the universal motion picker plans the wizard steps that MOUNT it, not just its own spec', () => {
+  const { mode, specs } = planFor(['src/components/MotionPresetPicker.tsx']);
+  assert.equal(mode, 'subset', 'the picker is mapped, so it must not escalate to the full suite');
+  for (const spec of ['motion-presets.spec.ts', 'ux.spec.ts', 'wizard-preview.spec.ts']) {
+    assert.ok(specs.includes(spec), `${spec} renders the picker and must be planned by a picker change`);
+  }
+});

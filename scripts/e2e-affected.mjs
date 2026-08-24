@@ -142,10 +142,18 @@ const MAP = [
   // The browser-output renderer (docs/CLOUD_PLAYOUT.md): its own MPA entry + the stage module.
   [/^src\/output\//, ['productions.spec.ts', 'snap-recovery.spec.ts']],
   [/^output\.html$/, ['productions.spec.ts']],
-  // The universal in/out bank and its picker (blocks/motionPresets.ts, MotionPresetPicker.tsx):
-  // mounted on the control page and the wizard's Animation step, so it rides on both of those
-  // rules below as well - listed here by name so an engine edit runs its own spec first.
-  [/^(src\/blocks\/motionPresets\.ts|src\/components\/MotionPresetPicker\.tsx)$/, ['motion-presets.spec.ts']],
+  // The universal in/out bank (blocks/motionPresets.ts) rides the `^src/blocks/` rule below as
+  // well, so naming it here only puts its own spec first. Its PICKER rides NOTHING: it sits at
+  // `src/components/MotionPresetPicker.tsx`, which matches neither the wizard rule nor the
+  // home rule, so whatever is listed on this line is its ENTIRE coverage. That cost a red
+  // shard on 2026-08-23 - the picker grew a direction-arrow row sharing the wizard Travel
+  // box's class, and `ux.spec.ts`, which broke on the resulting ambiguous locator, was never
+  // planned. The surfaces that MOUNT the picker are therefore named here explicitly.
+  [/^src\/blocks\/motionPresets\.ts$/, ['motion-presets.spec.ts']],
+  [
+    /^src\/components\/MotionPresetPicker\.tsx$/,
+    ['motion-presets.spec.ts', 'ux.spec.ts', 'wizard-preview.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts'],
+  ],
   [/^src\/blocks\//, ['motion-presets.spec.ts', 'anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
   // creative-routing rides along because ROUTING and SATISFACTION resolve live against the
   // catalog and the type registry (src/templates/structuralAnchor.ts): a structure the
@@ -187,7 +195,7 @@ const MAP = [
   // branch's FIRST push gave CI no diff base and it escalated to the full suite by accident.
   // `scripts/e2e-affected.test.mjs` now pins the rule this list was failing - every catalog
   // importer is selected by a `src/templates/` change - so the hole cannot silently reopen.
-  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts']],
+  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts']],
   // wizard-finish, wizard-kit and wizard-shell were MISSING from this list, so a FinishStep,
   // kit-flow or wizard-header change ran neither the spec named after it nor anything that
   // walks to its step - the "runs FEWER specs" failure mode with no alarm attached

@@ -1697,6 +1697,21 @@ kbd {
   box-shadow: 0 10px 50px rgba(0,0,0,0.55);
   transition: transform 0.25s ease;  /* the zoom toggle glides instead of jumping */
 }
+/* The hover highlight layer (WizardPreview's `highlightSelector`): the frame's twin, wearing
+   the same size and transform, so a rect measured inside the document lands over the layer the
+   reader is looking at. Never interactive — it sits above the frame and must not eat a click. */
+.wz-stage-overlay {
+  position: absolute; top: 50%; left: 50%;
+  pointer-events: none;
+  transition: transform 0.25s ease;  /* moves with the frame's zoom, not after it */
+}
+.wz-stage-highlight {
+  position: absolute;
+  border-style: solid;
+  border-color: var(--accent, #f6a623);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
 /* The action-safe area, 5% in — drawn on the STAGE rather than in the document, so it costs
    the preview nothing and can never reach an export. */
 .wz-stage::after {
@@ -2704,6 +2719,10 @@ details:not([open]) > *:not(summary) { display: none; }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* "Simple motion" — the universal bank folded under a design that leads with its own cards.
+   A fold rather than a second grid: the six are an addition here, not a replacement. */
+.wz-anim-universal { margin-top: 10px; }
+.wz-anim-universal > summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
 .wz-anim-dirs { display: flex; gap: 4px; }
 .wz-anim-dirs button { flex: 1; padding: 4px 0; font-size: 14px; line-height: 1; }
 .wz-anim-dirs button.active { border-color: var(--accent); color: var(--accent); }
@@ -2714,6 +2733,13 @@ details:not([open]) > *:not(summary) { display: none; }
    name and a one-line hint, four across at desktop width. The hint clamps to two lines so a
    longer description never makes its row taller than its neighbours. */
 .motion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+/* One grid cell = one MOTION FAMILY: its card, and (for Slide and Wipe) the direction arrows
+   under it. The arrows are a sibling of the card rather than a child, because a button inside
+   a button is not valid HTML and Chromium drops the inner one's clicks. They reuse the Slide
+   family's own `.wz-anim-dirs` styling so the two direction pickers on this step - the design's
+   own Travel box and a universal family's arrows - read as the same control. */
+.motion-cell { display: flex; flex-direction: column; gap: 4px; }
+.motion-cell .wz-anim-dirs button { padding: 2px 0; font-size: 13px; }
 .motion-card { padding: 8px 10px; gap: 2px; }
 .motion-card strong { font-size: 13px; }
 .motion-card .hint {

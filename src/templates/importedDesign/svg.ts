@@ -78,8 +78,15 @@ const NO_SVG: DesignSvg = {
  * marker is stripped, and the root <svg> gains the artwork class so the part registry names
  * it. Any pre-existing id that collides with a bound one is prefixed out of the way — the
  * field ids are the one namespace the platform owns inside the file.
+ *
+ * `keepMarkers` is the ONE preview-only exception (`ResolvedOptions.previewMarkers`): the
+ * mapping step's hover highlight needs a handle on the layer a checklist row means, and the
+ * preview iframe is the only canvas that has the fit runtime. A ticked OUTLINE group still
+ * loses its marker there — that group is hidden and its live stand-in wears the marker
+ * instead (components/wizard/draft.ts `withSvgOutlineFields`), so one marker always points at
+ * whatever actually airs.
  */
-function bindSvgMarkup(svg: DesignSvg): string {
+function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
 
@@ -149,7 +156,9 @@ function bindSvgMarkup(svg: DesignSvg): string {
   // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
   // each one on and off. Before the markers are stripped — that is what they are for.
   if (svg.behaviour) markQuizLayers(root, svg.behaviour);
+  const replaced = new Set(svg.outlines.map((o) => o.candidateId));
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
+    if (keepMarkers && !replaced.has(el.getAttribute(SVG_CANDIDATE_ATTR) ?? '')) continue;
     el.removeAttribute(SVG_CANDIDATE_ATTR);
   }
   return new XMLSerializer().serializeToString(root);
@@ -691,7 +700,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
 
   // The SVG rides inline, indented to sit inside the box — no asset path, no fetch, so every
   // single-file export target stays single-file.
-  const inlineSvg = bindSvgMarkup(svg)
+  const inlineSvg = bindSvgMarkup(svg, o.previewMarkers)
     .split('\n')
     .map((line) => `    ${line}`)
     .join('\n');

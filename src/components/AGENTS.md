@@ -293,10 +293,11 @@ written into the template.
   read-only shell (the timeline's convert chip arms editing). It is a dockable panel (default:
   the active tab of the RIGHT dock); any NEW selection reveals it, and an explicit close holds
   while the selection is unchanged (see AppShell).
-- **MotionPresetPicker** - the UNIVERSAL in/out picker (ten unit motions, blocks/motionPresets.ts):
-  presentational, hosts hold the state - the wizard's Animation step for an imported design
-  (wizard/) and a saved graphic's control page (home/). The no-code surface for the 80% case;
-  the timeline above stays the Advanced editor. Contract in src/blocks/AGENTS.md.
+- **MotionPresetPicker** - the UNIVERSAL in/out picker (ten unit motions drawn as SIX family
+  cards, Slide and Wipe carrying their directions as arrows; blocks/motionPresets.ts):
+  presentational, hosts hold the state - every wizard Animation step whose design has a unit to
+  move (wizard/) and a saved graphic's control page (home/). The no-code surface for the 80%
+  case; the timeline above stays the Advanced editor. Contract in src/blocks/AGENTS.md.
 - **LegacyTimeline** (Phase 8) - the READ-ONLY chart of a legacy region the importer REFUSES:
   measured motion written inline (`x: -track.scrollWidth`), or a loop it would have to guess at.
   Such a template can never be auto-converted, and regenerating it would discard its owner's

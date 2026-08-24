@@ -60,7 +60,11 @@ Two measured constraints:
 - **After Entry, the rail's 216px leaves the row before either pane sees it.** A WORKING left
   pane (`.wz-body-working`, the Import flow's Text step) lifts the measure cap and clamps the
   preview, or the placement canvas drops under the 700px floor `e2e/import-graphic.spec.ts`
-  holds.
+  holds. **Only a step whose left pane is a CANVAS may wear it.** The SVG mapping step did,
+  from when it drew its own artwork; its left pane is a form, and the class was taking the
+  preview down to ~275px wide - the one surface that can run the emitted fit, on the step where
+  the reader decides whether their text fits (docs/SVG_IMPORT_PLAN.md §6a step 1). Dropping it
+  puts the preview back at 614x345 on a 1366x768 laptop, four times the area.
 - **The Entry step's HEIGHT budget still binds** (`e2e/wizard-entry-fit.spec.ts`, 1366x768):
   cards share the column, and the grid's 10px came off the hero's title margin. Grow one, pay
   from another.
@@ -192,16 +196,15 @@ says a download shows the browser's IP to Google first); upload (woff2/woff/ttf/
 CustomFont, embedded in template.assets + every export); and Local Font Access (Chromium only,
 permission-gated), EMBEDDED exactly like an upload so playout never depends on the machine's
 fonts. The **Animation step** is the standard one - with ONE difference for this category:
-its cards are the UNIVERSAL in/out bank (`components/MotionPresetPicker.tsx` over
-`blocks/motionPresets.ts` - ten unit motions) in place of the category's four whole-unit
-presets, which the bank stands in for (`draft.ts` `isWholeUnitPreset` hides their cards; the
-SVG layer stagger stays beside them); a pick lives in `draft.animation.motionIn/motionOut` and
-is written AT BUILD by `withUniversalMotion` (the default maps design-fade -> fade, so an
-undecided design lands on the same data the card it shows lit would write), through the same
-engine the saved graphic's control page applies after - so the wizard preview, the created
-graphic and the page that reads it back agree by construction (`usesUniversalMotion` is the one
-switch; every other category keeps its tuned bank here and meets the universal one on the
-control page). Pinned by e2e/motion-presets.spec.ts.
+the UNIVERSAL in/out bank LEADS (`components/MotionPresetPicker.tsx` over
+`blocks/motionPresets.ts` - ten unit motions drawn as SIX family cards) in place of the
+category's four whole-unit presets, which the bank stands in for (`draft.ts`
+`isWholeUnitPreset` hides their cards; the SVG layer stagger stays beside them); a pick lives
+in `draft.animation.motionIn/motionOut` and is written AT BUILD by `withUniversalMotion` (the
+default maps design-fade -> fade, so an undecided design lands on the same data the card it
+shows lit would write), through the same engine the saved graphic's control page applies after
+- so the wizard preview, the created graphic and the page that reads it back agree by
+construction. Pinned by e2e/motion-presets.spec.ts.
 The **Prepare step** carries the two artwork decisions: ERASE baked-in text (source-px rects
 drawn on DesignPrepCanvas -> assets/eraseRegion flat-fill; flat verdicts apply immediately,
 non-flat holds behind "Use it anyway"). **It OPENS with the box already drawn** -
@@ -276,7 +279,21 @@ including a registry-wide check that a setup value lands on the field it NAMES (
 positional - out-of-order emission would silently put the club colour in the period chip);
 the Style step has TWO size knobs (Graphic
 size -> --scale, Text size -> --type-scale); the Animation step renders the slide family as ONE
-card with a direction-of-travel picker. WizardPreview cancels pending lifecycle-demo timers when
+card with a direction-of-travel picker.
+
+**THE ANIMATION STEP OFFERS THE UNIVERSAL BANK IN EVERY CATEGORY** - the switch
+(`draft.ts` `usesUniversalMotion`) asks the BUILT TEMPLATE whether it has a unit to move, not
+what category it is. Where the design has choreographies of its own they lead, in their own
+grid, and the six universal families sit under a **"Simple motion"** `<details>` beneath them
+(open from the start when the graphic already holds one). Where the design's own presets ARE
+the whole-unit kind - the imported design - the bank leads and those cards stand down. The
+reason it is an addition and not a replacement is measured: no catalog preset is a whole-unit
+motion the bank duplicates (they all move a box AND stagger what is inside it), so cutting them
+would remove taste, not duplication.
+
+**THE EASING DROPDOWN REACTS TO THE MOTION** (`blocks/motionPresets.ts` `easingsForMotions`) and
+shows the no-code `plain` names. Picking a motion that cannot render the current curve drops the
+choice to Auto rather than keeping a setting that does nothing. WizardPreview cancels pending lifecycle-demo timers when
 a debounced srcdoc commits (a stale stop() must never blank the fresh document), pushes field
 values from a latest-template ref, and gates the auto-entrance on `document.fonts.ready`
 (capped) so a font choice shows on the entrance itself. Pinned by e2e/wizard-preview.spec.ts,
