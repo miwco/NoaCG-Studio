@@ -197,6 +197,33 @@ at once and CI already builds each of them, previews are **opt-in**:
 Vercel build for every non-`main` branch unless the head commit message contains
 `[preview]`. `main` always builds - the script fails open (builds) on any error.
 
+## What Vercel builds (and why it is not `npm run build`)
+
+`vercel.json`'s `buildCommand` runs **`npm run build:vercel`**, not the full `npm run build`.
+The two are deliberately different:
+
+- **`npm run build` is the gate.** Typecheck (`tsc` twice), `eslint`, `depcruise`, the ~30
+  `node --test` suites, the repo-shape and shared-instruction checks. It runs on the laptop
+  and in CI, and CI gates the merge - so by the time a commit reaches `main` that whole
+  chain has already passed on that exact commit.
+- **`npm run build:vercel` is the deploy.** It produces the artifact and keeps only the
+  checks CI cannot substitute for: `check-vercel-config` and `check-function-budget` (both
+  refuse the deployment BEFORE it exists, so a failure shows nowhere on the Vercel dashboard
+  - each froze production once), `check-api-route-depth`, and `check-client-secrets` run
+  twice - once on source, once against the built `dist`, which is the only place the real
+  output is inspected.
+
+Why: Vercel bills Build CPU minutes against the plan's monthly credit, and re-running a
+chain CI already passed cost about 78 s of every ~238 s production build - roughly a third
+of the monthly credit for zero added safety. Measured on the 2026-08-23 production build:
+`tsc` + `tsc -p tsconfig.api.json` + `eslint` + `depcruise` were 65 s, the `node --test`
+suites 13 s. The remaining large phase is Vercel's own per-function TypeScript compile of
+`api/` (~89 s for 11 functions) which is the builder's, not ours, and has no skip flag.
+
+**If you add a check that must run at deploy time, add it to `build:vercel` too** - putting
+it only in `build` means Vercel never runs it. The test for "must" is narrow: it either
+inspects the built output, or it catches a failure that is invisible on the dashboard.
+
 ## Where to look when production stops updating
 
 1. **The rolling issues** (above) - if the machinery works, the answer is already filed.
