@@ -386,8 +386,17 @@ test('a reloaded browser source reads the log from where it left off, not from r
 
   // THE BOUND: the boot read starts one row before the play, so the airing comes back in full
   // and nothing older than it is fetched at all. Row 0 - the old behaviour - would be a 0 here.
+  //
+  // It is the LOWEST read that says this, never the first one. The outgoing document polls the
+  // log every 400 ms and those requests are still in flight while the reload navigates, so the
+  // first thing this route sees is routinely the old page asking from the HEAD - which is how
+  // `reads[0]` read 7 against an expected 4 in CI on 2026-08-24 while the boot read itself,
+  // `after=4`, sat two entries later in the very same trace. Every straggler is at or past the
+  // head, so it can never mask a boot read that started too early; the minimum is exactly the
+  // claim, and it fails at 0 for the old whole-log walk and at the cursor for a bound read off
+  // the wrong end of the baseline.
   expect(reads.length, 'the reloaded source must have read the log').toBeGreaterThan(0);
-  expect(reads[0]).toBe(play!.id - 1);
+  expect(Math.min(...reads), 'nothing older than the airing’s own play row may be fetched').toBe(play!.id - 1);
 
   await ctl.close();
   await air.close();
