@@ -231,11 +231,22 @@ with each other and three of them are the user's to fix:
 
 | State | What the app saw | What it says |
 |---|---|---|
-| `permission` | `navigator.permissions` reports `prompt`/`denied`, or the call timed out with the permission not granted | Your browser has not allowed this site to reach your local network. Answer the prompt, or allow it in the site settings. |
-| `agent` | fetch failed fast with the permission granted | The NoaCG agent is not running on that address. Run `noacg caspar agent`. |
+| `permission` | `navigator.permissions` reports `prompt` | Your browser is asking - answer the prompt at the top of the window. |
+| `permission` | it reports `denied` | Allow "local network access" for this site, in the icon left of the address. |
+| `permission` | the query threw, so this browser has no such permission | This browser will not do it at all and offers nothing to grant (Safari). Use Chrome or Edge, or `noacg caspar play`. |
+| `agent` | `/health` unreachable with the permission not in the way | The agent is not running on that address. Run `noacg caspar agent`. |
+| `agent` | `/health` answered, then a route came back 403 | The agent is running for a **different** deployment. Restart it with `--origin <this site>`. |
 | `token` | agent answered `/health`, then 401 | The agent is running but rejected the token. Re-copy it from the terminal. |
-| `server` | agent answered, AMCP connect/refuse | CasparCG did not answer on `<host>:<port>`. Names the socket error. |
+| `server` | agent answered, the AMCP socket did not | CasparCG did not answer on `<host>:<port>`, with the socket error in brackets. |
+| `server` | agent answered, and so did CasparCG - with a `4xx` | CasparCG refused the command, quoting its status line. Check the channel and layer. |
 | `ok` | AMCP `201 VERSION OK` | Shows the server's own version string. |
+
+The last two are one state and two sentences on purpose: "nothing answered on that address" and
+"the server answered and said no" send the operator to completely different places, and a single
+`server` red would have hidden which one it was.
+
+`config` is a fifth state for settings that are not filled in yet, and it is why **Test
+connection** is disabled rather than offering a call that must fail.
 
 `permission` is only ever offered when it is possible - a NoaCG on `http://localhost` or a LAN
 self-host cannot hit it (§1b), and saying so there would be a lie.
