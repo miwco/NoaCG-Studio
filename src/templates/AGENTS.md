@@ -518,6 +518,17 @@ itself as a broken one. **Full contract, measurements and traps: `docs/FOOTPRINT
   `e2e/catalog/footprint-stability.spec.ts`, which selects on the marker rather than a list, so a
   category is covered the day it flips. **Measure BOTH axes** - a `min-width` floor does not
   stabilise a board, it changes which dimension moves.
+- **THE RESERVE IS A LAYOUT NUMBER, AND IT IS SHIPPED** - the runtime writes it into the template as
+  an inline `height` / `min-height` that stays there, so a reserve measured wrong is what the graphic
+  puts on air. Three ways it was a measurement of the MOMENT instead of the design, all found
+  2026-08-24 by chasing `catalog-baseline` failing under load with a DIFFERENT element set each run
+  (docs/FOOTPRINT_STABILITY.md, last section): read off the VISUAL rect, so an animated ancestor's
+  transform landed in it (gt03 reserved 418px for a 400px clock); the `fonts.ready` recalibration
+  keeping the panel `min-height` it was re-measuring, so the fallback face floored the real one; and
+  that same pass re-measuring while the OTHER lines were still pinned from the previous one. **A rect
+  is the visual box - never measure a reserve with one.** The gate is
+  `e2e/stage-fit-determinism.spec.ts` (default suite, platform-free, mutation-tested): a reserve must
+  come back the same across recalibrations and whatever the webfonts do.
 - **A STAGED DESIGN SHIPS THE SIZE ITS CSS DECLARES - the shrink is the OPERATOR'S, never the
   design's own words.** The stage puts no floor under a `line-height` (**a LINE MASK still does** -
   `overflow: hidden` sized to the line box against a ~1.2em glyph box, so a tight leading clips

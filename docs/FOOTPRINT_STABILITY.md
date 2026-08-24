@@ -195,3 +195,59 @@ letter-space of tracked caps, which `scrollWidth` counts and no glyph occupies (
 over card48's line reports 162px against a 157px box, and its tracking is 4.8px; releasing lt51's
 mask changes zero pixels). They belong with the nineteen vertical rows above - the sweep's
 tolerance is what changes at L, not the design.
+
+
+## The reserve is a LAYOUT number, and three things kept making it a measurement of the moment
+
+**Found 2026-08-24**, chasing a flake rather than a design: `e2e/catalog-baseline.spec.ts` ("every
+catalog variant renders identically") failed under a loaded machine with a DIFFERENT set of elements
+each run - al01's four severity tiles and gt04's clock together on one run, al01 alone on the next,
+and both passing when the same tree was run on its own. A drifting set is the signature of a race,
+not of drift, and the race was here: nothing about the graphics had moved, the measurement had.
+
+The reserve is not a private number. `stageFitRuntimeJs` writes it into the template as an inline
+`height` on each line and a `min-height` on the panel, and those stay - so whatever the fit measured
+at load is what the graphic SHIPS, what the render baseline fingerprints, and what an exported
+package puts on air. (The baseline's `gsap.set(..., {clearProps: 'all'})` does not take it back off:
+GSAP clears what GSAP wrote, and this was written by the design's own runtime.)
+
+Three separate ways the same number came out differently on two runs of the same unchanged design:
+
+- **The reserve was read off the VISUAL box.** `getBoundingClientRect()` reports the box after every
+  ancestor transform, so a line inside a CSS-animated badge is measured through whatever that
+  animation was doing on the frame the fit ran. gt03's badge SCALES as it pops, and its clock
+  reserved **418px on one run and 412px on the next for an element that is 400px in layout** - the
+  reserve was the pop, frozen at a random moment. gt04's badge only TRANSLATES, which should cost
+  nothing, and still came back 399.9999694824219 or 400.0000305175781 from one frame to the next, so
+  `Math.ceil` shipped 400 or 401. Fixed by reading the layout box (`stageLayoutHeight`:
+  `getComputedStyle().height` plus padding and border, snapped to Blink's own 1/64px layout unit).
+  `offsetHeight` is transform-blind too but rounds to a whole pixel, and a reserve rounded DOWN is a
+  clipped design.
+- **The recalibration kept the panel's own reserve while re-measuring it.** The `document.fonts.ready`
+  pass exists to re-measure everything against the real face, and it cleared every remembered number
+  except the `min-height` it had itself written - so the FALLBACK pass became a floor under the real
+  one. The panel could only ever come back the same or taller, and what it kept was whatever the
+  substitute face happened to fill: 189px held against a real 188.5px on the alert strip. Which face
+  the first pass sees is decided by whether the woff2 arrived before DOMContentLoaded, which is a
+  property of the machine's load - that is the whole path from "busy laptop" to "shipped reserve".
+- **The recalibration re-measured while the OTHER lines were still pinned.** Each line clears its own
+  inline height before measuring itself, which is not the same thing: the fit runs in document order,
+  so while line 1 is measured lines 2..n still hold the previous pass's heights, and a row pinned
+  half a pixel off its natural height moves the box the line above it sits in. The alert tiles
+  reserved 188 with the siblings pinned and 189 from a clean sheet. `stageUnpin` now takes every line
+  back to the design's own CSS before any of them is measured.
+
+**The gate is `e2e/stage-fit-determinism.spec.ts`** (default suite, mutation-tested against all
+three), and it asks the property directly rather than comparing a fingerprint: a reserve must come
+back the same across repeated recalibrations of an unchanged layout, and the same whether the
+webfonts arrive immediately or 900ms late. It is deliberately platform-free - it compares a run
+against itself, never against a recorded number - so it guards on every runner, while
+`catalog-render-baseline` can only compare on the platform that recorded it (win32 today).
+
+**Measured effect on the catalog: 13 of 509 variants, 78 elements** - al01/al02/al04/al12 (four
+severity tiles each, 188 -> 189), card62, card76, gt02, gt03 (clock 412-418 -> a steady 400), sb23, sb25
+(245.4 -> 213), ss15 (372 -> 312), ss20, tt02. **Every one of them reserves LESS room than before**,
+and every new number is the design's own layout box: these panels were reserving room for a
+transform. Whole-catalog font-timing sensitivity went from "some variant moves on every pairing" to
+zero. The win32 `catalog-render-baseline` therefore has 13 variants to re-record, and the healthy
+diff is exactly that list - a reserve getting smaller, nothing else.
