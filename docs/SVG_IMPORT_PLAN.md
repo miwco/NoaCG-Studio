@@ -329,6 +329,36 @@ no shape drawn behind it (it was placed on empty artwork, or over shapes now hid
 honest fallback is its own slot, the way a bound line with no shape behind it keeps its drawn
 width.
 
+**THE ROOM RULE FOR A PLACED LINE** (settled 2026-08-24, before the refactor was written - it is
+the one decision in step 2 that is design and not mechanics):
+
+> **A placed line's room is its own SLOT: the width its wrapper declares.** Nothing was drawn
+> behind it - it sits on empty artwork, or over shapes the template now hides - so there is no
+> shape to measure a margin from, and the slot is the only statement anybody actually made about
+> how much room the line gets.
+
+Three things make the slot the honest answer rather than merely the available one:
+
+- **It is AUTHORED, not inferred.** The slot is measured at placement from the outlined group's
+  own box (`components/wizard/draft.ts`), or from the artwork's edge for a field added on empty
+  design, and the canvas resize handle re-states it (`blocks/designLayout.ts` `setLineFit`).
+  Everywhere else in this ladder an authored value beats a found one - the panel that grows is
+  PICKED, never guessed (§3) - and a container search that overrode a slot the author had just
+  dragged would break the resize handle to obey a rectangle nobody pointed at.
+- **It mirrors the bound line's fallback exactly.** A bound line with no shape behind it keeps
+  the width it was DRAWN at; a placed line keeps the width it was PLACED at. Same sentence, same
+  reason: measure what the design said, never what happens to be on screen.
+- **The slot is a WIDTH, so a placed line does not wrap.** Wrapping in this ladder is only ever
+  allowed into room the artwork already drew - from the line down to the nearest thing below it
+  inside its panel. Nothing under a placed line was drawn for it, so there is no such room to
+  claim, and reflowing into it would print through somebody else's layer. A placed line fills its
+  slot, shrinks to the 55% floor, and is then REPORTED - which is the half that was missing.
+
+The ladder therefore takes over exactly the lines `fitPlacedText` had (`data-fit="shrink"`, the
+mode every placed line is born in). A line the author switched to `overflow` still runs free and
+a `wrap` line still reflows in CSS, both unreported, because both are the author saying the cap
+does not apply - that vocabulary is out of scope below and unchanged.
+
 **OUT of scope, deliberately** - each of these is the "larger field-system cleanup" the owner
 refused, and none of them blocks step 4:
 

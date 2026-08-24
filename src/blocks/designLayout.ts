@@ -17,7 +17,7 @@
 
 import type { SpxTemplate } from '../model/types';
 import { FONTS, fontById, fontFaceCss, fontStack } from '../model/fonts';
-import { TEXT_FIT_HOOK, TEXT_FIT_MARKER, TEXT_FIT_RUNTIME_JS } from '../templates/shared/textFit';
+import { SVG_TEXT_FIT_MARKER, TEXT_FIT_HOOK, TEXT_FIT_MARKER, TEXT_FIT_RUNTIME_JS } from '../templates/shared/textFit';
 import { addFieldToDefinition, addLayer, appendCss, appendJs, nextFieldId, setCssDeclaration } from './edit';
 
 export interface LinePlacement {
@@ -335,8 +335,13 @@ export function lineFit(html: string, css: string, fieldId: string): LineFit | n
  * pattern blocks/lottieInsert.ts uses): the block is appended only when absent, and the
  * shared update()'s optional hook is added only when the template predates it — a project
  * created before the fit contract still gets working shrink, with no other line touched.
+ *
+ * An IMPORTED SVG is the one design that already has a fit: its ladder measures placed lines
+ * too (docs/SVG_IMPORT_PLAN.md §6b), so a template carrying it is left exactly as it is — one
+ * fit per graphic, and the ladder is the one that can report a value as too long.
  */
 export function ensureTextFitRuntime(template: SpxTemplate): SpxTemplate {
+  if (template.js.includes(SVG_TEXT_FIT_MARKER)) return template;
   let js = template.js;
   if (!js.includes(TEXT_FIT_MARKER)) {
     js = appendJs(js, 'Fit placed text to its slot (design-owned — the timeline never touches this).', TEXT_FIT_RUNTIME_JS);

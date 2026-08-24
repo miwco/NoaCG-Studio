@@ -2,8 +2,9 @@ import { test, expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { awaitPreviewRebuild } from './_preview';
 import { elementPoint } from './_canvas';
+import { settleDurableWrites } from './_durable';
 import { previewFrame } from './_frame';
-import { SCOREBUG_SVG } from './_svg-import';
+import { intoProduction, SCOREBUG_SVG } from './_svg-import';
 
 // The SVG import road, door to export (docs/SVG_IMPORT_PLAN.md P1): a layered
 // Illustrator-shaped SVG dropped on the Import door becomes a playable template whose text
@@ -737,10 +738,12 @@ test('svg import: outlined text — a glyph-shaped group becomes a placed live f
   // sized from the measured cap height (40 design px / 0.72 ≈ 56), in the shapes' own fill.
   expect(state.css).toMatch(/#fw0 \{\n {2}position: absolute;\n {2}left: calc\(60px \* var\(--scale\)\);[^}]*top: calc\(74px \* var\(--scale\)\);/);
   expect(state.css).toMatch(/#f0 \{[^}]*font-size: calc\(56px \* var\(--scale\)\);[^}]*color: rgb\(255, 255, 255\);/);
-  // Both fit runtimes coexist: the SVG's own shrink and the placed line's.
+  // ONE FIT (docs/SVG_IMPORT_PLAN.md §6b): the ladder measures the placed line too, so the
+  // placed-text runtime is not emitted at all and update() calls one hook, not two.
   expect(state.js).toContain('function fitSvgText');
-  expect(state.js).toContain('function fitPlacedText');
+  expect(state.js).not.toContain('function fitPlacedText');
   expect(state.js).toMatch(/typeof fitSvgText === 'function'\) fitSvgText\(\)/);
+  expect(state.js).not.toContain('typeof fitPlacedText');
   // A hidden group is not a layer: no registry part, no phantom timeline row. The mark is.
   expect(state.parts).not.toContain('#Name|block');
   expect(state.parts).toContain('#Mark|block');
@@ -1044,6 +1047,108 @@ test('svg import: copy too long for any size floors instead of vanishing, and sa
   expect(state.size).toBeCloseTo(state.drawnSize * 0.55, 1);
   expect(state.text).toHaveLength(400); // the copy is whole - never trimmed to fit
   expect(state.overflowing).toEqual(['f0']);
+});
+
+// ── ONE FITTING SYSTEM (docs/SVG_IMPORT_PLAN.md §6b) ─────────────────────────────────────
+// An imported SVG used to carry TWO fit runtimes: the ladder for the layers the designer drew,
+// and the raster import's `fitPlacedText` for the HTML lines placed on the artwork afterwards -
+// which had no room measurement, no height check and NO OVERFLOW REPORT. So the operator's
+// too-long warning covered the drawn text and went silent on an outlined-text field, which is
+// exactly the kind of field the road ahead adds more of.
+//
+// The fixture is the outlined export the fallback exists for: a backplate and one group of glyph
+// shapes named "Name", which the mapping step replaces with a live field.
+const OUTLINED_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <g id="Backplate"><rect x="10" y="10" width="380" height="180" rx="8" fill="#161a22"/></g>
+  <g id="Name">
+    <path d="M60 80 h20 v40 h-20 Z" fill="#ffffff"/>
+    <path d="M85 80 h20 v40 h-20 Z" fill="#ffffff"/>
+    <path d="M110 80 h20 v40 h-20 Z" fill="#ffffff"/>
+    <path d="M135 80 h20 v50 h-20 Z" fill="#ffffff"/>
+    <path d="M160 80 h20 v40 h-20 Z" fill="#ffffff"/>
+    <path d="M185 80 h20 v40 h-20 Z" fill="#ffffff"/>
+  </g>
+</svg>`;
+
+/** Drop the outlined file and replace its one glyph group with a live field, sampled `sample`. */
+async function replaceOutline(page: Page, sample: string) {
+  await dropSvgMarkup(page, OUTLINED_SVG, 'outlined.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-outline-o0').locator('input[type=checkbox]').check();
+  await page.getByTestId('map-svg-outline-sample-o0').fill(sample);
+}
+
+test('svg import: an outlined-text field is measured by the SAME ladder, against its own slot', async ({ page }) => {
+  await replaceOutline(page, 'Ada');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const read = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      const w = window as unknown as {
+        update: (json: string) => void;
+        svgFitWidths: Record<string, number>;
+        svgFitRoom: Record<string, { width: number; height: number }>;
+        svgFitSizes: Record<string, number>;
+        noacgTextOverflow: () => string[];
+      };
+      w.update(JSON.stringify({ f0: v }));
+      return {
+        drawnWidth: w.svgFitWidths.f0,
+        room: w.svgFitRoom.f0,
+        drawnSize: w.svgFitSizes.f0,
+        size: parseFloat(getComputedStyle(el).fontSize),
+        text: el.textContent,
+        overflowing: w.noacgTextOverflow(),
+      };
+    }, value);
+
+  // THE ROOM RULE. The placed line has no shape behind it - the group it stands in for is
+  // hidden - so its room is its own SLOT, the width measured from that group's box. It is not
+  // the width of the sample typed into it, which is the defect the drawn lines were cured of.
+  const drawn = await read('Ada');
+  expect(drawn.room.width).toBeGreaterThan(drawn.drawnWidth);
+  // A slot is a WIDTH: nothing under a placed line was drawn for it, so it never wraps.
+  expect(drawn.room.height).toBe(0);
+  expect(drawn.size).toBe(drawn.drawnSize);
+  expect(drawn.overflowing).toEqual([]);
+
+  // Past the slot it shrinks - and past the floor it is REPORTED, which is the half a placed
+  // line never had. The copy stays whole: warned about, never cut.
+  const long = await read('A'.repeat(400));
+  expect(long.size).toBeCloseTo(long.drawnSize * 0.55, 1);
+  expect(long.text).toHaveLength(400);
+  expect(long.overflowing).toEqual(['f0']);
+});
+
+test('svg import: the operator is WARNED about an outlined-text field that cannot hold its copy', async ({ page }) => {
+  // THE PROOF OF THE MERGE. The warning has always ridden `noacgTextOverflow()`, and every
+  // surface where a value is typed reads it (docs/SVG_IMPORT_PLAN.md §3, "THE OVERFLOW
+  // WARNING") - so a field whose fit could not report went silent on all five of them at once.
+  // Measured on the cue editor because that is where the value is typed, and against the
+  // PREVIEW monitor's own answer: only the rendered graphic can say whether copy fits, which is
+  // why no source check stands in for this.
+  await replaceOutline(page, 'Ada');
+  await intoProduction(page, 'Outlined name', 'Warning Night');
+  await settleDurableWrites(page);
+
+  const name = page.getByTestId('cue-field-f0');
+  const note = page.getByTestId('cue-overflow');
+
+  // Quiet first, or "it warns" would also be true of a surface that always warns.
+  await name.fill('Ada');
+  await expect(note).toHaveCount(0);
+  await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
+
+  await name.fill('A'.repeat(400));
+  await expect(note).toContainText('too long for the design');
+  await expect(note).toContainText('Name');
+  await expect(page.getByTestId('cue-field-over-f0')).toBeVisible();
+
+  // …and it tracks the value rather than latching on the cue.
+  await name.fill('Ada');
+  await expect(note).toHaveCount(0);
+  await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
 });
 
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {

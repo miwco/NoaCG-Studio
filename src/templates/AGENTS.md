@@ -319,6 +319,10 @@ tile-wall presentation, which no longer ships):
   `ensureTextFitRuntime`; the shared `update()` calls it via an optional hook (the
   `revealNextStep` idiom). It re-fits on `document.fonts.ready` as well as DOM-ready - a
   DOM-ready-only pass measures the FALLBACK face and overflows once the real one swaps in.
+  **The RASTER import is its only caller now**: an imported SVG fits its placed lines with the
+  FIT LADDER instead (importedDesign/svg.ts, docs/SVG_IMPORT_PLAN.md §6b), so `ensureTextFitRuntime`
+  recognises that design by `SVG_TEXT_FIT_MARKER` and leaves it alone - one fit per graphic, and
+  the ladder is the one that can report a too-long value to the operator.
 
 ## types/ - the GRAPHIC TYPE registry (docs/GRAPHIC_TYPES.md)
 

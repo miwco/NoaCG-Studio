@@ -122,7 +122,10 @@ mode is how a too-long operator value answers it - `overflow` (no cap; what a pr
 template reads as, so nothing changes under it), `wrap` (CSS), or `shrink` (one row, condensed
 by templates/shared/textFit.ts's `fitPlacedText()`, marked `data-fit="shrink"` on the element).
 `ensureTextFitRuntime` injects that design-owned runtime - and the shared update()'s optional
-hook when the template predates it - ONCE, idempotently (the lottieInsert bootstrap pattern).
+hook when the template predates it - ONCE, idempotently (the lottieInsert bootstrap pattern),
+and NOT AT ALL into an imported SVG: that design runs ONE fit, its own ladder, which measures
+placed lines too (`SVG_TEXT_FIT_MARKER`, docs/SVG_IMPORT_PLAN.md §6b - only the ladder can
+report a value as too long, so a second runtime there would silence the operator's warning).
 New lines from `addPlacedLine` default to `shrink` with the room to the artwork's right edge.
 
 `designStretchInfo(html, css)` derives a design's SCALING MODE + 9-slice guides from the

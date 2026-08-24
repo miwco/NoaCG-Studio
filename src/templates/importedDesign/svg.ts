@@ -258,12 +258,20 @@ function svgFontCss(svg: DesignSvg): string {
  * shrink-not-condense rule. Design-owned JS OUTSIDE the marked region, so the data
  * conversion and every export carry it untouched.
  *
- * Its name is `fitSvgText`, NOT the shared update()'s optional `fitPlacedText` hook: that
- * name belongs to the HTML placed-line shrink runtime (templates/shared/textFit.ts), which
- * blocks/designLayout installs by that exact marker the first time a placed field asks for
- * shrink - an outlined-text stand-in on this very design (plan §1.A). Two functions of one
- * name would leave the later declaration winning and the other fit silently dead, so the SVG
- * fit gets its own hook line in update() (SVG_FIT_HOOK below) and both can coexist.
+ * ONE FIT PER GRAPHIC (plan §6b). This runtime measures BOTH kinds of line an imported SVG
+ * can carry: the `<text>`/`<tspan>` layers the designer drew, and the HTML lines PLACED on the
+ * artwork afterwards - an outlined-text stand-in (plan §1.A) or a field added later. The
+ * placed ones used to have a fit of their own (`fitPlacedText`, templates/shared/textFit.ts,
+ * which the RASTER import still uses) with no room measurement, no height check and no
+ * overflow report - so the operator's too-long warning covered the drawn text and went silent
+ * on an outlined-text field. `blocks/designLayout.ts` now leaves a template carrying this
+ * ladder alone, and update() calls this one hook instead of two.
+ *
+ * The room a PLACED line gets is its own SLOT - the width its wrapper declares - because
+ * nothing was drawn behind it to measure a margin from. The slot is authored (measured from
+ * the outlined group's box, or dragged on the canvas), which is why it beats any rectangle a
+ * container search might find under it; and being a width alone, a placed line does not wrap.
+ * The full reasoning is plan §6b "THE ROOM RULE FOR A PLACED LINE".
  */
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
@@ -291,13 +299,64 @@ var svgFitOver = {};                            // id -> true when even the floo
 var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the drawn size
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
+// EVERY line this design fits, of both kinds. The layers the DESIGNER drew are <text>/<tspan>
+// inside the artwork; a PLACED line is an HTML span the design got afterwards — a stand-in for
+// text that was exported as outlines, or a field added later — and it lives after </svg>, in
+// the same box. One list, so one ladder walks them and one report names them.
 function svgFitNodes() {
-  var all = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
   var out = [];
-  for (var i = 0; i < all.length; i++) {
-    if (/^f\\d+$/.test(all[i].id) && typeof all[i].getComputedTextLength === 'function') out.push(all[i]);
+  var drawn = document.querySelectorAll('.${PREFIX}-art text[id], .${PREFIX}-art tspan[id]');
+  for (var i = 0; i < drawn.length; i++) {
+    if (/^f\\d+$/.test(drawn[i].id) && typeof drawn[i].getComputedTextLength === 'function') out.push(drawn[i]);
+  }
+  // data-fit="shrink" is the mode a placed line is born in and the only one that ever had a
+  // runtime: a line the author set to run free, or to reflow in CSS, is saying the cap does
+  // not apply to it, so the ladder leaves it exactly as it was.
+  var placed = document.querySelectorAll('.${PREFIX}-box [data-fit="shrink"]');
+  for (var j = 0; j < placed.length; j++) {
+    if (/^f\\d+$/.test(placed[j].id)) out.push(placed[j]);
   }
   return out;
+}
+
+/** A line PLACED on the artwork rather than drawn in it — an HTML span, which measures and
+ *  paints through different calls than an SVG text node does. */
+function svgFitPlaced(el) {
+  return typeof el.getComputedTextLength !== 'function';
+}
+
+/** Painted px per LAYOUT px for a placed line — what an entrance that scales the whole design
+ *  puts between the two. A drawn layer never needs this: getComputedTextLength answers in the
+ *  SVG's own user units, which no transform above it can move. */
+function svgPlacedScale(el) {
+  var slot = el.parentNode;
+  var layout = slot && slot.offsetWidth;
+  return layout > 0 ? slot.getBoundingClientRect().width / layout : 1;
+}
+
+/** The width of whatever text the node holds right now, in the space its room is measured in:
+ *  user units for a drawn layer, LAYOUT px for a placed one. Each is compared only against its
+ *  own room, and both spaces stand still while an entrance is mid-flight — so a value the design
+ *  cannot hold is caught during the animation exactly as it is at rest. */
+function svgTextWidth(el) {
+  return svgFitPlaced(el)
+    ? el.getBoundingClientRect().width / svgPlacedScale(el)
+    : el.getComputedTextLength();
+}
+
+// THE ROOM A PLACED LINE GETS IS ITS OWN SLOT — the max-width its wrapper declares. Nothing was
+// drawn behind it (it sits on empty artwork, or over shapes this template hides), so there is no
+// shape to take a margin from, and the slot is the only statement anybody made about how much
+// room the line has: measured from the outlined group's own box at import, or dragged on the
+// canvas. That is the same sentence as the drawn line's fallback — a layer with no shape behind
+// it keeps the width it was DRAWN at — and it is a WIDTH, so a placed line never wraps: the room
+// below it belongs to artwork drawn for something else.
+function svgFitSlot(el) {
+  var slot = el.parentNode;
+  if (!slot || !slot.offsetWidth) return 0;
+  var cap = parseFloat(getComputedStyle(slot).maxWidth);
+  // No cap at all: the wrapper hugs its line, so its own box is the only room on offer.
+  return cap > 0 ? cap : slot.offsetWidth;
 }
 
 // Runs as the page parses, with the artwork above it and update() not yet callable.
@@ -318,7 +377,7 @@ function measureSvgBudgets() {
     // Any previous fit has to come off first, or the measurement compounds.
     el.style.fontSize = '';
     if (live !== drawn) el.textContent = drawn;   // measure the design, put the value back
-    svgFitWidths[el.id] = el.getComputedTextLength();
+    svgFitWidths[el.id] = svgTextWidth(el);
     svgFitSizes[el.id] = parseFloat(getComputedStyle(el).fontSize) || 0;
     if (live !== drawn) el.textContent = live;
   }
@@ -385,6 +444,13 @@ function measureSvgRoom() {
     var drawn = svgFitDrawn[el.id];
     el.style.fontSize = '';
     if (live !== drawn) el.textContent = drawn;   // measure the DESIGN, then put the value back
+    // A PLACED line's room is its slot, and a slot has no height — one line, filled and then
+    // shrunk. Nothing else about it is measured, because nothing else about it was drawn.
+    if (svgFitPlaced(el)) {
+      svgFitRoom[el.id] = { width: svgFitSlot(el), height: 0, top: 0 };
+      if (live !== drawn) el.textContent = live;
+      continue;
+    }
     var box = el.getBoundingClientRect();
     var scale = box.width > 0 ? el.getComputedTextLength() / box.width : 1;   // screen px -> user units
     var panel = svgFitContainer(el);
@@ -447,7 +513,9 @@ function svgPaintLines(el, lines, size) {
 
 /** The widest of the painted lines, which is what has to fit the budget. */
 function svgBlockWidth(el) {
-  if (!el.children.length) return el.getComputedTextLength();
+  // A placed line is never painted as tspans (it does not wrap), and its own box is its width
+  // however somebody has marked its text up by hand.
+  if (svgFitPlaced(el) || !el.children.length) return svgTextWidth(el);
   var widest = 0;
   for (var i = 0; i < el.children.length; i++) {
     var w = el.children[i].getComputedTextLength();
@@ -562,8 +630,11 @@ var svgPanelTexts = [];                         // the bound lines drawn inside 
 
 function svgPanelNode() { return document.querySelector('.${PREFIX}-art .${PREFIX}-panel'); }
 
-/** Screen px per user unit for the space an element's own transform is written in. */
+/** Screen px per unit of the space an element's own measurements are written in — the CTM of
+ *  the space a drawn layer's transform lives in, and for a PLACED line the painted-to-layout
+ *  ratio, since that is the space its width and its slot are both measured in. */
 function svgUserScale(el) {
+  if (svgFitPlaced(el)) return svgPlacedScale(el);   // both defined in the fit block above
   var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
   return ctm && ctm.a ? ctm.a : 1;
 }
@@ -640,7 +711,7 @@ function stretchSvgPanel() {
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
     if (svgFitRoom[el.id] == null) measureSvgRoom();
     el.style.fontSize = '';                     // at the drawn size — the panel gives the room
-    var over = (el.getComputedTextLength() - svgFitRoom[el.id].width) * svgUserScale(el);
+    var over = (svgTextWidth(el) - svgFitRoom[el.id].width) * svgUserScale(el);
     if (over > need) need = over;
   }
   if (!(need > 0)) return;
@@ -663,11 +734,15 @@ function stretchSvgPanel() {
 }`;
 }
 
-/** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs)
- *  — the SVG fit's own hook is inserted right after it, so update() re-fits the SVG's text
- *  the way it re-fits placed lines. Matched by shape, like blocks/designLayout does. */
-const PLACED_TEXT_HOOK = `  if (typeof fitPlacedText === 'function') fitPlacedText();`;
-const SVG_FIT_HOOK = `  if (typeof fitSvgText === 'function') fitSvgText();       // the SVG's own text layers (below)`;
+/** The shared update()'s optional placed-text hook line (templates/shared/base.ts runtimeJs).
+ *  An imported SVG REPLACES it with its own: the ladder below fits the placed lines too, so
+ *  this design calls one fit rather than two (plan §6b). Matched by shape, like
+ *  blocks/designLayout does. */
+const PLACED_TEXT_HOOK = `  // Designs that fit text to a fixed slot re-measure here (no-op otherwise).
+  if (typeof fitPlacedText === 'function') fitPlacedText();`;
+const SVG_FIT_HOOK = `  // The fit ladder re-measures here — every text layer, the ones the SVG drew and the ones
+  // placed on it alike (no-op otherwise).
+  if (typeof fitSvgText === 'function') fitSvgText();`;
 
 /** The preset to build with — always one of this category's, whatever a carried-over draft says. */
 function designPreset(id: string): AnimPreset {
@@ -791,7 +866,7 @@ ${quizBehaviourCss}
   const js =
     runtimeJs(name, preset.emit(cfg)).replace(
       PLACED_TEXT_HOOK,
-      `${PLACED_TEXT_HOOK}\n${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
+      `${SVG_FIT_HOOK}${quiz ? `\n${quizHook}` : ''}`,
     ) +
     SVG_FIT_JS +
     (svg.stretch ? `\n${stretchRuntimeJs()}` : '') +

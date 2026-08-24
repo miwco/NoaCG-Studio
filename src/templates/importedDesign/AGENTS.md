@@ -39,8 +39,14 @@ e2e/import-stretch.spec.ts.
 **svg01 (importedDesign/svg.ts) is the same category's SVG variant** (docs/SVG_IMPORT_PLAN.md,
 the binding contract + reasoning): the SVG inlined VERBATIM, its own text/image nodes bound
 as `id="fN"` (markup edits: bound ids, `-art`, hidden `-outlined`); sanitized at import
-(assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); overflow-only
-the FIT LADDER (owner ruling 2026-08-23, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
+(assets/svgImport.ts), re-checked by the gate (rules 'svg'/'svg-binding'); ONE FIT for the whole
+graphic (§6b) - the ladder measures the PLACED lines too (an outlined-text stand-in, a field
+added later), so `fitPlacedText` is never emitted here and update() calls one hook, not two. A
+placed line's ROOM is its own SLOT, the width its wrapper declares: nothing was drawn behind it,
+the slot is the authored statement (measured from the outlined group's box, dragged on the
+canvas) and it beats any rectangle a container search might find under it - and being a width
+alone, a placed line never wraps. The ladder itself is overflow-only
+(owner ruling 2026-08-23, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
 panel, grow it only where the author opted in, wrap into the room the design already has, shrink
 to 55%, then report the field** (`noacgTextOverflow()`, read by every operator surface where a
 value is typed - the warning rides the machine-state answer, `control/controlModel.ts`). Three
