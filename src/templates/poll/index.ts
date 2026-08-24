@@ -10,12 +10,16 @@ import { pl01 } from './pl01';
 import { pl02 } from './pl02';
 import { pl03 } from './pl03';
 import { pl04 } from './pl04';
+import { pl05 } from './pl05';
 
 export const POLLS: TemplateVariant[] = [
   pl01, // House Vote — noacg void panel, amber edge (sibling lt11)
   pl02, // Volt Vote — sport results-night slab (sibling lt06)
   pl03, // Frost Vote — glass frosted card (sibling lt08)
   pl04, // Clean Vote — minimal quiet card (sibling lt01)
+  // Appended AFTER pl01, deliberately: resolvePack takes the FIRST design of a family, so the
+  // house KIT keeps pl01 and this one is reached through Browse.
+  pl05, // Floor Vote — noacg wide bottom band, horizontal rows (sibling lt11)
 ];
 
 export function pollById(id: string): TemplateVariant | undefined {

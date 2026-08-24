@@ -18,7 +18,7 @@ import {
   followControlLog,
   type ControlEventRow,
 } from '../control/hostedControl';
-import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../control/matchClockWire';
+import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, rowInstant, type ClockSpec } from '../control/matchClockWire';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -204,7 +204,15 @@ async function boot(): Promise<void> {
       ? clockRowEffect(row, clock, mergedData.get(row.graphic)?.[clock.field], Date.now())
       : null;
     if (clock && effect?.when === 'before') applyClock(row.graphic, clock, effect.value);
-    stage.apply(row.graphic, msg);
+    // An EVENT carries WHEN it happened, from the row's own server time — the same instant every
+    // renderer of this production reads, and the same one a replayed row carried when it was
+    // first written. A graphic that runs a clock of its own (the debate board's two speaking
+    // clocks) anchors to it instead of to this renderer's Date.now(), which is what stops two
+    // browser sources drifting apart and what makes a catch-up replay resume a speech from where
+    // it actually started. `rowInstant` is the match clock's own derivation, reused rather than
+    // re-guessed: a server row's `created_at` wins, and a locally-authored row falls back to now,
+    // which is correct there because that log has exactly one renderer.
+    stage.apply(row.graphic, msg.t === 'event' ? { ...msg, at: rowInstant(row.created_at, Date.now()) } : msg);
     if (clock && effect?.when === 'after') applyClock(row.graphic, clock, effect.value);
     // Status rows ('cue'/'staged'/'live') are for the operator pages; the stage ignored them
     // and so does the report path.

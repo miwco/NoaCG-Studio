@@ -89,6 +89,12 @@ function formatClock(total) {
 function renderClock() {
   var el = document.querySelector('.${prefix}-clock');
   if (el) el.textContent = formatClock(clockSecondsLeft);
+  // A design that draws MORE than the digits — a minute ruler, a drain ring, a progress arc —
+  // defines this and gets told on the same beat the number changes. It is the one paint point
+  // in this runtime, so a hook here fires for the idle preview, every tick, a pause and a
+  // resume alike; a design polling on its own would have to guess all four. Guarded, so a
+  // countdown that only shows numbers emits nothing extra and behaves exactly as before.
+  if (typeof clockPainted === 'function') clockPainted(clockSecondsLeft, clockSeconds());
 }
 
 // One tick: recompute from the deadline (self-correcting — see the header), and at zero stop

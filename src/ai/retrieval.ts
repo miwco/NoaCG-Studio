@@ -268,7 +268,11 @@ export function shortlistFor(
   const signal = new Set<string>();
   let distinctive = 0;
   for (const term of terms) {
-    const hits = browseTemplates({ ...NO_BROWSE_FILTERS, query: term }).best.filter((r) => inPool.has(r.variant.id));
+    // `briefTerm`: this is one term of a brief, not a person's search. See BrowseContext -
+    // the browse surfaces' "your own name ranks first" bonus is an absolute number, and the
+    // score below is multiplied by idf and measured against a relative cut, where an absolute
+    // bonus moves the bar rather than the order.
+    const hits = browseTemplates({ ...NO_BROWSE_FILTERS, query: term }, { briefTerm: true }).best.filter((r) => inPool.has(r.variant.id));
     if (!hits.length) continue;
     const idf = Math.log(pool.length / hits.length);
     if (idf <= 0) continue;
