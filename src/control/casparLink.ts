@@ -104,8 +104,22 @@ export async function localNetworkPermission(): Promise<PermissionState> {
   }
 }
 
-const PRIVATE_HOST =
-  /^(localhost|127\.|::1$|\[::1\]$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/i;
+/**
+ * A loopback or LAN hostname. Every branch is ANCHORED at both ends on purpose: a prefix match
+ * would read `localhost.evil.example` and `10.0.0.1.evil.example` - both ordinary public names -
+ * as local, and then quietly withhold the one diagnosis that would have explained the failure.
+ */
+function isPrivateHostname(hostname: string): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host === '::1') return true;
+  return (
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host) ||
+    /^169\.254\.\d{1,3}\.\d{1,3}$/.test(host)
+  );
+}
 
 /**
  * Whether the permission can even be the problem here. Measured: a page already on a loopback
@@ -116,8 +130,8 @@ export function localNetworkGateApplies(pageOrigin: string, agentUrl: string): b
   try {
     const page = new URL(pageOrigin);
     const agent = new URL(agentUrl);
-    if (!PRIVATE_HOST.test(agent.hostname)) return false; // agent is not on a local address
-    return !PRIVATE_HOST.test(page.hostname);
+    if (!isPrivateHostname(agent.hostname)) return false; // agent is not on a local address
+    return !isPrivateHostname(page.hostname);
   } catch {
     return false;
   }
