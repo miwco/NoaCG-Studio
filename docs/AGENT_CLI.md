@@ -183,6 +183,24 @@ installed from this repository as a marketplace (`claude plugin install noacg@no
 on npm the plugin's MCP server cannot start (`npx -y noacg` has nothing to fetch) while its skill
 and command already work.
 
+### Releasing to npm
+
+The package is published to the **`noacg` organisation** on npm (the account `miwco` owns it). An
+unscoped package belongs to whoever publishes it, so the first publish is followed by transferring
+the package to the org in its npm settings.
+
+Auth is a token in `.env` as `NPM_TOKEN`, read by a gitignored root `.npmrc` holding
+`_authToken=${NPM_TOKEN}` - an environment reference, never a literal. **npm does not read `.env`**:
+the variable has to be exported in the shell that publishes, or the publish fails with a 401 that
+looks like a broken token.
+
+**TODO after the first publish - set up trusted publishing (OIDC)** and delete the stored token.
+npm can trust a named GitHub Actions workflow in this repository and mint short-lived credentials
+at publish time, so no long-lived publish token sits on a laptop - which is the real standing risk
+here, larger than anything in the repository itself. It is configured against a package that
+already exists, which is why it is a follow-up rather than a prerequisite. Owner decision
+2026-08-25: this is wanted.
+
 ## The category-agnostic proof
 
 The playout boundary derives every operator surface from the graphic itself - fields -> inputs,
