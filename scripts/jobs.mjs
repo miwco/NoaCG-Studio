@@ -30,6 +30,7 @@ import {
   addJob,
   costOf,
   ensureJobsDir,
+  findRunner,
   finishedSince,
   jobsDir,
   pending,
@@ -289,13 +290,18 @@ function isAlive(pid) {
   }
 }
 
-/** The live runner's pid for THIS queue, or null. Read from the OS, so nothing goes stale. */
+/**
+ * The live runner's pid, or null. Read from the OS, so nothing goes stale.
+ *
+ * Delegates to `findRunner` rather than matching here. An earlier version required the command
+ * line to contain this file's ABSOLUTE path, which only matched runners that `ensureRunner`
+ * spawned: a runner started by hand as `node scripts/jobs.mjs --runner` was invisible, so the
+ * listing said "NO RUNNER" while one was draining the queue - and, far worse, the next `add`
+ * would have started a SECOND runner. Two schedulers reading one queue is the collision this
+ * whole mechanism exists to prevent, so there is exactly one definition of "is a runner live".
+ */
 function runnerPid() {
-  const self = fileURLToPath(import.meta.url).replaceAll('\\', '/').toLowerCase();
-  const match = nodeProcesses().find(
-    (p) => p.pid !== process.pid && p.command.replaceAll('\\', '/').toLowerCase().includes(self) && /--runner\b/.test(p.command),
-  );
-  return match?.pid ?? null;
+  return findRunner(nodeProcesses(), { excludePid: process.pid });
 }
 
 /** Start a runner in the background if none is live. A duplicate start wastes a process, never a job. */
