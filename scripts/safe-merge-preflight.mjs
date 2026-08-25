@@ -430,7 +430,7 @@ function reportMigrationDrift() {
   }
   if (result.status === 'drift') {
     check('production holds every migration in the repository', false,
-      `MISSING on production: ${result.missing.join(', ')} - apply with \`npx supabase db push --linked\` from the main checkout`,
+      `MISSING on production: ${result.missing.join(', ')} - apply with \`npm run db:push\`, which needs no permission (it refuses anything that can remove something and reports instead)`,
       { fatal: false });
   } else if (result.status === 'ok') {
     info('production migration drift', `none - all ${result.local} applied`);

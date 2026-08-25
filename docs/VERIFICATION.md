@@ -364,14 +364,31 @@ documents its own exemptions, with the reason written beside them.
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
 
-## Migrations reach production only when a human pushes them
+## Migrations reach production through a guard, not through a human
 
-So the safe-merge preflight REPORTS whether production is behind, and `npm run
-check:migration-drift` runs the same check alone. Landing is the moment it matters: a migration
-reaches `main` and then nothing applies it, because `supabase db push` is a deliberate act.
-`0051_client_table_grants` sat unapplied on production for hours on 2026-08-25, past a green CI
-run and a green nightly, and was found only because somebody ran `supabase migration list` for an
-unrelated reason.
+`npm run db:push` applies every pending migration to the hosted project and needs nobody's
+permission. What a human used to be asked for was a judgement about RISK, so `scripts/db-push.mjs`
+makes that judgement on the statements: grants, policies, additive columns/tables/indexes,
+functions and backfills apply; a DROP, TRUNCATE, DELETE FROM, column-type change, RENAME,
+`disable row level security`, `owner to`, `alter database`, a REVOKE on an object the same migration
+did not create - or any statement shape it does not recognise, because it fails CLOSED - stops and
+reports. That refusal is answered per version (`npm run db:push -- --allow 0052`), never in bulk.
+The classifier is the guard, and `scripts/db-push.test.mjs` is where it is held: the dangerous
+shapes are fixtures, and every migration in the repo is classified so the recognised set cannot
+quietly stop covering what this project writes.
+
+Two things make the result evidence rather than a claim. It refuses to push onto a DRIFTED ledger -
+a version that is not four digits, or one with no file on disk, means something applied a migration
+by a route that is not `db push` (supabase/AGENTS.md) - and it snapshots the grant matrix, columns,
+policies and ledger before and after, printing the difference. For a grants-only migration the
+expected diff is a named set of privileges and exactly one ledger row; anything else is a finding.
+
+The drift check stays, because a migration can still reach `main` with nobody running the push: the
+safe-merge preflight REPORTS whether production is behind, and `npm run check:migration-drift` runs
+the same check alone. `0051_client_table_grants` sat unapplied on production for hours on
+2026-08-25, past a green CI run and a green nightly, and was found only because somebody ran
+`supabase migration list` for an unrelated reason - the delay that rule bought was not caution, it
+was how one safe change becomes a compound one.
 
 Advisory, never blocking - a laptop without the token, or without a network, gets a note rather
 than a refusal. It is deliberately **not** a CI job: the ledger lives in
