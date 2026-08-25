@@ -52,6 +52,14 @@ Seeded 2026-08-25 from the work that landed in the preceding week.
 - [ ] **Dashboard re-lay at 1366** - `fe6a0447` (2026-08-21). Route: resize to 1366 wide and open
       a production dashboard.
 - [ ] **ig39 "Key Figures"** - `18d34f2b` (2026-08-20). Route: Browse -> infographics -> ig39.
+- [ ] **Settings -> Playout, and the CasparCG row on a production** (2026-08-25). The half of
+      CasparCG Connect that needs NO hardware: whether the panel reads as complete and calm with
+      nothing set up, and whether its refusals are useful. Route: `/app` -> gear -> Playout. With
+      no agent running, press **Test connection** and read the sentence; then run
+      `npx noacg caspar agent` in a terminal, paste the address and token it prints, and press it
+      again. What to look at: that a missing agent, a wrong token and an absent CasparCG each say
+      something different and something you could act on - never one generic red. The real
+      round-trip to a server is the hardware item below.
 
 ## Owner actions
 
@@ -63,6 +71,15 @@ Not walks - things only the owner can do, because they cannot be taken back by a
       this laptop can reach the CLI or MCP server at all. Owner asked to be reminded (2026-08-24).
       **Sequencing:** any branch adding a new `cli/src/commands/` entry should land first -
       `claude/caspar-connect-51d22d` has one - or it misses 0.2.0.
+      **How, settled 2026-08-25:** the token lives in `.env` as `NPM_TOKEN` and npm does NOT read
+      that file, so it must be exported in the publishing shell or the publish fails with a 401
+      that reads like a broken token. If it asks for a one-time code, that is 2FA rather than an
+      error. The account `miwco` owns the `noacg` org, but an unscoped package belongs to whoever
+      published it - so **transfer the package to the org** in its npm settings afterwards.
+- [ ] **Trusted publishing for the CLI** - after the first publish, let npm trust a GitHub Actions
+      workflow in this repo (OIDC) and delete the stored token. A long-lived publish token sitting
+      on a laptop is the largest standing credential risk here; it can only be configured against
+      a package that already exists. Owner decided this is wanted (2026-08-25).
 
 ## Blocked on hardware or real conditions
 

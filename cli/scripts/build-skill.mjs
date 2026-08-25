@@ -12,8 +12,12 @@
 //      into ~/.codex/skills/ when they want the skill without the plugin
 //   3. the version stamped on the two plugin manifests and on the marketplace entry at the repo
 //      root (.claude-plugin/marketplace.json) - cli/package.json's version, so a release bumps ONE number
-//   4. cli/LICENSE - the repository LICENSE copied in, because npm ships a LICENSE file from the
-//      package directory and the repo keeps one licence text, not two
+// cli/LICENSE used to be generated here too - the repository LICENSE copied in, on the assumption
+// that the repo keeps one licence text. That assumption ended on 2026-08-25: this package is
+// Apache-2.0 and the rest of the repository is AGPL-3.0-only (docs/AGENT_CLI.md explains why).
+// cli/LICENSE is therefore its own file, not a copy of anything, and nothing here regenerates it -
+// which matters, because while it WAS generated, `prepack` would have quietly rewritten it back to
+// the AGPL text on the way to npm.
 //
 // The in-repo dogfooding triple (.agent-workflows/noacg-graphic.md + .claude/skills/noacg-graphic +
 // .agents/skills/noacg-graphic) are thin POINTERS at the source, guarded by
@@ -107,8 +111,8 @@ expected.set(
   }),
 );
 
-// 3. The package's LICENSE: the repository's, copied (npm reads it from the package directory).
-expected.set(path.join(CLI, 'LICENSE'), readFileSync(path.join(ROOT, 'LICENSE')));
+// (cli/LICENSE is deliberately NOT generated - see the header. The package's licence differs from
+//  the repository's, so there is nothing to copy it from.)
 
 // Strays: anything under the generated skill copy that the source no longer has.
 const strays = existsSync(PLUGIN_SKILL)
