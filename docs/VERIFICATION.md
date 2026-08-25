@@ -450,6 +450,74 @@ WITHOUT raising a notification, the comparison never matched, and a green run sa
 is installed now, which is the smaller half of the lesson: a silent wait loop reads as "still
 running" forever, so wait on something that exits.
 
+## A schedule that never fires reads exactly like a healthy one
+
+A workflow whose cron has never once produced a run looks, on the Actions dashboard and in
+`gh run list`, exactly like a workflow that is running fine - because the runs are all there.
+They were just all typed by hand.
+
+**configured-suite, measured 2026-08-25.** Its cron landed on `main` on 2026-08-24 at 14:55 UTC
+and, by the time this was checked, had produced **zero** runs. All 16 were `workflow_dispatch`,
+several of them green, so the suite read as thoroughly exercised while the nightly signal it
+exists to BE had never fired once. The surfaces with no nightly verdict for those two days were
+the authenticated ones - account, community, moderation, the Pro wizard and the four
+hosted-playout walks the 2026-09-12 production is judged on.
+
+```bash
+gh run list --workflow=configured-suite.yml --event=schedule --limit 30   # empty
+```
+
+**What that check cost, and what it ruled out.** Every cheap cause was eliminated with API calls,
+in this order - run them in this order on any workflow whose cron looks dead:
+
+| Check | Command | Answer here |
+|---|---|---|
+| Is the schedule disabled? | `gh api repos/:owner/:repo/actions/workflows --jq '.workflows[] \| "\(.state)\t\(.path)"'` | `active` - not `disabled_inactivity` |
+| Is this a fork? (forks never run `schedule`) | `gh api repos/:owner/:repo --jq .fork` | `false` |
+| Is the file on the default branch, and since when? | `git log origin/main -- .github/workflows/<f>.yml` | since 2026-08-24 14:55 UTC |
+| Does repo-level scheduling work at all? | `gh run list --workflow=nightly.yml --event=schedule` | yes - fired 01:54 UTC that same night |
+| Did a concurrency group hold the slot? | compare `createdAt`/`updatedAt` of every run against the cron time | no - the group was free 01:03-03:58 UTC |
+| Is the `on:` block shaped like one that works? | diff against `nightly.yml` | identical shape |
+
+**Nothing was changed on that evidence, and that is deliberate.** One missed cycle on a
+ten-hour-old schedule is not proof of a broken cron: GitHub delays scheduled runs under load and
+**drops them outright** - `nightly.yml` ran its 00:20 UTC cron at 01:54 that same night, 94
+minutes late, and this repo has separately recorded a 23:43 cron running at 01:11. Moving the
+cron would also have re-registered the schedule and destroyed the one clean data point the next
+cycle gives. The falsifiable prediction is on the record instead: **if the 2026-08-26 01:10 UTC
+cycle also produces no run, the schedule itself is at fault and not GitHub's queue.**
+
+**Never dispatch a workflow to "check whether its cron works".** A `workflow_dispatch` proves the
+specs pass; it can never prove the schedule fires, and it fills the run list with green so the
+absence stops being visible. Dispatching is precisely what masked this one for two days.
+
+**The mechanism, so this cannot go quiet again.** `nightly-drift.yml` now carries a second job,
+"Did the configured suite run on its schedule?", built on the same rolling-issue pattern as the
+nightly's - **but filtered to `--event=schedule`**, because an unfiltered check would have been
+closed by any one of those 16 dispatches and would have lied in exactly the way it exists to
+prevent. Same 26-hour window, so one dropped GitHub slot closes itself and a genuinely dead cron
+does not.
+
+### The repo's secret list is a signal too
+
+Four repository secrets were deleted on 2026-08-25: **`E2E_EMAIL`, `E2E_PASSWORD`,
+`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`**. No workflow or composite action read any of
+them - `configured-suite.yml` sets `E2E_EMAIL`/`E2E_PASSWORD` to the local stack's own literals
+and derives the two `VITE_*` values from `supabase status`, and the only secrets referenced
+anywhere are the three `STAGING_*`. `E2E_PASSWORD` was a live production login sitting in the
+secret list of a **public** repository with nothing consuming it.
+
+```bash
+grep -rhoE 'secrets\.[A-Za-z0-9_]+' .github/ | sort -u   # the only true list of what is READ
+grep -rnE 'toJSON\(secrets|secrets\[' .github/           # and the dynamic forms that grep misses
+```
+
+Both, plus the environment and Dependabot scopes (`gh api
+repos/:owner/:repo/environments/<name>/secrets`, `gh secret list --app dependabot`), before
+deleting anything. The values survive in Supabase and in `.env`, so this is recoverable.
+**Deleting a secret is not rotating a credential** - the production login those two named still
+exists and should be rotated or removed at the source if it is not wanted.
+
 ## The affected mapper's one failure mode has no alarm
 
 `scripts/e2e-affected.mjs` is safe because it fails TOWARD running more specs. An entry that runs

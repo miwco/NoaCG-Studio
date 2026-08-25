@@ -1,4 +1,9 @@
-# NIGHTLY DRIFT - the belt against a nightly sweep that never runs.
+# NIGHTLY DRIFT - the belt against a SCHEDULED SWEEP THAT NEVER RUNS.
+#
+# Two schedules are watched here, one job each: nightly.yml and configured-suite.yml. One
+# workflow because the question is identical - "did the thing that is supposed to happen every
+# night actually happen" - and because an alarm living inside either of them could not fire on
+# the night that one did not run.
 #
 # nightly.yml alarms when the sweep goes RED. Nothing alarmed when it did not happen at all,
 # and that is the more dangerous of the two: a red nightly files an issue, while an absent one
@@ -28,8 +33,8 @@ permissions:
   contents: read
   issues: write # the failure step files/updates the rolling issue
 
+# Shared: both watched schedules are DAILY, so both tolerate the same drift.
 env:
-  ISSUE_TITLE: Nightly sweep has not run
   WINDOW_HOURS: '26'
 
 jobs:
@@ -37,6 +42,8 @@ jobs:
     name: Did a nightly run?
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      ISSUE_TITLE: Nightly sweep has not run
     steps:
       - name: Look for a nightly inside the window
         id: check
@@ -97,4 +104,81 @@ jobs:
         if: ${{ steps.check.outputs.ok == 'false' }}
         run: |
           echo "::error title=Nightly drift::No nightly sweep in the last ${WINDOW_HOURS} hours - see the rolling issue."
+          exit 1
+
+  # ── DID THE CONFIGURED SUITE RUN ON ITS OWN? ─────────────────────────────────────────────
+  # configured-suite.yml is the only nightly verdict for the authenticated surfaces the
+  # 2026-09-12 production is judged on (the four hosted-playout walks, account, community,
+  # moderation, the Pro wizard). Its cron landed on main on 2026-08-24 and, as of 2026-08-25,
+  # had never once produced a run: all 16 of its runs were workflow_dispatch.
+  #
+  # SCHEDULE RUNS ONLY, and that filter is the whole point. Sixteen manual dispatches made the
+  # suite look thoroughly exercised while the signal it is supposed to BE had never fired, and
+  # dispatching it by hand is exactly what masked that for two days. A dispatch proves the
+  # specs pass; it can never prove the schedule works, so it must not close this alarm.
+  configured:
+    name: Did the configured suite run on its schedule?
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ISSUE_TITLE: Configured suite is not running on its schedule
+    steps:
+      - name: Look for a SCHEDULED configured-suite run inside the window
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          CUTOFF="$(date -u -d "${WINDOW_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)"
+          # Any conclusion counts - a RED configured suite files its own rolling issue, and this
+          # one must never double-report it. In-progress counts too: a suite that started ran.
+          LATEST="$(gh run list --workflow=configured-suite.yml --event=schedule --limit 30 \
+            --json createdAt --jq 'if length == 0 then "" else (max_by(.createdAt).createdAt) end')"
+          echo "cutoff=${CUTOFF}  latest=${LATEST:-<none>}"
+          # ISO-8601 UTC sorts lexicographically, so a string compare is a time compare.
+          if [ -n "$LATEST" ] && [ "$LATEST" \> "$CUTOFF" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "latest=${LATEST:-none}" >> "$GITHUB_OUTPUT"
+          echo "cutoff=${CUTOFF}" >> "$GITHUB_OUTPUT"
+
+      # The rolling-issue pattern every alarm here follows (docs/DEPLOYMENT.md): one open
+      # issue, one comment per newly failing check, closed by the next healthy state.
+      - name: File / update the missing-schedule issue
+        if: ${{ steps.check.outputs.ok == 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LATEST: ${{ steps.check.outputs.latest }}
+          CUTOFF: ${{ steps.check.outputs.cutoff }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="$(printf 'No SCHEDULED configured-suite run since %s (window: last %s hours, cutoff %s).\n\nOnly schedule runs count here. A workflow_dispatch proves the specs pass; it can never prove the cron fires, and dispatching by hand is what hid this for two days.\n\nThe suite is scheduled at 01:10 UTC. GitHub delays scheduled runs under load and can drop them, so a single missed cycle is expected to close itself; a persistent one means the authenticated surfaces - including the four hosted-playout walks - have no nightly verdict at all.\n\nWhat to check, cheapest first: `gh api repos/:owner/:repo/actions/workflows` and read this workflow state (a disabled_inactivity state ends it there); then that .github/workflows/configured-suite.yml is still on the default branch; then whether another run held the configured-suite concurrency group across the slot.\n\nRun: %s' \
+            "${LATEST}" "${WINDOW_HOURS}" "${CUTOFF}" "$RUN_URL")"
+          EXISTING="$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -z "$EXISTING" ]; then
+            gh issue create --title "$ISSUE_TITLE" --body "$BODY"
+          else
+            gh issue comment "$EXISTING" --body "Still missing. $BODY"
+          fi
+
+      - name: Close the missing-schedule issue
+        if: ${{ steps.check.outputs.ok == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LATEST: ${{ steps.check.outputs.latest }}
+        run: |
+          EXISTING="$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --comment "The configured suite ran on its schedule at ${LATEST}: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+      - name: Fail the run when the schedule is not firing
+        if: ${{ steps.check.outputs.ok == 'false' }}
+        run: |
+          echo "::error title=Configured-suite schedule::No SCHEDULED configured-suite run in the last ${WINDOW_HOURS} hours - see the rolling issue."
           exit 1
