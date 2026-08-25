@@ -246,3 +246,31 @@ text.
   bootstrap decodes data: URLs inline (atob, no fetch), so single-file exports play from
   file:// too; the folder starter keeps the real `lottie/<file>.json` and plays over http
   (SPX's normal serving mode).
+
+## The dangling-reference defect class
+
+Referred to across the repo as "the dangling-refs doctrine"; this is it.
+
+> A generated artifact carries a RELATIVE reference to a resource that the packaging step for
+> THAT artifact does not place where the reference resolves at its destination - and nothing
+> fails loudly, so the output degrades quietly instead of erroring.
+
+Check for it in every new export or packaging surface. Three real instances shipped before the
+class was named (all fixed 2026-07-20, all found by measurement rather than review):
+
+1. **Fonts in single-file exports.** casparcg/h2r/htmlOverlay emitted `url("fonts/x.woff2")` and
+   shipped no font file. `font-display: swap` painted the fallback, so graphics played out in the
+   wrong typeface with no error anywhere. `bundledFonts.ts inlineBundledFonts` embeds the bytes,
+   and a font that cannot be fetched now THROWS rather than degrading.
+2. **The overlay's baked logo erased itself.** `composeSelfContainedHtml` ran `inlineAssetRefs`
+   over html and css but NOT over the appended scripts, and the overlay bakes sampleData into a
+   load handler. A filelist field's value is an asset path, so `update()` on load overwrote the
+   correctly-inlined data URL with a dangling path: the logo painted on frame one, then vanished.
+3. **The overlay's control panel offered unresolvable images.** Its picker listed asset PATHS
+   beside a package with no `images/` folder. Fixed by separating label (the path, what the
+   operator reads) from src (the data URL, what paints) from value (a path beside a folder
+   package, a data URL beside a single-file one - `renderControlPanelHtml(…, { inlineAssets })`).
+
+**The existing e2e suite could not see any of them**, because each one renders successfully. The
+gate is `e2e/exports.spec.ts`, which walks every relative reference in all six targets over
+`file://` and fails when one does not resolve inside its own package.
