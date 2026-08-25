@@ -604,6 +604,66 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         </div>
       )}
 
+      {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
+          a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
+          and the reader should be able to put it there without opening the editor. Always
+          offered — an artwork with every layer bound may still be missing a caption.
+          DIRECTLY UNDER THE CHECKLIST, and that placement is the point: this is the other half
+          of "which fields does this graphic have", so it belongs beside the layers it extends
+          rather than after the questions about behaviour and growth. Measured at 1366x768, a
+          seven-layer scorebug put it 553px below the fold when it sat last, which is where a
+          reader who has never been told it exists would never find it. */}
+      <div className="panel-section" data-testid="map-svg-added">
+        <h3>
+          Add a field{' '}
+          <span className="muted">
+            {draft.designFields.length === 0
+              ? 'nothing added'
+              : `${draft.designFields.length} added`}
+          </span>
+        </h3>
+        {/* Two lines, not four: the rows above have already shown what a field IS, so this only
+            has to say where a new one comes from. */}
+        <p className="hint">
+          Your artwork is the stage, not the whole graphic. Draw a box on the preview to put a
+          real editable field where the file drew nothing.
+        </p>
+        <button
+          className={drawArmed ? 'active' : ''}
+          onClick={() => setDrawArmed((a) => !a)}
+          data-testid="map-svg-add-field"
+        >
+          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
+        </button>
+        {draft.designFields.map((f) => (
+          <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
+            <label className="save-field grow">
+              <span>Field name</span>
+              <input
+                value={f.title}
+                onChange={(e) => patchAdded(f.id, { title: e.target.value })}
+                data-testid={`map-svg-added-title-${f.id}`}
+              />
+            </label>
+            <label className="save-field grow">
+              <span>Text</span>
+              <input
+                value={f.text}
+                onChange={(e) => patchAdded(f.id, { text: e.target.value })}
+                data-testid={`map-svg-added-sample-${f.id}`}
+              />
+            </label>
+            <button
+              onClick={() => removeAdded(f.id)}
+              title="Remove this field — the artwork is untouched either way"
+              data-testid={`map-svg-added-remove-${f.id}`}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* THE BEHAVIOUR (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Offered once there are enough text
           rows for a question and two answers — below that there is nothing to bind, and the
           section would only be a puzzle. Everything here is a picker: no layer has to be
@@ -942,60 +1002,6 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           ))}
         </div>
       )}
-
-      {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
-          a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
-          and the reader should be able to put it there without opening the editor. Always
-          offered — an artwork with every layer bound may still be missing a caption. */}
-      <div className="panel-section" data-testid="map-svg-added">
-        <h3>
-          Add a field{' '}
-          <span className="muted">
-            {draft.designFields.length === 0
-              ? 'nothing added'
-              : `${draft.designFields.length} added`}
-          </span>
-        </h3>
-        <p className="hint">
-          Your artwork is the stage, not the whole graphic. Draw a box on the preview and you
-          get a real editable field there — the same kind of field the layers above become, so
-          it airs, exports and takes an operator&rsquo;s value exactly like they do.
-        </p>
-        <button
-          className={drawArmed ? 'active' : ''}
-          onClick={() => setDrawArmed((a) => !a)}
-          data-testid="map-svg-add-field"
-        >
-          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
-        </button>
-        {draft.designFields.map((f) => (
-          <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
-            <label className="save-field grow">
-              <span>Field name</span>
-              <input
-                value={f.title}
-                onChange={(e) => patchAdded(f.id, { title: e.target.value })}
-                data-testid={`map-svg-added-title-${f.id}`}
-              />
-            </label>
-            <label className="save-field grow">
-              <span>Text</span>
-              <input
-                value={f.text}
-                onChange={(e) => patchAdded(f.id, { text: e.target.value })}
-                data-testid={`map-svg-added-sample-${f.id}`}
-              />
-            </label>
-            <button
-              onClick={() => removeAdded(f.id)}
-              title="Remove this field — the artwork is untouched either way"
-              data-testid={`map-svg-added-remove-${f.id}`}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
 
       {draft.svgFonts.length > 0 && (
         <div className="panel-section" data-testid="map-svg-fonts">
