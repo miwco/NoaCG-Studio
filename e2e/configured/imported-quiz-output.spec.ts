@@ -31,6 +31,15 @@ test('an imported quiz board publishes, runs on the real output renderer, and re
   test.setTimeout(240_000);
   await signIn(page);
 
+  // The account SYNCS graphics too, and this walk needs the creation wizard to be the first thing
+  // /app shows. A graphic left by an EARLIER SPEC IN THE SAME RUN syncs down on sign-in, the app
+  // restores it as the open project, and /app lands in the editor instead — so dropSvg's
+  // `expect('.wz-modal').toBeVisible()` fails with the confusing message that the wizard is
+  // missing. Seen on the local-stack CI run 32794390693, where it inherited community-authed's
+  // "Hairline". The spec already wipes graphics on the way OUT (below); doing it on the way IN is
+  // what makes it independent of whatever ran before it.
+  await wipeMyGraphics(page);
+
   // A prior FAILED run can leave a published production behind, and the account SYNCS shows — a
   // stale record with an outputSlug would shadow this run's. Clean slate first (the catalog
   // quiz walk's opening, for the same reason).
