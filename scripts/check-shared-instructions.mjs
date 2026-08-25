@@ -89,6 +89,11 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // is the half that fires them. Entering it is automatic, and a quiet tick must stay quiet.
       'A night wave enters this automatically',
       'A tick with no landing is a no-op, not a report',
+      // The loop can die silently, so nothing the wave NEEDS may depend on it - every starting
+      // prompt queues itself, and a follow-on only ever carries work the night can afford to lose.
+      'The loop is ADDITIVE, never load-bearing',
+      // Big prompts are the point: one branch, one gate, one landing instead of three.
+      'A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
       // reaches into another worktree - not to merge, not to check, not to tidy. Printing a merge
       // order reads like an offer to merge, so the boundary is pinned in both directions.

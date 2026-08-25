@@ -255,6 +255,16 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
+- **A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.** Not one task - a numbered
+  run of them, each finishing before the next begins, each committed once it is verified, all on
+  the one branch, and the whole thing queued at the end. Three or four related steps in one
+  session beats three sessions: it costs one branch, one gate and one landing instead of three,
+  and the second step gets the first one's context for free.
+  The bound is the wave's, not the session's: everything in the prompt must belong to the same
+  `TOUCHES` set, or the session collides with a sibling no matter how well it is written.
+- **Say where a long session may stop.** Name which steps are the core and which are the tail, so
+  a session running short commits and queues the core rather than queueing nothing. A prompt with
+  six steps and no stated core is a prompt that lands nothing when step four goes wrong.
 - **GATE is `npm run build` plus CI**, because the per-change suite belongs to CI, not the laptop -
   add a local browser job only for the work from section 2 that CI cannot do.
 - **QUEUE is mandatory on every prompt and is the last thing in it**, because the session running
@@ -291,6 +301,11 @@ sessions, and it is produced entirely from read-only commands in this session:
   `node scripts/worktree-activity.mjs` for work a session left uncommitted.
 - **Every session's handoff**, collected from `docs/handoffs/<date>-*.md` - the reason the prompts
   write those files. Quote each one's "what is left", not the whole file.
+- **How the follow-ons went** - which fired and when, which did not and why the trigger never
+  landed, and for a conditional one, which arm the handoff file selected. Say plainly if a
+  follow-on would have fired but the loop was not there to fire it.
+- **The loop's own vital signs** - ticks fired, and the time of the last one. See "The watch
+  loop": a report that cannot show a live tick late in the night is reporting a dead loop.
 - **What the night opened up** - work that is now unblocked and was not in the wave, including any
   follow-on that was NOT launched because its trigger never landed. This is the input to the next
   invocation, so write it as candidate rows, not prose.
@@ -310,12 +325,25 @@ after a signature change, a measurement that needs the fix in `main`. In a day w
 the next invocation. In a night wave the user is asleep, so a follow-on that waits for morning
 wastes the hours the wave existed to use.
 
+**Two kinds, and both are planned before the wave starts:**
+
+- **The logical consequence.** Known in advance, blocked only by the landing: the callers of a
+  renamed export, a measurement that needs the fix in `main`, the second half of a migration.
+  Its prompt is written in full in section 5.
+- **The expected surprise.** The SHAPE is predictable even though the content is not - "if the
+  flake reproduces, fix its cause; if twenty runs cannot reproduce it, harden the assertion
+  instead". Write it as a conditional prompt whose branch is chosen from what the trigger
+  session's own **handoff file** says. That file is the channel: the loop reads
+  `docs/handoffs/<date>-<letter>-*.md` on the landing and picks the arm, or launches nothing if
+  neither arm applies.
+
 The rules that keep it from becoming an unattended agent doing whatever it likes:
 
 - **It must be in the wave table before the wave starts**, with its letter, its `TOUCHES`, its
   trigger branch, and its full prompt in section 5. The user approves its shape before bed. **A
-  follow-on that was not planned is never launched** - it goes in the morning report as a
-  candidate row instead.
+  follow-on that was not planned is never launched** - a genuinely novel discovery at 03:00 goes
+  in the morning report as a candidate row, and waits for a person. Planned SHAPE with unplanned
+  CONTENT is the most a night gets to decide on its own.
 - **The trigger is a landing, checked, never assumed**: `git fetch` then
   `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
 - **It runs in its own worktree**, so it can never edit the files another session is holding.
@@ -360,6 +388,18 @@ morning with the command that would settle it, and the rest of the wave carries 
 
 **The loop never merges, never pushes, and never touches another worktree's files.** It watches,
 it launches what was planned, and it reports.
+
+**The loop is ADDITIVE, never load-bearing, and the wave is planned so that stays true.** Every
+starting prompt queues itself, so the wave lands with or without anything watching. If the loop
+dies, is interrupted, or never gets going, the cost is the follow-ons - never the night. Nothing a
+starting prompt needs may depend on the loop being alive, which is also why a follow-on is never
+allowed to hold work that the wave actually needs: if it is needed, it belongs inside a starting
+prompt as one more step.
+
+**A dead loop must be visible, because a silent one looks exactly like a quiet one.** The morning
+report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
+after a seven-hour night is the loop having died at the first tick, and it reads as a defect
+rather than as calm.
 
 ## How to ground it
 
