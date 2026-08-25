@@ -164,14 +164,32 @@ jobs:
       - name: Measure round-trip latency
         run: |
           set -euo pipefail
+          # A REAL QUERY, THROUGH POSTGREST AND RLS - the path the app actually takes. The first
+          # version of this step measured `/rest/v1/` with the anon key, which that endpoint
+          # REFUSES ("Only the `service_role` API key can be used for this endpoint"), so all 20
+          # requests were 401s and the reported number was the round trip of an error. It read
+          # ~18 ms and looked entirely plausible next to a real 207 ms. Measured on the workflow's
+          # first ever run (32849546221) and fixed immediately, because that number is the ONE
+          # thing this job exists to produce.
+          probe="${VITE_SUPABASE_URL}/rest/v1/documents?select=id&limit=1"
+
+          # PROVE the probe does real work before timing it. Without this the step cannot tell a
+          # fast answer from a fast refusal, which is exactly how the first version passed while
+          # measuring nothing.
+          code="$(curl -s -o /tmp/probe.json -w '%{http_code}' -H "apikey: ${VITE_SUPABASE_ANON_KEY}" "$probe")"
+          if [ "$code" != "200" ]; then
+            echo "::error title=Latency probe is not measuring a real query::${probe} answered ${code}, so any timing below would be the round trip of a refusal rather than of work. Body: $(head -c 200 /tmp/probe.json)"
+            exit 1
+          fi
+
           # ONE curl invocation with the URL repeated, so the connection is REUSED. A loop of
           # separate curls measures the TLS handshake instead: done by hand on 2026-08-24 it
           # reported 244 ms/request against a true 5 ms, and nearly sent the whole diagnosis in the
           # wrong direction.
           urls=""
-          for _ in $(seq 1 20); do urls="$urls ${VITE_SUPABASE_URL}/rest/v1/"; done
+          for _ in $(seq 1 20); do urls="$urls $probe"; done
           start=$(date +%s%N)
-          curl -s -o /dev/null -H "apikey: ${VITE_SUPABASE_ANON_KEY}" $urls || true
+          curl -s -o /dev/null -H "apikey: ${VITE_SUPABASE_ANON_KEY}" $urls
           end=$(date +%s%N)
           per=$(( (end - start) / 1000000 / 20 ))
           echo "round trip to staging: ~${per} ms/request from this runner"
