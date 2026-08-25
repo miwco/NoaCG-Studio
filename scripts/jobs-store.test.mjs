@@ -66,10 +66,12 @@ test('capacity is one by day, two at night', () => {
   assert.equal(capacity({ hour: POLICY.nightTo - 1, freeMemMb: PLENTY }), 2, '06:00 is still night');
 });
 
-test('the RAM floor overrides the clock in both directions', () => {
-  assert.equal(capacity({ hour: NIGHT, freeMemMb: POLICY.freeMemFloorMb - 1 }), 0);
-  assert.equal(capacity({ hour: DAY, freeMemMb: POLICY.freeMemFloorMb - 1 }), 0);
-  assert.equal(capacity({ hour: NIGHT, freeMemMb: POLICY.freeMemFloorMb }), 2, 'the floor itself is allowed');
+test('the RAM floor is an admission check on a job, not a cut to the budget', () => {
+  // Zeroing the budget also stopped the cheapest jobs, which is the opposite of what the floor
+  // is for - so the budget is now purely the clock, and the floor is applied per job in
+  // `schedule`, scaled by that job's cost.
+  assert.equal(capacity({ hour: NIGHT }), 2);
+  assert.equal(capacity({ hour: DAY }), 1);
 });
 
 test('work started outside the queue is subtracted from capacity', () => {
@@ -134,6 +136,26 @@ test('a landing runs beside a suite in ANOTHER checkout, but never in its own', 
   assert.deepEqual(schedule(mergeFirst, { hour: NIGHT, freeMemMb: PLENTY }).start, []);
 });
 
+test('a landing is not charged against the suite budget', () => {
+  // One suite elsewhere used to consume the whole day budget and stall every landing behind it,
+  // which is the opposite of what "merge latency is the bottleneck" asks for. A landing is a
+  // couple of git commands and then ten minutes waiting on GitHub; its concurrency is governed
+  // by rules that are stricter where it matters, not by the RAM budget.
+  const busy = [job('j-0001', { state: 'running', pid: 1, checkout: '/wt/a' }), merge('j-0002', { checkout: '/wt/b' })];
+  assert.deepEqual(schedule(busy, { hour: DAY, freeMemMb: PLENTY }).start.map((j) => j.id), ['j-0002']);
+
+  // Even with the budget fully spent by work OUTSIDE the queue.
+  const outside = [merge('j-0001', { checkout: '/wt/b' })];
+  assert.deepEqual(
+    schedule(outside, { hour: DAY, freeMemMb: PLENTY, outsideRuns: 2 }).start.map((j) => j.id),
+    ['j-0001'],
+  );
+
+  // A non-merge job is still charged, so the exemption cannot be used as a general escape.
+  const cheap = [job('j-0001', { state: 'running', pid: 1 }), job('j-0002', { command: 'npm run build' })];
+  assert.deepEqual(schedule(cheap, { hour: DAY, freeMemMb: PLENTY }).start, []);
+});
+
 test('several landings fit inside one suite-equivalent', () => {
   // 0.15 each: the day budget of 1.0 holds six of them, and they still drain one at a time
   // because two merges never overlap.
@@ -190,10 +212,24 @@ test('a job depending on an id that does not exist is not startable', () => {
   assert.match(waiting[0].reason, /did not finish green/);
 });
 
-test('nothing starts under the RAM floor, and the reason names the memory', () => {
+test('no SUITE starts under the RAM floor, and the reason names the memory', () => {
   const { start, waiting } = schedule([job('j-0001')], { hour: NIGHT, freeMemMb: 3174 });
   assert.deepEqual(start, []);
-  assert.match(waiting[0].reason, /3\.1 GB RAM free/);
+  assert.match(waiting[0].reason, /3\.1 GB RAM free, needs 4\.0/);
+});
+
+test('the floor scales with the job, so a landing is not blocked by a suite-sized threshold', () => {
+  // The floor stops a dev server and four browser workers starting on a short box. A landing is
+  // a few hundred megabytes spending ten minutes waiting on GitHub, and charging it the full
+  // 4 GB stalled exactly the work that most needs to finish overnight.
+  const tight = { hour: NIGHT, freeMemMb: 2458 }; // 2.4 GB - under the suite floor
+  assert.deepEqual(schedule([job('j-0001')], tight).start, [], 'a suite still waits');
+  assert.deepEqual(schedule([merge('j-0001')], tight).start.map((j) => j.id), ['j-0001'], 'a landing goes');
+
+  // But a landing is not exempt either - below its own scaled floor it waits too.
+  const starved = { hour: NIGHT, freeMemMb: 100 };
+  assert.deepEqual(schedule([merge('j-0001')], starved).start, []);
+  assert.match(schedule([merge('j-0001')], starved).waiting[0].reason, /needs 0\.6/);
 });
 
 test('a running job whose process is gone is reaped, not left holding a slot', () => {

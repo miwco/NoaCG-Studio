@@ -136,6 +136,12 @@ function cmdList() {
   for (const job of running) {
     console.log(`  running  ${job.id}  ${elapsed(job.startedAt)}  [${costOf(job)}]  ${job.command}`);
   }
+  // A job the scheduler has picked but the runner has not spawned yet is neither running nor
+  // waiting. Leaving it out made it vanish from the listing entirely, which is precisely the
+  // "nothing is happening and I cannot tell why" this command exists to prevent.
+  for (const job of start) {
+    console.log(`  starting ${job.id}  [${costOf(job)}]  ${job.command}`);
+  }
   waiting.forEach(({ job, reason }, i) => {
     console.log(`  #${i + 1}       ${job.id}  ${reason}  ${job.command}`);
   });
@@ -167,6 +173,14 @@ function cmdCancel() {
 
 // --- the drain loop --------------------------------------------------------------------------
 
+/**
+ * Drain the queue until it is empty.
+ *
+ * NOTE FOR ANYONE CHANGING THE SCHEDULER: a live runner keeps the code and the environment it
+ * started with, so an edit to `jobs-store.mjs` (or to `NOACG_JOBS_FREE_MB`) does nothing until
+ * the runner is restarted. The symptom is a queue that will not move for reasons the current
+ * source says it should - stop the runner and let the next `add` start a fresh one.
+ */
 async function runner() {
   const other = runnerPid();
   if (other && other !== process.pid) {

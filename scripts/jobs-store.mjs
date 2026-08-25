@@ -157,8 +157,11 @@ export function addJob(dir, { command, checkout, branch = null, kind = 'gate', a
  * we subtract it before starting anything. Cooperation is an optimisation here; the OS process
  * table stays the source of truth.
  */
-export function capacity({ hour, freeMemMb, outsideRuns = 0, policy = POLICY }) {
-  if (freeMemMb < policy.freeMemFloorMb) return 0;
+export function capacity({ hour, outsideRuns = 0, policy = POLICY }) {
+  // The free-RAM floor is deliberately NOT here. It is an admission check on one job, scaled by
+  // what that job costs (see `schedule`), because zeroing the whole budget on a suite-sized
+  // threshold also stopped the landings - the cheapest jobs there are, and the ones that most
+  // need to finish overnight.
   const isNight = hour >= policy.nightFrom && hour < policy.nightTo;
   // An outside run is browser work by definition - `activeRuns` only reports Playwright CLIs and
   // sweeps - so it costs a full suite-equivalent.
@@ -252,12 +255,25 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
       waiting.push({ job, reason: 'a landing is using that checkout' });
       continue;
     }
-    if (freeMemMb < policy.freeMemFloorMb) {
-      waiting.push({ job, reason: `only ${(freeMemMb / 1024).toFixed(1)} GB RAM free` });
+    const cost = costOf(job);
+    // THE FLOOR SCALES WITH THE JOB. It exists to stop a dev server and four browser workers
+    // starting on a box that is already short - not to stop a landing, which is a few hundred
+    // megabytes spending ten minutes in `gh run watch`. Charging a 0.15 job the full 4 GB
+    // stalled exactly the work the owner cares most about finishing overnight.
+    if (freeMemMb < policy.freeMemFloorMb * cost) {
+      waiting.push({
+        job,
+        reason: `only ${(freeMemMb / 1024).toFixed(1)} GB RAM free, needs ${(policy.freeMemFloorMb * cost / 1024).toFixed(1)}`,
+      });
       continue;
     }
-    const cost = costOf(job);
-    if (used + cost > slots) {
+    // A LANDING IS NOT CHARGED AGAINST THE SUITE BUDGET. The budget protects RAM and CPU, and a
+    // landing uses neither meaningfully - it is a couple of git commands and then ten minutes in
+    // `gh run watch`. Its concurrency is governed by its own rules instead, which are stricter
+    // where it matters: two never overlap, and none runs in a checkout something else is using.
+    // Without this exemption one suite in another worktree consumed the whole day budget and
+    // stalled every landing behind it - the opposite of "merge latency is the bottleneck".
+    if (job.kind !== 'merge' && used + cost > slots) {
       waiting.push({
         job,
         reason: `budget ${round(used)}/${round(slots)} used${outsideRuns ? `, ${outsideRuns} run(s) outside this queue` : ''}`,
