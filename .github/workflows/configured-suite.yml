@@ -174,49 +174,7 @@ jobs:
       # matches the server and no undeclared ubuntu-latest package is relied on. The container is
       # discovered rather than named: `supabase_db_<project_id>` is a CLI convention this repo
       # does not own.
-      # REPRODUCE HOSTED SUPABASE'S DEFAULT PRIVILEGES.
-      #
-      # This step compensates for a defect in the repository's own migrations, and should be
-      # DELETED the day that defect is fixed rather than kept as a convenience.
-      #
-      # `supabase/migrations` never grants table privileges to `anon` / `authenticated`. On a
-      # hosted project it does not have to: Supabase's bootstrap sets default privileges so every
-      # table created in `public` picks them up automatically. Verified against production
-      # 2026-08-25 — `information_schema.role_table_grants` shows anon and authenticated holding
-      # SELECT/INSERT/UPDATE/DELETE on public.documents, granted by no migration in this tree.
-      #
-      # The local stack does not reproduce that for migration-created tables, so every signed-in
-      # request comes back `42501 permission denied for table documents` and the app reports
-      # "Sync error". Measured: 17 of 32 specs failed this way on run 32792548123.
-      #
-      # That means `supabase start` — the command supabase/README.md gives self-hosters as the way
-      # to stand up an instance — currently produces a database the app cannot read. This is a
-      # REAL defect for self-hosters, not a CI quirk, and the honest fix is a migration that grants
-      # explicitly so the schema stops depending on the host's bootstrap. Until that lands, this
-      # step keeps CI honest about everything ELSE while being loud about what it is doing.
-      #
-      # RLS still governs every row: grants decide whether the role may touch the table at all,
-      # policies decide which rows. Reproducing the hosted grant matrix cannot widen access beyond
-      # what production already allows.
-      - name: Grant the privileges hosted Supabase grants by default
-        run: |
-          set -euo pipefail
-          db_container="$(docker ps --filter 'name=supabase_db' --format '{{.Names}}' | head -1)"
-          if [ -z "$db_container" ]; then
-            echo "::error title=No database container::Could not find the local Postgres container."
-            docker ps --format '{{.Names}}'
-            exit 1
-          fi
-          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
-          grant usage on schema public to anon, authenticated, service_role;
-          grant all on all tables in schema public to anon, authenticated, service_role;
-          grant all on all sequences in schema public to anon, authenticated, service_role;
-          grant all on all functions in schema public to anon, authenticated, service_role;
-          alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-          SQL
-          echo "::warning title=Compensating for missing grants::supabase/migrations does not grant table privileges to anon/authenticated; this job reproduces hosted Supabase's defaults so the suite can run. A self-hoster following supabase/README.md gets a database the app cannot read. Fix in a migration and delete this step."
-
-      - name: Assert the schema and the realtime publication
+      - name: Assert the schema, its grants, and the realtime publication
         run: |
           set -euo pipefail
           db_container="$(docker ps --filter 'name=supabase_db' --format '{{.Names}}' | head -1)"
@@ -247,6 +205,20 @@ jobs:
             fi
           done
           echo "supabase_realtime publishes chat_submissions and control_events."
+
+          # THE GRANTS, which this job compensated for by hand until 0051 put them in the schema.
+          # Postgres grants a new table to nobody but its owner; hosted Supabase's bootstrap hides
+          # that by granting every new table in `public` to the client roles, and a local stack does
+          # not. Missing here, the symptom is 17 specs timing out on "Sync error" - so assert it
+          # once, loudly, rather than reading it back out of twenty ambiguous UI failures.
+          for pair in 'authenticated documents' 'authenticated control_shows' 'anon control_events'; do
+            set -- $pair
+            if [ "$(psql "select has_table_privilege('$1', 'public.$2', 'select')")" != "t" ]; then
+              echo "::error title=${1} cannot read ${2}::The schema applied but ${1} holds no SELECT on public.${2}, so every request through PostgREST returns 42501. supabase/migrations/0051_client_table_grants.sql grants this; check whether a newer migration added a table without granting it."
+              exit 1
+            fi
+          done
+          echo "anon and authenticated hold the table grants 0051 declares."
 
       # The one thing a fresh database genuinely lacks: the account. 21 of the 33 tests sign in,
       # and without this every one of them fails at the sign-in assertion — twenty ambiguous UI
