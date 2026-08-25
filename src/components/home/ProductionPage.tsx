@@ -76,14 +76,6 @@ import {
   type ResolvedControlShow,
 } from '../../control/hostedControl';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
-import {
-  airOnCaspar,
-  casparAddress,
-  casparConfigured,
-  loadCasparSettings,
-  stopOnCaspar,
-  type CasparResult,
-} from '../../control/casparLink';
 import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
@@ -107,6 +99,17 @@ import BrandLogo from '../BrandLogo';
 import LibMenu from './LibMenu';
 import { copyLink } from './copyLink';
 import { IconDownload, IconLink, IconTv } from '../icons';
+// Deliberately last rather than beside the other control/ imports: this file's import head is a
+// hot spot two branches at a time edit, and the only merge conflict CasparCG Connect imposed on
+// anything in flight was this one statement landing in the same place as somebody else's.
+import {
+  airOnCaspar,
+  casparAddress,
+  casparConfigured,
+  loadCasparSettings,
+  stopOnCaspar,
+  type CasparResult,
+} from '../../control/casparLink';
 
 /** The selected cue's UNSAVED edits: local echo for instant typing, flushed to the record on a
  *  300 ms idle (a keystroke must not parse + rewrite the whole shows store — the store embeds
