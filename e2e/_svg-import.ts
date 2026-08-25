@@ -41,7 +41,17 @@ function wizardNext(page: Page) {
  */
 export async function dropSvg(page: Page, fixture: string): Promise<void> {
   const modal = page.locator('.wz-modal');
-  if (!(await modal.isVisible())) await startNewProject(page);
+  // WAIT for the auto-open before deciding, never sample it. `isVisible()` answers about THIS
+  // instant and does not retry, so called straight after a navigation it reports false while the
+  // wizard is still mounting - on a cold /app that is the normal case, not the exception. The
+  // first version of this helper did exactly that and opened a second wizard on every offline
+  // run, where `+ New graphic` then matched both the topbar's and the wizard's own copy:
+  // "strict mode violation: resolved to 2 elements" (CI run 32807175809).
+  const autoOpened = await modal
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!autoOpened) await startNewProject(page);
   await expect(modal).toBeVisible();
   await page.locator('[data-entry="import-graphic"]').click();
   await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture);
