@@ -58,44 +58,45 @@ change touching one prints a line telling you to run that suite. It is reported,
 starting it would bring up a dev server on the real `.env`, which is what the offline pin exists
 to prevent.
 
-**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC).** Per-change selection
-still cannot reach it, so nothing commit-driven ever will; a schedule can. It runs the whole
-`e2e/configured/` suite (~6 min, one worker) against the real backend as the throwaway test
-account and files its own rolling issue - separate from `nightly.yml` because it is the only job
-here that can go red for a reason outside the repository (expired account, paused project,
-rotated key), and that must not be able to red the main nightly verdict.
+**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC), against a LOCAL Supabase
+stack.** Per-change selection still cannot reach it, so nothing commit-driven ever will; a
+schedule can. The job runs `supabase start` on the runner, applies the repository's own
+migrations, mints a throwaway account, and runs the whole suite against that - then tears down
+with the runner. It files its own rolling issue, separate from `nightly.yml`.
+
+Two things that route buys, and one it costs:
+
+- **No Supabase secret lives in GitHub.** The local stack's keys are the CLI's published shared
+  defaults, read at runtime from `supabase status`. The repo is public and `.env` points at
+  PRODUCTION, so the previous design had to withhold `SUPABASE_SERVICE_ROLE_KEY` and lost two
+  specs to it; both are back, and `ALLOWED_SKIPS` is empty.
+- **Nothing is written to production.** The suite creates and deletes real rows every run; they
+  used to land in the owner's production project, against `playwright.live.config.ts`'s own
+  advice.
+- **It cannot see latency-shaped defects.** A local stack answers in ~1 ms where a hosted one
+  answers in ~200 ms from a runner. The tombstone sync defect fixed on 2026-08-24 was invisible
+  at 5 ms/request and failed six specs at 207 ms/request - **this job would not have caught it**.
+  A green run here is not evidence that sync is fast enough anywhere real; that needs a hosted
+  target or a deliberate delay.
 
 **Its exit code is not its verdict, by construction.** Every spec calls
-`test.skip(!haveCreds, …)`, so with the credentials unset the run executes nothing and exits 0 -
+`test.skip(!haveCreds, …)`, so with the environment unset the run executes nothing and exits 0 -
 a job checking only the exit code would be permanently, silently green, which is the exact hole
-that let five specs sit on main unverified. So the workflow (a) refuses to start when any of the
-four secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **nothing
-skipped outside `ALLOWED_SKIPS`, and at least `MIN_TESTS` (31) ran**. The four secrets are
-`E2E_EMAIL`, `E2E_PASSWORD`, `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` - the throwaway
-`synctest…` account. When the suite grows, raise `MIN_TESTS` in the same commit; a stale value
-only makes the guard weaker. The run summary lists every test that actually executed - read
-that, not the exit code.
+that let five specs sit on main unverified. The guards, in the order they fire:
 
-**Two specs are deliberately not covered**, both because they need `SUPABASE_SERVICE_ROLE_KEY` -
-a key that bypasses RLS entirely, full read/write on every table. This repository is public and
-`.env` points at the PRODUCTION Supabase project, so shipping that key to Actions would hand a
-production RLS-bypass credential to everyone with repo write access, permanently, to gain two
-tests. It is therefore absent and those two are the whole of `ALLOWED_SKIPS`; every other skip
-still fails the job.
+1. the stack must come up (`supabase start`);
+2. the applied migration count must equal the repository's, so a half-applied schema cannot pass
+   as a product regression;
+3. `supabase_realtime` must publish `chat_submissions` AND `control_events` - the four
+   hosted-playout specs subscribe through `postgres_changes`, and no migration CREATES that
+   publication (0003 and 0008 only add tables to it), so a missing one shows up as four 30-second
+   timeouts that read like a renderer bug;
+4. the test account must **authenticate**, not merely exist - one password grant turns twenty
+   ambiguous UI timeouts into one unambiguous step;
+5. the JSON report must show **nothing skipped and at least `MIN_TESTS` (32) run**.
 
-- **`moderator.spec.ts`** needs it to grant and revoke the test account's moderator role.
-  Unverified nightly: that the 🛡 Moderate button appears for a moderator, that the takedown
-  queue states status in the shared product vocabulary (`live` / `taken down`, never the
-  table's own words), that its preview ships the settle bootstrap so a moderator is not judging
-  a black rectangle, and that a removed item actually leaves the public gallery listing.
-- **`agent-access.spec.ts`** needs it SERVER-side - `api/_lib/agentAccessStore.ts` mints and
-  honours agent keys with it and answers 503 without - so the whole consent → code → redeem →
-  save → revoke walk is unverified. It asks the server and SKIPS rather than failing, because a
-  configured client is not enough to run it; `haveCreds` alone was the wrong gate.
-
-Run both by hand with `npm run test:e2e:live` after touching moderation or agent access. The
-real fix is a dedicated staging Supabase project with its own service key, which would also stop
-the suite writing rows into production every night - never a longer allowlist.
+When the suite grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard
+weaker. The run summary lists every test that actually executed - read that, not the exit code.
 
 ## A clean merge is not proof the integration worked
 

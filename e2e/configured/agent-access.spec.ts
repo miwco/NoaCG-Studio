@@ -66,26 +66,18 @@ test.describe('agent access (configured)', () => {
   test('consent -> loopback code -> redeem -> save 201 -> deep link -> revoke -> 401', async ({ page, request, baseURL }) => {
     const origin = baseURL!.replace(/\/+$/, '');
 
-    // The agent-key routes are SERVER-side: api/_lib/agentAccessStore.ts needs
-    // SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) to mint and honour keys, and answers 503
-    // "this NoaCG has no account backend" without it. A configured CLIENT is therefore not enough
-    // to run this walk, which is why haveCreds alone was the wrong gate: CI supplies the four
-    // client-side secrets deliberately WITHOUT the service-role key (it bypasses RLS entirely and
-    // this repository is public), so the spec failed there for a missing CAPABILITY rather than a
-    // regression. Ask the server what it can do instead of inferring it from the environment -
-    // the same question the Settings surface asks, so a skip here means a real user on this
-    // deployment would find the feature absent too. Restore the key (a staging project's, never
-    // production's) and the walk runs again with no change here.
-    //
-    // Asked in the BODY, not as a describe-level `test.skip(callback)`: that overload is
-    // `ConditionBody = (args) => boolean`, synchronous, so an async probe there would hand it a
-    // Promise - always truthy - and skip the walk unconditionally, for every deployment,
-    // silently. The imperative form takes a real awaited boolean.
+    // The agent-key routes are SERVER-side: api/_lib/agentAccessStore.ts mints and honours keys
+    // with SUPABASE_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY from the dev server's own process.env,
+    // and answers 503 without one. A configured CLIENT is not enough to run this walk. That is
+    // reported rather than skipped: CI brings up a local Supabase stack whose service key is a
+    // published default, so the capability is always present by construction, and a 503 here means
+    // the stack did not come up the way the workflow assumes - an environment fault worth failing
+    // on, not a deployment that legitimately lacks the feature.
     const probe = await request.get(`${origin}/api/me/agent-keys`).catch(() => null);
-    test.skip(
-      probe?.status() === 503,
-      'this deployment has no agent-key backend (no SUPABASE_SERVICE_ROLE_KEY)',
-    );
+    expect(
+      probe?.status(),
+      'the agent-key backend is configured (needs SUPABASE_SERVICE_ROLE_KEY on the server)',
+    ).not.toBe(503);
     await signIn(page);
     await dismissWizard(page);
     await settleSync(page);
