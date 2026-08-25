@@ -176,6 +176,11 @@ function update(data) {
     // UNCHANGED one is the wire resending the cue's whole value set (a score bump), and
     // matchClockUpdate repaints the ticked time over what setFieldValue just wrote above.
     if (typeof matchClockUpdate === 'function') matchClockUpdate(key, fields[key]);
+    // A board that runs CLOCKS OF ITS OWN (the debate floor's two) adopts the wire's value on
+    // the same beat and by the same rule: a stamped value says a clock is running and when it
+    // read that time, a plain one is a held time or the chair's correction, and a resend of the
+    // cue's own text is neither. Guarded, so every other board emits nothing extra.
+    if (typeof speakingClockUpdate === 'function') speakingClockUpdate(key, fields[key]);
     if (changed && onAir && scoreIds.indexOf(key) !== -1) {
       // Pop the MASK (the span's parent), not the span: the span is clipped by the mask's
       // overflow:hidden, so scaling it would chop the outer digits of a two-digit score.

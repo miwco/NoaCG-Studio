@@ -1178,6 +1178,208 @@ test('the clock walks a whole match through the log: start, bump, stop, restart,
   expect(walk.localRow).toEqual({ value: `30:00@${1_755_600_000_000}`, when: 'before' });
 });
 
+test('a debate’s two clocks survive a renderer reboot: the stamp says which one is running', async ({ page }) => {
+  // THE FAULT THIS EXISTS FOR. A debate board (dc01, the speaking-timer type) runs TWO clocks and
+  // one of them at a time, and until now neither was on the wire as anything but a plain time. A
+  // renderer rebuilding from a report snapshot taken AFTER the switch it needed had no row left
+  // to replay, so it came back at whatever the cue last wrote — the full allowance, mid-speech,
+  // on air, with a speaker's remaining time visibly wrong to the room.
+  //
+  // Which of the two is running is the floor group's pointer, and that is MACHINE state. The wire
+  // does not learn to read machine graphs to find it: **the stamp IS the pointer**. At most one
+  // clock field carries an origin, and that one is running, so `switch` is "bank the stamped one,
+  // stamp the other" and every other verb follows. This walks a real debate through the log
+  // exactly as `src/output/main.ts` does, and then reads the snapshot mid-speech.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const walk = await page.evaluate(async () => {
+    const w = await import('/src/control/matchClockWire.ts');
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    // The REAL design's markup, not a fixture: what is asserted here is that the reader finds
+    // what the emitter writes, and a hand-written fixture could only ever agree with itself.
+    let dc01 = null as null | { create: (o: Record<string, never>) => { html: string } };
+    for (const list of Object.values(CATALOG)) {
+      const hit = (list || []).find((v: { id: string }) => v.id === 'dc01');
+      if (hit) dc01 = hit as never;
+    }
+    const html = dc01!.create({}).html;
+    const clocks = w.speakingClocksFromHtml(html)!;
+    const T = 1_755_600_000_000;
+    const at = (secs: number) => new Date(T + secs * 1000).toISOString();
+
+    // src/output/main.ts apply(), mirrored: an update merges into the graphic's value set —
+    // through clockValueAfterUpdate for BOTH clock fields — and the row effect is then asked
+    // against it, its values written before or after the row itself.
+    let merged: Record<string, string> = {};
+    const trace: { row: string; values: Record<string, string> | null; when: string | null }[] = [];
+    const step = (label: string, msg: unknown, createdAt: string) => {
+      const m = msg as { t: string; data?: Record<string, string> };
+      if (m.t === 'update' && m.data) {
+        const prior = merged;
+        merged = { ...merged, ...m.data };
+        for (const field of [clocks.fieldA, clocks.fieldB]) {
+          if (m.data[field] !== undefined) merged[field] = w.clockValueAfterUpdate(prior[field], m.data[field]);
+        }
+      }
+      const effect = w.speakingClockRowEffect({ msg, created_at: createdAt } as never, clocks, merged, T);
+      if (effect) merged = { ...merged, ...effect.values };
+      trace.push({ row: label, values: effect?.values ?? null, when: effect?.when ?? null });
+    };
+
+    // A Take sends the cue's whole value set; both clocks ride it as plain (held) times.
+    step('take', { t: 'update', data: { f0: 'OPENING STATEMENTS', f5: '05:00', f6: '05:00', f7: '05:00', f9: '10' } }, at(0));
+    // The chair opens the debate. The board was ARMED — nobody had the floor — so the first
+    // Switch hands to A, which is what the machine's armed state does with the same press.
+    step('switch (A opens)', { t: 'event', event: 'switch' }, at(0));
+    // A minute in, the chair retypes the round label. The cue's WHOLE value set goes again and a
+    // cue stores a plain time forever, so this re-sends "05:00" over a clock at 04:00.
+    step('update (round label)', { t: 'update', data: { f0: 'REBUTTAL', f5: '05:00', f6: '05:00' } }, at(60));
+    // A penalty at 1:30. A docks ten seconds and KEEPS SPEAKING — a deduction, not a stoppage.
+    step('penalty (A)', { t: 'event', event: 'penalty' }, at(90));
+    // The floor passes at 3:00.
+    step('switch (to B)', { t: 'event', event: 'switch' }, at(180));
+    // …and back at 4:00, then off air at 5:00, then re-armed.
+    const midSpeech = { ...merged };
+    step('switch (back to A)', { t: 'event', event: 'switch' }, at(240));
+    step('stop (off air)', { t: 'stop' }, at(300));
+    step('reset', { t: 'event', event: 'reset' }, at(360));
+
+    return {
+      clocks,
+      trace,
+      // A graphic with no speaking clocks says so rather than guessing a pair.
+      noClocks: w.speakingClocksFromHtml('<div class="lower-third"><span id="f0">Name</span></div>'),
+      // Half a pair cannot alternate, so it is refused whole rather than half-guessed.
+      halfPair: w.speakingClocksFromHtml('<div><span id="f5" data-speaking="a">05:00</span></div>'),
+      // WHAT A RENDERER BOOTING AT 4:00 PAINTS, from the banked value set alone. This is the
+      // whole point: B is mid-speech and its remaining time is not the allowance.
+      rebuiltA: w.speakingClockAt(midSpeech[clocks.fieldA], T + 240_000),
+      rebuiltB: w.speakingClockAt(midSpeech[clocks.fieldB], T + 240_000),
+      // …and the same snapshot read a minute later still resolves, because it is time-relative.
+      rebuiltBLater: w.speakingClockAt(midSpeech[clocks.fieldB], T + 300_000),
+      runningMidSpeech: w.runningSpeakingSide(clocks, midSpeech),
+      runningAfterReset: w.runningSpeakingSide(clocks, merged),
+      // A locally-authored row (an offline rehearsal's own command) has no server time and falls
+      // back to the caller's instant — correct, because that log has exactly one renderer.
+      localRow: w.speakingClockRowEffect({ msg: { t: 'event', event: 'switch' } } as never, clocks, {}, T),
+    };
+  });
+
+  // The reader finds what dc01 emits, both clocks and both of the numbers the verbs need.
+  expect(walk.clocks).toEqual({
+    fieldA: 'f5', fieldB: 'f6', seedA: '05:00', seedB: '05:00',
+    allowanceField: 'f7', allowanceSeed: '05:00', penaltyField: 'f9', penaltySeed: '10',
+  });
+  expect(walk.noClocks).toBeNull();
+  expect(walk.halfPair).toBeNull();
+
+  expect(walk.trace.map((t) => [t.row, t.when])).toEqual([
+    ['take', null],                          // an update never moves a clock
+    ['switch (A opens)', 'before'],          // the stamp must be in the document before the call
+    ['update (round label)', null],
+    ['penalty (A)', 'after'],                // the engine docks it too; writing first docks twice
+    ['switch (to B)', 'before'],
+    ['switch (back to A)', 'before'],
+    ['stop (off air)', 'after'],
+    ['reset', 'after'],
+  ]);
+  // The chair's first press stamps A at the allowance and leaves B alone.
+  expect(walk.trace[1].values).toEqual({ f5: `05:00@${1_755_600_000_000}` });
+  // The penalty docks ten seconds off the DERIVED 03:30 and re-stamps, so A keeps running.
+  expect(walk.trace[3].values).toEqual({ f5: `03:20@${1_755_600_000_000 + 90_000}` });
+  // The floor passes: A banks the 01:50 it had actually run down to — not the 05:00 the cue
+  // re-sent at 1:00, which is the resend the origin has to survive — and B takes the stamp.
+  expect(walk.trace[4].values).toEqual({ f5: '01:50', f6: `05:00@${1_755_600_000_000 + 180_000}` });
+
+  // THE RECOVERY. A renderer rebuilding at 4:00 from that snapshot: A held where it stopped, B
+  // still speaking with a minute gone. Before the fix both read 05:00.
+  expect(walk.runningMidSpeech).toBe('b');
+  expect(walk.rebuiltA).toBe('01:50');
+  expect(walk.rebuiltB).toBe('04:00');
+  expect(walk.rebuiltBLater).toBe('03:00');
+
+  // Back to A: B banks the 04:00 it had run to, and A resumes from its OWN number — an
+  // interrupted speaker does not lose the time.
+  expect(walk.trace[5].values).toEqual({ f6: '04:00', f5: `01:50@${1_755_600_000_000 + 240_000}` });
+  // Off air nobody holds the floor, so the running clock is banked where it stood: 01:50 less
+  // the minute it ran. Without this a board taken down keeps its stamp and "runs" off air.
+  expect(walk.trace[6].values).toEqual({ f5: '00:50' });
+  // Re-arming returns both to the allowance ON SCREEN, plain — and with no stamp anywhere, the
+  // next Switch hands to A again.
+  expect(walk.trace[7].values).toEqual({ f5: '05:00', f6: '05:00' });
+  expect(walk.runningAfterReset).toBeNull();
+  // A row with no server time still opens the debate, against the caller's instant.
+  expect(walk.localRow).toEqual({ values: { f5: `05:00@${1_755_600_000_000}` }, when: 'before' });
+});
+
+test('the debate board itself reads a stamped clock: it opens mid-speech and keeps counting', async ({ page }) => {
+  test.setTimeout(60_000);
+  // The wire half above is arithmetic; this is the BOARD, which is where the recovery is either
+  // visible or not. It boots dc01 into a frame that has never seen the debate and hands it what a
+  // report snapshot holds mid-speech — one clock stamped, one plain — exactly as /output would.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const result = await page.evaluate(`(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const { composeDocument } = await import('/src/preview/composeDocument.ts');
+    let variant = null;
+    for (const list of Object.values(CATALOG)) {
+      const hit = (list || []).find((v) => v.id === 'dc01');
+      if (hit) variant = hit;
+    }
+    const f = document.createElement('iframe');
+    f.style.cssText = 'position:fixed;left:-4000px;top:0;width:1920px;height:1080px;border:0;';
+    document.body.appendChild(f);
+    await new Promise((res) => { f.onload = res; f.srcdoc = composeDocument(variant.create({})); });
+    await sleep(60);
+    const w = f.contentWindow, d = f.contentDocument;
+    const A = () => d.querySelector('#f5').textContent;
+    const B = () => d.querySelector('#f6').textContent;
+
+    // The Take: the cue's own plain values, which is all a cue ever stores.
+    w.update(JSON.stringify({ f0: 'REBUTTAL', f5: '05:00', f6: '05:00', f7: '05:00', f9: '10' }));
+    const afterTake = [A(), B()];
+    // The snapshot: B has been speaking for 62 seconds from 03:12, A is held at 01:50. This is
+    // the shape /output banks — the running clock stamped, the held one plain.
+    const stamped = '03:12@' + (Date.now() - 62000);
+    w.update(JSON.stringify({ f5: '01:50', f6: stamped }));
+    const recovered = [A(), B()];
+    await sleep(1300);
+    const stillRunning = [A(), B()];          // …and B is COUNTING, not a frozen recovered number
+    // A resend of the cue's whole value set — the chair retypes the round label. /output forwards
+    // what it HOLDS for the clock fields, so the stamped value comes round again; re-sending it
+    // is idempotent and must neither restart B nor disturb A.
+    w.update(JSON.stringify({ f0: 'CLOSING', f5: '01:50', f6: stamped }));
+    const afterResend = [A(), B()];
+    await sleep(1300);
+    const afterResendLater = [A(), B()];
+    // And a REAL correction is still obeyed, or the guard would have swallowed the one edit that
+    // matters most: a clock the chair cannot correct is a clock the chair stops trusting.
+    w.update(JSON.stringify({ f6: '00:45' }));
+    const corrected = [A(), B()];
+    return { afterTake, recovered, stillRunning, afterResend, afterResendLater, corrected,
+             label: d.querySelector('#f0').textContent };
+  })()`) as Record<string, string[] & string>;
+
+  expect(result.afterTake).toEqual(['05:00', '05:00']);
+  // The board opens at the real remaining time — 03:12 less the 62 seconds that had gone — and
+  // NOT at the 05:00 the cue last wrote, which is what it painted a line earlier. No '@' ever
+  // reaches the screen either: the raw wire text is written into the element by setFieldValue
+  // like any other field, and the engine paints the real time back over it.
+  expect(result.recovered).toEqual(['01:50', '02:10']);
+  expect(result.stillRunning[0]).toBe('01:50');       // the held clock does not creep
+  expect(result.stillRunning[1]).not.toBe('02:10');   // the running one does
+  // The resend leaves both where they stood — B a second on from where the sleep left it, never
+  // back at 03:12 and never back at the cue's 05:00 — and B is still counting after it.
+  expect(result.afterResend[0]).toBe('01:50');
+  expect(result.afterResend[1]).toBe(result.stillRunning[1]);
+  expect(result.afterResendLater[1]).not.toBe(result.afterResend[1]);
+  // A genuine correction still takes.
+  expect(result.corrected).toEqual(['01:50', '00:45']);
+  expect(result.label).toBe('CLOSING');
+});
+
 test('a renderer that has never reported boots from the START of the log, not its head', async ({ page }) => {
   // `control/outputRecovery.ts` decides which log rows a booting /output renderer counts as
   // already applied, and it is pure for the same reason the clock wire is: that page only runs

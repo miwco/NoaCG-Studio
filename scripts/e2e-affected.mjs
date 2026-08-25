@@ -195,7 +195,7 @@ const MAP = [
   // branch's FIRST push gave CI no diff base and it escalated to the full suite by accident.
   // `scripts/e2e-affected.test.mjs` now pins the rule this list was failing - every catalog
   // importer is selected by a `src/templates/` change - so the hole cannot silently reopen.
-  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts']],
+  [/^src\/templates\//, ['catalog-baseline.spec.ts', 'stage-fit-determinism.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts', 'graphic-types.spec.ts', 'bench.spec.ts', 'house.spec.ts', 'wave2.spec.ts', 'timeline-v2.spec.ts', 'wizard-filters.spec.ts', 'wizard-logo.spec.ts', 'wizard-preview.spec.ts', 'format.spec.ts', 'ux.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'template-pack-10.spec.ts', 'stream-notification.spec.ts', 'creative-routing.spec.ts', 'ai-retrieval.spec.ts', 'snap-recovery.spec.ts', 'lite-parity.spec.ts', 'competition-pack.spec.ts', 'holding-pack.spec.ts', 'full-frame-offering.spec.ts', 'public-service.spec.ts', 'template-escaping.spec.ts', 'sports.spec.ts', 'audience-pack.spec.ts', 'community.spec.ts', 'library.spec.ts', 'exports.spec.ts', 'wizard-kit.spec.ts', 'lite-field-paint.spec.ts', 'lite-line-content.spec.ts', 'wizard-setup-fields.spec.ts', 'productions.spec.ts']],
   // wizard-finish, wizard-kit and wizard-shell were MISSING from this list, so a FinishStep,
   // kit-flow or wizard-header change ran neither the spec named after it nor anything that
   // walks to its step - the "runs FEWER specs" failure mode with no alarm attached
@@ -328,6 +328,15 @@ const MAP = [
   // These files are assertions over catalog output, not shared application foundations.
   // Refreshing them should verify the catalog baseline without expanding to every UI flow.
   [/^e2e\/catalog(?:-render)?-baseline\.json$/, ['catalog-baseline.spec.ts']],
+  // CASPARCG CONNECT (docs/CASPARCG_CONNECT.md). The browser half is one file, and the two
+  // surfaces it grows are already mapped elsewhere for their own reasons - SettingsDialog to
+  // analytics/auth, ProductionPage into the productions set - so those rules are UNION'd with
+  // this one rather than replaced. Without this row a change to the link contract would run
+  // specs that pin the panels' other contents and never the four diagnosis states, which are
+  // the whole point of the feature.
+  [/^src\/control\/casparLink\.ts$/, ['caspar-connect.spec.ts']],
+  [/^src\/components\/SettingsDialog\.tsx$/, ['caspar-connect.spec.ts']],
+  [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
 ];
 
 // Anything matching these runs the FULL suite - shared foundations with fan-out everywhere.

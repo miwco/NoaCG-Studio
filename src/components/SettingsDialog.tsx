@@ -4,6 +4,15 @@ import { loadPrefs, savePrefs } from '../model/prefs';
 import { EXPORT_TARGETS } from '../export/registry';
 import { signOut, updatePassword } from '../backend/auth';
 import { listAgentKeys, revokeAgentKey, type AgentKeySummary } from '../backend/agentAccess';
+import {
+  casparAddress,
+  casparConfigured,
+  loadCasparSettings,
+  saveCasparSettings,
+  testCasparConnection,
+  type CasparResult,
+  type CasparSettings,
+} from '../control/casparLink';
 import { useModalGate } from './spaceKey';
 import { useAdvancedMode } from './useAdvancedMode';
 import { useAuthState } from './auth/useAuthState';
@@ -37,6 +46,7 @@ const SECTIONS = [
   { id: 'account', nav: 'Account', caption: 'Account' },
   { id: 'ai', nav: 'AI', caption: 'AI' },
   { id: 'privacy', nav: 'Privacy', caption: 'Privacy' },
+  { id: 'playout', nav: 'Playout', caption: 'Playout' },
   { id: 'workflow', nav: 'Workflow', caption: 'Workflow defaults' },
   { id: 'brand', nav: 'Brand & style', caption: 'Brand & style defaults' },
 ] as const;
@@ -194,6 +204,161 @@ function AgentAccessSection() {
   );
 }
 
+/**
+ * "Playout" - the one CasparCG server this studio drives (docs/CASPARCG_CONNECT.md). App-wide
+ * and persisted, never per production: a studio has one playout box, and retyping it per show
+ * is the friction this removes.
+ *
+ * FEATURE-DETECTED, not gated. With no agent running the section is complete and explains what
+ * to run - it must never look broken, because the CasparCG routes in
+ * docs/PLAYOUT_INTEGRATION.md all still work without any of this.
+ *
+ * The four diagnosis states come from control/casparLink.ts and are shown as themselves. A
+ * single generic red here would be the worst possible outcome: "the browser has not been given
+ * local network permission", "the agent is not running", "the agent rejected the token" and
+ * "CasparCG did not answer" have nothing to do with each other, and three of the four are the
+ * person's own to fix.
+ */
+function PlayoutSection() {
+  const [settings, setSettings] = useState(loadCasparSettings);
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<CasparResult | null>(null);
+
+  const set = (patch: Partial<CasparSettings>) => {
+    saveCasparSettings(patch);
+    setSettings(loadCasparSettings());
+    setResult(null); // a changed setting makes the last verdict stale, and a stale ✓ lies
+  };
+
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      setResult(await testCasparConnection(settings));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const configured = casparConfigured(settings);
+
+  return (
+    <div data-testid="settings-playout">
+      <p className="hint">
+        Put a production on a CasparCG channel from its own page, instead of loading the URL by
+        hand in the CasparCG Client. A browser cannot open the AMCP socket itself, so a small
+        helper on this machine holds it - run <code>noacg caspar agent</code> in a terminal and
+        leave it open. Loading a production&rsquo;s output URL by hand keeps working exactly as
+        before, with or without this.
+      </p>
+
+      <div className="dlg-rows">
+        <div className="dlg-row">
+          <label htmlFor="caspar-host">CasparCG server</label>
+          {/* Host and AMCP port are one address, so they share a row. */}
+          <div className="dlg-pair">
+            <input
+              id="caspar-host"
+              value={settings.host}
+              onChange={(e) => set({ host: e.target.value })}
+              placeholder="127.0.0.1"
+              spellCheck={false}
+              data-testid="caspar-host"
+            />
+            <input
+              type="number"
+              min={1}
+              max={65535}
+              value={settings.amcpPort}
+              onChange={(e) => set({ amcpPort: Number(e.target.value) || 0 })}
+              aria-label="AMCP port"
+              data-testid="caspar-amcp-port"
+            />
+          </div>
+          <p className="dlg-hint">The machine running CasparCG, and its AMCP port (5250 unless it was changed).</p>
+        </div>
+
+        <div className="dlg-row">
+          <label htmlFor="caspar-channel">Channel and layer</label>
+          <div className="dlg-pair">
+            <input
+              id="caspar-channel"
+              type="number"
+              min={1}
+              value={settings.channel}
+              onChange={(e) => set({ channel: Number(e.target.value) || 1 })}
+              aria-label="Channel"
+              data-testid="caspar-channel"
+            />
+            <input
+              type="number"
+              min={0}
+              value={settings.layer}
+              onChange={(e) => set({ layer: Number(e.target.value) || 0 })}
+              aria-label="Layer"
+              data-testid="caspar-layer"
+            />
+          </div>
+          <p className="dlg-hint">
+            Where the graphics go: CasparCG calls this <code>{casparAddress(settings)}</code>. Use a
+            layer above whatever your rundown plays video on.
+          </p>
+        </div>
+
+        <div className="dlg-row">
+          <label htmlFor="caspar-agent-url">Local agent</label>
+          <div className="dlg-pair">
+            <input
+              id="caspar-agent-url"
+              value={settings.agentUrl}
+              onChange={(e) => set({ agentUrl: e.target.value })}
+              placeholder="http://127.0.0.1:8899"
+              spellCheck={false}
+              data-testid="caspar-agent-url"
+            />
+            <input
+              type="password"
+              value={settings.agentToken}
+              onChange={(e) => set({ agentToken: e.target.value })}
+              placeholder="Agent token"
+              aria-label="Agent token"
+              spellCheck={false}
+              data-testid="caspar-agent-token"
+            />
+          </div>
+          <p className="dlg-hint">
+            Both are printed by <code>noacg caspar agent</code> when it starts. The token stays in
+            this browser; the agent only ever listens on this machine.
+          </p>
+        </div>
+      </div>
+
+      <div className="dlg-pair dlg-pair--wide">
+        <button onClick={() => void test()} disabled={testing || !configured} data-testid="caspar-test">
+          {testing ? 'Testing…' : 'Test connection'}
+        </button>
+      </div>
+      {result && (
+        <p
+          className={result.state === 'ok' ? 'status-ok' : 'status-bad'}
+          data-testid="caspar-result"
+          data-state={result.state}
+        >
+          {result.state === 'ok'
+            ? `✓ Connected${result.version ? ` — CasparCG ${result.version}` : ''}`
+            : result.detail}
+        </p>
+      )}
+      <p className="dlg-hint">
+        No connection? <code>noacg caspar status</code> in a terminal makes the same call without a
+        browser, and says whether the problem is this page or the server. Chrome and Edge are the
+        browsers this works in; Safari refuses a secure page reaching a local address outright, and
+        there <code>noacg caspar play</code> airs a production with no browser at all.
+      </p>
+    </div>
+  );
+}
+
 export default function SettingsDialog({ onClose }: Props) {
   useModalGate();
   const pressedOnBackdrop = useRef(false);
@@ -336,6 +501,13 @@ export default function SettingsDialog({ onClose }: Props) {
                 </p>
               </section>
             )}
+
+            {/* Offline builds keep this: airing on a local CasparCG needs no account and no
+                backend, so gating it on `backendConfigured` would remove a feature that works. */}
+            <section data-section="playout">
+              <p className="dlg-caption">Playout</p>
+              <PlayoutSection />
+            </section>
 
             <section data-section="workflow">
               <p className="dlg-caption">Workflow defaults</p>

@@ -190,6 +190,13 @@ supabase/.temp/
 /.tmp-hosted-build/
 .env*
 
+# npm auth for publishing the `noacg` CLI. The file itself holds no secret - it is
+# `_authToken=${NPM_TOKEN}`, an ENV REFERENCE, and the token lives in .env above. It is ignored
+# anyway for two reasons: committing it would point every contributor's npm at our registry auth
+# line, and the day somebody pastes a literal token in here instead of the reference, git must
+# already be refusing to take it.
+.npmrc
+
 # Local Lite test rig: a real bearer token, never committed.
 .lite-token
 lite-payload.tmp.json

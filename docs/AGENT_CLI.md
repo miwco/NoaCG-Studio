@@ -78,7 +78,9 @@ request was refused, `2` a usage/IO error.
 | `noacg docs [contract\|package\|validator\|ograf]` | Prints the skill's reference texts (the same files the skill ships). |
 | `noacg login [--name N] [--no-browser] [--key <noacg_ak_…>]` / `logout [--local]` / `whoami` | Obtain, end and show this machine's SCOPED AGENT KEY (docs/AGENT_SAVE.md): `login` opens the consent page in your browser and receives a one-time code on a loopback listener - the key is minted at redeem and never transits the browser; it can only create graphics in your library. `--key` stores a key minted elsewhere. |
 | `noacg save <dir\|zip> [--name N] [--folder F] [--no-bench]` | Validate (gate + bench) in the bridge, refuse on errors, then POST the library record to `/api/me/graphics` with the key; prints the `#/graphic/<id>` link, which opens at once (a miss while signed in runs one sync pass). SAVE is the library - never publish, never a production. |
-| `noacg mcp` | The same verbs as an MCP server over stdio (`noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`, `noacg_screenshot`, `noacg_save`; screenshots are returned as images). |
+| `noacg caspar agent [--port 8899] [--token T] [--new-token] [--origin URL ...] [--quiet]` | The ONE command here that is not about authoring a graphic (`docs/CASPARCG_CONNECT.md`). It holds an AMCP socket to CasparCG on behalf of the STUDIO PAGE, because a browser's only socket is a WebSocket and AMCP will never answer an HTTP Upgrade. Loopback-only bind, a stored per-machine token, an origin allowlist, and a `Host`-header check; `/health` is the one unauthenticated route so the panel can tell a missing agent from a rejected token. It lives in this CLI rather than as a second local helper, the same call `docs/PLAYOUT_INTEGRATION.md` §4 made for the exported package's relay. |
+| `noacg caspar status\|send\|play\|stop [--server HOST] [--amcp-port 5250] [--channel 1] [--layer 20]` | The same AMCP with no browser in the loop at all - which is also the answer for Safari and any browser that will not let a page reach a local address. `play --url <output URL>` is the whole live link: one `PLAY <channel>-<layer> [HTML] "<url>"`, after which every cue rides the durable command log. |
+| `noacg mcp` | The same verbs as an MCP server over stdio (`noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`, `noacg_screenshot`, `noacg_save`; screenshots are returned as images). `caspar` is deliberately NOT exposed: it drives live playout hardware, which is an operator's decision and not an authoring agent's. |
 
 Environment: `NOACG_URL` (the deployment to drive and save to; default `https://noacg.studio`;
 `http://localhost:<port>` for a dev server; any self-host), `NOACG_BROWSER` (a Chromium
@@ -145,6 +147,24 @@ and every shipped copy (npm, the Claude Code plugin, the Codex skill) are genera
 
 ## Distribution (one source, every shipped copy generated)
 
+**`cli/` is Apache-2.0. The rest of the repository is AGPL-3.0-only.** That split is deliberate
+and should not be "tidied" back into one licence (owner decision, 2026-08-25).
+
+The AGPL exists to stop the hosted application being taken proprietary and run as a competing
+NoaCG cloud. That threat lives in the web app, and the app's licence guards it. This package is a
+CLIENT - a tool an outside agent installs to talk to a deployment - so copyleft here protects
+nothing and costs real installs: organisations run automated dependency-licence policies that
+block or flag AGPL on sight, without distinguishing a tool you EXECUTE from a library you LINK.
+Since adoption is the goal for this surface and no revenue depends on it, permissive wins.
+Apache-2.0 over MIT for the explicit patent grant and trademark clarity, which is what enterprise
+review treats as safest.
+
+The split is clean because `cli/` imports nothing from `src/` - it drives the deployment over the
+bridge page instead - and every dependency is permissive (MCP SDK MIT, playwright-core Apache-2.0,
+zod MIT, jszip MIT-or-GPL). `cli/LICENSE` and the `license` field in `cli/package.json` and both
+plugin manifests must stay in step; a published version's licence is frozen in the registry, so
+this had to be right BEFORE the first publish rather than after.
+
 | Channel | What ships | Install |
 |---|---|---|
 | **npm** `noacg` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx noacg <cmd>` / `npm i -g noacg` |
@@ -162,6 +182,24 @@ installed from this repository as a marketplace (`claude plugin install noacg@no
 (`npm publish` from `cli/`, and pushing the marketplace) is the owner's call; until the package is
 on npm the plugin's MCP server cannot start (`npx -y noacg` has nothing to fetch) while its skill
 and command already work.
+
+### Releasing to npm
+
+The package is published to the **`noacg` organisation** on npm (the account `miwco` owns it). An
+unscoped package belongs to whoever publishes it, so the first publish is followed by transferring
+the package to the org in its npm settings.
+
+Auth is a token in `.env` as `NPM_TOKEN`, read by a gitignored root `.npmrc` holding
+`_authToken=${NPM_TOKEN}` - an environment reference, never a literal. **npm does not read `.env`**:
+the variable has to be exported in the shell that publishes, or the publish fails with a 401 that
+looks like a broken token.
+
+**TODO after the first publish - set up trusted publishing (OIDC)** and delete the stored token.
+npm can trust a named GitHub Actions workflow in this repository and mint short-lived credentials
+at publish time, so no long-lived publish token sits on a laptop - which is the real standing risk
+here, larger than anything in the repository itself. It is configured against a package that
+already exists, which is why it is a follow-up rather than a prerequisite. Owner decision
+2026-08-25: this is wanted.
 
 ## The category-agnostic proof
 

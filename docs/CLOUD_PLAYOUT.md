@@ -251,6 +251,30 @@ The page:
   copy of this module's arithmetic), so a reload is recovered off the hosted plane as well.
   `docs/SPORTS_PACK.md` carries the per-plane table and the one gap left — a relay-driven
   browser source, which boots at the log head and so recovers nothing until an operator acts.
+- **A DEBATE BOARD'S TWO SPEAKING CLOCKS carry the same origin, and the STAMP says which one is
+  running.** Everything above applies twice on the speaking-timer type (dc01), where two clocks
+  alternate — and the hard part is not the arithmetic but "who has the floor", which is the
+  machine's floor-group pointer. The wire does not learn to read machine graphs to find it. The
+  invariant is a property of the wire's own values: **at most one of the two clock fields carries
+  an origin stamp, and that one is running.** `switch` banks the stamped clock plain and stamps
+  the other (neither stamped → the first, because somebody has to open); `penalty` docks whichever
+  is stamped; `reset` returns both to the allowance on screen; going off air banks the stamped
+  one. No state id is named and no edge is read, and it agrees with the machine because the
+  design's own engine already alternates the same way (`scoreboards/debateFloor.ts`
+  `debateStart`). The design DECLARES its clocks with one attribute vocabulary —
+  `data-speaking="a" | "b" | "allowance" | "penalty"` — because unlike the match clock there is
+  no pre-existing class contract to read. Wire half: `speakingClocksFromHtml` /
+  `speakingClockRowEffect` in `control/matchClockWire.ts`; runtime half: `speakingClockUpdate` in
+  `templates/scoreboards/debateFloor.ts`. `e2e/productions.spec.ts` walks a whole debate through
+  the log and then reads the snapshot mid-speech, and boots the real board against a stamped
+  value; both are mutation-tested.
+- **THE STAGE IS SENT WHAT THE RENDERER HOLDS FOR A CLOCK FIELD, not what the row carried.** A cue
+  stores a plain time forever, so every Take and ✎ Update re-sends it. The template's own resend
+  guard can only compare against the value it last RECEIVED, so once a clock has moved away from
+  what the cue stores — a debate's second speech, a match clock restarted after the interval —
+  the resend is no longer recognisable as one and pulls a running clock back. `output/main.ts`
+  forwards the merged value instead: a stamped value is time-relative, so re-sending it is always
+  safe, and a genuine correction has already replaced it in `mergedData` by then.
 - **Snap resets the graphic first, and the reset is blunt** (`clearProps: 'all'` over the root's
   subtree). It clears inline styles the DATA layer owns, not just the motion's: an image field
   with no picture hides itself inline, so recovery used to put a broken-image box on air beside
