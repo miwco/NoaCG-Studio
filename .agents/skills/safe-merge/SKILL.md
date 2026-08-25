@@ -1,6 +1,6 @@
 ---
 name: safe-merge
-description: Safely merge a branch or worktree into main - live preflight checks, verified build, then push
+description: Land a branch on main - preflight checks, verified gate, then push. With no branch, drains the queue of `clear` branches in merge order.
 ---
 
 Read `.agent-workflows/safe-merge.md` (relative to the repo root) now and follow it in full -

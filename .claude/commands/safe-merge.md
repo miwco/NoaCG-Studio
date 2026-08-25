@@ -1,7 +1,6 @@
 ---
-description: Safely merge a branch or worktree into main - live preflight checks, verified build, then push
-argument-hint: [branch-name (optional - will be detected if omitted)]
-disable-model-invocation: true
+description: Land a branch on main - preflight checks, verified gate, then push. With no argument, drains the queue of `clear` branches in merge order.
+argument-hint: [branch-name (optional - omit to drain the queue in merge order)]
 ---
 
 Argument: $ARGUMENTS
