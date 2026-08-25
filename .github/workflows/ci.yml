@@ -42,6 +42,24 @@ on:
 # its verdict (cancelled main runs left commits with NO CI answer while they were already
 # deployed to production). Within the main group, newer pushes queue; GitHub keeps only the
 # newest queued run, so main's HEAD always ends with a completed run.
+#
+# WHAT THAT LAST SENTENCE DOES AND DOES NOT BUY, measured 2026-08-25 over three days. "Keeps
+# only the newest queued run" means the ones it does not keep are CANCELLED - so a main commit
+# that lands while an earlier main run is still executing, and is itself superseded before a
+# runner frees up, ends with a run of ZERO jobs and no verdict of its own. Three did:
+# 32894928634, 32852667652, 32849327749, each `jobs: []`. `cancel-in-progress: false` protects
+# main's HEAD, which is the commit production serves; it does not give every main commit its
+# own answer, and this comment used to read as though it did.
+#
+# Left as it is, deliberately. The fix would be a per-SHA group on main so no two main runs
+# ever share one, and that trades a verdict nothing reads for queue time on the branch gates
+# that everyone waits on: a full main run is 16 jobs against a 20-concurrent-job ceiling, and
+# runs starting while two branches were mid-gate have been measured waiting 22 to 45 minutes
+# for a shard (see the shard-count comment below). The dropped verdict costs
+# nothing real - landings are `--ff-only`, so the superseded SHA was already green on its
+# branch, and the run that supersedes it tests a tree that CONTAINS it. A cancelled run also
+# raises no notification, so this is not an inbox problem either
+# (docs/VERIFICATION.md, "What a red run means, and what actually emails").
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -71,8 +89,13 @@ jobs:
         run: npm run build
 
       # The `noacg` CLI + MCP server is its own package (cli/, docs/AGENT_CLI.md): own lockfile,
-      # own typecheck, own build. Its offline tests run here; the bridge-driving smoke needs a
-      # dev server and is `npm run bench:cli` on a developer machine.
+      # own typecheck, own build. Its offline tests run here - the flag grammar, the workspace <->
+      # zip boundary, the credential store, the AMCP reader, the exit-code contract - while the
+      # bridge-driving smoke needs a dev server and a browser and is `npm run bench:cli` on a
+      # developer machine, skipping itself with a message when no bridge answers.
+      #
+      # Releasing the package is NOT this workflow's job: .github/workflows/release-cli.yml
+      # publishes it from a `cli-vX.Y.Z` tag on main, with npm trusted publishing (no token).
       - name: CLI package (typecheck + build + offline tests)
         run: npm --prefix cli ci && npm --prefix cli run typecheck && npm --prefix cli run build && npm --prefix cli test
 

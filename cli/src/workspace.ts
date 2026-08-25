@@ -57,12 +57,20 @@ export async function readPackageInput(input: string): Promise<{ bytes: Uint8Arr
 /** The entries of a package zip, keyed by path with the top folder stripped. */
 export async function packageEntries(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
   const zip = await JSZip.loadAsync(bytes);
-  const paths = Object.keys(zip.files).filter((p) => !zip.files[p].dir);
+  const entries = Object.keys(zip.files)
+    .filter((p) => !zip.files[p].dir)
+    // A zip path is ALWAYS `/`-separated (APPNOTE 4.4.17), but PowerShell's Compress-Archive and
+    // a few other Windows tools write `\` anyway. Normalizing here is what makes such a package
+    // read the same on every platform - without it, Linux writes one file literally named
+    // `pkg\graphic.mjs` while Windows silently treats it as a directory - and it is also what
+    // brings a `..\..` entry under the same containment check as `../..` (JSZip resolves `../`
+    // on read, but leaves `..\` exactly as it found it).
+    .map((p) => ({ zipPath: p, rel: p.replace(/\\/g, '/') }));
   // Strip ONE common top folder when every entry shares it (an export's `<slug>/`).
-  const firstSegments = new Set(paths.map((p) => p.split('/')[0]));
-  const strip = firstSegments.size === 1 && paths.every((p) => p.includes('/')) ? `${[...firstSegments][0]}/` : '';
+  const firstSegments = new Set(entries.map((e) => e.rel.split('/')[0]));
+  const strip = firstSegments.size === 1 && entries.every((e) => e.rel.includes('/')) ? `${[...firstSegments][0]}/` : '';
   const out = new Map<string, Uint8Array>();
-  for (const p of paths) out.set(p.slice(strip.length), await zip.files[p].async('uint8array'));
+  for (const e of entries) out.set(e.rel.slice(strip.length), await zip.files[e.zipPath].async('uint8array'));
   return out;
 }
 
@@ -79,7 +87,11 @@ export async function unzipTo(bytes: Uint8Array, dir: string, opts: UnzipOptions
   for (const [rel, data] of await packageEntries(bytes)) {
     if (opts.generatedOnly && !isGeneratedFile(rel)) continue;
     const target = path.join(abs, ...rel.split('/'));
-    if (!target.startsWith(abs)) continue; // a zip entry escaping the directory is refused
+    // A zip entry escaping the directory is refused (zip slip). Compare against `abs` WITH a
+    // trailing separator: a bare `startsWith(abs)` accepts a SIBLING whose name merely begins with
+    // the target's - unzipping into /tmp/pkg, an entry `../pkg-evil/x` resolves to /tmp/pkg-evil/x,
+    // which starts with /tmp/pkg and would have been written outside the workspace.
+    if (target !== abs && !target.startsWith(abs + path.sep)) continue;
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, data);
     written.push(rel);
