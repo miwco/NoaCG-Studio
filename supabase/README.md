@@ -24,7 +24,9 @@ supabase link --project-ref <your-ref>
 supabase db push        # applies migrations/ (schema + RLS + auth hook)
 ```
 
-**On the hosted project, `npm run db:push` is how these are applied**, and it needs nobody's
+**On the hosted project these apply themselves.** A branch landing through the merge queue runs the
+push as soon as it reaches `origin/main`, so a migration is never left waiting for someone to
+remember it. The command behind that is `npm run db:push`, and it needs nobody's
 permission — `scripts/db-push.mjs` reads every pending migration, classifies each statement, applies
 the ones that can only add, and REFUSES the ones that can remove something (a DROP, TRUNCATE,
 DELETE FROM, column-type change, RENAME, `disable row level security`, `owner to`, `alter database`,

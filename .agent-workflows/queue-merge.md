@@ -63,6 +63,12 @@ Nothing else to do. Merge jobs never run beside each other, so queued landings d
 at a time in order. If `main` moves under yours mid-gate it re-integrates and re-verifies by
 itself, up to three times.
 
+**A migration on your branch applies itself.** Once the branch is on `origin/main` the job runs
+`npm run db:push`, so you never have to remember a production push. It refuses anything that can
+remove something - a DROP, a REVOKE on an object the migration did not create - and reports instead;
+that refusal does not fail the landing. If it happens, put it in `docs/acceptance/OWNER_QUEUE.md`
+with the `npm run db:push -- --allow <version>` command, because from there it is the owner's call.
+
 ## 4. When it lands
 
 The worktree whose branch landed is told at its next start-up: merged, pushed, nothing left to

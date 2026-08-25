@@ -2,7 +2,7 @@
 // LAND ONE BRANCH, MECHANICALLY - the boring path of the safe-merge workflow, as a command a
 // job runner can spawn.
 //
-//   node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait]
+//   node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push]
 //
 // WHY THIS EXISTS. `.agent-workflows/safe-merge.md` is a procedure for a reader: it stops for
 // judgement calls, and most of a landing is not a judgement call. Queued as
@@ -25,11 +25,16 @@
 // It never force-pushes, never resets, never deletes a branch or a worktree, and the only merge
 // it makes into main is `--ff-only`, which git refuses unless the branch already contains main.
 //
-// Publishing PAST main - npm publish, production migrations, money - is never done here.
+// Publishing PAST main - npm publish, money - is never done here. MIGRATIONS ARE THE EXCEPTION,
+// and deliberately so since 2026-08-25: after a successful landing this applies whatever
+// production is missing, through `scripts/db-push.mjs`, which classifies every statement and
+// refuses anything that can remove something. So the unattended run can do strictly less than an
+// attended one, and the thing it removes is the gap where a landed migration waits for somebody
+// to remember it. A refusal is reported and never fails the landing. `--no-db-push` opts out.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseWorktrees } from './safe-merge-preflight.mjs';
 import { jobsDir } from './jobs-store.mjs';
@@ -65,11 +70,15 @@ const accept = (valueOf('--accept') ?? '').split(',').map((s) => s.trim()).filte
  * job refuses and asks for a fresh queue rather than guessing which commits were meant.
  */
 const expectSha = valueOf('--expect-sha') ?? null;
+/**
+ * Land without applying what production is missing.
+ *
+ * For a machine that should never write to the hosted project - a second laptop, a checkout
+ * pointed at someone else's `.env`. The push is otherwise the default, because a migration that
+ * lands and is not applied is the failure this whole path exists to remove.
+ */
+const noDbPush = argv.includes('--no-db-push');
 
-if (!branch) {
-  console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait]');
-  process.exit(2);
-}
 
 /**
  * Exit code the runner reads as "not my turn yet - put me back in the queue".
@@ -80,8 +89,16 @@ if (!branch) {
  */
 const BLOCKED_EXIT = 3;
 
-const outcome = await main();
-process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome);
+// Only land when invoked directly. Importing this module - which is how `scripts/auto-merge.test.mjs`
+// reaches the decisions above - must never merge anything.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (!branch) {
+    console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait] [--no-db-push]');
+    process.exit(2);
+  }
+  const outcome = await main();
+  process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome);
+}
 
 async function main() {
   // --- 1. Order. A `clear` verdict is the licence; anything else is a person's call. ---------
@@ -232,7 +249,73 @@ async function attemptLanding(mainWt, branchWt) {
   say(`landed ${branch} on main as ${verifiedSha.slice(0, 8)}`);
   say('the branch and its worktree are left alone - cleanup-worktrees owns that.');
   recordLanding({ branch, sha: verifiedSha, worktree: branchWt, at: Date.now() });
+  applyPendingMigrations();
   return 0;
+}
+
+/**
+ * Apply any migration production is missing, now that one may have just landed.
+ *
+ * WHY HERE. `npm run db:push` removed the JUDGEMENT from applying a migration - it classifies
+ * every statement and refuses anything that can lose something - but it left the TRIGGER with a
+ * person, and a person is exactly what was missing. `0051` sat on main and unapplied for hours on
+ * 2026-08-25; the drift check that found it can only report. This is the moment the gap opens:
+ * main just moved, the runner is on a machine whose `.env` has the token, and nobody is watching.
+ * Closing it here means the state a migration is written for is the state the next request meets.
+ *
+ * WHY IT ASKS THE DRIFT CHECK RATHER THAN DIFFING THIS BRANCH. "Did this landing add a migration"
+ * is the wrong question - it would keep missing the case this exists for, which is a migration
+ * that landed at some point and was never applied. "Is production behind" is the right one, and
+ * it is already answered by a script that never fails its caller.
+ *
+ * WHY IT CANNOT FAIL THE LANDING. The merge is pushed. Whatever happens now, that is true, and
+ * turning a successful landing into a failed job would make the job's exit code mean two things
+ * at once - the same reasoning `recordLanding` above is written under. A REFUSED push is not an
+ * error either: it is the guard doing its work, and it is reported so the next person sees it.
+ */
+export function planMigrationPush(driftReport, { noDbPush: optedOut } = {}) {
+  if (optedOut) return { action: 'skip' };
+
+  let drift;
+  try {
+    drift = JSON.parse(driftReport);
+  } catch {
+    // The drift script never fails its caller, so an unreadable report means it did not run at
+    // all. Say so rather than treating silence as "production is fine" - that reading is the
+    // failure the script is named after, and it would be worse here than there.
+    return {
+      action: 'report',
+      message: 'could not read the migration drift report - run `npm run db:push` by hand if a migration just landed.',
+    };
+  }
+  if (drift.status === 'ok') return { action: 'skip' };
+  if (drift.status !== 'drift') {
+    // No token, no network, an offline laptop. Said once, so a reader knows the push was
+    // considered and stood down rather than silently skipped.
+    return { action: 'report', message: `migration push not attempted: ${drift.detail}` };
+  }
+  return { action: 'push', drift };
+}
+
+function applyPendingMigrations() {
+  const decision = planMigrationPush(capture('node', ['scripts/migration-drift.mjs', '--json']), { noDbPush });
+  if (decision.action === 'skip') return;
+  if (decision.action === 'report') return say(decision.message);
+
+  const drift = decision.drift;
+  say(`production is missing ${drift.missing.join(', ')} - applying`);
+  const pushed = run('node', ['scripts/db-push.mjs']);
+  if (pushed.status === 0) return say(`migrations applied to ${drift.ref}`);
+
+  console.error(
+    `\nauto-merge: ${branch} LANDED, but the migration push did not go through.\n` +
+      '  This is not a failed landing, and it may not be a failure at all - db-push refuses any\n' +
+      '  migration that can remove something and reports instead. Read what it printed above, then:\n' +
+      `      npm run db:push -- --allow ${drift.missing.join(',')}\n` +
+      '  if you accept what it does. Until then production stays one or more migrations behind,\n' +
+      '  which the safe-merge preflight will keep saying on every landing.',
+  );
+  return undefined;
 }
 
 /**

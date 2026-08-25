@@ -365,7 +365,10 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     never any other, never with `--force`. If the flow's checks fail, stop and report.
 - **Publishing PAST `main` still needs the user, in that message** - `npm publish`, anything costing
   money. Those are not landings: a later commit cannot take them back.
-- **Production migrations are a MECHANISM, not a permission** (owner, 2026-08-25). `npm run db:push`
+- **Production migrations are a MECHANISM, not a permission** (owner, 2026-08-25), and **you should
+  never have to run one**: a landing through the queue applies whatever production is missing as
+  soon as the branch is on `origin/main`, so the schema a migration was written for is the schema
+  the next request meets. `npm run db:push`
   applies every pending migration to the project `VITE_SUPABASE_URL` names and needs nobody, because
   the judgement a human was being asked for is made on the statements: grants, policies, additive
   columns/tables/indexes, functions and backfills go on their own; a DROP, TRUNCATE, DELETE FROM,
@@ -377,7 +380,9 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   ledger, and it prints the BEFORE/AFTER grant, column, policy and ledger diff, because "applied
   cleanly" is the CLI's opinion and the diff is the evidence. Waiting was never the safe option: the
   old rule left 0051 unapplied for hours, and `supabase/README.md` records that a ledger out of step
-  stays silent until the next push and then fails partway through.
+  stays silent until the next push and then fails partway through. A refused migration is the one
+  case that still reaches you - the landing succeeds, the push reports, and the branch's session
+  puts it in `docs/acceptance/OWNER_QUEUE.md` with the `--allow` command.
 - **A finished session can clean up its own worktree, but only the USER starts it** -
   `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
   model must never start an irreversible action. **A clean `git status` does not mean a worktree is

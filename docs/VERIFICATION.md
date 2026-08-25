@@ -383,9 +383,18 @@ by a route that is not `db push` (supabase/AGENTS.md) - and it snapshots the gra
 policies and ledger before and after, printing the difference. For a grants-only migration the
 expected diff is a named set of privileges and exactly one ledger row; anything else is a finding.
 
-The drift check stays, because a migration can still reach `main` with nobody running the push: the
-safe-merge preflight REPORTS whether production is behind, and `npm run check:migration-drift` runs
-the same check alone. `0051_client_table_grants` sat unapplied on production for hours on
+**Nothing triggers it by hand any more.** `scripts/auto-merge.mjs` calls the push immediately after
+a branch reaches `origin/main` - the moment a new migration exists and nothing has applied it, on a
+machine whose `.env` carries the token, with nobody watching. It asks the drift check rather than
+diffing the branch, so it also catches a migration that landed earlier and was never applied, which
+is the case the manual step kept losing. A push that refuses does NOT fail the landing: the merge is
+already pushed, the refusal is reported, and `scripts/auto-merge.test.mjs` pins both that ordering
+and the rule that nothing in the push can turn a successful landing into a failed job. `--no-db-push`
+opts a machine out.
+
+The drift check stays, because a migration can still reach `main` without going through the queue on
+this machine: the safe-merge preflight REPORTS whether production is behind, and
+`npm run check:migration-drift` runs the same check alone. `0051_client_table_grants` sat unapplied on production for hours on
 2026-08-25, past a green CI run and a green nightly, and was found only because somebody ran
 `supabase migration list` for an unrelated reason - the delay that rule bought was not caution, it
 was how one safe change becomes a compound one.
