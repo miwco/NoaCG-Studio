@@ -31,6 +31,21 @@ interface Props {
    * the iframe (it carries no allow-same-origin, like every other preview surface).
    */
   highlightSelector?: string | null;
+  /**
+   * ADD A FIELD BY DRAWING ONE (docs/SVG_IMPORT_PLAN.md §6a step 3). A selector inside the
+   * running document: the space a drawn box is reported IN, as fractions of that element's own
+   * rect, so this component never learns what a design px is.
+   *
+   * It is passed for the whole step, not only while the marquee is armed, because the rect
+   * arrives on the document's next FRAME — arming it at the moment of the gesture would leave
+   * the first drag after the button with nothing to measure against, and a field the reader
+   * drew would silently not appear.
+   */
+  drawIn?: string | null;
+  /** Arm the marquee. `drawIn` says where a box lands; this says the reader is drawing one. */
+  drawing?: boolean;
+  /** The drawn box, as fractions (0..1) of `drawIn`'s rect. */
+  onDraw?: (box: { x: number; y: number; w: number; h: number }) => void;
 }
 
 /**
@@ -53,10 +68,13 @@ export default function WizardPreview({
   demoOut = false,
   demoText = null,
   highlightSelector,
+  drawIn,
+  drawing = false,
+  onDraw,
 }: Props) {
   // A surface that never asks for a highlight pays nothing: the rect channel is installed only
   // for one that does (the prop present at all, even as null, is the step saying so).
-  const tracking = highlightSelector !== undefined;
+  const tracking = highlightSelector !== undefined || drawIn !== undefined;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
@@ -115,8 +133,16 @@ export default function WizardPreview({
     return () => ro.disconnect();
   }, []);
 
-  // The tracked layer's box in the document's own px (see the highlight block below).
-  const [hoverRect, setHoverRect] = useState<CanvasRect | null>(null);
+  // Every tracked selector's box in the document's own px, keyed by the selector that asked
+  // for it (see the highlight block below). Two things want one: the hover highlight, and the
+  // draw marquee, which needs the ARTWORK's box to report a drag relative to it.
+  const [rects, setRects] = useState<Record<string, CanvasRect | null>>({});
+  const hoverRect = highlightSelector ? rects[highlightSelector] ?? null : null;
+  const drawRect = drawIn ? rects[drawIn] ?? null : null;
+  // The marquee being dragged, in canvas px; null when no drag is in flight.
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const dragFrom = useRef<{ x: number; y: number } | null>(null);
+  const drawLayerRef = useRef<HTMLDivElement>(null);
 
   // Rebuild (debounced) when the template changes; auto-play the entrance on load.
   // Committing a new srcdoc also cancels any pending demo timers — a stop()/play()
@@ -130,9 +156,9 @@ export default function WizardPreview({
     const t = setTimeout(() => {
       clearDemo();
       docGenRef.current += 1;
-      // The old document's last rect describes a layout that no longer exists — drop it
+      // The old document's last rects describe a layout that no longer exists — drop them
       // rather than leaving a box hanging over the new one until its first frame arrives.
-      setHoverRect(null);
+      setRects({});
       setSrcdoc(doc);
     }, 220);
     return () => clearTimeout(t);
@@ -165,8 +191,7 @@ export default function WizardPreview({
       if (ev.source !== frameRef.current?.contentWindow) return;
       const msg = ev.data as CanvasRectsMessage | undefined;
       if (!msg || msg.type !== CANVAS_RECTS_TYPE) return;
-      const rects = Object.values(msg.rects);
-      setHoverRect(rects.length ? rects[0] : null);
+      setRects(msg.rects);
     };
     window.addEventListener('message', onRects);
     return () => window.removeEventListener('message', onRects);
@@ -176,12 +201,10 @@ export default function WizardPreview({
   // document, so a rebuilt one starts with nothing tracked until it is told again).
   const trackSelector = useCallback(() => {
     if (!tracking) return;
-    postCanvasCmd(frameRef.current?.contentWindow, {
-      cmd: 'track',
-      selectors: highlightSelector ? [highlightSelector] : [],
-    });
-    if (!highlightSelector) setHoverRect(null);
-  }, [tracking, highlightSelector]);
+    const selectors = [highlightSelector, drawIn].filter((s): s is string => !!s);
+    postCanvasCmd(frameRef.current?.contentWindow, { cmd: 'track', selectors });
+    if (selectors.length === 0) setRects({});
+  }, [tracking, highlightSelector, drawIn]);
   useEffect(trackSelector, [trackSelector]);
 
   const playIn = useCallback(() => {
@@ -209,6 +232,56 @@ export default function WizardPreview({
     postCmd({ cmd: 'update', data: JSON.stringify(pushValues(templateRef.current)) });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- postCmd is stable; pushValues reads live refs
   }, [demoText]);
+
+  // ── The draw marquee (plan §6a step 3) ──
+  // The layer is laid out in CANVAS px and painted through the frame's own transform, so a
+  // pointer position becomes canvas px by the ratio between the two — no zoom maths of its
+  // own, the same trick the highlight overlay uses.
+  const pointToCanvas = (ev: React.PointerEvent): { x: number; y: number } | null => {
+    const el = drawLayerRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) return null;
+    return { x: ((ev.clientX - r.left) * width) / r.width, y: ((ev.clientY - r.top) * height) / r.height };
+  };
+
+  const onDrawDown = (ev: React.PointerEvent) => {
+    const p = pointToCanvas(ev);
+    if (!p) return;
+    ev.currentTarget.setPointerCapture(ev.pointerId);
+    dragFrom.current = p;
+    setMarquee({ x: p.x, y: p.y, w: 0, h: 0 });
+  };
+
+  const onDrawMove = (ev: React.PointerEvent) => {
+    const from = dragFrom.current;
+    const p = from && pointToCanvas(ev);
+    if (!from || !p) return;
+    setMarquee({
+      x: Math.min(from.x, p.x),
+      y: Math.min(from.y, p.y),
+      w: Math.abs(p.x - from.x),
+      h: Math.abs(p.y - from.y),
+    });
+  };
+
+  const onDrawUp = () => {
+    const box = marquee;
+    dragFrom.current = null;
+    setMarquee(null);
+    if (!box || !drawRect || !onDraw) return;
+    if (!(drawRect.width > 0) || !(drawRect.height > 0)) return;
+    // Reported RELATIVE TO THE ARTWORK, as fractions of its box: the step knows what a design
+    // px is and this component deliberately does not. Clamped to the artwork because a placed
+    // field is positioned inside the design unit — a box half outside it would be authored at
+    // a coordinate the emitted rule cannot express.
+    const clamp = (v: number) => Math.min(1, Math.max(0, v));
+    const x0 = clamp((box.x - drawRect.left) / drawRect.width);
+    const y0 = clamp((box.y - drawRect.top) / drawRect.height);
+    const x1 = clamp((box.x + box.w - drawRect.left) / drawRect.width);
+    const y1 = clamp((box.y + box.h - drawRect.top) / drawRect.height);
+    onDraw({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+  };
 
   // The view: whole canvas by default; zoomed reframes onto the graphic's box.
   const fitScale = Math.min(stage.w / width, stage.h / height) || 0.2;
@@ -262,22 +335,51 @@ export default function WizardPreview({
             room around the layer are the two things corrected back OUT of that scale, because
             they are drawn for the reader rather than for the artwork: at the default fit a 2px
             rule would paint half a pixel and a 4px gap would close to one. */}
-        {hoverRect && (
+        {(hoverRect || drawing) && (
           <div
             className="wz-stage-overlay"
             style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
           >
-            <div
-              className="wz-stage-highlight"
-              data-testid="wz-preview-highlight"
-              style={{
-                left: hoverRect.left - HL_PAD / z,
-                top: hoverRect.top - HL_PAD / z,
-                width: hoverRect.width + (2 * HL_PAD) / z,
-                height: hoverRect.height + (2 * HL_PAD) / z,
-                borderWidth: Math.max(1, 2 / z),
-              }}
-            />
+            {hoverRect && (
+              <div
+                className="wz-stage-highlight"
+                data-testid="wz-preview-highlight"
+                style={{
+                  left: hoverRect.left - HL_PAD / z,
+                  top: hoverRect.top - HL_PAD / z,
+                  width: hoverRect.width + (2 * HL_PAD) / z,
+                  height: hoverRect.height + (2 * HL_PAD) / z,
+                  borderWidth: Math.max(1, 2 / z),
+                }}
+              />
+            )}
+            {/* The draw surface takes pointer events back (the overlay above it has none), so
+                the marquee is drawn on the one canvas that is showing the real graphic. */}
+            {drawing && (
+              <div
+                ref={drawLayerRef}
+                className="wz-stage-draw"
+                data-testid="wz-preview-draw"
+                onPointerDown={onDrawDown}
+                onPointerMove={onDrawMove}
+                onPointerUp={onDrawUp}
+                onPointerCancel={onDrawUp}
+              >
+                {marquee && (
+                  <div
+                    className="wz-stage-marquee"
+                    data-testid="wz-preview-marquee"
+                    style={{
+                      left: marquee.x,
+                      top: marquee.y,
+                      width: marquee.w,
+                      height: marquee.h,
+                      borderWidth: Math.max(1, 2 / z),
+                    }}
+                  />
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -57,13 +57,27 @@ nearest thing below it inside its panel, re-asked at every size, dropping a LINE
 printing through the layer below; and the shrink is FLOORED, or a long value reaches 3.7px and
 reads as text that vanished. The drawn text is still measured in the real face and never
 re-taken from whatever is on screen, or a playout renderer's own first update becomes the budget
-and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense). The HUG is the
-per-graphic alternative the mapping step ASKS for (`DesignSvg.stretch` -> one `-panel` class on
-one `<rect>` + `stretchRuntimeJs`): the picked rectangle widens by the widest inside line's
-deficit, whatever is drawn past its right edge travels by its transform ATTRIBUTE, the growth
-caps at the frame's 4% safe margin and the shrink answers the rest. Default OFF and never
+and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense). GROWTH is the
+per-graphic alternative the mapping step ASKS for, and it is a VERSIONED TABLE
+(`DesignSvg.growth` -> `NOACG_LAYOUT` version 1 + `growthRuntimeJs`, docs/SVG_IMPORT_PLAN.md §6c):
+each row names one element by its `data-noacg-el` stamp, the axis it may grow on, its safe margin,
+and optionally its FOLLOWERS. `layoutRules` is the NORMALIZING read - the old one-rectangle
+`stretch` becomes one axis-'x' row, so a saved option from before still builds what it described.
+`followers` is ADDITIVE, so declared-vs-derived cost no second version: absent = "whatever is
+drawn past the moving edge", a fair guess sideways and a poor one downwards. The table lives in
+the design-owned JS, NEVER in `NOACG_ANIM` - the timeline rewrites that region.
+**The two axes sit on opposite sides of the fit, and that is the point.** Sideways, growth is extra
+BUDGET, so it happens BEFORE the fit and the shrink answers what the 4% cap withheld. Downwards it
+is somewhere to WRAP into, so the fit runs first against the MOST that rule could ever give
+(measured at rest, `svgOfferHeights`), then the panel grows by what the settled block needed
+(`growSvgHeights`). One measure, one fit, one apply - never iterated, because wrap and grow are
+circular and an iterated answer would settle differently in the editor, in an export and under SPX.
+**Every re-measure RESTS the layout first** (`refitSvgText`), or the last pass's growth becomes
+this pass's room: the block reads as already fitting, the growth is dropped, and a graphic that
+grew in the editor collapses on air the moment `document.fonts.ready` fires. Default OFF and never
 inferred - no geometry separates a lower third from a scorebug (docs/SVG_IMPORT_PLAN.md §3 says
-why, and what v1 does not handle). DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
+why, and what v1 does not handle: rectangles, and ONE picked element per graphic in the wizard -
+the format expresses several rules and declared followers, the step does not ask for them yet). DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
 step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
 E2E: e2e/import-svg.spec.ts.
 **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the

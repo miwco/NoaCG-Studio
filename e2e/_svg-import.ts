@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { startNewProject } from './_create';
 
 // THE SVG IMPORT WALK, shared by the offline spec and the live one.
 //
@@ -21,9 +22,37 @@ function wizardNext(page: Page) {
   return page.locator('.wz-modal').getByRole('button', { name: 'Next' });
 }
 
-/** Drop a file on the Import door and land on the SVG mapping step. */
+/**
+ * Drop a file on the Import door and land on the SVG mapping step.
+ *
+ * OPENS THE WIZARD IF IT IS NOT ALREADY SHOWING, rather than requiring the caller to have
+ * arrived on a surface that happens to auto-open it. A COLD `/app` opens the wizard by itself,
+ * which is the offline walk's world; a SIGNED-IN load does not necessarily, because the account
+ * syncs and the app can restore a previous project and land in the editor instead. That
+ * difference is invisible until it bites: on the local-stack CI run 32795037259 this walk
+ * inherited another spec's "Hairline" as the open project and failed on `.wz-modal` never
+ * appearing - a message that sends the reader looking for a broken wizard rather than for two
+ * specs sharing one account.
+ *
+ * `startNewProject` is the deterministic opener: it clicks + New graphic and answers the
+ * discard-current-work guard when one appears. Wiping the library does NOT substitute for it -
+ * the restored project reads "Not saved", so it is not a library row and there is nothing there
+ * to delete.
+ */
 export async function dropSvg(page: Page, fixture: string): Promise<void> {
-  await expect(page.locator('.wz-modal')).toBeVisible();
+  const modal = page.locator('.wz-modal');
+  // WAIT for the auto-open before deciding, never sample it. `isVisible()` answers about THIS
+  // instant and does not retry, so called straight after a navigation it reports false while the
+  // wizard is still mounting - on a cold /app that is the normal case, not the exception. The
+  // first version of this helper did exactly that and opened a second wizard on every offline
+  // run, where `+ New graphic` then matched both the topbar's and the wizard's own copy:
+  // "strict mode violation: resolved to 2 elements" (CI run 32807175809).
+  const autoOpened = await modal
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!autoOpened) await startNewProject(page);
+  await expect(modal).toBeVisible();
   await page.locator('[data-entry="import-graphic"]').click();
   await page.locator('.wz-drop input[type="file"]').setInputFiles(fixture);
   await expect(page.getByTestId('import-svg-card')).toBeVisible();

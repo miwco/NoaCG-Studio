@@ -1151,6 +1151,290 @@ test('svg import: the operator is WARNED about an outlined-text field that canno
   await expect(page.getByTestId('cue-field-over-f0')).toHaveCount(0);
 });
 
+// ── ADD A FIELD WHERE THE FILE DREW NOTHING (docs/SVG_IMPORT_PLAN.md §6a step 3) ──────────
+// The imported SVG is a fixed STAGE, not immutable artwork. The mapping step used to be a pure
+// BINDING form, which assumes the file contains a layer for everything the show needs; it does
+// not, and the answer is to draw the missing line ON the artwork rather than to send a reader
+// who has never opened the editor into it.
+//
+// Full-frame on purpose: with the artwork covering the canvas, a fraction of the draw surface
+// IS that fraction of the design, so the assertions below can say where the field landed.
+const STAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect x="0" y="0" width="1920" height="1080" fill="#0d1017"/>
+  <text id="Headline" x="160" y="300" font-size="72" fill="#ffffff">Tonight</text>
+</svg>`;
+
+/** Drag a box over the preview, in fractions of the canvas. */
+async function drawField(page: Page, from: [number, number], to: [number, number]) {
+  const surface = page.getByTestId('wz-preview-draw');
+  const b = (await surface.boundingBox())!;
+  await page.mouse.move(b.x + b.width * from[0], b.y + b.height * from[1]);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width * to[0], b.y + b.height * to[1], { steps: 8 });
+  await expect(page.getByTestId('wz-preview-marquee')).toBeVisible();
+  await page.mouse.up();
+}
+
+test('svg import: a field drawn on the artwork becomes a real field, where it was drawn', async ({ page }) => {
+  // THE ARMED STEP MUST NOT SPIN. The step re-reports its drop handler on every render, because
+  // the closure reads the draft — so holding that FUNCTION in the wizard's state made each
+  // report a state change, each a render, each a fresh identity, and React stopped the wizard
+  // with "Maximum update depth exceeded" while the tool was armed. Every assertion below still
+  // passed through it, which is exactly why the loop needs an assertion of its own.
+  const loops: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /Maximum update depth/.test(m.text())) loops.push(m.text());
+  });
+  page.on('pageerror', (e) => {
+    if (/Maximum update depth/.test(e.message)) loops.push(e.message);
+  });
+
+  await dropSvgMarkup(page, STAGE_SVG, 'stage.svg');
+  await page.locator('.wz-next').click();
+
+  // Nothing is armed until the reader says so — the canvas is for reading the graphic, and a
+  // stray drag on it must not mint a field.
+  await expect(page.getByTestId('map-svg-added')).toContainText('nothing added');
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toBeVisible();
+  // From (25%, 50%) to (55%, 56%) of a 1920x1080 stage: x 480, y 540, 576 wide, ~65 tall.
+  await drawField(page, [0.25, 0.5], [0.55, 0.56]);
+
+  // One row, and the tool disarms itself: drawing a field is one gesture, not a mode the
+  // reader has to remember to leave.
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+  await page.locator('[data-testid^="map-svg-added-title-"]').fill('Subtitle');
+  await page.locator('[data-testid^="map-svg-added-sample-"]').fill('Live from the studio');
+  // Typing is what drove the loop hardest — every keystroke is a new draft and a new closure.
+  expect(loops).toEqual([]);
+
+  await createProject(page);
+
+  const state = await page.evaluate(async () => {
+    const [{ useTemplateStore }, { getTemplateParts }, { validateTemplate }] = await Promise.all([
+      import('/src/store/templateStore.ts'),
+      import('/src/model/structure.ts'),
+      import('/src/validation/validateTemplate.ts'),
+    ]);
+    const t = useTemplateStore.getState().template;
+    return {
+      fields: t.fields.map((f) => `${f.field}:${f.ftype}:${f.title}:${f.value}`),
+      html: t.html,
+      css: t.css,
+      js: t.js,
+      parts: getTemplateParts(t.html, t.fields).map((p) => `${p.selector}|${p.kind}`),
+      valid: validateTemplate(t).ok,
+    };
+  });
+
+  // A REAL field, after the artwork's own bound layer — the drawn line is an ordinary placed
+  // line, emitted AFTER `</svg>` like every other one, and it validates like any template.
+  expect(state.fields).toEqual([
+    'f0:textfield:Headline:Tonight',
+    'f1:textfield:Subtitle:Live from the studio',
+  ]);
+  const svgEnd = state.html.lastIndexOf('</svg>');
+  expect(state.html.slice(svgEnd)).toMatch(
+    /<div class="imported-design-mask" id="fw1"\s*>\s*<span id="f1" data-fit="shrink"\s*>\s*Live from the studio\s*<\/span>/,
+  );
+  expect(state.parts).toContain('#f1|line');
+  expect(state.valid).toBe(true);
+
+  // …WHERE IT WAS DRAWN. The box is the type's own em box (line-height 1), so the numbers the
+  // reader dragged are the numbers in the rule rather than a guess away from them.
+  const left = Number(/#fw1 \{[^}]*left: calc\((\d+)px/.exec(state.css)![1]);
+  const top = Number(/#fw1 \{[^}]*top: calc\((\d+)px/.exec(state.css)![1]);
+  const maxWidth = Number(/#fw1 \{[^}]*max-width: calc\((\d+)px/.exec(state.css)![1]);
+  const fontSize = Number(/#f1 \{[^}]*font-size: calc\((\d+)px/.exec(state.css)![1]);
+  expect(Math.abs(left - 480)).toBeLessThan(14);
+  expect(Math.abs(top - 540)).toBeLessThan(14);
+  expect(Math.abs(maxWidth - 576)).toBeLessThan(20);
+  expect(Math.abs(fontSize - 65)).toBeLessThan(14);
+
+  // ONE FIT (plan §6b): the drawn field is a `shrink` line, so the LADDER measures it and the
+  // operator's too-long warning can see it. A wrapping line would be the one field it cannot.
+  expect(state.js).toContain('function fitSvgText');
+  expect(state.js).not.toContain('function fitPlacedText');
+  expect(state.css).toMatch(/#f1 \{[^}]*white-space: nowrap;/);
+
+  const reported = await previewFrame(page).locator('#f1').evaluate((el) => {
+    const w = window as unknown as {
+      update: (json: string) => void;
+      svgFitRoom: Record<string, { width: number; height: number }>;
+      noacgTextOverflow: () => string[];
+    };
+    w.update(JSON.stringify({ f1: 'A'.repeat(400) }));
+    return { room: w.svgFitRoom.f1, size: parseFloat(getComputedStyle(el).fontSize), over: w.noacgTextOverflow() };
+  });
+  // Its room is the slot it was DRAWN with, and it does not wrap — the room rule for a placed
+  // line, now reached through a field nobody had drawn before.
+  expect(reported.room.height).toBe(0);
+  expect(reported.room.width).toBeGreaterThan(0);
+  expect(reported.over).toEqual(['f1']);
+});
+
+test('svg import: a drawn field can be renamed and removed, and cancelling draws nothing', async ({ page }) => {
+  await dropSvgMarkup(page, STAGE_SVG, 'stage.svg');
+  await page.locator('.wz-next').click();
+
+  // Arming and then changing your mind leaves the artwork exactly as it was.
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toBeVisible();
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
+  await expect(page.getByTestId('map-svg-added')).toContainText('nothing added');
+
+  await page.getByTestId('map-svg-add-field').click();
+  await drawField(page, [0.2, 0.7], [0.5, 0.76]);
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+
+  // A CLICK is a drag of no size. It reads as "put a field here", not as a two-pixel field
+  // nobody could see or select.
+  await page.getByTestId('map-svg-add-field').click();
+  const surface = page.getByTestId('wz-preview-draw');
+  const b = (await surface.boundingBox())!;
+  await page.mouse.move(b.x + b.width * 0.3, b.y + b.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page.getByTestId('map-svg-added')).toContainText('2 added');
+
+  // Removing one takes it off the artwork too — nothing about the file changed either way.
+  const removes = page.locator('[data-testid^="map-svg-added-remove-"]');
+  await expect(removes).toHaveCount(2);
+  await removes.first().click();
+  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+
+  await createProject(page);
+  const fields = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.fields.map((f) => `${f.field}:${f.title}`);
+  });
+  // The clicked one survived, sized from the design rather than from the gesture — and it kept
+  // the name it was given, which the next add would not have re-issued.
+  expect(fields).toEqual(['f0:Headline', 'f1:Text 2']);
+});
+
+// ── VERTICAL GROWTH (docs/SVG_IMPORT_PLAN.md §6c) ────────────────────────────────────────
+// A panel with room beneath it can get TALLER so a long value wraps into new height, instead of
+// shrinking inside the height it was drawn at. The board below is drawn small on a tall frame,
+// so the growth has somewhere to go and the caption underneath has to travel with it.
+// The board is drawn for ONE line - tight enough that a second one does not fit inside the
+// height the designer gave it, which is exactly when growing down is the answer.
+const GROW_DOWN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="1200" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="260" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Footer" x="300" y="340" width="1200" height="60" rx="8" fill="#f6a623"/>
+</svg>`;
+
+test('svg import: a panel told to grow taller wraps into the new height instead of shrinking', async ({ page }) => {
+  await dropSvgMarkup(page, GROW_DOWN_SVG, 'grow-down.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
+      const board = document.querySelector('rect[data-noacg-el="g0"]')!;
+      const footer = document.getElementById('Footer')!;
+      const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
+      return {
+        boardHeight: Math.round(parseFloat(board.getAttribute('height')!)),
+        boardBottom: Math.round(board.getBoundingClientRect().bottom),
+        footerTop: Math.round(footer.getBoundingClientRect().top),
+        frameBottom: Math.round(art.bottom),
+        frameHeight: art.height,
+        size: parseFloat(getComputedStyle(el).fontSize),
+        lines: el.children.length,
+        over: (window as unknown as { noacgTextOverflow: () => string[] }).noacgTextOverflow(),
+      };
+    }, value);
+
+  const rest = await run('Which city?');
+  expect(rest.boardHeight).toBe(110);
+
+  // A value the drawn board already holds does not move it - the design's own space first.
+  const fits = await run('Which city hosted?');
+  expect(fits.boardHeight).toBe(110);
+  expect(fits.size).toBe(rest.size);
+
+  // Past that, the board gets TALLER and the value WRAPS at full size. Shrinking is what this
+  // rule exists to avoid: the type stays as drawn and the panel finds the room.
+  const long = await run('Which city hosted the first modern Olympic Games of the modern era?');
+  expect(long.boardHeight).toBeGreaterThan(rest.boardHeight);
+  expect(long.lines).toBeGreaterThan(1);
+  expect(long.size).toBe(rest.size);
+  expect(long.over).toEqual([]);
+  // …and the caption drawn below it travelled, keeping the gap the designer left.
+  expect(long.footerTop - rest.footerTop).toBeCloseTo(long.boardBottom - rest.boardBottom, 0);
+
+  // Growing off the frame is not a fit: the board stops at the safe margin and the rest of the
+  // ladder answers what the cap could not give.
+  const huge = await run('Which city hosted the first modern Olympic Games '.repeat(60));
+  expect(huge.boardBottom).toBeLessThanOrEqual(huge.frameBottom - huge.frameHeight * 0.04 + 1);
+  expect(huge.size).toBeLessThan(rest.size);
+
+  // And a short value again puts the artwork back exactly as drawn.
+  const back = await run('Which city?');
+  expect(back.boardHeight).toBe(110);
+  expect(back.footerTop).toBe(rest.footerTop);
+});
+
+test('svg import: growing downwards settles on ONE geometry, whatever order the values arrive in', async ({ page }) => {
+  // THE OWNER'S ACCEPTANCE CRITERION (plan §6c). Wrap and grow are circular - the line count
+  // depends on the size, the available height on the growth, the growth on the line count - and
+  // the fit runs INSIDE the template, so the same values must settle on the same geometry in the
+  // editor, in an exported package and under SPX. That is only true if the fit is a function of
+  // the VALUE and the DESIGN, never of whatever the artwork happens to look like right now.
+  //
+  // Measured here as the two properties that make it so: running it twice changes nothing, and
+  // the answer does not depend on what was on screen before.
+  await dropSvgMarkup(page, GROW_DOWN_SVG, 'grow-down.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  await createProject(page);
+
+  const LONG = 'Which city hosted the first modern Olympic Games of the modern era?';
+  const geometry = async (values: string[]) =>
+    previewFrame(page)
+      .locator('#f0')
+      .evaluate((el, vs) => {
+        const w = window as unknown as {
+          update: (json: string) => void;
+          refitSvgText: () => void;
+          noacgTextOverflow: () => string[];
+        };
+        for (const v of vs) w.update(JSON.stringify({ f0: v }));
+        const read = () => ({
+          board: Math.round(parseFloat(document.querySelector('rect[data-noacg-el="g0"]')!.getAttribute('height')!)),
+          footer: Math.round(document.getElementById('Footer')!.getBoundingClientRect().top),
+          size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 100) / 100,
+          lines: el.children.length,
+          over: w.noacgTextOverflow().join(','),
+        });
+        const first = read();
+        w.refitSvgText(); // the same pass the webfonts fire — running it twice must change nothing
+        return { first, again: read() };
+      }, values);
+
+  // IDEMPOTENT: a second pass over a settled graphic moves nothing.
+  const direct = await geometry([LONG]);
+  expect(direct.again).toEqual(direct.first);
+  expect(direct.first.lines).toBeGreaterThan(1);
+
+  // ORDER-INDEPENDENT: the same value reached through a short one, a longer one, and an
+  // enormous one settles on exactly the geometry it reaches directly. The trap the ladder
+  // already paid for once is a budget taken from the first value that happened to arrive.
+  const viaShort = await geometry(['Hi', LONG]);
+  const viaHuge = await geometry(['Which city hosted the first modern Olympics '.repeat(12), LONG]);
+  expect(viaShort.first).toEqual(direct.first);
+  expect(viaHuge.first).toEqual(direct.first);
+});
+
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
   // Wrapping is allowed only into room the artwork already has: the panel's own height, down to
   // whatever is drawn below the line. How many lines that is depends on the SIZE - a 190px panel
@@ -1237,7 +1521,7 @@ test('svg import: the panel hug is offered, off, with the widest rectangle propo
   // resizes is a control with no effect.
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
 
-  await mode.selectOption('grow');
+  await mode.selectOption('grow-x');
   const shape = page.getByTestId('map-svg-stretch-shape');
   // Widest first, and it is the proposal: a banner's background is the widest rectangle on it.
   await expect(shape.locator('option')).toHaveText([
@@ -1251,17 +1535,18 @@ test('svg import: the panel hug is offered, off, with the widest rectangle propo
 test('svg import: a hugging panel grows with its text, and what is beyond it travels', async ({ page }) => {
   await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
   await page.locator('.wz-next').click();
-  await page.getByTestId('map-svg-stretch-mode').selectOption('grow');
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-x');
   await createProject(page);
 
   const frame = previewFrame(page);
-  // ONE class on ONE rectangle is the whole markup edit; the runtime finds it by that class.
-  await expect(frame.locator('rect.imported-design-panel')).toHaveAttribute('width', '600');
+  // ONE stamp per participant is the whole markup edit; the emitted NOACG_LAYOUT table says
+  // what each stamp does, and the runtime loops that table (docs/SVG_IMPORT_PLAN.md §6c).
+  await expect(frame.locator('rect[data-noacg-el="g0"]')).toHaveAttribute('width', '600');
 
   const run = (value: string) =>
     frame.locator('#f0').evaluate((el, v) => {
       (window as unknown as { update: (json: string) => void }).update(JSON.stringify({ f0: v }));
-      const panel = document.querySelector('rect.imported-design-panel')!;
+      const panel = document.querySelector('rect[data-noacg-el="g0"]')!;
       const logo = document.getElementById('Logo')!;
       return {
         panelWidth: Math.round(parseFloat(panel.getAttribute('width')!)),

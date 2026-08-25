@@ -118,7 +118,8 @@ export interface OutputPayload {
 /** Per graphic: the renderer's last reported truth, plus (0033) `event` — the log row it had
  *  applied when the report was written. `event` is the graphic's RECOVERY BASELINE: on boot the
  *  renderer rebuilds from `data`/`state` and replays only rows after it. Absent on a pre-0033
- *  server or from a pre-0033 renderer, which degrades to the old "start at the log head". */
+ *  server or from a pre-0033 renderer, and then the entry is REPLAYED rather than trusted
+ *  (control/outputRecovery.ts owns that rule). */
 export type LiveReportMap = Record<
   string,
   {
