@@ -61,7 +61,7 @@ in an OGraf renderer and it plays (it is an OGraf package); `noacg save` puts it
 
 ## The CLI
 
-Install: `npx noacg <command>` (or `npm i -g noacg`). Every command takes `--json` for
+Install: `npx @noacg/cli <command>` (or `npm i -g @noacg/cli`). Every command takes `--json` for
 machine-readable output. Exit codes: `0` clean, `1` the graphic has findings (validate) or the
 request was refused, `2` a usage/IO error.
 
@@ -147,6 +147,19 @@ and every shipped copy (npm, the Claude Code plugin, the Codex skill) are genera
 
 ## Distribution (one source, every shipped copy generated)
 
+**The npm package is `@noacg/cli`, SCOPED, and cannot be unscoped.** npm's typosquatting filter
+refuses to create an unscoped `noacg` - it is judged too similar to the long-established `nock`:
+
+```
+403 Forbidden - PUT https://registry.npmjs.org/noacg
+Package name too similar to existing package nock; try renaming your package to ...
+```
+
+Worth knowing before anyone "fixes" this back: `npm view noacg` returns **404**, so the name looks
+free and only the write reveals it is not. The scope is exempt from that filter. The **bin name is
+still `noacg`**, so nothing a user types changes - only the install identifier does, which is why
+the docs say `npx @noacg/cli` but every command line says `noacg`.
+
 **`cli/` is Apache-2.0. The rest of the repository is AGPL-3.0-only.** That split is deliberate
 and should not be "tidied" back into one licence (owner decision, 2026-08-25).
 
@@ -167,9 +180,9 @@ this had to be right BEFORE the first publish rather than after.
 
 | Channel | What ships | Install |
 |---|---|---|
-| **npm** `noacg` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx noacg <cmd>` / `npm i -g noacg` |
-| **Claude Code plugin** (`cli/plugin/`, marketplace `noacg-studio` = root `.claude-plugin/marketplace.json`) | the skill copy, `/noacg:graphic`, `.mcp.json` running `npx -y noacg mcp` | `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`; from a checkout `claude --plugin-dir ./cli/plugin` |
-| **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`) | the skill copy | copy `cli/plugin/skills/noacg-graphic/` to `~/.codex/skills/`; `codex mcp add noacg -- npx -y noacg mcp` |
+| **npm** `@noacg/cli` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx @noacg/cli <cmd>` / `npm i -g @noacg/cli` |
+| **Claude Code plugin** (`cli/plugin/`, marketplace `noacg-studio` = root `.claude-plugin/marketplace.json`) | the skill copy, `/noacg:graphic`, `.mcp.json` running `npx -y @noacg/cli mcp` | `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`; from a checkout `claude --plugin-dir ./cli/plugin` |
+| **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`) | the skill copy | copy `cli/plugin/skills/noacg-graphic/` to `~/.codex/skills/`; `codex mcp add noacg -- npx -y @noacg/cli mcp` |
 | **In-repo dogfooding** | the thin adapter triple (`.agent-workflows/noacg-graphic.md`, `.claude/skills/`, `.agents/skills/`) - POINTERS at the source | already there |
 
 `cli/scripts/build-skill.mjs` writes every generated copy from `cli/skill/noacg-graphic/` and stamps
@@ -180,7 +193,7 @@ triple is guarded by `scripts/check-shared-instructions.mjs` and never generated
 installed from this repository as a marketplace (`claude plugin install noacg@noacg-studio`) and
 `claude plugin details` listed the skill, the command and the MCP server at v0.2.0. Publishing
 (`npm publish` from `cli/`, and pushing the marketplace) is the owner's call; until the package is
-on npm the plugin's MCP server cannot start (`npx -y noacg` has nothing to fetch) while its skill
+on npm the plugin's MCP server cannot start (`npx -y @noacg/cli` has nothing to fetch) while its skill
 and command already work.
 
 ### Releasing to npm

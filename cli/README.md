@@ -1,8 +1,11 @@
-# noacg
+# @noacg/cli
 
 The [NoaCG Studio](https://noacg.studio) command-line tool and MCP server: make broadcast
 graphics for NoaCG from a coding agent's terminal - scaffold, validate, inspect, screenshot,
 package, save - against any NoaCG deployment. The full account is the repo's `docs/AGENT_CLI.md`.
+
+**The package is `@noacg/cli`; the command it installs is `noacg`.** So `npm i -g @noacg/cli`
+gives you `noacg validate …`, and every command below is spelled the way you will type it.
 
 It also carries `noacg caspar`, which is not about authoring: it talks **AMCP to a CasparCG
 server**, so a NoaCG production can go on a channel from the studio page (or straight from the
@@ -12,8 +15,8 @@ terminal). A browser cannot open the socket AMCP needs, so this tool holds it -
 ## Install
 
 ```
-npx noacg doctor                 # no install: runs the published build
-npm i -g noacg                   # or install it once
+npx @noacg/cli doctor                 # no install: runs the published build
+npm i -g @noacg/cli                   # or install it once
 ```
 
 **Claude Code**: the `noacg` plugin ships the `noacg-graphic` skill, a `/noacg:graphic` command
@@ -25,21 +28,21 @@ claude plugin install noacg@noacg-studio
 ```
 
 **Codex**: copy `skill/noacg-graphic/` from this package (or `cli/plugin/skills/noacg-graphic/`
-in the repo) to `~/.codex/skills/noacg-graphic/`, then `codex mcp add noacg -- npx -y noacg mcp`.
+in the repo) to `~/.codex/skills/noacg-graphic/`, then `codex mcp add noacg -- npx -y @noacg/cli mcp`.
 
-**Any MCP client**: `claude mcp add noacg -- npx -y noacg mcp` (Claude Code), or the equivalent
-stdio entry - command `npx`, args `-y noacg mcp`.
+**Any MCP client**: `claude mcp add noacg -- npx -y @noacg/cli mcp` (Claude Code), or the equivalent
+stdio entry - command `npx`, args `-y @noacg/cli mcp`.
 
 ## Use
 
 ```
-npx noacg types
-npx noacg scaffold --type scoreboard --design neutral --name "Football scoreboard" --out ./football-scoreboard
+npx @noacg/cli types
+npx @noacg/cli scaffold --type scoreboard --design neutral --name "Football scoreboard" --out ./football-scoreboard
 #  ...design it: edit football-scoreboard.html, css/template.css, js/template.js ...
-npx noacg validate ./football-scoreboard --screenshots ./shots
-npx noacg inspect ./football-scoreboard
-npx noacg login                  # once per machine: a scoped key that can only create graphics in your library
-npx noacg save ./football-scoreboard
+npx @noacg/cli validate ./football-scoreboard --screenshots ./shots
+npx @noacg/cli inspect ./football-scoreboard
+npx @noacg/cli login                  # once per machine: a scoped key that can only create graphics in your library
+npx @noacg/cli save ./football-scoreboard
 ```
 
 | Command | What it does |

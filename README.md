@@ -66,9 +66,9 @@ surface NoaCG derives from it, and saves it straight into your NoaCG library wit
 key (`noacg login`). The `noacg-graphic` skill teaches the contract, not a look.
 
 ```bash
-npx noacg scaffold --type scoreboard --design neutral --name "Football scoreboard" --out ./football-scoreboard
-npx noacg validate ./football-scoreboard --screenshots ./shots
-npx noacg save ./football-scoreboard
+npx @noacg/cli scaffold --type scoreboard --design neutral --name "Football scoreboard" --out ./football-scoreboard
+npx @noacg/cli validate ./football-scoreboard --screenshots ./shots
+npx @noacg/cli save ./football-scoreboard
 ```
 
 Claude Code: `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install

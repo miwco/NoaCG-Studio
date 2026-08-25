@@ -2,7 +2,11 @@
   "mcpServers": {
     "noacg": {
       "command": "npx",
-      "args": ["-y", "noacg", "mcp"]
+      "args": [
+        "-y",
+        "@noacg/cli",
+        "mcp"
+      ]
     }
   }
 }

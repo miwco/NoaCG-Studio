@@ -195,7 +195,7 @@ behind it is still origin-checked and token-gated.
 **Release note.** The command was added to the `noacg` package at version **0.2.0**, before that
 version was published to npm - so `caspar` ships in 0.2.0 rather than waiting for a later one.
 Anyone on an earlier published CLI does not have it; the Settings panel's "agent not running"
-diagnosis is what they see, and `npx noacg@latest caspar agent` is the fix.
+diagnosis is what they see, and `npx @noacg/cli@latest caspar agent` is the fix.
 
 ### AMCP, precisely
 

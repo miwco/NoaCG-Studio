@@ -180,7 +180,7 @@ export class BridgeClient {
       const newest = Math.max(...SUPPORTED_BRIDGE_V);
       throw new Error(
         hello.v > newest
-          ? `This NoaCG speaks bridge v${hello.v} and this noacg speaks v${newest} - update noacg (npm i -g noacg@latest).`
+          ? `This NoaCG speaks bridge v${hello.v} and this noacg speaks v${newest} - update noacg (npm i -g @noacg/cli@latest).`
           : `This noacg speaks bridge v${newest} and the deployment at ${origin} speaks v${hello.v} - update NoaCG, or point NOACG_URL at a newer deployment.`,
       );
     }

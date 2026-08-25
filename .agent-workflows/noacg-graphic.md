@@ -14,7 +14,7 @@ canonical procedure to point at (docs/AGENT_WORKFLOWS.md).
    and the optional house design notes (`references/design-notes.md`, off by default).
 2. Drive the LOCAL deployment: start this checkout's dev server (`npm run dev` - the port is
    `node scripts/dev-port.mjs`) and run the CLI with `NOACG_URL=http://localhost:<port>` from
-   `cli/` (`npm run build` once, then `node cli/dist/index.js <command>`), or `npx noacg` for
+   `cli/` (`npm run build` once, then `node cli/dist/index.js <command>`), or `npx @noacg/cli` for
    the published build against `https://noacg.studio`.
 3. The CLI launches a headless Chromium - a browser-driving job. Respect the one-job-per-machine
    rule (root AGENTS.md "Verifying changes"): `npm run bench:cli` is the queued, guard-known
