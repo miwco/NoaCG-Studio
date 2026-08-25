@@ -44,6 +44,15 @@ const noWait = argv.includes('--no-wait');
  * ci.yml (`06a1cb31`) made cheap for a small branch - it used to be ten minutes of full suite.
  */
 const attempts = Math.max(1, Number(valueOf('--attempts') ?? 3));
+/**
+ * Verdict reason KINDS a person has weighed and accepted, comma-separated.
+ *
+ * Not a severity override: `--accept shared-registry` says "I have looked at that specific
+ * collision", and any OTHER reason in the same verdict still refuses. Exists because two
+ * branches touching one registry both read `hold` symmetrically, so neither can go first and
+ * the queue deadlocks until a human breaks the tie.
+ */
+const accept = (valueOf('--accept') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
 if (!branch) {
   console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait]');
@@ -57,15 +66,36 @@ async function main() {
   const verdict = mergeOrderVerdict(branch);
   if (!verdict) return refuse('merge-order gave no verdict for this branch');
   if (verdict.severity !== 'clear') {
-    return refuse(
-      `merge-order says ${verdict.severity}: ${verdict.reasons.map((r) => r.text).join('; ')}` +
-        (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : ''),
-    );
+    // A NAMED risk a person has already weighed may be accepted; nothing else can.
+    //
+    // Two branches editing one shared registry both read `hold`, symmetrically, so neither can
+    // ever be the one that goes first - the queue deadlocks and only a human can break it. That
+    // is the tool asking the right question, but it needs an answer it can accept. `--accept
+    // <kind>` is that answer, and it is deliberately per-KIND rather than a blanket override:
+    // saying "I have looked at the shared-registry collision" must not also wave through a
+    // stacked branch or a duplicate migration number that happens to be in the same verdict.
+    const unaccepted = verdict.reasons.filter((r) => !accept.includes(r.kind));
+    if (unaccepted.length > 0) {
+      return refuse(
+        `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
+          (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
+          `\n  a person who has weighed one of these can pass --accept <kind>`,
+      );
+    }
+    say(`merge-order says ${verdict.severity}, accepted by hand: ${verdict.reasons.map((r) => r.kind).join(', ')}`);
+  } else {
+    say('merge-order: clear');
   }
-  say(`merge-order: clear`);
 
   // --- 2. Assess. The preflight settles every mechanical condition and prints each one. ------
-  if (run('node', ['scripts/safe-merge-preflight.mjs', '--branch', branch]).status !== 0) {
+  //
+  // `--skip-order` only when a person has already accepted the order verdict above: the preflight
+  // runs merge-order itself and blocks on a `hold`, so without this the acceptance would be
+  // overruled one step later by the same fact. Every OTHER preflight check still runs - this
+  // drops the one question that has already been answered, not the assessment.
+  const preflight = ['scripts/safe-merge-preflight.mjs', '--branch', branch];
+  if (accept.length > 0) preflight.push('--skip-order');
+  if (run('node', preflight).status !== 0) {
     return refuse('preflight phase 1 failed - see its output above');
   }
 
