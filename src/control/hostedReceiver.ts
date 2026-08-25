@@ -148,26 +148,32 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   // Back-fill the gap after (re)connecting, in log order, then continue live. The tail RPC
   // answers TAIL_PAGE rows at a time, so one call only ever recovers that much of a gap: keep
   // pulling while pages come back full (every page advances the cursor, so the walk ends).
-  // One walk at a time - a second would re-read the same rows and apply them twice.
+  // One walk at a time - a second in parallel would re-read the same rows and apply them twice.
   var TAIL_PAGE = 500;        // the RPC's own limit (migration 0008)
   var MAX_TAIL_PAGES = 40;    // runaway guard, the same ceiling the renderer's catch-up uses
   var POLL_MS = ${CONTROL_POLL_MS};  // the floor under realtime — see startPolling() below
-  var tailing = false;
+  var tailing = false, tailAgain = false;
   function fillTail() {
-    if (tailing) return;
+    // A second walk while one is in flight is REMEMBERED, not dropped. Dropping it re-creates the
+    // bug the hole path exists to prevent, one level up: a row that arrives while the boot walk
+    // is still reading is skipped here (its own handler returned without applying it, to keep the
+    // cursor behind the gap), and the walk in flight may already have read past the point that
+    // row would appear at - so nothing would fetch it until the poll came round.
+    if (tailing) { tailAgain = true; return; }
     tailing = true;
     var pages = 0;
     var step = function () {
       // Five failures and we stop rather than spin: the socket is up by now, and the next row
-      // that arrives with a hole in front of it starts this walk again.
+      // that arrives with a hole in front of it starts this walk again - as does the poll below.
       rpcRetry('control_tail', { p_slug: SLUG, p_graphic: GRAPHIC, p_after: lastId }, 5, function (ok, rows) {
-        if (!ok || !rows) { tailing = false; return; }
+        if (!ok || !rows) { tailing = false; tailAgain = false; return; }
         for (var i = 0; i < rows.length; i++) {
           if (rows[i].id > lastId) { lastId = rows[i].id; apply(rows[i].msg); }
         }
         pages += 1;
         if (rows.length >= TAIL_PAGE && pages < MAX_TAIL_PAGES) { step(); return; }
         tailing = false;
+        if (tailAgain) { tailAgain = false; fillTail(); }
       });
     };
     step();
@@ -182,6 +188,7 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   // doing, and a channel that has never joined says so ONCE rather than being retried in silence.
   // The interval is the app's own (control/hostedControl.ts CONTROL_POLL_MS), where the cost
   // arithmetic behind it is written down.
+  var warnedNotJoined = false;
   function startPolling() {
     setInterval(function () {
       if (!joined && !warnedNotJoined) {
@@ -195,7 +202,6 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
       fillTail();
     }, POLL_MS);
   }
-  var warnedNotJoined = false;
 
   // ── Realtime: follow new log rows (Postgres Changes on control_events). ──
   var url = 'wss://' + REF + '.supabase.co/realtime/v1/websocket?apikey=' + encodeURIComponent(KEY) + '&vsn=1.0.0';
