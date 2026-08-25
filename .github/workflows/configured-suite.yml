@@ -29,9 +29,9 @@
 # read a green run here as evidence that sync is fast enough anywhere real.
 #
 # NIGHTLY, not weekly: the suite costs minutes, and the surfaces it covers (quiz-output,
-# scorebug-output, imported-quiz-output, hosted-control-recovery) are what the 2026-09-12
-# production is judged on. Its own schedule and its own rolling issue rather than joining
-# nightly.yml, so an infrastructure fault here can never red the main nightly verdict.
+# scorebug-output, imported-quiz-output, output-cold-boot, hosted-control-recovery) are what the
+# 2026-09-12 production is judged on. Its own schedule and its own rolling issue rather than
+# joining nightly.yml, so an infrastructure fault here can never red the main nightly verdict.
 #
 # THE FAILURE MODE THIS WORKFLOW IS BUILT AROUND. Every spec calls `test.skip(!haveCreds, …)`, so
 # with the environment unset the run executes NOTHING and exits 0 — a job checking only the exit
@@ -75,9 +75,9 @@ jobs:
       # that boolean override is a no-op on 2.111.0. No spec uses Google sign-in.
       SUPABASE_AUTH_GOOGLE_CLIENT_ID: local-e2e-unused
       SUPABASE_AUTH_GOOGLE_SECRET: local-e2e-unused
-      # The suite declares 32 tests across 16 spec files. With the local stack there is no reason
+      # The suite declares 33 tests across 17 spec files. With the local stack there is no reason
       # for ANY of them to skip - both specs that used to need the service-role key now have it.
-      MIN_TESTS: 32
+      MIN_TESTS: 33
       # Deliberately EMPTY. Every skip is a failure now. An entry here is coverage being given up,
       # so adding one needs a reason written next to it.
       ALLOWED_SKIPS: ''
@@ -248,7 +248,7 @@ jobs:
           done
           echo "supabase_realtime publishes chat_submissions and control_events."
 
-      # The one thing a fresh database genuinely lacks: the account. 20 of the 32 tests sign in,
+      # The one thing a fresh database genuinely lacks: the account. 21 of the 33 tests sign in,
       # and without this every one of them fails at the sign-in assertion — twenty ambiguous UI
       # timeouts for a single missing row.
       #
