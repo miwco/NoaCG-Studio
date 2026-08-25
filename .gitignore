@@ -132,6 +132,7 @@ shots-*/
 !.agents/skills/spx-html-template-expert/
 !.agents/skills/start/
 !.agents/skills/video-quality-round/
+!.agents/skills/walk/
 skills-lock.json
 
 # re-design/ holds the approved redesign reference (handoff.md + the mockup PNGs) and IS

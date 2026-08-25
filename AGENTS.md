@@ -262,6 +262,17 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    it is not blocked and not detected: the spike family was missed until 2026-08-15 and ran three
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
+   **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
+   at once, and one runner per machine drains the queue against a BUDGET in suite-equivalents:
+   1.0 by day, 2.0 between 00:00 and 07:00, nothing below a free-RAM floor. A suite (or anything
+   unrecognised) costs 1.0, a build or `node --test` 0.4, a landing 0.15 - so a night drains
+   several landings beside a suite instead of behind it. `npm run jobs` shows what is running and
+   why anything is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
+   the foreground is what used to lose hours: the shell tool is killed at 600 s with the wait
+   still running, so the work never started and nothing anywhere said so
+   (`docs/JOB_RUNNER_PLAN.md`). The `:queued` scripts remain for when you need the VERDICT now -
+   a gate cannot take a job id for an answer - and they now give up after 30 minutes instead of
+   never.
 4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
@@ -282,6 +293,12 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    catalog that was visibly broken.
 6. **Freshness is TIME-driven, never commit-driven** (`docs/STACK_FRESHNESS.md`): `check:freshness`
    reports weekly and nothing auto-upgrades.
+7. **A green gate is not a human seeing it.** Work that is observable in the product adds an item
+   to **`docs/acceptance/OWNER_QUEUE.md`** in the same commit - what changed, the ROUTE to it in
+   under a minute, what specifically to look at, and the date. `/walk` empties that list one item
+   at a time and expires anything older than 7 days as presumed seen. Whether the owner looked at
+   something and thought it was any good is the one fact about shipped work that no file in the
+   repo can otherwise hold; an item with no route is not an item.
 
 **Gotchas:**
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the
@@ -292,10 +309,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   localStorage after 4 s (`durableStoreHealth` -> StorageHealthNotice), and a boot that never
   mounts paints a plain-HTML diagnosis. Pinned by `e2e/network-resilience.spec.ts`; ops view
   in docs/DEPLOYMENT.md ("Where to look").
-- **Every trap a SPEC falls into is in `e2e/AGENTS.md`** (with its thin `CLAUDE.md`), which
-  loads when you work in that directory: the reused dev server, the ghost store, the
-  `addInitScript` storage trap, the preview debounce, waiting for a durable write, where focus
-  is before a Space press, and the video project that generates on its own.
+- **Every trap a SPEC falls into, and every trap of RUNNING the suite, is in `e2e/AGENTS.md`**
+  (with its thin `CLAUDE.md`), which loads when you work in that directory. The same rule holds
+  everywhere: a trap lives in the contract that loads where it fires, not in a list somebody has
+  to remember to read - `supabase/AGENTS.md`, `api/AGENTS.md` and `docs/VERIFICATION.md` carry
+  theirs the same way.
 
 ## Git
 
@@ -307,35 +325,38 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   with work to do, branch first. The rhythm: **commit each completed, verified phase/step** to the
   FEATURE BRANCH with a descriptive message. **Never add a `Co-Authored-By` trailer or any agent
   co-author.** Don't commit `dist/` in feature work.
-- **`main` is only ever touched when the user asks for it, in that message - from ANY checkout.**
-  Nothing lands on your own initiative: no commit made while sitting on `main`, no `git merge` into
-  main, no `git push origin main`. Being in the primary checkout on `main` is not
-  permission to land - the user decides when work lands, *after* they know the change is safe.
-  Commit verified work to the feature branch, report what you did and verified, and STOP.
-- **The one exception is the user invoking the repo's merge-to-main flow** (`/safe-merge` in
-  Claude Code or `$safe-merge` in Codex). Invoking it IS the ask: run that flow to completion for
-  the named branch - preflight, merge into `main`, and push - without asking again for the merge
-  or push. **Picking the safe-merge option the `next` workflow offered counts as invoking it** -
-  the user chose that branch deliberately, so run the flow rather than telling them to type the
-  command; see `.agent-workflows/next.md` §2c. It does not authorize branch or
-  worktree cleanup, with one carve-out: a branch with no worktree (a closed session leaves those
-  behind) has nowhere to integrate `main` and run the gate, so the flow creates a TEMPORARY
-  worktree for it and removes that same one at the end - never any other, never with `--force`.
-  The permission is scoped to that invocation and that branch; it never carries
-  to another branch, a later turn, or any other route onto `main`. If the flow's checks fail,
-  stop and report - permission to run the flow is not permission to land something broken.
+- **Landing is SERIALIZED, not permissioned.** Merging never waits on the user; it waits on the
+  other branches. Two rules, both machine-checked, both in `/safe-merge` (Claude Code) or
+  `$safe-merge` (Codex) - use the flow rather than raw git, because that is where they live:
+  - **Order.** `node scripts/merge-order.mjs` ranks every branch ahead of `main` by what landing
+    it FIRST costs the other worktrees, measuring real conflicts with `git merge-tree` (read-only
+    - no working tree, no ref) and naming the collisions git merges cleanly and still gets wrong:
+    a rename over another branch's edits, two branches minting the same migration number, a
+    stacked branch jumping its ancestor. A **`clear`** verdict may land. **`caution` and `hold`
+    stop and ask** - those are the cases that historically went wrong.
+  - **One at a time.** Never merge while another merge is in flight. The flow re-fetches and
+    re-checks that `main` has not moved since the branch integrated it, and the final merge is
+    `--ff-only`, so git itself refuses if anything landed meanwhile. The gate must be green on the
+    INTEGRATED sha, never the pre-integration one. Once the job runner exists
+    (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
+    rather than remembered.
+  - **Queue a landing rather than sitting through it.** `npm run queue:merge -- <branch>` runs
+    `scripts/auto-merge.mjs`, the mechanical path of the flow: it takes only a `clear` verdict,
+    with clean trees, a conflict-free integration and a green gate on the integrated sha, and
+    REFUSES everything else without changing anything further. Merge jobs never run beside
+    anything, so queueing several lands them one at a time in order. `--dry-run` stops before the
+    first state change.
+  - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
+    worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
+    gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -
+    never any other, never with `--force`. If the flow's checks fail, stop and report.
+- **Publishing PAST `main` still needs the user, in that message** - `npm publish`, production
+  migrations, anything costing money. Those are not landings: a later commit cannot take them back.
 - **A finished session can clean up its own worktree, but only the USER starts it** -
   `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
   model must never start an irreversible action. **A clean `git status` does not mean a worktree is
   disposable** - ignored files (`.env`, paid bench output, logs) die with it, so the script refuses
   to apply until that loss is acknowledged (`.agent-workflows/cleanup-worktrees.md`).
-- **Merge ORDER is checked, not guessed.** `node scripts/merge-order.mjs` ranks every branch
-  ahead of `main` by what landing it FIRST costs the other worktrees, measuring real conflicts
-  with `git merge-tree` (read-only - no working tree, no ref) and naming the collisions git
-  merges cleanly and still gets wrong: a rename over another branch's edits, two branches minting
-  the same migration number, a stacked branch jumping its ancestor. `next` uses it to avoid
-  recommending an expensive landing; `safe-merge` runs it in Phase 1 and stops for a go-ahead
-  only on a `hold`. It is advisory about order alone and never overrides a Hard safety rule.
 - **Commit messages:** clear and human-readable, explaining the actual change - understandable to an
   outside developer reading the history cold. No chat/session language, internal planning names, or
   AI-sounding phrases ("as requested", "starting era 5", "continued work"). Never mention Claude,

@@ -85,3 +85,31 @@ every session editing a wizard step was loading the whole canvas gesture contrac
 7. Run `npm run check:shared-instructions`, the relevant focused tests, and `npm run build`.
 
 Never put a second copy of the procedure in a tool adapter.
+
+## Three traps in the tooling itself
+
+- **A personal command silently outranks the project's.** Claude Code's precedence is personal >
+  project, so `~/.claude/commands/<name>.md` always wins over `.claude/commands/<name>.md` for a
+  colliding name - with no error and no warning. Confirmed live 2026-07-25 for `/safe-merge` and
+  `/handoff`, which expanded to repo-agnostic personal versions while the correct project files
+  sat on disk unused. (`next`, `cleanup-worktrees` and `noacg-task` have no personal counterpart;
+  Codex has no equivalent collision - `~/.codex/skills/` and `~/.codex/prompts/` are clean.) Both
+  personal files now open by checking for `.agent-workflows/<name>.md` in the invoking repo and
+  deferring to it, so the collision is handled rather than avoided. **Do not assume a project
+  command file's content is what runs** - `ls ~/.claude/commands/` for collisions first.
+- **Codex writes ONLY to the session's worktree.** Delegating while the session sits in worktree A
+  and the work lives in worktree B fails: the sandbox root comes from the session cwd, not from
+  the path in the prompt, so restating the target path does not help. It refuses with "the
+  requested worktree is read-only" and writes nothing - correctly, since editing another checkout
+  would corrupt a parallel session. Move the SESSION (`EnterWorktree` at that path), then
+  relaunch. **It fails intermittently**, which is what makes it dangerous: one batch of three got
+  through and two were blocked from the identical cwd. Diagnose by comparing live processes
+  against files on disk, not by waiting. A Codex task can also `git checkout` and DETACH HEAD in a
+  shared worktree - it cannot commit (index.lock), but a later commit then lands off-branch.
+- **Never round-trip a source file through PowerShell.** Windows PowerShell 5.1 is the only
+  edition here, and it defaults to UTF-8 on neither side: `Get-Content` decodes as the system ANSI
+  codepage and `Set-Content -Encoding utf8` re-encodes WITH a BOM. A quick sed-style patch
+  therefore glues `EF BB BF` to the first token and mojibakes every non-ASCII character - and this
+  repo's comment style is full of em dashes and arrows, so one round-trip of a single spec file
+  turned a one-line change into a 42-insertion diff. **The tests still pass afterwards**, because
+  mojibake in comments and a BOM before `import` are both legal. Use the editing tools.

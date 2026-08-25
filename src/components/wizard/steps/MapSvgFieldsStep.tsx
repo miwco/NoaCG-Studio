@@ -3,6 +3,7 @@ import { uuid } from '../../../model/id';
 import type {
   DesignFieldSpec,
   DraftPatch,
+  SvgFollowerDraft,
   SvgFieldDraft,
   SvgFontDraft,
   SvgImageDraft,
@@ -10,7 +11,7 @@ import type {
   SvgQuizDraft,
   WizardDraft,
 } from '../draft';
-import { SVG_CANDIDATE_ATTR } from '../../../assets/svgImport';
+import { SVG_CANDIDATE_ATTR, type SvgImportResult } from '../../../assets/svgImport';
 import { extOf, fileToDataUrl } from '../../../assets/assetUtils';
 import {
   FONTS,
@@ -36,6 +37,48 @@ interface Props {
    * SVG. Null disarms. CreationWizard just hands the handler to the canvas.
    */
   onArmDraw: (handler: ((box: { x: number; y: number; w: number; h: number }) => void) | null) => void;
+  /**
+   * THE CANVAS AS A CONTROL SURFACE (docs/SVG_IMPORT_PLAN.md §6a step 5). Reported the same way
+   * as the draw handler and for the same reason: the canvas answers WHICH layer was picked, and
+   * only this step knows what picking one means. `drag` is the direction of a click-drag, which
+   * is how a rectangle is told which way to grow without hunting for a second control.
+   */
+  onArmPick: (handler: ((candidateId: string, drag: 'x' | 'y' | null) => void) | null) => void;
+}
+
+/**
+ * WHAT GEOMETRY PROPOSES TRAVELS with a growing element (docs/SVG_IMPORT_PLAN.md §6c).
+ *
+ * The same guess the runtime makes - anything drawn past the growing edge - but made HERE, on
+ * the step's own rendered artwork, so the reader can see it and change it. That is the whole
+ * ruling: sideways the guess is usually right, downwards it is not, because "below the panel"
+ * holds things that should move, things that should stretch and things pinned to the frame that
+ * must stay, and no measurement separates those.
+ *
+ * An OUTERMOST-first rule keeps the set honest: when a named group and something inside it both
+ * qualify, only the group is proposed - the runtime moves whole layers, and offering both would
+ * let a reader tick one thing twice.
+ */
+function proposeFollowers(
+  stage: HTMLElement,
+  svg: SvgImportResult,
+  growId: string,
+  axis: 'x' | 'y',
+): string[] {
+  const grow = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${growId}"]`);
+  if (!grow) return [];
+  const gr = grow.getBoundingClientRect();
+  const edge = axis === 'y' ? gr.bottom : gr.right;
+  const hits: { id: string; el: Element }[] = [];
+  for (const c of [...svg.groups, ...svg.shapes, ...svg.candidates, ...svg.images, ...svg.outlines]) {
+    if (c.id === growId) continue;
+    const el = stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${c.id}"]`);
+    if (!el || el.contains(grow) || grow.contains(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) continue;
+    if ((axis === 'y' ? r.top : r.left) >= edge - 0.5) hits.push({ id: c.id, el });
+  }
+  return hits.filter((h) => !hits.some((o) => o !== h && o.el.contains(h.el))).map((h) => h.id);
 }
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -155,11 +198,15 @@ function measureOutline(
  * channel the editor canvas already uses (`preview/canvasControlProtocol.ts`) — the wizard
  * preview iframe deliberately carries no allow-same-origin, so nothing reaches into it.
  */
-export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }: Props) {
+export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, onArmPick }: Props) {
   const svg = draft.designSvg;
   const stageRef = useRef<HTMLDivElement>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [drawArmed, setDrawArmed] = useState(false);
+  // While armed, a pick on the artwork adds or drops a FOLLOWER instead of binding a field
+  // (plan §6c). Two meanings for one gesture need a mode, and the mode is a visible button
+  // rather than a modifier key nobody would find.
+  const [followArmed, setFollowArmed] = useState(false);
   const [fontBusy, setFontBusy] = useState<string | null>(null);
   const [fontError, setFontError] = useState<string | null>(null);
   const uploadFor = useRef<string | null>(null);
@@ -238,6 +285,126 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
     onArmDraw(drawArmed ? placeDrawnField : null);
   }, [drawArmed, placeDrawnField, onArmDraw]);
   useEffect(() => () => onArmDraw(null), [onArmDraw]);
+
+  // ── WHAT TRAVELS WITH THE GROWING ELEMENT (docs/SVG_IMPORT_PLAN.md §6c) ──
+  // Geometry PROPOSES and the author edits. The proposal is measured on this step's own
+  // rendered artwork, so what the reader sees listed is what the runtime would have guessed;
+  // touching it MATERIALIZES the whole set into the draft, and from then on the list is the
+  // answer rather than a preview of one.
+  const [proposed, setProposed] = useState<string[]>([]);
+  const growId = draft.svgStretch.on ? draft.svgStretch.shapeId : null;
+  const growAxis = draft.svgStretch.axis ?? 'x';
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!svg || !stage || !growId) {
+      setProposed([]);
+      return;
+    }
+    setProposed(proposeFollowers(stage, svg, growId, growAxis));
+  }, [svg, growId, growAxis]);
+
+  /** The set as it stands: the author's own list once they have touched it, else the proposal. */
+  const declaredFollowers: SvgFollowerDraft[] =
+    draft.svgStretch.followers ?? proposed.map((candidateId) => ({ candidateId, mode: 'move' as const }));
+
+  /** Every follower edit commits the whole set, so an untouched proposal never half-materializes. */
+  const setFollowers = (next: SvgFollowerDraft[]) =>
+    onDraft({ svgStretch: { ...draft.svgStretch, followers: next } });
+
+  const labelOfCandidate = (id: string): string => {
+    const all = svg
+      ? [...svg.groups, ...svg.shapes, ...svg.candidates, ...svg.images, ...svg.outlines]
+      : [];
+    return all.find((c) => c.id === id)?.label ?? id;
+  };
+
+  // ── PICKING A LAYER ON THE ARTWORK (docs/SVG_IMPORT_PLAN.md §6a step 5) ──
+  // The checklist and the canvas are two views of one decision, and pointing at the thing itself
+  // is the one that needs no reading. What a pick MEANS depends on what was picked - a text layer
+  // becomes a field, a rectangle becomes the panel that grows - so the canvas reports which layer
+  // and this decides, exactly as it does for a drawn box.
+  const pickLayer = useCallback(
+    (candidateId: string, drag: 'x' | 'y' | null) => {
+      // DECLARING FOLLOWERS takes the gesture while it is armed: the same pick that would
+      // otherwise bind a field instead says "this travels" (plan §6c). The growing element
+      // itself is never its own follower.
+      if (followArmed) {
+        if (candidateId === draft.svgStretch.shapeId) return;
+        const set = declaredFollowers;
+        const already = set.some((f) => f.candidateId === candidateId);
+        onDraft({
+          svgStretch: {
+            ...draft.svgStretch,
+            followers: already
+              ? set.filter((f) => f.candidateId !== candidateId)
+              : [...set, { candidateId, mode: 'move' as const }],
+          },
+        });
+        return;
+      }
+      const text = draft.svgFields.find((f) => f.candidateId === candidateId);
+      if (text) {
+        onDraft({
+          svgFields: draft.svgFields.map((f) =>
+            f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+          ),
+        });
+        return;
+      }
+      const picture = draft.svgImages.find((f) => f.candidateId === candidateId);
+      if (picture) {
+        onDraft({
+          svgImages: draft.svgImages.map((f) =>
+            f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+          ),
+        });
+        return;
+      }
+      const outline = draft.svgOutlines.find((f) => f.candidateId === candidateId);
+      if (outline) {
+        // Only a MEASURED group can be replaced - the same rule its checkbox keeps, since the
+        // stand-in needs the box. Picking an unmeasurable one does nothing rather than pretending.
+        if (outline.box) {
+          onDraft({
+            svgOutlines: draft.svgOutlines.map((f) =>
+              f.candidateId === candidateId ? { ...f, on: !f.on } : f,
+            ),
+          });
+        }
+        return;
+      }
+      // A RECTANGLE is the panel that grows, and a DRAG says which way. Picking the one that is
+      // already growing, with no direction, turns it off again - the gesture is its own undo.
+      if (!svg?.shapes.some((s) => s.id === candidateId)) return;
+      const isPanel = draft.svgStretch.on && draft.svgStretch.shapeId === candidateId;
+      if (isPanel && !drag) {
+        onDraft({ svgStretch: { ...draft.svgStretch, on: false } });
+        return;
+      }
+      onDraft({
+        svgStretch: {
+          on: true,
+          shapeId: candidateId,
+          axis: drag ?? (isPanel ? draft.svgStretch.axis : undefined) ?? 'x',
+        },
+      });
+    },
+    [
+      draft.svgFields,
+      draft.svgImages,
+      draft.svgOutlines,
+      draft.svgStretch,
+      svg,
+      onDraft,
+      followArmed,
+      declaredFollowers,
+    ],
+  );
+
+  useEffect(() => {
+    onArmPick(pickLayer);
+  }, [pickLayer, onArmPick]);
+  useEffect(() => () => onArmPick(null), [onArmPick]);
 
   const patchAdded = (id: string, patch: Partial<DesignFieldSpec>) =>
     onDraft({ designFields: draft.designFields.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
@@ -535,6 +702,66 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
         </div>
       )}
 
+      {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
+          a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
+          and the reader should be able to put it there without opening the editor. Always
+          offered — an artwork with every layer bound may still be missing a caption.
+          DIRECTLY UNDER THE CHECKLIST, and that placement is the point: this is the other half
+          of "which fields does this graphic have", so it belongs beside the layers it extends
+          rather than after the questions about behaviour and growth. Measured at 1366x768, a
+          seven-layer scorebug put it 553px below the fold when it sat last, which is where a
+          reader who has never been told it exists would never find it. */}
+      <div className="panel-section" data-testid="map-svg-added">
+        <h3>
+          Add a field{' '}
+          <span className="muted">
+            {draft.designFields.length === 0
+              ? 'nothing added'
+              : `${draft.designFields.length} added`}
+          </span>
+        </h3>
+        {/* Two lines, not four: the rows above have already shown what a field IS, so this only
+            has to say where a new one comes from. */}
+        <p className="hint">
+          Your artwork is the stage, not the whole graphic. Draw a box on the preview to put a
+          real editable field where the file drew nothing.
+        </p>
+        <button
+          className={drawArmed ? 'active' : ''}
+          onClick={() => setDrawArmed((a) => !a)}
+          data-testid="map-svg-add-field"
+        >
+          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
+        </button>
+        {draft.designFields.map((f) => (
+          <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
+            <label className="save-field grow">
+              <span>Field name</span>
+              <input
+                value={f.title}
+                onChange={(e) => patchAdded(f.id, { title: e.target.value })}
+                data-testid={`map-svg-added-title-${f.id}`}
+              />
+            </label>
+            <label className="save-field grow">
+              <span>Text</span>
+              <input
+                value={f.text}
+                onChange={(e) => patchAdded(f.id, { text: e.target.value })}
+                data-testid={`map-svg-added-sample-${f.id}`}
+              />
+            </label>
+            <button
+              onClick={() => removeAdded(f.id)}
+              title="Remove this field — the artwork is untouched either way"
+              data-testid={`map-svg-added-remove-${f.id}`}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* THE BEHAVIOUR (docs/GRAPHIC_BEHAVIOUR_PLAN.md). Offered once there are enough text
           rows for a question and two answers — below that there is nothing to bind, and the
           section would only be a puzzle. Everything here is a picker: no layer has to be
@@ -738,7 +965,21 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
               <span>Which panel grows</span>
               <select
                 value={draft.svgStretch.shapeId ?? ''}
-                onChange={(e) => onDraft({ svgStretch: { on: true, shapeId: e.target.value || null } })}
+                // SPREAD, never rebuild. Written as a fresh object this dropped the AXIS the
+                // reader had just chosen - picking the panel silently sent a "grows taller"
+                // graphic back to growing sideways - and it would drop their declared
+                // followers with it. Changing the panel also invalidates that set: it was
+                // measured against a different element, so it goes back to being proposed.
+                onChange={(e) =>
+                  onDraft({
+                    svgStretch: {
+                      ...draft.svgStretch,
+                      on: true,
+                      shapeId: e.target.value || null,
+                      followers: null,
+                    },
+                  })
+                }
                 data-testid="map-svg-stretch-shape"
               >
                 {svg.shapes.map((s) => (
@@ -751,10 +992,82 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
           )}
           {draft.svgStretch.on && (
             <p className="hint">
-              It widens to the right, and anything drawn past its right edge travels with it —
-              never past the frame's safe margin. Only rectangles can grow: a panel drawn as a
-              freeform shape has no width to change.
+              {growAxis === 'y'
+                ? 'It gets taller and the value wraps into the new height — never past the frame’s safe margin.'
+                : 'It widens to the right and the type stays the size you drew — never past the frame’s safe margin.'}{' '}
+              Only rectangles can grow: a panel drawn as a freeform shape has no side to move.
             </p>
+          )}
+          {/* WHAT TRAVELS (docs/SVG_IMPORT_PLAN.md §6c). Geometry proposes and the author edits,
+              and the reason is the ruling itself: sideways "anything past the edge" is usually
+              right, downwards it is not - below a panel sit things that should move, things that
+              should stretch, and things pinned to the frame that must stay, and no measurement
+              tells them apart. So the guess is shown rather than trusted. */}
+          {draft.svgStretch.on && (
+            <div className="map-svg-followers" data-testid="map-svg-followers">
+              <h4>
+                What travels with it{' '}
+                <span className="muted">
+                  {declaredFollowers.length === 0
+                    ? 'nothing moves'
+                    : `${declaredFollowers.length} layer${declaredFollowers.length === 1 ? '' : 's'}`}
+                  {draft.svgStretch.followers ? '' : ' — proposed'}
+                </span>
+              </h4>
+              <p className="hint">
+                {draft.svgStretch.followers
+                  ? 'Your list. A layer that moves keeps its gap; one that stretches grows by the same amount.'
+                  : 'Measured from your artwork — everything drawn past the growing edge. Change it and the list becomes yours.'}
+              </p>
+              <button
+                className={followArmed ? 'active' : ''}
+                onClick={() => setFollowArmed((a) => !a)}
+                data-testid="map-svg-followers-pick"
+              >
+                {followArmed
+                  ? '✕ Done — or click layers on the artwork'
+                  : '⌖ Pick what travels, on the artwork'}
+              </button>
+              {declaredFollowers.map((f) => (
+                <div
+                  className="map-svg-row"
+                  key={f.candidateId}
+                  onMouseEnter={() => setHoverId(f.candidateId)}
+                  onMouseLeave={() => setHoverId((h) => (h === f.candidateId ? null : h))}
+                  data-testid={`map-svg-follower-${f.candidateId}`}
+                >
+                  <span className="grow">{labelOfCandidate(f.candidateId)}</span>
+                  <label className="save-field">
+                    <span>Behaviour</span>
+                    <select
+                      value={f.mode}
+                      onChange={(e) =>
+                        setFollowers(
+                          declaredFollowers.map((o) =>
+                            o.candidateId === f.candidateId
+                              ? { ...o, mode: e.target.value as 'move' | 'grow' }
+                              : o,
+                          ),
+                        )
+                      }
+                      data-testid={`map-svg-follower-mode-${f.candidateId}`}
+                    >
+                      <option value="move">Moves with it</option>
+                      <option value="grow">Stretches with it</option>
+                    </select>
+                  </label>
+                  <button
+                    onClick={() =>
+                      setFollowers(declaredFollowers.filter((o) => o.candidateId !== f.candidateId))
+                    }
+                    title="This one stays where it was drawn"
+                    data-testid={`map-svg-follower-drop-${f.candidateId}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -873,60 +1186,6 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }:
           ))}
         </div>
       )}
-
-      {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
-          a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
-          and the reader should be able to put it there without opening the editor. Always
-          offered — an artwork with every layer bound may still be missing a caption. */}
-      <div className="panel-section" data-testid="map-svg-added">
-        <h3>
-          Add a field{' '}
-          <span className="muted">
-            {draft.designFields.length === 0
-              ? 'nothing added'
-              : `${draft.designFields.length} added`}
-          </span>
-        </h3>
-        <p className="hint">
-          Your artwork is the stage, not the whole graphic. Draw a box on the preview and you
-          get a real editable field there — the same kind of field the layers above become, so
-          it airs, exports and takes an operator&rsquo;s value exactly like they do.
-        </p>
-        <button
-          className={drawArmed ? 'active' : ''}
-          onClick={() => setDrawArmed((a) => !a)}
-          data-testid="map-svg-add-field"
-        >
-          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
-        </button>
-        {draft.designFields.map((f) => (
-          <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
-            <label className="save-field grow">
-              <span>Field name</span>
-              <input
-                value={f.title}
-                onChange={(e) => patchAdded(f.id, { title: e.target.value })}
-                data-testid={`map-svg-added-title-${f.id}`}
-              />
-            </label>
-            <label className="save-field grow">
-              <span>Text</span>
-              <input
-                value={f.text}
-                onChange={(e) => patchAdded(f.id, { text: e.target.value })}
-                data-testid={`map-svg-added-sample-${f.id}`}
-              />
-            </label>
-            <button
-              onClick={() => removeAdded(f.id)}
-              title="Remove this field — the artwork is untouched either way"
-              data-testid={`map-svg-added-remove-${f.id}`}
-            >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
 
       {draft.svgFonts.length > 0 && (
         <div className="panel-section" data-testid="map-svg-fonts">

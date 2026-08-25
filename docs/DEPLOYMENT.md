@@ -74,7 +74,7 @@ The cost and capacity policy for the Pro account is
    dropped slot cannot hide a missing nightly. It lives in its own workflow deliberately: a
    check inside `nightly.yml` could not fire when the nightly did not.
 2. **Vercel** builds production from **`main` only** (project `noacg-studio`,
-   team `miwcos-projects`, production URL <https://noacg.studio>). Every push to
+   team `noacg`, production URL <https://noacg.studio>). Every push to
    `main` triggers a production deployment via the Git integration; CI and Vercel run in
    parallel and do not gate each other (see "Known limits").
 3. **`deploy-verify` (`.github/workflows/deploy-verify.yml`)** watches the deployment:
@@ -185,7 +185,7 @@ tests the rule against a fixture tree, since `api/` alone only ever exercises to
   **`npm run check:vercel-config` now runs this locally in the build gate**
   (`scripts/check-vercel-config.mjs`, over Vercel's own `@vercel/routing-utils`), so this class
   cannot reach `main` again; `scripts/check-vercel-config.test.mjs` mutation-tests the gate.
-- Build log access: `vercel.com/miwcos-projects/noacg-studio` → the deployment → Build Logs,
+- Build log access: `vercel.com/noacg/noacg-studio` → the deployment → Build Logs,
   or the Vercel MCP `get_deployment_build_logs`.
 
 ## Previews (opt-in, never production)
