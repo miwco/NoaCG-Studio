@@ -232,6 +232,12 @@ function printOutstanding(jobs) {
 
   console.log('');
   console.log(`Ahead of main, cheapest to land first (${ordered.length}):`);
+  // Stamped because this output gets READ ALOUD - pasted into a chat, relayed to the owner,
+  // quoted back hours later. Every one of those is a snapshot that keeps looking authoritative
+  // while branches are queued and landed underneath it. Three times in one day someone acted on
+  // a picture that had aged in transit, including the owner being told a branch was not queued
+  // twenty minutes after its session queued it. A timestamp does not stop that; it makes it
+  // visible, which is the most a report can do about its own staleness.
   for (const { branch, commits, age } of ordered) {
     const entry = rank.get(branch);
     const job = queued.get(branch);
@@ -241,6 +247,7 @@ function printOutstanding(jobs) {
     console.log(`      ${state}  ·  ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
   }
   console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
+  console.log(`  Read at ${new Date().toISOString().slice(11, 16)} UTC - re-run rather than trusting a copy of this.`);
 }
 
 /** Every ref ahead of origin/main, local or remote-only, with how far ahead and how stale. */
