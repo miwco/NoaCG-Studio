@@ -93,7 +93,16 @@ that let five specs sit on main unverified. The guards, in the order they fire:
    timeouts that read like a renderer bug;
 4. the test account must **authenticate**, not merely exist - one password grant turns twenty
    ambiguous UI timeouts into one unambiguous step;
-5. the JSON report must show **nothing skipped and at least `MIN_TESTS` (32) run**.
+5. the JSON report must show **nothing skipped and at least `MIN_TESTS` run**.
+
+**A repeat of the same failure set posts nothing** (the `nightly.yml` amendment, ported here). The
+run still fails and the rolling issue stays open - only the COMMENT is withheld, and GitHub mails
+on comments rather than on an issue continuing to exist, so a known flake stops arriving every
+morning while staying just as visible to anyone who looks. Two conditions keep that honest: the
+set must be byte-identical to the one already reported (a new spec failing always posts, even
+beside a familiar one), and there must be zero hard failures - only flakes are ever this quiet.
+This is deliberately NOT the same as downgrading flaky to a warning: the verdict is unchanged,
+each distinct problem is simply said once instead of nightly.
 
 When the suite grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard
 weaker. The run summary lists every test that actually executed - read that, not the exit code.
