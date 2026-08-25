@@ -232,6 +232,19 @@ Anything the named list misses is absorbed by the worker ladder (`scripts/e2e-wo
 reads FREE MEMORY at start and takes fewer workers when something heavy is already resident, which
 is why the local worker count is not a constant.
 
+**Better than waiting: enqueue.** `npm run queue -- "<command>"` returns a job id immediately and
+one runner per machine drains the queue - one job by day, two between 00:00 and 07:00, never two
+merges, and nothing below a free-RAM floor (`NOACG_JOBS_FREE_MB` retunes it). `npm run jobs` shows
+what is running and the REASON each waiting job is waiting, which is the thing none of the
+mechanisms above ever reported: "correctly queued behind a long suite" and "died ten minutes ago"
+used to look identical from outside. Every job carries a 45-minute cap and is killed as a whole
+process TREE on expiry, so a wedged run cannot hold a slot the way an orphaned bench used to.
+
+Keep using the `:queued` scripts when you need the verdict in this session - a gate cannot take a
+job id for an answer - but know that `--wait` now gives up after 30 minutes rather than never.
+Unbounded, it outlived the shell that started it (an agent's tool call dies at 600 s), so the run
+never started and nothing said so. Full account and the remaining rollout: `docs/JOB_RUNNER_PLAN.md`.
+
 ## Logic checks without UI (fast path)
 
 Vite serves source modules, so in a browser context you can

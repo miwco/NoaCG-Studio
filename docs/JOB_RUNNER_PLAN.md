@@ -1,7 +1,15 @@
 # The job runner - one queue per machine for browser-driving work and merges
 
-Status: PLANNED (2026-08-25). Nothing here is built yet. It replaces the "merge lock" idea from
-the same session - the queue IS the lock, and building both would be two mechanisms for one job.
+Status: **steps 1, 3 and 5 BUILT (2026-08-25); step 2 revised on contact; step 4 not started.**
+It replaces the "merge lock" idea from the same session - the queue IS the lock, and building
+both would be two mechanisms for one job.
+
+- `scripts/jobs-store.mjs` - the state and the arithmetic, unit-tested in `jobs-store.test.mjs`
+  (in the build gate).
+- `scripts/jobs.mjs` - the CLI and the drain loop. `npm run queue -- "<command>"` to enqueue,
+  `npm run jobs` to see the queue.
+- `scripts/hooks/session-start.mjs` prints the queue and what finished since the last session.
+- `scripts/e2e-runs.mjs --wait` now gives up after 30 minutes instead of never.
 
 ## The problem, measured
 
@@ -170,14 +178,33 @@ memory the machine happens to have.
 
 ## Rollout
 
-1. `jobs.mjs` plus its tests - `add`, list, `log`, `cancel`, and the runner. Nothing calls it yet.
-2. Point the `:queued` npm scripts at `jobs.mjs add`, keeping the old `--wait` path behind
-   `NOACG_E2E_WAIT=1` for one week as an escape hatch.
-3. Teach the SessionStart hook to print the queue and the finished-since-last-session summary.
-4. Add the `merge` kind, wired to `scripts/safe-merge-preflight.mjs` and `scripts/merge-order.mjs`.
-   Run it attended for a few days before letting it run overnight.
-5. Give the `--wait` loop a cap and the `blockingRuns` tie-break anyway, so the escape hatch and
-   any hand-run command stop being able to stall.
+1. **DONE.** `jobs.mjs` + `jobs-store.mjs` + tests - `add`, list, `log`, `cancel`, the runner,
+   capacity, dependencies, reaping, and the tree kill.
+2. **REVISED - do NOT repoint the `:queued` scripts.** The original plan said to make
+   `test:e2e:*:queued` enqueue and return. That is wrong on contact with the callers: safe-merge
+   Phase 3 Route B runs `npm run test:e2e:integration:queued` **for its verdict**, and a command
+   that returns a job id instead of a pass/fail silently turns the gate into a no-op. Two
+   different needs, so two different commands:
+   - **needs the answer now** (a gate, a human watching) -> the `:queued` scripts, unchanged
+     except that they can no longer wait forever (step 5);
+   - **will come back for it later** (an agent, an overnight sweep) -> `npm run queue -- "<cmd>"`.
 
-Step 5 is worth doing even if everything above slips: it is a small change to one loop, and it
-removes the unbounded wait that costs the most today.
+   The guard hook already tells these apart correctly - `node scripts/jobs.mjs add "npm run
+   test:e2e:affected"` is allowed while `npm run test:e2e:affected` is refused - so enqueuing
+   needed no change to `command-match.mjs`.
+3. **DONE.** SessionStart prints running/waiting with reasons, what finished since the last
+   session, and a loud line when there are waiting jobs but no runner.
+4. **NOT STARTED.** The `merge` kind, wired to `scripts/safe-merge-preflight.mjs` and
+   `scripts/merge-order.mjs`. `kind: 'merge'` already never runs beside anything (pinned by a
+   test), so the serialization half exists; what is missing is the job that actually lands a
+   branch. Run it attended for a few days before letting it run overnight, and only then lift
+   `disable-model-invocation: true` from the safe-merge adapter.
+5. **DONE.** `--wait` gives up after 30 minutes - matched to `QUEUE_TIMEOUT_MS` in
+   `e2e/_offline-guard.ts`, which has capped the other waiter for the same resource since
+   2026-08-21 - and points at the queue instead of stalling.
+
+## Tuning
+
+`NOACG_JOBS_FREE_MB` overrides the RAM floor for a runner. The 4 GB default is a starting point,
+not a measurement; set it from what the logs say a run actually costs. A runner keeps the
+environment it was started with, so change it and restart the runner.

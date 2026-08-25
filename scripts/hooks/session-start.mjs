@@ -179,6 +179,65 @@ try {
   // Same contract as above: awareness only, never a reason to fail session start.
 }
 
+// --- The job queue ---------------------------------------------------------------------------
+//
+// The queue's whole point is that waiting is VISIBLE (docs/JOB_RUNNER_PLAN.md). Printing it here
+// is what turns "I came back and nothing had progressed" into something answerable without
+// asking an agent: what is running, what is waiting and why, what finished while you were away,
+// and whether the runner is alive to drain any of it.
+try {
+  const { readJobs, jobsDir } = await import('../jobs-store.mjs');
+  const { pending, finishedSince, schedule } = await import('../jobs-store.mjs');
+  const dir = jobsDir();
+  const jobs = dir ? readJobs(dir) : [];
+
+  if (jobs.length > 0) {
+    const { readFileSync, writeFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const seenPath = join(dir, 'last-seen.json');
+    let since = 0;
+    if (existsSync(seenPath)) {
+      try {
+        since = JSON.parse(readFileSync(seenPath, 'utf8')).at ?? 0;
+      } catch {
+        since = 0; // an unreadable marker just means "report everything terminal"
+      }
+    }
+    const done = finishedSince(jobs, since);
+    if (done.length > 0) {
+      console.log('');
+      console.log(`Queued work that finished since your last session (${done.length}):`);
+      for (const job of done.slice(-8)) {
+        const mark = job.state === 'done' ? 'green' : job.state.toUpperCase();
+        console.log(`  ${mark}  ${job.id}  ${job.command}${job.state === 'done' ? '' : `  -> node scripts/jobs.mjs log ${job.id}`}`);
+      }
+    }
+
+    const live = pending(jobs);
+    if (live.length > 0) {
+      const { freemem } = await import('node:os');
+      const plan = schedule(jobs, {
+        hour: new Date().getHours(),
+        freeMemMb: Math.round(freemem() / (1024 * 1024)),
+      });
+      console.log('');
+      console.log(`Job queue: ${plan.running.length} running, ${plan.waiting.length} waiting (${plan.slots} slot(s) right now).`);
+      for (const job of plan.running) console.log(`  running  ${job.id}  ${job.command}`);
+      plan.waiting.slice(0, 5).forEach(({ job, reason }, i) => console.log(`  #${i + 1}       ${job.id}  ${reason}`));
+      // A runner that died leaves the queue frozen with no error anywhere. Say so; the fix is
+      // one command, and without this line the symptom is indistinguishable from normal waiting.
+      const { findRunner } = await import('../jobs-store.mjs');
+      const { nodeProcesses } = await import('../e2e-runs.mjs');
+      if (!findRunner(nodeProcesses())) {
+        console.log('  NO RUNNER is draining this queue - start one: node scripts/jobs.mjs --runner');
+      }
+    }
+    writeFileSync(seenPath, `${JSON.stringify({ at: Date.now() })}\n`);
+  }
+} catch {
+  // Awareness only. A queue we cannot read must never stop a session from starting.
+}
+
 process.exit(0);
 
 /** Run git with the given args in `cwd` and return stdout as trimmed lines. */

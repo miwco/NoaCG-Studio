@@ -262,6 +262,15 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    it is not blocked and not detected: the spike family was missed until 2026-08-15 and ran three
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
+   **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
+   at once, and one runner per machine drains the queue (one job by day, two at night, never two
+   merges, nothing below a free-RAM floor). `npm run jobs` shows what is running and why anything
+   is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
+   the foreground is what used to lose hours: the shell tool is killed at 600 s with the wait
+   still running, so the work never started and nothing anywhere said so
+   (`docs/JOB_RUNNER_PLAN.md`). The `:queued` scripts remain for when you need the VERDICT now -
+   a gate cannot take a job id for an answer - and they now give up after 30 minutes instead of
+   never.
 4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
