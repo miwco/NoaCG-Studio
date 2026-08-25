@@ -166,8 +166,15 @@ render-worker/remotion/*.generated.ts
 /*.JPEG
 /*.PNG
 
-# Supabase CLI version-check cache - rewritten whenever a new CLI ships
-supabase/.temp/cli-latest
+# The Supabase CLI's scratch directory: its version-check cache and, more importantly, the LINK
+# state (project-ref, linked-project.json, pooler-url, the remote version stamps). That state is
+# per-checkout and per-machine, so tracking it did two bad things: a fresh clone of this public
+# repository arrived pre-linked to the PRODUCTION project - `supabase db push --linked` would
+# target the live database without anyone choosing it - and linking any one worktree elsewhere
+# dirtied seven tracked files for everybody. Nothing in the repo reads these files; the checks
+# that need the production ref derive it from VITE_SUPABASE_URL instead (scripts/migration-drift.mjs,
+# scripts/supabase-advisors.mjs).
+supabase/.temp/
 
 # The compiled API runtime the node test runners and bench:preflight build. Cleaned up in a
 # finally, but a killed run leaks one, and a leaked directory reads as an unmapped source
