@@ -262,6 +262,17 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    it is not blocked and not detected: the spike family was missed until 2026-08-15 and ran three
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
+   **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
+   at once, and one runner per machine drains the queue against a BUDGET in suite-equivalents:
+   1.0 by day, 2.0 between 00:00 and 07:00, nothing below a free-RAM floor. A suite (or anything
+   unrecognised) costs 1.0, a build or `node --test` 0.4, a landing 0.15 - so a night drains
+   several landings beside a suite instead of behind it. `npm run jobs` shows what is running and
+   why anything is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
+   the foreground is what used to lose hours: the shell tool is killed at 600 s with the wait
+   still running, so the work never started and nothing anywhere said so
+   (`docs/JOB_RUNNER_PLAN.md`). The `:queued` scripts remain for when you need the VERDICT now -
+   a gate cannot take a job id for an answer - and they now give up after 30 minutes instead of
+   never.
 4. **The pre-merge gate belongs to CI, not the laptop** - it does strictly more, in about ten
    minutes, on a clean checkout. **A clean `git merge main` is not proof the integration
    worked**: both sides were verified against a tree that no longer exists. After taking `main`
@@ -329,6 +340,25 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     INTEGRATED sha, never the pre-integration one. Once the job runner exists
     (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
     rather than remembered.
+  - **`/queue-merge` is how work reaches `main`** (owner, 2026-08-25). Run it in the session that
+    owns the branch, when that work is FINISHED - it does not merge anything itself, it puts the
+    branch in the machine-wide queue, which lands it when its turn comes. **Nobody else queues your
+    branch**, because a branch can be green, clean and `clear` while its session is still mid-
+    conversation about what to do next, and no verdict can tell those apart. Queueing IS the
+    declaration that the work is done, made by the only party who can make it. It pins the branch's
+    current commit, so a later commit makes the job refuse and ask you to queue again.
+    `.agent-workflows/queue-merge.md` is the procedure.
+  - Underneath it: `npm run queue:merge`, never `safe-merge` run directly. It runs `scripts/auto-merge.mjs`, the mechanical path of the
+    flow: only a `clear` verdict, clean trees, a conflict-free integration and a green gate on the
+    integrated sha, REFUSING everything else without changing anything further. `--dry-run` stops
+    before the first state change; `npm run jobs` shows what is running and why anything waits.
+    **Merge jobs never run beside anything**, so queued landings drain strictly one at a time in
+    order - which is the point. Five branches landed in a hundred minutes on 2026-08-25 against a
+    ten-minute gate, so a branch gating had close to a coin-flip chance of `main` moving under it;
+    nothing was ever at risk (`--ff-only` and the Phase 4 re-check see to that), but every
+    collision costs a FULL re-verification, because a new `main` is a new tree. The queue trades
+    racing for waiting. **It only serializes what goes through it** - a session running the flow
+    by hand is outside it, which is exactly the churn the owner asked to end.
   - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
     worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
     gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -

@@ -107,3 +107,24 @@
   font-weight: 700;
   color: var(--accent, #f6a623);
 }
+
+/* WHAT TRAVELS with a growing element (docs/SVG_IMPORT_PLAN.md §6c). A sub-list inside the
+   growth question rather than a section of its own: it is an answer to "which panel grows",
+   not a separate decision, and indenting says so without a heading level shouting it. */
+.map-svg-followers {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line, rgba(232, 237, 242, 0.12));
+}
+.map-svg-followers h4 {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.map-svg-followers .map-svg-row > .grow {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

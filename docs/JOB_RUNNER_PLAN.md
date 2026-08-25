@@ -1,7 +1,15 @@
 # The job runner - one queue per machine for browser-driving work and merges
 
-Status: PLANNED (2026-08-25). Nothing here is built yet. It replaces the "merge lock" idea from
-the same session - the queue IS the lock, and building both would be two mechanisms for one job.
+Status: **steps 1, 3 and 5 BUILT (2026-08-25); step 2 revised on contact; step 4 not started.**
+It replaces the "merge lock" idea from the same session - the queue IS the lock, and building
+both would be two mechanisms for one job.
+
+- `scripts/jobs-store.mjs` - the state and the arithmetic, unit-tested in `jobs-store.test.mjs`
+  (in the build gate).
+- `scripts/jobs.mjs` - the CLI and the drain loop. `npm run queue -- "<command>"` to enqueue,
+  `npm run jobs` to see the queue.
+- `scripts/hooks/session-start.mjs` prints the queue and what finished since the last session.
+- `scripts/e2e-runs.mjs --wait` now gives up after 30 minutes instead of never.
 
 ## The problem, measured
 
@@ -83,21 +91,54 @@ node scripts/jobs.mjs --runner                           # the drain loop itself
 decides such things - by looking for the process in the OS table, not by a lock file - so a
 crashed runner leaves nothing behind to clean up.
 
-### Capacity policy
+### Capacity policy - a BUDGET, not a job count
 
-Capacity is recomputed before every start, never cached:
+**One runner is an election, not a throughput limit.** The runner is the scheduler; jobs run as
+separate processes beside it. Two runners would both read the queue, both see the same free slot
+and both start the same job - the exact collision the queue removes. Parallelism is the budget
+below, and that is the only knob worth turning.
 
-- **Day (07:00-24:00 Helsinki): 1 job.** The owner needs the machine for email and the web.
-- **Night (00:00-07:00 Helsinki): 2 jobs.** Nights are for agents; fans are allowed to be loud.
+Jobs are weighted in **suite-equivalents**, because counting them was the crude part:
+
+| job | cost | why |
+|---|---|---|
+| e2e suite, sweep, bench | **1.0** | a dev server plus four browser workers; two at once measured 34 browser processes, 93% CPU, under 2 GB free |
+| anything unrecognised | **1.0** | assumed expensive - see the asymmetry below |
+| `npm run build`, `node --test`, lint, `tsc`, `check:*` | **0.4** | CPU, little RAM, no browser |
+| a landing (`auto-merge`) | **0.15** | almost entirely `gh run watch`, waiting on GitHub's network |
+
+Heavy work is classified by `command-match.mjs` - the repo's ONE named list of what starts
+browser work, read by the guard hook and the process detector too, so a script that is heavy here
+is heavy everywhere rather than in a second opinion that can drift.
+
+**The asymmetry decides the default.** Charging a cheap job too much costs some wall clock at
+night. Charging an expensive one too little puts two dev servers and eight browser workers on a
+16 GB laptop and slows everything down at once. So only explicitly-listed commands get a
+discount; everything else pays a full suite.
+
+Budget, recomputed before every start and never cached:
+
+- **Day (07:00-24:00 Helsinki): 1.0.** Never two suites while someone is using the machine.
+- **Night (00:00-07:00 Helsinki): 2.0.** Two suites, or one suite plus a night's worth of
+  landings draining beside it rather than behind it.
 - **A free-RAM floor overrides the clock in both directions.** Below the floor nothing new starts,
   however many slots the schedule allows. Ship the floor at 4 GB and tune it from the log.
+- **A free-RAM floor overrides the budget in both directions.** Below it nothing new starts,
+  whatever the clock allows. `NOACG_JOBS_FREE_MB` retunes it; a runner keeps the environment it
+  started with, so restart it after changing.
 - **Work started outside the queue still counts.** Another coding agent - Codex, or a hand-run
   command - never touches `jobs.mjs` and is invisible to the queue, but it IS visible to
-  `activeRuns()`. The runner subtracts that from its capacity before starting anything.
-  Cooperation is an optimisation here; the process table stays the source of truth.
+  `activeRuns()`, which only ever reports browser work. Each such run costs a full
+  suite-equivalent, subtracted before anything starts. Cooperation is an optimisation here; the
+  process table stays the source of truth.
+- **Landings are serial by their own rule, not by the budget.** Two merges never overlap however
+  cheap they are, and a landing never runs beside anything in the SAME checkout - it rewrites the
+  tree a suite there would be reading. Beside a suite in a different worktree it is harmless,
+  which is the whole point of the 0.15.
 
-Night = 2 is a starting point, not a promise. 16 GB with 4 workers per run is tight, and the log
-records per-job peak RAM so the number can be set from evidence rather than taste.
+Night = 2.0 is a starting point, not a promise, and it is probably already at the memory wall
+rather than conservative: past it a RAM-bound box pages, and every job slows down together, so
+more parallel stops being more throughput. Raise it only against measurements.
 
 ### Per-job cap
 
@@ -137,9 +178,21 @@ Guardrails, because nobody is watching at 03:00:
 - The gate must be green on the **integrated** SHA - main merged into the branch - never on the
   pre-integration commit. A clean `git merge main` is not proof the integration worked.
 - `git merge --ff-only` stays the final arbiter. If anything landed while the gate ran, git
-  refuses, the job records `failed`, and the branch re-queues itself behind the winner.
+  refuses before anything is published.
+- **When main moves under it mid-gate it re-integrates and re-verifies**, at most `--attempts`
+  times (default 3). A serial queue loses that race constantly on a busy day - the second real
+  landing lost it to a branch that landed during its own ten-minute CI run, and before the retry
+  existed the job simply failed with nothing re-queuing it. There is no shortcut: a new main is a
+  new tree, and a clean merge is not proof the integration worked, so each retry is a full
+  re-verification. Bounded, because an unbounded retry is a machine that never lands anything
+  while looking busy. Only this refusal retries; every other one stops dead.
 - Publishing past `main` is never enqueued. `npm publish`, production migrations and anything
   costing money stay owner-triggered.
+- **A green gate says nothing about migrations applying to a fresh HOSTED project.** CI's
+  migration evidence comes from the local-stack nightly, and the CLI's local image ships
+  `pgcrypto` already reachable - which is how three unqualified `gen_random_bytes` call sites
+  passed every run and still failed a from-scratch hosted apply. "CI is green" and "a self-hoster
+  can stand this up" are unrelated statements; this gate must never be cited for the second.
 
 Morning report: what merged, what did not, and why - in the SessionStart summary.
 
@@ -170,14 +223,44 @@ memory the machine happens to have.
 
 ## Rollout
 
-1. `jobs.mjs` plus its tests - `add`, list, `log`, `cancel`, and the runner. Nothing calls it yet.
-2. Point the `:queued` npm scripts at `jobs.mjs add`, keeping the old `--wait` path behind
-   `NOACG_E2E_WAIT=1` for one week as an escape hatch.
-3. Teach the SessionStart hook to print the queue and the finished-since-last-session summary.
-4. Add the `merge` kind, wired to `scripts/safe-merge-preflight.mjs` and `scripts/merge-order.mjs`.
-   Run it attended for a few days before letting it run overnight.
-5. Give the `--wait` loop a cap and the `blockingRuns` tie-break anyway, so the escape hatch and
-   any hand-run command stop being able to stall.
+1. **DONE.** `jobs.mjs` + `jobs-store.mjs` + tests - `add`, list, `log`, `cancel`, the runner,
+   capacity, dependencies, reaping, and the tree kill.
+2. **REVISED - do NOT repoint the `:queued` scripts.** The original plan said to make
+   `test:e2e:*:queued` enqueue and return. That is wrong on contact with the callers: safe-merge
+   Phase 3 Route B runs `npm run test:e2e:integration:queued` **for its verdict**, and a command
+   that returns a job id instead of a pass/fail silently turns the gate into a no-op. Two
+   different needs, so two different commands:
+   - **needs the answer now** (a gate, a human watching) -> the `:queued` scripts, unchanged
+     except that they can no longer wait forever (step 5);
+   - **will come back for it later** (an agent, an overnight sweep) -> `npm run queue -- "<cmd>"`.
 
-Step 5 is worth doing even if everything above slips: it is a small change to one loop, and it
-removes the unbounded wait that costs the most today.
+   The guard hook already tells these apart correctly - `node scripts/jobs.mjs add "npm run
+   test:e2e:affected"` is allowed while `npm run test:e2e:affected` is refused - so enqueuing
+   needed no change to `command-match.mjs`.
+3. **DONE.** SessionStart prints running/waiting with reasons, what finished since the last
+   session, and a loud line when there are waiting jobs but no runner.
+4. **BUILT, DELIBERATELY NOT AUTOMATIC.** `scripts/auto-merge.mjs --branch <b>` does the boring
+   path of the safe-merge workflow as one command, and `npm run queue:merge -- <branch>` queues
+   it as a `merge` job. Because a merge job never runs beside anything, queueing several drains
+   them strictly one at a time - which is the "wake up and they are landed" case.
+
+   **What it refuses**, changing nothing further, is the whole design: any verdict that is not
+   `clear`; any failed preflight check in phase 1, 3 or 4; a dirty worktree either side; a branch
+   with no worktree; a CONFLICT integrating main (aborted, tree restored); a red, missing,
+   damaged or shard-skipping CI run; and main moving under it at any point. It never
+   force-pushes, never resets, never deletes anything, and the only merge it makes into main is
+   `--ff-only`. `--dry-run` stops before the first state change.
+
+   **Nothing enqueues these on its own yet, on purpose.** A person still queues each landing, so
+   the whole thing runs attended by construction. Lifting `disable-model-invocation: true` from
+   the safe-merge adapter, and letting a session queue its own landing, is the step after this
+   has run clean for a while.
+5. **DONE.** `--wait` gives up after 30 minutes - matched to `QUEUE_TIMEOUT_MS` in
+   `e2e/_offline-guard.ts`, which has capped the other waiter for the same resource since
+   2026-08-21 - and points at the queue instead of stalling.
+
+## Tuning
+
+`NOACG_JOBS_FREE_MB` overrides the RAM floor for a runner. The 4 GB default is a starting point,
+not a measurement; set it from what the logs say a run actually costs. A runner keeps the
+environment it was started with, so change it and restart the runner.

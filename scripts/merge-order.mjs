@@ -59,6 +59,40 @@ const SILENT_MERGE_FILES = [
   'scripts/e2e-affected.mjs',
 ];
 
+// MEASURE A SHARED-REGISTRY HOLD BEFORE ORDERING AROUND IT. The check above is textual - "both
+// branches touch this file" - because that is all it can be without understanding each registry's
+// shape. Whether the collision is REAL depends on whether the two edits touch the same ENTRIES.
+//
+// Worked example, 2026-08-25: `claude/caspar-connect-51d22d` and
+// `claude/debate-clock-wire-origin-139b05` both read `hold` over `scripts/e2e-affected.mjs`, each
+// naming the other, so neither could ever be the one that goes first. Their edits turned out to be
+// disjoint - caspar ADDS three rows (`casparLink.ts`, `SettingsDialog.tsx`, `ProductionPage.tsx`),
+// debate-clock MODIFIES the existing `src/templates/` row - so neither order loses a mapping and
+// the ordering was not actually constrained at all.
+//
+// How to check, in one command per branch: diff each branch's change to the file against its merge
+// base and compare the PATTERNS, not the line counts:
+//
+//   git diff $(git merge-base origin/main <branch>) <branch> -- scripts/e2e-affected.mjs \
+//     | grep -oE '\^src[^,]*' | sort -u
+//
+// An empty intersection means the hold is the heuristic being textual, which is the right way for
+// it to be wrong: it escalates rather than guessing. `auto-merge --accept shared-registry` is how a
+// person records that they measured it. A NON-empty intersection is the real thing - two rules for
+// one path, where a clean merge keeps both and only one ever runs.
+//
+// THE RANKING IS A SNAPSHOT, AND IT MOVES WHILE YOU READ IT. A branch with a dirty worktree is NOT
+// LANDABLE and drops out, so the order flips the moment anyone saves a file - and it flips back
+// when they commit. On 2026-08-25 two sessions each concluded the OTHER should go first, politely
+// and in good faith, because each had read a ranking taken while the other's tree was dirty; the
+// standoff was an artefact of two stale snapshots rather than a real disagreement. A third flip
+// happened seconds later when one of them started editing again.
+//
+// So: re-run it immediately before acting, with both trees clean, and treat any ranking you were
+// handed by someone else as already out of date. The verdict is what gates a landing anyway -
+// `caution` and `hold` refuse whichever way the ranking points, so a flip never unblocks anything
+// on its own. Deciding who goes first from a ranking alone is how both sessions got it wrong.
+
 /**
  * Directories whose file names carry a SEQUENCE NUMBER that must be unique AND applied in
  * ascending order. Three distinct faults live here, none of which git ever reports, because

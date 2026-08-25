@@ -206,6 +206,35 @@ export interface SvgStretchDraft {
    *  into new height instead of shrinking - what a board or a card wants, where the panel has
    *  room below it and the type may not get smaller. Absent = 'x', the hug as it shipped. */
   axis?: 'x' | 'y';
+  /**
+   * WHAT TRAVELS with the growing element (plan §6c). Absent/null = the author has not touched
+   * the set, so the runtime's own geometric derivation stands and nothing is emitted - which is
+   * exactly the behaviour the horizontal hug has always had. An ARRAY is the author's own
+   * answer and is emitted verbatim, even when empty ("nothing travels" is a decision too).
+   *
+   * The first edit MATERIALIZES the whole proposal into this list, the idiom the node editor
+   * already uses for a derived machine (docs/STATE_MACHINE_SCHEMA.md §6a): behaviourally a
+   * no-op at the moment it happens, and from then on what the reader SEES is what ships.
+   */
+  followers?: SvgFollowerDraft[] | null;
+}
+
+/** Does this marker still name something in the file? A follower the reader declared and then
+ *  dropped a NEW file over must not travel into the graphic as a rule pointing at nothing. */
+export function svgCandidateExists(draft: WizardDraft, candidateId: string): boolean {
+  const s = draft.designSvg;
+  if (!s) return false;
+  return [...s.candidates, ...s.images, ...s.outlines, ...s.groups, ...s.shapes].some(
+    (c) => c.id === candidateId,
+  );
+}
+
+/** One layer declared to travel with a growing element. */
+export interface SvgFollowerDraft {
+  /** The layer's `data-noacg-candidate` marker. */
+  candidateId: string;
+  /** 'move' translates it by the growth; 'grow' stretches it by the same amount instead. */
+  mode: 'move' | 'grow';
 }
 
 /** How one font family the SVG references resolves (plan §4). */
@@ -509,7 +538,22 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
             draft.svgStretch.on &&
             draft.svgStretch.shapeId &&
             draft.designSvg.shapes.some((s) => s.id === draft.svgStretch.shapeId)
-              ? [{ candidateId: draft.svgStretch.shapeId, axis: draft.svgStretch.axis ?? 'x' }]
+              ? [
+                  {
+                    candidateId: draft.svgStretch.shapeId,
+                    axis: draft.svgStretch.axis ?? 'x',
+                    // Only a set the author actually EDITED travels as data. Untouched, the
+                    // field is left off and the runtime derives it, which is the behaviour
+                    // every hugging graphic already shipped with (plan §6c).
+                    ...(draft.svgStretch.followers
+                      ? {
+                          followers: draft.svgStretch.followers.filter((f) =>
+                            svgCandidateExists(draft, f.candidateId),
+                          ),
+                        }
+                      : {}),
+                  },
+                ]
               : undefined,
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,

@@ -246,6 +246,29 @@ export default function CreationWizard() {
   const onSvgDraw = useCallback((box: { x: number; y: number; w: number; h: number }) => {
     svgDrawRef.current?.(box);
   }, []);
+  // The mapping step's PICK handler, held the same way and for the same reason (plan §6a step 5).
+  const svgPickRef = useRef<((candidateId: string, drag: 'x' | 'y' | null) => void) | null>(null);
+  const armSvgPick = useCallback(
+    (handler: ((candidateId: string, drag: 'x' | 'y' | null) => void) | null) => {
+      svgPickRef.current = handler;
+    },
+    [],
+  );
+  // Selector -> the marker it carries; the canvas speaks selectors, the step speaks candidates.
+  const onSvgPick = useCallback((selector: string, drag: 'x' | 'y' | null) => {
+    const id = /="([^"]+)"/.exec(selector)?.[1];
+    if (id) svgPickRef.current?.(id, drag);
+  }, []);
+  // EVERY layer the import inventoried, as selectors the canvas can hit-test. The text layers,
+  // the pictures, the outlined-text groups and the rectangles all answer a pointer - which is
+  // what makes the artwork the control surface rather than a picture beside the controls.
+  const svgPickable = useMemo(() => {
+    const s = draft.designSvg;
+    if (!s) return [];
+    return [...s.candidates, ...s.images, ...s.outlines, ...s.shapes].map(
+      (c) => `[${SVG_CANDIDATE_ATTR}="${c.id}"]`,
+    );
+  }, [draft.designSvg]);
   // ── THE KIT HALF of the Browse step (one graphic, or the whole set) ──
   // Its picker state lives here, not in the step, for the same reason `browseFilters` does:
   // Back must return to the set exactly as it was left.
@@ -1774,7 +1797,7 @@ export default function CreationWizard() {
             )}
             {/* The SVG walk's one setup step: which text layers the operator can edit. */}
             {step === 2 && mode === 'svg' && draft.designSvg && (
-              <MapSvgFieldsStep draft={draft} onDraft={patch} onHover={setSvgHoverId} onArmDraw={armSvgDraw} />
+              <MapSvgFieldsStep draft={draft} onDraft={patch} onHover={setSvgHoverId} onArmDraw={armSvgDraw} onArmPick={armSvgPick} />
             )}
             {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
@@ -1987,6 +2010,11 @@ export default function CreationWizard() {
                       drawIn: '.imported-design-box',
                       drawing: svgDrawArmed,
                       onDraw: onSvgDraw,
+                      // Every layer the file offers is pointable (plan §6a step 5). Derived
+                      // here because the wizard holds the inventory, and joined as a stable
+                      // list so the canvas re-tracks only when the FILE changes.
+                      pickable: svgPickable,
+                      onPick: onSvgPick,
                     }
                   : {})}
               />
