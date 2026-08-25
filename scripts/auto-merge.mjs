@@ -36,6 +36,14 @@ const argv = process.argv.slice(2);
 const branch = valueOf('--branch');
 const dryRun = argv.includes('--dry-run');
 const noWait = argv.includes('--no-wait');
+/**
+ * How many times to re-integrate when main moves under this branch mid-gate.
+ *
+ * Three, not unbounded: on a busy day an unbounded retry is a machine that never lands anything
+ * while looking busy. Each attempt is a full re-verification, which the fork-point recovery in
+ * ci.yml (`06a1cb31`) made cheap for a small branch - it used to be ten minutes of full suite.
+ */
+const attempts = Math.max(1, Number(valueOf('--attempts') ?? 3));
 
 if (!branch) {
   console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait]');
@@ -74,7 +82,32 @@ async function main() {
     return 0;
   }
 
-  // --- 3. Integrate main INTO the branch. Conflicts stop here, with the tree put back. -------
+  // --- 3-5. Integrate, verify, land - retried ONLY when main moved underneath. ---------------
+  //
+  // A serial queue on a busy day loses this race constantly: another branch lands while this
+  // one's gate runs, and phase 4 correctly refuses. Measured on the first two real landings -
+  // the second one lost to a branch that landed during its ten-minute CI run. Without a retry
+  // the job just fails and nothing re-queues it, so a queue would quietly drop landings one
+  // after another while looking busy.
+  //
+  // There is no honest shortcut around re-verifying: a new main means a new tree, and a clean
+  // merge is not proof the integration worked. So a retry is a full re-integration.
+  //
+  // ONLY this refusal retries. Every other one - a conflict, a red gate, a dirty tree - stops
+  // dead, because the whole design is that anything needing judgement stops.
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (attempt > 1) say(`main moved - re-integrating (attempt ${attempt} of ${attempts})`);
+    const outcome = await attemptLanding(mainWt, branchWt);
+    if (outcome !== 'main-moved') return outcome;
+  }
+  return refuse(
+    `main moved under this branch ${attempts} times running - giving up rather than looping. ` +
+      'Land it by hand, or queue it when the machine is quieter.',
+  );
+}
+
+/** One full integrate-verify-land pass. Returns 0, 1, or 'main-moved' when the target moved. */
+async function attemptLanding(mainWt, branchWt) {
   if (run('git', ['-C', mainWt, 'pull', '--ff-only', 'origin', 'main']).status !== 0) {
     return refuse('could not fast-forward main from origin');
   }
@@ -88,7 +121,7 @@ async function main() {
   const verifiedSha = git(['rev-parse', branch]);
   say(`verified sha will be ${verifiedSha.slice(0, 8)}`);
 
-  // --- 4. Gate on CI, green on EXACTLY that commit. ------------------------------------------
+  // Gate on CI, green on EXACTLY that commit.
   if (run('git', ['-C', branchWt, 'push', 'origin', branch]).status !== 0) {
     return refuse('could not push the branch for CI');
   }
@@ -97,14 +130,15 @@ async function main() {
     return refuse('preflight phase 3 refused the CI run - red, damaged, or it skipped every shard');
   }
 
-  // --- 5. Re-check, fast-forward, push. -----------------------------------------------------
+  // Re-check, fast-forward, push.
   if (
     run('node', [
       'scripts/safe-merge-preflight.mjs', '--branch', branch, '--phase', '4',
       '--verified-sha', verifiedSha, '--integrated-main-sha', integratedMainSha,
     ]).status !== 0
   ) {
-    return refuse('main moved while the gate ran - re-queue this branch and it will integrate the new main');
+    console.error('auto-merge: main moved while the gate ran.');
+    return 'main-moved';
   }
   if (run('git', ['-C', mainWt, 'merge', '--ff-only', branch]).status !== 0) {
     return refuse('the fast-forward merge was refused by git');

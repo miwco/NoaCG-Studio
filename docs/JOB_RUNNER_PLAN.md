@@ -178,9 +178,21 @@ Guardrails, because nobody is watching at 03:00:
 - The gate must be green on the **integrated** SHA - main merged into the branch - never on the
   pre-integration commit. A clean `git merge main` is not proof the integration worked.
 - `git merge --ff-only` stays the final arbiter. If anything landed while the gate ran, git
-  refuses, the job records `failed`, and the branch re-queues itself behind the winner.
+  refuses before anything is published.
+- **When main moves under it mid-gate it re-integrates and re-verifies**, at most `--attempts`
+  times (default 3). A serial queue loses that race constantly on a busy day - the second real
+  landing lost it to a branch that landed during its own ten-minute CI run, and before the retry
+  existed the job simply failed with nothing re-queuing it. There is no shortcut: a new main is a
+  new tree, and a clean merge is not proof the integration worked, so each retry is a full
+  re-verification. Bounded, because an unbounded retry is a machine that never lands anything
+  while looking busy. Only this refusal retries; every other one stops dead.
 - Publishing past `main` is never enqueued. `npm publish`, production migrations and anything
   costing money stay owner-triggered.
+- **A green gate says nothing about migrations applying to a fresh HOSTED project.** CI's
+  migration evidence comes from the local-stack nightly, and the CLI's local image ships
+  `pgcrypto` already reachable - which is how three unqualified `gen_random_bytes` call sites
+  passed every run and still failed a from-scratch hosted apply. "CI is green" and "a self-hoster
+  can stand this up" are unrelated statements; this gate must never be cited for the second.
 
 Morning report: what merged, what did not, and why - in the SessionStart summary.
 
