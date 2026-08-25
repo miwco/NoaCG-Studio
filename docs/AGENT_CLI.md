@@ -147,6 +147,24 @@ and every shipped copy (npm, the Claude Code plugin, the Codex skill) are genera
 
 ## Distribution (one source, every shipped copy generated)
 
+**`cli/` is Apache-2.0. The rest of the repository is AGPL-3.0-only.** That split is deliberate
+and should not be "tidied" back into one licence (owner decision, 2026-08-25).
+
+The AGPL exists to stop the hosted application being taken proprietary and run as a competing
+NoaCG cloud. That threat lives in the web app, and the app's licence guards it. This package is a
+CLIENT - a tool an outside agent installs to talk to a deployment - so copyleft here protects
+nothing and costs real installs: organisations run automated dependency-licence policies that
+block or flag AGPL on sight, without distinguishing a tool you EXECUTE from a library you LINK.
+Since adoption is the goal for this surface and no revenue depends on it, permissive wins.
+Apache-2.0 over MIT for the explicit patent grant and trademark clarity, which is what enterprise
+review treats as safest.
+
+The split is clean because `cli/` imports nothing from `src/` - it drives the deployment over the
+bridge page instead - and every dependency is permissive (MCP SDK MIT, playwright-core Apache-2.0,
+zod MIT, jszip MIT-or-GPL). `cli/LICENSE` and the `license` field in `cli/package.json` and both
+plugin manifests must stay in step; a published version's licence is frozen in the registry, so
+this had to be right BEFORE the first publish rather than after.
+
 | Channel | What ships | Install |
 |---|---|---|
 | **npm** `noacg` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx noacg <cmd>` / `npm i -g noacg` |

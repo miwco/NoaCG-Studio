@@ -93,3 +93,19 @@ npm run build                                # generates the plugin's skill copy
 NOACG_URL=http://localhost:5174 npm test     # against a NoaCG dev server's /bridge
 npm run check:skill                          # every shipped copy of the skill matches cli/skill/
 ```
+
+## Licence
+
+**Apache-2.0** - deliberately different from NoaCG Studio itself, which is AGPL-3.0-only. This
+tool is the door into NoaCG for coding agents, so it is licensed to be installed anywhere without
+a policy review: a permissive licence, an explicit patent grant, no copyleft reaching anything you
+build with it. The AGPL on the studio protects the hosted application; it was never meant to gate
+the client that talks to it.
+
+Graphics you create are yours. Nothing in either licence attaches to the templates this tool
+scaffolds or to what you export and put on air.
+
+One third-party note, since a scaffolded package carries it: the animation runtime bundled into a
+graphic (`js/gsap.min.js`) is GreenSock's GSAP, under its own
+[standard licence](https://gsap.com/standard-license), not ours. It is not part of this npm
+package - it arrives inside the graphic your deployment generates.
