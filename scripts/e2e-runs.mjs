@@ -298,6 +298,15 @@ export function activeRuns({ exclude, excludePids, unattributableRoot = '<unknow
 const SIMULTANEOUS_MS = 2_000;
 
 /**
+ * How long `--wait` will block before giving up.
+ *
+ * Matched to `QUEUE_TIMEOUT_MS` in e2e/_offline-guard.ts, which caps the OTHER waiter for this
+ * same resource. That one has had a cap since 2026-08-21; this one did not, and the difference
+ * is the single most expensive thing about the old queueing (docs/JOB_RUNNER_PLAN.md).
+ */
+const WAIT_CAP_SECONDS = 30 * 60;
+
+/**
  * Which of `runs` a WAITING run must actually yield to.
  *
  * THE STALL THIS EXISTS TO PREVENT. A Playwright CLI that is sitting in its globalSetup waiting
@@ -507,6 +516,21 @@ if (process.argv[1] && normalize(process.argv[1]) === normalize(fileURLToPath(im
         console.log(`Waiting for ${runs.length} browser-driving job(s) to finish:\n${describeRuns(runs)}`);
       } else if (waited % 60 === 0) {
         console.log(`  still waiting (${waited / 60} min)...`);
+      }
+      // THE CAP. This loop used to have none, while the OTHER waiter for the same resource -
+      // `waitForOtherRuns` in e2e/_offline-guard.ts - has had a 30-minute one since 2026-08-21.
+      // Unbounded, it outlives the shell that started it (an agent's tool call is killed at
+      // 600 s), so the run never starts and nothing anywhere says so: the session sees a timed
+      // out command and the queue sees a run that never existed. A wait that cannot end is
+      // indistinguishable from a wait that has died, which is the whole problem.
+      if (waited >= WAIT_CAP_SECONDS) {
+        console.error(
+          `Gave up waiting after ${WAIT_CAP_SECONDS / 60} min. Still active:\n${describeRuns(runs)}\n` +
+            'Nothing was started. Enqueue the work instead of waiting for it, and it will run when a ' +
+            'slot frees:\n  node scripts/jobs.mjs add "<the command>"\n' +
+            '(docs/JOB_RUNNER_PLAN.md; `node scripts/jobs.mjs` shows the queue.)',
+        );
+        process.exit(1);
       }
       await new Promise((done) => setTimeout(done, 5_000));
       waited += 5;

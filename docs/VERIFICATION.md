@@ -58,23 +58,54 @@ change touching one prints a line telling you to run that suite. It is reported,
 starting it would bring up a dev server on the real `.env`, which is what the offline pin exists
 to prevent.
 
-**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC).** Per-change selection
-still cannot reach it, so nothing commit-driven ever will; a schedule can. It runs the whole
-`e2e/configured/` suite (~6 min, one worker) against the real backend as the throwaway test
-account and files its own rolling issue - separate from `nightly.yml` because it is the only job
-here that can go red for a reason outside the repository (expired account, paused project,
-rotated key), and that must not be able to red the main nightly verdict.
+**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC), against a LOCAL Supabase
+stack.** Per-change selection still cannot reach it, so nothing commit-driven ever will; a
+schedule can. The job runs `supabase start` on the runner, applies the repository's own
+migrations, mints a throwaway account, and runs the whole suite against that - then tears down
+with the runner. It files its own rolling issue, separate from `nightly.yml`.
+
+Two things that route buys, and one it costs:
+
+- **No Supabase secret lives in GitHub.** The local stack's keys are the CLI's published shared
+  defaults, read at runtime from `supabase status`. The repo is public and `.env` points at
+  PRODUCTION, so the previous design had to withhold `SUPABASE_SERVICE_ROLE_KEY` and lost two
+  specs to it; both are back, and `ALLOWED_SKIPS` is empty.
+- **Nothing is written to production.** The suite creates and deletes real rows every run; they
+  used to land in the owner's production project, against `playwright.live.config.ts`'s own
+  advice.
+- **It cannot see latency-shaped defects.** A local stack answers in ~1 ms where a hosted one
+  answers in ~200 ms from a runner. The tombstone sync defect fixed on 2026-08-24 was invisible
+  at 5 ms/request and failed six specs at 207 ms/request - **this job would not have caught it**.
+  A green run here is not evidence that sync is fast enough anywhere real; that needs a hosted
+  target or a deliberate delay.
 
 **Its exit code is not its verdict, by construction.** Every spec calls
-`test.skip(!haveCreds, …)`, so with the credentials unset the run executes nothing and exits 0 -
+`test.skip(!haveCreds, …)`, so with the environment unset the run executes nothing and exits 0 -
 a job checking only the exit code would be permanently, silently green, which is the exact hole
-that let five specs sit on main unverified. So the workflow (a) refuses to start when any of the
-five secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **zero
-tests skipped and at least `MIN_TESTS` (32) ran**. The five secrets are `E2E_EMAIL`,
-`E2E_PASSWORD`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` -
-the throwaway `synctest…` account and a test/staging project, never the owner's. When the suite
-grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard weaker. The run
-summary lists every test that actually executed - read that, not the exit code.
+that let five specs sit on main unverified. The guards, in the order they fire:
+
+1. the stack must come up (`supabase start`);
+2. the applied migration count must equal the repository's, so a half-applied schema cannot pass
+   as a product regression;
+3. `supabase_realtime` must publish `chat_submissions` AND `control_events` - the four
+   hosted-playout specs subscribe through `postgres_changes`, and no migration CREATES that
+   publication (0003 and 0008 only add tables to it), so a missing one shows up as four 30-second
+   timeouts that read like a renderer bug;
+4. the test account must **authenticate**, not merely exist - one password grant turns twenty
+   ambiguous UI timeouts into one unambiguous step;
+5. the JSON report must show **nothing skipped and at least `MIN_TESTS` run**.
+
+**A repeat of the same failure set posts nothing** (the `nightly.yml` amendment, ported here). The
+run still fails and the rolling issue stays open - only the COMMENT is withheld, and GitHub mails
+on comments rather than on an issue continuing to exist, so a known flake stops arriving every
+morning while staying just as visible to anyone who looks. Two conditions keep that honest: the
+set must be byte-identical to the one already reported (a new spec failing always posts, even
+beside a familiar one), and there must be zero hard failures - only flakes are ever this quiet.
+This is deliberately NOT the same as downgrading flaky to a warning: the verdict is unchanged,
+each distinct problem is simply said once instead of nightly.
+
+When the suite grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard
+weaker. The run summary lists every test that actually executed - read that, not the exit code.
 
 ## A clean merge is not proof the integration worked
 
@@ -210,6 +241,19 @@ Anything the named list misses is absorbed by the worker ladder (`scripts/e2e-wo
 reads FREE MEMORY at start and takes fewer workers when something heavy is already resident, which
 is why the local worker count is not a constant.
 
+**Better than waiting: enqueue.** `npm run queue -- "<command>"` returns a job id immediately and
+one runner per machine drains the queue - one job by day, two between 00:00 and 07:00, never two
+merges, and nothing below a free-RAM floor (`NOACG_JOBS_FREE_MB` retunes it). `npm run jobs` shows
+what is running and the REASON each waiting job is waiting, which is the thing none of the
+mechanisms above ever reported: "correctly queued behind a long suite" and "died ten minutes ago"
+used to look identical from outside. Every job carries a 45-minute cap and is killed as a whole
+process TREE on expiry, so a wedged run cannot hold a slot the way an orphaned bench used to.
+
+Keep using the `:queued` scripts when you need the verdict in this session - a gate cannot take a
+job id for an answer - but know that `--wait` now gives up after 30 minutes rather than never.
+Unbounded, it outlived the shell that started it (an agent's tool call dies at 600 s), so the run
+never started and nothing said so. Full account and the remaining rollout: `docs/JOB_RUNNER_PLAN.md`.
+
 ## Logic checks without UI (fast path)
 
 Vite serves source modules, so in a browser context you can
@@ -320,9 +364,125 @@ documents its own exemptions, with the reason written beside them.
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
 
+## Migrations reach production only when a human pushes them
+
+So the safe-merge preflight REPORTS whether production is behind, and `npm run
+check:migration-drift` runs the same check alone. Landing is the moment it matters: a migration
+reaches `main` and then nothing applies it, because `supabase db push` is a deliberate act.
+`0051_client_table_grants` sat unapplied on production for hours on 2026-08-25, past a green CI
+run and a green nightly, and was found only because somebody ran `supabase migration list` for an
+unrelated reason.
+
+Advisory, never blocking - a laptop without the token, or without a network, gets a note rather
+than a refusal. It is deliberately **not** a CI job: the ledger lives in
+`supabase_migrations.schema_migrations`, which PostgREST does not expose, so reading it remotely
+needs the Supabase MANAGEMENT API and an ACCOUNT-WIDE personal access token - one that enumerates
+every organisation and project, and whose API deletes them. This repository is public, so that
+token stays out of Actions and the check runs locally, where it already lives in `.env`.
+
+It reads the production ref from `VITE_SUPABASE_URL`, never from `supabase/.temp/`: that is the
+CLI's per-checkout LINK state, and a worktree linked to a staging project would otherwise make the
+check answer confidently about the wrong database.
+
 ## Freshness is TIME-driven, never commit-driven
 
 `docs/STACK_FRESHNESS.md` owns this. `npm run check:freshness` is not in the build gate, because
 its answer changes when upstream publishes. It runs weekly in `weekly-audit.yml` and REPORTS -
 nothing auto-upgrades, since Remotion's three-file exact pin and the es2017 output floor can both
 be broken by a bump that passes every check.
+
+## Ways a run reports something other than its verdict
+
+Four of these have each cost a session, and all four read as green.
+
+**`gh run watch --exit-status` lies.** On 2026-08-23, mid-safe-merge, it exited **0** on a run
+whose conclusion was `failure` - two E2E shards red, `CI gate` red. Its own printed output showed
+`X CI gate`; only the exit code said green. Settle a CI verdict with the jobs list, never the exit
+code:
+
+```bash
+gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'
+```
+
+or let `node scripts/safe-merge-preflight.mjs --branch <b> --phase 3 --verified-sha <sha>` do it,
+which also applies the two checks a green tick hides - whether the shards actually ran, and
+whether a failing job is damaged rather than failing.
+
+**A damaged run is not a red run - it is NO run.** GitHub Actions can return `failure` with none
+of this repository's code having executed, and the two are indistinguishable in `gh run list`.
+
+```bash
+gh api repos/{owner}/{repo}/actions/runs/<RUN_ID>/jobs \
+  --jq '.jobs[] | select(.conclusion != "success")
+        | {name, conclusion, steps: [.steps[] | {name, conclusion}]}'
+```
+
+A failing job is damaged when it shows any of: `steps: []` (killed while queued, never started);
+a single failed step of `Set up job` (runner acquisition failed, before checkout); `cancelled` on
+a job nobody cancelled, especially several in the same second (a whole-run kill, not independent
+timeouts); or a wall time far past its own `timeout-minutes` - that clock only runs while a job is
+EXECUTING, so it cannot cut short a job stuck in the queue, and the reported start time is when it
+entered the queue rather than when it ran. Corroborate with
+`curl -s https://www.githubstatus.com/api/v2/status.json`. Degraded Actions is not rare: on
+2026-08-06 a critical incident ran over five hours and produced three damaged runs here, two on
+`main`, which filed the rolling red-main issue against a commit that had passed every code-testing
+job twice. A damaged run carries no verdict, so it is not fix-or-abort and there is nothing to
+fix - fall back to the local gate and say so explicitly, naming the run, the damaged job and the
+incident, so the landing is never later mistaken for one that ignored a red gate. One free retry;
+if it also queues without starting, that is confirmation, not a reason to keep waiting.
+
+**A pipe masks the exit code.** `npm run test:e2e:affected 2>&1 | tail -30` reports the TAIL's
+status, so a failing suite exits 0 - and grepping the tail for "passed" compounds it, because
+Playwright prints the failed-test LIST above the "N passed" summary. On 2026-08-05 that produced a
+false "350 green" report; a review workflow caught it, not the gate. Redirect to a file and echo
+the code explicitly - `cmd > log 2>&1; echo "EXIT: $?"` - then read the log's failure list, never a
+grepped summary. **And the echo becomes the next lie:** a background-task notification reports the
+whole compound command's status, which is the `echo`'s, i.e. always 0. A queued run notified
+"completed (exit code 0)" while Playwright had failed 2 of 13. A notification's exit code is never
+a verdict for a compound command - open the log.
+
+**Never hand-roll a poll loop to wait for a run.** Use the command that EXITS on the condition,
+backgrounded, so it notifies once: `gh run watch --exit-status <run-id>` (with `gh`'s own `--jq`
+flag, which does not need the jq binary). On 2026-08-21 a hand-rolled loop shelled out to `jq`,
+which was not installed; `jq: command not found` went to stderr, stderr landed in the output file
+WITHOUT raising a notification, the comparison never matched, and a green run sat unreported for
+26 minutes while the owner waited on a safe-merge. Three monitors died that way in one session. jq
+is installed now, which is the smaller half of the lesson: a silent wait loop reads as "still
+running" forever, so wait on something that exits.
+
+## The affected mapper's one failure mode has no alarm
+
+`scripts/e2e-affected.mjs` is safe because it fails TOWARD running more specs. An entry that runs
+FEWER is therefore the one mistake nothing reports. It has happened twice:
+
+- `src/assets/` maps to a fixed six-spec list written for asset HELPERS (`eraseRegion`,
+  `assetInfo`, `lottieSupport`). But `src/assets/gsap.min.js` is the ANIMATION ENGINE, inlined
+  into every preview and every export - so upgrading GSAP selected those six specs and never
+  `anim-engine.spec.ts`, the one pinning editor-against-runtime motion parity. Fixed in `b250f2c`
+  by naming the file in `CORE`. **Generalise: a shared foundation living in a folder whose rule
+  was written for helpers gets silently under-covered. Ask what a file IS, not where it sits.**
+- 12 AI specs sat red on `main` unnoticed when the Finish step's "Open in the editor" door became
+  Advanced-only and `ai.spec.ts`, `ai-lite.spec.ts` and `adapt-first.spec.ts` were missed in the
+  migration to `enableAdvancedMode`. They waited 60 s on a button that no longer rendered.
+
+Mutation-test a mapping change in both directions before committing it - a guard that can be added
+wrong and still look fine is exactly the kind that is.
+
+## The runtime bench measures paint, not layout
+
+`runtimeBench.overlapIssues` pairs LEAVES, and a leaf owns a text node - a PANEL owns none, so a
+panel was never in a pair and text could vanish under one completely with every geometry check
+passing. Closed by `src/validation/occlusion.ts` + `bench-occluded` (`9044899c`), which hit-tests
+with `elementsFromPoint` rather than deriving paint order, and reads 0 of 502 shipped designs at
+default values and 0 of 502 with every text doubled - which is what makes an error band affordable.
+
+**Both calibration runs found bugs in the PROBE, not in the catalog**, and both were the same
+mistake: measuring something other than what is on screen.
+
+- Ten shipped tickers read 13-100% covered, because a crawling item passes under the fixed label
+  every lap. Fixed by taking the bench's own `dynamicsRoots`.
+- es02 read 16.3% under stress because **`Range.getClientRects()` reports LAYOUT rects, and layout
+  does not stop at a clip.** The doubled name laid out to x=974 while its box ended at 698; those
+  glyphs are never painted. Fixed by cutting line boxes down by every clipping ancestor.
+
+Before believing any measurement of the rendered frame, check the instrument against a screenshot.

@@ -46,6 +46,23 @@ interface Props {
   drawing?: boolean;
   /** The drawn box, as fractions (0..1) of `drawIn`'s rect. */
   onDraw?: (box: { x: number; y: number; w: number; h: number }) => void;
+  /**
+   * THE CANVAS AS A CONTROL SURFACE (docs/SVG_IMPORT_PLAN.md §6a step 5): the selectors the
+   * reader may point at. Tracked like everything else, and hit-tested HERE rather than in the
+   * document - the iframe carries no allow-same-origin, so nothing can reach in and ask what is
+   * under a pointer. It does not need to: the rect channel already pushes every tracked
+   * selector's box each frame, and the candidate list is the app's own
+   * (`preview/canvasControlProtocol.ts` states this as its core design move).
+   */
+  pickable?: string[];
+  /** The layer under the pointer, or null. Lets the checklist point back at the canvas. */
+  onPickHover?: (selector: string | null) => void;
+  /**
+   * A layer the reader picked. `drag` is the dominant direction of a click-DRAG on it, or null
+   * for a plain click - which is how "drag its direction" says which way a panel grows without
+   * a second control to find.
+   */
+  onPick?: (selector: string, drag: 'x' | 'y' | null) => void;
 }
 
 /**
@@ -71,10 +88,17 @@ export default function WizardPreview({
   drawIn,
   drawing = false,
   onDraw,
+  pickable,
+  onPickHover,
+  onPick,
 }: Props) {
   // A surface that never asks for a highlight pays nothing: the rect channel is installed only
   // for one that does (the prop present at all, even as null, is the step saying so).
-  const tracking = highlightSelector !== undefined || drawIn !== undefined;
+  const tracking = highlightSelector !== undefined || drawIn !== undefined || pickable !== undefined;
+  // The pickable set as a stable KEY: the prop is a fresh array on every render of the step
+  // above, and depending on the array itself would re-post the `track` command each time.
+  const pickKey = (pickable ?? []).join('|');
+  const picking = pickKey.length > 0;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 0, h: 0 });
@@ -137,12 +161,20 @@ export default function WizardPreview({
   // for it (see the highlight block below). Two things want one: the hover highlight, and the
   // draw marquee, which needs the ARTWORK's box to report a drag relative to it.
   const [rects, setRects] = useState<Record<string, CanvasRect | null>>({});
-  const hoverRect = highlightSelector ? rects[highlightSelector] ?? null : null;
+  // The layer under the pointer while picking (plan §6a step 5), and the grab a drag started
+  // from. Declared here with the other rect state because the highlight below reads them.
+  const [pickHover, setPickHover] = useState<string | null>(null);
+  const pickFrom = useRef<{ x: number; y: number; sel: string } | null>(null);
+  // What the highlight box is drawn around. A layer under the POINTER wins over one a checklist
+  // row is pointing at: the reader's hand is the more recent statement of what they mean.
+  const hoverRect = pickHover ? rects[pickHover] ?? null : highlightSelector ? rects[highlightSelector] ?? null : null;
   const drawRect = drawIn ? rects[drawIn] ?? null : null;
   // The marquee being dragged, in canvas px; null when no drag is in flight.
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragFrom = useRef<{ x: number; y: number } | null>(null);
-  const drawLayerRef = useRef<HTMLDivElement>(null);
+  // Whichever pointer layer is mounted - draw or pick, never both. Pointer positions become
+  // canvas px against ITS box, so the two share one ref rather than one each.
+  const canvasLayerRef = useRef<HTMLDivElement>(null);
 
   // Rebuild (debounced) when the template changes; auto-play the entrance on load.
   // Committing a new srcdoc also cancels any pending demo timers — a stop()/play()
@@ -201,10 +233,14 @@ export default function WizardPreview({
   // document, so a rebuilt one starts with nothing tracked until it is told again).
   const trackSelector = useCallback(() => {
     if (!tracking) return;
-    const selectors = [highlightSelector, drawIn].filter((s): s is string => !!s);
+    const selectors = [...new Set([highlightSelector, drawIn, ...pickKey.split('|')])].filter(
+      (s): s is string => !!s,
+    );
     postCanvasCmd(frameRef.current?.contentWindow, { cmd: 'track', selectors });
     if (selectors.length === 0) setRects({});
-  }, [tracking, highlightSelector, drawIn]);
+    // The pickable set is depended on as a KEY, not as the array: a fresh array identity every
+    // render would re-post `track` on every render of the step above.
+  }, [tracking, highlightSelector, drawIn, pickKey]);
   useEffect(trackSelector, [trackSelector]);
 
   const playIn = useCallback(() => {
@@ -238,11 +274,72 @@ export default function WizardPreview({
   // pointer position becomes canvas px by the ratio between the two — no zoom maths of its
   // own, the same trick the highlight overlay uses.
   const pointToCanvas = (ev: React.PointerEvent): { x: number; y: number } | null => {
-    const el = drawLayerRef.current;
+    const el = canvasLayerRef.current;
     if (!el) return null;
     const r = el.getBoundingClientRect();
     if (!(r.width > 0) || !(r.height > 0)) return null;
     return { x: ((ev.clientX - r.left) * width) / r.width, y: ((ev.clientY - r.top) * height) / r.height };
+  };
+
+  // ── The pick hit-test (plan §6a step 5) ──
+  // WHICH LAYER IS UNDER THIS POINT, answered from the pushed rect map. A rect carries no paint
+  // order, so the tie-break is the editor canvas's own: innermost first (greatest ancestor
+  // depth), then the smallest box - a word inside a panel wins over the panel it sits on, which
+  // is what someone pointing at it means.
+  const pickAt = (p: { x: number; y: number }): string | null => {
+    let best: { sel: string; depth: number; area: number } | null = null;
+    for (const sel of pickKey ? pickKey.split('|') : []) {
+      const r = rects[sel];
+      if (!r || !(r.width > 0) || !(r.height > 0)) continue;
+      if (p.x < r.left || p.x > r.left + r.width || p.y < r.top || p.y > r.top + r.height) continue;
+      const area = r.width * r.height;
+      if (!best || r.depth > best.depth || (r.depth === best.depth && area < best.area)) {
+        best = { sel, depth: r.depth, area };
+      }
+    }
+    return best?.sel ?? null;
+  };
+
+  const onPickDown = (ev: React.PointerEvent) => {
+    const p = pointToCanvas(ev);
+    const sel = p && pickAt(p);
+    if (!p || !sel) return;
+    ev.currentTarget.setPointerCapture(ev.pointerId);
+    pickFrom.current = { ...p, sel };
+  };
+
+  const onPickMove = (ev: React.PointerEvent) => {
+    const p = pointToCanvas(ev);
+    if (!p) return;
+    // While a drag is in flight the highlight stays on what was grabbed, so the box does not
+    // flicker between layers the pointer crosses on its way.
+    const sel = pickFrom.current ? pickFrom.current.sel : pickAt(p);
+    if (sel !== pickHover) {
+      setPickHover(sel);
+      onPickHover?.(sel);
+    }
+  };
+
+  const onPickUp = (ev: React.PointerEvent) => {
+    const from = pickFrom.current;
+    pickFrom.current = null;
+    if (!from || !onPick) return;
+    const p = pointToCanvas(ev);
+    // A DRAG says a direction, a click says none. The threshold is in canvas px, so it means the
+    // same thing at every zoom - and the dominant axis wins, because a drag meant as "rightwards"
+    // is never perfectly horizontal.
+    const dx = p ? p.x - from.x : 0;
+    const dy = p ? p.y - from.y : 0;
+    const DRAG_MIN = 24;
+    const drag =
+      Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_MIN ? null : Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+    onPick(from.sel, drag);
+  };
+
+  const onPickLeave = () => {
+    if (pickFrom.current) return;
+    setPickHover(null);
+    onPickHover?.(null);
   };
 
   const onDrawDown = (ev: React.PointerEvent) => {
@@ -335,7 +432,7 @@ export default function WizardPreview({
             room around the layer are the two things corrected back OUT of that scale, because
             they are drawn for the reader rather than for the artwork: at the default fit a 2px
             rule would paint half a pixel and a 4px gap would close to one. */}
-        {(hoverRect || drawing) && (
+        {(hoverRect || drawing || picking) && (
           <div
             className="wz-stage-overlay"
             style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}
@@ -353,11 +450,25 @@ export default function WizardPreview({
                 }}
               />
             )}
+            {/* THE PICK SURFACE. Drawing wins when both are armed: a reader who just asked to
+                draw a box means the drag to make one, not to pick what is under it. */}
+            {picking && !drawing && (
+              <div
+                ref={canvasLayerRef}
+                className="wz-stage-pick"
+                data-testid="wz-preview-pick"
+                onPointerDown={onPickDown}
+                onPointerMove={onPickMove}
+                onPointerUp={onPickUp}
+                onPointerCancel={onPickLeave}
+                onPointerLeave={onPickLeave}
+              />
+            )}
             {/* The draw surface takes pointer events back (the overlay above it has none), so
                 the marquee is drawn on the one canvas that is showing the real graphic. */}
             {drawing && (
               <div
-                ref={drawLayerRef}
+                ref={canvasLayerRef}
                 className="wz-stage-draw"
                 data-testid="wz-preview-draw"
                 onPointerDown={onDrawDown}

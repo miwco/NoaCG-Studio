@@ -464,3 +464,28 @@ what the mapping above records.
   assertion catches a drift in either direction.
 - The pack lineup itself (names, family picks, which formats cluster) is a taste layer over a
   mechanical core — review it like a design, change it like config.
+
+## Merging a pack branch that predates the taxonomy
+
+Learned merging the pack backlog (2026-07-24: packs 10, 7, 9, 5 landed in that order).
+
+**Recompute id collisions against CURRENT main, not against a handoff's snapshot.** The handoff
+said only pack-5 collided on `card10-18`; by the time it merged, main had absorbed more packs and
+pack-10 collided too (card10-21, ig14-17, lt19-21). For each pack, diff its added
+`src/templates/**/idNN.ts` against its merge-base, then test each id with
+`git cat-file -e main:<path>` - an add/add conflict means two DIFFERENT graphics share an id.
+
+**Renumber on the branch FIRST, then merge main.** That turns a pile of add/add content conflicts
+into a couple of list-file conflicts. Renumber with exact-token sed (`\bcardNN\b`) across the
+template files, the category `index.ts`, the graphic-type files and the docs, then `git mv`. Pick
+a target range disjoint from the source range so the ordering never chains. (Landed: pack-10
+card10-21 -> 38-49, ig14-17 -> 22-25, lt19-21 -> 55-57; pack-5 card10-18 -> 50-58.)
+
+**A pack predating the taxonomy fails the build on exactly three TOTAL Records** - `tsc` enforces
+them, which is the design: `OLD_CATEGORY_FALLBACK` and `PRESET_MOTION` in `src/model/taxonomy.ts`,
+plus the pack's own entry.
+
+**The append-union resolver DUPLICATES.** Resolving a list-file conflict by taking both sides
+appends the same entry twice when the two branches added it independently; the build does not
+always object. After any pack merge, check the category `index.ts` and the pack tables for repeated
+ids before trusting a green gate.

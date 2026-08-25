@@ -1721,6 +1721,15 @@ kbd {
   pointer-events: auto;
   cursor: crosshair;
 }
+/* Pointing AT the artwork to say what a layer is (WizardPreview's `pickable`). The cursor is a
+   pointer rather than a crosshair: this layer selects what is already drawn, it does not make
+   anything new. */
+.wz-stage-pick {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
 .wz-stage-marquee {
   position: absolute;
   border-style: dashed;

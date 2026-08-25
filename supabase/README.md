@@ -131,6 +131,18 @@ that says nothing about roles ships an open function. That happened twice —
 0042). **Every definer function in `public` must name the ROLES it revokes**, and
 `scripts/definer-grants.test.mjs` fails the build if one does not.
 
+**The same bootstrap has a mirror image for TABLES, and it is the one that bites a self-hoster.**
+Supabase also sets `alter default privileges in schema public grant all on tables to anon,
+authenticated, service_role`, so on a hosted project a migration that grants nothing still works.
+Postgres itself grants a new table to nobody but its owner, so the identical SQL applied to a stack
+without that bootstrap produces a schema the app cannot read - `documents` exists, RLS is on, the
+policies are right, and every signed-in request comes back `42501 permission denied for table
+documents`. Nothing in `migrations/` granted a table privilege to a client role until **`0051`**,
+which states the whole matrix explicitly; `scripts/client-grants-migration.test.mjs` now fails the
+build if a policy admits `anon` or `authenticated` to a command that no migration grants. When
+adding a table, **grant it in the same migration** - and remember 0028's lesson in reverse: a grant
+that adds nothing on a hosted project is exactly the grant a self-hoster cannot do without.
+
 Dashboard-only, so no migration can fix them: leaked-password protection (Auth → Passwords, on
 since 2026-08-13) and the Auth connection strategy (`auth_db_connections_absolute` — Auth holds a
 fixed 10 connections; switch it to percentage-based the day the instance is resized up, or the
@@ -164,6 +176,11 @@ resize does nothing for Auth).
   every sign-up; the hook wiring and the allowlist table stay, so re-closing is a one-function
   migration. Abuse posture for public instances: require email confirmation (Auth → Sign In/Up)
   and enable captcha (Auth → Attack Protection) in the dashboard.
+- `migrations/0051_client_table_grants.sql` — the table privileges `anon`, `authenticated` and
+  `service_role` had only ever inherited from hosted Supabase's default privileges, stated in SQL so
+  a stack built with `supabase start` is readable too. Grants only, narrowed per table to what each
+  table's own RLS policies already admit — a verified no-op on the hosted project. See the table
+  half of "Advisor warnings" above.
 - `seed.sql` — local-dev-only allowlist seed.
 
 Migrations are ordered by filename and are **immutable once shipped** — change the schema by adding

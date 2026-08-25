@@ -86,11 +86,20 @@ const ACCEPTED_CLASSES = {
     'policies; merging them would obscure two different reasons for access.',
 };
 
+/**
+ * The project to ask about: an explicit `SUPABASE_PROJECT_REF`, otherwise the one the CLIENT is
+ * built against, taken from `VITE_SUPABASE_URL`.
+ *
+ * Deliberately NOT `supabase/.temp/project-ref`: that is the Supabase CLI's LINK state. It is
+ * per-checkout and untracked, so a worktree linked to a staging project would make this gate
+ * quietly report on the wrong database - a confident wrong answer, which is worse than no answer.
+ * scripts/migration-drift.mjs derives its ref the same way, for the same reason.
+ */
 const readProjectRef = () => {
   if (env.SUPABASE_PROJECT_REF) return env.SUPABASE_PROJECT_REF;
-  const fromCli = resolve(root, 'supabase/.temp/project-ref');
-  if (existsSync(fromCli)) return readFileSync(fromCli, 'utf8').trim();
-  throw new Error('no project ref: set SUPABASE_PROJECT_REF, or link the CLI so supabase/.temp/project-ref exists');
+  const match = /^https:\/\/([a-z0-9]+)\.supabase\.co/i.exec(env.VITE_SUPABASE_URL || '');
+  if (match) return match[1];
+  throw new Error('no project ref: set SUPABASE_PROJECT_REF, or put VITE_SUPABASE_URL in .env');
 };
 
 /** The live fetch. Both advisor types; the endpoint is one per type. */

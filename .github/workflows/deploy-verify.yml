@@ -143,7 +143,7 @@ jobs:
             echo "Production serves $LIVE_SHA, which contains matured main ($MATURED). No drift."
             exit 0
           fi
-          echo "::error title=Production drift::Production serves ${LIVE_SHA}, but main reached ${MATURED} over 90 minutes ago and no deployment carried it live. Check Vercel: https://vercel.com/miwcos-projects/noacg-studio"
+          echo "::error title=Production drift::Production serves ${LIVE_SHA}, but main reached ${MATURED} over 90 minutes ago and no deployment carried it live. Check Vercel: https://vercel.com/noacg/noacg-studio"
           exit 1
 
       - name: File / update the production issue

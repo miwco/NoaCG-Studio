@@ -7,11 +7,29 @@
 -- (moderation); the unattended graphic reads (as anon) only rows the owner promoted to 'on_air', for a
 -- show whose UUID is an unguessable capability. Realtime Postgres Changes re-checks RLS per event.
 
+-- pgcrypto, BEFORE the first use of it in this file. This is the earliest migration that needs
+-- `gen_random_bytes`, so it is the only place the extension can be created: on a database being
+-- built from scratch, everything after this file runs later by definition, and a fix added in a
+-- later migration would never be reached. (0004 also creates it, harmlessly - `if not exists`.)
+--
+-- Created in `extensions` and called SCHEMA-QUALIFIED, the convention 0029/0035/0047 already
+-- follow. Both halves are needed: a hosted Supabase project puts pgcrypto in `extensions`, and
+-- the CLI's ephemeral migration role does NOT carry that schema on its search_path, so an
+-- unqualified call fails even once the extension exists. Measured against a fresh hosted project
+-- 2026-08-25: `ERROR: function gen_random_bytes(integer) does not exist (SQLSTATE 42883)` at this
+-- very line. Nothing caught it because the CLI's LOCAL image ships pgcrypto already reachable, so
+-- the local-stack CI applies all 51 migrations happily - see scripts/extension-order.test.mjs,
+-- which is the guard that now does catch it.
+--
+-- `gen_random_uuid()` below needs none of this: it is core Postgres since 13, not pgcrypto.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 -- ── shows: a chat room owned by an authenticated owner. slug is an unguessable capability. ──────────
 create table if not exists public.shows (
   id          uuid primary key default gen_random_uuid(),
   owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  slug        text not null unique default encode(gen_random_bytes(9), 'base64'),
+  slug        text not null unique default encode(extensions.gen_random_bytes(9), 'base64'),
   title       text not null default 'Show chat',
   is_open     boolean not null default true,     -- owner can close submissions
   updated_at  timestamptz not null default now(),

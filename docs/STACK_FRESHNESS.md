@@ -281,3 +281,16 @@ shows up as "gone". Neither can silently accept something.
 **Not in CI.** It needs a Management API personal access token and `weekly-audit.yml` is
 secret-free on purpose. Whether it ever joins is a decision about putting a Supabase token in
 Actions, and should be made deliberately rather than drifted into.
+
+## Standing upgrade debt
+
+Two deliberate exceptions, both waiting on the same upgrade, and one pin that must not be tidied.
+
+- **`react-hooks/refs` and `react-hooks/set-state-in-effect` are OFF** in `eslint.config.js`. They
+  flag the intentional state-mirrored-into-a-ref and reset-dialog-on-open patterns. Revisit both
+  when React 19 / the Compiler goes in - not before, and not one at a time.
+- **zustand 5** is the other half of that upgrade and has not been attempted.
+- **`@emnapi/core` and `@emnapi/runtime` are pinned in devDependencies ONLY** so a
+  Windows-written lockfile passes `npm ci`: npm omits the wasm binding's dependencies when the
+  native binding installs, a known optional-deps bug. **Do not "clean up" those pins.** Verify
+  `npm ci` locally after any lockfile regeneration.

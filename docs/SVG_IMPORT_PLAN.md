@@ -321,6 +321,42 @@ required for the feature and never participates in the runtime fit.
 5. **THE CANVAS AS A CONTROL SURFACE** - click a layer to bind it, click a rectangle to make it
    the growing panel, drag its direction. The relationship set from 4 stops being
    dropdown-authored. This is the canvas-editor question proper and is taken deliberately.
+   **Status 2026-08-25 - the gestures are shipped; declared followers are not.** The preview
+   iframe carries no allow-same-origin, so nothing reaches in to ask what is under a pointer -
+   and it does not need to: every offered layer is TRACKED and the hit-test runs on the APP side
+   against the pushed rects, which is the core design move `canvasControlProtocol.ts` already
+   states. The tie-break is the editor canvas's own - innermost by ancestor depth, then smallest
+   box - so a name drawn on a banner answers for itself rather than for the banner.
+   - **The canvas says WHICH layer; the step says what that MEANS.** Same split as the drawn box
+     (step 3): a text, picture or outlined-text layer toggles its binding, a rectangle becomes
+     the growing panel, and a DRAG on it names the axis (dominant direction, a 24 canvas-px
+     threshold so it reads the same at every zoom). Picking the panel that is already growing,
+     with no direction, turns it off - every gesture is its own undo.
+   - **The handler lives in a REF**, the lesson step 3 paid for: a function reported up from the
+     step and held in state re-renders on every report and spins React.
+   - **A pointer is a ONE-SHOT, and the rects are not there yet when the step opens.** The
+     document commits on a debounce and the first rect push lands on its next animation frame,
+     so a pointer arriving before that finds nothing under it and never asks again. That is a
+     property of the surface, not of the test: anything driving this canvas has to wait for a
+     layer to actually answer (`awaitPickable` in the spec) rather than for the surface to exist.
+   **Followers - the last half - shipped 2026-08-25.** §6c's "geometry proposes, the author
+   edits" is now whole: the proposal is measured on the STEP's own artwork (the same rule the
+   runtime guesses by, outermost-first so a named group and its contents are never both offered),
+   listed with a per-follower Moves/Stretches choice, and editable either in the list or by
+   arming "⌖ Pick what travels" and clicking layers on the artwork. Two rules make it honest:
+   - **An untouched proposal is NEVER written down.** No `followers` field is emitted and the
+     runtime derives exactly as the hug always has. Freezing a design-time guess into every
+     future playout would be worse than the guess, and it would have changed shipped horizontal
+     behaviour.
+   - **The first edit MATERIALIZES the whole set** (the derived-machine idiom,
+     docs/STATE_MACHINE_SCHEMA.md §6a): a no-op at the moment it happens, and from then on the
+     list stops calling itself "proposed" and what the reader sees is what ships.
+   Changing WHICH panel grows clears the set back to a proposal - it was measured against a
+   different element, so keeping it would be stale rows about the wrong panel.
+   **A defect this found, worth keeping:** the panel picker rebuilt its answer as a fresh object,
+   so choosing a panel silently reset the AXIS - a "grows taller" graphic went back to growing
+   sideways with nothing on screen to say so. Two controls where one quietly resets the other is
+   the kind of thing only a walk catches; it now has a mutation-tested guard.
 
 **Why 2 before 4, though 4 is the higher-value feature** (owner: "I don't want vertical growth
 implemented against a field distinction we're about to remove"): the growth half - moving a panel
@@ -428,6 +464,34 @@ before the type shrinks.** Deterministic layout, never AI.
 **One copy change rides along:** the mapping step promises "Your artwork airs exactly as drawn."
 The markup does stay verbatim, but the sentence becomes a half-truth the moment a declared
 element can move, and it needs rewording in the same change.
+
+**Status 2026-08-24 - the format, the growth and the convergence are shipped; authoring is the
+minimum.** `NOACG_LAYOUT` (version 1) is a commented table in the design-owned JS - deliberately
+NOT in `NOACG_ANIM`, which the timeline rewrites. Each row names one element by its
+`data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE optional field,
+so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
+used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
+NORMALIZING read - the old one-rectangle `stretch` becomes one axis-'x' row - so nothing
+downstream sees two shapes. One stamp per participant replaced `.imported-design-panel`, which a
+class per role could not scale past one rule.
+
+**How the circularity was answered: it is not iterated.** The ceiling a block may fill is the MOST
+its rule could ever give, measured at rest BEFORE the fit (`svgOfferHeights`); the fit wraps and
+shrinks inside that fixed ceiling exactly as before; then the panel grows by what the SETTLED
+block needed (`growSvgHeights`). One measure, one fit, one apply. Sideways stays the other way
+round - growth is extra BUDGET, so it happens before the fit - and that asymmetry is the whole
+reason the two halves sit on opposite sides of it.
+
+**The acceptance criterion caught a real defect, which is why it is the criterion.** `refitSvgText`
+re-measured the room BEFORE resetting the layout, so a second pass measured against a panel still
+grown by the first: the block looked like it already fitted the drawn height and the growth was
+silently dropped (122 -> 110). `document.fonts.ready` fires exactly that path, so on air the
+graphic would have grown and then collapsed when the webfont landed. Every re-measure now rests
+first, which is what makes a pass a function of the VALUE and the DESIGN and nothing else.
+
+**Still authored the narrow way:** the mapping step asks shrink / wider / taller for ONE picked
+rectangle. Declared followers and several rules are what the format now expresses and the step
+does not yet ask for - that is step 5's surface, and the runtime is ready for it.
 
 ## 7. What this is NOT
 
