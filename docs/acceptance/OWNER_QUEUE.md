@@ -69,6 +69,12 @@ Seeded 2026-08-25 from the work that landed in the preceding week.
       again. What to look at: that a missing agent, a wrong token and an absent CasparCG each say
       something different and something you could act on - never one generic red. The real
       round-trip to a server is the hardware item below.
+- [ ] **"Cloud storage" on an /admin user now reports a real number** (2026-08-25). It read 0 for
+      every account, because it summed a `public.assets` table nothing has ever written; migration
+      0052 removed the table and the read went to the `user-assets` bucket, where the bytes are.
+      Route: `/admin` -> Users -> your own account -> the Cloud storage row. What to look at: it
+      should say about 8.7 MB, not 0 - that is 23 objects, measured against the bucket while
+      writing this. Nothing enforces on the figure; the 50 MB ceiling is a separate Storage policy.
 
 ## Owner actions
 
@@ -89,22 +95,14 @@ Not walks - things only the owner can do, because they cannot be taken back by a
       workflow in this repo (OIDC) and delete the stored token. A long-lived publish token sitting
       on a laptop is the largest standing credential risk here; it can only be configured against
       a package that already exists. Owner decided this is wanted (2026-08-25).
-- [ ] **Migration 0052 - the one the new push guard refuses** (2026-08-25). `npm run db:push` now
-      applies pending migrations to production on its own, so this list should never mention a
-      migration again. It mentions this one because the guard REFUSED it, which is the guard
-      working: 0052 revokes seven inherited privileges from `anon`/`authenticated` on eighteen
-      tables and drops the never-written `assets` table, and a REVOKE against a live database is
-      exactly the class that stops for a person. It is proven end to end on the STAGING project
-      (`garafohbzmsybtysxphb`): applied cleanly, self-check passed, and the matrix afterwards is
-      `anon` on two tables and `authenticated` on eight, nothing more. About a minute:
-      ```bash
-      npm run db:push -- --dry-run --allow 0052
-      ```
-      then drop `--dry-run` if the plan reads right. What to look at in the before/after diff it
-      prints: the only removals should be TRUNCATE/REFERENCES/TRIGGER, the privileges on tables
-      with no matching policy, and the `assets` rows - and nothing ADDED except one ledger row.
-      Until it runs, the safe-merge preflight reports production as one migration behind, which is
-      correct. Reversible: it only re-grants what `0051` already states.
+- [x] **Migration 0052** - applied to production 2026-08-25, on the owner's word, because the push
+      guard refused it and that refusal is the mechanism rather than a formality. Production now
+      holds all 52; `anon` reaches two tables and `authenticated` eight, and nothing else in the
+      schema moved (six policies and eight columns went with the dropped `assets` table, and the
+      only addition anywhere was the ledger row). Verified afterwards over PostgREST: an anon read
+      of `control_events` and `chat_submissions` still answers 200, `documents` and `agent_keys`
+      now answer `42501` by PRIVILEGE rather than only by policy. `npm run check:advisors` reports
+      no new finding.
 
 ## Blocked on hardware or real conditions
 
