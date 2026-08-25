@@ -340,12 +340,18 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     INTEGRATED sha, never the pre-integration one. Once the job runner exists
     (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
     rather than remembered.
-  - **Queue a landing rather than sitting through it.** `npm run queue:merge -- <branch>` runs
-    `scripts/auto-merge.mjs`, the mechanical path of the flow: it takes only a `clear` verdict,
-    with clean trees, a conflict-free integration and a green gate on the integrated sha, and
-    REFUSES everything else without changing anything further. Merge jobs never run beside
-    anything, so queueing several lands them one at a time in order. `--dry-run` stops before the
-    first state change.
+  - **EVERY landing goes through the queue** (owner, 2026-08-25) - `npm run queue:merge -- <branch>`,
+    never `safe-merge` run directly. It runs `scripts/auto-merge.mjs`, the mechanical path of the
+    flow: only a `clear` verdict, clean trees, a conflict-free integration and a green gate on the
+    integrated sha, REFUSING everything else without changing anything further. `--dry-run` stops
+    before the first state change; `npm run jobs` shows what is running and why anything waits.
+    **Merge jobs never run beside anything**, so queued landings drain strictly one at a time in
+    order - which is the point. Five branches landed in a hundred minutes on 2026-08-25 against a
+    ten-minute gate, so a branch gating had close to a coin-flip chance of `main` moving under it;
+    nothing was ever at risk (`--ff-only` and the Phase 4 re-check see to that), but every
+    collision costs a FULL re-verification, because a new `main` is a new tree. The queue trades
+    racing for waiting. **It only serializes what goes through it** - a session running the flow
+    by hand is outside it, which is exactly the churn the owner asked to end.
   - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
     worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
     gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -

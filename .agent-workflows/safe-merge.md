@@ -15,6 +15,14 @@ stopping at the first failure and reporting what is left.
 Landing is serialized, not permissioned (root `AGENTS.md`, "Git"). Nobody waits on an approval;
 what a run waits on is the other branches.
 
+> **Prefer the queue: `npm run queue:merge -- <branch>`** (owner, 2026-08-25 - every landing goes
+> through it). That runs `scripts/auto-merge.mjs`, which is this procedure's mechanical path, and
+> merge jobs never run beside each other - so several branches land one at a time in order instead
+> of racing. Running this workflow by hand is outside that serialization: it is still safe, because
+> `--ff-only` and the Phase 4 re-check cannot be talked out of, but it is how five landings in a
+> hundred minutes each cost a full re-verification. Use this file directly when the queue refuses
+> and a person has to judge why.
+
 **A human still starts each run today.** The Claude adapter keeps `disable-model-invocation: true`
 and the shared-instruction gate enforces it, so the model cannot invoke this as a tool of its own
 accord. Two things count as a real invocation: the user typing the command
