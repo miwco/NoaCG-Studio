@@ -75,9 +75,9 @@ jobs:
       # that boolean override is a no-op on 2.111.0. No spec uses Google sign-in.
       SUPABASE_AUTH_GOOGLE_CLIENT_ID: local-e2e-unused
       SUPABASE_AUTH_GOOGLE_SECRET: local-e2e-unused
-      # The suite declares 33 tests across 17 spec files. With the local stack there is no reason
+      # The suite declares 35 tests across 19 spec files. With the local stack there is no reason
       # for ANY of them to skip - both specs that used to need the service-role key now have it.
-      MIN_TESTS: 33
+      MIN_TESTS: 35
       # Deliberately EMPTY. Every skip is a failure now. An entry here is coverage being given up,
       # so adding one needs a reason written next to it.
       ALLOWED_SKIPS: ''

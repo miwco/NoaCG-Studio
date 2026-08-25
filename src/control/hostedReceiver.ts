@@ -7,6 +7,12 @@
 // vsn=1.0.0, no bundled library) and 100% inert until REF and KEY are filled in.
 
 import { loadBackendConfig } from '../backend/config';
+// The two rules this block MIRRORS rather than re-decides: where a boot starts reading the log,
+// and how often a following surface re-reads it when Realtime says nothing. Both are owned by the
+// modules the app's own renderer uses, so the emitted text cannot drift away from the plane it is
+// supposed to behave like.
+import { CONTROL_POLL_MS } from './hostedControl';
+import { RECEIVER_FOLLOW_FROM_JS } from './outputRecovery';
 import { refFromSupabaseUrl } from './realtimeControl';
 
 const OPEN = '/* == HOSTED CONTROL (Supabase log) — edit or delete this whole block == */';
@@ -60,6 +66,9 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   var REST = 'https://' + REF + '.supabase.co/rest/v1/rpc/';
   var lastId = 0;      // the last log row applied — the tail cursor
   var showId = null;
+  var joined = false;  // has the realtime channel ever answered our join?
+
+  ${RECEIVER_FOLLOW_FROM_JS}
 
   // AN RPC EITHER ANSWERED OR FAILED, and this block must never confuse the two. A dropped
   // request says nothing about the show, so it is reported AS a failure (the ok flag) and the
@@ -142,6 +151,7 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
   // One walk at a time - a second would re-read the same rows and apply them twice.
   var TAIL_PAGE = 500;        // the RPC's own limit (migration 0008)
   var MAX_TAIL_PAGES = 40;    // runaway guard, the same ceiling the renderer's catch-up uses
+  var POLL_MS = ${CONTROL_POLL_MS};  // the floor under realtime — see startPolling() below
   var tailing = false;
   function fillTail() {
     if (tailing) return;
@@ -163,12 +173,37 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
     step();
   }
 
+  // THE FLOOR UNDER REALTIME. Every recovery above is triggered by something the socket does — a
+  // row arriving with a hole in front of it, or a reconnect. A channel that opens and never joins
+  // (a venue proxy that passes the upgrade and eats the frames, a realtime incident, an old CEF)
+  // does neither: it never closes, so nothing reconnects, and it never delivers, so no row can
+  // reveal a gap. This graphic then holds whatever the boot fetched and airs nothing else for the
+  // rest of the show, silently. So the log is re-read on a slow timer whatever the socket is
+  // doing, and a channel that has never joined says so ONCE rather than being retried in silence.
+  // The interval is the app's own (control/hostedControl.ts CONTROL_POLL_MS), where the cost
+  // arithmetic behind it is written down.
+  function startPolling() {
+    setInterval(function () {
+      if (!joined && !warnedNotJoined) {
+        warnedNotJoined = true;
+        try {
+          console.warn('NoaCG: the realtime channel for "' + GRAPHIC + '" has never joined. ' +
+            'Following the control log by polling every ' + Math.round(POLL_MS / 1000) +
+            's - commands can be that late on air.');
+        } catch (e) { /* a host with no console */ }
+      }
+      fillTail();
+    }, POLL_MS);
+  }
+  var warnedNotJoined = false;
+
   // ── Realtime: follow new log rows (Postgres Changes on control_events). ──
   var url = 'wss://' + REF + '.supabase.co/realtime/v1/websocket?apikey=' + encodeURIComponent(KEY) + '&vsn=1.0.0';
   var n = 0, ws = null, hb = null, backoff = 1000;
   function ref() { return String(++n); }
   function connect() {
     var full = 'realtime:control-' + showId;
+    joined = false;
     ws = new WebSocket(url);
     ws.onopen = function () {
       backoff = 1000;
@@ -179,10 +214,18 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
       hb = setInterval(function () {
         if (ws && ws.readyState === 1) ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: ref() }));
       }, 25000);
-      fillTail(); // anything sent while we were away, in order, before the live rows land
     };
     ws.onmessage = function (e) {
       var m; try { m = JSON.parse(e.data); } catch (err) { return; }
+      // THE JOIN REPLY, not the socket opening, is what says rows will now arrive — and it is
+      // where the gap gets filled, mirroring the app's refill-on-SUBSCRIBED. Filling at onopen
+      // instead read the log BEFORE the subscription existed, so anything written in that window
+      // was delivered by neither and waited for the next row to expose the hole.
+      if (m.event === 'phx_reply' && m.topic === full && m.payload && m.payload.status === 'ok') {
+        joined = true;
+        fillTail(); // anything sent while we were away, in order, before the live rows land
+        return;
+      }
       if (m.event !== 'postgres_changes') return;
       var rec = m.payload && m.payload.data && m.payload.data.record;
       if (!rec || rec.graphic !== GRAPHIC) return;
@@ -216,7 +259,14 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
     var row = ok && rows && rows[0];
     if (!row) return;
     showId = row.id;
-    lastId = row.last_event_id || 0;
+    // WHERE TO START READING. Not the log head: the head is a claim about the RENDERER — that
+    // everything up to it is already on air — and a graphic that has never reported has rendered
+    // none of it. A cue taken before this graphic finished loading (an operator with the
+    // production up long before the browser source is added, which is the ordinary order) was
+    // dropped for good that way: nothing to rebuild from, nothing left to replay, a dark layer
+    // until somebody happened to send another command. control/outputRecovery.ts owns the rule
+    // and the one case where this plane still differs from the app's renderer.
+    lastId = followFrom(GRAPHIC, row.live, row.last_event_id);
     var mine = (row.live || {})[GRAPHIC];
     if (mine) {
       // Reset is two operations, and recovery is both: the data half, then the visual half
@@ -229,6 +279,12 @@ export function hostedReceiverBlock(cfg: HostedReceiverConfig): string {
         if (mine.data && typeof update === 'function') update(JSON.stringify(mine.data));
       }
     }
+    // THE BOOT CATCH-UP, before the socket rather than through it: everything commanded since
+    // that baseline, in log order. It used to happen only inside ws.onopen, so a graphic whose
+    // socket was slow, blocked or dead showed the report and nothing else — and on the cold-boot
+    // path above there is no report either, which is a blank layer over a full log.
+    fillTail();
+    startPolling();
     connect();
   });
 })();

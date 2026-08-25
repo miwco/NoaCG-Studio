@@ -746,12 +746,58 @@ export const CONTROL_TAIL_PAGE = 500;
 /** Runaway guard on the catch-up walk: 20k rows is far past any real outage after pruning. */
 const MAX_TAIL_PAGES = 40;
 
+/**
+ * THE FLOOR UNDER REALTIME: how often a following surface re-reads the log even when nothing has
+ * happened on the socket.
+ *
+ * Every recovery above is driven by an EVENT — a row arriving with a hole in front of it, or a
+ * `SUBSCRIBED` after a reconnect. A channel that never joins produces neither, and there is no
+ * shortage of ways for that to happen on the surfaces this runs on: a venue proxy that passes the
+ * WebSocket upgrade and eats the frames, a Realtime incident, a CasparCG CEF, a phone that
+ * suspends the tab so long the rejoin never lands. The renderer then sits on whatever its boot
+ * catch-up fetched and airs nothing else for the rest of the show, with nothing anywhere saying
+ * why — the exact on-air failure the discipline above exists to prevent, reached from the one
+ * direction it did not cover.
+ *
+ * 30 SECONDS, and the interval is a real decision rather than a round number:
+ *
+ * - It is a FLOOR, not a transport. When Realtime works it delivers in well under a second and
+ *   every poll returns zero rows; the only thing this buys on a healthy production is load.
+ * - The cost, against the numbers in docs/CLOUD_PLAYOUT.md's concurrency budget: one
+ *   `control_tail` per following surface per 30 s is 0.03 req/s each, so 100 simultaneous
+ *   productions with a renderer and two operator pages apiece cost ~10 req/s on PostgREST —
+ *   under 2% of the ~600 req/s the audience plane already spends at that scale, which is the
+ *   thing that actually breaks first. At 5 s it would be ~60 req/s, a tenth of that ceiling,
+ *   spent almost entirely on empty answers.
+ * - The benefit is bounded staleness: with Realtime dead, the worst a command can be late is one
+ *   interval. Against today's alternative — silence until somebody reloads the browser source —
+ *   30 s is the difference between a slow production and a dead one.
+ * - Not longer. A take that airs a minute after the press is indistinguishable from a take that
+ *   never aired; the operator has already pulled the URL and started debugging by then.
+ *
+ * A surface that needs commands to land instantly while Realtime is down does not want a faster
+ * poll — it wants to know, which is what `onStatus` is for.
+ */
+export const CONTROL_POLL_MS = 30_000;
+
+/** What a following surface can say about its live connection. `everJoined: false` after the
+ *  first poll tick means the log is arriving ONLY through that poll. */
+export interface ControlFollowStatus {
+  /** The last status Realtime reported ('' until it reports anything). */
+  status: string;
+  /** Has the channel EVER joined? */
+  everJoined: boolean;
+}
+
 export async function followControlLog(opts: {
   showId: string;
   /** The log baseline from the resolve call — rows after it follow live. */
   from: number;
   tail: (afterId: number) => Promise<ControlEventRow[]>;
   onRow: (row: ControlEventRow) => void;
+  /** Called on every Realtime status change AND on every poll tick, so a surface with somewhere
+   *  to show it can say "not joined — polling" instead of showing a stale picture in silence. */
+  onStatus?: (status: ControlFollowStatus) => void;
 }): Promise<() => void> {
   let lastId = opts.from;
   const apply = (row: ControlEventRow) => {
@@ -772,17 +818,33 @@ export async function followControlLog(opts: {
         if (rows.length < CONTROL_TAIL_PAGE) return;
       }
     })();
-  return subscribeControlEvents(
-    opts.showId,
-    (row) => {
-      if (row.id > lastId + 1) {
-        refill();
-        return;
-      }
-      apply(row);
-    },
-    refill,
-  );
+  let everJoined = false;
+  let status = '';
+  const report = () => opts.onStatus?.({ status, everJoined });
+  // The floor. It runs whatever the socket is doing: a poll that returns nothing costs one empty
+  // RPC, and deciding when it is "needed" would mean trusting exactly the signal that is broken.
+  const poll = setInterval(() => {
+    report();
+    refill();
+  }, CONTROL_POLL_MS);
+  const unsubscribe = await subscribeControlEvents(opts.showId, (row) => {
+    if (row.id > lastId + 1) {
+      refill();
+      return;
+    }
+    apply(row);
+  }, (next) => {
+    status = next;
+    if (next === 'SUBSCRIBED') {
+      everJoined = true;
+      refill();
+    }
+    report();
+  });
+  return () => {
+    clearInterval(poll);
+    unsubscribe();
+  };
 }
 
 /** Stage PREPARED data — shared with every operator page on this slug. */
@@ -809,7 +871,7 @@ export async function hostedControlTail(slug: string, afterId: number, graphic?:
 export async function subscribeControlEvents(
   showId: string,
   onRow: (row: ControlEventRow) => void,
-  onSubscribed?: () => void,
+  onStatus?: (status: string) => void,
 ): Promise<() => void> {
   const sb = await getSupabase();
   if (!sb) return () => {};
@@ -820,13 +882,14 @@ export async function subscribeControlEvents(
       { event: 'INSERT', schema: 'public', table: 'control_events', filter: `show_id=eq.${showId}` },
       (payload) => onRow(payload.new as ControlEventRow),
     )
-    // SUBSCRIBED fires on every (re)join, not only the first — the callback is where a
-    // consumer tail-fills the gap a dropped socket left (rows inserted while away produce no
-    // postgres_changes replay, so without this a sleeping tab misses commands until the NEXT
-    // row happens to arrive with a visible id hole).
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') onSubscribed?.();
-    });
+    // EVERY status, not only SUBSCRIBED. SUBSCRIBED fires on every (re)join, not only the first
+    // — that is where a consumer tail-fills the gap a dropped socket left (rows inserted while
+    // away produce no postgres_changes replay, so without it a sleeping tab misses commands
+    // until the NEXT row happens to arrive with a visible id hole). The OTHER statuses
+    // (CHANNEL_ERROR, TIMED_OUT, CLOSED) were swallowed here, which is what made a channel that
+    // never joins indistinguishable from a quiet show: the consumer decides what to do with
+    // them, and `followControlLog` both polls under them and says so.
+    .subscribe((status) => onStatus?.(status));
   return () => {
     void sb.removeChannel(channel);
   };

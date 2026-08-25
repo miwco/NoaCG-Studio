@@ -25,6 +25,15 @@ Nothing here is a gate. It is a to-do list with an expiry date.
 
 Seeded 2026-08-25 from the work that landed in the preceding week.
 
+- [ ] **A renderer that is only polling now SAYS so** (2026-08-25). Two on-air holes closed; only
+      the second has anything to look at. Route: open a production's browser-output URL with
+      `&debug=1` and read the `realtime:` line on the overlay. It should say `following
+      (SUBSCRIBED)` on a healthy box. What to look at: whether that line is legible against a
+      transparent stage and whether `NOT JOINED — polling every 30 s` would actually catch your
+      eye during a setup - it is the only warning a production running on a 30 s delay ever gets,
+      and the alternative it replaces was silence. The 30 s floor itself is a cost decision
+      (docs/CLOUD_PLAYOUT.md §3); say if you want it tighter for the 2026-09-12 show.
+
 - [ ] **SVG import steps 3, 4 and 5** - `b41533bf`, `80b9185e`, `7af9ca7b` (2026-08-24/25). One
       fitting system, draw a field on the canvas, versioned `NOACG_LAYOUT` with vertical growth.
       **None of the three has been seen** - the Browser pane would not composite during the build

@@ -179,7 +179,8 @@ The page:
   resolve via `control_output_by_slug`, seed `lastId` from the RECOVERY BASELINE (below),
   rebuild each graphic from `live[key]` (update, then snap), subscribe to `control_events` INSERTs filtered by
   show id, **re-tail on every `SUBSCRIBED`** (the reconnect gap the audit found in the hosted
-  page), dedupe by row id, tail-fill on holes, route each command to its graphic's iframe as
+  page), **re-tail every `CONTROL_POLL_MS` whatever the socket is doing** (the floor below),
+  dedupe by row id, tail-fill on holes, route each command to its graphic's iframe as
   a `previewProtocol` message, report applied state back via `control_report` (debounced),
   heartbeat `control_output_seen` every 60 s.
 - **Nothing on air but graphics.** No UI, no connection text — a disconnected renderer keeps
@@ -215,8 +216,48 @@ The page:
   backend, so a decision left inside it can be verified by no offline spec.
   `e2e/productions.spec.ts` drives the rule; `e2e/configured/output-cold-boot.spec.ts` walks it
   end to end on the real wire (take first, open the renderer second).
-  The relay receiver (`control/hostedReceiver.ts`) still seeds from the head and is still the
-  gap named below.
+- **The RELAY receiver shares that rule, with one stated divergence** (2026-08-25). The block
+  appended to an exported graphic (`control/hostedReceiver.ts`) follows the same log for one
+  graphic and had the same bug on the plane published packages run on: seeded from
+  `last_event_id`, a graphic loaded after the cue was taken dropped that cue for good. It now
+  calls `receiverFollowFrom` — `control/outputRecovery.ts`, beside the renderer's rule, emitted
+  into the block as ES5 because that plane can import nothing, and the two forms are asserted
+  equal by `e2e/hosted-control.spec.ts` rather than trusted. The boot also READS the log itself
+  now, before the socket, instead of relying on `ws.onopen` to do it.
+  **Where it differs, and why:** a report with no `event` baseline is trusted here (start at the
+  head) where the renderer would replay from the log start. `control_report` (migration 0008)
+  has no `p_event` parameter, so a report written on this plane can never carry a baseline —
+  the renderer's pre-0033 edge case is this plane's every report — and a graphic is its own
+  stage, with no `setVisible(false)` to settle a replay behind, so replaying a 7-day log would
+  play the outage's history out on screen. **So the outage window a report cannot date is still
+  lost on the relay plane**, and closing it is two changes together: `p_event` on
+  `control_report`, plus a catch-up pass that hides the graphic. Walked on the real wire by
+  `e2e/configured/relay-cold-boot.spec.ts`, which proxies the block's own RPCs to the stack.
+- **THERE IS A FLOOR UNDER REALTIME: every follower re-reads the log every 30 s**
+  (`CONTROL_POLL_MS`, 2026-08-25). Every recovery above is triggered by something the SOCKET
+  does — a row arriving with a hole in front of it, or a `SUBSCRIBED` after a reconnect. A
+  channel that opens and is never joined does neither: it never closes, so nothing reconnects,
+  and it never delivers, so no row can expose a gap. The renderer held whatever its boot
+  catch-up had fetched and aired nothing else for the rest of the show. It is not exotic — a
+  venue proxy that passes the WebSocket upgrade and eats the frames, a Realtime incident, a
+  phone suspended past its rejoin, an old CEF.
+  **Why 30 s specifically.** It is a floor, not a transport: when Realtime works it delivers in
+  well under a second and every poll returns nothing, so the only thing it buys on a healthy
+  production is load. Against the concurrency budget below, one `control_tail` per follower per
+  30 s is 0.03 req/s each — 100 productions with a renderer and two operator pages apiece cost
+  ~10 req/s on PostgREST, under 2% of the ~600 req/s the audience plane already spends at that
+  scale and which is what actually breaks first. At 5 s it would be ~60 req/s, a tenth of that
+  ceiling, spent almost entirely on empty answers. Longer is worse than useless: a take that
+  airs a minute after the press is indistinguishable from one that never aired.
+  **And a channel that never joins is DIAGNOSABLE, not silently retried.** `subscribeControlEvents`
+  used to swallow every status but `SUBSCRIBED`; it now reports all of them, `followControlLog`
+  tracks whether the channel has ever joined, and `/output` says `NOT JOINED … polling every
+  30 s` on the `&debug=1` overlay plus once on the console — which is what reaches a CasparCG or
+  OBS log when nobody thought to add `&debug=1` first. The receiver block warns the same way.
+  A renderer running on the floor instead of the stream is a production on a 30 s delay, and it
+  looks identical to a quiet show from every seat unless it says so.
+  `e2e/configured/output-realtime-floor.spec.ts` intercepts the socket and takes a cue through
+  it; `e2e/hosted-control.spec.ts` does the same offline for the relay block.
 - **Recovery is never watchable.** The doctrine is data, then SNAP — instant, timers arm — and
   catch-up rows break it by their nature: they are ordinary commands, so replaying them animates.
   A reopened output would air the outage's history (a graphic entering, a cue leaving, another
@@ -664,8 +705,8 @@ What holds a connection, per live production:
 
 | surface | transport | cost |
 |---|---|---|
-| `/output` renderer | Realtime WebSocket on `control-<showId>` + `control_output_tail` gap-fill + `control_output_seen` every 60 s | 1 Realtime connection |
-| operator control page | same Realtime channel | 1 Realtime connection |
+| `/output` renderer | Realtime WebSocket on `control-<showId>` + `control_output_tail` gap-fill + a 30 s tail poll (`CONTROL_POLL_MS`, §3) + `control_output_seen` every 60 s | 1 Realtime connection; 1 request per 30 s |
+| operator control page | same Realtime channel, same 30 s poll | 1 Realtime connection; 1 request per 30 s |
 | `/join` audience pages | **HTTP polling, never Realtime** (`src/audience/audienceData.ts` - an authorization decision, not a performance one: the capability model cannot be expressed to Realtime row filters) | 0 Realtime connections; 1 request per 5 s per viewer (inbox 4 s, tally 2 s, jittered, paused while hidden) |
 
 That split is what makes the audience cheap on Realtime and expensive on PostgREST. At **100
@@ -677,6 +718,9 @@ connections, 500 messages/s, 500 channel joins/s):
   but also opts the org into overage billing.
 - **Realtime messages: ~20/s of 500.** Playout events are operator-driven and sparse. Not a
   concern even if the cap counts per-subscriber deliveries rather than sends.
+- **Follower polling: ~10 req/s** (100 productions x 3 followers / 30 s) — the §3 floor. Under
+  2% of the audience figure below, on the same PostgREST instance, and almost all of it empty
+  answers. That ratio is the whole argument for 30 s rather than 5.
 - **Audience polling: ~600 req/s** (100 productions x 30 viewers / 5 s) against PostgREST on a
   Micro compute instance. **This is the first thing that breaks, and it is a compute problem,
   not a Realtime one.** The lever is a compute add-on; the included $10 credits cover Micro

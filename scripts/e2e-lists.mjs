@@ -99,6 +99,14 @@ export const CONFIGURED_TRIGGERS = [
   /^api\/_lib\/(principal|agentAccessStore)\.ts$/,
   /^api\/me\/\[\.\.\.path\]\.ts$/,
   /^scripts\/meDevPlugin\.mjs$/,
+  // THE HOSTED PLAYOUT WIRE (docs/CLOUD_PLAYOUT.md §3). The follow discipline, the boot
+  // baseline and the renderer that uses both only ever run against a real durable log: offline
+  // there is no production to resolve, no log to follow and no channel to join, so the
+  // mechanism is ABSENT rather than merely untested. Their live coverage is the four /output
+  // walks plus output-realtime-floor and relay-cold-boot, all in the configured suite - so a
+  // change here that the offline plan reports as "covered" is covered by nothing.
+  /^src\/control\/(hostedControl|hostedReceiver|outputRecovery)\.ts$/,
+  /^src\/output\//,
   // The suite's own files.
   /^e2e\/configured\//,
   /^playwright\.live\.config\.ts$/,
