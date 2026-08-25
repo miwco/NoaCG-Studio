@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Docs — NoaCG Studio</title>
+  <meta
+    name="description"
+    content="Guides for NoaCG Studio: bring your own SVG graphic on air, connect CasparCG, run graphics in OBS or vMix, drive live data, and let coding agents like Claude Code build graphics for you."
+  />
+  <meta name="theme-color" content="#0a0c10" />
+  <link rel="canonical" href="https://noacg.studio/docs" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+  <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin />
+  <meta property="og:title" content="Docs — NoaCG Studio" />
+  <meta property="og:description" content="Guides for NoaCG Studio: SVG import, CasparCG, OBS and vMix, live data, and making graphics with coding agents." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://noacg.studio/docs" />
+  <link rel="stylesheet" href="/src/docs/docs.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <a href="/" class="wordmark">Noa<span>CG</span><small>Studio</small></a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="https://github.com/miwco/NoaCG-Studio">Source</a>
+        <a class="btn" href="/app#/new">Open the studio</a>
+      </nav>
+    </header>
+
+    <div class="doc-hero">
+      <p class="kicker">Documentation</p>
+      <h1>Guides for making it, and putting it on air.</h1>
+      <p class="lede">
+        Everything here assumes nothing: no account, no installs beyond what each guide names,
+        no code unless you want it. The studio itself lives at <a href="/app">noacg.studio/app</a>
+        and is free.
+      </p>
+    </div>
+
+    <div class="doc-grid">
+      <nav class="doc-nav" aria-label="Sections">
+        <p class="group">Start</p>
+        <a href="#getting-started">Getting started</a>
+        <p class="group">Guides</p>
+        <a href="#svg">Import your own SVG graphic</a>
+        <a href="#browser-source">OBS, vMix &amp; browser sources</a>
+        <a href="#casparcg">CasparCG</a>
+        <p class="group">Run the show</p>
+        <a href="#dashboard">The playout dashboard</a>
+        <a href="#audience">Audience join pages</a>
+        <a href="#behaviour">Graphics with behaviour</a>
+        <a href="#data">Live data</a>
+        <p class="group">For developers</p>
+        <a href="#claude-code">Coding agents &amp; the CLI</a>
+      </nav>
+
+      <div class="doc-body">
+        <!-- ═══════════════════════ START ═══════════════════════ -->
+        <section id="getting-started">
+          <h2>Getting started</h2>
+          <p>
+            NoaCG Studio makes broadcast graphics — lower thirds, scoreboards, tickers, quiz
+            boards, countdowns — in the browser, and gets them on air two ways: a <strong>live
+            production</strong> you drive from an online dashboard, or an <strong>exported
+            package</strong> that runs offline in whatever system your studio already uses.
+          </p>
+          <ol>
+            <li>Open <a href="/app#/new">the studio</a>. The creation wizard offers four doors:
+              a template from the catalog, a description for AI, your own artwork, or a blank start.</li>
+            <li>Style it — colors, typefaces, your logo, motion — beside a live preview. Every
+              change writes real HTML/CSS/JS you can open, or never look at.</li>
+            <li>Finish, then either export a package straight away or collect graphics into a
+              production and <a href="#dashboard">run the show</a>.</li>
+          </ol>
+          <p>
+            The guides below cover the parts people ask about: bringing your own design in as an
+            SVG, connecting playout systems, live data, and letting a coding agent do the
+            authoring.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ SVG IMPORT ═══════════════════════ -->
+        <section id="svg">
+          <h2>Import your own SVG graphic</h2>
+          <p>
+            SVG import is <strong>the</strong> way to bring a graphic you designed yourself into
+            NoaCG. Design it in Illustrator, Figma or Inkscape, export an SVG, and drop it on the
+            Import door: your text layers become operator fields, and the pixel-exact graphic —
+            your typography, your geometry, nothing redrawn — goes on air and exports to every
+            target like any other graphic.
+          </p>
+          <p>
+            Where to drop it: <a href="/app#/new">the studio</a> → <strong>New graphic</strong> →
+            <strong>Import graphic</strong>.
+          </p>
+
+          <h3 id="svg-rules">The five rules that decide whether it works</h3>
+          <ol>
+            <li><strong>Give the file a size.</strong> A <code>viewBox</code> (or
+              <code>width</code>+<code>height</code>) is required — it is the design space every
+              field position is measured against. 1920×1080 with a transparent background is the
+              predictable choice for frame-exact artwork; a smaller artboard imports as a
+              free-floating object placed by the zone picker.</li>
+            <li><strong>Keep text as text.</strong> Every live <code>&lt;text&gt;</code> layer
+              becomes an editable operator field, bound in place. Text converted to outlines
+              cannot be edited in place — the import offers a fallback (a matching editable line
+              placed over the measured outline), but the good road is re-exporting with real
+              text.</li>
+            <li><strong>Name your layers.</strong> Layer names become the field labels an
+              operator reads: "Home team" reads better than "Rectangle_3". No naming convention
+              is required beyond that.</li>
+            <li><strong>Embed your pictures.</strong> A linked image is a network reference and
+              is stripped on import — an exported graphic must play out with no internet.</li>
+            <li><strong>Do not animate in the design app.</strong> SVG-native (SMIL) animation is
+              removed with a note. Motion is added in NoaCG's Animation step, where the timeline
+              and the playout server can drive it deterministically.</li>
+          </ol>
+
+          <h3 id="svg-layers">What each layer becomes</h3>
+          <div class="doc-table"><table>
+            <tr><th>In your file</th><th>In NoaCG</th></tr>
+            <tr><td>Live text</td><td>An operator text field, bound in place — the typography stays yours</td></tr>
+            <tr><td>Multi-line text (positioned tspans)</td><td>One field per line, each separately editable</td></tr>
+            <tr><td>A plain figure as the sample (<code>84</code>)</td><td>Proposes a number field</td></tr>
+            <tr><td>A clock-shaped sample (<code>12:00</code>)</td><td>The row asks: ordinary text, or a countdown</td></tr>
+            <tr><td>An embedded picture</td><td>A picture field the operator can swap; clearing it restores your drawing</td></tr>
+            <tr><td>Text converted to outlines</td><td>Offered as an outline row (off by default): tick it and an editable line is placed over its measured box</td></tr>
+            <tr><td>Panels, rules, gradients, masks</td><td>Ride along verbatim as the look</td></tr>
+          </table></div>
+          <p>
+            When a typed value is longer than the design was drawn for, the generated code answers
+            in one fixed order: fill the shape you drew the line in, grow the panel only if you
+            opted in, wrap into the room the design already has, shrink to a readability floor,
+            then warn the operator. The artwork is never reshaped behind your back and copy is
+            never cut.
+          </p>
+
+          <h3 id="svg-fonts">Fonts</h3>
+          <p>
+            An SVG names its fonts; if the playout machine lacks the family, the "exact" graphic
+            silently isn't. The import inventories every family and, per family, matches a bundled
+            face, offers the Google Fonts library (fetched at design time and embedded — exported
+            code never reaches the network), or takes a font file you upload for a licensed face.
+            An unresolved family warns and continues. PostScript names
+            (<code>Archivo-Bold</code>) are understood.
+          </p>
+
+          <h3 id="svg-export">Export settings, app by app</h3>
+          <div class="doc-table"><table>
+            <tr><th>App</th><th>Settings that matter</th></tr>
+            <tr><td><strong>Illustrator</strong></td><td><em>File → Export → Export As… → SVG</em> (not "Save As"). Font: <strong>SVG</strong> (not outlines) · Images: <strong>Embed</strong> · Object IDs: <strong>Layer Names</strong> · Minify: off. Name your layers first — duplicates are safe.</td></tr>
+            <tr><td><strong>Figma</strong></td><td>Name the layers, select the frame, <em>Export → SVG</em> with <strong>Include "id" attribute</strong> ON and <strong>Outline text</strong> OFF.</td></tr>
+            <tr><td><strong>Inkscape</strong></td><td><em>Save As… → Plain SVG</em>. Label layers and objects. Do not run <em>Object to Path</em> on editable text, and do not use flowed text (drag-drawn text boxes) — it exports as <code>&lt;flowRoot&gt;</code>, which no browser renders.</td></tr>
+          </table></div>
+          <p>
+            Ready-made files to try — a lower third, a scorebug, an outlined-text example and an
+            Illustrator-shaped export — are in the repository's
+            <a href="https://github.com/miwco/NoaCG-Studio/tree/main/docs/svg-samples">docs/svg-samples</a>
+            folder.
+          </p>
+          <p>
+            A quiz board can carry its behaviour in the file too: draw the base look, then one
+            hidden layer per moment (answer picked, right, wrong, locked in) and the import's
+            behaviour pickers wire them up — see <a href="#behaviour">graphics with behaviour</a>.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ BROWSER SOURCES ═══════════════════════ -->
+        <section id="browser-source">
+          <h2>OBS, vMix &amp; any browser source</h2>
+          <p>
+            A published production gives you <strong>one output URL</strong> —
+            <code>…/output?production=&lt;slug&gt;</code> — that renders the whole show:
+            transparent, all its graphics, driven live from the
+            <a href="#dashboard">playout dashboard</a>. Anything that can show a web page can
+            carry it. Load it once, leave it up; graphics are cued by the operator, not by
+            reloading the source.
+          </p>
+          <p>Four rules apply to every browser-based playout:</p>
+          <ul>
+            <li><strong>Transparency is built in.</strong> Do not set a chroma key. A black or
+              white box behind the graphic means the host is forcing an opaque background —
+              check its custom-CSS / background settings.</li>
+            <li><strong>Match the resolution exactly.</strong> Graphics are designed in real
+              pixels (1920×1080 unless you chose otherwise). A mismatch does not crop — but it
+              scales, and scaled text is softer than text rendered at its own size.</li>
+            <li><strong>Resize the source, never the resulting layer.</strong></li>
+            <li><strong>Set the source's FPS to the channel's.</strong> Motion is authored in
+              seconds and plays correctly at any rate, but a 30 fps source in a 50 Hz channel
+              judders in a way that looks like the graphic's fault.</li>
+          </ul>
+
+          <h3 id="obs">OBS Studio</h3>
+          <ol>
+            <li><strong>Sources → + → Browser</strong>.</li>
+            <li>Paste the production's output URL (or, for an exported overlay, tick
+              <strong>Local file</strong> and pick the <code>.html</code>).</li>
+            <li>Set <strong>Width</strong> and <strong>Height</strong> to the graphic's own
+              resolution, and <strong>FPS</strong> to your channel's.</li>
+            <li>Leave the background alone — the page is already transparent.</li>
+          </ol>
+          <p>
+            Leave <strong>"Shutdown source when not visible" off</strong> for a production
+            output: it tears the page down every time you hide the scene and forces a full
+            rebuild on the way back.
+          </p>
+          <p>
+            An exported overlay package ships a local relay and launcher
+            (<code>Start controller.cmd</code> on Windows,
+            <code>start-controller.command</code> on macOS, <code>./start-controller.sh</code> on
+            Linux): it serves the folder locally, opens the operator page, and relays every
+            command into the graphic — the route into a page loaded by OBS's or vMix's own
+            browser engine. Fully offline, no installs.
+          </p>
+
+          <h3 id="vmix">vMix</h3>
+          <ol>
+            <li><strong>Add Input → More → Web Browser</strong>.</li>
+            <li>URL: the output URL, or the full local path to an exported file.</li>
+            <li>Set the width and height to the graphic's resolution.</li>
+            <li>Use it as an overlay channel input.</li>
+          </ol>
+
+          <h3 id="browser-troubleshooting">When it does not work</h3>
+          <div class="doc-table"><table>
+            <tr><th>What you see</th><th>Do this</th></tr>
+            <tr><td>Black or white box behind the graphic</td><td>Clear any custom CSS setting a background; do not add a chroma key.</td></tr>
+            <tr><td>Graphic looks soft or wrong-sized</td><td>Set the browser source to the graphic's own resolution; resize the source, never the layer.</td></tr>
+            <tr><td>Motion judders</td><td>Set the source's FPS to the channel's.</td></tr>
+            <tr><td>Output URL shows "not available"</td><td>Re-copy the URL from the production page. Unpublishing kills the URL on purpose.</td></tr>
+            <tr><td>Blank after a network drop</td><td>Wait — it rebuilds on its own without replaying animations on screen. If it does not, reload the layer.</td></tr>
+            <tr><td>A take airs nothing</td><td>Check the mode strip on the production page — <strong>Rehearse</strong> drives a local copy on purpose; <strong>Show</strong> drives the air.</td></tr>
+          </table></div>
+          <p>
+            The full playout setup reference, including SPX Graphics and self-hosted routes, is
+            <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/PLAYOUT_INTEGRATION.md">PLAYOUT_INTEGRATION.md</a>.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ CASPARCG ═══════════════════════ -->
+        <section id="casparcg">
+          <h2>CasparCG</h2>
+          <p>
+            CasparCG plays web pages through its HTML producer, so both routes work: the live
+            output URL for a whole production, or an exported single-file template played from
+            disk with no network at all.
+          </p>
+
+          <h3 id="casparcg-url">Playing the production's output URL</h3>
+          <pre><code>CG 1-20 ADD 1 "https://noacg.studio/output?production=&lt;slug&gt;" 1</code></pre>
+          <ul>
+            <li><code>1-20</code> is channel 1, layer 20 — use whatever your rundown expects.</li>
+            <li>The URL is a <strong>capability</strong>: anyone holding it can render the
+              production (not operate it). Treat it like a password.</li>
+            <li>Load it <strong>once</strong> at the start and leave it up — graphics are cued
+              from the dashboard, not by re-adding the layer.</li>
+            <li>Add <code>&amp;debug=1</code> while setting up for an on-screen status readout;
+              take it off before air.</li>
+            <li>The page recovers by itself after a network drop or a layer restart, rebuilding
+              what was on air without replaying animations.</li>
+          </ul>
+
+          <h3 id="casparcg-versions">Which server version you have matters</h3>
+          <div class="doc-table"><table>
+            <tr><th>Server</th><th>Engine</th><th>Consequence</th></tr>
+            <tr><td><strong>2.3.x</strong> (the common teaching install)</td><td>Old CEF (Chromium 6x–8x era)</td><td>Rejects modern JavaScript syntax and drops modern CSS <em>silently</em>. NoaCG builds its output page down to that engine on purpose, so you do not have to do anything — but if you hand-edit template code, <code>?.</code> and <code>??</code> will kill the layer with a SyntaxError only the server log shows.</td></tr>
+            <tr><td><strong>2.4.x</strong></td><td>CEF 117</td><td>The oldest version NoaCG targets with nothing special to do.</td></tr>
+            <tr><td><strong>2.5.x</strong></td><td>CEF 142</td><td>Current.</td></tr>
+          </table></div>
+          <p>
+            Every export screen carries a <strong>Playout compatibility</strong> section measured
+            from the graphic's own code — one line per system saying whether it renders as
+            designed there, and which CSS declaration needs what version.
+          </p>
+
+          <h3 id="casparcg-connect">Letting NoaCG load the layer for you</h3>
+          <p>
+            Instead of typing the command into the CasparCG Client, the production page can send
+            it: <strong>Settings → Playout</strong> holds one server for the whole studio (host,
+            AMCP port, channel, layer), and the production page grows a
+            <strong>Put on air</strong> / <strong>Take off</strong> row. One thing must run on the
+            machine you operate from, because a browser cannot open a raw TCP socket and AMCP is
+            one:
+          </p>
+          <pre><code>npx @noacg/cli caspar agent</code></pre>
+          <p>
+            Leave that terminal open. It prints an address and token to paste into the Playout
+            settings, listens on <code>127.0.0.1</code> only, and CasparCG itself can be any
+            machine on the studio LAN — exactly as with the Client. <strong>Test
+            connection</strong> round-trips a real AMCP <code>VERSION</code> and shows the
+            server's own version string. On the hosted studio, Chrome asks once whether the site
+            may reach your local network — answer the prompt and it sticks. Safari refuses this
+            outright; there, use the terminal route:
+          </p>
+          <pre><code>npx @noacg/cli caspar play --url "https://noacg.studio/output?production=&lt;slug&gt;" --channel 1 --layer 20</code></pre>
+          <p class="callout truth">
+            <span class="lbl">What has been verified</span>
+            The output URL route has run on real hardware: a CasparCG 2.3.2 server rendered it at
+            1920×1080, transparent, surviving a renderer restart. The one-button connection is
+            newer: its AMCP wire and every failure state are verified against protocol-accurate
+            fakes and the test suite, but it has <strong>not yet driven a real CasparCG
+            server</strong>. If it misbehaves on yours, the manual command above is the same live
+            link — and we want to hear about it.
+          </p>
+
+          <h3 id="casparcg-file">Playing an exported file</h3>
+          <p>
+            Export with the <strong>CasparCG</strong> target and you get one self-contained
+            <code>.html</code> — fonts and images inlined, no network needed. Drop it into the
+            server's template folder and drive it as a normal HTML template:
+          </p>
+          <pre><code>CG 1-20 ADD 1 "&lt;template-name&gt;" 1 "&lt;templateData&gt;…&lt;/templateData&gt;"
+CG 1-20 PLAY
+CG 1-20 NEXT
+CG 1-20 STOP</code></pre>
+          <p>
+            A CasparCG client sends values by field id (<code>f0</code>, <code>f1</code>, …), so
+            every exported package ships <strong>FIELDS.md</strong>: each field's id, name, type
+            and default, with paste-ready payloads built from that graphic's own ids. Keep it
+            open beside the client.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ DASHBOARD ═══════════════════════ -->
+        <section id="dashboard">
+          <h2>The playout dashboard</h2>
+          <p>
+            A <strong>production</strong> is the live unit: a pool of graphics, a cue rundown
+            prepared in advance, and one persistent output URL. Each graphic is its own layer, so
+            a bug, a lower third and a ticker can be on air at once. Publish the production and
+            the dashboard drives it from anywhere — another tab, an OBS dock, a phone at the
+            desk.
+          </p>
+          <ul>
+            <li><strong>Preview and program.</strong> Two monitors and the verbs an operator
+              actually uses: select a cue, check it on preview, <strong>Take</strong>. Staged
+              edits air on an explicit take, never mid-keystroke.</li>
+            <li><strong>Rehearse vs Show.</strong> Rehearse drives a local copy so you can walk
+              the rundown without touching the air; Show drives the published output. The mode
+              strip on the production page says which you are in.</li>
+            <li><strong>Recovery is built in.</strong> Every command is a row in a durable log;
+              the on-air renderer applies rows in order and, after a network drop or restart,
+              catches up in order — rebuilding what was on air without replaying animations on
+              screen.</li>
+            <li><strong>Pictures without templates.</strong> "＋ Add pictures…" turns image files
+              into cues — a holding slide, a sponsor card — aired like any other cue, one
+              picture layer per production so stills replace rather than stack.</li>
+          </ul>
+        </section>
+
+        <!-- ═══════════════════════ AUDIENCE ═══════════════════════ -->
+        <section id="audience">
+          <h2>Audience join pages</h2>
+          <p>
+            A production can invite its audience in: a public join page at a readable URL
+            (<code>noacg.studio/join/&lt;name&gt;</code> — the kind you read out on air) collects
+            viewer messages and votes from any phone, no app and no account.
+          </p>
+          <ul>
+            <li><strong>Nothing viewer-written airs on its own.</strong> Send-ins land in a
+              moderation inbox; an operator picks what goes into the graphic. That separation is
+              structural, not a setting.</li>
+            <li><strong>Votes tally live</strong> into poll graphics — open the vote, close it,
+              put the result on air when you are ready.</li>
+            <li><strong>A presenter view</strong> (a separate link) shows the host what is coming
+              without giving them operator controls.</li>
+          </ul>
+        </section>
+
+        <!-- ═══════════════════════ BEHAVIOUR ═══════════════════════ -->
+        <section id="behaviour">
+          <h2>Graphics with behaviour</h2>
+          <p>
+            A lower third plays and stops. A quiz board has to know which answer the contestant
+            locked in and whether it has been revealed yet. NoaCG graphics can carry that logic
+            themselves, as named states and real operator events — and the control panel is
+            generated from them, so a move that would be wrong is greyed out instead of being
+            wrong.
+          </p>
+          <ul>
+            <li><strong>A quiz</strong> runs Select answer → Lock it in → Reveal — each a button
+              on the dashboard, each legal only when the board's state allows it.</li>
+            <li><strong>A scoreboard</strong> carries score up/down and clock start/stop as
+              events; the numbers are data an operator or a <a href="#data">feed</a> writes.</li>
+            <li><strong>Data never causes a state change.</strong> Updating a name or a score
+              re-renders fields; states move only on operator events. That is what makes a feed
+              safe to leave running.</li>
+            <li><strong>Everything still degrades to plain stepping.</strong> Hand the same
+              graphic to SPX or CasparCG and it walks its steps in order like an ordinary
+              template — the extra buttons are what you get when you drive it from NoaCG, never a
+              reason it won't play elsewhere.</li>
+          </ul>
+          <p>
+            You can author behaviour without code: an imported SVG quiz board is just layers —
+            draw each moment (answer picked, right, wrong, locked in), hide those layers in the
+            design app, and the import wires them to the quiz behaviour. See
+            <a href="#svg">the SVG guide</a>.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ DATA ═══════════════════════ -->
+        <section id="data">
+          <h2>Live data</h2>
+          <p>Three doors, from no-setup to fully automated. All of them respect the same rule:
+            data updates change what a graphic shows, never what state it is in — and the
+            operator always wins, because their command lands later in the same log.</p>
+
+          <h3 id="data-typed">Type it on the dashboard</h3>
+          <p>
+            Every field is editable live from the production page: edit, stage, take. For most
+            shows this is the whole answer.
+          </p>
+
+          <h3 id="data-sheets">A Google Sheet (or any published CSV)</h3>
+          <p>
+            Point a graphic at a published sheet and its fields follow the sheet — from anywhere,
+            by anyone you share the sheet with. In the sheet: <em>File → Share → Publish to web →
+            CSV</em>; in the studio, add the live-data source and paste the link. The generated
+            polling code is ordinary, commented JavaScript appended to the graphic's own code
+            (column headers map to field titles), so it runs wherever the graphic runs — the
+            preview, an OBS browser source, an exported package — and you can open and edit the
+            mapping like anything else.
+          </p>
+
+          <h3 id="data-api">The Production Data API</h3>
+          <p>
+            For a timing system, a results service or your own scripts: push values into a
+            published production over plain HTTPS, authenticated by the production's own data key
+            (minted when it is published). Writes become rows in the production's command log —
+            the renderer cannot tell your update from an operator's, which is the point.
+          </p>
+          <pre><code>curl -s https://noacg.studio/api/data/update \
+  -H "Authorization: Bearer $NOACG_DATA_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"graphic": "House Scorebug", "values": {"Score A": 2, "Clock": "43:12"}}'</code></pre>
+          <ul>
+            <li>Fields are addressed by the <strong>labels the graphic shows its operator</strong>
+              ("Score A"), so a feed and a spreadsheet speak the same language.</li>
+            <li>The key can write data only — it cannot play, stop, take or clear anything.
+              A feed that could clear the frame would be a second operator with no face.</li>
+            <li><code>PATCH /api/data/patch</code> goes one step further: write to a data path
+              (<code>match.home.score</code>) and every graphic bound to it follows, without the
+              feed knowing the rundown.</li>
+            <li>A worked example ships in the repository: a weather mini-pack driven by a small
+              Node connector polling Open-Meteo — see
+              <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/DATA_API.md">DATA_API.md</a>
+              for the full reference, limits and error shapes.</li>
+          </ul>
+        </section>
+
+        <!-- ═══════════════════════ AGENTS ═══════════════════════ -->
+        <section id="claude-code">
+          <h2>Make graphics with Claude Code, Codex or any coding agent</h2>
+          <p>
+            Coding agents are good at writing HTML graphics. NoaCG gives them the missing half: a
+            contract for what a broadcast graphic must expose, a validator that actually runs it
+            in a live playout bench, and a door into your library. The agent designs the way it
+            works best; NoaCG makes the result editable, controllable and playable — the same
+            gate the studio itself uses.
+          </p>
+          <p>
+            The bridge is the <code>noacg</code> CLI, published on npm as
+            <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a>. You
+            need Node.js and a system Chrome or Edge (the CLI drives the validator in a headless
+            browser). No account is needed until you want to save into a library.
+          </p>
+
+          <h3 id="agent-setup">Set it up for your agent</h3>
+          <div class="doc-table"><table>
+            <tr><th>Agent</th><th>One-time setup</th></tr>
+            <tr><td><strong>Claude Code</strong></td><td><code>claude plugin marketplace add miwco/NoaCG-Studio</code> then <code>claude plugin install noacg@noacg-studio</code> — installs the skill, the <code>/noacg:graphic</code> command and the MCP server together.</td></tr>
+            <tr><td><strong>Codex</strong></td><td><code>codex mcp add noacg -- npx -y @noacg/cli mcp</code>, plus the <code>noacg-graphic</code> skill from the package.</td></tr>
+            <tr><td><strong>Any MCP client</strong></td><td>Run <code>npx -y @noacg/cli mcp</code> as a stdio MCP server — it exposes scaffold, validate, inspect, screenshot and save as tools.</td></tr>
+            <tr><td><strong>No agent, just you</strong></td><td>Every verb is a plain CLI command — see the loop below.</td></tr>
+          </table></div>
+          <p>
+            By default everything talks to <code>https://noacg.studio</code>; set
+            <code>NOACG_URL</code> to point at a self-hosted or local deployment instead.
+          </p>
+
+          <h3 id="agent-loop">The loop</h3>
+          <p>Ask your agent for a graphic ("make me a clean scoreboard for a floorball
+            stream — home, away, period, clock"), or walk it yourself:</p>
+          <pre><code><span class="c"># 1. Start from a working chassis (optional — agents may also author from scratch):</span>
+npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug
+
+<span class="c"># 2. Author: edit the package's HTML/CSS/JS the way you normally work.</span>
+
+<span class="c"># 3. Validate — the studio's own gate plus a live playout bench, with screenshots</span>
+<span class="c">#    (off-air, on-air, stress) so the agent can SEE what it made:</span>
+npx @noacg/cli validate my-scorebug --screenshots shots
+
+<span class="c"># 4. Put it in your NoaCG library (login once; the key can only create graphics):</span>
+npx @noacg/cli login
+npx @noacg/cli save my-scorebug</code></pre>
+          <p>
+            <code>validate</code> reports findings the way a compiler reports errors, and the
+            agent iterates until clean; <code>save</code> refuses anything that does not pass.
+            The saved graphic opens in your library like any other: editable in the studio,
+            exportable to every target, ready for a production.
+          </p>
+          <p>
+            The package on disk is simultaneously a valid <strong>SPX</strong> package and an
+            <strong>EBU OGraf v1</strong> graphic — zip it and it also imports through the
+            studio's Import door, or plays in any OGraf renderer. The full reference is
+            <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/AGENT_CLI.md">AGENT_CLI.md</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <footer>
+      <span class="fm">NoaCG Studio · Documentation</span>
+      <span>
+        <a href="/">Home</a> ·
+        <a href="/app">Open the studio</a> ·
+        <a href="https://github.com/miwco/NoaCG-Studio">Source</a> ·
+        <a href="mailto:contact.noacg@gmail.com">Contact</a>
+      </span>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/docs/docs.ts"></script>
+</body>
+</html>

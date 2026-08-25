@@ -44,6 +44,28 @@ test('the landing CTA opens the wizard even for a visitor with work in progress'
   await expect(page.locator('iframe.preview-frame')).toBeVisible();
 });
 
+test('the landing says the two things that used to be invisible', async ({ page }) => {
+  // Two shipped capabilities the page previously never mentioned (a capability nobody can
+  // discover does not exist): SVG import as THE way to bring your own graphic in, and the
+  // agent door — coding agents making NoaCG graphics through the published @noacg/cli.
+  await page.goto('/');
+
+  // The import card leads with SVG and links to the authoring guide.
+  const importCard = page.locator('.way', { hasText: 'Import your own graphic' });
+  await expect(importCard).toContainText('SVG');
+  await expect(importCard.locator('a[href="/docs#svg"]')).toHaveCount(1);
+
+  // The agent-door section shows the real, installable command — never a mocked terminal.
+  const agents = page.locator('#agents');
+  await expect(agents).toContainText('Claude Code');
+  await expect(agents).toContainText('npx @noacg/cli');
+  await expect(agents.locator('a[href="/docs#claude-code"]')).toHaveCount(1);
+
+  // And the docs home is reachable from the page chrome.
+  await expect(page.locator('header nav a[href="/docs"]')).toHaveCount(1);
+  await expect(page.locator('footer a[href="/docs"]')).toHaveCount(1);
+});
+
 test('old root share links redirect into the app with their query intact', async ({ page }) => {
   await page.goto('/?chat=my-show');
   await page.waitForURL('**/app?chat=my-show');

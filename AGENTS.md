@@ -71,12 +71,13 @@ Vite, both Playwright configs, the guard hooks and the dev scripts all read that
 never hand-edit or commit them). `DEV_PORT=n` overrides everything. Details:
 **`docs/DEV_PORTS.md`**; `npm run test:ports` covers the allocator.
 
-**Nine pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
+**Ten pages (Vite MPA).** Clean URLs come from the `app-clean-url` plugin in dev/preview and
 Vercel `cleanUrls` in production.
 
 | URL | Entry | What it is |
 |---|---|---|
 | `/` | `index.html` | static landing, no React; carries a redirect shim so old root `?chat=`/`?template=` share links land on `/app` with their query |
+| `/docs` | `docs.html` | PUBLIC docs home - static, indexed, no React; guides for SVG import, OBS/vMix, CasparCG, the playout dashboard and the agent door (`src/docs/`) |
 | `/app` | `app.html` | the studio: home, wizard, productions - the editor is its Advanced surface. E2E specs navigate here |
 | `/admin` | `admin.html` | PRIVATE admin surface - unlinked, `noindex`, a plain 404 for everyone the server does not recognise (`docs/ADMIN.md`) |
 | `/output?production=<slug>` | `output.html` | the transparent browser-output RENDERER a production client (CasparCG/OBS/vMix) loads once (`docs/CLOUD_PLAYOUT.md`) |

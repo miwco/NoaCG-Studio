@@ -1,0 +1,167 @@
+/* NoaCG Studio docs — same brand system as the landing (index.html):
+   dark control-room ground, one amber "on-air" accent, restrained glow
+   (NoaCG-Brand-Kit/BRAND-MANUAL.md §3). The page is static and fully readable
+   with no JavaScript; src/docs/docs.ts only highlights the section nav. */
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/space-grotesk.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  --void: #0a0c10;
+  --panel: #141922;
+  --amber: #f6a623;
+  --glow: #ffc65c;
+  --paper: #e8edf2;
+  --dim: #b7bcc4;
+  --faint: #7c8798;
+  --line: rgba(232, 237, 242, 0.09);
+  --mono: "JetBrains Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background:
+    radial-gradient(55% 30% at 70% 0%, rgba(246, 166, 35, 0.06) 0%, transparent 70%),
+    var(--void);
+  color: var(--paper);
+  font-family: "Space Grotesk", Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Top bar (the landing's, unchanged) ── */
+header.top {
+  display: flex; align-items: center; gap: 14px;
+  padding: 22px 0;
+}
+.mark { display: flex; flex-direction: column; gap: 3px; width: 26px; }
+.mark i { display: block; height: 6px; border-radius: 2px; }
+.mark i:nth-child(1) { width: 100%; background: var(--amber); box-shadow: 0 0 10px rgba(246, 166, 35, 0.6); }
+.mark i:nth-child(2) { width: 66%; background: var(--paper); }
+.mark i:nth-child(3) { width: 40%; background: rgba(232, 237, 242, 0.3); }
+.wordmark { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.wordmark span { color: var(--amber); }
+.wordmark small {
+  display: block; font-family: var(--mono); font-weight: 400; font-size: 9px;
+  letter-spacing: 0.42em; color: var(--dim); text-transform: uppercase; margin-top: 1px;
+}
+header.top nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
+header.top nav a { font-size: 14px; color: var(--dim); }
+header.top nav a:hover { color: var(--paper); }
+.btn {
+  display: inline-block; padding: 10px 20px; border-radius: 8px;
+  font-weight: 600; font-size: 14px; letter-spacing: 0.01em;
+  background: var(--amber); color: #14100a;
+  box-shadow: 0 0 22px rgba(246, 166, 35, 0.24);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:hover { background: var(--glow); box-shadow: 0 0 30px rgba(246, 166, 35, 0.36); }
+
+/* ── Page head ── */
+.doc-hero { padding: 34px 0 8px; max-width: 760px; }
+.kicker {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  letter-spacing: 0.28em; text-transform: uppercase; color: var(--amber);
+}
+h1 { font-size: clamp(32px, 4.5vw, 46px); font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; margin: 12px 0 14px; }
+.lede { font-size: 17px; color: var(--dim); }
+.lede a, .doc-body p a, .doc-body li a, .doc-body td a { color: var(--amber); }
+.lede a:hover, .doc-body p a:hover, .doc-body li a:hover, .doc-body td a:hover { color: var(--glow); }
+
+/* ── Two-column shell: sticky section nav beside the content ── */
+.doc-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; padding: 30px 0 90px; align-items: start; }
+.doc-nav { position: sticky; top: 26px; }
+.doc-nav .group {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--faint); margin: 20px 0 8px;
+}
+.doc-nav .group:first-child { margin-top: 0; }
+.doc-nav a {
+  display: block; font-size: 14px; color: var(--dim); padding: 5px 0 5px 12px;
+  border-left: 2px solid var(--line);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.doc-nav a:hover { color: var(--paper); }
+.doc-nav a.is-active { color: var(--amber); border-left-color: var(--amber); }
+@media (max-width: 900px) {
+  .doc-grid { grid-template-columns: 1fr; gap: 30px; }
+  .doc-nav { position: static; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: var(--panel); }
+}
+
+/* ── Content ── */
+.doc-body { max-width: 780px; min-width: 0; }
+.doc-body section { padding: 26px 0 6px; }
+.doc-body section + section { border-top: 1px solid var(--line); margin-top: 28px; }
+h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 6px 0 10px; scroll-margin-top: 24px; }
+h3 { font-size: 17px; font-weight: 700; margin: 26px 0 8px; scroll-margin-top: 24px; }
+.doc-body p, .doc-body li { font-size: 15px; color: var(--dim); }
+.doc-body p { margin: 10px 0; }
+.doc-body p strong, .doc-body li strong { color: var(--paper); }
+.doc-body ol, .doc-body ul { margin: 10px 0 14px 22px; }
+.doc-body li { margin: 6px 0; }
+.doc-body li::marker { color: var(--faint); font-family: var(--mono); font-size: 13px; }
+
+/* Inline code + command blocks */
+code {
+  font-family: var(--mono); font-size: 13px; color: var(--paper);
+  background: rgba(232, 237, 242, 0.06); padding: 1px 6px; border-radius: 4px;
+}
+pre {
+  margin: 14px 0; padding: 14px 18px; overflow-x: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  font-family: var(--mono); font-size: 13px; line-height: 1.7; color: var(--paper);
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+pre .c { color: var(--faint); }
+
+/* Tables (export settings, versions, troubleshooting) */
+.doc-table { width: 100%; overflow-x: auto; margin: 14px 0; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 8px 12px; border: 1px solid var(--line); font-size: 14px; vertical-align: top; }
+th {
+  font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--faint); background: rgba(20, 25, 34, 0.6);
+}
+td { color: var(--dim); }
+td strong { color: var(--paper); }
+
+/* Callouts: plain fact panels. `.truth` is the honesty callout — what has and has not
+   been verified, stated rather than implied (the docs must stay true on the day
+   someone tries it). */
+.callout {
+  margin: 16px 0; padding: 13px 17px; border: 1px solid var(--line); border-left: 3px solid var(--amber);
+  border-radius: 0 8px 8px 0; background: rgba(20, 25, 34, 0.55); font-size: 14px; color: var(--dim);
+}
+.callout strong { color: var(--paper); }
+.callout.truth { border-left-color: var(--faint); }
+.callout .lbl {
+  display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 4px;
+}
+.callout.truth .lbl { color: var(--faint); }
+
+/* Footer */
+footer {
+  display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;
+  padding: 30px 0 44px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px;
+}
+footer .fm { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+footer a { color: var(--dim); }
+footer a:hover { color: var(--paper); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
