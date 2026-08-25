@@ -10,9 +10,11 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  COST,
   POLICY,
   addJob,
   capacity,
+  costOf,
   ensureJobsDir,
   finishedSince,
   pending,
@@ -25,9 +27,30 @@ const NIGHT = 3; // 03:00 local
 const DAY = 14; // 14:00 local
 const PLENTY = 12_000; // MB free
 
-/** A job in whatever state the case needs, with the fields the scheduler reads. */
+/**
+ * A job in whatever state the case needs.
+ *
+ * The default command is a real e2e invocation, because that is the expensive case the budget
+ * exists for - a fixture with no command would be charged as one too (unknown is assumed heavy),
+ * but naming it keeps these tests honest about WHICH cost they are exercising.
+ */
 function job(id, over = {}) {
-  return { id, kind: 'gate', state: 'waiting', after: [], enqueuedAt: Number(id.slice(2)), pid: null, ...over };
+  return {
+    id,
+    kind: 'gate',
+    command: 'npm run test:e2e:affected',
+    checkout: `/wt/${id}`,
+    state: 'waiting',
+    after: [],
+    enqueuedAt: Number(id.slice(2)),
+    pid: null,
+    ...over,
+  };
+}
+
+/** A landing job - the cheap, network-bound kind that the weighting exists to let through. */
+function merge(id, over = {}) {
+  return job(id, { kind: 'merge', command: `node scripts/auto-merge.mjs --branch b-${id}`, ...over });
 }
 
 function tempQueue() {
@@ -57,13 +80,13 @@ test('work started outside the queue is subtracted from capacity', () => {
   assert.equal(capacity({ hour: DAY, freeMemMb: PLENTY, outsideRuns: 1 }), 0);
 });
 
-test('by day one job starts and the rest say why they are waiting', () => {
+test('by day one suite starts and the rest say why they are waiting', () => {
   const jobs = [job('j-0001'), job('j-0002'), job('j-0003')];
   const { start, waiting, slots } = schedule(jobs, { hour: DAY, freeMemMb: PLENTY });
   assert.deepEqual(start.map((j) => j.id), ['j-0001']);
   assert.equal(slots, 1);
   assert.deepEqual(waiting.map((w) => w.job.id), ['j-0002', 'j-0003']);
-  assert.match(waiting[0].reason, /capacity 1\/1/);
+  assert.match(waiting[0].reason, /budget 1\/1 used/);
 });
 
 test('at night two start together', () => {
@@ -72,27 +95,71 @@ test('at night two start together', () => {
   assert.deepEqual(start.map((j) => j.id), ['j-0001', 'j-0002']);
 });
 
-test('a running job occupies its slot', () => {
+test('a running suite occupies the whole day budget', () => {
   const jobs = [job('j-0001', { state: 'running', pid: 1 }), job('j-0002')];
   const { start, waiting } = schedule(jobs, { hour: DAY, freeMemMb: PLENTY });
   assert.deepEqual(start, []);
-  assert.match(waiting[0].reason, /capacity 1\/1/);
+  assert.match(waiting[0].reason, /budget 1\/1 used/);
 });
 
-test('a merge never runs beside anything, even at night', () => {
+test('two merges never overlap, whatever the clock says', () => {
   // This is what makes "land one branch at a time" structural instead of remembered.
-  const withMerge = [job('j-0001', { kind: 'merge' }), job('j-0002')];
-  const { start, waiting } = schedule(withMerge, { hour: NIGHT, freeMemMb: PLENTY });
-  assert.deepEqual(start.map((j) => j.id), ['j-0001'], 'the merge goes alone');
-  assert.match(waiting[0].reason, /merge runs alone/);
+  const two = [merge('j-0001'), merge('j-0002')];
+  const { start, waiting } = schedule(two, { hour: NIGHT, freeMemMb: PLENTY });
+  assert.deepEqual(start.map((j) => j.id), ['j-0001']);
+  assert.match(waiting[0].reason, /another landing is in flight/);
 
-  // And it will not start beside work already running.
-  const busy = [job('j-0001', { state: 'running', pid: 1 }), job('j-0002', { kind: 'merge' })];
-  assert.deepEqual(schedule(busy, { hour: NIGHT, freeMemMb: PLENTY }).start, []);
+  const oneRunning = [merge('j-0001', { state: 'running', pid: 1 }), merge('j-0002')];
+  assert.deepEqual(schedule(oneRunning, { hour: NIGHT, freeMemMb: PLENTY }).start, []);
+});
 
-  // Two merges never overlap either.
-  const twoMerges = [job('j-0001', { kind: 'merge' }), job('j-0002', { kind: 'merge' })];
-  assert.deepEqual(schedule(twoMerges, { hour: NIGHT, freeMemMb: PLENTY }).start.map((j) => j.id), ['j-0001']);
+test('a landing runs beside a suite in ANOTHER checkout, but never in its own', () => {
+  // The overnight case: five branches to land is five jobs that are almost entirely idle in
+  // `gh run watch`. Charging them a full slot each would queue them behind a suite for no reason.
+  const elsewhere = [job('j-0001', { state: 'running', pid: 1, checkout: '/wt/a' }), merge('j-0002', { checkout: '/wt/b' })];
+  assert.deepEqual(
+    schedule(elsewhere, { hour: NIGHT, freeMemMb: PLENTY }).start.map((j) => j.id),
+    ['j-0002'],
+    'a landing in another worktree is harmless beside a suite',
+  );
+
+  // Same checkout is a different matter: the merge rewrites the tree the suite is reading.
+  const sameTree = [job('j-0001', { state: 'running', pid: 1, checkout: '/wt/a' }), merge('j-0002', { checkout: '/wt/a' })];
+  const { start, waiting } = schedule(sameTree, { hour: NIGHT, freeMemMb: PLENTY });
+  assert.deepEqual(start, []);
+  assert.match(waiting[0].reason, /using that checkout/);
+
+  // And nothing else starts in a checkout a landing is already using.
+  const mergeFirst = [merge('j-0001', { state: 'running', pid: 1, checkout: '/wt/a' }), job('j-0002', { checkout: '/wt/a' })];
+  assert.deepEqual(schedule(mergeFirst, { hour: NIGHT, freeMemMb: PLENTY }).start, []);
+});
+
+test('several landings fit inside one suite-equivalent', () => {
+  // 0.15 each: the day budget of 1.0 holds six of them, and they still drain one at a time
+  // because two merges never overlap.
+  const many = [merge('j-0001'), merge('j-0002'), merge('j-0003')];
+  const { start } = schedule(many, { hour: DAY, freeMemMb: PLENTY });
+  assert.deepEqual(start.map((j) => j.id), ['j-0001'], 'serial by the merge rule, not by the budget');
+  assert.ok(costOf(many[0]) * 3 < 1, 'three landings cost less than one suite');
+});
+
+test('cost is read from the command, and an unrecognised command is assumed expensive', () => {
+  assert.equal(costOf({ command: 'npm run test:e2e:affected', kind: 'gate' }), COST.browser);
+  assert.equal(costOf({ command: 'node scripts/l3-sweep.mjs scoreboard', kind: 'sweep' }), COST.browser);
+  assert.equal(costOf({ command: 'npm run build', kind: 'gate' }), COST.other);
+  assert.equal(costOf({ command: 'node --test scripts/x.test.mjs', kind: 'gate' }), COST.other);
+  assert.equal(costOf({ command: 'node scripts/auto-merge.mjs --branch x', kind: 'merge' }), COST.merge);
+  // The asymmetry that matters: undercharging an expensive job puts two dev servers and eight
+  // browser workers on a 16 GB laptop; overcharging a cheap one costs some wall clock at night.
+  assert.equal(costOf({ command: 'some-tool-nobody-listed', kind: 'gate' }), COST.browser);
+  assert.equal(costOf({ command: 'npm run build', kind: 'gate', cost: 0.9 }), 0.9, 'an explicit cost wins');
+});
+
+test('a cheap job runs beside a suite at night', () => {
+  const jobs = [job('j-0001', { state: 'running', pid: 1 }), job('j-0002', { command: 'npm run build' })];
+  assert.deepEqual(schedule(jobs, { hour: NIGHT, freeMemMb: PLENTY }).start.map((j) => j.id), ['j-0002']);
+  // ...but not by day, where the whole budget is one suite.
+  assert.deepEqual(schedule(jobs, { hour: DAY, freeMemMb: PLENTY }).start, []);
 });
 
 test('a dependency holds a job back until it is green, and names what it waits on', () => {

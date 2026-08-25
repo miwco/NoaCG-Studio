@@ -27,6 +27,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gitCommonDir } from './dev-port.mjs';
+import { invokesE2e, invokesSweep } from './command-match.mjs';
 
 /** Job lifecycle. `waiting` and `running` are live; the rest are terminal. */
 export const LIVE_STATES = Object.freeze(['waiting', 'running']);
@@ -34,10 +35,26 @@ export const LIVE_STATES = Object.freeze(['waiting', 'running']);
 /** What a job is. `merge` never runs beside anything, whatever the clock says. */
 export const KINDS = Object.freeze(['gate', 'merge', 'sweep']);
 
+/**
+ * What a job COSTS, in suite-equivalents.
+ *
+ * Counting jobs was the crude part. A Playwright suite is a dev server plus four browser workers
+ * - two of them together were measured at 34 `chrome-headless-shell` processes, 93% CPU and
+ * under 2 GB free. A merge job is almost entirely `gh run watch` waiting on GitHub's network,
+ * and it used to occupy a whole slot for ten minutes while a suite queued behind it. That is the
+ * overnight case exactly: "land these five branches" is five jobs that are nearly all idle.
+ *
+ * Heavy work is classified by `command-match.mjs`, the repo's ONE named list of what starts
+ * browser work - the same authority the guard hook and the process detector read, so a script
+ * that is heavy here is heavy everywhere rather than in a second opinion that can drift.
+ */
+export const COST = Object.freeze({ browser: 1, merge: 0.15, other: 0.4 });
+
 /** Capacity policy. Night is for agents; the day belongs to the person using the laptop. */
 export const POLICY = Object.freeze({
   nightFrom: 0, // 00:00 local, inclusive
   nightTo: 7, //  07:00 local, exclusive
+  /** Budgets in suite-equivalents, not job counts. */
   byDay: 1,
   byNight: 2,
   /**
@@ -143,7 +160,38 @@ export function addJob(dir, { command, checkout, branch = null, kind = 'gate', a
 export function capacity({ hour, freeMemMb, outsideRuns = 0, policy = POLICY }) {
   if (freeMemMb < policy.freeMemFloorMb) return 0;
   const isNight = hour >= policy.nightFrom && hour < policy.nightTo;
-  return Math.max(0, (isNight ? policy.byNight : policy.byDay) - outsideRuns);
+  // An outside run is browser work by definition - `activeRuns` only reports Playwright CLIs and
+  // sweeps - so it costs a full suite-equivalent.
+  return Math.max(0, (isNight ? policy.byNight : policy.byDay) - outsideRuns * COST.browser);
+}
+
+/**
+ * Commands we KNOW are cheap: CPU and a little RAM, no dev server, no browser.
+ *
+ * The list is deliberately short and explicit. Everything it does not recognise is charged as a
+ * full suite, because the failure directions are not symmetric: charging a cheap job too much
+ * costs some wall clock at night, while charging an expensive one too little puts two dev
+ * servers and eight browser workers on a 16 GB laptop and slows everything down at once.
+ */
+const CHEAP = [/\bnpm\s+run\s+build\b/, /\bnode\s+--test\b/, /\bnpm\s+run\s+lint\b/, /\btsc\b/, /\bnpm\s+run\s+check:/];
+
+/**
+ * What one job costs, in suite-equivalents.
+ *
+ * A job records its cost when it is queued, so the number is visible in the queue and stable for
+ * the job's whole life; this is where that default comes from.
+ */
+export function costOf(job) {
+  if (typeof job.cost === 'number') return job.cost;
+  if (job.kind === 'merge') return COST.merge;
+  const command = job.command ?? '';
+  if (invokesE2e(command) || invokesSweep(command)) return COST.browser;
+  return CHEAP.some((p) => p.test(command)) ? COST.other : COST.browser;
+}
+
+/** Budgets are fractional; print them without floating-point noise. */
+function round(n) {
+  return Math.round(n * 100) / 100;
 }
 
 /** Whether a job's `after:` dependencies have all finished green. */
@@ -173,7 +221,7 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
 
   const start = [];
   const waiting = [];
-  let used = running.length;
+  let used = running.reduce((sum, j) => sum + costOf(j), 0);
   const mergeLive = () => [...running, ...start].some((j) => j.kind === 'merge');
 
   for (const job of jobs.filter((j) => j.state === 'waiting')) {
@@ -185,22 +233,39 @@ export function schedule(jobs, { hour, freeMemMb, outsideRuns = 0, policy = POLI
       waiting.push({ job, reason: `waiting on ${job.after.filter((id) => byId.get(id)?.state !== 'done').join(', ')}` });
       continue;
     }
-    // A merge never runs beside anything, and nothing starts beside a merge. That is what makes
-    // "one branch at a time" structural rather than remembered.
-    if (mergeLive() || (job.kind === 'merge' && used > 0)) {
-      waiting.push({ job, reason: 'a merge runs alone' });
+    // TWO MERGES NEVER OVERLAP. That is what makes "land one branch at a time" structural
+    // rather than remembered, and it holds whatever the clock or the budget says.
+    if (job.kind === 'merge' && mergeLive()) {
+      waiting.push({ job, reason: 'another landing is in flight' });
+      continue;
+    }
+    // A merge rewrites the working tree of the checkout it runs in, so it must not run beside
+    // anything IN THAT CHECKOUT - a suite there would have the ground moved under it mid-run.
+    // Beside work in a DIFFERENT worktree it is harmless, which is what lets a night drain
+    // several landings alongside a suite instead of behind it.
+    const sharesCheckout = (a, b) => String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase();
+    const live = [...running, ...start];
+    if (
+      (job.kind === 'merge' && live.some((j) => sharesCheckout(j.checkout, job.checkout))) ||
+      live.some((j) => j.kind === 'merge' && sharesCheckout(j.checkout, job.checkout))
+    ) {
+      waiting.push({ job, reason: 'a landing is using that checkout' });
       continue;
     }
     if (freeMemMb < policy.freeMemFloorMb) {
       waiting.push({ job, reason: `only ${(freeMemMb / 1024).toFixed(1)} GB RAM free` });
       continue;
     }
-    if (used >= slots) {
-      waiting.push({ job, reason: `capacity ${used}/${slots}${outsideRuns ? ` (${outsideRuns} outside this queue)` : ''}` });
+    const cost = costOf(job);
+    if (used + cost > slots) {
+      waiting.push({
+        job,
+        reason: `budget ${round(used)}/${round(slots)} used${outsideRuns ? `, ${outsideRuns} run(s) outside this queue` : ''}`,
+      });
       continue;
     }
     start.push(job);
-    used += 1;
+    used += cost;
   }
   return { start, waiting, running, slots };
 }

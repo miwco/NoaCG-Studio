@@ -28,6 +28,7 @@ import { nodeProcesses } from './e2e-runs.mjs';
 import {
   POLICY,
   addJob,
+  costOf,
   ensureJobsDir,
   finishedSince,
   jobsDir,
@@ -127,9 +128,13 @@ function cmdList() {
     console.log('Job queue empty.');
     return;
   }
-  console.log(`Job queue - ${slots} slot(s) right now, ${runnerPid() ? 'runner live' : 'NO RUNNER (start with --runner)'}`);
+  const spent = running.reduce((sum, j) => sum + costOf(j), 0);
+  console.log(
+    `Job queue - budget ${Math.round(spent * 100) / 100}/${slots} suite-equivalents in use, ` +
+      `${runnerPid() ? 'runner live' : 'NO RUNNER (start with --runner)'}`,
+  );
   for (const job of running) {
-    console.log(`  running  ${job.id}  ${elapsed(job.startedAt)}  ${job.command}`);
+    console.log(`  running  ${job.id}  ${elapsed(job.startedAt)}  [${costOf(job)}]  ${job.command}`);
   }
   waiting.forEach(({ job, reason }, i) => {
     console.log(`  #${i + 1}       ${job.id}  ${reason}  ${job.command}`);

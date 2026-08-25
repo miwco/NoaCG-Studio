@@ -263,9 +263,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    times beside a live suite. Name a new browser-driving script like its siblings (`*bench*`,
    `*spike*`, `*-sweep`) or add it there.
    **Do not sit and wait for a slot - ENQUEUE.** `npm run queue -- "<command>"` returns a job id
-   at once, and one runner per machine drains the queue (one job by day, two at night, never two
-   merges, nothing below a free-RAM floor). `npm run jobs` shows what is running and why anything
-   is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
+   at once, and one runner per machine drains the queue against a BUDGET in suite-equivalents:
+   1.0 by day, 2.0 between 00:00 and 07:00, nothing below a free-RAM floor. A suite (or anything
+   unrecognised) costs 1.0, a build or `node --test` 0.4, a landing 0.15 - so a night drains
+   several landings beside a suite instead of behind it. `npm run jobs` shows what is running and
+   why anything is waiting; SessionStart prints the same plus what finished while you were away. Waiting in
    the foreground is what used to lose hours: the shell tool is killed at 600 s with the wait
    still running, so the work never started and nothing anywhere said so
    (`docs/JOB_RUNNER_PLAN.md`). The `:queued` scripts remain for when you need the VERDICT now -

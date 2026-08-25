@@ -91,21 +91,54 @@ node scripts/jobs.mjs --runner                           # the drain loop itself
 decides such things - by looking for the process in the OS table, not by a lock file - so a
 crashed runner leaves nothing behind to clean up.
 
-### Capacity policy
+### Capacity policy - a BUDGET, not a job count
 
-Capacity is recomputed before every start, never cached:
+**One runner is an election, not a throughput limit.** The runner is the scheduler; jobs run as
+separate processes beside it. Two runners would both read the queue, both see the same free slot
+and both start the same job - the exact collision the queue removes. Parallelism is the budget
+below, and that is the only knob worth turning.
 
-- **Day (07:00-24:00 Helsinki): 1 job.** The owner needs the machine for email and the web.
-- **Night (00:00-07:00 Helsinki): 2 jobs.** Nights are for agents; fans are allowed to be loud.
+Jobs are weighted in **suite-equivalents**, because counting them was the crude part:
+
+| job | cost | why |
+|---|---|---|
+| e2e suite, sweep, bench | **1.0** | a dev server plus four browser workers; two at once measured 34 browser processes, 93% CPU, under 2 GB free |
+| anything unrecognised | **1.0** | assumed expensive - see the asymmetry below |
+| `npm run build`, `node --test`, lint, `tsc`, `check:*` | **0.4** | CPU, little RAM, no browser |
+| a landing (`auto-merge`) | **0.15** | almost entirely `gh run watch`, waiting on GitHub's network |
+
+Heavy work is classified by `command-match.mjs` - the repo's ONE named list of what starts
+browser work, read by the guard hook and the process detector too, so a script that is heavy here
+is heavy everywhere rather than in a second opinion that can drift.
+
+**The asymmetry decides the default.** Charging a cheap job too much costs some wall clock at
+night. Charging an expensive one too little puts two dev servers and eight browser workers on a
+16 GB laptop and slows everything down at once. So only explicitly-listed commands get a
+discount; everything else pays a full suite.
+
+Budget, recomputed before every start and never cached:
+
+- **Day (07:00-24:00 Helsinki): 1.0.** Never two suites while someone is using the machine.
+- **Night (00:00-07:00 Helsinki): 2.0.** Two suites, or one suite plus a night's worth of
+  landings draining beside it rather than behind it.
 - **A free-RAM floor overrides the clock in both directions.** Below the floor nothing new starts,
   however many slots the schedule allows. Ship the floor at 4 GB and tune it from the log.
+- **A free-RAM floor overrides the budget in both directions.** Below it nothing new starts,
+  whatever the clock allows. `NOACG_JOBS_FREE_MB` retunes it; a runner keeps the environment it
+  started with, so restart it after changing.
 - **Work started outside the queue still counts.** Another coding agent - Codex, or a hand-run
   command - never touches `jobs.mjs` and is invisible to the queue, but it IS visible to
-  `activeRuns()`. The runner subtracts that from its capacity before starting anything.
-  Cooperation is an optimisation here; the process table stays the source of truth.
+  `activeRuns()`, which only ever reports browser work. Each such run costs a full
+  suite-equivalent, subtracted before anything starts. Cooperation is an optimisation here; the
+  process table stays the source of truth.
+- **Landings are serial by their own rule, not by the budget.** Two merges never overlap however
+  cheap they are, and a landing never runs beside anything in the SAME checkout - it rewrites the
+  tree a suite there would be reading. Beside a suite in a different worktree it is harmless,
+  which is the whole point of the 0.15.
 
-Night = 2 is a starting point, not a promise. 16 GB with 4 workers per run is tight, and the log
-records per-job peak RAM so the number can be set from evidence rather than taste.
+Night = 2.0 is a starting point, not a promise, and it is probably already at the memory wall
+rather than conservative: past it a RAM-bound box pages, and every job slows down together, so
+more parallel stops being more throughput. Raise it only against measurements.
 
 ### Per-job cap
 
