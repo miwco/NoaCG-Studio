@@ -250,9 +250,15 @@ The tag is the one manual step, and deliberately so: a landing can be re-landed,
 version can never be taken back**, so it stays a decision a human makes.
 
 **A rehearsal costs nothing.** Run the workflow from the Actions tab with `dry_run` left checked
-(its default): every guard, the install, typecheck, build, tests and `npm publish --dry-run` run
-for real, and the job stops at the registry call without burning a version. Unchecking `dry_run`
-publishes - the same thing a tag push does, for when a tagged run needs re-driving.
+(its default): every guard, the install, typecheck, build, the tests and `npm pack --dry-run` run
+for real, and the job stops without burning a version. Unchecking `dry_run` publishes - the same
+thing a tag push does, for when a tagged run needs re-driving.
+
+The packing proof (`npm pack --dry-run`) touches no registry, so it runs whatever state the version
+is in. The step after it (`npm publish --dry-run`) is the first that talks to the registry, and it
+runs **only when the version is free** - `npm publish --dry-run` refuses a version that already
+exists, so on a tree whose version is already published a dry run would otherwise only ever be able
+to fail. A real publish always reaches it, because a taken version is refused long before.
 
 **What the workflow refuses**, each one a way a release has gone wrong somewhere before:
 
@@ -260,7 +266,7 @@ publishes - the same thing a tag push does, for when a tagged run needs re-drivi
 |---|---|
 | the commit is not an ancestor of `origin/main` | a published version must be a version on main - this is what makes that structural rather than remembered |
 | a `cli-vX.Y.Z` tag that disagrees with `cli/package.json` | a tag naming a version it does not release is always a mistake |
-| the version already exists on the registry | npm would refuse too; here the answer is readable and arrives in seconds |
+| the version already exists on the registry | npm would refuse too; here the answer is readable and arrives in seconds. A dry run downgrades this to a notice, so a rehearsal is not limited to the window between a bump and its release |
 | `build-skill.mjs --check` finds drift, or the build changes a tracked file | the bump was committed without running the generator, so the plugin would advertise the previous version |
 | `npm --version` below 11.5.1 | trusted publishing needs it; the workflow upgrades npm and then asserts, because the install succeeding proves nothing about what is on PATH |
 | the run is on a fork | `github.repository` is pinned and there is no `pull_request` trigger at all |

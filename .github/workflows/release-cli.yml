@@ -128,20 +128,31 @@ jobs:
           fi
           echo "Tag $TAG matches cli/package.json."
 
-      # The registry is the authority on what already exists.
-      - name: Refuse a version that is already published
+      # The registry is the authority on what already exists. A real publish must refuse a taken
+      # version; a DRY RUN must not, or the rehearsal would only ever work in the narrow window
+      # between bumping the version and releasing it - which is exactly when nobody rehearses.
+      - name: Is the version free?
+        id: free
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          # `npm view <pkg>@<missing-version> version` prints nothing and exits 0; a package that
-          # does not exist at all is an E404 exit 1. Both mean "free to publish", so only NON-EMPTY
-          # output is a refusal - `|| true` keeps the E404 from failing the step under `bash -e`.
+          # `npm view <pkg>@<missing-version> version` prints nothing; whether it exits 0 or E404
+          # depends on whether the PACKAGE exists, and both mean "free to publish". So the answer
+          # is the OUTPUT, not the exit code - `|| true` keeps the E404 from failing the step.
           FOUND="$(npm view "@noacg/cli@$VERSION" version 2>/dev/null || true)"
-          if [ -n "$FOUND" ]; then
-            echo "::error title=Already published::@noacg/cli@$VERSION is already on the registry. Bump cli/package.json."
-            exit 1
+          if [ -z "$FOUND" ]; then
+            echo "free=true" >> "$GITHUB_OUTPUT"
+            echo "@noacg/cli@$VERSION is free."
+            exit 0
           fi
-          echo "@noacg/cli@$VERSION is free."
+          echo "free=false" >> "$GITHUB_OUTPUT"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "::notice title=Version already published::@noacg/cli@$VERSION is already on the registry, so this dry run rehearses everything except the registry call itself. Bump cli/package.json to rehearse that too."
+            exit 0
+          fi
+          echo "::error title=Already published::@noacg/cli@$VERSION is already on the registry. Bump cli/package.json."
+          exit 1
 
       # THE TRAP (cli/scripts/build-skill.mjs): a version bump must run the skill generator, which
       # stamps the two plugin manifests and the root marketplace entry. A bump committed without it
@@ -164,11 +175,19 @@ jobs:
       - name: Test
         run: npm --prefix cli test
 
-      # Everything the real publish does except the upload. `prepack` re-runs the full build, so
-      # what is packed here is what would be packed for real - which is also why a stale local
-      # dist/ can never be shipped. This is the step a dry-run dispatch exists to reach: it proves
-      # the whole path up to the registry call without burning a version.
-      - name: Pack exactly as a publish would (dry run)
+      # Build the exact tarball a publish would upload, and print its contents. `prepack` re-runs
+      # the full build, so what is packed here is what would be packed for real - which is also why
+      # a stale local dist/ can never be shipped. This step touches no registry, so it proves the
+      # packaging whatever the version's state.
+      - name: Pack exactly as a publish would
+        working-directory: cli
+        run: npm pack --dry-run
+
+      # The last step before the upload, and the first that talks to the registry: it resolves the
+      # package, refuses a taken version, and reports the tag and access it would publish with.
+      # Only reachable with a free version - see "Is the version free?" above.
+      - name: Rehearse the publish
+        if: ${{ steps.free.outputs.free == 'true' }}
         working-directory: cli
         run: npm publish --dry-run
 
@@ -176,8 +195,13 @@ jobs:
         if: ${{ inputs.dry_run }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          FREE: ${{ steps.free.outputs.free }}
         run: |
-          echo "::notice title=Dry run::@noacg/cli@$VERSION packed cleanly and was NOT published. Re-run with dry_run unchecked, or push the tag cli-v$VERSION, to publish for real."
+          if [ "$FREE" = "true" ]; then
+            echo "::notice title=Dry run::@noacg/cli@$VERSION packed cleanly and rehearsed against the registry. Nothing was published. Re-run with dry_run unchecked, or push the tag cli-v$VERSION, to publish for real."
+          else
+            echo "::notice title=Dry run::@noacg/cli@$VERSION packed cleanly. Nothing was published, and the registry rehearsal was skipped because that version already exists."
+          fi
 
       # The publish itself. No NODE_AUTH_TOKEN, no .npmrc secret, nothing to leak: npm exchanges
       # the GitHub OIDC token for a short-lived credential, which is what `id-token: write` is for.

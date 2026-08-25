@@ -28,7 +28,7 @@
   ],
   "type": "module",
   "bin": {
-    "noacg": "./dist/index.js"
+    "noacg": "dist/index.js"
   },
   "files": [
     "dist",

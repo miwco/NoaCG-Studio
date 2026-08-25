@@ -26,9 +26,11 @@ Tokens. Until they are revoked, the risk this whole change removes is still live
 publish as you, from anywhere it has leaked to, and one of them bypasses 2FA.
 
 **Then prove it, without spending a version:** Actions → "Release CLI to npm" → Run workflow, leave
-`dry_run` checked. It runs every guard, the build, the tests and `npm publish --dry-run`. Before
-step 1 that dry run already passes (a dry run never reaches the registry), so what step 1 actually
-buys is the real publish - which is proven on the next version bump, not before.
+`dry_run` checked. It runs every guard, the build, the tests and `npm pack --dry-run`. That dry run
+passes whether or not step 1 is done, because a dry run never authenticates - so what step 1 buys
+is the real publish, which is proven on the next version bump and not before. `cli/package.json` is
+still at 0.2.0, which is published, so the dry run will say it skipped the registry rehearsal; that
+notice is expected, not a fault.
 
 **The first real release is the proof.** Watch for: the run reaching `Publish` (not stopping at
 `Stop here (dry run)`); no 401/403 at the registry call; and a **provenance** badge on
