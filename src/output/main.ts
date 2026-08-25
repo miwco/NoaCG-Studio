@@ -19,7 +19,16 @@ import {
   untilAnswered,
   type ControlEventRow,
 } from '../control/hostedControl';
-import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, rowInstant, type ClockSpec } from '../control/matchClockWire';
+import {
+  clockRowEffect,
+  clockSpecFromHtml,
+  clockValueAfterUpdate,
+  rowInstant,
+  speakingClockRowEffect,
+  speakingClocksFromHtml,
+  type ClockSpec,
+  type SpeakingClockPair,
+} from '../control/matchClockWire';
 import { alreadyInSnapshot, planOutputRecovery } from '../control/outputRecovery';
 import { createOutputStage } from './stage';
 
@@ -164,35 +173,65 @@ async function boot(): Promise<void> {
   // three land in `mergedData`, which is what the report persists and what boot recovery
   // replays — which is the whole recovery. ──
   const clockSpecs = new Map<string, ClockSpec>();
+  // …and the SPEAKING CLOCKS: a debate board runs two, alternating, and the same snapshot
+  // problem bites twice as hard there — a renderer rebuilding mid-speech had no row left to
+  // replay and came back at the allowance. Which of the two is running is not asked of the
+  // machine; the stamp itself carries it (control/matchClockWire.ts).
+  const speakingClocks = new Map<string, SpeakingClockPair>();
   for (const spec of resolved.output.graphics) {
     const clock = clockSpecFromHtml(spec.html);
     if (clock) clockSpecs.set(spec.key, clock);
+    const speaking = speakingClocksFromHtml(spec.html);
+    if (speaking) speakingClocks.set(spec.key, speaking);
   }
   // WHICH row moves the clock, to what, and in which order is `clockRowEffect` — pure, in
   // control/matchClockWire.ts, so an offline spec can drive it. This page only ever runs against
   // a live backend, and a decision left in this closure could be verified nowhere.
-  const applyClock = (graphic: string, clock: ClockSpec, value: string) => {
-    mergedData.set(graphic, { ...mergedData.get(graphic), [clock.field]: value });
-    stage.apply(graphic, { t: 'update', data: { [clock.field]: value } });
+  const applyClock = (graphic: string, values: Record<string, string>) => {
+    mergedData.set(graphic, { ...mergedData.get(graphic), ...values });
+    stage.apply(graphic, { t: 'update', data: values });
   };
 
   const apply = (row: ControlEventRow) => {
     lastAppliedId = Math.max(lastAppliedId, row.id);
     // Already inside the state this graphic was rebuilt from — replaying it would re-air it.
     if (alreadyInSnapshot(snapshotAt, row.graphic, row.id)) return;
-    const msg = row.msg;
+    // `let`, because an update row's CLOCK fields are forwarded as this renderer HOLDS them
+    // rather than as the row carried them — see the rewrite in the update branch below.
+    let msg = row.msg;
     if (msg.t === 'update') {
       const merged = { ...mergedData.get(row.graphic), ...msg.data };
-      // …except the CLOCK field, which is not an ordinary value: a resend of the cue's plain
+      // …except the CLOCK fields, which are not ordinary values: a resend of the cue's plain
       // time must not erase the origin this renderer stamped onto it (clockValueAfterUpdate).
       const held = clockSpecs.get(row.graphic);
-      if (held && msg.data[held.field] !== undefined) {
-        merged[held.field] = clockValueAfterUpdate(
-          mergedData.get(row.graphic)?.[held.field],
-          msg.data[held.field],
-        );
-      }
+      const prior = mergedData.get(row.graphic);
+      const data = msg.data;
+      const clockFields: string[] = [];
+      const keepOrigin = (field: string) => {
+        clockFields.push(field);
+        if (data[field] === undefined) return;
+        merged[field] = clockValueAfterUpdate(prior?.[field], data[field]);
+      };
+      if (held) keepOrigin(held.field);
+      // Both speaking clocks, for the same reason and by the same rule: the cue stores the plain
+      // allowance forever, so every Take mid-debate re-sends "05:00" over a running speech.
+      const pair = speakingClocks.get(row.graphic);
+      if (pair) { keepOrigin(pair.fieldA); keepOrigin(pair.fieldB); }
       mergedData.set(row.graphic, merged);
+      // AND THE STAGE IS SENT WHAT WE NOW HOLD, not what the row carried. The template runs its
+      // own guard against a resend, but it can only compare the value it last RECEIVED — and
+      // once a clock has moved away from what the cue stores (a debate's second speech, a match
+      // clock restarted after the interval) the cue's plain time is no longer equal to it, so
+      // the resend reads as a correction and pulls a running clock back to the cue's value.
+      // Forwarding the merged value settles it here instead: a stamped value is time-relative,
+      // so re-sending it is always safe, and a genuine correction has already replaced it above.
+      if (clockFields.some((f) => data[f] !== undefined)) {
+        const forwarded = { ...data };
+        for (const field of clockFields) {
+          if (data[field] !== undefined) forwarded[field] = merged[field];
+        }
+        msg = { ...msg, data: forwarded };
+      }
     } else if (msg.t === 'event' && msg.payload) {
       mergedData.set(row.graphic, { ...mergedData.get(row.graphic), ...msg.payload });
     } else if (msg.t === 'play' || msg.t === 'snap') {
@@ -201,10 +240,17 @@ async function boot(): Promise<void> {
       liveGraphics.delete(row.graphic);
     }
     const clock = clockSpecs.get(row.graphic);
+    const speaking = speakingClocks.get(row.graphic);
+    // A graphic carries one kind of clock or the other, never both: the match clock is read from
+    // `.<prefix>-clock` and the speaking pair from `data-speaking`, and no design draws both.
     const effect = clock
       ? clockRowEffect(row, clock, mergedData.get(row.graphic)?.[clock.field], Date.now())
       : null;
-    if (clock && effect?.when === 'before') applyClock(row.graphic, clock, effect.value);
+    const pairEffect = speaking
+      ? speakingClockRowEffect(row, speaking, mergedData.get(row.graphic), Date.now())
+      : null;
+    if (clock && effect?.when === 'before') applyClock(row.graphic, { [clock.field]: effect.value });
+    if (pairEffect?.when === 'before') applyClock(row.graphic, pairEffect.values);
     // An EVENT carries WHEN it happened, from the row's own server time — the same instant every
     // renderer of this production reads, and the same one a replayed row carried when it was
     // first written. A graphic that runs a clock of its own (the debate board's two speaking
@@ -214,7 +260,8 @@ async function boot(): Promise<void> {
     // re-guessed: a server row's `created_at` wins, and a locally-authored row falls back to now,
     // which is correct there because that log has exactly one renderer.
     stage.apply(row.graphic, msg.t === 'event' ? { ...msg, at: rowInstant(row.created_at, Date.now()) } : msg);
-    if (clock && effect?.when === 'after') applyClock(row.graphic, clock, effect.value);
+    if (clock && effect?.when === 'after') applyClock(row.graphic, { [clock.field]: effect.value });
+    if (pairEffect?.when === 'after') applyClock(row.graphic, pairEffect.values);
     // Status rows ('cue'/'staged'/'live') are for the operator pages; the stage ignored them
     // and so does the report path.
     const forwarded = msg.t === 'update' || msg.t === 'play' || msg.t === 'stop' || msg.t === 'next' || msg.t === 'event' || msg.t === 'snap';

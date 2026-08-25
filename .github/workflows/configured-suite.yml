@@ -265,85 +265,17 @@ jobs:
         run: npm run test:e2e:live -- --reporter=list,json || true
 
       # A green exit code from this suite means nothing on its own; only the counts do.
+      # ONE implementation of the verdict, shared with hosted-latency.yml, because both run the
+      # SAME specs and must judge them identically. It was eighty lines of jq in this file until
+      # 2026-08-25; a shared e2e helper drifting between its two callers on the same day is what
+      # argued for extracting it. scripts/configured-verdict.test.mjs pins the behaviour, with a
+      # fixture for every shape a real run produced - including the all-skipped one that exits 0.
       - name: Assert the suite actually ran
         id: assert
-        run: |
-          set -uo pipefail
-          if [ ! -f configured-report.json ]; then
-            echo "::error title=No report::Playwright wrote no JSON report - the run never started."
-            echo "green=false" >> "$GITHUB_OUTPUT"
-            echo "summary=no JSON report - the run never started" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          expected=$(jq -r '.stats.expected // 0' configured-report.json)
-          unexpected=$(jq -r '.stats.unexpected // 0' configured-report.json)
-          flaky=$(jq -r '.stats.flaky // 0' configured-report.json)
-          skipped=$(jq -r '.stats.skipped // 0' configured-report.json)
-          ran=$((expected + unexpected + flaky))
-          echo "Ran ${ran} tests (${expected} passed, ${unexpected} failed, ${flaky} flaky), ${skipped} skipped."
-
-          {
-            echo "### Configured suite — tests executed"
-            echo ""
-            echo "${ran} ran, ${skipped} skipped, ${unexpected} failed, ${flaky} flaky."
-            echo ""
-            # Read the RESULT status, not `.ok` - a skipped spec reports ok:true, which is the
-            # very confusion this workflow exists to remove.
-            jq -r '[.. | objects | select(has("specs")) | .specs[]]
-                   | .[]
-                   | "- `\(.file)` — \(.title): \([.tests[]?.results[]?.status] | last // "not run")"' \
-              configured-report.json | sort
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          status=0
-          # WHICH spec skipped, not just how many.
-          unexpected_skips="$(jq -r --arg allowed "$ALLOWED_SKIPS" '
-            ($allowed | split(" ") | map(select(. != ""))) as $ok
-            | [.. | objects | select(has("specs")) | .specs[]]
-            | map(select(([.tests[]?.results[]?.status] | last) == "skipped"))
-            | map(.file) | unique | map(select(. as $f | ($ok | index($f)) | not))
-            | join(" ")' configured-report.json)"
-          if [ -n "$unexpected_skips" ]; then
-            echo "::error title=Unexpected skip::These spec files skipped:${unexpected_skips}. With a local stack nothing should skip - every credential and capability is present by construction, so a skip means the environment did not come up the way this job assumes."
-            status=1
-          fi
-          if [ "$ran" -lt "$MIN_TESTS" ]; then
-            echo "::error title=Too few tests ran::${ran} test(s) executed, expected at least ${MIN_TESTS}."
-            status=1
-          fi
-          if [ "$unexpected" -ne 0 ] || [ "$flaky" -ne 0 ]; then
-            echo "::error title=Configured suite is red::${unexpected} failed, ${flaky} flaky."
-            status=1
-          fi
-          if [ "$status" -eq 0 ]; then
-            echo "green=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "green=false" >> "$GITHUB_OUTPUT"
-          fi
-          echo "summary=${ran} ran, ${skipped} skipped, ${unexpected} failed, ${flaky} flaky" >> "$GITHUB_OUTPUT"
-
-          # FINGERPRINT THE FAILURE SET, so the issue step can tell "the same known problem again"
-          # from "something new". nightly.yml has carried this idea since the sprint began; the
-          # rule there and here is the same - drift that has already been reported is reported
-          # ONCE, not once per night.
-          #
-          # The identity is file + title of every spec with ANY non-passing attempt, sorted so
-          # ordering noise cannot change the hash, and it deliberately does NOT include the run id,
-          # the SHA or a timestamp: two runs failing the same way must hash the same.
-          #
-          # ANY attempt, not the LAST one - a flake is `failed > passed`, so a filter reading only
-          # the final status sees `passed` and hashes the empty set. Written that way first and
-          # caught against two real reports that both fingerprinted as SHA1("") while each held a
-          # flaky spec; it would have suppressed nothing, silently, which is the failure mode this
-          # whole workflow exists to avoid.
-          failset="$(jq -r '[.. | objects | select(has("specs")) | .specs[]]
-            | map(select([.tests[]?.results[]?.status] | any(. != "passed")))
-            | map("\(.file)::\(.title)") | sort | join("\n")' configured-report.json)"
-          failhash="$(printf '%s' "$failset" | sha1sum | cut -c1-12)"
-          echo "failhash=${failhash}" >> "$GITHUB_OUTPUT"
-          # Hard failures are never suppressed, however familiar they look - only flakes are.
-          echo "hardfail=${unexpected}" >> "$GITHUB_OUTPUT"
-          printf 'failure set (%s):\n%s\n' "$failhash" "$failset"
+        run: >-
+          node scripts/configured-verdict.mjs configured-report.json
+          --min "$MIN_TESTS" --allow "$ALLOWED_SKIPS"
+          --label "Configured suite (local stack)"
 
       # Container logs are the difference between "the playout specs are red" and "realtime never
       # came up". Only on failure, and only the stack's own logs.

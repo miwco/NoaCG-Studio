@@ -1,4 +1,9 @@
-// THE MATCH CLOCK ON THE WIRE (docs/CLOUD_PLAYOUT.md §3, docs/SPORTS_PACK.md).
+// CLOCKS ON THE WIRE (docs/CLOUD_PLAYOUT.md §3, docs/SPORTS_PACK.md).
+//
+// Two halves, one doctrine. The first is the MATCH CLOCK — one clock, started and stopped by the
+// operator. The second, at the bottom of this file, is the debate board's pair of SPEAKING
+// CLOCKS, which alternate; it reuses every primitive here and adds no new idea, only a second
+// shape. What follows is the match clock's story, and it is the story of both.
 //
 // A match clock is the one piece of a graphic whose truth is a moving number, and a moving
 // number cannot be recovered from a snapshot of the commands that moved it. Until 2026-08-19 it
@@ -207,6 +212,216 @@ export function clockRowEffect(
     // recover a different time from the one on air.
     case 'clockReset':
       return { value: clock.resetTo, when: 'after' };
+    default:
+      return null;
+  }
+}
+
+// ═══ THE SPEAKING CLOCKS ON THE WIRE (docs/CLOUD_PLAYOUT.md §3, types/speakingTimer.ts) ═══
+//
+// A debate board runs TWO clocks and exactly one of them at a time, so everything above applies
+// twice — and the hard part is not the arithmetic, it is "which one is running". That is the
+// floor group's pointer, which is MACHINE state, and the wire must not learn to read machine
+// graphs to find it.
+//
+// IT DOES NOT HAVE TO. **The stamp IS the pointer.** The invariant this half keeps is a property
+// of the wire's own values, not of any state graph:
+//
+//     at most one of the two clock fields carries an origin stamp, and that one is running.
+//
+// From there every verb is arithmetic over a PAIR: `switch` banks the stamped clock as a plain
+// time and stamps the other one; with neither stamped it stamps the first, because somebody has
+// to open. `penalty` docks whichever clock is stamped. `reset` returns both to the allowance,
+// plain. Going off air banks the stamped one. No state id is named here and no edge is read: the
+// alternation lives in the two values themselves.
+//
+// It agrees with the machine because both describe the same two-sided board — the floor group's
+// `armed | speakerA | speakerB` under `switch` is the same three-way alternation as
+// `neither | a | b` under a moving stamp — and because the DESIGN'S OWN ENGINE
+// (`scoreboards/debateFloor.ts`) already decides it that way: `debateStart(side)` holds whoever
+// was running and picks the other up from its own number. If that engine ever stops alternating,
+// this stops being right, which is why the two are pinned by one spec rather than by a comment.
+//
+// THE STAMP DOES NOT COME OFF AT ZERO. A speaker who runs out keeps the floor — the engine keeps
+// `debateActive` set with the timer stopped — so dropping the stamp there would hand the next
+// `switch` to the wrong side. `speakingSecondsAt` floors at zero instead, and a stamped "00:00"
+// reads 00:00 however long it is left there.
+
+/**
+ * A published debate board's two clocks, read off its own markup.
+ *
+ * Unlike the match clock there is no pre-existing class contract to read (`.<prefix>-clock` is
+ * the SINGLE clock's name, and a board answering to it would be mistaken for one), so the design
+ * DECLARES its clocks with one attribute vocabulary: `data-speaking="a" | "b" | "allowance" |
+ * "penalty"`. One word to grep for, one reader, and nothing about the type registry or the
+ * machine reaches in here.
+ */
+export interface SpeakingClockPair {
+  /** The field ids the two clocks ride under. `a` is whoever opens when nobody has the floor. */
+  fieldA: string;
+  fieldB: string;
+  /** Each clock's value before the wire has said anything — the element's own initial text. */
+  seedA: string;
+  seedB: string;
+  /** The field holding the per-speaker allowance both clocks reset TO, and its initial text.
+   *  The field wins wherever the wire carries one: the chair can retype the allowance. */
+  allowanceField: string | null;
+  allowanceSeed: string;
+  /** The field holding one penalty's size in whole seconds, and its initial text. */
+  penaltyField: string | null;
+  penaltySeed: string;
+}
+
+/** What a board with no readable allowance falls back to — the engine's own default. */
+const SPEAKING_ALLOWANCE_FALLBACK = 300;
+/** …and its default penalty, for the same reason. */
+const SPEAKING_PENALTY_FALLBACK = 10;
+
+/**
+ * Read the two speaking clocks out of a published graphic's html, or null for the graphics that
+ * have none — which is nearly all of them. DOMParser rather than a regex, for the reason the
+ * match clock's reader gives: attribute order is not something a generated template promises,
+ * and a clock silently missed here is a clock that quietly stops recovering.
+ *
+ * A board declaring only one side is refused whole: half a pair cannot alternate, and guessing
+ * the other half would put a wrong number on air rather than none.
+ */
+export function speakingClocksFromHtml(html: string): SpeakingClockPair | null {
+  if (!html || html.indexOf('data-speaking') === -1) return null;
+  let doc: Document;
+  try {
+    doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
+  } catch {
+    return null;
+  }
+  const byRole = new Map<string, HTMLElement>();
+  for (const node of doc.body.querySelectorAll<HTMLElement>('[data-speaking]')) {
+    const role = node.getAttribute('data-speaking') ?? '';
+    if (role && !byRole.has(role)) byRole.set(role, node);
+  }
+  const a = byRole.get('a');
+  const b = byRole.get('b');
+  if (!a?.id || !b?.id) return null;             // a readout with no field id is not on the wire
+  const text = (el: HTMLElement | undefined): string => (el?.textContent ?? '').trim();
+  const allowance = byRole.get('allowance');
+  const penalty = byRole.get('penalty');
+  return {
+    fieldA: a.id,
+    fieldB: b.id,
+    seedA: text(a),
+    seedB: text(b),
+    allowanceField: allowance?.id || null,
+    allowanceSeed: text(allowance),
+    penaltyField: penalty?.id || null,
+    penaltySeed: text(penalty),
+  };
+}
+
+/** "05:00" — both halves padded, which is what a debate board paints and what the engine's own
+ *  `debateFormat` writes. (The match clock's `formatClock` leaves the minutes unpadded, because
+ *  broadcast reads a match time as "7:05"; a speaking clock reads "07:05".) */
+export function formatSpeakingClock(total: number): string {
+  const safe = total < 0 ? 0 : total;
+  const pad = (n: number): string => (n < 10 ? `0${n}` : String(n));
+  return `${pad(Math.floor(safe / 60))}:${pad(safe % 60)}`;
+}
+
+/** How many seconds a speaking clock has left at `now`: its plain value, less the time since its
+ *  origin. A speaking clock only ever counts DOWN, and never past zero. */
+export function speakingSecondsAt(raw: string | undefined | null, now: number): number {
+  const base = clockSeconds(raw);
+  const origin = clockOriginOf(raw);
+  if (origin === null) return base;
+  return Math.max(0, base - Math.max(0, Math.floor((now - origin) / 1000)));
+}
+
+/** What a speaking clock READS at `now` — a plain time, whether or not it was stamped. */
+export function speakingClockAt(raw: string | undefined | null, now: number): string {
+  return formatSpeakingClock(speakingSecondsAt(raw, now));
+}
+
+/** Which side holds the floor, according to the wire alone: the stamped one. `a` settles a tie
+ *  the invariant forbids, so the answer never depends on which field was read first. */
+export function runningSpeakingSide(
+  clocks: SpeakingClockPair,
+  held: Record<string, string> | undefined,
+): 'a' | 'b' | null {
+  if (clockOriginOf(held?.[clocks.fieldA]) !== null) return 'a';
+  if (clockOriginOf(held?.[clocks.fieldB]) !== null) return 'b';
+  return null;
+}
+
+/** What one log row does to the two clocks: the field values it settles, and whether they must be
+ *  written before or after the row itself. The two `when`s mean what the match clock's mean. */
+export interface SpeakingClockEffect {
+  values: Record<string, string>;
+  when: 'before' | 'after';
+}
+
+/**
+ * THE ONE PLACE A LOG ROW IS READ AS A MOVE OF A DEBATE'S TWO CLOCKS. Pure for the reason the
+ * match clock's is: the renderer that uses it only runs against a live backend, so a decision
+ * left inside its boot closure could be driven by no offline spec at all.
+ *
+ * `held` is the graphic's whole merged value set, because three of its fields matter here — the
+ * two clocks, the allowance and the penalty size — and every one of them can be retyped
+ * mid-debate. Each falls back to the design's own seed only until the wire has said something.
+ *
+ * Returns null for every row that does not move a clock, which is nearly all of them.
+ */
+export function speakingClockRowEffect(
+  row: Pick<ControlEventRow, 'msg' | 'created_at'>,
+  clocks: SpeakingClockPair,
+  held: Record<string, string> | undefined,
+  now: number,
+): SpeakingClockEffect | null {
+  const at = rowInstant(row.created_at, now);
+  const fieldOf = (side: 'a' | 'b'): string => (side === 'a' ? clocks.fieldA : clocks.fieldB);
+  const valueOf = (side: 'a' | 'b'): string =>
+    held?.[fieldOf(side)] ?? (side === 'a' ? clocks.seedA : clocks.seedB);
+  const running = runningSpeakingSide(clocks, held);
+
+  // Off air nobody holds the floor: the engine's `holdClocks` freezes the running clock where it
+  // stands, so the wire banks the same number. Without this a board taken down mid-speech keeps
+  // its stamp, and a renderer booting an hour later paints a clock that "ran" while off air.
+  if (row.msg.t === 'stop') {
+    if (!running) return null;
+    return { values: { [fieldOf(running)]: speakingClockAt(valueOf(running), at) }, when: 'after' };
+  }
+  if (row.msg.t !== 'event') return null;
+
+  switch (row.msg.event) {
+    case 'switch': {
+      // The outgoing clock stops exactly where it was; the incoming one picks up from its OWN
+      // number — the whole point of two clocks is that an interrupted speaker keeps the time.
+      // BEFORE the event, so the stamp is in the document by the time the machine's
+      // `runSpeakerA`/`runSpeakerB` reads the element, exactly as a match clock's start is.
+      const next: 'a' | 'b' = running === 'a' ? 'b' : 'a';
+      const values: Record<string, string> = {};
+      if (running) values[fieldOf(running)] = speakingClockAt(valueOf(running), at);
+      values[fieldOf(next)] = `${speakingClockAt(valueOf(next), at)}@${at}`;
+      return { values, when: 'before' };
+    }
+    case 'penalty': {
+      // A penalty is a deduction, not a stoppage: the docked clock keeps running, just shorter,
+      // so it is re-stamped at the same instant. With nobody speaking there is nothing to dock,
+      // which is what the engine's `applyPenalty` also does. AFTER, because the engine docks it
+      // too — writing first would dock it twice.
+      if (!running) return null;
+      const cost = Number.parseInt(held?.[clocks.penaltyField ?? ''] ?? clocks.penaltySeed, 10)
+        || SPEAKING_PENALTY_FALLBACK;
+      const left = Math.max(0, speakingSecondsAt(valueOf(running), at) - cost);
+      return { values: { [fieldOf(running)]: `${formatSpeakingClock(left)}@${at}` }, when: 'after' };
+    }
+    case 'reset': {
+      // Both back to the allowance, neither running — and the allowance is the one the chair has
+      // on screen, not the design's seed, because the figure the audience reads is the figure
+      // Reset promised them.
+      const full = clockSeconds(held?.[clocks.allowanceField ?? ''] ?? clocks.allowanceSeed)
+        || SPEAKING_ALLOWANCE_FALLBACK;
+      const value = formatSpeakingClock(full);
+      return { values: { [clocks.fieldA]: value, [clocks.fieldB]: value }, when: 'after' };
+    }
     default:
       return null;
   }

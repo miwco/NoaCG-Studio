@@ -76,7 +76,15 @@ import {
   type ResolvedControlShow,
 } from '../../control/hostedControl';
 import { appendLogEntries, describeLogRow, logTime, type LogEntry } from '../../control/eventLog';
-import { clockRowEffect, clockSpecFromHtml, clockValueAfterUpdate, type ClockSpec } from '../../control/matchClockWire';
+import {
+  clockRowEffect,
+  clockSpecFromHtml,
+  clockValueAfterUpdate,
+  speakingClockRowEffect,
+  speakingClocksFromHtml,
+  type ClockSpec,
+  type SpeakingClockPair,
+} from '../../control/matchClockWire';
 import ProgramStage, { type ProgramStageHandle } from './ProgramStage';
 import { composeDocument } from '../../preview/composeDocument';
 import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../../preview/previewProtocol';
@@ -330,6 +338,18 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   }, [show, library]);
   const clockSpecsRef = useRef(clockSpecs);
   clockSpecsRef.current = clockSpecs;
+  /** …and the debate boards' PAIRS of speaking clocks, read the same way off the same markup.
+   *  A graphic carries one kind or the other, never both. */
+  const speakingClocks = useMemo(() => {
+    const out = new Map<string, SpeakingClockPair>();
+    for (const g of show?.graphics ?? []) {
+      const pair = speakingClocksFromHtml(templateForSavedGraphic(g, library).html);
+      if (pair) out.set(g.name, pair);
+    }
+    return out;
+  }, [show, library]);
+  const speakingClocksRef = useRef(speakingClocks);
+  speakingClocksRef.current = speakingClocks;
   /**
    * The clock field's value ON THE WIRE per graphic — the monitor's own copy of what the
    * renderer keeps in `mergedData`. Deliberately NOT folded into `airedData`: that one also
@@ -338,6 +358,55 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
    * match. `restoreProgram` folds it back in at the one moment it is needed.
    */
   const clockValues = useRef<Record<string, string>>({});
+  /** The same, per FIELD, for a debate board's two clocks — the monitor's copy of what the
+   *  renderer keeps in `mergedData` for the pair. Kept out of `airedData` for the same reason. */
+  const speakingValues = useRef<Record<string, Record<string, string>>>({});
+  /**
+   * A debate board's two clocks, put through the same decision the hosted renderer makes. The
+   * pair is handled apart from the single match clock rather than folded in with it because the
+   * two share nothing but the stamp: one clock verb settles one field, a `switch` settles both.
+   */
+  const applySpeakingClocks = useCallback(
+    (out: ControlSendItem[], item: ControlSendItem, pair: SpeakingClockPair) => {
+      const msg = item.msg;
+      const held = speakingValues.current[item.graphic] ?? {};
+      // A plain resend of the cue's own allowance must not erase a stamp, exactly as for the
+      // match clock: the cue stores "05:00" forever and every Take mid-debate re-sends it.
+      const carried = msg.t === 'update' ? msg.data : msg.t === 'event' ? msg.payload : undefined;
+      for (const field of [pair.fieldA, pair.fieldB]) {
+        const value = carried?.[field];
+        if (value !== undefined) held[field] = clockValueAfterUpdate(held[field], value);
+      }
+      // The allowance and the penalty size ride the wire plain and are read back as themselves.
+      for (const field of [pair.allowanceField, pair.penaltyField]) {
+        const value = field ? carried?.[field] : undefined;
+        if (field && value !== undefined) held[field] = value;
+      }
+      speakingValues.current[item.graphic] = held;
+      // The monitor is sent what we now hold, not what the row carried — the same rule
+      // `src/output/main.ts` states: once a clock has run away from the time the cue stores, a
+      // resend of that stored time is no longer recognisable as a resend to the template.
+      let staged = item;
+      if (msg.t === 'update' && msg.data) {
+        const forwarded = { ...msg.data };
+        for (const field of [pair.fieldA, pair.fieldB]) {
+          if (forwarded[field] !== undefined) forwarded[field] = held[field];
+        }
+        staged = { graphic: item.graphic, msg: { ...msg, data: forwarded } };
+      }
+      const effect = speakingClockRowEffect({ msg }, pair, held, Date.now());
+      if (!effect) {
+        out.push(staged);
+        return;
+      }
+      speakingValues.current[item.graphic] = { ...held, ...effect.values };
+      const clockItem: ControlSendItem = { graphic: item.graphic, msg: { t: 'update', data: effect.values } };
+      if (effect.when === 'before') out.push(clockItem);
+      out.push(staged);
+      if (effect.when === 'after') out.push(clockItem);
+    },
+    [],
+  );
   /**
    * The ONE way a command reaches the PROGRAM monitor, so the clock cannot be handled on one
    * route and missed on the other (the wire follower and the offline verbs both come here).
@@ -348,6 +417,11 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
   const applyProgram = useCallback((items: ControlSendItem[]) => {
     const out: ControlSendItem[] = [];
     for (const item of items) {
+      const pair = speakingClocksRef.current.get(item.graphic);
+      if (pair) {
+        applySpeakingClocks(out, item, pair);
+        continue;
+      }
       const clock = clockSpecsRef.current.get(item.graphic);
       if (!clock) {
         out.push(item);
@@ -379,7 +453,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
       if (effect.when === 'after') out.push(clockItem);
     }
     programRef.current?.apply(out);
-  }, []);
+  }, [applySpeakingClocks]);
 
 
   const cues = useMemo(() => show?.cues ?? [], [show]);
@@ -674,7 +748,12 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
       // from `airedData` on purpose (see applyProgram) and is folded back in only here.
       const clock = clockSpecsRef.current.get(graphic);
       const stamped = clock ? clockValues.current[graphic] : undefined;
-      const data = base && stamped !== undefined ? { ...base, [clock!.field]: stamped } : base;
+      let data = base && stamped !== undefined ? { ...base, [clock!.field]: stamped } : base;
+      // A debate board's pair replays the same way, both fields at once — the running one
+      // stamped, the held one plain, which is the whole state the floor was in.
+      const pair = speakingClocksRef.current.get(graphic);
+      const speaking = pair ? speakingValues.current[graphic] : undefined;
+      if (base && pair && speaking) data = { ...base, ...speaking };
       const groups = machineStatesRef.current[graphic]?.groups;
       const items: ControlSendItem[] = [];
       if (data) items.push({ graphic, msg: { t: 'update', data } });

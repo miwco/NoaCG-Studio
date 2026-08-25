@@ -71,13 +71,18 @@ const idOf = (key: string): string => `f${DEBATE_FLOOR_FIELDS.findIndex((f) => f
  * renderer replaying a missed row resumes the speech from where it really started rather than
  * from the moment it caught up.
  *
- * THE LIMIT, stated so nobody assumes otherwise: the clock's value on the WIRE is still a plain
- * time, not an origin-stamped one (`"45:00@<epoch>"`). A renderer that rebuilds from a report
- * snapshot taken AFTER the switch it needed has no row left to replay and comes back at the
- * field's last written value. Closing that means stamping the clock fields in the report the way
- * `control/matchClockWire.ts` stamps the single match clock — and which of these two clocks is
- * running is machine state, so a stamper would have to know the floor group's pointer. That is
- * the piece of work this does not do.
+ * THE RUNNING CLOCK'S VALUE ON THE WIRE IS ORIGIN-STAMPED, exactly as the single match clock's
+ * is (`"03:12@<epoch>"`, control/matchClockWire.ts). It has to be: a renderer that rebuilds from
+ * a report snapshot taken AFTER the switch it needed has no row left to replay, and a plain time
+ * would put the field's last written value on air mid-speech. `speakingClockUpdate` below is
+ * this engine's half of that — the same three-way reading the match clock's `matchClockUpdate`
+ * makes, over two clocks instead of one.
+ *
+ * WHICH of the two is running is not asked of the machine. **The stamp IS the pointer**: at most
+ * one clock field carries one, and that one is running. The wire keeps that invariant without
+ * reading a state graph (the argument is in matchClockWire.ts), and this engine reads it back
+ * the same way. `data-speaking="a" | "b" | "allowance" | "penalty"` on the design's own markup
+ * is the whole contract between them.
  */
 export function debateFloorRuntimeJs(): string {
   return `// ---- The debate floor's two clocks (playout, not motion — the machine calls into this) ----
@@ -103,10 +108,29 @@ function debateNow() {
   return (typeof noacgEventAt === 'number' && noacgEventAt > 0) ? noacgEventAt : Date.now();
 }
 
+// The value without its origin stamp — what a person reads, and what a held clock carries.
+// The stamp is OURS, not the chair's, so it is this half a resend is judged against.
+function debatePlainTime(text) {
+  var raw = String(text == null ? '' : text);
+  var at = raw.indexOf('@');
+  return (at === -1 ? raw : raw.slice(0, at)).replace(/\\s+/g, '');
+}
+
+// The epoch ms an "@"-stamped value was true, or 0 for a plain (held) one. A stamp that is not
+// a number reads as absent: a broken stamp must degrade to a held clock showing the right time,
+// never to one counting from 1970.
+function debateWireOrigin(text) {
+  var raw = String(text == null ? '' : text);
+  var at = raw.indexOf('@');
+  if (at === -1) return 0;
+  var stamp = parseInt(raw.slice(at + 1), 10);
+  return stamp > 0 ? stamp : 0;
+}
+
 // "05:00" -> 300 · "5:00" -> 300 · "300" -> 300 (a bare number is seconds). Anything else is 0,
 // which is how a half-typed value stops the count instead of racing to a nonsense deadline.
 function debateParseTime(text) {
-  var raw = String(text == null ? '' : text).replace(/\\s+/g, '');
+  var raw = debatePlainTime(text);
   if (!raw) return 0;
   var parts = raw.split(':');
   var total;
@@ -118,6 +142,13 @@ function debateParseTime(text) {
     total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
   }
   return total > 0 ? total : 0;
+}
+
+// Is this text a time at all? "00:00" and "3:x" both parse to zero, and they must not be treated
+// alike: one is a clock that has run out, the other a half-finished edit to leave alone.
+function debateIsTime(text) {
+  var raw = debatePlainTime(text);
+  return /^\\d+$/.test(raw) || /^\\d+:\\d+$/.test(raw);
 }
 
 function debateFormat(total) {
@@ -205,6 +236,13 @@ function debateHold() {
 // Give one side the floor: the other stops where it is, this one picks up from its OWN number.
 // That is the whole point of two clocks — a speaker who is interrupted does not lose the time.
 function debateStart(side) {
+  // ALREADY RUNNING THIS SIDE: the wire got here first. On a hosted production the switch row's
+  // clock values are written BEFORE the event that consumes them, so speakingClockUpdate has
+  // already adopted the stamp and anchored the count to the row's own instant. Re-anchoring here
+  // would subtract the elapsed time a second time, and on a REPLAYED row — a renderer catching
+  // up on a speech that began minutes ago — that lands the clock at zero. The machine never
+  // re-enters speakerA from speakerA, so this can mean nothing else.
+  if (debateActive === side && debateTimer) { debatePaintClockColors(); return; }
   debateHold();
   debateActive = side;
   var left = debateRemaining(side);
@@ -261,14 +299,83 @@ function clearPenaltyMark() {
   debatePaintClockColors();
 }
 
-// After update(): the chair may have retyped a clock or the allowance. Never repaint here —
-// their text is theirs — just re-anchor the running count to what now stands on screen.
-function debateAdoptTypedClock() {
-  if (!debateActive) return;
-  var left = debateRemaining(debateActive);
-  if (left <= 0) return;
-  debateDeadline = Date.now() + left * 1000;
-  debateLastPaint[debateActive] = debateFormat(left);
+// ---- The wire's own clock values (control/matchClockWire.ts) ----
+//
+// speakingClockUpdate(key, value): called from update() for every field written, and the one
+// place a clock's value ARRIVING is read. Three kinds reach it, told apart by the "@" stamp:
+//
+//   "03:12@1755600000000"  a RUNNING clock: it read 03:12 at that instant, and this side holds
+//                          the floor. Adopt both — the derived time is right however long ago
+//                          that was, which is what brings a reconnecting browser source back
+//                          mid-speech instead of at the allowance.
+//   "03:12"                a HELD time: the wire banking a stopped clock, or the chair typing a
+//                          correction into a running one.
+//   a plain value equal to the last one delivered — a RESEND, not an edit. Every Take, ✎ Update
+//                          and Snap sends the cue's WHOLE value set, and a cue stores the plain
+//                          allowance forever, so a penalty in the fourth minute re-sends
+//                          "05:00" over a clock that has run down to 01:12. Adopting that would
+//                          pull the speech back to full time on every press.
+//
+// It is the PLAIN HALF that is compared, for the reason the match clock states at length: the
+// stamp is ours, and the chair's "05:00" has not changed just because we stamped it. The honest
+// limit is the same one too — the chair cannot re-apply a time the clock already holds, and
+// returning to a known figure is what Reset is for.
+var debateSent = { a: null, b: null };   // the last value the WIRE delivered, not the painted time
+
+function debateSideOfField(key) {
+  if (key === '${idOf('clockA')}') return 'a';
+  if (key === '${idOf('clockB')}') return 'b';
+  return null;
+}
+
+// Put the side's REAL time back on screen. setFieldValue has already written the wire's raw text
+// into the element for every field alike, so a stamped value would otherwise sit on air reading
+// "03:12@1755600000000", and a resent one would show a stale time until the next tick.
+function debateRepaintSide(side) {
+  if (debateActive === side && debateTimer) {
+    debatePaint(side, Math.max(0, Math.ceil((debateDeadline - Date.now()) / 1000)));
+  } else {
+    debatePaint(side, debateParseTime(debateLastPaint[side]));
+  }
+}
+
+function speakingClockUpdate(key, value) {
+  var side = debateSideOfField(key);
+  if (!side) return;
+  var incoming = String(value == null ? '' : value);
+  var origin = debateWireOrigin(incoming);
+  if (!origin && debateSent[side] !== null && debatePlainTime(incoming) === debatePlainTime(debateSent[side])) {
+    debateRepaintSide(side);
+    return;
+  }
+  debateSent[side] = incoming;
+  var base = debateParseTime(incoming);
+  if (origin) {
+    // The wire says this side is running, and what it read when. Anchoring to the origin rather
+    // than to this browser is what makes two browser sources of the same debate paint the same
+    // second, and what lets a renderer that boots mid-speech land on the right one.
+    debateStopTimer();
+    debateActive = side;
+    var left = Math.max(0, base - Math.max(0, Math.floor((Date.now() - origin) / 1000)));
+    debateDeadline = Date.now() + left * 1000;
+    debatePaint(side, left);
+    if (left > 0) debateTimer = setInterval(debateTick, DEBATE_TICK_MS);
+    debatePaintClockColors();
+    return;
+  }
+  // Not a time at all — a half-finished edit in the studio's Content panel. Leave it exactly
+  // where the chair put it and stop counting; their text is theirs.
+  if (!debateIsTime(incoming)) {
+    if (debateActive === side) debateStopTimer();
+    debatePaintClockColors();
+    return;
+  }
+  // A plain time. Held, unless this side is the one speaking — in which case it is the chair
+  // correcting a running clock, which must correct it without stopping it.
+  debatePaint(side, base);
+  if (debateActive !== side) return;
+  if (base <= 0) { debateStopTimer(); debatePaintClockColors(); return; }
+  debateDeadline = Date.now() + base * 1000;
   if (!debateTimer) { debateTimer = setInterval(debateTick, DEBATE_TICK_MS); debatePaintClockColors(); }
 }
 
