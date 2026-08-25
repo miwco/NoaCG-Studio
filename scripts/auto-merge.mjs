@@ -56,6 +56,15 @@ const attempts = Math.max(1, Number(valueOf('--attempts') ?? 3));
  * the queue deadlocks until a human breaks the tie.
  */
 const accept = (valueOf('--accept') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+/**
+ * The commit the branch was at when a person queued it, if they said.
+ *
+ * A landing is queued to mean "this work is finished". Without pinning the sha, a session that
+ * queues and then keeps working would have whatever it had committed by the time its turn came
+ * landed for it - which is the thing queueing was supposed to prevent. If the branch moved, the
+ * job refuses and asks for a fresh queue rather than guessing which commits were meant.
+ */
+const expectSha = valueOf('--expect-sha') ?? null;
 
 if (!branch) {
   console.error('usage: node scripts/auto-merge.mjs --branch <branch> [--dry-run] [--no-wait]');
@@ -100,6 +109,20 @@ async function main() {
   if (accept.length > 0) preflight.push('--skip-order');
   if (run('node', preflight).status !== 0) {
     return refuse('preflight phase 1 failed - see its output above');
+  }
+
+  // The branch must still be what it was when a person said it was finished. Checked ONCE, here,
+  // before any attempt: the retry loop legitimately moves the tip by integrating main, so this
+  // cannot live inside it.
+  if (expectSha) {
+    const now = git(['rev-parse', branch]);
+    if (now !== expectSha) {
+      return refuse(
+        `${branch} has moved since it was queued (${expectSha.slice(0, 8)} -> ${now.slice(0, 8)}).\n` +
+          '  Queueing a landing means the work is finished; commits arrived after that, so this is\n' +
+          '  no longer the thing that was queued. Queue it again when it is done.',
+      );
+    }
   }
 
   const mainWt = worktreeFor('main');

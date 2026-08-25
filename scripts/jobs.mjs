@@ -100,9 +100,13 @@ async function cmdAdd() {
  * of these lands the boring ones and leaves the interesting ones for a person.
  */
 async function cmdAddMerge() {
-  const target = args[1];
-  if (!target || target.startsWith('-')) {
-    console.error('Usage: node scripts/jobs.mjs add-merge <branch> [--after <id>] [--accept <kind>] [--attempts <n>]');
+  // No branch given means THIS worktree's - the overwhelmingly common case, and the safe default.
+  // Naming someone else's branch still works, but it has to be deliberate: a session that is
+  // still working on a branch must never have it landed out from under the conversation.
+  const target = args[1] && !args[1].startsWith('-') ? args[1] : currentBranch();
+  if (!target || target === 'main' || target === 'HEAD') {
+    console.error('Usage: node scripts/jobs.mjs add-merge [branch] [--after <id>] [--accept <kind>] [--attempts <n>]');
+    console.error('  With no branch it queues this worktree\'s. It refuses main and a detached HEAD.');
     process.exit(1);
   }
   ensureJobsDir(dir);
@@ -114,8 +118,12 @@ async function cmdAddMerge() {
     const value = valueOf(name);
     return value ? [name, value] : [];
   });
+  // Pin the commit the branch is at RIGHT NOW. Queueing a landing means "this work is finished";
+  // if commits arrive afterwards, the job refuses rather than landing something nobody queued.
+  const tip = branchTip(target);
+  const pin = tip ? ` --expect-sha ${tip}` : '';
   const job = addJob(dir, {
-    command: `node scripts/auto-merge.mjs --branch ${target}${passthrough.length ? ` ${passthrough.join(' ')}` : ''}`,
+    command: `node scripts/auto-merge.mjs --branch ${target}${passthrough.length ? ` ${passthrough.join(' ')}` : ''}${pin}`,
     checkout: process.cwd(),
     branch: target,
     kind: 'merge',
@@ -373,6 +381,12 @@ function elapsed(startedAt) {
   if (!startedAt) return '';
   const min = Math.round((Date.now() - startedAt) / 60_000);
   return `${min} min`;
+}
+
+/** The commit a branch points at, or null if git cannot say. */
+function branchTip(branch) {
+  const res = spawnSync('git', ['rev-parse', branch], { encoding: 'utf8', windowsHide: true });
+  return res.status === 0 ? res.stdout.trim() : null;
 }
 
 function currentBranch() {

@@ -127,6 +127,7 @@ shots-*/
 !.agents/skills/o/
 !.agents/skills/ograf-expert/
 !.agents/skills/orchestrator/
+!.agents/skills/queue-merge/
 !.agents/skills/safe-merge/
 !.agents/skills/so/
 !.agents/skills/spx-html-template-expert/

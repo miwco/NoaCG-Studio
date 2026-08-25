@@ -340,8 +340,15 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     INTEGRATED sha, never the pre-integration one. Once the job runner exists
     (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
     rather than remembered.
-  - **EVERY landing goes through the queue** (owner, 2026-08-25) - `npm run queue:merge -- <branch>`,
-    never `safe-merge` run directly. It runs `scripts/auto-merge.mjs`, the mechanical path of the
+  - **`/queue-merge` is how work reaches `main`** (owner, 2026-08-25). Run it in the session that
+    owns the branch, when that work is FINISHED - it does not merge anything itself, it puts the
+    branch in the machine-wide queue, which lands it when its turn comes. **Nobody else queues your
+    branch**, because a branch can be green, clean and `clear` while its session is still mid-
+    conversation about what to do next, and no verdict can tell those apart. Queueing IS the
+    declaration that the work is done, made by the only party who can make it. It pins the branch's
+    current commit, so a later commit makes the job refuse and ask you to queue again.
+    `.agent-workflows/queue-merge.md` is the procedure.
+  - Underneath it: `npm run queue:merge`, never `safe-merge` run directly. It runs `scripts/auto-merge.mjs`, the mechanical path of the
     flow: only a `clear` verdict, clean trees, a conflict-free integration and a green gate on the
     integrated sha, REFUSING everything else without changing anything further. `--dry-run` stops
     before the first state change; `npm run jobs` shows what is running and why anything waits.
