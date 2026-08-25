@@ -28,6 +28,17 @@
 // Overriding is per-version and explicit: `--allow 0052` says "I read 0052 and I accept what it
 // does". There is no blanket override, because a blanket override is the old rule again.
 //
+// WHAT IT IS NOT, stated so nobody reads more into a green run than is there. This guard is about
+// LOSS, not about EXPOSURE. A migration that grants a client role new reach, or replaces a
+// SECURITY DEFINER function's body, or adds a permissive policy, is applied without comment - those
+// are product decisions written in SQL, and refusing every one of them would make the override
+// routine, which is how a guard stops meaning anything. Exposure has its own guards, offline and in
+// the build: `scripts/client-grants-migration.test.mjs` (a policy that admits a role no migration
+// granted), `scripts/definer-grants.test.mjs` (a definer function that ships with the bootstrap's
+// EXECUTE grant), and `npm run check:advisors` against the live project. A `select some_function()`
+// is likewise taken at face value; what a function does when called is not visible in the statement
+// that calls it.
+//
 // It also refuses to push onto a DRIFTED ledger. `supabase db push` keys each migration by the
 // four-digit version in its filename; an MCP `apply_migration` or an SQL-editor paste records a
 // generated timestamp instead, and the damage stays invisible until the next push (supabase/AGENTS.md).
@@ -254,10 +265,13 @@ export function normalize(raw) {
 
 // ── Rules ────────────────────────────────────────────────────────────────────────────────────────
 
-/** `public.documents` / `"documents"` / `documents(uuid, text)` all name the same thing to the rules. */
-// Trim FIRST: in `revoke all on public.a, public.b` every object after the comma arrives with a
-// leading space, and a schema prefix that survives it makes the name miss what the migration
-// created - which turns a same-migration lock-down into a refusal.
+/**
+ * `public.documents`, `"documents"` and `documents(uuid, text)` all name the same thing to the rules.
+ *
+ * Trimming FIRST is load-bearing: in `revoke all on public.a, public.b` every object after the comma
+ * arrives with a leading space, and a `public.` prefix that survives it makes the name miss what the
+ * migration created - which turns a same-migration lock-down into a refusal.
+ */
 const bareName = (name) => name.trim().replace(/^public\./, '').replace(/\(.*$/, '').trim();
 
 /** Split a comma-separated object list without cutting inside an argument list: a function is named
@@ -626,7 +640,9 @@ function runSupabase(args, token) {
 }
 
 const flag = (argv, name) => argv.includes(name);
-const value = (argv, name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : '');
+/** A flag's value, with a trailing `--allow` (no version after it) reading as absent rather than
+ *  crashing - the difference between "you forgot the version" and a stack trace. */
+const value = (argv, name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] || '' : '');
 
 /** Decide the whole push without changing anything - so a caller, and the test, can read the plan. */
 export async function plan({ ref, token, allow = new Set() }) {
@@ -704,7 +720,11 @@ async function main(argv) {
   for (const m of decision.migrations) console.log(describe(m));
   for (const version of allow) {
     const m = decision.migrations.find((x) => x.version === version);
-    if (m?.blocked) console.log(`\n  --allow ${version}: accepting the ${m.findings.length} refusal(s) above.`);
+    // Say when an --allow did nothing. A typo (`--allow 052`) would otherwise read as an accepted
+    // override right up until the push refuses, and the refusal would look like the flag was ignored.
+    if (!m) console.log(`\n  --allow ${version}: no pending migration has that version - check the number.`);
+    else if (!m.blocked) console.log(`\n  --allow ${version}: nothing to accept; it has no refusals.`);
+    else console.log(`\n  --allow ${version}: accepting the ${m.findings.length} refusal(s) above.`);
   }
 
   if (decision.status === 'refused') {

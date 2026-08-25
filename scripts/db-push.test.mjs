@@ -238,6 +238,25 @@ test('a REVOKE of function EXECUTE follows the same rule', () => {
   assert.equal(verdict('revoke execute on function public.is_suspended() from authenticated'), 'dangerous');
 });
 
+// ── Shapes that read differently than they parse ─────────────────────────────────────────────────
+
+test('a retention cron scheduled through a function call is a schedule, not a deletion', () => {
+  // 0037 and 0039 register prunes this way. The DELETE is the cron's future behaviour on rows that
+  // do not exist yet; nothing is removed by scheduling it.
+  const schedule = `select cron.schedule('prune', '0 3 * * *', $$ delete from public.control_events where created_at < now() - interval '14 days' $$)`;
+  assert.equal(verdict(schedule), 'safe');
+  // The schema rules still reach the same body.
+  assert.equal(verdict(`select cron.schedule('x', '0 3 * * *', $$ drop table public.documents $$)`), 'dangerous');
+});
+
+test('case and a byte-order mark do not change a verdict', () => {
+  assert.equal(verdict('DROP TABLE Public.Documents'), 'dangerous');
+  // A Windows editor writes a BOM, and without stripping it the FIRST statement of a file is the
+  // one that misreads - which is the statement most likely to be the `drop`.
+  assert.equal(verdict('﻿drop table public.documents'), 'dangerous');
+  assert.equal(verdict('﻿create table public.t (id uuid primary key)'), 'safe');
+});
+
 // ── Fail closed ──────────────────────────────────────────────────────────────────────────────────
 
 test('an unrecognised statement shape refuses rather than passing', () => {
