@@ -25,23 +25,6 @@ Nothing here is a gate. It is a to-do list with an expiry date.
 
 Seeded 2026-08-25 from the work that landed in the preceding week.
 
-- [ ] **Migration 0052 is waiting for you, and that is the mechanism working** (2026-08-25).
-      `npm run db:push` now applies pending migrations to production unattended, and it REFUSED
-      0052 - which revokes seven inherited privileges from `anon`/`authenticated` on eighteen
-      tables and drops the never-written `assets` table. Refusing a REVOKE on a live database is
-      exactly what it is for, so this one needs you. It is already proven end to end on the
-      STAGING project (`garafohbzmsybtysxphb`): applied cleanly, self-check passed, and the
-      matrix afterwards is `anon` on two tables and `authenticated` on eight, nothing more.
-      Route, about a minute:
-      ```bash
-      npm run db:push -- --dry-run --allow 0052
-      ```
-      then, if the plan reads right, drop `--dry-run`. What to look at: the before/after diff it
-      prints - the only removals should be TRUNCATE/REFERENCES/TRIGGER plus the privileges on
-      tables with no matching policy, and the `assets` rows. Nothing should be ADDED except one
-      ledger row. Until it runs, the safe-merge preflight will keep reporting production as one
-      migration behind, which is correct.
-
 - [ ] **SVG import steps 3, 4 and 5** - `b41533bf`, `80b9185e`, `7af9ca7b` (2026-08-24/25). One
       fitting system, draw a field on the canvas, versioned `NOACG_LAYOUT` with vertical growth.
       **None of the three has been seen** - the Browser pane would not composite during the build
@@ -97,6 +80,22 @@ Not walks - things only the owner can do, because they cannot be taken back by a
       workflow in this repo (OIDC) and delete the stored token. A long-lived publish token sitting
       on a laptop is the largest standing credential risk here; it can only be configured against
       a package that already exists. Owner decided this is wanted (2026-08-25).
+- [ ] **Migration 0052 - the one the new push guard refuses** (2026-08-25). `npm run db:push` now
+      applies pending migrations to production on its own, so this list should never mention a
+      migration again. It mentions this one because the guard REFUSED it, which is the guard
+      working: 0052 revokes seven inherited privileges from `anon`/`authenticated` on eighteen
+      tables and drops the never-written `assets` table, and a REVOKE against a live database is
+      exactly the class that stops for a person. It is proven end to end on the STAGING project
+      (`garafohbzmsybtysxphb`): applied cleanly, self-check passed, and the matrix afterwards is
+      `anon` on two tables and `authenticated` on eight, nothing more. About a minute:
+      ```bash
+      npm run db:push -- --dry-run --allow 0052
+      ```
+      then drop `--dry-run` if the plan reads right. What to look at in the before/after diff it
+      prints: the only removals should be TRUNCATE/REFERENCES/TRIGGER, the privileges on tables
+      with no matching policy, and the `assets` rows - and nothing ADDED except one ledger row.
+      Until it runs, the safe-merge preflight reports production as one migration behind, which is
+      correct. Reversible: it only re-grants what `0051` already states.
 
 ## Blocked on hardware or real conditions
 
