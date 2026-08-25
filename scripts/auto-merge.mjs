@@ -100,44 +100,101 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome);
 }
 
+/**
+ * What the merge-order verdict licenses: proceed, wait for a turn, or refuse.
+ *
+ * Pure, and lifted out of `main` for the reason `planMigrationPush` was: these three answers are
+ * the difference between a night that lands five branches and one that quietly drops four of
+ * them, and no test can reach them through a function that also performs a real merge.
+ */
+export function planOrderDecision(verdict, { accept: accepted = [], isAheadOfMain = () => false } = {}) {
+  if (!verdict) return { action: 'refuse', message: 'merge-order gave no verdict for this branch' };
+  if (verdict.severity === 'clear') return { action: 'proceed', message: 'merge-order: clear' };
+
+  // A NAMED risk a person has already weighed may be accepted; nothing else can.
+  //
+  // Two branches editing one shared registry both read `hold`, symmetrically, so neither can
+  // ever be the one that goes first - the queue deadlocks and only a human can break it. That
+  // is the tool asking the right question, but it needs an answer it can accept. `--accept
+  // <kind>` is that answer, and it is deliberately per-KIND rather than a blanket override:
+  // saying "I have looked at the shared-registry collision" must not also wave through a
+  // stacked branch or a duplicate migration number that happens to be in the same verdict.
+  const unaccepted = (verdict.reasons ?? []).filter((r) => !accepted.includes(r.kind));
+  if (unaccepted.length === 0) {
+    return {
+      action: 'proceed',
+      message: `merge-order says ${verdict.severity}, accepted by hand: ${verdict.reasons.map((r) => r.kind).join(', ')}`,
+    };
+  }
+
+  // BLOCKED BY A BRANCH THAT IS ITSELF STILL WAITING? Then this is not a refusal, it is a
+  // turn-order problem that solves itself. Queue several landings at once and most of them
+  // start out blocked by each other; each one that lands frees the next. Failing them
+  // outright would mean the owner queues five, three fail, and he re-queues by hand - which
+  // is the manual tracking this whole thing exists to remove.
+  const blockers = [...(verdict.blockedBy ?? []), verdict.landFirst].filter(Boolean);
+  const stillWaiting = blockers.filter((b) => isAheadOfMain(b));
+  if (stillWaiting.length > 0) {
+    return {
+      action: 'blocked',
+      message: `waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
+    };
+  }
+  return {
+    action: 'refuse',
+    message:
+      `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
+      (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
+      `\n  a person who has weighed one of these can pass --accept <kind>`,
+  };
+}
+
+/**
+ * The conditions that must hold before main is touched at all: the branch is still the commit a
+ * person queued, both sides have a worktree, and neither is dirty.
+ *
+ * Pure for the same reason, and ORDERED on purpose. The pin comes first because it is the only
+ * one of the three that says "this is not the work that was queued", which stays true however
+ * clean the trees are.
+ */
+export function planPreconditions({
+  branch: name,
+  expectSha: pinned = null,
+  currentSha = null,
+  mainWorktree = null,
+  branchWorktree = null,
+  isDirty = () => false,
+} = {}) {
+  if (pinned && currentSha !== pinned) {
+    return {
+      action: 'refuse',
+      message:
+        `${name} has moved since it was queued (${pinned.slice(0, 8)} -> ${String(currentSha).slice(0, 8)}).\n` +
+        '  Queueing a landing means the work is finished; commits arrived after that, so this is\n' +
+        '  no longer the thing that was queued. Queue it again when it is done.',
+    };
+  }
+  if (!mainWorktree) {
+    return { action: 'refuse', message: 'main is checked out nowhere - the human flow handles that case' };
+  }
+  if (!branchWorktree) {
+    return { action: 'refuse', message: `${name} has no worktree - the human flow makes a temporary one` };
+  }
+  for (const [label, wt] of [['main', mainWorktree], [name, branchWorktree]]) {
+    if (isDirty(wt)) return { action: 'refuse', message: `${label}'s worktree is dirty (${wt})` };
+  }
+  return { action: 'proceed' };
+}
+
 async function main() {
   // --- 1. Order. A `clear` verdict is the licence; anything else is a person's call. ---------
-  const verdict = mergeOrderVerdict(branch);
-  if (!verdict) return refuse('merge-order gave no verdict for this branch');
-  if (verdict.severity !== 'clear') {
-    // A NAMED risk a person has already weighed may be accepted; nothing else can.
-    //
-    // Two branches editing one shared registry both read `hold`, symmetrically, so neither can
-    // ever be the one that goes first - the queue deadlocks and only a human can break it. That
-    // is the tool asking the right question, but it needs an answer it can accept. `--accept
-    // <kind>` is that answer, and it is deliberately per-KIND rather than a blanket override:
-    // saying "I have looked at the shared-registry collision" must not also wave through a
-    // stacked branch or a duplicate migration number that happens to be in the same verdict.
-    const unaccepted = verdict.reasons.filter((r) => !accept.includes(r.kind));
-    if (unaccepted.length > 0) {
-      // BLOCKED BY A BRANCH THAT IS ITSELF STILL WAITING? Then this is not a refusal, it is a
-      // turn-order problem that solves itself. Queue several landings at once and most of them
-      // start out blocked by each other; each one that lands frees the next. Failing them
-      // outright would mean the owner queues five, three fail, and he re-queues by hand - which
-      // is the manual tracking this whole thing exists to remove.
-      const blockers = [...(verdict.blockedBy ?? []), verdict.landFirst].filter(Boolean);
-      const stillWaiting = blockers.filter((b) => aheadOfMain(b));
-      if (stillWaiting.length > 0) {
-        console.error(
-          `auto-merge: waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
-        );
-        return 'blocked';
-      }
-      return refuse(
-        `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
-          (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
-          `\n  a person who has weighed one of these can pass --accept <kind>`,
-      );
-    }
-    say(`merge-order says ${verdict.severity}, accepted by hand: ${verdict.reasons.map((r) => r.kind).join(', ')}`);
-  } else {
-    say('merge-order: clear');
+  const order = planOrderDecision(mergeOrderVerdict(branch), { accept, isAheadOfMain: aheadOfMain });
+  if (order.action === 'refuse') return refuse(order.message);
+  if (order.action === 'blocked') {
+    console.error(`auto-merge: ${order.message}`);
+    return 'blocked';
   }
+  say(order.message);
 
   // --- 2. Assess. The preflight settles every mechanical condition and prints each one. ------
   //
@@ -151,27 +208,19 @@ async function main() {
     return refuse('preflight phase 1 failed - see its output above');
   }
 
-  // The branch must still be what it was when a person said it was finished. Checked ONCE, here,
-  // before any attempt: the retry loop legitimately moves the tip by integrating main, so this
-  // cannot live inside it.
-  if (expectSha) {
-    const now = git(['rev-parse', branch]);
-    if (now !== expectSha) {
-      return refuse(
-        `${branch} has moved since it was queued (${expectSha.slice(0, 8)} -> ${now.slice(0, 8)}).\n` +
-          '  Queueing a landing means the work is finished; commits arrived after that, so this is\n' +
-          '  no longer the thing that was queued. Queue it again when it is done.',
-      );
-    }
-  }
-
+  // The pin is checked ONCE, here, before any attempt: the retry loop legitimately moves the
+  // branch tip by integrating main, so it cannot live inside the loop.
   const mainWt = worktreeFor('main');
   const branchWt = worktreeFor(branch);
-  if (!mainWt) return refuse('main is checked out nowhere - the human flow handles that case');
-  if (!branchWt) return refuse(`${branch} has no worktree - the human flow makes a temporary one`);
-  for (const [label, wt] of [['main', mainWt], [branch, branchWt]]) {
-    if (git(['-C', wt, 'status', '--porcelain']) !== '') return refuse(`${label}'s worktree is dirty (${wt})`);
-  }
+  const pre = planPreconditions({
+    branch,
+    expectSha,
+    currentSha: expectSha ? git(['rev-parse', branch]) : null,
+    mainWorktree: mainWt,
+    branchWorktree: branchWt,
+    isDirty: (wt) => git(['-C', wt, 'status', '--porcelain']) !== '',
+  });
+  if (pre.action === 'refuse') return refuse(pre.message);
 
   if (dryRun) {
     say('dry run: everything up to the first state change passed. Stopping before touching main.');
@@ -191,9 +240,20 @@ async function main() {
   //
   // ONLY this refusal retries. Every other one - a conflict, a red gate, a dirty tree - stops
   // dead, because the whole design is that anything needing judgement stops.
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    if (attempt > 1) say(`main moved - re-integrating (attempt ${attempt} of ${attempts})`);
-    const outcome = await attemptLanding(mainWt, branchWt);
+  return landWithRetries(attempts, () => attemptLanding(mainWt, branchWt));
+}
+
+/**
+ * Run one landing pass, re-running it ONLY while main keeps moving underneath, and at most
+ * `attempts` times.
+ *
+ * Separated so the bound itself can be tested: an unbounded version of this is a machine that
+ * looks busy all night and lands nothing, and that failure is invisible from the outside.
+ */
+export async function landWithRetries(attempts, attempt) {
+  for (let n = 1; n <= attempts; n += 1) {
+    if (n > 1) say(`main moved - re-integrating (attempt ${n} of ${attempts})`);
+    const outcome = await attempt(n);
     if (outcome !== 'main-moved') return outcome;
   }
   return refuse(
@@ -202,54 +262,73 @@ async function main() {
   );
 }
 
-/** One full integrate-verify-land pass. Returns 0, 1, or 'main-moved' when the target moved. */
-async function attemptLanding(mainWt, branchWt) {
-  if (run('git', ['-C', mainWt, 'pull', '--ff-only', 'origin', 'main']).status !== 0) {
+/**
+ * One full integrate-verify-land pass. Returns 0, 1, or 'main-moved' when the target moved.
+ *
+ * Every command it issues arrives through `deps`, defaulting to the real ones. That is not
+ * ceremony: the refusals below - a conflict, a red gate, a fast-forward git itself declines, a
+ * main that moved - ARE this script, they run unattended at night, and a test that cannot reach
+ * them without performing a real merge is not testing the part that lands branches.
+ */
+export async function attemptLanding(mainWt, branchWt, deps = {}) {
+  const {
+    branch: name = branch,
+    noWait: skipCi = noWait,
+    run: runCmd = run,
+    git: gitCmd = git,
+    waitForCi: awaitCi = waitForCi,
+    afterLanding = (entry) => {
+      recordLanding(entry);
+      applyPendingMigrations();
+    },
+  } = deps;
+  if (runCmd('git', ['-C', mainWt, 'pull', '--ff-only', 'origin', 'main']).status !== 0) {
     return refuse('could not fast-forward main from origin');
   }
-  const integratedMainSha = git(['rev-parse', 'main']);
+  const integratedMainSha = gitCmd(['rev-parse', 'main']);
   say(`main is ${integratedMainSha.slice(0, 8)}`);
 
-  if (run('git', ['-C', branchWt, 'merge', '--no-edit', 'main']).status !== 0) {
-    run('git', ['-C', branchWt, 'merge', '--abort']);
+  if (runCmd('git', ['-C', branchWt, 'merge', '--no-edit', 'main']).status !== 0) {
+    runCmd('git', ['-C', branchWt, 'merge', '--abort']);
     return refuse('integrating main conflicted - aborted, nothing changed. A person resolves this.');
   }
-  const verifiedSha = git(['rev-parse', branch]);
+  const verifiedSha = gitCmd(['rev-parse', name]);
   say(`verified sha will be ${verifiedSha.slice(0, 8)}`);
 
   // Gate on CI, green on EXACTLY that commit.
-  if (run('git', ['-C', branchWt, 'push', 'origin', branch]).status !== 0) {
+  if (runCmd('git', ['-C', branchWt, 'push', 'origin', name]).status !== 0) {
     return refuse('could not push the branch for CI');
   }
-  if (!noWait && !(await waitForCi(verifiedSha))) return refuse('no green CI run for the integrated commit');
-  if (run('node', ['scripts/safe-merge-preflight.mjs', '--branch', branch, '--phase', '3', '--verified-sha', verifiedSha]).status !== 0) {
+  if (!skipCi && !(await awaitCi(verifiedSha))) return refuse('no green CI run for the integrated commit');
+  if (runCmd('node', ['scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '3', '--verified-sha', verifiedSha]).status !== 0) {
     return refuse('preflight phase 3 refused the CI run - red, damaged, or it skipped every shard');
   }
 
   // Re-check, fast-forward, push.
   if (
-    run('node', [
-      'scripts/safe-merge-preflight.mjs', '--branch', branch, '--phase', '4',
+    runCmd('node', [
+      'scripts/safe-merge-preflight.mjs', '--branch', name, '--phase', '4',
       '--verified-sha', verifiedSha, '--integrated-main-sha', integratedMainSha,
     ]).status !== 0
   ) {
     console.error('auto-merge: main moved while the gate ran.');
     return 'main-moved';
   }
-  if (run('git', ['-C', mainWt, 'merge', '--ff-only', branch]).status !== 0) {
+  if (runCmd('git', ['-C', mainWt, 'merge', '--ff-only', name]).status !== 0) {
     return refuse('the fast-forward merge was refused by git');
   }
-  if (git(['rev-parse', 'main']) !== verifiedSha) {
+  if (gitCmd(['rev-parse', 'main']) !== verifiedSha) {
     return refuse('main is not the verified commit after the merge - NOT pushing');
   }
-  if (run('git', ['-C', mainWt, 'push', 'origin', 'main']).status !== 0) {
+  if (runCmd('git', ['-C', mainWt, 'push', 'origin', 'main']).status !== 0) {
     return refuse('the push to origin/main failed - main is landed locally, resolve by hand');
   }
 
-  say(`landed ${branch} on main as ${verifiedSha.slice(0, 8)}`);
+  say(`landed ${name} on main as ${verifiedSha.slice(0, 8)}`);
   say('the branch and its worktree are left alone - cleanup-worktrees owns that.');
-  recordLanding({ branch, sha: verifiedSha, worktree: branchWt, at: Date.now() });
-  applyPendingMigrations();
+  // Only now, with the merge on origin/main: the ledger line, then whatever migration production
+  // is missing. Neither may fail the landing - see `applyPendingMigrations`.
+  afterLanding({ branch: name, sha: verifiedSha, worktree: branchWt, at: Date.now() });
   return 0;
 }
 
