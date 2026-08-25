@@ -58,23 +58,45 @@ change touching one prints a line telling you to run that suite. It is reported,
 starting it would bring up a dev server on the real `.env`, which is what the offline pin exists
 to prevent.
 
-**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC).** Per-change selection
-still cannot reach it, so nothing commit-driven ever will; a schedule can. It runs the whole
-`e2e/configured/` suite (~6 min, one worker) against the real backend as the throwaway test
-account and files its own rolling issue - separate from `nightly.yml` because it is the only job
-here that can go red for a reason outside the repository (expired account, paused project,
-rotated key), and that must not be able to red the main nightly verdict.
+**That suite now has its own nightly, `configured-suite.yml` (01:10 UTC), against a LOCAL Supabase
+stack.** Per-change selection still cannot reach it, so nothing commit-driven ever will; a
+schedule can. The job runs `supabase start` on the runner, applies the repository's own
+migrations, mints a throwaway account, and runs the whole suite against that - then tears down
+with the runner. It files its own rolling issue, separate from `nightly.yml`.
+
+Two things that route buys, and one it costs:
+
+- **No Supabase secret lives in GitHub.** The local stack's keys are the CLI's published shared
+  defaults, read at runtime from `supabase status`. The repo is public and `.env` points at
+  PRODUCTION, so the previous design had to withhold `SUPABASE_SERVICE_ROLE_KEY` and lost two
+  specs to it; both are back, and `ALLOWED_SKIPS` is empty.
+- **Nothing is written to production.** The suite creates and deletes real rows every run; they
+  used to land in the owner's production project, against `playwright.live.config.ts`'s own
+  advice.
+- **It cannot see latency-shaped defects.** A local stack answers in ~1 ms where a hosted one
+  answers in ~200 ms from a runner. The tombstone sync defect fixed on 2026-08-24 was invisible
+  at 5 ms/request and failed six specs at 207 ms/request - **this job would not have caught it**.
+  A green run here is not evidence that sync is fast enough anywhere real; that needs a hosted
+  target or a deliberate delay.
 
 **Its exit code is not its verdict, by construction.** Every spec calls
-`test.skip(!haveCreds, …)`, so with the credentials unset the run executes nothing and exits 0 -
+`test.skip(!haveCreds, …)`, so with the environment unset the run executes nothing and exits 0 -
 a job checking only the exit code would be permanently, silently green, which is the exact hole
-that let five specs sit on main unverified. So the workflow (a) refuses to start when any of the
-five secrets is missing, naming it, and (b) asserts on the JSON report afterwards that **zero
-tests skipped and at least `MIN_TESTS` (32) ran**. The five secrets are `E2E_EMAIL`,
-`E2E_PASSWORD`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` -
-the throwaway `synctest…` account and a test/staging project, never the owner's. When the suite
-grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard weaker. The run
-summary lists every test that actually executed - read that, not the exit code.
+that let five specs sit on main unverified. The guards, in the order they fire:
+
+1. the stack must come up (`supabase start`);
+2. the applied migration count must equal the repository's, so a half-applied schema cannot pass
+   as a product regression;
+3. `supabase_realtime` must publish `chat_submissions` AND `control_events` - the four
+   hosted-playout specs subscribe through `postgres_changes`, and no migration CREATES that
+   publication (0003 and 0008 only add tables to it), so a missing one shows up as four 30-second
+   timeouts that read like a renderer bug;
+4. the test account must **authenticate**, not merely exist - one password grant turns twenty
+   ambiguous UI timeouts into one unambiguous step;
+5. the JSON report must show **nothing skipped and at least `MIN_TESTS` (32) run**.
+
+When the suite grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard
+weaker. The run summary lists every test that actually executed - read that, not the exit code.
 
 ## A clean merge is not proof the integration worked
 

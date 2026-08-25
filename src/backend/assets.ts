@@ -59,6 +59,30 @@ export async function externalizeAssets(body: unknown, uid: string, upload: Uplo
   return clone;
 }
 
+/**
+ * True when `body` still holds at least one Storage sentinel — bytes that live in Storage and
+ * have not been rehydrated yet.
+ *
+ * The sync engine uses this to decide whether a record actually needs its per-record `get()`.
+ * A cloud `list()` already returns the whole row; the ONLY thing `get()` adds is
+ * `rehydrateAssets`, so a body with no sentinel has nothing to gain from the extra round trip.
+ *
+ * A plain string scan rather than a tree walk: the callers use it on bodies that are expected to
+ * be small (tombstones), and on a large body one `JSON.stringify` is still far cheaper than the
+ * network request it avoids. It can only over-report (a literal "spx-storage:" in ordinary text
+ * costs one needless fetch), never under-report, which is the safe direction.
+ */
+export function hasStorageSentinel(body: unknown): boolean {
+  if (body === null || body === undefined) return false;
+  try {
+    return JSON.stringify(body).includes(STORAGE_SENTINEL);
+  } catch {
+    // Unserializable (a cycle, a BigInt): assume it needs the full fetch rather than risk
+    // dropping an asset. Failing towards the slow-but-correct path is the whole point.
+    return true;
+  }
+}
+
 /** Return a deep copy of `body` with every Storage-referenced asset downloaded and restored to its
  *  data-URL. A missing object resolves to '' so the runtime simply hides that image. */
 export async function rehydrateAssets(body: unknown, download: Downloader): Promise<unknown> {

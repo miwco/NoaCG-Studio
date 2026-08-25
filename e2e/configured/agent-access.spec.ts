@@ -63,8 +63,21 @@ test.describe('agent access (configured)', () => {
   test.skip(!haveCreds, 'needs E2E_EMAIL/E2E_PASSWORD');
   test.setTimeout(120_000);
 
-  test('consent -> loopback code -> redeem -> save 201 -> deep link -> revoke -> 401', async ({ page, baseURL }) => {
+  test('consent -> loopback code -> redeem -> save 201 -> deep link -> revoke -> 401', async ({ page, request, baseURL }) => {
     const origin = baseURL!.replace(/\/+$/, '');
+
+    // The agent-key routes are SERVER-side: api/_lib/agentAccessStore.ts mints and honours keys
+    // with SUPABASE_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY from the dev server's own process.env,
+    // and answers 503 without one. A configured CLIENT is not enough to run this walk. That is
+    // reported rather than skipped: CI brings up a local Supabase stack whose service key is a
+    // published default, so the capability is always present by construction, and a 503 here means
+    // the stack did not come up the way the workflow assumes - an environment fault worth failing
+    // on, not a deployment that legitimately lacks the feature.
+    const probe = await request.get(`${origin}/api/me/agent-keys`).catch(() => null);
+    expect(
+      probe?.status(),
+      'the agent-key backend is configured (needs SUPABASE_SERVICE_ROLE_KEY on the server)',
+    ).not.toBe(503);
     await signIn(page);
     await dismissWizard(page);
     await settleSync(page);

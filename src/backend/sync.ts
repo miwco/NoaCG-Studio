@@ -31,6 +31,7 @@
 // id is tombstoned locally, and the new id pushes cleanly. A denied TOMBSTONE deletes nothing of
 // ours in the cloud, so it is dropped silently (the 90-day purge removes it locally).
 
+import { hasStorageSentinel } from './assets';
 import { isPutDenied, isSingleton, type StorageProvider, type StoredRecord, type SyncKind } from './storage';
 import { uuid } from '../model/id';
 
@@ -214,7 +215,23 @@ export async function runSync(local: StorageProvider, remote: StorageProvider): 
   for (const r of plan.toLocal) {
     if (skipPull.has(recordKey(r))) continue;
     try {
-      const full = (await remote.get(r.kind, r.id)) ?? r;
+      // A TOMBSTONE NEEDS NO ROUND TRIP. `list()` already returned the whole row; the only thing
+      // `get()` adds is rehydrateAssets, and a delete strips the payload before pushing
+      // (library.ts deleteGraphic, shows.ts deleteShow), so there is nothing left to rehydrate.
+      // Re-fetching it costs one serialized request to receive data we are already holding.
+      //
+      // This is not a micro-optimization: the pull loop is sequential, tombstones are never
+      // reaped before 90 days, and every fresh device pulls every tombstone the account has ever
+      // accumulated. Measured on a GitHub runner 2026-08-24 (run 32767300909): 141 of 155 pulls
+      // were tombstones, 207 ms each, 29.4 s in total - past the 30 s the UI was being waited on
+      // for, on an account only seven weeks old. The cost grows without bound as an account ages,
+      // so this was a real user-facing defect, not only a slow test.
+      //
+      // GUARDED, NOT ASSUMED: the "no payload" claim belongs to today's two delete paths. Should a
+      // tombstone ever arrive still holding a Storage sentinel, it takes the normal get() and
+      // rehydrates exactly as before.
+      const cheapTombstone = r.deleted && !hasStorageSentinel(r.body);
+      const full = cheapTombstone ? r : ((await remote.get(r.kind, r.id)) ?? r);
       await local.put(full);
       pulled += 1;
     } catch (e) {
