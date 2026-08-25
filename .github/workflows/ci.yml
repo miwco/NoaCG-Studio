@@ -71,8 +71,13 @@ jobs:
         run: npm run build
 
       # The `noacg` CLI + MCP server is its own package (cli/, docs/AGENT_CLI.md): own lockfile,
-      # own typecheck, own build. Its offline tests run here; the bridge-driving smoke needs a
-      # dev server and is `npm run bench:cli` on a developer machine.
+      # own typecheck, own build. Its offline tests run here - the flag grammar, the workspace <->
+      # zip boundary, the credential store, the AMCP reader, the exit-code contract - while the
+      # bridge-driving smoke needs a dev server and a browser and is `npm run bench:cli` on a
+      # developer machine, skipping itself with a message when no bridge answers.
+      #
+      # Releasing the package is NOT this workflow's job: .github/workflows/release-cli.yml
+      # publishes it from a `cli-vX.Y.Z` tag on main, with npm trusted publishing (no token).
       - name: CLI package (typecheck + build + offline tests)
         run: npm --prefix cli ci && npm --prefix cli run typecheck && npm --prefix cli run build && npm --prefix cli test
 

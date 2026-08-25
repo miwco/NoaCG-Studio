@@ -25,9 +25,9 @@ async function bridgeUp() {
   }
 }
 
-async function run(args) {
+async function run(args, env = {}) {
   try {
-    const { stdout, stderr } = await exec(process.execPath, [cli, ...args], { env: process.env, maxBuffer: 64 * 1024 * 1024 });
+    const { stdout, stderr } = await exec(process.execPath, [cli, ...args], { env: { ...process.env, ...env }, maxBuffer: 64 * 1024 * 1024 });
     return { code: 0, stdout, stderr };
   } catch (e) {
     return { code: e.code ?? 1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' };
@@ -98,6 +98,29 @@ test('a typeless graphic from a field list validates', { skip }, async () => {
   assert.equal(vj.ok, true, `validate not ok: ${JSON.stringify(vj.validation?.merged?.errors)}`);
   const i = await run(['inspect', pkg, '--json']);
   assert.equal(JSON.parse(i.stdout).inspection.descriptors.length, 3);
+});
+
+test('save drives the whole client path and stops at the server', { skip }, async () => {
+  // `save` is the one command whose end is not in this repository's control: everything up to the
+  // POST runs here (read the package, normalize it in the bridge's own browser, run the static
+  // gate and the runtime bench, build the library record), and only the last hop needs an account
+  // and a real backend. A dev server has neither, so this asserts the CLIENT half - which is the
+  // half that can regress - and asserts that the refusal it gets is the DOCUMENTED one rather than
+  // a crash: `reason: 'refused'`, exit 1, the validation attached so an agent can still read it.
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'noacg-smoke-'));
+  const pkg = path.join(dir, 'save-probe');
+  const s = await run(['scaffold', '--fields', 'Headline:text=Hello', '--name', 'Save probe', '--out', pkg, '--json']);
+  assert.equal(s.code, 0, s.stderr);
+
+  const key = `noacg_ak_${'0'.repeat(32)}`;
+  const r = await run(['save', pkg, '--json', '--no-bench'], { NOACG_AGENT_KEY: key });
+  const json = JSON.parse(r.stdout);
+  assert.equal(r.code, 1, `expected the documented refusal, got exit ${r.code}: ${r.stdout}`);
+  assert.equal(json.ok, false);
+  assert.equal(json.reason, 'refused', `a bogus key must be REFUSED, not a crash: ${JSON.stringify(json)}`);
+  // The refusal came from the server hop, which means everything before it succeeded.
+  assert.equal(json.validation?.merged?.errors?.length, 0, `the graphic validated before the save was attempted: ${JSON.stringify(json.validation?.merged?.errors)}`);
+  assert.match(json.error, /^Not saved:/);
 });
 
 test('a third-party OGraf package is inspected and driven in the OGraf host', { skip }, async () => {

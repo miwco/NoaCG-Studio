@@ -1,0 +1,200 @@
+# Publish the `noacg` CLI + MCP server (cli/, docs/AGENT_CLI.md) to npm as @noacg/cli.
+#
+# WHY THIS FILE EXISTS. 0.2.0 was published by hand from a laptop with a granular npm token kept
+# in a gitignored `.env`. That token bypassed 2FA, expired in 30 days, and could publish as the
+# owner from anywhere it leaked - and the agent door is the most distinctive thing this product
+# ships, so its release path being one secret on one machine was the largest standing credential
+# risk in the repository. npm TRUSTED PUBLISHING removes the secret entirely: npm is told to trust
+# THIS workflow file in THIS repository, and mints a short-lived credential from the GitHub OIDC
+# token at publish time. There is nothing left to leak, rotate, or forget to revoke.
+#
+# WHAT MAKES IT SAFE, beyond having no secret:
+#   - No `pull_request` trigger at all, so a fork's PR can never reach this workflow.
+#   - `github.repository` is pinned, so a fork of the repository cannot run it either.
+#   - The commit being published must be an ANCESTOR OF `main`. A tag on a side branch, or a
+#     dispatch against an unmerged branch, is refused before anything is built. "Published" and
+#     "on main" therefore cannot come apart.
+#   - The version must not already exist on the registry - npm would refuse anyway, but refusing
+#     here means a readable answer at the start instead of a 403 at the end of a long job.
+#   - The default dispatch is a DRY RUN. Publishing is the deliberate answer, never the default.
+#
+# HOW TO RELEASE (docs/AGENT_CLI.md "Releasing to npm" is the prose):
+#   1. Bump `cli/package.json` version and run `npm --prefix cli run build` - that stamps the two
+#      plugin manifests and the root marketplace entry. Commit; land on main through /queue-merge.
+#   2. `git tag cli-v0.3.0 && git push origin cli-v0.3.0`
+#   3. Watch this workflow. It builds from that commit and publishes with provenance.
+#
+# The tag is the ONE step a human takes, and it is the step this repository's own rule reserves
+# for a human: a landing can be re-landed, but a published version can never be taken back.
+name: Release CLI to npm
+
+on:
+  # The tag IS the release request. `cli-v*` rather than `v*` because this repository publishes
+  # exactly one package out of a subdirectory; a bare `v*` would read as the studio's version.
+  push:
+    tags: ['cli-v*']
+  # The manual door: a dry run by default (prove the whole path without burning a version), and a
+  # real publish when a tagged run needs re-driving. GitHub only offers the button once this
+  # trigger is on the DEFAULT branch.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build, test and pack, stop before the registry call.'
+        type: boolean
+        default: true
+
+# A release is never superseded by a newer one. Two publishes racing is exactly the case where
+# cancel-in-progress would leave a half-answered question behind.
+concurrency:
+  group: release-cli
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish @noacg/cli
+    # Never on a fork, and never on a fork's tag push.
+    if: ${{ github.repository == 'miwco/NoaCG-Studio' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # The whole point: GitHub mints an OIDC token, npm trades it for a short-lived credential.
+      id-token: write
+    steps:
+      # Full history: the ancestor-of-main check below needs real refs, not a shallow cone.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Node 24 (LTS) is the version this project is developed on. `registry-url` is what makes
+      # setup-node write the .npmrc pointing npm at registry.npmjs.org; no token goes with it.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs npm >= 11.5.1. Node 24 ships a new enough npm today, but a
+      # release path must not silently depend on which npm a runner image happens to carry - so
+      # upgrade, then ASSERT, because "npm install -g npm@latest" succeeding proves nothing about
+      # which binary is now on PATH.
+      - name: Use an npm that can publish with OIDC
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm --version), node $(node --version)"
+          NPM_VERSION="$(npm --version)" node -e '
+            const need = [11, 5, 1];
+            const got = process.env.NPM_VERSION.split(".").map(Number);
+            const ok = got[0] > need[0]
+              || (got[0] === need[0] && (got[1] > need[1] || (got[1] === need[1] && got[2] >= need[2])));
+            if (!ok) {
+              console.error(`npm ${process.env.NPM_VERSION} cannot publish with OIDC; 11.5.1 or later is required.`);
+              process.exit(1);
+            }
+          '
+
+      # Re-read the version rather than trusting the tag: cli/package.json is the one number a
+      # release bumps (cli/scripts/build-skill.mjs stamps everything else FROM it).
+      - name: Read the version being released
+        id: version
+        run: |
+          VERSION="$(node -p 'require("./cli/package.json").version')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing @noacg/cli@$VERSION from ${GITHUB_SHA}"
+
+      # A published version must be a version on main. Both triggers land here: a tag pushed from
+      # a side branch and a dispatch against an unmerged branch are refused identically.
+      - name: Refuse a commit that is not on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error title=Not on main::${GITHUB_SHA} is not an ancestor of origin/main. Land the branch first (/queue-merge), then tag the commit on main."
+            exit 1
+          fi
+          echo "${GITHUB_SHA} is on main."
+
+      # A tag that disagrees with the version it claims to release is a mistake every time.
+      - name: Refuse a tag that disagrees with cli/package.json
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ "$TAG" != "cli-v$VERSION" ]; then
+            echo "::error title=Tag/version mismatch::tag $TAG but cli/package.json says $VERSION (expected tag cli-v$VERSION)."
+            exit 1
+          fi
+          echo "Tag $TAG matches cli/package.json."
+
+      # The registry is the authority on what already exists.
+      - name: Refuse a version that is already published
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # `npm view <pkg>@<missing-version> version` prints nothing and exits 0; a package that
+          # does not exist at all is an E404 exit 1. Both mean "free to publish", so only NON-EMPTY
+          # output is a refusal - `|| true` keeps the E404 from failing the step under `bash -e`.
+          FOUND="$(npm view "@noacg/cli@$VERSION" version 2>/dev/null || true)"
+          if [ -n "$FOUND" ]; then
+            echo "::error title=Already published::@noacg/cli@$VERSION is already on the registry. Bump cli/package.json."
+            exit 1
+          fi
+          echo "@noacg/cli@$VERSION is free."
+
+      # THE TRAP (cli/scripts/build-skill.mjs): a version bump must run the skill generator, which
+      # stamps the two plugin manifests and the root marketplace entry. A bump committed without it
+      # ships a plugin that advertises the previous version. `--check` is the same comparison
+      # `npm run build` makes, asked BEFORE anything can rewrite the answer.
+      - name: Refuse manifests that are out of step with the version
+        run: npm --prefix cli run check:skill
+
+      - name: Install the CLI package's dependencies
+        run: npm --prefix cli ci
+
+      - name: Typecheck and build
+        run: npm --prefix cli run typecheck && npm --prefix cli run build
+
+      # The build just RAN the generator. If it changed a tracked file, the committed tree was
+      # stale in a way `--check` did not cover - belt for the braces above.
+      - name: Refuse a build that changed a tracked file
+        run: git diff --exit-code
+
+      - name: Test
+        run: npm --prefix cli test
+
+      # Everything the real publish does except the upload. `prepack` re-runs the full build, so
+      # what is packed here is what would be packed for real - which is also why a stale local
+      # dist/ can never be shipped. This is the step a dry-run dispatch exists to reach: it proves
+      # the whole path up to the registry call without burning a version.
+      - name: Pack exactly as a publish would (dry run)
+        working-directory: cli
+        run: npm publish --dry-run
+
+      - name: Stop here (dry run)
+        if: ${{ inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "::notice title=Dry run::@noacg/cli@$VERSION packed cleanly and was NOT published. Re-run with dry_run unchecked, or push the tag cli-v$VERSION, to publish for real."
+
+      # The publish itself. No NODE_AUTH_TOKEN, no .npmrc secret, nothing to leak: npm exchanges
+      # the GitHub OIDC token for a short-lived credential, which is what `id-token: write` is for.
+      # PROVENANCE is automatic here - this repository is public and the package is public, so npm
+      # attaches a signed provenance statement without `--provenance` being passed. Passing the
+      # flag would also work; leaving it off keeps the command identical to npm's own documented
+      # trusted-publishing example, which is the version these docs are kept in step with.
+      #
+      # `inputs.dry_run` is null on a tag push, so `!inputs.dry_run` is true there: a tag publishes.
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        working-directory: cli
+        run: npm publish
+
+      - name: Say what landed
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "::notice title=Published::@noacg/cli@$VERSION is on npm - check the provenance badge at https://www.npmjs.com/package/@noacg/cli"
