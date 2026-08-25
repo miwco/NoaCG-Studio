@@ -62,6 +62,10 @@ wave, where the user is awake to unstick things.
 
 Seven sections, in this order. Nothing else - no session summary, no restatement of the input.
 
+**A night wave does not end with the text.** After section 6, and with no further prompting, this
+session ENTERS THE WATCH LOOP below and stays in it until the wave is done. The plan is what the
+user reads before bed; the loop is what makes the wave land while they are asleep.
+
 ### 1. The wave table
 
 One row per session: letter, one-line goal, `START` (`now`, or `on <branch> landing` for a
@@ -287,8 +291,13 @@ sessions, and it is produced entirely from read-only commands in this session:
   `node scripts/worktree-activity.mjs` for work a session left uncommitted.
 - **Every session's handoff**, collected from `docs/handoffs/<date>-*.md` - the reason the prompts
   write those files. Quote each one's "what is left", not the whole file.
-- **What the night opened up** - work that is now unblocked and was not in the wave. This is the
-  input to the next invocation, so write it as candidate rows, not prose.
+- **What the night opened up** - work that is now unblocked and was not in the wave, including any
+  follow-on that was NOT launched because its trigger never landed. This is the input to the next
+  invocation, so write it as candidate rows, not prose.
+
+In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
+loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's
+plan says so in one line.
 
 Nothing in this section merges, re-queues or cleans up anything. A refusal is reported with the
 command that would settle it and WHERE to run it, exactly as section 5's prompts are.
@@ -312,10 +321,45 @@ The rules that keep it from becoming an unattended agent doing whatever it likes
 - **It runs in its own worktree**, so it can never edit the files another session is holding.
 - **It queues itself and writes its own handoff**, exactly like a session the user started. This
   session still never merges and never pushes.
-- **Staying awake is a loop, not a daemon.** This session only sees a landing if it is woken to
-  look; the pacing is dynamic, and a wake with nothing landed is a no-op, not a report.
 - **Cap the chain at one.** A follow-on may not itself have a follow-on. Two hops of unattended
   planning is how a night ends somewhere nobody chose.
+
+## The watch loop
+
+**A night wave enters this automatically**, as the last action of the invocation, without being
+asked. Staying awake is a LOOP, not a daemon: this session only sees a landing if something wakes
+it to look.
+
+- **In Claude Code** that is the built-in `/loop` with **no interval**, so the pacing is
+  self-chosen rather than a fixed cadence - nothing useful happens every five minutes at 03:00.
+  Say in one line that the loop has started and what it is watching; do not paste the loop prompt
+  back at the user.
+- **In Codex** there is no equivalent, so a night wave there is planned with **no follow-on rows
+  at all** - the work is collapsed into bigger prompts instead, and the morning report is produced
+  by re-invoking this workflow in the morning. Say that out loud in section 7 rather than leaving
+  the user to notice the difference.
+
+Each tick, in this order, and nothing else:
+
+1. `git fetch` (this checkout only), then for each wave branch
+   `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
+2. `npm run jobs` - what landed, what is running, what refused and which of the four kinds.
+3. For every follow-on whose trigger has now landed, launch it in its own worktree with the prompt
+   already written in section 5. Never one that is not in the wave table.
+4. Otherwise do nothing. **A tick with no landing is a no-op, not a report** - a night of "still
+   waiting" messages is what the no-op tick exists to prevent.
+
+**Pacing.** Long. Twenty to forty minutes is right for a wave whose sessions take an hour each;
+a gate takes about ten minutes, so anything under that measures nothing new. Never poll in the
+foreground and never sleep to pass the time.
+
+**Stopping.** The loop ends when every wave branch has either landed or refused and every fired
+follow-on has done the same - then it produces section 7, the morning report, and stops. It also
+stops on the user's word. It does not stop because a branch refused: a refusal is reported in the
+morning with the command that would settle it, and the rest of the wave carries on.
+
+**The loop never merges, never pushes, and never touches another worktree's files.** It watches,
+it launches what was planned, and it reports.
 
 ## How to ground it
 

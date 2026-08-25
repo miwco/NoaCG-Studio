@@ -85,6 +85,10 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'Exactly two exceptions, both bounded',
       'Never merge, and never push.',
       'follow-on that was not planned is never launched',
+      // A night wave that plans follow-ons and then goes to sleep has planned nothing: the loop
+      // is the half that fires them. Entering it is automatic, and a quiet tick must stay quiet.
+      'A night wave enters this automatically',
+      'A tick with no landing is a no-op, not a report',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
       // reaches into another worktree - not to merge, not to check, not to tidy. Printing a merge
       // order reads like an offer to merge, so the boundary is pinned in both directions.
