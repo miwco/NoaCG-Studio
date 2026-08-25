@@ -70,6 +70,21 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       'Never act on a collision.',
       "Read, don't write.",
       'Create or update no files',
+      // A wave is planned so that nothing waits to START - the queue already serializes landing,
+      // and a start-order edge is the one that strands work overnight when its predecessor dies.
+      // Both halves are pinned: the rule, and the ban on the line that used to encode the edge.
+      'A wave is ORDER-FREE or it is not a wave',
+      'There is no `WAIT` line, because a wave is order-free',
+      // Landing is serialized, not permissioned. A wave the user has to merge by hand in the
+      // morning is the exact cost this shape removes, so every prompt queues itself - and a
+      // session that stops to ask a human is a session that does nothing all night.
+      'QUEUE is mandatory on every prompt and is the last thing in it',
+      'No prompt ever contains a step for the user.',
+      // The two exceptions to NEVER ACTS are enumerated so neither can widen quietly, and
+      // neither of them reaches landing.
+      'Exactly two exceptions, both bounded',
+      'Never merge, and never push.',
+      'follow-on that was not planned is never launched',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
       // reaches into another worktree - not to merge, not to check, not to tidy. Printing a merge
       // order reads like an offer to merge, so the boundary is pinned in both directions.

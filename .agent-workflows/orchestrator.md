@@ -5,9 +5,10 @@ Shared canonical procedure for the `orchestrator` workflow - invoked as `/orches
 below use their plain names (e.g. "the safe-merge workflow"); translate as `/safe-merge` in
 Claude Code, `$safe-merge` in Codex.
 
-Run at the START of a session that will orchestrate other sessions. **This session produces text
-and nothing else.** It is deliberately not explicit-only, because a workflow that cannot act
-cannot be invoked dangerously - do not "harden" it later, which would also break its alias.
+Run at the START of a session that will orchestrate other sessions. **This session produces text,
+and acts only inside the two bounded exceptions below.** It is deliberately not explicit-only,
+because a workflow that plans work and lands none of it is not dangerous to invoke - do not
+"harden" it later, which would also break its alias.
 
 ## THIS SESSION NEVER ACTS
 
@@ -25,6 +26,19 @@ it **never touches another worktree** - not to check something, not to merge, no
 The reason is not caution, it is legibility: the moment this session starts doing work as well as
 assigning it, nobody can tell which state came from the plan and which from a side effect.
 
+**Exactly two exceptions, both bounded, both written here so neither can widen quietly:**
+
+1. **Its own contract.** This session may edit `.agent-workflows/orchestrator.md` and the adapters
+   that point at it, and nothing else in the repository. Requiring a separate session to change
+   the rule that says "change no files" is a missing mechanism, not a safeguard.
+2. **A follow-on it already planned.** In a night wave it may launch a follow-on session that its
+   own wave table named before the wave started, in that session's own worktree, when the trigger
+   branch lands - see "Follow-on waves" below. Never anything unplanned.
+
+**Neither exception touches landing.** It never merges, never pushes, never touches another
+worktree's files - not to check something, not to tidy. The queue lands work; this session reads
+what the queue did.
+
 ## Input
 
 Whatever the user pasted with or after the invocation, in any mix:
@@ -38,15 +52,29 @@ Whatever the user pasted with or after the invocation, in any mix:
   in section 6.
 - **Nothing.** Then plan from repository state alone and say that is what happened.
 
+**Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, and
+expected to be landed and pushed by morning - roughly seven unattended hours, with the queue doing
+the merging. It is the default when the user says so, or when a wave is being started at the end
+of a day. Everything below marked *night* is mandatory there and merely good practice in a day
+wave, where the user is awake to unstick things.
+
 ## Output
 
-Six sections, in this order. Nothing else - no session summary, no restatement of the input.
+Seven sections, in this order. Nothing else - no session summary, no restatement of the input.
 
 ### 1. The wave table
 
-One row per session: letter, one-line goal, `START` (now, or `after <letter>`), `TOUCHES` (the
-files or directories it will own), `MINTS` (any scarce shared slot it needs - see section 2), and
-whether it needs a browser on this machine.
+One row per session: letter, one-line goal, `START` (`now`, or `on <branch> landing` for a
+follow-on), `TOUCHES` (the files or directories it will own), `MINTS` (any scarce shared slot it
+needs - see section 2), and whether it needs a browser on this machine.
+
+**Target about five sessions. There is no hard limit, and the count is not the constraint** - the
+constraint is whether they can land in ANY ORDER (section 2). Five order-free sessions drain
+comfortably inside a night; two that must land in sequence are one prompt, not two rows.
+
+**A follow-on row is a session this workflow may launch itself** when its trigger branch lands,
+rather than one the user starts. It carries the same letter discipline as every other row and is
+written out in full in section 5, so its shape is approved before the user goes to bed.
 
 Letters are the day's vocabulary and, once assigned, never move.
 
@@ -87,18 +115,45 @@ the laptop's browser is what CI cannot do - in-browser visual acceptance, the ca
 benches, and render smoke. Order those cheapest-first and tell the user to use the `:queued` form
 of any e2e script.
 
-### 3. Landing order
+**A wave is ORDER-FREE or it is not a wave** (*night*: mandatory). Landing is already serialized -
+the queue lands one branch at a time, and a branch blocked by one still waiting retries rather than
+failing, so no plan ever needs to say which merges first. What a plan DOES have to guarantee is
+that no session waits to START. That is the edge that breaks: a session whose predecessor dies,
+runs out of room, or refuses its gate never begins, and the user finds out in the morning.
+
+So a wave carries **no `WAIT` lines**. Two tasks that cannot be made order-free are ONE prompt
+doing both in sequence - which is also the real justification for big prompts over many: a wave
+with no edges cannot half-fail. Work that genuinely only exists once something has landed is a
+FOLLOW-ON, not a waiting session (see "Follow-on waves").
+
+**Two files every session appends to, and both would otherwise collide.** These are append-only
+lists, so N sessions writing at the same offset is a git conflict, and `auto-merge.mjs` aborts on a
+conflict and stops - the branch then sits until a person looks at it. Both are solved the same way,
+by giving each session its own FILE rather than its own line:
+
+- **the owner queue** - one file per item under `docs/acceptance/owner-queue/`, named
+  `<date>-<letter>-<slug>.md`. Never a shared list (root `AGENTS.md` rule 7; the walk workflow reads
+  the directory).
+- **the handoff** - one file per session at `docs/handoffs/<date>-<letter>-<slug>.md`, so the
+  morning report can collect every session's handoff without the user opening any of them.
+
+### 3. Landing
 
 Two different things, never blended:
 
 - **Branches already ahead of `main`** - `node scripts/merge-order.mjs` measures this with
   `git merge-tree`. Quote its own verdict words - `clear`, `caution`, `hold` - so the answer can be
   compared with what the safe-merge workflow prints an hour later. It is the authority here.
-- **Today's new sessions**, which have no branches yet, so the script cannot see them. Give the
-  order as an explicit PREDICTION from `TOUCHES`, `MINTS` and the wait-chain - **as a numbered
-  list of LETTERS**, matching the wave table and the branch names, so it can be compared against
-  section 5 without re-reading either. Say that `merge-order.mjs` should be re-run once the
-  branches exist.
+- **Today's new sessions**, which have no branches yet, so the script cannot see them. **Do not
+  predict an order for them.** State the QUEUE POLICY instead: every session runs `/queue-merge` as
+  its last action, the queue lands them one at a time in the order they finish, and the wave was
+  built order-free (section 2) so any order is correct. If the wave is NOT order-free, that is a
+  defect in the plan - say so here, name the one chain, and say why it could not be collapsed into
+  a single prompt.
+
+**Nothing in this section is an offer to merge.** A branch named here is not a safe-merge option:
+"merge A" said to this session does not invoke that flow, and this session never merges. Answer by
+naming the branch and its current `merge-order.mjs` verdict; the queue does the landing.
 
 **Section 3 is a report, not a pick.** A branch named here is NOT an offered safe-merge option, so
 "merge A" said to this session does not invoke that flow. Answer it by naming the branch, its
@@ -133,35 +188,37 @@ One fenced block per session, in START order, each pasteable into a fresh sessio
 target ~20 lines.
 
 Open the section with a **one-line run order** naming the letters and nothing else, so the user
-can see the shape before reading a single prompt: *"Start now: A, C, D. Then B after A. Then E
-after D. F and G held."*
+can see the shape before reading a single prompt: *"Start now: A, B, C, D. E follows on A landing.
+F held."*
 
 ```
 SESSION A - <three-word name>
 BRANCH <tool>/a-<name>
 MODEL  opus high - <what KIND of thinking this task rewards>
 START  now
-WAIT   nothing - start immediately
 TOUCHES <files>   MINTS <slot, or ->
 GOAL   One sentence: what is true when this is done.
 WHY    The real problem it solves, or the goal it serves.
 READ   file, file, file.
 DO     1. …  2. …  3. …
 TRAPS  only what is written in no repo file
-GATE   npm run build, then push and read the CI run. Commit each verified step. Never land on main.
+GATE   npm run build, then push and read the CI run. Commit each verified step.
+QUEUE  Then, as your LAST TWO actions and in this order:
+       1. write docs/handoffs/<date>-a-<slug>.md - what landed, what is left, what it cost;
+       2. run /queue-merge. Do not commit after queueing: queueing pins the branch, and a later
+          commit makes the landing job refuse. Never merge into main yourself.
 ```
 
 - **`SESSION <letter>` is the first line, always**, before the branch and before anything else.
   Same letter as the wave table, same letter as the branch name. This line exists for the user
   scrolling back at 4pm, not for the session reading it.
-- **`START` and `WAIT` are two different facts and both are mandatory.** `START` is the position
-  in the day (`now`, or `after C`). `WAIT` is the *check that proves the wait is over*, written as
-  something runnable, e.g. `WAIT C landed - git branch --merged main | grep c-pro-panel, and its
-  worktree clean`. A session that starts now still carries `WAIT nothing - start immediately`,
-  because an absent line reads as an omission rather than as permission.
-- **A `WAIT` names a letter and a verifiable condition, never a time.** "after lunch", "once the
-  other one is further along" and "in parallel but a bit later" are not conditions. If the real
-  dependency is a shared file rather than a merge, say which file and say who owns it today.
+- **There is no `WAIT` line, because a wave is order-free** (section 2). `START` is `now` for every
+  session the user starts. The only other value is `on <branch> landing`, and that belongs to a
+  follow-on this workflow launches itself - never to a prompt the user is asked to hold.
+- **No prompt ever contains a step for the user.** Not "ask the owner", not "wait for approval",
+  not "have the user run this". A session that stops to ask is a session that does nothing all
+  night. Anything that genuinely needs the user is a note in section 4, never a line in a prompt;
+  if a task cannot be written without one, it does not go in the wave.
 - **`<tool>` is whichever tool will run it** - `claude/…` or `codex/…`. Never hardcode one.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
@@ -195,8 +252,16 @@ GATE   npm run build, then push and read the CI run. Commit each verified step. 
   pointer. Reprinting an area contract is how these get fat.
 - **DO is verifiable steps**, not a topic list. Reproduce-before-fixing for any bug.
 - **GATE is `npm run build` plus CI**, because the per-change suite belongs to CI, not the laptop -
-  add a local browser job only for the work from section 2 that CI cannot do. Every prompt ends on
-  `Never land on main`, because the session running it may never see this one.
+  add a local browser job only for the work from section 2 that CI cannot do.
+- **QUEUE is mandatory on every prompt and is the last thing in it**, because the session running
+  it may never see this file. Landing is serialized, not permissioned: a finished session queues
+  itself, and the machine-wide queue lands it - gated on CI, one branch at a time, pushing when it
+  wins (`.agent-workflows/queue-merge.md`). A wave that does not queue itself is a wave the user has
+  to merge by hand in the morning, which is the cost this whole shape exists to remove. The handoff
+  FILE is written first and `/queue-merge` second, so the handoff is inside what lands.
+- **Say what to do with unfinished work, once, in QUEUE**: commit and queue only what stands on its
+  own and is green; leave the rest uncommitted and describe it in the handoff file. A session must
+  never queue a branch it has not gated just to get it landed before morning.
 - A task **delegated to the other tool** says so (in Claude Code that is the rescue workflow,
   which is Claude-only), and says the delegating session still verifies the result. Delegate for
   mechanical bulk edits, a settled design spanning many files, or a bug still failing after two
@@ -207,6 +272,50 @@ GATE   npm run build, then push and read the CI run. Commit each verified step. 
 Only decisions that change what the work IS and that the user alone can make; a question with an
 obvious default is not a question. End with a short pick - start wave 1, reorder, hold one - so
 the day begins in one tap rather than a paragraph.
+
+### 7. The morning report
+
+**Only for a wave that has already run** - when the plan is first written this section is one line
+saying when the report will be available. It is what the user reads instead of opening six
+sessions, and it is produced entirely from read-only commands in this session:
+
+- **Landed** - from `npm run jobs`: branch, session, in the order the queue took them.
+- **Refused, and WHICH KIND** - `auto-merge.mjs` refuses loudly with a reason, and the four are four
+  different mornings: a red gate, a conflict integrating `main`, a dirty worktree, and a stale pin
+  (the branch moved after it was queued). Name the kind, not just the failure.
+- **Still holding** - `node scripts/merge-order.mjs` for anything ahead of `main`, and
+  `node scripts/worktree-activity.mjs` for work a session left uncommitted.
+- **Every session's handoff**, collected from `docs/handoffs/<date>-*.md` - the reason the prompts
+  write those files. Quote each one's "what is left", not the whole file.
+- **What the night opened up** - work that is now unblocked and was not in the wave. This is the
+  input to the next invocation, so write it as candidate rows, not prose.
+
+Nothing in this section merges, re-queues or cleans up anything. A refusal is reported with the
+command that would settle it and WHERE to run it, exactly as section 5's prompts are.
+
+## Follow-on waves
+
+**Night only, and the one thing this session is allowed to start.** A follow-on is work that
+genuinely does not exist until another branch lands - the second half of a rename, a caller update
+after a signature change, a measurement that needs the fix in `main`. In a day wave it is simply
+the next invocation. In a night wave the user is asleep, so a follow-on that waits for morning
+wastes the hours the wave existed to use.
+
+The rules that keep it from becoming an unattended agent doing whatever it likes:
+
+- **It must be in the wave table before the wave starts**, with its letter, its `TOUCHES`, its
+  trigger branch, and its full prompt in section 5. The user approves its shape before bed. **A
+  follow-on that was not planned is never launched** - it goes in the morning report as a
+  candidate row instead.
+- **The trigger is a landing, checked, never assumed**: `git fetch` then
+  `git merge-base --is-ancestor <branch> origin/main`. A queued job is not a landed branch.
+- **It runs in its own worktree**, so it can never edit the files another session is holding.
+- **It queues itself and writes its own handoff**, exactly like a session the user started. This
+  session still never merges and never pushes.
+- **Staying awake is a loop, not a daemon.** This session only sees a landing if it is woken to
+  look; the pacing is dynamic, and a wake with nothing landed is a no-op, not a report.
+- **Cap the chain at one.** A follow-on may not itself have a follow-on. Two hops of unattended
+  planning is how a night ends somewhere nobody chose.
 
 ## How to ground it
 
@@ -246,19 +355,21 @@ a longer prompt.
 
 ## Rules
 
-- **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract.
+- **Read, don't write.** See "THIS SESSION NEVER ACTS" above; that section is the contract, and it
+  carries the only two exceptions there are.
 - **Never act on a collision.** Another worktree's in-flight work is reported and planned around.
-- **Create or update no files.** The plan lives in the response. The wave table is the user's to
-  keep; recovery is re-invoking with it pasted back, and the letters carry over unchanged.
+- **Create or update no files** except this workflow's own contract and its adapters. The plan
+  lives in the response. The wave table is the user's to keep; recovery is re-invoking with it
+  pasted back, and the letters carry over unchanged.
+- **Never merge, and never push.** Every branch reaches `main` through the queue, started by the
+  session that owns the work. This session reports what the queue did; it does not do it.
 - **Verify before you list.** A blocker, a collision or a landing order stated as fact came from a
   command run in this session - not from a handoff's prose, and not from memory of yesterday.
 - **`TOUCHES` is a forecast**, not a copy of a handoff's retrospective file list. They answer
   different questions.
 - **Letters are stable, and so is scope.** Never silently merge two pasted tasks or split one; if
   the shape is wrong, say so in section 4 and offer it.
-- **Stay usable all day.** "Can B start now" is three checks, all required: A's branch contained
-  in `main` (`git branch --merged main`), A's worktree clean, and the shared file no longer listed
-  in flight. Answer from those plus a fresh `worktree-activity.mjs` run - never by re-planning.
-  Those three checks are what B's own `WAIT` line already promised, so answering the question and
-  reading B's prompt must give the same answer; if they diverge, the `WAIT` line was written
-  wrong and gets corrected rather than explained.
+- **Stay usable all day.** "Can B start now" is answered from a fresh `worktree-activity.mjs` run
+  plus `npm run jobs`, never by re-planning. In an order-free wave the answer is almost always yes,
+  and if it is not, the reason is a collision the plan missed - name the file, and say so, rather
+  than inventing a wait after the fact.

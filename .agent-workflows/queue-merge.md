@@ -33,7 +33,9 @@ So before queueing:
 
 - everything committed, `git status --porcelain` empty;
 - `npm run build` green on what you are about to queue;
-- anything observable in the product has its item in `docs/acceptance/OWNER_QUEUE.md`.
+- anything observable in the product has its own file under `docs/acceptance/owner-queue/`
+  (one file per item - a shared list makes parallel sessions conflict, and a conflict stops the
+  landing job dead).
 
 ## 2. Look before you queue
 
@@ -66,8 +68,9 @@ itself, up to three times.
 **A migration on your branch applies itself.** Once the branch is on `origin/main` the job runs
 `npm run db:push`, so you never have to remember a production push. It refuses anything that can
 remove something - a DROP, a REVOKE on an object the migration did not create - and reports instead;
-that refusal does not fail the landing. If it happens, put it in `docs/acceptance/OWNER_QUEUE.md`
-with the `npm run db:push -- --allow <version>` command, because from there it is the owner's call.
+that refusal does not fail the landing. If it happens, add an `owner-action` file under
+`docs/acceptance/owner-queue/` carrying the `npm run db:push -- --allow <version>` command,
+because from there it is the owner's call.
 
 ## 4. When it lands
 

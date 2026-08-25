@@ -293,10 +293,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    catalog that was visibly broken.
 6. **Freshness is TIME-driven, never commit-driven** (`docs/STACK_FRESHNESS.md`): `check:freshness`
    reports weekly and nothing auto-upgrades.
-7. **A green gate is not a human seeing it.** Work that is observable in the product adds an item
-   to **`docs/acceptance/OWNER_QUEUE.md`** in the same commit - what changed, the ROUTE to it in
-   under a minute, what specifically to look at, and the date. `/walk` empties that list one item
-   at a time and expires anything older than 7 days as presumed seen. Whether the owner looked at
+7. **A green gate is not a human seeing it.** Work that is observable in the product adds its OWN
+   FILE under **`docs/acceptance/owner-queue/`** in the same commit - what changed, the ROUTE to it
+   in under a minute, what to look at, and the date. One file per item, never a shared list, so
+   parallel sessions cannot conflict on it. `/walk` reads that directory, empties it one item at a
+   time, and expires anything older than 7 days as presumed seen. Whether the owner looked at
    something and thought it was any good is the one fact about shipped work that no file in the
    repo can otherwise hold; an item with no route is not an item.
 
@@ -382,7 +383,7 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   old rule left 0051 unapplied for hours, and `supabase/README.md` records that a ledger out of step
   stays silent until the next push and then fails partway through. A refused migration is the one
   case that still reaches you - the landing succeeds, the push reports, and the branch's session
-  puts it in `docs/acceptance/OWNER_QUEUE.md` with the `--allow` command.
+  files it under `docs/acceptance/owner-queue/` with the `--allow` command.
 - **A finished session can clean up its own worktree, but only the USER starts it** -
   `cleanup-worktrees.mjs --self`. **No other workflow raises the subject**: a verdict written by a
   model must never start an irreversible action. **A clean `git status` does not mean a worktree is
