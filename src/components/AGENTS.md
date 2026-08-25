@@ -525,3 +525,21 @@ useAuthState + authUi + SignInDialog / SignInPrompt / AuthStatus, the account es
 `CLAUDE.md`), which loads when you work in that directory. The gating pattern it holds is the
 one every surface uses: read `useAuthState().needsSignIn` and render `SignInPrompt` - never
 block the app. No login wall, ever - see the root AGENTS.md "Auth posture".
+
+## A grid track's fixed floor makes a wide control overflow its neighbour
+
+`grid-template-columns: repeat(auto-fit, minmax(210px, 1fr))` does NOT mean "at least 210px, grow
+if the content needs more". **The `210px` is a hard track minimum**: an item whose own min-content
+is wider neither widens the track nor shrinks - it overflows its track, and the item in the next
+column draws on top of it. `1fr` is `minmax(auto, 1fr)`, but an explicit fixed min replaces the
+`auto` that would otherwise have protected the content.
+
+It costs time because **the symptom reads as a z-index or positioning bug and is neither**, and it
+only appears at the widths where the track sits at its floor - so a wide monitor shows it and the
+developer's window does not. In NoaCG (2026-08-21) it put a scoreboard's team name across the
+score field's step-size box for everyone on a big monitor.
+
+Set the floor from the WIDEST control's measured min-content, not from a round number that looked
+right beside a text box, and put a structural backstop behind the arithmetic for the control
+nobody has written yet: let the row WRAP. A taller field is ugly; an overlapping one is unreadable
+and silent.

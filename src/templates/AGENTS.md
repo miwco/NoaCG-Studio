@@ -22,6 +22,23 @@ catalog gate can pass while CI's full plan goes red on it - which is exactly wha
 2026-08-19 to a nine-design branch with four green catalog runs behind it. The healthy diff is
 purely additive: ids added, nothing existing changed. Details: docs/VERIFICATION.md.
 
+**But `overflow-baseline.json` is the one file whose own updater breaks that rule.** Re-recording
+it with `--update-baseline` on a clean tree produced **+12 / -98** (2026-08-23): the deletions were
+`-mask:y` self-clip rows on designs nothing had touched - card05, card17, card18, card21, card33,
+card44, ss05, ss10, ss18 and more. Those rows sit within a pixel or two of `CLIP_TOLERANCE` (2px),
+so whether they appear depends on font loading and machine load rather than on the code. A full
+re-record bakes one run's coin flips into the committed reference, and the NEXT run reports the
+ones that came back as regressions. **Add only the new rows by hand and leave every existing one
+alone**, then re-run `node scripts/overflow-sweep.mjs --baseline` to confirm PASS:
+
+```bash
+node -e "const fs=require('fs');const p='scripts/overflow-baseline.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.myNewId={off:[],clip:['.prefix-mask:y']};fs.writeFileSync(p,JSON.stringify(j,null,1))"
+```
+
+Editing `shared/matchClock.ts` moves about 25 catalog hashes on its own, because every board that
+reads the clock re-serializes - re-record the catalog baselines in the same commit rather than
+treating that diff as a regression.
+
 **A DESIGN'S NAME IS ITS OWN - no two may share one**, and the same spec holds that (both names:
 the variant's, which is the Browse card, and the created template's, which is what a production,
 a rundown and an export folder carry). Export already survived a collision by suffixing the
@@ -706,3 +723,36 @@ lower-third counterpart). Custom colors enter through the wizard's Custom palett
 picker); imported fonts become template assets (`fonts/<file>` data-URL) with a visible
 `@font-face`, are registered via the FontFace API for the builder UI, and ship as real binaries
 in the export.
+
+## Three traps that no gate here can see
+
+- **`tabular-nums` is not `lining-nums`.** `font-variant-numeric: tabular-nums` holds a figure's
+  WIDTH and says nothing about its HEIGHT. The bundled text serifs (source-serif-4,
+  playfair-display) default to OLD-STYLE figures: 0, 1, 2 sit at x-height while 3, 4, 7, 9 hang
+  below the baseline. In a stat column that puts "42" lower than "18,400" beside it and breaks the
+  baseline each figure shares with its label; in a tracked all-caps label it makes "2026" read as
+  lowercase inside its own line. **`scripts/numerals.mjs` cannot catch it** - it measures whether a
+  number's box MOVES as digits change, and old-style figures are perfectly stable at the wrong
+  height, so it passes. Any figure column or caps label on a serif face writes both:
+  `font-variant-numeric: lining-nums tabular-nums;`. Found while drawing ig39 "Key Figures",
+  visible only in a high-DPI crop.
+- **A permanent `will-change` makes a settled capture unreproducible.** Chromium promotes the
+  element to its own compositing layer for the life of the page, rasterises its texture DURING the
+  entrance, and never redraws it once the tween settles - so a still of a finished graphic carries
+  a texture rastered at whatever sub-pixel phase the last mid-flight raster caught. One cell
+  produced 5 distinct PNGs in 5 runs, differing only on glyph and panel edges. It looks exactly
+  like a composer or font bug and is neither: in the measured case (2026-08-17) the language, the
+  composed html/css/js, the srcdoc and every element's rect to 4dp plus 19 computed paint styles
+  were byte-identical across runs that disagreed. In a capture runner, after the graphic settles,
+  drop the hint for one frame and restore it - `addStyleTag('*{will-change:auto !important}')`, two
+  rAFs, remove, two rAFs - then shoot.
+- **Never import from `src/blocks/**` inside `src/templates/**`.** `src/blocks/edit.ts` imports
+  `templates/shared/standard.ts`, so any import back the other way closes a cycle - and because
+  the catalog builds at module scope, the cycle throws no readable error: **the app simply never
+  renders.** On 2026-08-09 reusing `setFieldDefault` inside `templates/types/graphicType.ts` made
+  45 AI/wizard e2e tests time out waiting for the "Generate" button, with nothing in the console
+  naming the cycle, while the same specs passed one at a time. The templates layer sits UNDER
+  blocks in the allowed import edges (`docs/ARCHITECTURE.md`); the sanctioned
+  `blocks/animData` / `blocks/animImport` seam reads like a precedent it is not. If a blocks helper
+  looks reusable here, copy the few lines. **A wholesale wizard/AI spec failure with timeouts and
+  no error message is the signature** - check the new import before debugging the UI.
