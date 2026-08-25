@@ -351,6 +351,26 @@ documents its own exemptions, with the reason written beside them.
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
 
+## Migrations reach production only when a human pushes them
+
+So the safe-merge preflight REPORTS whether production is behind, and `npm run
+check:migration-drift` runs the same check alone. Landing is the moment it matters: a migration
+reaches `main` and then nothing applies it, because `supabase db push` is a deliberate act.
+`0051_client_table_grants` sat unapplied on production for hours on 2026-08-25, past a green CI
+run and a green nightly, and was found only because somebody ran `supabase migration list` for an
+unrelated reason.
+
+Advisory, never blocking - a laptop without the token, or without a network, gets a note rather
+than a refusal. It is deliberately **not** a CI job: the ledger lives in
+`supabase_migrations.schema_migrations`, which PostgREST does not expose, so reading it remotely
+needs the Supabase MANAGEMENT API and an ACCOUNT-WIDE personal access token - one that enumerates
+every organisation and project, and whose API deletes them. This repository is public, so that
+token stays out of Actions and the check runs locally, where it already lives in `.env`.
+
+It reads the production ref from `VITE_SUPABASE_URL`, never from `supabase/.temp/`: that is the
+CLI's per-checkout LINK state, and a worktree linked to a staging project would otherwise make the
+check answer confidently about the wrong database.
+
 ## Freshness is TIME-driven, never commit-driven
 
 `docs/STACK_FRESHNESS.md` owns this. `npm run check:freshness` is not in the build gate, because
