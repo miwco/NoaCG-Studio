@@ -30,12 +30,17 @@ import { setFieldDefault } from '../../blocks/edit';
 import { parseAnimData } from '../../blocks/animData';
 import {
   applyMotionPreset,
+  currentMotionEasing,
   currentMotionPreset,
+  easesForChoice,
+  easingLegalForMotions,
+  easingsForMotions,
   motionPresetById,
   motionTargets,
   type MotionPick,
   type MotionPresetId,
 } from '../../blocks/motionPresets';
+import { EASINGS, type EasingId } from '../../model/easings';
 import { writeAnimData } from '../../templates/shared/animRuntime';
 import type { AnimPhase } from '../../blocks/presetRegistry';
 import MotionPresetPicker from '../MotionPresetPicker';
@@ -149,6 +154,19 @@ export default function GraphicControlPage({ id }: { id: string }) {
   const motionIn = useMemo(() => (template && anim ? currentMotionPreset(template, anim, 'in') : null), [template, anim]);
   const motionOut = useMemo(() => (template && anim ? currentMotionPreset(template, anim, 'out') : null), [template, anim]);
   const motionUnits = useMemo(() => (template && anim ? motionTargets(template, anim).length : 0), [template, anim]);
+  // The CURVE is read back the same way — off the keyframes the last pick stamped it into, not
+  // out of component state — so it survives a reload and an edit made anywhere else. It is a
+  // modifier on a universal motion: with neither phase holding one (a catalog choreography, a
+  // hand-keyed timeline) there is nothing for it to shape, and the control says so.
+  const motionEasing = useMemo(
+    () => (template && anim ? currentMotionEasing(template, anim, { in: motionIn, out: motionOut }) : 'auto'),
+    [template, anim, motionIn, motionOut],
+  );
+  // The offer is what the picked motion can actually RENDER (blocks/motionPresets.ts —
+  // an overshoot needs an unclamped property to overshoot into), asked of BOTH phases because
+  // one setting drives both. Same rule, same list as the wizard's Animation step.
+  const easeOptions = useMemo(() => easingsForMotions([motionIn, motionOut]), [motionIn, motionOut]);
+  const easeSettable = motionIn !== null || motionOut !== null;
   const [motionDirection, setMotionDirection] = useState<AnimPhase>('both');
   const [motionOpen, setMotionOpen] = useState(false);
   /** Armed by a motion pick: the REBUILT document plays its new entrance once (then the exit,
@@ -417,7 +435,40 @@ export default function GraphicControlPage({ id }: { id: string }) {
     let written = false;
     patch((cur) => {
       const data = parseAnimData(cur.template.js);
-      const next = data && applyMotionPreset(cur.template, data, pick);
+      if (!data) return {};
+      // The pair the graphic will hold once this pick lands — which is what decides whether the
+      // curve beside it still means anything.
+      const ids = { in: pick.in ?? motionIn, out: pick.out ?? motionOut };
+      const legal = easingLegalForMotions([ids.in, ids.out], motionEasing);
+      // A curve the new motion cannot show drops to Auto rather than staying set and doing
+      // nothing (the wizard's Animation step does exactly this). The phase that was NOT picked
+      // is rewritten with it too — otherwise the data would keep a curve on the exit that this
+      // control no longer offers, which is the invisible setting the fallback exists to end.
+      const full: MotionPick = { ...pick };
+      if (!legal) {
+        for (const ph of ['in', 'out'] as const) if (full[ph] === undefined && ids[ph]) full[ph] = ids[ph]!;
+      }
+      const next = applyMotionPreset(cur.template, data, full, easesForChoice(legal ? motionEasing : 'auto'));
+      const js = next && writeAnimData(cur.template.js, next);
+      if (!js) return {};
+      written = true;
+      return { template: { ...cur.template, js } };
+    });
+    if (written) demoAfterLoad.current = true;
+  };
+
+  /** The curve the picked motion travels on — one setting for both phases, applied by rewriting
+   *  every phase that holds a universal motion with the same motion and the new ease. */
+  const setMotionEasing = (choice: EasingId) => {
+    if (choice === motionEasing) return;
+    const pick: MotionPick = {};
+    if (motionIn) pick.in = motionIn;
+    if (motionOut) pick.out = motionOut;
+    if (pick.in === undefined && pick.out === undefined) return;
+    let written = false;
+    patch((cur) => {
+      const data = parseAnimData(cur.template.js);
+      const next = data && applyMotionPreset(cur.template, data, pick, easesForChoice(choice));
       const js = next && writeAnimData(cur.template.js, next);
       if (!js) return {};
       written = true;
@@ -678,6 +729,8 @@ export default function GraphicControlPage({ id }: { id: string }) {
                 <strong>Motion</strong>
                 <span className="muted">
                   {' '}In: {motionName(motionIn)} · Out: {motionName(motionOut)} · {speedName(anim.speed)}
+                  {motionEasing !== 'auto' &&
+                    ` · ${EASINGS.find((e) => e.id === motionEasing)?.plain ?? motionEasing}`}
                 </span>
               </summary>
               <div className="control-motion-body">
@@ -699,7 +752,9 @@ export default function GraphicControlPage({ id }: { id: string }) {
                   }
                 />
                 <div className="row" style={{ gap: 6, marginTop: 10, alignItems: 'center' }} role="group" aria-label="Speed">
-                  <span className="hint" style={{ marginRight: 4 }}>Speed</span>
+                  {/* One width for both labels, so Speed's buttons and Easing's select start on
+                      the same left edge — at their natural widths they landed a pixel apart. */}
+                  <span className="hint" style={{ marginRight: 4, width: 40 }}>Speed</span>
                   {MOTION_SPEEDS.map((s) => (
                     <button
                       key={s.value}
@@ -711,6 +766,48 @@ export default function GraphicControlPage({ id }: { id: string }) {
                     </button>
                   ))}
                   <span className="hint">entrance, steps and exit together</span>
+                </div>
+                {/* EASING — the same control the wizard's Animation step offers, on the surface
+                    that is supposed to share its engine: until now the curve was frozen at
+                    creation here, because the pick wrote the motion's own tuned pair and nothing
+                    else could be asked for. The list is what the picked motion can RENDER, and
+                    with no universal motion on either phase there is nothing to shape - the
+                    graphic's own choreography carries its curves, and that is the editor's. */}
+                <div className="row" style={{ gap: 6, marginTop: 10, alignItems: 'center' }}>
+                  <span className="hint" style={{ marginRight: 4, width: 40 }}>Easing</span>
+                  <select
+                    value={motionEasing}
+                    disabled={!easeSettable}
+                    // 180, like the wizard's own Easing select: a select in a flex row grows
+                    // into everything left over, and at this column's width that was a 675 px
+                    // control holding one short word.
+                    style={{ flex: '0 0 180px' }}
+                    onChange={(e) => setMotionEasing(e.target.value as EasingId)}
+                    data-testid="control-easing"
+                    title={
+                      easeSettable
+                        ? 'The feel of the motion — how it accelerates and settles'
+                        : 'This graphic keeps its own choreography; pick a motion above to give it a curve'
+                    }
+                  >
+                    <option value="auto">Auto — recommended</option>
+                    {easeSettable &&
+                      easeOptions.map((e) => (
+                        <option key={e.id} value={e.id} title={e.description}>{e.plain}</option>
+                      ))}
+                    {/* A curve the data still holds that this list does not offer (a timeline
+                        edit, an older pick): keep it selectable so the select shows what plays
+                        rather than rendering blank. */}
+                    {motionEasing !== 'auto' && !easeOptions.some((e) => e.id === motionEasing) && (
+                      <option value={motionEasing}>
+                        {EASINGS.find((e) => e.id === motionEasing)?.plain ?? motionEasing}
+                      </option>
+                    )}
+                  </select>
+                  <span className="hint" style={{ flex: '1 1 0', minWidth: 0 }}>
+                    {EASINGS.find((e) => e.id === motionEasing)?.description ??
+                      'Each motion arrives on the curve it was tuned with — quick in, settling softly.'}
+                  </span>
                 </div>
               </div>
             </details>
