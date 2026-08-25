@@ -4,6 +4,11 @@ The [NoaCG Studio](https://noacg.studio) command-line tool and MCP server: make 
 graphics for NoaCG from a coding agent's terminal - scaffold, validate, inspect, screenshot,
 package, save - against any NoaCG deployment. The full account is the repo's `docs/AGENT_CLI.md`.
 
+It also carries `noacg caspar`, which is not about authoring: it talks **AMCP to a CasparCG
+server**, so a NoaCG production can go on a channel from the studio page (or straight from the
+terminal). A browser cannot open the socket AMCP needs, so this tool holds it -
+`docs/CASPARCG_CONNECT.md`.
+
 ## Install
 
 ```
