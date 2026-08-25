@@ -248,6 +248,19 @@ letterboxing would break `measureOutline`'s scale) and sits in a STICKY band bes
 sentence that says what to do, so the checklist starts above the fold and the hover highlight
 still has something to point at. Editing a row's sample WRITES IT INTO THAT ARTWORK the way
 `update()` writes it on air, which is what makes a real length testable here.
+The step also lets a reader **ADD A FIELD THE FILE NEVER DREW** (plan §6a step 3): "＋ Draw a
+field on the artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn` + `drawing` +
+`onDraw`), and the box comes back as FRACTIONS of the artwork's own rect - the preview never
+learns what a design px is, the step does the conversion because it holds the SVG. The result is
+an ordinary `DesignFieldSpec` in `draft.designFields`, which `buildDraftTemplate` already applied
+for this category. Three rules: the spec asks for `fit: 'shrink'`, because the ladder measures
+`data-fit="shrink"` and a wrapping line would be the one field the too-long warning cannot see
+(plan §6b); the drawn box IS the type's em box (`lineHeight: 1`), and a CLICK gets a
+field-shaped default rather than a two-pixel field; and `drawIn` is tracked for the WHOLE step,
+because the artwork's rect arrives a frame later and arming it at the gesture lost the first
+drag. The step reports its drop HANDLER up, not a flag - and the wizard holds that handler in a
+REF with only a boolean in state, or every re-report is a render and React stops the wizard with
+"Maximum update depth exceeded" while every assertion still passes.
 The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
 does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
 inferred from geometry - the shipped lower third is a full-frame artboard and the shipped

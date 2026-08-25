@@ -1712,6 +1712,22 @@ kbd {
   border-radius: 3px;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
 }
+/* Drawing a NEW field on the artwork (WizardPreview's `drawIn`). The layer takes pointer
+   events back from the overlay above — it is the one thing on this stage meant to be dragged
+   on — and covers the whole canvas so a field may be drawn anywhere on it. */
+.wz-stage-draw {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+.wz-stage-marquee {
+  position: absolute;
+  border-style: dashed;
+  border-color: var(--accent, #f6a623);
+  background: rgba(246, 166, 35, 0.12);
+  border-radius: 3px;
+}
 /* The action-safe area, 5% in — drawn on the STAGE rather than in the document, so it costs
    the preview nothing and can never reach an export. */
 .wz-stage::after {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTemplateStore } from '../../store/templateStore';
 import { variantById, variantsFor } from '../../templates/catalog';
 import { createBlankTemplate } from '../../templates/blank';
@@ -227,6 +227,25 @@ export default function CreationWizard() {
   // the step because the highlight is drawn on the PREVIEW — the step's one canvas, and the
   // only one carrying the fit runtime (docs/SVG_IMPORT_PLAN.md §6a step 1).
   const [svgHoverId, setSvgHoverId] = useState<string | null>(null);
+  // The mapping step's "draw a field" handler while it is armed (plan §6a step 3). The handler
+  // itself lives in a REF and only the armed/not-armed answer is state: the step re-reports it
+  // on every render (its closure reads the draft, so its identity changes with every keystroke),
+  // and holding a FUNCTION in state would make each of those a state change, each a render, each
+  // a fresh identity — a loop React stops with "Maximum update depth exceeded". A boolean
+  // settles on the second pass.
+  const svgDrawRef = useRef<((box: { x: number; y: number; w: number; h: number }) => void) | null>(null);
+  const [svgDrawArmed, setSvgDrawArmed] = useState(false);
+  const armSvgDraw = useCallback(
+    (handler: ((box: { x: number; y: number; w: number; h: number }) => void) | null) => {
+      svgDrawRef.current = handler;
+      setSvgDrawArmed(!!handler);
+    },
+    [],
+  );
+  // Stable, so the canvas never re-installs its listeners for a handler that only looks new.
+  const onSvgDraw = useCallback((box: { x: number; y: number; w: number; h: number }) => {
+    svgDrawRef.current?.(box);
+  }, []);
   // ── THE KIT HALF of the Browse step (one graphic, or the whole set) ──
   // Its picker state lives here, not in the step, for the same reason `browseFilters` does:
   // Back must return to the set exactly as it was left.
@@ -1755,7 +1774,7 @@ export default function CreationWizard() {
             )}
             {/* The SVG walk's one setup step: which text layers the operator can edit. */}
             {step === 2 && mode === 'svg' && draft.designSvg && (
-              <MapSvgFieldsStep draft={draft} onDraft={patch} onHover={setSvgHoverId} />
+              <MapSvgFieldsStep draft={draft} onDraft={patch} onHover={setSvgHoverId} onArmDraw={armSvgDraw} />
             )}
             {step === 3 && mode === 'svg' && variant && (
               <AnimationStep
@@ -1960,7 +1979,15 @@ export default function CreationWizard() {
                 demoOut={demoOut}
                 demoText={mode === 'design' ? stretchDemo : null}
                 {...(mode === 'svg' && step === 2
-                  ? { highlightSelector: svgHoverId ? `[${SVG_CANDIDATE_ATTR}="${svgHoverId}"]` : null }
+                  ? {
+                      highlightSelector: svgHoverId ? `[${SVG_CANDIDATE_ATTR}="${svgHoverId}"]` : null,
+                      // The ARTWORK's own rect is the space a drawn box is reported in — the one
+                      // the step turns into design px (plan §6a step 3). Tracked for the whole
+                      // step, so the first drag after arming has a rect to measure against.
+                      drawIn: '.imported-design-box',
+                      drawing: svgDrawArmed,
+                      onDraw: onSvgDraw,
+                    }
                   : {})}
               />
             </aside>

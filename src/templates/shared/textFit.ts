@@ -23,6 +23,20 @@
 export const TEXT_FIT_MARKER = 'function fitPlacedText';
 
 /**
+ * The marker of the OTHER fit — the imported-SVG FIT LADDER
+ * (templates/importedDesign/svg.ts, docs/SVG_IMPORT_PLAN.md §6b).
+ *
+ * An imported SVG runs ONE fit: the ladder measures its placed lines too, so this runtime must
+ * not be added to such a template. A second fit there would be worse than redundant — both
+ * hooks run on every update(), each re-measures from a size the other just changed, and only
+ * one of the two can report a value as too long (`noacgTextOverflow()`), so the operator's
+ * overflow warning would go quiet on exactly the fields the ladder was extended to cover.
+ * Named here rather than imported from importedDesign/ so blocks/ keeps its one edge into
+ * templates/shared.
+ */
+export const SVG_TEXT_FIT_MARKER = 'function fitSvgText';
+
+/**
  * The emitted runtime. Deliberately ES5 and comment-rich: it ships inside the user's
  * template.js, where it has to read as ordinary code a professional can edit.
  *
