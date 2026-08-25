@@ -16,9 +16,15 @@
 -- email). There is deliberately NO anon access this cut (signed-in-only beta) — opening the gallery to
 -- anonymous visitors later is granting the two RPCs + the storage bucket read to `anon`.
 
--- Slug defaults use gen_random_bytes (pgcrypto). Ensure it exists so this migration also applies on a
--- plain self-hosted Postgres (Supabase ships it preinstalled, so this is a no-op there).
-create extension if not exists pgcrypto;
+-- Slug defaults use gen_random_bytes (pgcrypto). 0003 already creates it in `extensions`; this
+-- repeats it harmlessly (`if not exists`) so the file still stands alone when read.
+--
+-- The claim that used to sit here - "Supabase ships it preinstalled, so this is a no-op there" -
+-- was FALSE for a fresh hosted project, measured 2026-08-25: pgcrypto is available but NOT
+-- installed, and 0003 failed on it three files earlier than this one. Creating it here was always
+-- too late to help the migration that needed it first.
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ── moderators: a global reviewer role. RLS ON + NO policy = admin-only (the 0002 allowlist pattern). ─
 create table if not exists public.moderators (
@@ -48,7 +54,7 @@ create table if not exists public.community_templates (
   author_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
   author_name      text not null default '',   -- denormalized display snapshot (auth.users isn't client-joinable)
   -- URL-SAFE slug: a base64url alphabet (no '/','+','=') so a share link never breaks a URL path/query.
-  slug             text not null unique default translate(encode(gen_random_bytes(9), 'base64'), '+/=', '-_'),
+  slug             text not null unique default translate(encode(extensions.gen_random_bytes(9), 'base64'), '+/=', '-_'),
   kind             text not null check (kind in ('graphic', 'look')),
   name             text not null default '',
   summary          text not null default '',    -- one-line gallery description

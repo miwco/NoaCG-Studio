@@ -17,7 +17,7 @@
 create table if not exists public.control_shows (
   id          uuid primary key,                    -- the local Show.id (client-supplied, like documents)
   owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  slug        text not null unique default encode(gen_random_bytes(9), 'base64'),
+  slug        text not null unique default encode(extensions.gen_random_bytes(9), 'base64'),
   title       text not null default 'Show',
   -- The operator page's spec: [{ name, fields, js, images: [{value,label}] }] per graphic —
   -- what the panel needs (descriptors + machine), never the full template payload.
