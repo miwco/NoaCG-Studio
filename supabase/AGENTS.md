@@ -18,6 +18,36 @@ vendor's default privileges is a product defect, not a test-environment quirk.
 Verify with `information_schema.role_table_grants` on a LOCAL stack, never on production - the
 hosted project's answer is the one that hides the omission.
 
+## An extension must exist before the migration that calls it, and be called qualified
+
+Same shape as the grants rule, found the same way, one day apart. `0003_show_chat.sql` used
+`gen_random_bytes` in a column default and pgcrypto was not created until `0004` - so the
+migrations could not be applied to a fresh HOSTED project at all:
+`ERROR: function gen_random_bytes(integer) does not exist (SQLSTATE 42883)`. `0004`'s own comment
+said it created the extension "so this migration also applies on a fresh project", which was right
+about the need and wrong about the file, and its claim that Supabase ships pgcrypto preinstalled is
+false - available, not installed.
+
+**A later migration cannot fix this.** On an empty database `0003` runs before anything added
+afterwards, so the repair has to live in the file that needs the extension FIRST. That is the whole
+reason the rule is worth stating: the instinctive fix does not work.
+
+**Creating it is only half.** Supabase installs extensions into the `extensions` schema and the
+CLI's ephemeral migration role does not carry that schema on its `search_path`, so an unqualified
+call fails even once the extension exists. Write `extensions.gen_random_bytes(...)`, as
+`0029`/`0035`/`0047` already did and `0003`/`0004`/`0008` now do.
+
+`scripts/extension-order.test.mjs` holds both halves in the build gate. Nothing else can:
+**a green nightly says the migrations apply to the CLI's LOCAL image, which ships pgcrypto already
+reachable - it says nothing about a fresh hosted project**, and production has had the extension
+for months so a push there never re-runs the early files. The only real evidence is a from-scratch
+apply against a hosted database: `supabase db reset --linked --yes` against the STAGING project
+(`garafohbzmsybtysxphb`, free org) does exactly that, and is how this fix was proven.
+
+If you do that, clear any `search_path` accommodation first. `db reset` wipes schemas but NOT
+database-level settings, so an `alter database ... set search_path` from an earlier debugging
+session survives the reset and quietly does the work the fix is supposed to be doing.
+
 ## A policy expression runs with the QUERYING role's privileges
 
 The caller must hold EXECUTE on every function a policy names, **even a `SECURITY DEFINER` one**.
