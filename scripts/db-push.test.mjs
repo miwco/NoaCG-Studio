@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 
-import { classifyMigration, classifyStatement, normalize, splitStatements } from './db-push.mjs';
+import { classifyMigration, classifyStatement, ledgerDrift, normalize, splitStatements } from './db-push.mjs';
 
 const verdict = (sql, created = []) => classifyStatement(sql, new Set(created)).verdict;
 const reasons = (sql, created = []) => classifyStatement(sql, new Set(created)).reasons.map((r) => r.id);
@@ -255,6 +255,32 @@ test('case and a byte-order mark do not change a verdict', () => {
   // one that misreads - which is the statement most likely to be the `drop`.
   assert.equal(verdict('﻿drop table public.documents'), 'dangerous');
   assert.equal(verdict('﻿create table public.t (id uuid primary key)'), 'safe');
+});
+
+// ── The ledger: pushing onto a drifted one is the worst documented failure ───────────────────────
+
+test('a ledger whose versions match the filenames is not drift', () => {
+  const remote = [{ version: '0001', name: 'documents' }, { version: '0002', name: 'auth_allowlist' }];
+  assert.equal(ledgerDrift(remote, ['0001', '0002', '0003']), null, 'behind is not drifted - 0003 is simply pending');
+});
+
+test('a generated timestamp version stops the push before anything is applied', () => {
+  // What a Supabase MCP `apply_migration` or an SQL-editor paste records. Everything looks fine
+  // until the NEXT push, which sees those files as pending and re-runs them against the live
+  // database - and `create policy` has no `if not exists`, so it dies partway through.
+  const remote = [{ version: '0001', name: 'documents' }, { version: '20260730062721', name: '0002_auth_allowlist.sql' }];
+  const drift = ledgerDrift(remote, ['0001', '0002']);
+  assert.equal(drift.status, 'drifted');
+  assert.deepEqual(drift.badVersions, ['20260730062721 (0002_auth_allowlist.sql)']);
+});
+
+test('a version applied on the project with no file on disk is drift too', () => {
+  // The same disease from the other end: an applied migration was deleted or renamed, or something
+  // wrote a version this repository never had.
+  const remote = [{ version: '0001', name: 'documents' }, { version: '0002', name: 'gone' }];
+  const drift = ledgerDrift(remote, ['0001']);
+  assert.equal(drift.status, 'drifted');
+  assert.deepEqual(drift.orphans, ['0002 (gone)']);
 });
 
 // ── Fail closed ──────────────────────────────────────────────────────────────────────────────────

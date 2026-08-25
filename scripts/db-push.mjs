@@ -644,23 +644,41 @@ const flag = (argv, name) => argv.includes(name);
  *  crashing - the difference between "you forgot the version" and a stack trace. */
 const value = (argv, name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] || '' : '');
 
+/**
+ * Is the remote ledger still the one this repository's filenames describe? Pure, so the refusal
+ * that protects the worst documented failure is testable without a database.
+ *
+ * `supabase db push` keys each migration by the four-digit version in its filename. A Supabase MCP
+ * `apply_migration` or an SQL-editor paste mints a generated timestamp instead, and `list_migrations`
+ * keeps looking fine because it prints whatever is in the table. The damage arrives at the NEXT
+ * push, which sees those files as pending and re-runs them against the live database - and
+ * `create policy` and `create trigger` have no `if not exists`, so it dies partway through. That is
+ * the moment this refusal exists to prevent, so it fires before anything is applied and points at
+ * the repair: fix the ledger's version/name columns, never re-run the SQL (supabase/AGENTS.md).
+ *
+ * A four-digit version with no file on disk is the same disease read from the other end - either an
+ * applied migration was deleted or renamed, or something wrote a version this repo never had.
+ */
+export function ledgerDrift(remote, localVersions) {
+  const badVersions = remote.filter((r) => !/^[0-9]{4}$/.test(r.version));
+  const onDisk = new Set(localVersions);
+  const orphans = remote.filter((r) => /^[0-9]{4}$/.test(r.version) && !onDisk.has(r.version));
+  if (!badVersions.length && !orphans.length) return null;
+  return {
+    status: 'drifted',
+    badVersions: badVersions.map((r) => `${r.version} (${r.name})`),
+    orphans: orphans.map((r) => `${r.version} (${r.name})`),
+  };
+}
+
 /** Decide the whole push without changing anything - so a caller, and the test, can read the plan. */
 export async function plan({ ref, token, allow = new Set() }) {
   const remote = (await query(ref, token, 'select version, name from supabase_migrations.schema_migrations'))
     .map((row) => ({ version: String(row.version), name: row.name || '' }));
 
-  const badVersions = remote.filter((r) => !/^[0-9]{4}$/.test(r.version));
   const local = localMigrations();
-  const onDisk = new Set(local.map((m) => m.version));
-  const orphans = remote.filter((r) => /^[0-9]{4}$/.test(r.version) && !onDisk.has(r.version));
-
-  if (badVersions.length || orphans.length) {
-    return {
-      status: 'drifted',
-      badVersions: badVersions.map((r) => `${r.version} (${r.name})`),
-      orphans: orphans.map((r) => `${r.version} (${r.name})`),
-    };
-  }
+  const drifted = ledgerDrift(remote, local.map((m) => m.version));
+  if (drifted) return drifted;
 
   const applied = new Set(remote.map((r) => r.version));
   const pending = local.filter((m) => !applied.has(m.version));
