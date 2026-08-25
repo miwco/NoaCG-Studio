@@ -18,6 +18,21 @@ vendor's default privileges is a product defect, not a test-environment quirk.
 Verify with `information_schema.role_table_grants` on a LOCAL stack, never on production - the
 hosted project's answer is the one that hides the omission.
 
+**The revoke is the migration's job too.** A migration that grants only what it wants still leaves
+whatever the host handed out, and the two statements do not cancel: `0052` had to take back DELETE,
+INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE from `anon` and `authenticated` on eighteen
+tables, including `anon` on `documents` and `agent_keys`. Say `revoke all … from public, anon,
+authenticated` before the narrow grants - the idiom every table from `0010` on already uses - and a
+self-check that asserts ABSENCE, not only presence, is what makes the claim checkable.
+
+## A push needs the management token, not a database password
+
+`supabase db push --linked` initialises a temporary login role over the Management API, so
+`SUPABASE_ACCESS_TOKEN` alone is enough and there is no database password to find. The token is
+ACCOUNT-WIDE - it enumerates every organisation and project, and the same API deletes them - which
+is why it lives in `.env` on a maintainer's machine and is deliberately not a CI secret in a public
+repo (`scripts/migration-drift.mjs` says the same about reading the ledger).
+
 ## An extension must exist before the migration that calls it, and be called qualified
 
 Same shape as the grants rule, found the same way, one day apart. `0003_show_chat.sql` used
@@ -87,7 +102,18 @@ grants are right; 0035's self-check asserted all of that and passed. Only callin
   names were also columns of the table it writes.
 - **Never edit an applied migration to fix it.** 0035 stayed exactly as applied; 0036 is the fix.
 
-## Apply migrations with `db push`, never the MCP tool
+## Apply migrations with `npm run db:push`, never the MCP tool
+
+Applying to the hosted project needs no permission and no waiting: `npm run db:push` classifies
+every pending statement, applies what can only add, and REFUSES what can remove - a DROP, TRUNCATE,
+DELETE FROM, column-type change, RENAME, `disable row level security`, `owner to`, `alter database`,
+or a REVOKE on an object the same migration did not create. It fails CLOSED on a shape it does not
+recognise, so a new kind of statement stops at `scripts/db-push.test.mjs` in the build rather than
+mid-push. A refusal is answered by naming the version - `npm run db:push -- --allow 0052` - and the
+run prints the before/after grant, column, policy and ledger diff, which is the evidence that the
+migration did what its header claims. It drives `supabase db push` underneath, so everything below
+still holds.
+
 
 The remote ledger keys each migration by the four-digit `version` parsed from the filename
 (`0017_admin_roles.sql` -> version `0017`, name `admin_roles`), and `db push` decides what is

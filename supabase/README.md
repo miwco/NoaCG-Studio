@@ -24,7 +24,18 @@ supabase link --project-ref <your-ref>
 supabase db push        # applies migrations/ (schema + RLS + auth hook)
 ```
 
-**`supabase db push` is the only supported way to apply these.** The remote ledger
+**On the hosted project, `npm run db:push` is how these are applied**, and it needs nobody's
+permission — `scripts/db-push.mjs` reads every pending migration, classifies each statement, applies
+the ones that can only add, and REFUSES the ones that can remove something (a DROP, TRUNCATE,
+DELETE FROM, column-type change, RENAME, `disable row level security`, `owner to`, `alter database`,
+or a REVOKE on an object the same migration did not create), reporting instead. It fails closed on a
+statement shape it does not recognise, refuses to push onto a drifted ledger, and prints the
+before/after grant, column, policy and ledger diff so "it applied" is evidence rather than a claim.
+A refusal is answered per version — `npm run db:push -- --allow 0052` — and never in bulk. It needs
+`SUPABASE_ACCESS_TOKEN` in `.env` and no database password; `SUPABASE_PROJECT_REF` points a run at
+staging instead.
+
+Underneath it, **`supabase db push` is the only supported way to apply these.** The remote ledger
 (`supabase_migrations.schema_migrations`) keys every applied migration by the four-digit `version`
 taken from the filename, and `db push` decides what is pending by comparing that column against
 `migrations/`. Applying a file by any other route — pasting it into the SQL editor, or an agent
@@ -142,6 +153,10 @@ which states the whole matrix explicitly; `scripts/client-grants-migration.test.
 build if a policy admits `anon` or `authenticated` to a command that no migration grants. When
 adding a table, **grant it in the same migration** - and remember 0028's lesson in reverse: a grant
 that adds nothing on a hosted project is exactly the grant a self-hoster cannot do without.
+**Revoke in the same migration too** (`revoke all … from public, anon, authenticated` before the
+narrow grants, the idiom every table from `0010` on already uses): `0052` had to take back seven
+privileges on eighteen tables precisely because the earlier files stated only what they wanted and
+let the host supply the rest.
 
 Dashboard-only, so no migration can fix them: leaked-password protection (Auth → Passwords, on
 since 2026-08-13) and the Auth connection strategy (`auth_db_connections_absolute` — Auth holds a
@@ -153,9 +168,11 @@ resize does nothing for Auth).
 - `config.toml` — project settings for the open features. Auth is **invite-only**: the
   Before-User-Created hook (`enforce_allowlist`) is the gate. Google OAuth needs
   `SUPABASE_AUTH_GOOGLE_CLIENT_ID` / `SUPABASE_AUTH_GOOGLE_SECRET` in the deploy env.
-- `migrations/0001_documents.sql` — `documents` + `assets` tables, per-user RLS, the `updated_at`
+- `migrations/0001_documents.sql` — the `documents` table, per-user RLS, the `updated_at`
   trigger, and the private `user-assets` Storage bucket + its RLS. Binaries live in Storage, not in
-  `body` jsonb.
+  `body` jsonb. (It also created an `assets` back-reference table, removed by `0052` — nothing ever
+  wrote it, and dedupe was never in it: `src/backend/assets.ts` keys each object
+  `{uid}/{content_hash}`, so identical bytes land on the same object without a row anywhere.)
 - `migrations/0002_auth_allowlist.sql` — the `allowlist` table and the `enforce_allowlist` auth
   hook. Add invitees with `insert into allowlist (email) values ('…');` (service_role / SQL editor).
 - `migrations/0003_show_chat.sql` — the show-chat send-in queue, moderation, and abuse trigger.
@@ -181,6 +198,15 @@ resize does nothing for Auth).
   a stack built with `supabase start` is readable too. Grants only, narrowed per table to what each
   table's own RLS policies already admit — a verified no-op on the hosted project. See the table
   half of "Advisor warnings" above.
+- `migrations/0052_inherited_grants_tightened.sql` — the half `0051` named and did not do: it
+  REVOKES what the bootstrap over-granted, so the hosted matrix equals what `0051` states rather than
+  exceeding it. `anon` and `authenticated` held all seven privileges on all nineteen tables from
+  `0001`–`0050`, including `anon` on `documents`, `agent_keys` and `allowlist` — inert, because RLS
+  denies them, but inert by the policies rather than by the SQL, so the day one of those tables gains
+  a permissive policy `anon` inherits its reach with nothing saying it should. Its self-check asserts
+  ABSENCE as well as presence, which is what `0051` could not do without refusing to apply. It also
+  drops the never-written `assets` table (see `0001` above); `service_role` is untouched, so `0028`
+  and `0030`'s append-only grants stay exactly as they are.
 - `seed.sql` — local-dev-only allowlist seed.
 
 Migrations are ordered by filename and are **immutable once shipped** — change the schema by adding
