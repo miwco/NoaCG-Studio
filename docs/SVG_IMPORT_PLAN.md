@@ -264,6 +264,22 @@ gate - not the importer - is authoritative.
   declared under the name the artwork asks for; `<textPath>` binds the path run, not the `<text>`
   around it; samples collapse source whitespace unless `xml:space="preserve"`; repeated layer
   names are numbered. The designer-facing half of all of it is `docs/SVG_AUTHORING.md`.
+- **Flawed-human corpus (2026-08-26)** - every SVG walked so far was AI-made, so twelve
+  hand-authored failure modes were probed against `importSvgMarkup` and the mapping step ahead
+  of the first student file. Every case either imports correctly or refuses with a message
+  naming the fix; nothing needed a code change. For the /docs authoring guide:
+  - **Refused, teaching the fix:** no viewBox AND no width/height ("Re-export it with a
+    viewBox - in Illustrator, File > Export > SVG does this"); a damaged/unclosed file ("may
+    be damaged or not an SVG at all"). Outlined-only files keep their honest answer from P2.
+  - **Imports correctly:** width/height attributes without a viewBox; a group transform
+    (translate + scale) between root and layers - candidates bind AND the goal-5 growth
+    default measures right through it, because everything is read off rendered rects; a
+    matrix transform on the text element itself; text used inside `<clipPath>` (never
+    offered - it is furniture) beside a real text that is; `clip-path` applied TO a text
+    layer (still bindable); a nested `<svg>`; BOM + XML declaration + DOCTYPE; percent
+    coordinates (`x="50%"`, offered - and middle-anchored, so growth correctly refuses);
+    a `<text>` with no x/y; duplicate ids (labels number "Name" / "Name 2", binding is by
+    marker so ids never collide with fields).
 - **P3 (opt-in):** AI label proposals; Figma-specific niceties; SVG *export* of a NoaCG graphic
   is explicitly out of scope.
 

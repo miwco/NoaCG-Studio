@@ -47,12 +47,16 @@ mapping-step section, the Animation step (Direction/Style/Speed/Easing) and the 
 step; Finish/Entry/Fields/Style already read one-line-per-thing. NOT yet swept: raster
 Prepare/PlaceFields and the AI step - noted on the GOALS tick.
 
-## Flawed-human corpus (tail)
+## Flawed-human corpus (tail) - DONE, nothing needed fixing
 
-Findings in docs/SVG_IMPORT_PLAN.md §6 P2 already covered most modes (outlines, unnamed
-layers, Inkscape, flowRoot, symbols, hidden layers, external refs). This session's pass:
-no-size files, parse errors and clipPath text refuse with teaching messages (verified in
-source + probe); see the plan's detection-hardening list for what each new case landed as.
+Twelve hand-authored failure modes probed live against `importSvgMarkup` + the mapping step
+(findings written into docs/SVG_IMPORT_PLAN.md, new "Flawed-human corpus" section): no-size
+and damaged files refuse with the fix named; transforms (group translate+scale, matrix on
+text), clipPath text, nested svg, BOM/DOCTYPE, percent coordinates, missing x/y and duplicate
+ids all import correctly - and the goal-5 growth default measures correctly through a group
+transform. P2's detection-hardening already covered the rest (outlines, Inkscape, flowRoot,
+symbols, hidden layers, external refs). The morning folds the section into the /docs
+authoring guide.
 
 ## Loose ends for the morning
 
