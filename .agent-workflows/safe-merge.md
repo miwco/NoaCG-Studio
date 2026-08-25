@@ -12,14 +12,27 @@ stopping at the first failure and reporting what is left.
 
 ## When this may run
 
-Landing is serialized, not permissioned (root `AGENTS.md`, "Git"). This workflow may run:
+Landing is serialized, not permissioned (root `AGENTS.md`, "Git"). Nobody waits on an approval;
+what a run waits on is the other branches.
 
-- whenever the user invokes it, or picks it from an option another workflow offered;
-- **on its own initiative for a branch whose `merge-order.mjs` verdict is `clear`**, once that
-  branch's gate is green on the integrated sha.
+**A human still starts each run today.** The Claude adapter keeps `disable-model-invocation: true`
+and the shared-instruction gate enforces it, so the model cannot invoke this as a tool of its own
+accord. Two things count as a real invocation: the user typing the command
+(`/safe-merge`, `$safe-merge`), or **the user SELECTING this workflow from a pick another workflow
+offered** for a named branch - a pick is a decision about a specific branch, so honour it by
+running this procedure rather than answering "type the command yourself". Acting on a pick means
+reading this file and following it directly; the adapter is only a pointer here anyway. Never
+infer an invocation from a request to inspect or discuss a merge, or from work merely looking
+finished.
 
-A **`caution` or `hold`** verdict stops and asks, whoever started the run. Those are the cases
-that historically went wrong - a stacked branch jumping its ancestor, two branches minting one
+**Unattended landing of `clear` branches arrives with the job runner**, not before
+(`docs/JOB_RUNNER_PLAN.md`, rollout step 4). The owner's condition for automation was that it stay
+visible - "it just needs to be clear that something is merging" - and the queue plus the
+SessionStart summary are what make it visible. Lifting the flag before that would deliver the
+automation without the condition attached to it.
+
+Whoever starts the run, a **`caution` or `hold`** verdict stops and asks. Those are the cases that
+historically went wrong - a stacked branch jumping its ancestor, two branches minting one
 migration number, a rename over another branch's edits.
 
 Never enqueue anything PAST `main` here: `npm publish`, production migrations and anything
@@ -57,9 +70,11 @@ costing money stay owner-triggered, because a later commit cannot take them back
   conflicting files rather than guessing.
 - Never touch other worktrees' work: merge only the ONE branch, never `checkout`/`switch`/
   `restore` across worktrees, never run `reset`/`clean`/`checkout -- .` in any checkout.
-- Cleanup belongs to the cleanup-worktrees workflow. The single exception is a TEMPORARY worktree
-  this run created (`safe-merge-` prefix AND created in this run) - removed in Phase 5, never
-  with `--force`, never any other.
+- **Never delete a branch,** and never remove a worktree you did not create in this run. Cleanup
+  belongs to the cleanup-worktrees workflow. The single exception is a TEMPORARY worktree this run
+  created (identified by the `safe-merge-` prefix AND by having been created in this run - a
+  pre-existing folder with that prefix belongs to someone else) - removed in Phase 5, never with
+  `--force`, never any other.
 
 ## Phase 1 - Assess (reads only)
 
@@ -77,6 +92,10 @@ checked and one that was merely claimed must never again look the same in a repo
 
 The judgement calls stay here: whether a `hold` should be waved through, whether a conflict is
 mechanically resolvable, and in Phase 3 whether a red CI run is a verdict or a damaged run.
+
+The preflight previews the merge with `git merge-base` + `git merge-tree`. **Never use
+`git merge --no-commit` as a preview** - it changes the index and the working tree, which is
+exactly what an assessment phase must not do.
 
 **Two states the preflight reports that need a decision before Phase 2:**
 
@@ -208,9 +227,11 @@ fast-forward. Paste the output.
        git worktree remove .claude/worktrees/safe-merge-main
        node scripts/dev-port.mjs --prune
 
-   The prune only clears tickets whose worktree is gone, so it is safe unconditionally. Never
-   `--force`: if a removal refuses, say so and leave it for the cleanup-worktrees workflow. On
-   Windows a removal routinely half-succeeds - git deregisters the worktree and then reports
+   Run each line only for a worktree this run actually created. The prune only clears tickets
+   whose worktree is gone, so it is safe unconditionally. Never `--force`: if a removal refuses,
+   say so and leave it for the cleanup-worktrees workflow rather than overriding a refusal you did
+   not diagnose. **Remove ONLY the worktrees this run created, and never the branch.** On Windows
+   a removal routinely half-succeeds - git deregisters the worktree and then reports
    `Permission denied`, leaving an EMPTY directory. That is the known OS lock, not a refusal to
    override; `session-start.mjs` sweeps those anyway.
 3. Do NOT remove any other worktree or delete the branch, and do not offer to.

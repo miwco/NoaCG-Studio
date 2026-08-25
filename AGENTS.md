@@ -282,6 +282,12 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
    catalog that was visibly broken.
 6. **Freshness is TIME-driven, never commit-driven** (`docs/STACK_FRESHNESS.md`): `check:freshness`
    reports weekly and nothing auto-upgrades.
+7. **A green gate is not a human seeing it.** Work that is observable in the product adds an item
+   to **`docs/acceptance/OWNER_QUEUE.md`** in the same commit - what changed, the ROUTE to it in
+   under a minute, what specifically to look at, and the date. `/walk` empties that list one item
+   at a time and expires anything older than 7 days as presumed seen. Whether the owner looked at
+   something and thought it was any good is the one fact about shipped work that no file in the
+   repo can otherwise hold; an item with no route is not an item.
 
 **Gotchas:**
 - The app declares `color-scheme: dark` (styles.css `:root`) and composeDocument injects the

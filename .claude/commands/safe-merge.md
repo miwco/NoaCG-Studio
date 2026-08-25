@@ -1,6 +1,7 @@
 ---
 description: Land a branch on main - preflight checks, verified gate, then push. With no argument, drains the queue of `clear` branches in merge order.
 argument-hint: [branch-name (optional - omit to drain the queue in merge order)]
+disable-model-invocation: true
 ---
 
 Argument: $ARGUMENTS
