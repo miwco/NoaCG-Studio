@@ -55,10 +55,12 @@ test('an imported quiz board publishes, runs on the real output renderer, and re
   // Publish for real.
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  // Publishing opens the links popover; Escape closes it (quiz-output.spec.ts says why there
-  // is nothing to click).
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('production-links')).toBeHidden();
+  // Publishing opens the links popover; its own toggle closes it (quiz-output.spec.ts says why
+  // that rather than Escape, and why not a backdrop).
+  const links = page.getByTestId('production-links');
+  await expect(links).toBeVisible();
+  await page.getByTestId('production-links-toggle').click();
+  await expect(links).toBeHidden();
 
   const outputSlug = await page.evaluate(async (name) => {
     const { loadShows } = await import('/src/model/shows.ts');

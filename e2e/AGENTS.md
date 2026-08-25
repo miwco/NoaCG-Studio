@@ -36,8 +36,79 @@ belong where specs are written rather than in the contract every session loads.
   it focused, and Space belongs to a focused button by design (spaceKey.ts) - so the press lands on
   that button, not on the surface under test. Call `parkFocusOffControls` (`e2e/_keys.ts`) rather
   than inheriting whatever the bootstrap left behind.
+- **A route installed to watch a RELOAD also catches the page it is replacing.** The document
+  still on screen keeps its timers until the navigation commits, so a poller (the relay receiver
+  polls every 400 ms) fires straight into the recorder and its request is indistinguishable, by
+  URL, from the boot request under test. `local-relay.spec.ts` recorded a live cursor of 7 as the
+  boot read of 4 that way - green on this laptop, red on CI, green again on a re-run of the same
+  commit. Waiting before the reload does not help; the window narrows and never closes. Separate
+  the two by something the NEW document does first (the receiver pings once, at the top of a fresh
+  document, before it reads the log) and record only what follows it - then leave a poll interval
+  of slack before the reload so the separation is exercised rather than merely written.
 - A wizard-created VIDEO project auto-runs its first generation, which lands as its own undoable
   snapshot ~0.1-2.6 s after `video-shell` appears (unbounded: the validation probe waits on the
   player host with no timeout). A spec that makes an undoable change before that lands is racing
   it. Wait for the assistant reply first (`waitForGeneration`, `.ai-msg.assistant`), never a fixed
   timeout.
+- **Inside `page.evaluate`, an `import('/src/…')` MUST carry the `.ts` extension.** Vite serves
+  both URLs and gives each its own module registry, so the extensionless form sometimes resolves a
+  SECOND instance - `useTemplateStore.getState()` then answers from a store nobody drove. The
+  symptom is not an error but a plausible empty answer: `template.assets` came back `[]` for a
+  graphic whose artwork was visible in the failure screenshot. Both forms often work, so the same
+  spec file can have one passing extensionless evaluate and one failing one.
+- **A guard fix needs the assertion written backwards, then mutation-tested.** When two handlers
+  both fire and only one should, asserting that the right thing happened proves nothing - the bug
+  IS the extra thing happening alongside it. Assert that the stood-down handler stayed quiet, then
+  break the guard on purpose and watch the spec go red. If it still passes, the spec is vacuous.
+  A pre-existing pan spec passed for MONTHS while Space-pan-also-plays was live, because a play
+  tween touches none of what it asserted. For a HELD key use real auto-repeat
+  (`e2e/_keys.ts holdKeyRepeats`, CDP `autoRepeat: true`); `keyboard.down()` sends one keydown and
+  never repeats, so it cannot exercise the gesture at all.
+
+## Traps when RUNNING the suite
+
+- **A suite that skips itself exits 0.** `npm run test:e2e:live` with `E2E_EMAIL`/`E2E_PASSWORD`
+  unset prints `32 skipped` and exits 0, so any job checking only the exit code is permanently,
+  silently green. Worse, the JSON report's `.specs[].ok` is **true for a skipped spec**, so a
+  summary built on `.ok` reports all 32 as passed on a run where none executed. Read
+  `.specs[].tests[].results[].status`, and make an env-gated job a verdict by asserting on
+  `.stats`: `skipped == 0` and `expected + unexpected + flaky >= <declared count>`.
+- **A wholesale local red can be green on CI, with no code fault.** 42 failed / 7 passed across
+  the AI specs locally while the same commit passed CI's full 8-shard run - the checkout, not the
+  code. Before attributing a big local red to your change, `git stash push src scripts` and re-run
+  the SAME spec files; equal failure counts mean pre-existing. The pre-merge gate belongs to CI on
+  a clean checkout anyway.
+- **A worktree with no `npm install` deadlocks against itself.** A linked worktree lives inside
+  the primary checkout, so Node's upward `node_modules` walk reaches the PARENT's - Playwright
+  resolves from there, `e2e-runs.mjs` records the queue ticket under the parent's root, and the
+  run's own globalSetup then waits for itself. The message reads exactly like normal contention.
+  Tells: the queue names a root you are not in, the blocking pid's command line points at the
+  parent's `node_modules\.bin` and chains back to your own shell, and CPU is near zero for the
+  whole wait. Fix: `npm install` here, kill the stuck pid, and kill the orphaned Vite it left on
+  this checkout's port (Playwright starts `webServer` BEFORE globalSetup, so the server survives).
+  The same missing install makes `npm run build` fail on `check-workflows` with
+  `Cannot find module '@action-validator/cli/cli.mjs'` - usually the first sign.
+- **Do not edit `src/` while a bench, spike or sweep is in flight.** Those runners drive the dev
+  server, so a save triggers a Vite full reload and the measured page navigates out from under
+  them: `page.evaluate: Execution context was destroyed`. One run died on item 9 of 11 and the
+  ledger is written at the END, so everything already measured was lost with screenshots still on
+  disk. Docs, memory and scratchpad files are safe - they are not in the module graph.
+- **Stopping a background bench does not stop the bench.** Killing the shell leaves the npm/node
+  descendants reparented and alive - one measured 198 minutes later with 2.4 s of CPU, wedged,
+  holding a headless browser. It keeps the one paid concurrency slot (later cells fail
+  `already_running` at $0.0000, which looks like a free wholesale failure) and `e2e-runs.mjs`
+  cannot see it. After stopping any bench or eval, check `Get-CimInstance Win32_Process -Filter
+  "Name='node.exe'"` for a surviving runner and stop the whole chain. Tell an orphan by CPU:
+  seconds of CPU over hours of wall clock.
+- **`l3-sweep <category>` writes its screenshots into `./<category>/` in the CWD** - untracked and
+  invisible until a `git add -A` sweeps ~90 PNGs into the commit. Delete the directory, or pass an
+  out-dir outside the repo, before committing.
+- **`pro-spike --control` does not start a dev server**, and a linked worktree cannot easily be
+  given one: the guard hook hard-denies `npm run dev`/`preview`/bare `vite`, and `preview_start`
+  serves whatever worktree the SESSION is in. Start it in the session's own worktree, prove both
+  checkouts serve identical bytes (`git -C <a> rev-parse HEAD:<path>` against the other for `src`,
+  `public`, `index.html`, `app.html`, `vite.config.ts`, `package.json`, `package-lock.json`, plus a
+  clean `git status` on the serving side), then run the script from ITS worktree with
+  `DEV_PORT=<the session worktree's port>`. If the bytes differ, do not run - a determinism
+  measurement against someone else's source is not a measurement. `preview_start`'s reported port
+  can also be wrong; trust Vite's own banner in `preview_logs`.

@@ -946,3 +946,29 @@ binding experiment and artifact contract is `docs/VIDEO_MODEL_BENCHMARK.md`.
 evidence-based findings, never auto-rewriting a valid grounded result), a curated taste library with
 per-brief retrieval, and a nightly taste-analysis task producing reviewable proposals. Add them only when
 the compare rig shows they pay for themselves.
+
+## A harness bug reads as model incapacity - state which faults were live in any round
+
+Two consecutive PAID Creative Mode rounds (2026-08-02) produced numbers that looked like the model
+could not design. Both were platform faults:
+
+1. **Structured output refused for being ENCODED, not wrong.** Anthropic tool use returns a nested
+   array as a JSON string, sometimes re-wrapping the whole tool envelope inside the property
+   (`{"concepts":"{\"concepts\":[…]}"}`). `api/_lib/aiGateway.ts` schema-checked it, called it
+   `malformed_response`, and retried to exhaustion. 7 of 8 briefs died with three usable design
+   directions sitting in every rejected payload. Fixed by running `decodeStructuredOutput` BEFORE
+   validation - which had also been breaking every BYO-Anthropic user in the product, not just the
+   bench.
+2. **A style patch giving `.creative-box` `position: absolute` collapsed the root to 0x0.** The
+   root is absolutely positioned in its zone and sized by its content, and the box is its only
+   in-flow child. Sonnet did it in 8 of 8 stylesheets (blank frames); qwen in 4 of 8 (content
+   survives, re-anchors to the collapsed root, drifts to the frame edge). Fixed by
+   `keepStructureInFlow` in `src/ai/creative/style.ts`.
+
+**The second one retro-invalidated a human verdict.** The owner's blind review that evening judged
+frames of which half carried the bug, and its "content on the frame edge" note was the bug, not
+taste. So: **any conclusion drawn from a round must state which platform faults were live during
+it**, and a round whose harness changed underneath it is not comparable to one that ran before.
+
+The general form is the same as the runtime bench's (`docs/VERIFICATION.md`): check the instrument
+before concluding anything about what it measured.

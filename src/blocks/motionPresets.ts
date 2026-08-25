@@ -527,6 +527,69 @@ export function currentMotionPreset(template: SpxTemplate, data: AnimData, ph: M
   return null;
 }
 
+/**
+ * The ease STRING a phase currently carries, or null when its targets disagree (a hand edit) or
+ * carry no motion. Read off the landing keyframes, which is where `motionTracks` stamps it — the
+ * step's own `ease` is only a fallback for tracks that named none, so asking the keyframes is
+ * asking what actually plays.
+ */
+function phaseEase(template: SpxTemplate, data: AnimData, ph: MotionPhaseName): string | null {
+  const targets = motionTargets(template, data);
+  if (targets.length === 0) return null;
+  const step = data.steps[phaseStepIndex(data, ph)];
+  let found: string | null = null;
+  for (const selector of targets) {
+    const layer = step.layers[selector];
+    if (!layer) return null;
+    const loops = step.loops?.[selector] ?? {};
+    for (const prop of Object.keys(layer)) {
+      if (loops[prop]) continue; // an ambient loop's curve is not the entrance's
+      const kfs = layer[prop];
+      const ease = kfs[kfs.length - 1]?.ease ?? step.ease;
+      if (ease === undefined) return null;
+      if (found === null) found = ease;
+      else if (found !== ease) return null;
+    }
+  }
+  return found;
+}
+
+/**
+ * Which EASING CHOICE the data currently holds — the read-back behind a no-code Easing control,
+ * derived from the code like the lit card is, never stamped into the block.
+ *
+ * One easing setting drives every phase that holds a universal motion, so all of them are read
+ * and they have to agree. A phase sitting on its motion's own tuned curve is 'auto' — that is
+ * literally what Auto means here (applyMotionPreset falls back to `phase.ease` when given no
+ * override), so a graphic that was never given a curve reads back as Auto rather than as
+ * whichever named preset happens to share that GSAP string.
+ *
+ * Anything the list cannot name — a hand-tuned curve from the timeline, a phase whose targets
+ * disagree — also answers 'auto': the honest thing for a control that cannot show it, and the
+ * pick that leaves the existing motion alone until the operator chooses something.
+ */
+export function currentMotionEasing(
+  template: SpxTemplate,
+  data: AnimData,
+  ids: { in: MotionPresetId | null; out: MotionPresetId | null },
+): EasingId {
+  const phases = (['in', 'out'] as const).filter((ph) => ids[ph]);
+  if (phases.length === 0) return 'auto';
+  const held = phases.map((ph) => ({ ph, ease: phaseEase(template, data, ph) }));
+  if (held.some((h) => h.ease === null)) return 'auto';
+  if (held.every((h) => h.ease === motionPresetById(ids[h.ph]!)[h.ph].ease)) return 'auto';
+  const named = EASINGS.find((e) => held.every((h) => h.ease === (h.ph === 'in' ? e.gsapIn : e.gsapOut)));
+  return named?.id ?? 'auto';
+}
+
+/** The { easeIn, easeOut } overrides a choice hands `applyMotionPreset`: 'auto' overrides
+ *  nothing, so each motion keeps its own tuned pair. */
+export function easesForChoice(choice: EasingId): MotionEases {
+  if (choice === 'auto') return {};
+  const e = EASINGS.find((x) => x.id === choice);
+  return e ? { easeIn: e.gsapIn, easeOut: e.gsapOut } : {};
+}
+
 function sameTrack(a: AnimKeyframe[] | undefined, b: AnimKeyframe[] | undefined): boolean {
   if (!a || !b || a.length !== b.length) return false;
   return a.every((k, i) => k.time === b[i].time && k.value === b[i].value);

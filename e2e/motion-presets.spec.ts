@@ -16,7 +16,8 @@ import { dropSvg, SCOREBUG_SVG } from './_svg-import';
 //     (plus the SVG layer stagger), and a wizard pick lands as the same data the control page
 //     reads back;
 //   - the easing dropdown offers what the picked motion can actually RENDER, and drops an
-//     impossible choice to Auto rather than keeping a setting that does nothing;
+//     impossible choice to Auto rather than keeping a setting that does nothing - on the wizard's
+//     Animation step AND on the control page, where the curve used to be frozen at creation;
 //   - a catalog design keeps its own choreographies and meets the universal six under them.
 
 /** Save one catalog design to the library and open its control page. */
@@ -291,6 +292,77 @@ test('wizard: the easing list is what the picked motion can render, and an impos
   await easing.selectOption('expo');
   await page.getByTestId('motion-zoom').click();
   await expect(easing).toHaveValue('expo');
+});
+
+test('control page: the operator can change the curve after creation, and it lands in the emitted code', async ({ page }) => {
+  const id = await openControlPage(page, 'lower-third', 'Curved strap');
+
+  /** The ease STRING each phase's unit tracks actually carry — the code, not the control. */
+  const savedEases = (gid: string) =>
+    page.evaluate(async (g) => {
+      const { graphicById } = await import('/src/model/library.ts');
+      const { parseAnimData } = await import('/src/blocks/animData.ts');
+      const d = parseAnimData(graphicById(g)!.template.js)!;
+      const eases = (i: number) => [
+        ...new Set(
+          Object.values(d.steps[i < 0 ? d.steps.length + i : i].layers).flatMap((layer) =>
+            Object.values(layer).map((kfs) => kfs[kfs.length - 1].ease ?? null),
+          ),
+        ),
+      ];
+      return { in: eases(0), out: eases(-1) };
+    }, gid);
+
+  await page.getByTestId('control-motion-summary').click();
+  const easing = page.getByTestId('control-easing');
+  const options = () => easing.locator('option').evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+
+  // A catalog strap arrives on its own choreography: there is no universal motion for a curve to
+  // shape, so the control says so instead of offering a setting that would go nowhere.
+  await expect(easing).toBeDisabled();
+  expect(await options()).toEqual(['auto']);
+
+  // Pick Rise, and the same list the wizard offers for it appears — one rule, two hosts.
+  await page.getByTestId('motion-rise').click();
+  await expect(easing).toBeEnabled();
+  expect(await options()).toEqual(['auto', 'ease-out', 'sine', 'expo', 'back', 'bounce', 'elastic', 'linear']);
+  // Auto is what a fresh pick holds: each phase on the motion's own tuned pair.
+  await expect(easing).toHaveValue('auto');
+  await settleDurableWrites(page);
+  expect(await savedEases(id)).toEqual({ in: ['power3.out'], out: ['power2.in'] });
+
+  // THE POINT OF THIS CASE: the choice reaches the emitted code after creation.
+  await easing.selectOption('bounce');
+  await expect(page.getByTestId('control-motion-summary')).toContainText('Bounce');
+  await settleDurableWrites(page);
+  expect(await savedEases(id)).toEqual({ in: ['bounce.out'], out: ['power2.in'] });
+
+  // …and it is read back from the TEMPLATE, so a reload still shows what plays.
+  await page.reload();
+  await expect(page.getByTestId('graphic-control-page')).toBeVisible();
+  await expect(page.getByTestId('control-motion-summary')).toContainText('In: Rise · Out: Rise · Normal · Bounce');
+  await page.getByTestId('control-motion-summary').click();
+  await expect(page.getByTestId('control-easing')).toHaveValue('bounce');
+
+  // A motion that cannot SHOW the curve drops it to Auto (Fade animates opacity, which clamps) —
+  // and the phase that was not picked is rewritten with it, so no phase keeps a curve the
+  // control has stopped offering.
+  await page.getByTestId('motion-direction-out').click();
+  await page.getByTestId('motion-fade').click();
+  await expect(page.getByTestId('control-easing')).toHaveValue('auto');
+  await settleDurableWrites(page);
+  expect(await savedEases(id)).toEqual({ in: ['power3.out'], out: ['sine.in'] });
+
+  // A curve the new motion CAN show is kept — the fallback fires on impossibility, not on every
+  // motion click.
+  await page.getByTestId('control-easing').selectOption('expo');
+  await settleDurableWrites(page);
+  expect(await savedEases(id)).toEqual({ in: ['expo.out'], out: ['expo.in'] });
+  await page.getByTestId('motion-direction-both').click();
+  await page.getByTestId('motion-zoom').click();
+  await expect(page.getByTestId('control-easing')).toHaveValue('expo');
+  await settleDurableWrites(page);
+  expect(await savedEases(id)).toEqual({ in: ['expo.out'], out: ['expo.in'] });
 });
 
 test('wizard: a catalog design keeps its own cards and offers the universal six under them', async ({ page }) => {
