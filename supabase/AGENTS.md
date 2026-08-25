@@ -104,6 +104,10 @@ grants are right; 0035's self-check asserted all of that and passed. Only callin
 
 ## Apply migrations with `npm run db:push`, never the MCP tool
 
+**You should not have to run this at all.** A branch landing through `npm run queue:merge` applies
+whatever production is missing as soon as it is on `origin/main` (`scripts/auto-merge.mjs`). Reach
+for the command by hand only when a push refused, or when a migration arrived some other way.
+
 Applying to the hosted project needs no permission and no waiting: `npm run db:push` classifies
 every pending statement, applies what can only add, and REFUSES what can remove - a DROP, TRUNCATE,
 DELETE FROM, column-type change, RENAME, `disable row level security`, `owner to`, `alter database`,
