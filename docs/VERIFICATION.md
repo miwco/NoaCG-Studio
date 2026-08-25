@@ -580,3 +580,75 @@ mistake: measuring something other than what is on screen.
   glyphs are never painted. Fixed by cutting line boxes down by every clipping ancestor.
 
 Before believing any measurement of the rendered frame, check the instrument against a screenshot.
+
+## What a red run means, and what actually emails
+
+The rule this repo wants is **red means a person must act**. Everything else on the Actions
+dashboard is bookkeeping. This section is the checkable list the next GitHub email can be held
+against, and the measurement behind it.
+
+**Measured 2026-08-22 00:00 to 2026-08-25 21:00 UTC** (3.9 days, 59 non-success runs).
+
+### A CANCELLED run does not email. Only a FAILURE does.
+
+This was assumed the other way round for a while, and it is worth settling because it changes
+which fixes are worth making. Ground truth is the notification inbox, not the run list:
+
+```bash
+gh api --paginate "notifications?all=true&per_page=100&since=<ISO>" \
+  --jq '.[] | select(.repository.full_name=="<owner>/<repo>")
+        | "\(.updated_at)\t\(.subject.type)\t\(.subject.title)"'
+```
+
+Over the window that returned **35 `CheckSuite` threads**. Every one of them matches, to within
+about twenty seconds, either a run whose conclusion was `failure` (30) or the failed **attempt 1**
+of a run that a re-run later turned green (5). **None of the 29 `cancelled` runs produced a thread
+at all** - including the three on `main`. A run cancelled by concurrency is silent.
+
+The five re-run cases are worth knowing separately, because the run reads `success` afterwards and
+the email is left with nothing to point at:
+
+```bash
+gh api repos/{owner}/{repo}/actions/runs/<id>/attempts/1 --jq '.conclusion'
+```
+
+### An issue COMMENT emails; an issue staying open does not
+
+Notification *threads* collapse to one per issue, so the inbox is worse than a thread count
+suggests: GitHub mails a person for every comment. Over the window that was **9 issues opened and
+17 comments** on top of the 35 run failures - about 61 emails, ~16 a day, of which 26 were issue
+traffic. **Seven of those 17 comments were the same sentence** ("Still red.") on issue #38, one
+per `workflow_dispatch` while a branch iterated on a broken workflow.
+
+That asymmetry is why every rolling alarm here withholds a repeat of an identical finding while
+keeping the run red: a red tick costs nobody an email once it has been reported, and a comment
+costs one every time. See `nightly-drift.yml`'s header, and commit 1e05894e for `configured-suite`
+and `nightly`.
+
+### The classes
+
+| Class | What it is | Emails | Verdict |
+|---|---|---|---|
+| **Real failure** | CI red on a branch (12) or on `main` (4); `nightly` red (2); `deploy-verify` red (1) | yes, once per run | correct - a person must act |
+| **By-design alarm** | `nightly-drift` red while its rolling issue is open (1) | yes, once per firing, twice a day | correct; the repeat COMMENT is now withheld, the red is not |
+| **Self-requested** | `workflow_dispatch` failing while somebody iterates on it (10) | yes | correct - the person who typed it asked for exactly this answer. It is not inbox noise; it is the reply |
+| **Flake** | attempt 1 red, re-run green (5) | yes | red without an action. Only fixable by fixing the flake |
+| **Superseded, mid-run** | branch push cancels its predecessor, `cancel-in-progress: true` (26) | **no** | deliberate - saves runner slots, tells nobody |
+| **Superseded, never started** | `main` run cancelled while queued, `jobs: []` (3) | **no** | costs a per-commit verdict, nothing else - see the concurrency comment in `ci.yml` |
+
+Two shapes that look like classes and are not. A **damaged** run (see "Ways a run reports
+something other than its verdict" above) reports `failure` and emails like one, but carries no
+verdict; check `jobs: []` before treating one as red. And a rolling alarm filed by a run on a
+**feature branch** is a false alarm about `main`: `ci.yml` guards its issue steps with
+`github.ref == 'refs/heads/main'`, and `configured-suite.yml` does not - which is where issue
+#38's seven identical comments came from.
+
+### Reproducing the inventory
+
+```bash
+gh api --paginate "repos/{owner}/{repo}/actions/runs?created=>=<DATE>&per_page=100" \
+  --jq '.workflow_runs[] | select(.conclusion != "success" and .conclusion != "skipped")
+        | "\(.updated_at)\t\(.conclusion)\t\(.name)\tev=\(.event)\tbr=\(.head_branch)\tid=\(.id)"'
+# then, per cancelled run, tell a mid-run cancel from one that never started:
+gh api repos/{owner}/{repo}/actions/runs/<id>/jobs --jq '[.jobs[]] | length'
+```
