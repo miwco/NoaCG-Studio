@@ -315,6 +315,41 @@ export function findRunner(processes, { excludePid = null } = {}) {
   return match?.pid ?? null;
 }
 
+/**
+ * Branches this queue has landed, oldest first.
+ *
+ * Automating the merge took the ANSWER off the owner's desk along with the decision: with
+ * landings happening in a background runner, "which branches are in, and therefore which sessions
+ * are finished?" stopped being visible anywhere. This ledger is what puts it back - SessionStart
+ * announces it in the worktree whose branch landed, and `npm run jobs` lists it for everyone else.
+ */
+export function readLandings(dir) {
+  if (!dir) return [];
+  try {
+    return readFileSync(join(dir, 'landed.jsonl'), 'utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line);
+        } catch {
+          return null; // one torn line must not hide every landing before it
+        }
+      })
+      .filter(Boolean);
+  } catch {
+    return []; // nothing has landed through the queue yet
+  }
+}
+
+/** The most recent landing of the branch checked out at `worktree`, or null. */
+export function landingForWorktree(landings, worktree) {
+  const want = String(worktree ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '');
+  if (!want) return null;
+  const mine = landings.filter((l) => String(l.worktree ?? '').replaceAll('\\', '/').toLowerCase().replace(/\/$/, '') === want);
+  return mine.length > 0 ? mine[mine.length - 1] : null;
+}
+
 /** Everything still live, for the CLI and the SessionStart summary. */
 export function pending(jobs) {
   return jobs.filter((j) => LIVE_STATES.includes(j.state));

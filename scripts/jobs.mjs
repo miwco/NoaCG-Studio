@@ -35,6 +35,7 @@ import {
   jobsDir,
   pending,
   readJobs,
+  readLandings,
   reapDead,
   schedule,
   writeJob,
@@ -101,12 +102,20 @@ async function cmdAdd() {
 async function cmdAddMerge() {
   const target = args[1];
   if (!target || target.startsWith('-')) {
-    console.error('Usage: node scripts/jobs.mjs add-merge <branch> [--after <id>]');
+    console.error('Usage: node scripts/jobs.mjs add-merge <branch> [--after <id>] [--accept <kind>] [--attempts <n>]');
     process.exit(1);
   }
   ensureJobsDir(dir);
+  // Forward the flags auto-merge understands. Dropping one silently is worse than rejecting it:
+  // `--accept conflict` went missing here once and the job refused with the very verdict the flag
+  // was there to answer, which reads exactly like the policy refusing rather than the queue
+  // losing an argument.
+  const passthrough = ['--accept', '--attempts'].flatMap((name) => {
+    const value = valueOf(name);
+    return value ? [name, value] : [];
+  });
   const job = addJob(dir, {
-    command: `node scripts/auto-merge.mjs --branch ${target}`,
+    command: `node scripts/auto-merge.mjs --branch ${target}${passthrough.length ? ` ${passthrough.join(' ')}` : ''}`,
     checkout: process.cwd(),
     branch: target,
     kind: 'merge',
@@ -125,6 +134,20 @@ function cmdList() {
     process.stdout.write(`${JSON.stringify({ running, waiting: waiting.map((w) => ({ ...w.job, reason: w.reason })), starting: start, slots })}\n`);
     return;
   }
+  // Landings first, and shown even when the queue is empty: "which branches are in, and therefore
+  // which sessions are finished?" is the question automating the merge quietly took away, and an
+  // empty queue is exactly when it gets asked.
+  const landed = readLandings(dir).slice(-6);
+  if (landed.length > 0) {
+    console.log('Landed through the queue (newest last):');
+    for (const l of landed) {
+      const where = String(l.worktree ?? '').split('/').pop();
+      console.log(`  ${String(l.sha).slice(0, 8)}  ${l.branch}${where ? `   session: ${where}` : ''}`);
+    }
+    console.log('  Those sessions have nothing left to merge - /handoff tells you which are done.');
+    console.log('');
+  }
+
   if (pending(jobs).length === 0) {
     console.log('Job queue empty.');
     return;

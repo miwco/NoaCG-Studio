@@ -28,8 +28,11 @@
 // Publishing PAST main - npm publish, production migrations, money - is never done here.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseWorktrees } from './safe-merge-preflight.mjs';
+import { jobsDir } from './jobs-store.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const argv = process.argv.slice(2);
@@ -182,7 +185,29 @@ async function attemptLanding(mainWt, branchWt) {
 
   say(`landed ${branch} on main as ${verifiedSha.slice(0, 8)}`);
   say('the branch and its worktree are left alone - cleanup-worktrees owns that.');
+  recordLanding({ branch, sha: verifiedSha, worktree: branchWt, at: Date.now() });
   return 0;
+}
+
+/**
+ * Append one line to the landed ledger.
+ *
+ * WHY. Automating the merge moved the decision off the owner's desk and, as a side effect, took
+ * the ANSWER with it: with landings happening in a background runner, "which branches are in, and
+ * therefore which sessions are finished?" stopped being something he could see. The ledger is
+ * what SessionStart and `npm run jobs` read to put that back - a session whose branch has landed
+ * says so loudly and suggests a handoff, so "done" is announced rather than inferred.
+ *
+ * Append-only JSONL, and a failure here never fails the landing: the merge is already pushed, and
+ * losing a notification must not turn a successful landing into a failed job.
+ */
+function recordLanding(entry) {
+  try {
+    const dir = jobsDir();
+    if (dir) appendFileSync(join(dir, 'landed.jsonl'), `${JSON.stringify(entry)}\n`);
+  } catch {
+    // Reported nowhere on purpose - see above.
+  }
 }
 
 /**

@@ -213,6 +213,19 @@ try {
       }
     }
 
+    // THE ONE LINE THIS WORKTREE'S SESSION MOST NEEDS. Its branch is in main; there is nothing
+    // here left to merge, and the work is done unless someone says otherwise. Before the queue,
+    // whoever ran the merge saw it happen; now a background runner does it, so it has to be said
+    // out loud or the session keeps behaving as though it still has something to land.
+    const { readLandings, landingForWorktree } = await import('../jobs-store.mjs');
+    const mine = landingForWorktree(readLandings(dir), root);
+    if (mine && (mine.at ?? 0) >= since) {
+      console.log('');
+      console.log(`THIS WORKTREE'S BRANCH HAS LANDED: ${mine.branch} is in main as ${String(mine.sha).slice(0, 8)}.`);
+      console.log('  Merged and pushed - nothing here is waiting to merge.');
+      console.log('  If the work is finished, run /handoff so the owner knows this session is done.');
+    }
+
     const live = pending(jobs);
     if (live.length > 0) {
       const { freemem } = await import('node:os');
