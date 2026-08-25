@@ -290,8 +290,8 @@ The page:
   several renderers agree EXACTLY rather than within delivery skew. Since 2026-08-20 the
   exported operator pages stamp one too (`control/matchClockPageJs.ts`, the dependency-free
   copy of this module's arithmetic), so a reload is recovered off the hosted plane as well.
-  `docs/SPORTS_PACK.md` carries the per-plane table and the one gap left — a relay-driven
-  browser source, which boots at the log head and so recovers nothing until an operator acts.
+  `docs/SPORTS_PACK.md` carries the per-plane table. A relay-driven browser source recovers a
+  reload as well, by the bounded off-air replay in `control/localReceiver.ts`.
 - **A DEBATE BOARD'S TWO SPEAKING CLOCKS carry the same origin, and the STAMP says which one is
   running.** Everything above applies twice on the speaking-timer type (dc01), where two clocks
   alternate — and the hard part is not the arithmetic but "who has the floor", which is the
