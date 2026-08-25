@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { uuid } from '../../../model/id';
 import type {
+  DesignFieldSpec,
   DraftPatch,
   SvgFieldDraft,
   SvgFontDraft,
@@ -27,6 +29,13 @@ interface Props {
   /** Which layer the checklist is pointing at, for the PREVIEW's highlight (the step's one
    *  canvas — CreationWizard owns the state because the canvas is beside the step, not in it). */
   onHover: (candidateId: string | null) => void;
+  /**
+   * ADD A FIELD BY DRAWING ONE (docs/SVG_IMPORT_PLAN.md §6a step 3). Arming reports a HANDLER
+   * rather than a flag: the preview gives back a box in fractions of the artwork's rect, and
+   * the only code that can turn that into design px is this step, which is the one holding the
+   * SVG. Null disarms. CreationWizard just hands the handler to the canvas.
+   */
+  onArmDraw: (handler: ((box: { x: number; y: number; w: number; h: number }) => void) | null) => void;
 }
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -146,10 +155,11 @@ function measureOutline(
  * channel the editor canvas already uses (`preview/canvasControlProtocol.ts`) — the wizard
  * preview iframe deliberately carries no allow-same-origin, so nothing reaches into it.
  */
-export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
+export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw }: Props) {
   const svg = draft.designSvg;
   const stageRef = useRef<HTMLDivElement>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [drawArmed, setDrawArmed] = useState(false);
   const [fontBusy, setFontBusy] = useState<string | null>(null);
   const [fontError, setFontError] = useState<string | null>(null);
   const uploadFor = useRef<string | null>(null);
@@ -163,6 +173,76 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
     onHover(hoverId);
   }, [hoverId, onHover]);
   useEffect(() => () => onHover(null), [onHover]);
+
+  // ── ADD A FIELD WHERE THE FILE DREW NOTHING (docs/SVG_IMPORT_PLAN.md §6a step 3) ──
+  // The imported SVG is a STAGE, not immutable artwork: a show needs a line the designer never
+  // drew, and the honest answer is to draw it on the artwork rather than to send the reader to
+  // the editor for it. The box arrives as fractions of the artwork's own rect, so this is where
+  // it becomes DESIGN px — the space addPlacedLine speaks.
+  const placeDrawnField = useCallback(
+    (box: { x: number; y: number; w: number; h: number }) => {
+      if (!svg) return;
+      const w = box.w * svg.width;
+      const h = box.h * svg.height;
+      // A CLICK is a drag of no size, and a 2px field is nobody's intention — read it as
+      // "put a field here" and give it a field-shaped box at that point instead.
+      const tap = w < svg.width * 0.02 || h < svg.height * 0.02;
+      const width = Math.max(64, Math.round(tap ? svg.width * 0.3 : w));
+      // The drawn box IS the type's em box (line-height 1 below), which is what makes the
+      // field land where the reader drew it rather than a guess away from it.
+      const fontSize = Math.max(10, Math.min(Math.round(tap ? svg.height * 0.06 : h), Math.round(svg.height * 0.5)));
+      // The first "Text n" nobody is using. Counting the list would re-issue a name the moment
+      // one is removed, and two operator inputs labelled the same is a control page nobody can
+      // read - the labels ARE the field names on every surface.
+      const taken = new Set(draft.designFields.map((f) => f.title));
+      let n = 1;
+      while (taken.has(`Text ${n}`)) n += 1;
+      const title = `Text ${n}`;
+      onDraft({
+        designFields: [
+          ...draft.designFields,
+          {
+            id: uuid(),
+            title,
+            text: title,
+            x: Math.round(box.x * svg.width),
+            y: Math.round(box.y * svg.height),
+            kind: 'area',
+            width,
+            // ONE FIT (plan §6b): a placed line on an SVG design is measured by the ladder,
+            // which reads `data-fit="shrink"`. A wrapping line would be the one field the
+            // operator's too-long warning cannot see.
+            fit: 'shrink',
+            fontId: null,
+            fontSize,
+            weight: null,
+            // The design's own text token — there is no artwork behind a field nobody drew to
+            // sample a colour from, and the project's colour is the honest default.
+            color: 'var(--text-color)',
+            // The reader drew where the text STARTS. A centre rule belongs to a field standing
+            // in for something already drawn (the outlined-text seed), not to a fresh one.
+            align: 'left',
+            lineHeight: 1,
+            letterSpacing: null,
+          },
+        ],
+      });
+      setDrawArmed(false);
+    },
+    [svg, draft.designFields, onDraft],
+  );
+
+  // Arming IS reporting the handler; disarming is reporting null, and so is leaving the step —
+  // a canvas still armed for a graphic nobody is mapping any more would swallow the next drag.
+  useEffect(() => {
+    onArmDraw(drawArmed ? placeDrawnField : null);
+  }, [drawArmed, placeDrawnField, onArmDraw]);
+  useEffect(() => () => onArmDraw(null), [onArmDraw]);
+
+  const patchAdded = (id: string, patch: Partial<DesignFieldSpec>) =>
+    onDraft({ designFields: draft.designFields.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
+  const removeAdded = (id: string) =>
+    onDraft({ designFields: draft.designFields.filter((f) => f.id !== id) });
 
   // WHICH FAMILIES GOOGLE ACTUALLY HAS. The index is a local module (no network), so the step
   // can answer this before anyone clicks: offering "Get from Google Fonts" for a licensed face
@@ -344,15 +424,20 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
       <div className="map-svg-lead">
         <h3>Choose what the operator can change</h3>
         {svg.candidates.length > 0 ? (
+          /* The promise used to be "your artwork airs exactly as drawn", and the markup does
+             still ship verbatim. But it became a half-truth the moment a declared element could
+             move (plan §6c): a panel the author tells to grow WILL change size on air, and only
+             because they asked for it. The sentence now says what is actually guaranteed. */
           <p className="hint">
-            Your artwork airs exactly as drawn. Tick the layers below that an operator should
-            be able to retype — hover a row to see which layer it is in the preview, and type a
-            real length into its text to watch the graphic take it.
+            Your artwork ships exactly as you drew it, and nothing moves unless you say so. Tick
+            the layers below that an operator should be able to retype — hover a row to see which
+            layer it is in the preview, and type a real length into its text to watch the graphic
+            take it.
           </p>
         ) : (
           <p className="hint">
-            Your artwork airs exactly as drawn. This file has no text layers to bind — what
-            that means, and the two ways forward, are below.
+            Your artwork ships exactly as you drew it. This file has no text layers to bind —
+            what that means, and the two ways forward, are below.
           </p>
         )}
       </div>
@@ -608,32 +693,40 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
           <h3>
             When the text is too long{' '}
             <span className="muted">
-              {draft.svgStretch.on ? 'the panel grows' : 'the text shrinks to fit'}
+              {!draft.svgStretch.on
+                ? 'the text shrinks to fit'
+                : draft.svgStretch.axis === 'y'
+                  ? 'the panel gets taller'
+                  : 'the panel gets wider'}
             </span>
           </h3>
           <p className="hint">
             A longer value than you drew for has to go somewhere. By default the line shrinks
             until it fits — right for a board, whose layout is the design. A lower third can
-            instead let its banner grow, so the type stays the size you drew it.
+            instead let its banner grow WIDER, so the type stays the size you drew it; a panel
+            with room beneath it can grow TALLER, and the value wraps into the new height
+            before any of it shrinks.
           </p>
           <label className="save-field">
             <span>Too-long text</span>
             <select
-              value={draft.svgStretch.on ? 'grow' : 'shrink'}
+              value={!draft.svgStretch.on ? 'shrink' : draft.svgStretch.axis === 'y' ? 'grow-y' : 'grow-x'}
               onChange={(e) =>
                 onDraft({
                   svgStretch: {
-                    on: e.target.value === 'grow',
+                    on: e.target.value !== 'shrink',
                     // Turning it on with nothing picked takes the proposal rather than
                     // leaving a switch that is on and does nothing.
                     shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
+                    axis: e.target.value === 'grow-y' ? 'y' : 'x',
                   },
                 })
               }
               data-testid="map-svg-stretch-mode"
             >
               <option value="shrink">Shrinks to fit the space you drew</option>
-              <option value="grow">Grows the panel behind it</option>
+              <option value="grow-x">Grows the panel wider</option>
+              <option value="grow-y">Grows the panel taller, and the text wraps</option>
             </select>
           </label>
           {draft.svgStretch.on && (
@@ -780,6 +873,60 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover }: Props) {
           ))}
         </div>
       )}
+
+      {/* FIELDS THE FILE NEVER DREW (docs/SVG_IMPORT_PLAN.md §6a step 3). The imported SVG is
+          a fixed STAGE, not immutable artwork: the show needs a line the designer did not draw,
+          and the reader should be able to put it there without opening the editor. Always
+          offered — an artwork with every layer bound may still be missing a caption. */}
+      <div className="panel-section" data-testid="map-svg-added">
+        <h3>
+          Add a field{' '}
+          <span className="muted">
+            {draft.designFields.length === 0
+              ? 'nothing added'
+              : `${draft.designFields.length} added`}
+          </span>
+        </h3>
+        <p className="hint">
+          Your artwork is the stage, not the whole graphic. Draw a box on the preview and you
+          get a real editable field there — the same kind of field the layers above become, so
+          it airs, exports and takes an operator&rsquo;s value exactly like they do.
+        </p>
+        <button
+          className={drawArmed ? 'active' : ''}
+          onClick={() => setDrawArmed((a) => !a)}
+          data-testid="map-svg-add-field"
+        >
+          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
+        </button>
+        {draft.designFields.map((f) => (
+          <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
+            <label className="save-field grow">
+              <span>Field name</span>
+              <input
+                value={f.title}
+                onChange={(e) => patchAdded(f.id, { title: e.target.value })}
+                data-testid={`map-svg-added-title-${f.id}`}
+              />
+            </label>
+            <label className="save-field grow">
+              <span>Text</span>
+              <input
+                value={f.text}
+                onChange={(e) => patchAdded(f.id, { text: e.target.value })}
+                data-testid={`map-svg-added-sample-${f.id}`}
+              />
+            </label>
+            <button
+              onClick={() => removeAdded(f.id)}
+              title="Remove this field — the artwork is untouched either way"
+              data-testid={`map-svg-added-remove-${f.id}`}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
 
       {draft.svgFonts.length > 0 && (
         <div className="panel-section" data-testid="map-svg-fonts">

@@ -372,11 +372,28 @@ test('a reloaded browser source reads the log from where it left off, not from r
 
   // Watch what the reloaded source actually asks for. A route added later wins, and falls back
   // to the relay underneath it, so this observes without replacing anything.
+  //
+  // ONLY THE RELOADED DOCUMENT'S READS COUNT, and telling them apart is the whole difficulty: the
+  // page still on screen is a live receiver polling every 400 ms with its OWN cursor, so a poll
+  // that slipped between this route and the navigation used to be recorded as if it were the boot
+  // read - measured at 7 where the boot asks for 4, which is exactly what reddened CI on
+  // 2026-08-25 and then passed on a re-run of the same commit. Waiting it out cannot fix it; the
+  // window never closes, it only narrows. The receiver's own boot ORDER separates them with no
+  // timing left to lose: /relay/ping is sent once, by probe(), at the top of a fresh document and
+  // never again, so the first ping this route sees IS the reload, and every log read after it
+  // belongs to the new document.
   const reads: number[] = [];
-  await air.route(`${origin}/relay/log*`, (route) => {
-    reads.push(Number(new URL(route.request().url()).searchParams.get('after') ?? '0'));
+  let rebooted = false;
+  await air.route(`${origin}/relay/*`, (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/relay/ping') rebooted = true;
+    else if (rebooted && url.pathname === '/relay/log') reads.push(Number(url.searchParams.get('after') ?? '0'));
     return route.fallback();
   });
+  // Let the LIVE page poll through the recorder before the reload, so the separation above is
+  // exercised rather than merely written down: without it this spec passes even with the filter
+  // deleted, and the flake it was written for comes straight back.
+  await air.waitForTimeout(600);
 
   await air.reload({ waitUntil: 'load' });
   await expect
@@ -386,17 +403,8 @@ test('a reloaded browser source reads the log from where it left off, not from r
 
   // THE BOUND: the boot read starts one row before the play, so the airing comes back in full
   // and nothing older than it is fetched at all. Row 0 - the old behaviour - would be a 0 here.
-  //
-  // It is the LOWEST read that says this, never the first one. The outgoing document polls the
-  // log every 400 ms and those requests are still in flight while the reload navigates, so the
-  // first thing this route sees is routinely the old page asking from the HEAD - which is how
-  // `reads[0]` read 7 against an expected 4 in CI on 2026-08-24 while the boot read itself,
-  // `after=4`, sat two entries later in the very same trace. Every straggler is at or past the
-  // head, so it can never mask a boot read that started too early; the minimum is exactly the
-  // claim, and it fails at 0 for the old whole-log walk and at the cursor for a bound read off
-  // the wrong end of the baseline.
   expect(reads.length, 'the reloaded source must have read the log').toBeGreaterThan(0);
-  expect(Math.min(...reads), 'nothing older than the airing’s own play row may be fetched').toBe(play!.id - 1);
+  expect(reads[0]).toBe(play!.id - 1);
 
   await ctl.close();
   await air.close();

@@ -122,7 +122,10 @@ mode is how a too-long operator value answers it - `overflow` (no cap; what a pr
 template reads as, so nothing changes under it), `wrap` (CSS), or `shrink` (one row, condensed
 by templates/shared/textFit.ts's `fitPlacedText()`, marked `data-fit="shrink"` on the element).
 `ensureTextFitRuntime` injects that design-owned runtime - and the shared update()'s optional
-hook when the template predates it - ONCE, idempotently (the lottieInsert bootstrap pattern).
+hook when the template predates it - ONCE, idempotently (the lottieInsert bootstrap pattern),
+and NOT AT ALL into an imported SVG: that design runs ONE fit, its own ladder, which measures
+placed lines too (`SVG_TEXT_FIT_MARKER`, docs/SVG_IMPORT_PLAN.md §6b - only the ladder can
+report a value as too long, so a second runtime there would silence the operator's warning).
 New lines from `addPlacedLine` default to `shrink` with the room to the artwork's right edge.
 
 `designStretchInfo(html, css)` derives a design's SCALING MODE + 9-slice guides from the
@@ -438,6 +441,18 @@ Fade, Blur and the Wipes therefore do not offer them: measured, they render as a
 flicker, and nothing. It takes EVERY phase the one easing setting will land on. `simple` on the
 easing is the second, motion-independent filter (the near-duplicates and wrong-direction curves);
 the Inspector's Advanced picker still lists all twelve.
+
+**Both hosts SET the curve, and both read it back from the code.** `easesForChoice(easingId)` is
+the `{easeIn, easeOut}` override handed to `applyMotionPreset` ('auto' overrides nothing, so each
+motion keeps its tuned pair), and `currentMotionEasing(template, data, {in, out})` is its inverse:
+the ease stamped on the landing keyframes of every phase holding a universal motion, mapped back
+to an `EasingId` - all phases must agree, a phase sitting on its motion's tuned curve reads 'auto',
+and anything the list cannot name (a hand-tuned timeline curve) reads 'auto' too. Nothing is
+stamped into the block for it, exactly as with the lit card. This is what lets the control page
+offer the wizard's Easing control rather than freezing the curve at creation; on both surfaces a
+motion that cannot SHOW the held curve drops it to Auto (`easingLegalForMotions`), and on the
+control page the phase that was not picked is rewritten with it, so the data never keeps a curve
+the control stopped offering.
 
 ## presetRegistry.ts - the preset library (what is left of animPatch)
 

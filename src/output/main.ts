@@ -29,6 +29,7 @@ import {
   type ClockSpec,
   type SpeakingClockPair,
 } from '../control/matchClockWire';
+import { alreadyInSnapshot, planOutputRecovery } from '../control/outputRecovery';
 import { createOutputStage } from './stage';
 
 /** How long the recovered picture is given to settle off air before the stage comes back.
@@ -120,21 +121,12 @@ async function boot(): Promise<void> {
   dbg('graphics', stage.graphics.join(', '));
 
   // ── Recovery baselines (0033): each live entry records the log row the renderer had applied
-  // when it wrote that report, so a graphic's rebuilt state accounts for everything up to its
-  // own baseline and nothing after it. Follow from the OLDEST baseline and skip, per graphic,
-  // what its own snapshot already contains — reports are per graphic and debounced, so one can
-  // be seconds fresher than another, and a single show-wide cursor would drop the difference.
-  // An entry with no baseline (a pre-0033 server or renderer) is replayed from the oldest
-  // baseline instead: replaying a command the snapshot already holds costs one re-animation,
-  // skipping one loses the picture. Nothing reported at all (no renderer has ever run) starts
-  // at the log head, because there is no snapshot the history would be filling in. ──
-  const snapshotAt = new Map<string, number>();
-  for (const key of stage.graphics) {
-    const at = resolved.live[key]?.event;
-    if (typeof at === 'number') snapshotAt.set(key, at);
-  }
-  const baselines = [...snapshotAt.values()];
-  const followFrom = baselines.length > 0 ? Math.min(...baselines) : resolved.lastEventId;
+  // when it wrote that report, so the boot follows from the OLDEST baseline and skips, per
+  // graphic, what its own snapshot already contains. Nothing reported at all means the START of
+  // the log, never its head — the head would count commands nobody has ever rendered as already
+  // on air. The whole rule, and why, is `control/outputRecovery.ts`; it lives out there so an
+  // offline spec can drive it. ──
+  const { followFrom, snapshotAt } = planOutputRecovery(stage.graphics, resolved.live);
   let lastAppliedId = followFrom;
 
   // ── Applied-truth bookkeeping (the panel event-log pattern, parent-side): the sandbox has
@@ -202,9 +194,10 @@ async function boot(): Promise<void> {
 
   const apply = (row: ControlEventRow) => {
     lastAppliedId = Math.max(lastAppliedId, row.id);
-    const snapshot = snapshotAt.get(row.graphic);
     // Already inside the state this graphic was rebuilt from — replaying it would re-air it.
-    if (snapshot !== undefined && row.id <= snapshot) return;
+    if (alreadyInSnapshot(snapshotAt, row.graphic, row.id)) return;
+    // `let`, because an update row's CLOCK fields are forwarded as this renderer HOLDS them
+    // rather than as the row carried them — see the rewrite in the update branch below.
     let msg = row.msg;
     if (msg.t === 'update') {
       const merged = { ...mergedData.get(row.graphic), ...msg.data };
@@ -304,7 +297,7 @@ async function boot(): Promise<void> {
   }
   const animates = missed.some(
     (row) =>
-      row.id > (snapshotAt.get(row.graphic) ?? -1) &&
+      !alreadyInSnapshot(snapshotAt, row.graphic, row.id) &&
       (row.msg.t === 'play' || row.msg.t === 'stop' || row.msg.t === 'next' || row.msg.t === 'event'),
   );
   if (animates) {

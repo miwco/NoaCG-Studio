@@ -199,6 +199,24 @@ The page:
   replayed rather than trusted — a needless re-animation is recoverable, a lost take is not.
   Catch-up is paged: the tail RPC answers 500 rows, so `followControlLog` keeps pulling while
   pages come back full instead of recovering only the first page of a long outage.
+- **A production nobody has rendered starts at the log START, never at its head** (2026-08-25).
+  0033 left one case behind: with NO baseline anywhere — no renderer, hosted or relay, has ever
+  reported for this production — the boot fell back to the log head, and the head is a claim
+  about the renderer ("everything up to here is already on air") made about a log nothing had
+  ever followed. So a cue taken before the browser source finished booting was dropped for good:
+  no snapshot to recover from, no row left to replay, a dark layer until an operator happened to
+  send another command. Taking a cue and THEN pasting the output URL into OBS is the everyday
+  shape of it; the boot itself is the same race in miniature, since the take only has to beat the
+  resolve. It is what made `quiz-output` and `scorebug-output` flaky on CI on 2026-08-24 — both
+  dark for their polls' full 30 s, both green on retry, never failing on a warm laptop.
+  Replaying that log is the FIRST airing rather than a re-airing, and it settles off air like
+  every other catch-up. The whole rule lives in `control/outputRecovery.ts`, pure and outside the
+  boot closure for the reason the match clock's does — this page runs only against a live
+  backend, so a decision left inside it can be verified by no offline spec.
+  `e2e/productions.spec.ts` drives the rule; `e2e/configured/output-cold-boot.spec.ts` walks it
+  end to end on the real wire (take first, open the renderer second).
+  The relay receiver (`control/hostedReceiver.ts`) still seeds from the head and is still the
+  gap named below.
 - **Recovery is never watchable.** The doctrine is data, then SNAP — instant, timers arm — and
   catch-up rows break it by their nature: they are ordinary commands, so replaying them animates.
   A reopened output would air the outage's history (a graphic entering, a cue leaving, another

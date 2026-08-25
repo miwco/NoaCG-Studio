@@ -39,11 +39,18 @@ test('a published quiz runs the sealed sequence on the real output renderer, and
   await expect(page.getByTestId('production-page')).toBeVisible();
   await page.getByTestId('production-publish').click();
   await expect(page.getByTestId('production-mode')).toContainText('SHOW', { timeout: 30_000 });
-  // Publishing opens the links popover (the URLs are the point). Escape closes it — the shell
-  // has no backdrop element to click any more, because a covering div ate the press that was
-  // meant for whatever the operator clicked next (home/LibMenu).
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('production-links')).toBeHidden();
+  // Publishing opens the links popover (the URLs are the point). Close it through its OWN
+  // toggle: the shell has no backdrop element to click any more (a covering div ate the press
+  // meant for whatever the operator clicked next — home/LibMenu), and Escape is a race here.
+  // LibMenu registers the key handler when it OPENS, so a press landing in the gap between the
+  // publish answering and the popover mounting is simply lost, and the popover then sits over
+  // the page for the rest of the walk. That is what took scorebug-output red on 2026-08-25 —
+  // ten seconds of `toBeHidden` watching a popover that had never seen the key. A toggle click
+  // is a state flip and cannot miss.
+  const links = page.getByTestId('production-links');
+  await expect(links).toBeVisible();
+  await page.getByTestId('production-links-toggle').click();
+  await expect(links).toBeHidden();
 
   const outputSlug = await page.evaluate(async (name) => {
     const { loadShows } = await import('/src/model/shows.ts');

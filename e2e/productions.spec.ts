@@ -1379,3 +1379,59 @@ test('the debate board itself reads a stamped clock: it opens mid-speech and kee
   expect(result.corrected).toEqual(['01:50', '00:45']);
   expect(result.label).toBe('CLOSING');
 });
+
+test('a renderer that has never reported boots from the START of the log, not its head', async ({ page }) => {
+  // `control/outputRecovery.ts` decides which log rows a booting /output renderer counts as
+  // already applied, and it is pure for the same reason the clock wire is: that page only runs
+  // against a live backend, so the rule used to sit in a boot closure no offline spec could
+  // reach — and getting it wrong loses a take, on air, permanently.
+  //
+  // The case this pins is a production NOBODY has rendered yet. Seeding the cursor with the log
+  // HEAD there reads "everything up to here is already on air" about a log no renderer has ever
+  // followed, so a cue taken before the browser source finished booting was dropped for good.
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+  const plan = await page.evaluate(async () => {
+    const r = await import('/src/control/outputRecovery.ts');
+    const graphics = ['Scorebug', 'Lower third'];
+    const snap = (p: { followFrom: number; snapshotAt: Map<string, number> }) => ({
+      followFrom: p.followFrom,
+      snapshotAt: [...p.snapshotAt.entries()],
+    });
+    return {
+      // Nothing reported: the log is unrendered history, so all of it replays.
+      cold: snap(r.planOutputRecovery(graphics, {})),
+      // Reports with baselines: the OLDEST baseline is the floor, and each graphic drops only
+      // what its own snapshot already holds (reports are debounced, so they differ).
+      reported: snap(
+        r.planOutputRecovery(graphics, {
+          Scorebug: { event: 120, data: { f1: '1' } },
+          'Lower third': { event: 90, data: {} },
+        }),
+      ),
+      // A report with NO baseline (a pre-0033 server or renderer) is not a baseline: it is
+      // replayed rather than trusted, so it must not raise the floor.
+      unbaselined: snap(r.planOutputRecovery(graphics, { Scorebug: { data: { f1: '1' } } })),
+      // A graphic that reported while another never did: the reported one keeps its own
+      // snapshot, the other takes everything from the shared floor.
+      partial: snap(r.planOutputRecovery(graphics, { Scorebug: { event: 200 } })),
+      // The per-row question the boot asks twice — replay, and "does this catch-up animate".
+      insideSnapshot: r.alreadyInSnapshot(new Map([['Scorebug', 120]]), 'Scorebug', 120),
+      afterSnapshot: r.alreadyInSnapshot(new Map([['Scorebug', 120]]), 'Scorebug', 121),
+      noSnapshot: r.alreadyInSnapshot(new Map([['Scorebug', 120]]), 'Lower third', 1),
+    };
+  });
+
+  // THE REGRESSION: 0, not the head. A production whose log holds a take nobody rendered must
+  // replay that take, and the boot pass runs with the stage hidden, so it settles off air.
+  expect(plan.cold).toEqual({ followFrom: 0, snapshotAt: [] });
+  expect(plan.reported).toEqual({
+    followFrom: 90,
+    snapshotAt: [['Scorebug', 120], ['Lower third', 90]],
+  });
+  expect(plan.unbaselined).toEqual({ followFrom: 0, snapshotAt: [] });
+  expect(plan.partial).toEqual({ followFrom: 200, snapshotAt: [['Scorebug', 200]] });
+  // The row a snapshot was captured AT is inside it; the next one is not; a graphic with no
+  // snapshot holds nothing, so every row reaches it.
+  expect([plan.insideSnapshot, plan.afterSnapshot, plan.noSnapshot]).toEqual([true, false, false]);
+});

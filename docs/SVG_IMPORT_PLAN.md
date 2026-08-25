@@ -294,6 +294,29 @@ required for the feature and never participates in the runtime fit.
    field-system cleanup"). See §6b.
 3. **ADD FIELD** - drag on the canvas, a real editable field where the file drew nothing. Cheap
    once 2 lands: `addPlacedLine` already emits it; this is the gesture plus the canvas from 1.
+   **Status 2026-08-24 - shipped.** "＋ Draw a field on the artwork" arms a marquee on the
+   preview; the box comes back as FRACTIONS of the artwork's own rect (`WizardPreview` never
+   learns what a design px is) and the mapping step turns it into a `DesignFieldSpec`, which
+   `buildDraftTemplate` already applied for this category - so the drawn line is an ordinary
+   placed field from birth and the preview, the editor and every export agree by construction.
+   Three decisions worth keeping:
+   - **A drawn field is a `shrink` line, never a `wrap` one.** `applyPlacedFieldSpecs` gives a
+     dragged box CSS wrap, which is right on RASTER artwork and wrong here: the ladder measures
+     `data-fit="shrink"` (§6b), so a wrapping line would be the one field the operator's
+     too-long warning cannot see - the defect step 2 just removed, re-entering by a new door.
+     `DesignFieldSpec.fit` carries the answer and raster keeps its default.
+   - **The drawn box IS the type's em box** (`lineHeight: 1`), so the numbers dragged are the
+     numbers in the emitted rule. A CLICK is a drag of no size and reads as "put a field here",
+     with a field-shaped default - never a two-pixel field nobody can see or select.
+   - **The artwork is tracked for the whole step, not only while armed.** Its rect arrives on
+     the document's next FRAME, so arming the channel at the moment of the gesture left the
+     first drag after the button with nothing to measure against, and the field silently did
+     not appear.
+   The step reports its drop HANDLER up rather than a flag, because only it holds the SVG - and
+   that handler's identity changes with every keystroke, so it lives in a REF with a boolean in
+   state. Held as state it made every report a render and React stopped the wizard with
+   "Maximum update depth exceeded" **while every assertion still passed**, which is why the
+   loop has an assertion of its own in `e2e/import-svg.spec.ts`.
 4. **VERTICAL GROWTH** - the rung the owner values most. See §6c.
 5. **THE CANVAS AS A CONTROL SURFACE** - click a layer to bind it, click a rectangle to make it
    the growing panel, drag its direction. The relationship set from 4 stops being
@@ -328,6 +351,36 @@ all three text origins. The real design work is the ladder's ROOM rule for a pla
 no shape drawn behind it (it was placed on empty artwork, or over shapes now hidden), so the
 honest fallback is its own slot, the way a bound line with no shape behind it keeps its drawn
 width.
+
+**THE ROOM RULE FOR A PLACED LINE** (settled 2026-08-24, before the refactor was written - it is
+the one decision in step 2 that is design and not mechanics):
+
+> **A placed line's room is its own SLOT: the width its wrapper declares.** Nothing was drawn
+> behind it - it sits on empty artwork, or over shapes the template now hides - so there is no
+> shape to measure a margin from, and the slot is the only statement anybody actually made about
+> how much room the line gets.
+
+Three things make the slot the honest answer rather than merely the available one:
+
+- **It is AUTHORED, not inferred.** The slot is measured at placement from the outlined group's
+  own box (`components/wizard/draft.ts`), or from the artwork's edge for a field added on empty
+  design, and the canvas resize handle re-states it (`blocks/designLayout.ts` `setLineFit`).
+  Everywhere else in this ladder an authored value beats a found one - the panel that grows is
+  PICKED, never guessed (§3) - and a container search that overrode a slot the author had just
+  dragged would break the resize handle to obey a rectangle nobody pointed at.
+- **It mirrors the bound line's fallback exactly.** A bound line with no shape behind it keeps
+  the width it was DRAWN at; a placed line keeps the width it was PLACED at. Same sentence, same
+  reason: measure what the design said, never what happens to be on screen.
+- **The slot is a WIDTH, so a placed line does not wrap.** Wrapping in this ladder is only ever
+  allowed into room the artwork already drew - from the line down to the nearest thing below it
+  inside its panel. Nothing under a placed line was drawn for it, so there is no such room to
+  claim, and reflowing into it would print through somebody else's layer. A placed line fills its
+  slot, shrinks to the 55% floor, and is then REPORTED - which is the half that was missing.
+
+The ladder therefore takes over exactly the lines `fitPlacedText` had (`data-fit="shrink"`, the
+mode every placed line is born in). A line the author switched to `overflow` still runs free and
+a `wrap` line still reflows in CSS, both unreported, because both are the author saying the cap
+does not apply - that vocabulary is out of scope below and unchanged.
 
 **OUT of scope, deliberately** - each of these is the "larger field-system cleanup" the owner
 refused, and none of them blocks step 4:
@@ -375,6 +428,34 @@ before the type shrinks.** Deterministic layout, never AI.
 **One copy change rides along:** the mapping step promises "Your artwork airs exactly as drawn."
 The markup does stay verbatim, but the sentence becomes a half-truth the moment a declared
 element can move, and it needs rewording in the same change.
+
+**Status 2026-08-24 - the format, the growth and the convergence are shipped; authoring is the
+minimum.** `NOACG_LAYOUT` (version 1) is a commented table in the design-owned JS - deliberately
+NOT in `NOACG_ANIM`, which the timeline rewrites. Each row names one element by its
+`data-noacg-el` stamp, its axis, and its safe margin; `followers` is an ADDITIVE optional field,
+so declared-vs-derived needed no second version: absent = the geometric derivation the hug always
+used (fair sideways, poor downwards), present = exactly what the author said. `layoutRules` is a
+NORMALIZING read - the old one-rectangle `stretch` becomes one axis-'x' row - so nothing
+downstream sees two shapes. One stamp per participant replaced `.imported-design-panel`, which a
+class per role could not scale past one rule.
+
+**How the circularity was answered: it is not iterated.** The ceiling a block may fill is the MOST
+its rule could ever give, measured at rest BEFORE the fit (`svgOfferHeights`); the fit wraps and
+shrinks inside that fixed ceiling exactly as before; then the panel grows by what the SETTLED
+block needed (`growSvgHeights`). One measure, one fit, one apply. Sideways stays the other way
+round - growth is extra BUDGET, so it happens before the fit - and that asymmetry is the whole
+reason the two halves sit on opposite sides of it.
+
+**The acceptance criterion caught a real defect, which is why it is the criterion.** `refitSvgText`
+re-measured the room BEFORE resetting the layout, so a second pass measured against a panel still
+grown by the first: the block looked like it already fitted the drawn height and the growth was
+silently dropped (122 -> 110). `document.fonts.ready` fires exactly that path, so on air the
+graphic would have grown and then collapsed when the webfont landed. Every re-measure now rests
+first, which is what makes a pass a function of the VALUE and the DESIGN and nothing else.
+
+**Still authored the narrow way:** the mapping step asks shrink / wider / taller for ONE picked
+rectangle. Declared followers and several rules are what the format now expresses and the step
+does not yet ask for - that is step 5's surface, and the runtime is ready for it.
 
 ## 7. What this is NOT
 
