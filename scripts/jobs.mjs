@@ -44,6 +44,16 @@ import {
 const POLL_MS = 5_000;
 /** The runner exits after this long with nothing live, so no daemon outlives the work. */
 const IDLE_EXIT_MS = 60_000;
+/** `auto-merge`'s "not my turn yet" - blocked by a branch that is itself still waiting. */
+const BLOCKED_EXIT = 3;
+/**
+ * How many times a landing may go to the back of the queue before it is failed.
+ *
+ * Five branches queued together mostly start out blocked by each other, and each landing frees
+ * the next - so a handful of deferrals is normal traffic, not a problem. The bound is what stops
+ * a genuinely stuck pair cycling for ever while looking busy.
+ */
+const MAX_DEFERRALS = 6;
 
 const dir = jobsDir();
 if (!dir) {
@@ -158,6 +168,7 @@ function cmdList() {
 
   if (pending(jobs).length === 0) {
     console.log('Job queue empty.');
+    printOutstanding(jobs);
     return;
   }
   const spent = running.reduce((sum, j) => sum + costOf(j), 0);
@@ -177,6 +188,44 @@ function cmdList() {
   waiting.forEach(({ job, reason }, i) => {
     console.log(`  #${i + 1}       ${job.id}  ${reason}  ${job.command}`);
   });
+  printOutstanding(jobs);
+}
+
+/**
+ * What is still ahead of main, cheapest first, and whether anyone has queued it.
+ *
+ * The third of the three questions this command exists to answer - what landed, what is running,
+ * and what is still OUT there. Without it, "which branch should go next" meant running a second
+ * tool and holding both answers in your head, which is precisely the tracking cost that
+ * automating the merge was supposed to remove rather than move.
+ *
+ * A branch with no job is not idle by accident: only its own session queues it (`/queue-merge`),
+ * so "not queued" means that work is not finished yet, which is a different thing from stuck.
+ */
+function printOutstanding(jobs) {
+  const res = spawnSync('node', ['scripts/merge-order.mjs', '--json'], { encoding: 'utf8', windowsHide: true });
+  let order;
+  try {
+    order = JSON.parse(res.stdout).order ?? [];
+  } catch {
+    return; // merge-order could not answer; the queue above is still the useful half
+  }
+  if (order.length === 0) {
+    console.log('');
+    console.log('Nothing is ahead of main.');
+    return;
+  }
+  const queued = new Map(pending(jobs).filter((j) => j.kind === 'merge').map((j) => [j.branch, j]));
+  console.log('');
+  console.log(`Ahead of main, cheapest to land first (${order.length}):`);
+  for (const entry of order) {
+    const job = queued.get(entry.branch);
+    const state = job ? `QUEUED ${job.id}` : 'not queued';
+    const where = String(entry.worktree ?? '').split('/').pop() || 'no worktree';
+    console.log(`  ${entry.branch}`);
+    console.log(`      ${state}  ·  ${entry.ahead} commit(s), ${entry.files} file(s)  ·  ${where}`);
+  }
+  console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
 }
 
 function cmdLog() {
@@ -281,8 +330,24 @@ function spawnJob(job) {
     const current = readJobs(dir).find((j) => j.id === job.id);
     // Cancelled or timed out while running: that verdict wins, do not overwrite it.
     if (!current || current.state !== 'running') return;
+
+    // NOT MY TURN YET (auto-merge exit 3): the branch is blocked by another that is itself still
+    // waiting, so this resolves the moment that one lands. Send it to the BACK of the queue
+    // rather than failing it - queueing five branches at once means most start out blocked by
+    // each other, and each landing frees the next. Bounded, so a genuinely stuck job still
+    // surfaces instead of cycling for ever.
+    if (code === BLOCKED_EXIT && (current.deferrals ?? 0) < MAX_DEFERRALS) {
+      const deferrals = (current.deferrals ?? 0) + 1;
+      writeJob(dir, { ...current, state: 'waiting', startedAt: null, pid: null, enqueuedAt: Date.now(), deferrals });
+      console.log(`  ${job.id} not its turn yet - back of the queue (deferral ${deferrals}/${MAX_DEFERRALS})`);
+      return;
+    }
+
+    const blockedOut = code === BLOCKED_EXIT;
     writeJob(dir, { ...current, state: code === 0 ? 'done' : 'failed', exitCode: code, finishedAt: Date.now() });
-    console.log(`  ${job.id} ${code === 0 ? 'done' : `FAILED (exit ${code})`}`);
+    console.log(
+      `  ${job.id} ${code === 0 ? 'done' : blockedOut ? `FAILED - still blocked after ${MAX_DEFERRALS} turns` : `FAILED (exit ${code})`}`,
+    );
   });
 }
 

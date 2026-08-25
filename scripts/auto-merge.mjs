@@ -71,7 +71,17 @@ if (!branch) {
   process.exit(2);
 }
 
-process.exit(await main());
+/**
+ * Exit code the runner reads as "not my turn yet - put me back in the queue".
+ *
+ * Distinct from a failure on purpose: a landing blocked by a branch that is ITSELF still waiting
+ * is a turn-order problem that resolves as soon as that branch lands, and treating it as a
+ * failure would mean queueing five branches and hand-re-queueing the three that lost.
+ */
+const BLOCKED_EXIT = 3;
+
+const outcome = await main();
+process.exit(outcome === 'blocked' ? BLOCKED_EXIT : outcome);
 
 async function main() {
   // --- 1. Order. A `clear` verdict is the licence; anything else is a person's call. ---------
@@ -88,6 +98,19 @@ async function main() {
     // stacked branch or a duplicate migration number that happens to be in the same verdict.
     const unaccepted = verdict.reasons.filter((r) => !accept.includes(r.kind));
     if (unaccepted.length > 0) {
+      // BLOCKED BY A BRANCH THAT IS ITSELF STILL WAITING? Then this is not a refusal, it is a
+      // turn-order problem that solves itself. Queue several landings at once and most of them
+      // start out blocked by each other; each one that lands frees the next. Failing them
+      // outright would mean the owner queues five, three fail, and he re-queues by hand - which
+      // is the manual tracking this whole thing exists to remove.
+      const blockers = [...(verdict.blockedBy ?? []), verdict.landFirst].filter(Boolean);
+      const stillWaiting = blockers.filter((b) => aheadOfMain(b));
+      if (stillWaiting.length > 0) {
+        console.error(
+          `auto-merge: waiting its turn - ${stillWaiting.join(', ')} ${stillWaiting.length === 1 ? 'is' : 'are'} still ahead of main.`,
+        );
+        return 'blocked';
+      }
       return refuse(
         `merge-order says ${verdict.severity}: ${unaccepted.map((r) => `[${r.kind}] ${r.text}`).join('; ')}` +
           (verdict.landFirst ? `\n  land ${verdict.landFirst} first` : '') +
@@ -291,6 +314,16 @@ function worktreeFor(ref) {
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+/** Is `ref` still unmerged - i.e. is the branch blocking us actually still in the running? */
+function aheadOfMain(ref) {
+  const res = spawnSync('git', ['rev-list', '--count', `origin/main..${ref}`], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  return res.status === 0 && res.stdout.trim() !== '0';
 }
 
 /** Run a command with its output shown, and hand back the result rather than throwing. */
