@@ -1,7 +1,7 @@
 {
   "note": "Advisor findings seen and accepted. Regenerate with `node scripts/supabase-advisors.mjs --update-baseline`. Each entry is accepted because of its lint CLASS - the reasons live in ACCEPTED_CLASSES in that script. Re-recording accepts everything currently reported, so read the diff before committing one.",
-  "recordedAt": "2026-08-22",
-  "count": 102,
+  "recordedAt": "2026-08-25",
+  "count": 100,
   "entries": {
     "anon_security_definer_function_executable_public_audience_close_round_p_slug text, p_round uuid": {
       "name": "anon_security_definer_function_executable",
@@ -472,16 +472,6 @@
       "name": "unindexed_foreign_keys",
       "level": "INFO",
       "detail": "Table \\`public.user_plans\\` has a foreign key \\`user_plans_assigned_by_fkey\\` without a covering index. This can lead to suboptimal query performance."
-    },
-    "unused_index_public_agent_auth_codes_agent_auth_codes_expires_idx": {
-      "name": "unused_index",
-      "level": "INFO",
-      "detail": "Index \\`agent_auth_codes_expires_idx\\` on table \\`public.agent_auth_codes\\` has not been used"
-    },
-    "unused_index_public_agent_keys_agent_keys_user_idx": {
-      "name": "unused_index",
-      "level": "INFO",
-      "detail": "Index \\`agent_keys_user_idx\\` on table \\`public.agent_keys\\` has not been used"
     },
     "unused_index_public_community_templates_community_kind_status_idx": {
       "name": "unused_index",

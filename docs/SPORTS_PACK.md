@@ -177,7 +177,7 @@ exists for:
   |---|---|---|---|
   | hosted `/output` | fixed | fixed (one derived stamp) | **fixed** |
   | exported package · standalone panel (BroadcastChannel) | fixed | within delivery skew | **fixed** |
-  | exported package · local relay (OBS/vMix) | fixed | within delivery skew | **on the next Take or ✎ Update** |
+  | exported package · local relay (OBS/vMix) | fixed | within delivery skew | **fixed** (bounded replay) |
   | the dashboard's own PROGRAM monitor | fixed | within delivery skew | **fixed** (stage rebuild) |
 
   - **Throttled tabs are fixed everywhere**, because painting from an origin is the runtime's
@@ -193,14 +193,18 @@ exists for:
     match time. The dashboard's PROGRAM monitor keeps the stamped value beside its aired data
     and folds it into the rebuild, so a stage that comes up fresh no longer restarts the clock
     at its seed.
-  - **The local relay is the one gap left, and it is not a clock gap.** A relay-driven browser
-    source boots at the log HEAD by design (`control/localReceiver.ts`: replaying a whole show
-    blind is worse than starting clean), so it recovers NOTHING until an operator acts — text,
-    scores and clock alike. What changed is that when the operator does act, the value set the
-    controller sends carries the stamped clock, so the graphic lands on the right second
-    instead of being dragged back to the cue's typed time. Closing it properly means teaching
-    that receiver to RECONSTRUCT from the log rather than replay it, which is a recovery
-    design, not another clock stamp.
+  - **The local relay recovers a reload too, and its clock rides in on the same replay.** The
+    receiver does not boot at the log head — that was the old behaviour, and it came back blank
+    (`control/localReceiver.ts` measures it: a board aired at 89-84 with the clock at 9:55 came
+    back invisible, reading 88 and 10:00). What it does instead is a BOUNDED replay of the
+    current airing: it starts at the last `play` for this graphic and stream — found from a
+    baseline persisted in localStorage on the relay's origin, or by walking the log from row 0
+    when there is none — replays those rows OFF AIR so the outage's history is never watchable,
+    lets the motion settle, and comes back. Because the value in the log is the STAMPED one,
+    the clock returns at the match time rather than at the cue's typed time, exactly as on the
+    other planes. The one case that still follows from the head is five consecutive FAILED
+    reads: a half-read log says the same thing an empty one does, so after retrying it follows
+    live rather than paint a conclusion it did not earn.
   - **The stamped value rides every later send, and that is safe because it is idempotent** —
     re-resolving `"10:00@1787257289761"` a minute later still gives the right second. A plain
     snapshot did not have that property, which is why re-sending the cue's whole value set on

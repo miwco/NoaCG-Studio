@@ -23,6 +23,8 @@ export const FOCUS = [
   'cross-tab.spec.ts',
   'data-api.spec.ts',
   'design-rules-product.spec.ts',
+  // The public docs home: the guides students and operators follow to get on air at all.
+  'docs.spec.ts',
   'exports.spec.ts',
   'feedback.spec.ts',
   'flows.spec.ts',

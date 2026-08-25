@@ -201,6 +201,22 @@
     }
     .card code { font-family: var(--mono); font-size: 12.5px; color: var(--paper); background: rgba(232,237,242,0.06); padding: 1px 6px; border-radius: 4px; }
 
+    /* ── The agent door: real, installable commands — never a faked terminal session.
+       Shown as the commands a user types, without invented output. ── */
+    .agent-cli {
+      margin-top: 30px; padding: 18px 22px; overflow-x: auto;
+      border: 1px solid var(--line); border-radius: 12px;
+      background: linear-gradient(180deg, rgba(232, 237, 242, 0.025), transparent 55%), var(--panel);
+      font-family: var(--mono); font-size: 13px; line-height: 1.9; color: var(--paper);
+      white-space: pre;
+    }
+    .agent-cli .c { color: var(--faint); }
+    .agent-link { margin-top: 18px; font-size: 15px; }
+    .agent-link a { color: var(--amber); }
+    .agent-link a:hover { color: var(--glow); }
+    .way p a { color: var(--amber); }
+    .way p a:hover { color: var(--glow); }
+
     /* ── Bottom CTA ── */
     .bottom {
       margin: 96px 0 0; padding: 56px 24px; text-align: center;
@@ -515,6 +531,7 @@
       <nav>
         <a class="gh" href="#how">How it works</a>
         <a class="gh" href="#live">Going live</a>
+        <a href="/docs">Docs</a>
         <a class="gh" href="mailto:contact.noacg@gmail.com">Contact</a>
         <a class="btn btn-amber" href="/app#/new">Start creating</a>
       </nav>
@@ -674,11 +691,12 @@
               <img src="/landing/shot-wizard-import.png" alt="The Import graphic step: editable name and role fields placed on an imported design plate" loading="lazy" />
             </div>
             <div class="way-body">
-              <h3>Import your own artwork</h3>
+              <h3>Import your own graphic</h3>
               <p>
-                Bring a finished design from any design tool, place editable text fields on it,
-                pick fonts and motion. Your artwork is never redrawn — NoaCG adds the broadcast
-                behaviour around it.
+                Design it in Illustrator, Figma or Inkscape and drop the SVG in: your text layers
+                become operator fields and the pixel-exact graphic goes on air — nothing is
+                redrawn, the typography stays yours. Photos and flattened images work too, with
+                editable fields placed on top. <a href="/docs#svg">How to prepare your file →</a>
               </p>
             </div>
           </article>
@@ -855,9 +873,9 @@
             <h4>Multi-step reveals</h4>
             <p>Graphics that advance stage by stage, one Continue press at a time.</p>
           </div>
-          <div class="feat planned">
-            <h4>More data sources <span class="soon">coming</span></h4>
-            <p>APIs, dashboards and automated feeds for hands-off graphics.</p>
+          <div class="feat">
+            <h4>Live data API</h4>
+            <p>Push scores, clocks and results from your own systems over plain HTTPS.</p>
           </div>
         </div>
 
@@ -958,6 +976,29 @@
         </div>
       </section>
 
+      <!-- The agent door (docs/AGENT_CLI.md): coding agents make NoaCG graphics directly
+           through the published @noacg/cli. Real and installable — the commands below are the
+           actual CLI, never a mocked terminal, and validation is the studio's own gate. -->
+      <section id="agents">
+        <p class="kicker" data-reveal>For developers</p>
+        <h2 data-reveal>Your coding agent can make these too.</h2>
+        <p class="sub" data-reveal>
+          Claude Code, Codex, or any MCP-capable agent can build NoaCG graphics directly. The
+          agent designs the way it already works best; <code>noacg</code> validates the result in
+          a live playout bench — the same gate the studio itself uses — and saves it into your
+          library, editable, controllable, and ready to air or export.
+        </p>
+        <div class="agent-cli" data-reveal><span class="c"># scaffold a working chassis, iterate, validate with screenshots, save:</span>
+npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug
+npx @noacg/cli validate my-scorebug --screenshots shots
+npx @noacg/cli save my-scorebug
+<span class="c"># or run it as an MCP server for any agent:</span>
+npx -y @noacg/cli mcp</div>
+        <p class="agent-link" data-reveal>
+          <a href="/docs#claude-code">Set it up for Claude Code or Codex →</a>
+        </p>
+      </section>
+
       <!-- The studio's second workspace. It sits after the whole live-graphics story on purpose:
            a visitor should finish the on-air story first, then learn there is a separate place
            for rendered video. -->
@@ -1011,6 +1052,7 @@
       <span class="fm">NoaCG Studio · Live graphics, made simple</span>
       <span>
         <a href="mailto:contact.noacg@gmail.com">contact.noacg@gmail.com</a> ·
+        <a href="/docs">Docs</a> ·
         <a href="/terms">Terms</a> ·
         <a href="/privacy">Privacy</a> ·
         Free forever for the core

@@ -121,6 +121,33 @@ Third-party OGraf packages are mounted under the app origin at `/__noacg-package
 `new URL(…, import.meta.url)` needs a base) and hosted by `src/bridge/ografHost.ts` - a minimal
 renderer for ONE Graphic with a driver the CLI calls.
 
+### Verifying the CLI
+
+`cli/` is its own package with its own gate, and it runs in two tiers for one reason: only the
+first can run in CI.
+
+| Tier | File | Needs | Runs |
+|---|---|---|---|
+| offline | `cli/test/unit.test.mjs`, `cli/test/caspar.test.mjs` | nothing - no network, no browser, no deployment | **every push** (the CLI step in `ci.yml`) and `npm --prefix cli test` |
+| against a bridge | `cli/test/smoke.test.mjs` | a dev server at `NOACG_URL` and a headless Chromium | `npm run bench:cli` on a developer machine |
+
+The offline tier is where a regression actually gets caught, so it covers the parts a fault would
+hide in until it hurt someone: the flag grammar every command reads its arguments through, the
+workspace ↔ zip boundary (the module that has been wrong twice, and the one place the CLI writes
+attacker-named paths to disk), the credential store and its `NOACG_AGENT_KEY`-beats-the-file
+precedence, the `--fields` grammar, and the process contract - exit codes, and the rule that
+`--json` puts exactly one parsable object on stdout however the command ended.
+
+`smoke.test.mjs` **skips itself with a message** when no bridge answers, rather than passing: an
+offline `npm test` that reported six green tests it never ran would be worse than no test at all.
+It walks scaffold → validate → inspect → screenshot, a typeless graphic from a field list, a
+third-party OGraf package driven in the host, and `save` - which is the one command whose far end
+this repository does not own, so it asserts the whole CLIENT path (read, normalize, gate, bench,
+build the library record) and then that the server hop's refusal is the DOCUMENTED one.
+
+`npm run bench:cli` is named `*bench*` on purpose: that puts it in `SWEEP_SCRIPTS`, so it queues
+behind a live e2e suite instead of running beside one (root `AGENTS.md`, "Verifying changes").
+
 ## The skill (`cli/skill/noacg-graphic/`)
 
 Contract-only by default: the SPX/NoaCG runtime contract (definition + DataFields, `fN` ->
@@ -191,28 +218,82 @@ the npm version onto the two plugin manifests and the marketplace entry; `npm ru
 triple is guarded by `scripts/check-shared-instructions.mjs` and never generated. Verified
 2026-08-22: `npm pack --dry-run` = 31 files (dist, skill, package.json, README, LICENSE); the plugin
 installed from this repository as a marketplace (`claude plugin install noacg@noacg-studio`) and
-`claude plugin details` listed the skill, the command and the MCP server at v0.2.0. Publishing
-(`npm publish` from `cli/`, and pushing the marketplace) is the owner's call; until the package is
-on npm the plugin's MCP server cannot start (`npx -y @noacg/cli` has nothing to fetch) while its skill
-and command already work.
+`claude plugin details` listed the skill, the command and the MCP server at v0.2.0. **0.2.0 is on
+npm** (published by hand 2026-08-25; the registry lists it Apache-2.0 under the `noacg` org), so the
+plugin's MCP server starts for anyone - `npx -y @noacg/cli mcp` has something to fetch. Every
+version after it is released by the workflow below, not by hand.
 
 ### Releasing to npm
 
-The package is published to the **`noacg` organisation** on npm (the account `miwco` owns it). An
-unscoped package belongs to whoever publishes it, so the first publish is followed by transferring
-the package to the org in its npm settings.
+The package is published to the **`noacg` organisation** on npm (the account `miwco` owns it), by
+**`.github/workflows/release-cli.yml` running in GitHub Actions**. There is no publish token
+anywhere - not in `.env`, not on a laptop, not in repository secrets. npm **trusted publishing**
+tells npm to trust that one workflow file in this repository, and npm exchanges the run's GitHub
+OIDC token for a credential that lives for the length of the publish. Nothing is left to leak,
+rotate, or forget to revoke, and a published version carries a signed **provenance** statement
+linking it to the commit and the run that built it (automatic for a public repo + public package -
+no `--provenance` flag).
 
-Auth is a token in `.env` as `NPM_TOKEN`, read by a gitignored root `.npmrc` holding
-`_authToken=${NPM_TOKEN}` - an environment reference, never a literal. **npm does not read `.env`**:
-the variable has to be exported in the shell that publishes, or the publish fails with a 401 that
-looks like a broken token.
+**Releasing a version, start to finish:**
 
-**TODO after the first publish - set up trusted publishing (OIDC)** and delete the stored token.
-npm can trust a named GitHub Actions workflow in this repository and mint short-lived credentials
-at publish time, so no long-lived publish token sits on a laptop - which is the real standing risk
-here, larger than anything in the repository itself. It is configured against a package that
-already exists, which is why it is a follow-up rather than a prerequisite. Owner decision
-2026-08-25: this is wanted.
+1. Bump `version` in `cli/package.json`, then run `npm --prefix cli run build`. **That second step
+   is not optional**: `cli/scripts/build-skill.mjs` stamps the version onto the two plugin manifests
+   and the root marketplace entry, and the workflow refuses a tree where they disagree.
+2. Commit, and land it on `main` the normal way (`/queue-merge`).
+3. Tag that commit on main and push the tag:
+   ```bash
+   git tag cli-v0.3.0 && git push origin cli-v0.3.0
+   ```
+4. Watch the run. It builds from that commit and publishes.
+
+The tag is the one manual step, and deliberately so: a landing can be re-landed, but **a published
+version can never be taken back**, so it stays a decision a human makes.
+
+**A rehearsal costs nothing.** Run the workflow from the Actions tab with `dry_run` left checked
+(its default): every guard, the install, typecheck, build, the tests and `npm pack --dry-run` run
+for real, and the job stops without burning a version. Unchecking `dry_run` publishes - the same
+thing a tag push does, for when a tagged run needs re-driving.
+
+The packing proof (`npm pack --dry-run`) touches no registry, so it runs whatever state the version
+is in. The step after it (`npm publish --dry-run`) is the first that talks to the registry, and it
+runs **only when the version is free** - `npm publish --dry-run` refuses a version that already
+exists, so on a tree whose version is already published a dry run would otherwise only ever be able
+to fail. A real publish always reaches it, because a taken version is refused long before.
+
+**What the workflow refuses**, each one a way a release has gone wrong somewhere before:
+
+| Refusal | Why |
+|---|---|
+| the commit is not an ancestor of `origin/main` | a published version must be a version on main - this is what makes that structural rather than remembered |
+| a `cli-vX.Y.Z` tag that disagrees with `cli/package.json` | a tag naming a version it does not release is always a mistake |
+| the version already exists on the registry | npm would refuse too; here the answer is readable and arrives in seconds. A dry run downgrades this to a notice, so a rehearsal is not limited to the window between a bump and its release |
+| `build-skill.mjs --check` finds drift, or the build changes a tracked file | the bump was committed without running the generator, so the plugin would advertise the previous version |
+| `npm --version` below 11.5.1 | trusted publishing needs it; the workflow upgrades npm and then asserts, because the install succeeding proves nothing about what is on PATH |
+| the run is on a fork | `github.repository` is pinned and there is no `pull_request` trigger at all |
+
+`prepack` re-runs the full build, so the `dist/` that is packed is always built from the checkout
+being published - a stale local build cannot reach the registry even in principle.
+
+**Two things only the owner can do**, both one-time (`docs/acceptance/owner-queue/`):
+
+- On npmjs.com → the package → Settings → **Trusted publishers**, add a GitHub Actions publisher:
+  organisation `miwco`, repository `NoaCG-Studio`, workflow filename **`release-cli.yml`** (the
+  filename only, not a path), environment left blank. Every field is case-sensitive, and
+  `repository.url` in `cli/package.json` must match the GitHub repository - it does.
+- Delete `NPM_TOKEN` from `.env` and **revoke both tokens** in npm account settings.
+
+Until the trusted publisher is configured, the workflow's dry run passes and a real publish fails
+at the registry call. That failure is safe and repeatable; nothing else about the run changes.
+
+**Appendix - the manual path (0.2.0, superseded).** 0.2.0 was published by hand: a granular token
+in `.env` as `NPM_TOKEN`, read by a gitignored root `.npmrc` holding `_authToken=${NPM_TOKEN}` (an
+environment reference, never a literal), with `npm publish` run from `cli/`. **npm does not read
+`.env`**, so the variable had to be exported in the publishing shell or the publish failed with a
+401 that read like a broken token; a prompt for a one-time code was 2FA rather than an error. That
+token bypassed 2FA, expired in 30 days, and could publish as the owner from anywhere it leaked,
+which is why it is gone. Keep this paragraph only as the explanation of what the revoked tokens
+were for. Also from that first publish: an unscoped package belongs to whoever published it, so
+the package was transferred to the `noacg` org in its npm settings afterwards.
 
 ## The category-agnostic proof
 
@@ -228,9 +309,9 @@ production shows an input per field + Take/Update/Next/Out. No application code 
 
 - **P1 (this document's subject):** the bridge page, the dual package, the neutral scaffold, the
   OGraf contract adapter, the CLI core + MCP, the skill. LANDED on the branch, offline-verified:
-  `e2e/bridge.spec.ts` + `e2e/ograf-contract.spec.ts`, the CLI smoke (`npm run bench:cli`, five
-  tests including the third-party OGraf host), and the pre-existing OGraf conformance, import,
-  export and SVG-import specs all green.
+  `e2e/bridge.spec.ts` + `e2e/ograf-contract.spec.ts`, the CLI smoke (`npm run bench:cli`, six
+  tests including the third-party OGraf host and the `save` client path), and the pre-existing
+  OGraf conformance, import, export and SVG-import specs all green.
 - **P2 (docs/AGENT_SAVE.md):** `save` - a scoped agent key minted through a loopback one-time
   code, the permission vocabulary (`src/entitlements/permissions.ts`), `/api/me/agent-keys` +
   `/api/me/graphics` (the server never executes template code), the consent route, Settings →

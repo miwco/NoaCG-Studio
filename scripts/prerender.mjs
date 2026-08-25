@@ -188,6 +188,8 @@ function sitemap(entries) {
   const urls = [
     { loc: `${SITE_ORIGIN}/`, priority: '1.0' },
     { loc: `${SITE_ORIGIN}/app`, priority: '0.8' },
+    // The public docs home (docs.html) — guides for SVG import, playout and the agent door.
+    { loc: `${SITE_ORIGIN}/docs`, priority: '0.8' },
     // The free OGraf starters page (ograf.html) — a public, indexable landing of its own.
     { loc: `${SITE_ORIGIN}/ograf`, priority: '0.8' },
     ...entries.map((entry) => ({ loc: `${SITE_ORIGIN}/templates/${entry.slug}`, priority: '0.6' })),
