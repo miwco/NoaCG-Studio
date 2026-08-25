@@ -400,7 +400,43 @@ function phase1(args) {
       fatal: verdict === 'hold',
     });
   }
+  reportMigrationDrift();
   return 0;
+}
+
+/**
+ * Does PRODUCTION hold every migration the repository has? ADVISORY - it never blocks a landing.
+ *
+ * Landing is the moment this is worth knowing: a migration reaches `main` and then nothing applies
+ * it, because `supabase db push` is a deliberate human act. 0051_client_table_grants.sql sat
+ * unapplied on production for hours on 2026-08-25, past a green CI run and a green nightly, and was
+ * found only by someone running `supabase migration list` for an unrelated reason.
+ *
+ * Non-fatal on purpose, and quiet when it cannot tell: the answer needs the account-wide Supabase
+ * token from .env, so a machine without one (or without a network) gets a note rather than a
+ * refusal. Blocking a merge on an unrelated credential is how a check earns itself a `--skip` flag.
+ */
+function reportMigrationDrift() {
+  let result;
+  try {
+    result = JSON.parse(execFileSync('node', ['scripts/migration-drift.mjs', '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }));
+  } catch {
+    info('production migration drift', 'not checked (the drift script did not run)');
+    return;
+  }
+  if (result.status === 'drift') {
+    check('production holds every migration in the repository', false,
+      `MISSING on production: ${result.missing.join(', ')} - apply with \`npx supabase db push --linked\` from the main checkout`,
+      { fatal: false });
+  } else if (result.status === 'ok') {
+    info('production migration drift', `none - all ${result.local} applied`);
+  } else {
+    info('production migration drift', `not checked (${result.detail})`);
+  }
 }
 
 /** Phase 3 - is there a CI run that actually verifies VERIFIED_SHA, and what does it prove? */

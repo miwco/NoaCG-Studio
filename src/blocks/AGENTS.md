@@ -442,6 +442,18 @@ flicker, and nothing. It takes EVERY phase the one easing setting will land on. 
 easing is the second, motion-independent filter (the near-duplicates and wrong-direction curves);
 the Inspector's Advanced picker still lists all twelve.
 
+**Both hosts SET the curve, and both read it back from the code.** `easesForChoice(easingId)` is
+the `{easeIn, easeOut}` override handed to `applyMotionPreset` ('auto' overrides nothing, so each
+motion keeps its tuned pair), and `currentMotionEasing(template, data, {in, out})` is its inverse:
+the ease stamped on the landing keyframes of every phase holding a universal motion, mapped back
+to an `EasingId` - all phases must agree, a phase sitting on its motion's tuned curve reads 'auto',
+and anything the list cannot name (a hand-tuned timeline curve) reads 'auto' too. Nothing is
+stamped into the block for it, exactly as with the lit card. This is what lets the control page
+offer the wizard's Easing control rather than freezing the curve at creation; on both surfaces a
+motion that cannot SHOW the held curve drops it to Auto (`easingLegalForMotions`), and on the
+control page the phase that was not picked is rewritten with it, so the data never keeps a curve
+the control stopped offering.
+
 ## presetRegistry.ts - the preset library (what is left of animPatch)
 
 `presetsForType` / `anyPresetById` - every category's presets in one lookup - plus

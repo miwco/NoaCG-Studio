@@ -93,7 +93,16 @@ that let five specs sit on main unverified. The guards, in the order they fire:
    timeouts that read like a renderer bug;
 4. the test account must **authenticate**, not merely exist - one password grant turns twenty
    ambiguous UI timeouts into one unambiguous step;
-5. the JSON report must show **nothing skipped and at least `MIN_TESTS` (32) run**.
+5. the JSON report must show **nothing skipped and at least `MIN_TESTS` run**.
+
+**A repeat of the same failure set posts nothing** (the `nightly.yml` amendment, ported here). The
+run still fails and the rolling issue stays open - only the COMMENT is withheld, and GitHub mails
+on comments rather than on an issue continuing to exist, so a known flake stops arriving every
+morning while staying just as visible to anyone who looks. Two conditions keep that honest: the
+set must be byte-identical to the one already reported (a new spec failing always posts, even
+beside a familiar one), and there must be zero hard failures - only flakes are ever this quiet.
+This is deliberately NOT the same as downgrading flaky to a warning: the verdict is unchanged,
+each distinct problem is simply said once instead of nightly.
 
 When the suite grows, raise `MIN_TESTS` in the same commit; a stale value only makes the guard
 weaker. The run summary lists every test that actually executed - read that, not the exit code.
@@ -354,6 +363,26 @@ documents its own exemptions, with the reason written beside them.
 **None of the five is left to memory:** `npm run test:e2e:affected` raises the tripwire
 automatically when relevant and CI runs it on that flag, and the NIGHTLY sweep runs all five
 unconditionally - so an unrun catalog gate is caught by morning rather than never.
+
+## Migrations reach production only when a human pushes them
+
+So the safe-merge preflight REPORTS whether production is behind, and `npm run
+check:migration-drift` runs the same check alone. Landing is the moment it matters: a migration
+reaches `main` and then nothing applies it, because `supabase db push` is a deliberate act.
+`0051_client_table_grants` sat unapplied on production for hours on 2026-08-25, past a green CI
+run and a green nightly, and was found only because somebody ran `supabase migration list` for an
+unrelated reason.
+
+Advisory, never blocking - a laptop without the token, or without a network, gets a note rather
+than a refusal. It is deliberately **not** a CI job: the ledger lives in
+`supabase_migrations.schema_migrations`, which PostgREST does not expose, so reading it remotely
+needs the Supabase MANAGEMENT API and an ACCOUNT-WIDE personal access token - one that enumerates
+every organisation and project, and whose API deletes them. This repository is public, so that
+token stays out of Actions and the check runs locally, where it already lives in `.env`.
+
+It reads the production ref from `VITE_SUPABASE_URL`, never from `supabase/.temp/`: that is the
+CLI's per-checkout LINK state, and a worktree linked to a staging project would otherwise make the
+check answer confidently about the wrong database.
 
 ## Freshness is TIME-driven, never commit-driven
 

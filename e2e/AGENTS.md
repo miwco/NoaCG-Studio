@@ -36,6 +36,15 @@ belong where specs are written rather than in the contract every session loads.
   it focused, and Space belongs to a focused button by design (spaceKey.ts) - so the press lands on
   that button, not on the surface under test. Call `parkFocusOffControls` (`e2e/_keys.ts`) rather
   than inheriting whatever the bootstrap left behind.
+- **A route installed to watch a RELOAD also catches the page it is replacing.** The document
+  still on screen keeps its timers until the navigation commits, so a poller (the relay receiver
+  polls every 400 ms) fires straight into the recorder and its request is indistinguishable, by
+  URL, from the boot request under test. `local-relay.spec.ts` recorded a live cursor of 7 as the
+  boot read of 4 that way - green on this laptop, red on CI, green again on a re-run of the same
+  commit. Waiting before the reload does not help; the window narrows and never closes. Separate
+  the two by something the NEW document does first (the receiver pings once, at the top of a fresh
+  document, before it reads the log) and record only what follows it - then leave a poll interval
+  of slack before the reload so the separation is exercised rather than merely written.
 - A wizard-created VIDEO project auto-runs its first generation, which lands as its own undoable
   snapshot ~0.1-2.6 s after `video-shell` appears (unbounded: the validation probe waits on the
   player host with no timeout). A spec that makes an undoable change before that lands is racing
