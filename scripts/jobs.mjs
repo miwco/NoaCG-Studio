@@ -203,29 +203,68 @@ function cmdList() {
  * so "not queued" means that work is not finished yet, which is a different thing from stuck.
  */
 function printOutstanding(jobs) {
-  const res = spawnSync('node', ['scripts/merge-order.mjs', '--json'], { encoding: 'utf8', windowsHide: true });
-  let order;
-  try {
-    order = JSON.parse(res.stdout).order ?? [];
-  } catch {
-    return; // merge-order could not answer; the queue above is still the useful half
-  }
-  if (order.length === 0) {
+  // ENUMERATE THE BRANCHES HERE, do not inherit merge-order's list. It finds candidates with
+  // `git branch --no-merged`, which sees LOCAL branches only - so a branch that exists solely as
+  // `origin/<name>`, which is what a closed session's pushed work looks like once its local ref
+  // is gone, is invisible to it. `claude/html-graphics-course-form-a55q31` sat unmerged and
+  // unmentioned for seven weeks that way, and this view reported "2 ahead of main" when there
+  // were 5. A summary whose whole promise is completeness must not delegate the question of what
+  // EXISTS to a tool with a narrower view; it may delegate only the ranking.
+  const ahead = refsAheadOfMain();
+  if (ahead.length === 0) {
     console.log('');
     console.log('Nothing is ahead of main.');
     return;
   }
+
+  const res = spawnSync('node', ['scripts/merge-order.mjs', '--json'], { encoding: 'utf8', windowsHide: true });
+  let ranked = [];
+  try {
+    ranked = JSON.parse(res.stdout).order ?? [];
+  } catch {
+    // merge-order could not answer - list everything unranked rather than listing nothing.
+  }
+  const rank = new Map(ranked.map((entry, i) => [entry.branch, { ...entry, position: i + 1 }]));
   const queued = new Map(pending(jobs).filter((j) => j.kind === 'merge').map((j) => [j.branch, j]));
+
+  // Ranked first, in the order it gave; anything it could not see goes after, flagged.
+  const ordered = [...ahead].sort((a, b) => (rank.get(a.branch)?.position ?? 1e9) - (rank.get(b.branch)?.position ?? 1e9));
+
   console.log('');
-  console.log(`Ahead of main, cheapest to land first (${order.length}):`);
-  for (const entry of order) {
-    const job = queued.get(entry.branch);
+  console.log(`Ahead of main, cheapest to land first (${ordered.length}):`);
+  for (const { branch, commits, age } of ordered) {
+    const entry = rank.get(branch);
+    const job = queued.get(branch);
     const state = job ? `QUEUED ${job.id}` : 'not queued';
-    const where = String(entry.worktree ?? '').split('/').pop() || 'no worktree';
-    console.log(`  ${entry.branch}`);
-    console.log(`      ${state}  ·  ${entry.ahead} commit(s), ${entry.files} file(s)  ·  ${where}`);
+    const where = entry ? String(entry.worktree ?? '').split('/').pop() || 'no worktree' : 'NOT RANKED - no local branch';
+    console.log(`  ${branch}`);
+    console.log(`      ${state}  ·  ${commits} commit(s)  ·  last commit ${age}  ·  ${where}`);
   }
   console.log('  Only a branch\'s own session queues it - "not queued" means that work is not finished yet.');
+}
+
+/** Every ref ahead of origin/main, local or remote-only, with how far ahead and how stale. */
+function refsAheadOfMain() {
+  const list = (pattern) =>
+    spawnSync('git', ['for-each-ref', '--format=%(refname:short)', pattern], { encoding: 'utf8', windowsHide: true })
+      .stdout?.split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean) ?? [];
+  const names = new Set([...list('refs/heads/'), ...list('refs/remotes/origin/').map((n) => n.replace(/^origin\//, ''))]);
+  const out = [];
+  for (const branch of names) {
+    if (branch === 'main' || branch === 'HEAD') continue;
+    const ref = ['origin/' + branch, branch].find(
+      (r) => spawnSync('git', ['rev-parse', '--verify', '-q', r], { encoding: 'utf8', windowsHide: true }).status === 0,
+    );
+    if (!ref) continue;
+    const count = spawnSync('git', ['rev-list', '--count', `origin/main..${ref}`], { encoding: 'utf8', windowsHide: true });
+    const commits = Number(count.stdout?.trim() ?? 0);
+    if (!commits) continue;
+    const age = spawnSync('git', ['log', '-1', '--format=%cr', ref], { encoding: 'utf8', windowsHide: true }).stdout?.trim() ?? '';
+    out.push({ branch, commits, age });
+  }
+  return out.sort((a, b) => b.commits - a.commits);
 }
 
 function cmdLog() {
