@@ -88,7 +88,8 @@
     "bench:lite:semantic": "node scripts/ai-lite-semantic-bench.mjs",
     "bench:cli": "node scripts/cli-bench.mjs",
     "postinstall": "node scripts/dev-port.mjs && node scripts/gen-video-font-css.mjs && node scripts/build-player-host.mjs",
-    "build:packs": "node scripts/build-production-pack.mjs"
+    "build:packs": "node scripts/build-production-pack.mjs",
+    "check:migration-drift": "node scripts/migration-drift.mjs"
   },
   "overrides": {
     "dompurify": "3.4.13",
