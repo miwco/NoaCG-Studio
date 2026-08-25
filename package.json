@@ -41,6 +41,7 @@
     "test:e2e:runs": "node scripts/e2e-runs.mjs --all",
     "queue": "node scripts/jobs.mjs add",
     "jobs": "node scripts/jobs.mjs",
+    "queue:merge": "node scripts/jobs.mjs add-merge",
     "test:jobs": "node --test scripts/jobs-store.test.mjs",
     "test:e2e-workers": "node --test scripts/e2e-workers.test.mjs",
     "test:e2e-affected": "node --test scripts/e2e-affected.test.mjs",

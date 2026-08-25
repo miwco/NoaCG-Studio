@@ -338,6 +338,12 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
     INTEGRATED sha, never the pre-integration one. Once the job runner exists
     (`docs/JOB_RUNNER_PLAN.md`), merge jobs are serialized by it and this becomes structural
     rather than remembered.
+  - **Queue a landing rather than sitting through it.** `npm run queue:merge -- <branch>` runs
+    `scripts/auto-merge.mjs`, the mechanical path of the flow: it takes only a `clear` verdict,
+    with clean trees, a conflict-free integration and a green gate on the integrated sha, and
+    REFUSES everything else without changing anything further. Merge jobs never run beside
+    anything, so queueing several lands them one at a time in order. `--dry-run` stops before the
+    first state change.
   - The flow does not authorize branch or worktree cleanup, with one carve-out: a branch with no
     worktree (a closed session leaves those behind) has nowhere to integrate `main` and run the
     gate, so the flow creates a TEMPORARY worktree for it and removes that same one at the end -

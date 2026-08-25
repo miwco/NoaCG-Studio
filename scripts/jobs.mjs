@@ -57,6 +57,7 @@ const valueOf = (name) => {
 
 if (flag('--runner')) await runner();
 else if (args[0] === 'add') await cmdAdd();
+else if (args[0] === 'add-merge') await cmdAddMerge();
 else if (args[0] === 'log') cmdLog();
 else if (args[0] === 'cancel') cmdCancel();
 else cmdList();
@@ -84,6 +85,35 @@ async function cmdAdd() {
   const { waiting } = snapshot();
   const mine = waiting.find((w) => w.job.id === job.id);
   console.log(mine ? `  ${mine.reason}` : '  starting now');
+  console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
+}
+
+/**
+ * Queue a LANDING for one branch.
+ *
+ * `kind: 'merge'` is what makes it safe to queue several at once: a merge never runs beside
+ * anything, so they drain strictly one at a time whatever the clock allows. `auto-merge.mjs`
+ * refuses anything that is not a `clear` verdict with clean trees and a green gate, so a queue
+ * of these lands the boring ones and leaves the interesting ones for a person.
+ */
+async function cmdAddMerge() {
+  const target = args[1];
+  if (!target || target.startsWith('-')) {
+    console.error('Usage: node scripts/jobs.mjs add-merge <branch> [--after <id>]');
+    process.exit(1);
+  }
+  ensureJobsDir(dir);
+  const job = addJob(dir, {
+    command: `node scripts/auto-merge.mjs --branch ${target}`,
+    checkout: process.cwd(),
+    branch: target,
+    kind: 'merge',
+    after: (valueOf('--after') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+    capMinutes: Number(valueOf('--cap') ?? 45),
+    now: Date.now(),
+  });
+  ensureRunner();
+  console.log(`${job.id} queued: land ${target}`);
   console.log(`  output: node scripts/jobs.mjs log ${job.id}`);
 }
 

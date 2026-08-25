@@ -194,11 +194,22 @@ memory the machine happens to have.
    needed no change to `command-match.mjs`.
 3. **DONE.** SessionStart prints running/waiting with reasons, what finished since the last
    session, and a loud line when there are waiting jobs but no runner.
-4. **NOT STARTED.** The `merge` kind, wired to `scripts/safe-merge-preflight.mjs` and
-   `scripts/merge-order.mjs`. `kind: 'merge'` already never runs beside anything (pinned by a
-   test), so the serialization half exists; what is missing is the job that actually lands a
-   branch. Run it attended for a few days before letting it run overnight, and only then lift
-   `disable-model-invocation: true` from the safe-merge adapter.
+4. **BUILT, DELIBERATELY NOT AUTOMATIC.** `scripts/auto-merge.mjs --branch <b>` does the boring
+   path of the safe-merge workflow as one command, and `npm run queue:merge -- <branch>` queues
+   it as a `merge` job. Because a merge job never runs beside anything, queueing several drains
+   them strictly one at a time - which is the "wake up and they are landed" case.
+
+   **What it refuses**, changing nothing further, is the whole design: any verdict that is not
+   `clear`; any failed preflight check in phase 1, 3 or 4; a dirty worktree either side; a branch
+   with no worktree; a CONFLICT integrating main (aborted, tree restored); a red, missing,
+   damaged or shard-skipping CI run; and main moving under it at any point. It never
+   force-pushes, never resets, never deletes anything, and the only merge it makes into main is
+   `--ff-only`. `--dry-run` stops before the first state change.
+
+   **Nothing enqueues these on its own yet, on purpose.** A person still queues each landing, so
+   the whole thing runs attended by construction. Lifting `disable-model-invocation: true` from
+   the safe-merge adapter, and letting a session queue its own landing, is the step after this
+   has run clean for a while.
 5. **DONE.** `--wait` gives up after 30 minutes - matched to `QUEUE_TIMEOUT_MS` in
    `e2e/_offline-guard.ts`, which has capped the other waiter for the same resource since
    2026-08-21 - and points at the queue instead of stalling.
