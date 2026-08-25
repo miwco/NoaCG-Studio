@@ -45,8 +45,14 @@ directly.
   selection logic, no horizontal overflow at desktop and 375px, tables and command blocks
   contained. (Scroll-spy rAF is suspended in a hidden tab - environment artifact, checked.)
 - `npm run build` green locally (includes check:vercel-config, prerender sitemap test, the
-  e2e-affected mapping tests, tsc + eslint + vite build).
-- CI on the pushed sha - see the wrap-up below for which jobs ran.
+  e2e-affected mapping tests, tsc + eslint + vite build); `e2e/docs.spec.ts` +
+  `e2e/landing.spec.ts` 9/9 green locally through the run queue.
+- CI, jobs read per the verification rule: run 32899153042 (`89183ea0`, the real change) ran
+  all nine E2E subset shards green + Factory gates green, and failed ONLY Build - the
+  tree-shape gate did not know `docs.html` (it passed locally because it reads tracked files
+  and the page was still untracked during the pre-commit build). Fix commit `1f4680e7` adds
+  it to ALLOWED_ROOT_ENTRIES; its run 32899807875 is green (Build + plan + Factory gates;
+  shards correctly skipped - its diff is the gate script alone, which maps to no spec).
 
 ## Deliberately not done
 
