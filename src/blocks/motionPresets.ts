@@ -52,6 +52,14 @@
 //
 // The old note here read "short travel (a rise reads as 'arriving', not as movement)". That was
 // the intent; the measurement is that at 40 px it read as neither.
+//
+// SECOND ROUND, 2026-08-26 (the owner's 2026-08-25 walk: easing accepted, Speed still "does not
+// change, at least in the preview"). The lengthened durations were in and the knob still did not
+// read - a ±33% step compared from MEMORY across two replays is below the noticing threshold on
+// a smooth power curve, and his own hypothesis ("do I need an ease on it?") was the clue: bounce
+// made it visible because the bounce COUNT changes, a rhythm rather than a duration. The knob's
+// STEPS were widened instead (model/wizard.ts AnimSpeed, 0.6/1/1.8): the same 0.8 s entrance now
+// spans ≈ 1.33 / 0.80 / 0.44 s. Nothing here changed - the bank's durations stay speed-relative.
 
 import { EASINGS, type EasingId, type EasingPreset } from '../model/easings';
 import type { SpxTemplate } from '../model/types';

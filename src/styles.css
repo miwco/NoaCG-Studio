@@ -2726,6 +2726,30 @@ details:not([open]) > *:not(summary) { display: none; }
   .wz-browse-format .project-format-fields label { flex: 1 1 45%; }
 }
 
+/* ONE LINE PER THING, AND AN ⓘ FOR THE REST (SectionHead.tsx; owner 2026-08-25, GOALS goal 4):
+   a section head is the title, one muted line, and this dot. The dot is deliberately quiet -
+   borderless, small - because it exists for the reader who wants the why, not as a control the
+   walk needs. `.active` marks it open the same way every other toggle here does. */
+.wz-sec-head { display: flex; align-items: baseline; gap: 8px; }
+.wz-sec-head .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-why-btn {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--muted, #8b919c);
+  cursor: pointer;
+}
+.wz-why-btn:hover, .wz-why-btn.active { color: var(--accent, #f6a623); background: rgba(246, 166, 35, 0.12); }
+.wz-why { margin: 2px 0 10px; }
+.wz-why p { margin: 0 0 6px; }
+.wz-why p:last-child { margin-bottom: 0; }
+
 .wz-anim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .wz-anim { text-align: left; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 4px; }
 .wz-anim.selected { border-color: var(--accent); }

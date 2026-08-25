@@ -130,11 +130,22 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   declares a STAGE (a quiz board, a scoreboard - `src/templates/AGENTS.md` "THE STAGE") and
   wrong for a lower third, where "the text should decide how big the banner is". An imported SVG
   has no category to read that from, so **the mapping step ASKS** - "when the text is too long",
-  shrink (default) or grow, plus WHICH RECTANGLE grows, proposed as the widest one.
-  **The default is fixed, and the question is not answered from geometry**, which was the shape
-  of the original instruction: no measurement separates the two cases, and our own samples prove
-  it - the lower third is drawn on a FULL-FRAME artboard while the scorebug is a small floating
-  object, so "smaller than the frame = a banner" mislabels both.
+  shrink or grow, plus WHICH RECTANGLE grows, proposed as the widest one.
+  **The DEFAULT is measured off the artwork where it is unambiguous, and asked where it is not**
+  (owner 2026-08-25, GOALS goal 5 - "of course that text should be able to become longer and
+  the background should grow with it. I don't know why we need to choose them"; shipped
+  2026-08-26, `MapSvgFieldsStep` `proposeBannerGrowth`). The 2026-08-23 ruling that geometry
+  cannot answer this was about SIZE - the shipped lower third is a full-frame artboard and the
+  shipped scorebug a small floating object, so "smaller than the frame = a banner" mislabels
+  both, and size against the frame is still never measured. What IS measured is containment
+  and arrangement: a rectangle wider than tall, with room before the safe margin, holding
+  bound text that is STACKED and START-anchored, defaults to grow-x - the ordinary lower
+  third, working with nothing chosen. Side-by-side lines on one plate (a scorebug row - the
+  inner line's room is bounded by its neighbour, so growth helps nobody), an end- or
+  middle-anchored line (composed against a point growth would move), a full-frame backplate
+  (no room), and a quiz BEHAVIOUR (a stage by declaration) all refuse the default and keep
+  shrink. The measured default is marked unauthored (`SvgStretchDraft.authored`) and re-derives
+  as rows are ticked; the author's first touch of any growth control freezes their answer.
   The runtime (`stretchRuntimeJs` in importedDesign/svg.ts) keeps the raster stretch's doctrine
   (`importedDesign/stretch.ts`): ONE measured deficit - how far the widest bound line inside the
   panel runs past the width it was drawn at - widens the picked rectangle, everything drawn past
@@ -357,6 +368,18 @@ required for the feature and never participates in the runtime fit.
    so choosing a panel silently reset the AXIS - a "grows taller" graphic went back to growing
    sideways with nothing on screen to say so. Two controls where one quietly resets the other is
    the kind of thing only a walk catches; it now has a mutation-tested guard.
+   **The owner's walk of this surface (2026-08-25) revised two things, both shipped 2026-08-26:**
+   - **"What travels with it" renders only where there is something to decide** - a proposal
+     with members, a declared list, or an author who engaged with growth themselves. On the
+     ordinary lower third's measured default (grow-x, nothing past the edge) the section does
+     not exist, because being asked it at all was the thing he could not understand - and on
+     that artwork the honest answer is that nothing needs to move. When it does render, it is
+     one line + an ⓘ carrying the why (GOALS goal 4).
+   - **Named groups joined the pickable set.** The canvas hit-test offered candidates, images,
+     outlines and rectangles but not GROUPS, so arming "⌖ Pick what travels" over a lower third
+     could only ever hit the fields - his words: "I can only click the fields". A follower is
+     usually a named layer; the innermost-first tie-break keeps a group from answering for what
+     is drawn inside it.
 
 **Why 2 before 4, though 4 is the higher-value feature** (owner: "I don't want vertical growth
 implemented against a field distinction we're about to remove"): the growth half - moving a panel

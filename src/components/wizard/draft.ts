@@ -189,16 +189,25 @@ export interface SvgOutlineDraft {
  * THE HUG (docs/SVG_IMPORT_PLAN.md §3), as the mapping step holds it: does one rectangle grow
  * so a longer value fits at full size, and which rectangle is it?
  *
- * **Off by default, and asked rather than guessed.** The owner's ruling is that a lower third's
- * banner should be as wide as the name on it, while a quiz board and a scorebug declare a stage
- * and must not move - and no geometry separates those two. The shipped samples prove it: the
- * lower third is drawn on a FULL-FRAME artboard (so "smaller than the frame" calls it a board),
- * and the scorebug is a small floating object (so the same rule calls it a banner). Both
- * readings are wrong, so the step asks, with the widest rectangle already proposed.
+ * **The ordinary lower third works with NOTHING chosen** (owner, 2026-08-25 - docs/GOALS.md
+ * NOW goal 5: "of course that text should be able to become longer and the background should
+ * grow with it"). The mapping step MEASURES the artwork and turns growth on by itself where
+ * the geometry is unambiguous - one banner-shaped rectangle with stacked, start-anchored text
+ * drawn inside it and room to grow before the safe margin. Where it is genuinely ambiguous
+ * (side-by-side text on one plate, a quiz behaviour, a full-frame backplate) the default stays
+ * shrink and the step asks, exactly as before. The earlier ruling that ARTBOARD SIZE cannot
+ * separate a banner from a board still stands - the shipped lower third is a full-frame
+ * artboard and the shipped scorebug a small floating object - which is why the rule below
+ * measures containment and arrangement, never size against the frame.
  */
 export interface SvgStretchDraft {
   /** ON = the picked rectangle grows with its text; OFF = today's behaviour, nothing moves. */
   on: boolean;
+  /** True once the AUTHOR has touched any growth control (mode, panel, a canvas gesture, a
+   *  follower edit). While false the value is the measured proposal and the step may
+   *  re-derive it as rows are ticked or a behaviour is attached; an authored answer is never
+   *  recomputed. Session state only - the emitted graphic carries the growth rule, not this. */
+  authored?: boolean;
   /** Candidate id ("sN") of the rectangle that grows. Null = none picked, which reads as off. */
   shapeId: string | null;
   /** Which way it grows (docs/SVG_IMPORT_PLAN.md §6c). 'x' widens it, so the type stays the

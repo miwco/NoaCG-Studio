@@ -107,11 +107,12 @@ test('control page: the Motion section rewrites the entrance and exit on the gra
   expect(anim.box.out).toEqual({ opacity: [[0, 1], [0.45, 0]] });
   expect(anim.outDuration).toBe(0.45);
 
-  // The speed knob is NOACG_ANIM.speed - one number, every phase.
-  await page.getByTestId('control-speed-1.5').click();
+  // The speed knob is NOACG_ANIM.speed - one number, every phase. 1.8, not the old 1.5: the
+  // ±33% steps read as "no change" on the owner's walk (model/wizard.ts AnimSpeed).
+  await page.getByTestId('control-speed-1.8').click();
   await expect(summary).toContainText('Faster');
   await settleDurableWrites(page);
-  expect((await savedAnim(page, id)).speed).toBe(1.5);
+  expect((await savedAnim(page, id)).speed).toBe(1.8);
 
   // A reload reads the cards back from the TEMPLATE: nothing here lived in component state.
   await page.reload();

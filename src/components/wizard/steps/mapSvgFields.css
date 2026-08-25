@@ -116,7 +116,9 @@
   padding-left: 10px;
   border-left: 2px solid var(--line, rgba(232, 237, 242, 0.12));
 }
-.map-svg-followers h4 {
+/* The follower list's head is a SectionHead like every section's (GOALS goal 4), scaled to a
+   sub-list: it is an answer inside "which panel grows", not a section of its own. */
+.map-svg-followers .wz-sec-head {
   margin: 0 0 4px;
   font-size: 0.85rem;
   font-weight: 600;

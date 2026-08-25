@@ -260,12 +260,16 @@ export default function CreationWizard() {
     if (id) svgPickRef.current?.(id, drag);
   }, []);
   // EVERY layer the import inventoried, as selectors the canvas can hit-test. The text layers,
-  // the pictures, the outlined-text groups and the rectangles all answer a pointer - which is
-  // what makes the artwork the control surface rather than a picture beside the controls.
+  // the pictures, the outlined-text groups, the rectangles AND the named groups all answer a
+  // pointer - which is what makes the artwork the control surface rather than a picture beside
+  // the controls. Groups were missing until the owner armed "pick what travels" over a lower
+  // third and could only ever hit the fields (2026-08-25 walk): a follower is usually a named
+  // LAYER, so the picker has to reach them. The innermost-first tie-break keeps a group from
+  // answering for the text or rectangle drawn inside it.
   const svgPickable = useMemo(() => {
     const s = draft.designSvg;
     if (!s) return [];
-    return [...s.candidates, ...s.images, ...s.outlines, ...s.shapes].map(
+    return [...s.candidates, ...s.images, ...s.outlines, ...s.shapes, ...s.groups].map(
       (c) => `[${SVG_CANDIDATE_ATTR}="${c.id}"]`,
     );
   }, [draft.designSvg]);
@@ -1607,11 +1611,11 @@ export default function CreationWizard() {
                     // re-pickable, and a file that looks like nothing in particular proposes
                     // nothing at all.
                     svgBehaviour: proposeQuizBinding(result),
-                    // THE HUG (plan §3) starts OFF with the widest rectangle already proposed:
-                    // a banner's background is the widest rectangle on it. Off rather than
-                    // inferred because no geometry separates a lower third from a scorebug —
-                    // our own samples draw the banner on a FULL-FRAME artboard and the scorebug
-                    // as a small floating object, so either rule mislabels one of them.
+                    // THE HUG (plan §3) starts OFF here with the widest rectangle proposed;
+                    // the mapping step then MEASURES the rendered artwork and turns growth on
+                    // by itself where it is unambiguous (GOALS goal 5 - MapSvgFieldsStep
+                    // proposeBannerGrowth). The measurement needs layout, which a drop handler
+                    // does not have, so the decision lives there rather than here.
                     svgStretch: { on: false, shapeId: result.shapes[0]?.id ?? null },
                     // Bundled faces auto-match by family name; the mapping step offers the
                     // Google fetch or an upload for the rest (plan §4).

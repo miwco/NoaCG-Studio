@@ -114,6 +114,16 @@ function layoutRules(svg: DesignSvg): DesignSvgGrowth[] {
   return svg.stretch ? [{ candidateId: svg.stretch.candidateId, axis: 'x' }] : [];
 }
 
+/** The designer's own name for a marked element, straight off the markup - `data-name`
+ *  carries the original spelling where an exporter uniquified the id. Null when the layer
+ *  was never named, so the caller can fall back honestly. */
+function candidateLabel(svg: DesignSvg, candidateId: string): string | null {
+  const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
+  const el = doc.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
+  const name = el?.getAttribute('data-name') ?? el?.getAttribute('id');
+  return name?.trim() ? name.trim() : null;
+}
+
 function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
@@ -1097,7 +1107,14 @@ ${quizBehaviourCss}
     // The relationship TABLE and the runtime that loops it ride together, and only for a design
     // that declares one: a board emits neither and cannot move (plan §6c).
     (layoutRules(svg).length > 0
-      ? `\n${layoutDataJs(svg, (id) => svg.fields.find((f) => f.candidateId === id)?.title ?? 'Layer')}${growthRuntimeJs()}`
+      ? `\n${layoutDataJs(
+          svg,
+          // The comment above each rule names the element the way the reader knows it: a bound
+          // field by its operator title, anything else (the usual case - a panel rect) by the
+          // layer name the designer gave it in their own file.
+          (id) =>
+            svg.fields.find((f) => f.candidateId === id)?.title ?? candidateLabel(svg, id) ?? 'Layer',
+        )}${growthRuntimeJs()}`
       : '') +
     '\n' +
     (clockField ? `\n${clockRuntimeJs(PREFIX, clockField.field)}\n` : '') +

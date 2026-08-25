@@ -542,9 +542,17 @@ function AnimationSection({ spec, onSpec, disabled }: Pick<Props, 'spec' | 'onSp
           disabled={disabled}
         >
           <option value="">Auto</option>
-          <option value="0.75">Slower</option>
+          {/* The same steps the wizard's Speed buttons write (model/wizard.ts AnimSpeed:
+              ±33% read as "no change" on the owner's walk, ±80% does not). A saved spec
+              carrying 0.75/1.5 still resolves - the union keeps them. */}
+          <option value="0.6">Slower</option>
           <option value="1">Normal</option>
-          <option value="1.5">Faster</option>
+          <option value="1.8">Faster</option>
+          {/* A value the buttons no longer write (a saved spec from before the widening)
+              stays selectable rather than being silently rewritten by the render. */}
+          {a.speed !== undefined && ![0.6, 1, 1.8].includes(a.speed) && (
+            <option value={String(a.speed)}>{a.speed}×</option>
+          )}
         </select>
         <label style={{ margin: 0 }}>Easing</label>
         <select

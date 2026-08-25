@@ -50,11 +50,12 @@ import ProductionPicker from './ProductionPicker';
 import { IconControl } from '../icons';
 import { slug } from '../../export/common';
 
-/** The speed knob's three stops — the wizard's Animation step offers the same three. */
+/** The speed knob's three stops — the wizard's Animation step offers the same three
+ *  (model/wizard.ts AnimSpeed: ±33% read as "no change" on the owner's walk, ±80% does not). */
 const MOTION_SPEEDS: { label: string; value: number }[] = [
-  { label: 'Slower', value: 0.75 },
+  { label: 'Slower', value: 0.6 },
   { label: 'Normal', value: 1 },
-  { label: 'Faster', value: 1.5 },
+  { label: 'Faster', value: 1.8 },
 ];
 const motionName = (id: MotionPresetId | null) => (id ? motionPresetById(id).name : 'its own');
 const speedName = (speed: number) => MOTION_SPEEDS.find((s) => s.value === speed)?.label ?? `${speed}×`;

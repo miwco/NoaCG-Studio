@@ -1660,7 +1660,7 @@ function StepTimeline({
           {editable && (
             <select
               className="tlv2-speed"
-              value={[0.75, 1, 1.5].includes(data.speed) ? String(data.speed) : 'custom'}
+              value={[0.6, 0.75, 1, 1.5, 1.8].includes(data.speed) ? String(data.speed) : 'custom'}
               onChange={(e) => {
                 if (e.target.value === 'custom') return;
                 applyData({ ...data, speed: Number(e.target.value) });
@@ -1668,10 +1668,14 @@ function StepTimeline({
               title={`Motion speed — scales every duration and keyframe (currently ×${data.speed})`}
               data-testid="tlv2-speed"
             >
+              {/* The wizard's widened steps (model/wizard.ts AnimSpeed) plus the old pair —
+                  this is the Advanced surface, and a saved graphic may hold any of them. */}
+              <option value="0.6">×0.6</option>
               <option value="0.75">×0.75</option>
               <option value="1">×1</option>
               <option value="1.5">×1.5</option>
-              {![0.75, 1, 1.5].includes(data.speed) && <option value="custom" disabled>{`×${data.speed}`}</option>}
+              <option value="1.8">×1.8</option>
+              {![0.6, 0.75, 1, 1.5, 1.8].includes(data.speed) && <option value="custom" disabled>{`×${data.speed}`}</option>}
             </select>
           )}
           <span className="tlv2-time mono" data-testid="tlv2-time">{head.t.toFixed(2)}s</span>

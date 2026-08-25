@@ -13,6 +13,7 @@ import {
   type MotionPresetId,
 } from '../../../blocks/motionPresets';
 import MotionPresetPicker from '../../MotionPresetPicker';
+import SectionHead from '../SectionHead';
 
 interface Props {
   variant: TemplateVariant;
@@ -26,10 +27,20 @@ interface Props {
   onReplay: () => void;
 }
 
+// MEASURED, 2026-08-26 (GOALS goal 6 - the owner: "the speed does not change, at least in the
+// preview"). The knob was never broken: the emitted NOACG_ANIM carried 0.75/1/1.5 and the
+// interpreter divides every duration by it, so a slide's 0.8s entrance ran 1.07/0.8/0.53s.
+// What failed is PERCEPTION: two replays of a smooth power-out entrance are compared from
+// memory seconds apart, and a ±33% step is below that threshold - which is also why the owner
+// could see it with BOUNCE (the bounce COUNT changes, a rhythm rather than a duration). His
+// hypothesis "you need an ease on it to adjust the speed" was measurably half-right: the knob
+// always worked, but only an ease with rhythm made it readable. The honest fix keeps the
+// button and widens the steps to ±80% (1.33/0.8/0.44s on that slide), which is unmistakable
+// across separate replays; a matcher for the old values stays in AnimSpeed.
 const SPEEDS: { label: string; value: AnimSpeed }[] = [
-  { label: 'Slower', value: 0.75 },
+  { label: 'Slower', value: 0.6 },
   { label: 'Normal', value: 1 },
-  { label: 'Faster', value: 1.5 },
+  { label: 'Faster', value: 1.8 },
 ];
 
 const DIRECTIONS: { id: AnimPhase; label: string; hint: string }[] = [
@@ -233,9 +244,22 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
 
   return (
     <div>
+      {/* ONE LINE PER THING, AND AN ⓘ FOR THE REST (docs/GOALS.md NOW goal 4): each section
+          head is a title, one muted line, and the why behind the dot. */}
       {phaseApply && (
         <div className="panel-section">
-          <h3>Direction <span className="muted">what your style choice applies to</span></h3>
+          <SectionHead
+            title="Direction"
+            summary="what your style choice applies to"
+            testid="wz-anim-why-direction"
+          >
+            <p>
+              A graphic animates twice — ON air and OFF again — and they need not match: a
+              confident slide in can leave with a quiet fade. This chooses which of the two
+              your next style pick changes. Most graphics keep one style for both, which is why
+              “In and out” is the default.
+            </p>
+          </SectionHead>
           <div className="row" style={{ gap: 6 }}>
             {DIRECTIONS.map((d) => (
               <button
@@ -261,14 +285,19 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
       )}
 
       <div className="panel-section">
-        <h3>
-          Animation style{' '}
-          <span className="muted">
-            {phaseApply && direction !== 'in'
-              ? '(click a preset — the preview plays the entrance, then the exit)'
-              : '(click a preset to watch it in the preview)'}
-          </span>
-        </h3>
+        <SectionHead
+          title="Animation style"
+          summary="click a preset to watch it in the preview"
+          testid="wz-anim-why-style"
+        >
+          <p>
+            How the graphic arrives and leaves. Every card is a finished, broadcast-tuned
+            motion — click one and the preview plays it
+            {phaseApply && direction !== 'in' ? ', entrance then exit' : ''}; click the active
+            card again to replay. Nothing here changes your content or layout, only the way it
+            moves.
+          </p>
+        </SectionHead>
         {universalPrimary ? (
           <MotionPresetPicker
             hideDirection
@@ -326,7 +355,13 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
           under Speed rather than clipping it. */}
       <div className="row" style={{ alignItems: 'flex-start', gap: 24, flexWrap: 'wrap' }}>
         <div className="panel-section">
-          <h3>Speed <span className="muted">entrance and exit</span></h3>
+          <SectionHead title="Speed" summary="entrance and exit" testid="wz-anim-why-speed">
+            <p>
+              How long the entrance and the exit take — the same motion, on a faster or slower
+              clock. It scales the graphic everywhere it plays: the preview here, the editor,
+              and on air.
+            </p>
+          </SectionHead>
           <div className="row" style={{ gap: 6 }}>
             {SPEEDS.map((s) => (
               <button
@@ -346,7 +381,14 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
             missed by 4 px. 180 fits, and the select grows into whatever is left. The wrap above
             still catches anything narrower. */}
         <div className="panel-section" style={{ minWidth: 180, flex: '1 1 180px' }}>
-          <h3>Easing <span className="muted">the feel of the motion</span></h3>
+          <SectionHead title="Easing" summary="the feel of the motion" testid="wz-anim-why-easing">
+            <p>
+              The same travel can arrive mechanically or with character — settle softly, pop
+              past and snap back, bounce. That curve is the easing. The list only offers curves
+              the current motion can actually show, and Auto is each motion&rsquo;s hand-tuned
+              pair, which is why it is the recommendation.
+            </p>
+          </SectionHead>
           <select
             value={draft.animation.easing}
             onChange={(e) => onDraft({ animation: { easing: e.target.value as EasingId } })}

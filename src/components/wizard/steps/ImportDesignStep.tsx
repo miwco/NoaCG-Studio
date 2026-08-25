@@ -7,6 +7,7 @@ import { probeAsset } from '../../../assets/assetInfo';
 import { importSvgMarkup, isSvgFile, type SvgImportResult } from '../../../assets/svgImport';
 import { isTemplateFile, type ImportedTemplateResult } from '../../../model/importTemplate';
 import ProjectFormatPicker from '../../ProjectFormatPicker';
+import SectionHead from '../SectionHead';
 
 interface Props {
   art: DesignArt | null;
@@ -187,6 +188,24 @@ export default function ImportDesignStep({
         }
       />
 
+      {/* ONE LINE PER THING, AND AN ⓘ FOR THE REST (GOALS goal 4): the drop zone carries one
+          line; what each format buys lives behind this dot. */}
+      {!art && !templateFile && !svg && (
+        <SectionHead title="Your design" summary="the artwork you already made" testid="import-design-why">
+          <p>
+            A layered <strong>SVG</strong> (from Illustrator, Figma or Inkscape) is the best
+            import: it stays pixel-exact and its text layers become editable fields by
+            themselves. A PNG, JPEG or WebP works too — you place its text fields in the next
+            steps. A format that carries transparency (SVG, PNG or WebP) keeps everything
+            behind it visible on air.
+          </p>
+          <p>
+            Already have the finished graphic as an <strong>.html</strong> or{' '}
+            <strong>.zip</strong>? Drop that instead and it comes in as it is, with its own
+            fields.
+          </p>
+        </SectionHead>
+      )}
       {/* Once the design is in, the drop zone steps DOWN to a quiet swap target: keeping it
           at full height would give the loudest element on the step to an action the user has
           already finished, and push everything that still matters below the fold. */}
@@ -209,16 +228,13 @@ export default function ImportDesignStep({
         <strong>
           {art || templateFile || svg ? 'Drop another file to replace it' : 'Drop your finished design here'}
         </strong>
+        {/* ONE LINE (GOALS goal 4): the drop zone says what to do; the format detail — why an
+            SVG beats a PNG, what transparency buys, the .html/.zip door — moved to the ⓘ
+            beside the step title above. */}
         {!art && !templateFile && !svg && (
           <span className="hint">
-            The design you already made. A layered <strong>SVG</strong> (from Illustrator, Figma
-            or Inkscape) is the best import: it stays pixel-exact and its text layers become
-            editable fields by themselves. A PNG, JPEG or WebP works too — you place its text
-            fields in the next steps. A format that carries transparency (SVG, PNG or WebP)
-            keeps everything behind it visible on air.
-            <br />
-            Already have the finished graphic as an <strong>.html</strong> or <strong>.zip</strong>?
-            Drop that instead and it comes in as it is, with its own fields.
+            A layered <strong>SVG</strong> is the best import — a PNG, JPEG, WebP, .html or
+            .zip works too.
           </span>
         )}
       </div>

@@ -239,11 +239,19 @@ export type AnimPresetId =
   // in (PresetConfig.layers) — a designer-drawn structure, unlike a flat picture's.
   | 'design-stagger';
 
-export type AnimSpeed = 0.75 | 1 | 1.5;
+/**
+ * The speed knob's multiplier. The wizard offers 0.6 · 1 · 1.8 (2026-08-26, GOALS goal 6):
+ * the earlier 0.75/1.5 steps were a REAL ±33% on the timings and still read as "no change" on
+ * the owner's walk, because two replays of a smooth power-curve entrance seconds apart are
+ * compared from memory, where a third is below the noticing threshold. 0.75 and 1.5 stay in
+ * the union - saved AI specs and projects carry them, and the interpreter divides by any
+ * number - they are just no longer what the buttons write.
+ */
+export type AnimSpeed = 0.6 | 0.75 | 1 | 1.5 | 1.8;
 
 export interface AnimationChoice {
   presetId: AnimPresetId;
-  /** Multiplier on animSpeed: 0.75 slower · 1 normal · 1.5 faster. */
+  /** Multiplier on animSpeed: 0.6 slower · 1 normal · 1.8 faster (see AnimSpeed). */
   speed: AnimSpeed;
   /** Easing preset ('auto' = the animation preset's hand-tuned pair). See model/easings.ts. */
   easing: EasingId;

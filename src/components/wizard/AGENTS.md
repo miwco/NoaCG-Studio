@@ -277,14 +277,16 @@ first (a named group and its contents are never both offered). **An untouched pr
 NOTHING** - the runtime derives, as the hug always did; writing the guess down would freeze a
 design-time measurement into every playout. **The first edit materializes the whole set**
 (`svgStretch.followers`, the derived-machine idiom) and the label stops saying "proposed".
-Arming `followArmed` makes a canvas pick toggle a FOLLOWER instead of a binding - two meanings
-for one gesture need a visible mode, not a modifier key. **Every handler that patches
-`svgStretch` must SPREAD it**: rebuilding the object dropped the axis, and picking a panel
-silently sent a "grows taller" graphic back to sideways.
-The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
-does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
-inferred from geometry - the shipped lower third is a full-frame artboard and the shipped
-scorebug is a small floating object, so any size rule mislabels one of them.
+**The list renders only where there is something to decide** (non-empty proposal, declared set,
+or authored growth): on the ordinary lower third's default nothing needs to move.
+Arming `followArmed` makes a canvas pick toggle a FOLLOWER instead of a binding - a visible
+mode, not a modifier key. **Every handler that patches `svgStretch` must SPREAD it**: rebuilt
+fresh, it dropped the axis (a "grows taller" graphic silently went back to sideways).
+THE HUG's DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
+`proposeBannerGrowth`): a banner rectangle holding stacked START-anchored bound text, with room
+before the safe margin, defaults to grow-x with nothing chosen; side-by-side lines, non-start
+anchors, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
+size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
 **THE SAME DROP ZONE TAKES A FINISHED TEMPLATE** (`.html`/`.zip` -> `importTemplateFile`),
@@ -324,6 +326,11 @@ reason it is an addition and not a replacement is measured: no catalog preset is
 motion the bank duplicates (they all move a box AND stagger what is inside it), so cutting them
 would remove taste, not duplication.
 
+**ONE LINE PER THING, AND AN ⓘ FOR THE REST** (GOALS goal 4; `SectionHead.tsx`): title, one
+muted line, and an ⓘ holding what it does AND why it exists. The mapping, Animation and Import
+Design steps wear it; a new section starts with it, not a paragraph under an h3. **THE SPEED
+BUTTONS WRITE 0.6 / 1 / 1.8** (`AnimSpeed`, GOALS goal 6: ±33% was real on the clock, invisible
+across separate replays; 0.75/1.5 stay valid stored values).
 **THE EASING DROPDOWN REACTS TO THE MOTION** (`blocks/motionPresets.ts` `easingsForMotions`) and
 shows the no-code `plain` names. Picking a motion that cannot render the current curve drops the
 choice to Auto rather than keeping a setting that does nothing. WizardPreview cancels pending lifecycle-demo timers when

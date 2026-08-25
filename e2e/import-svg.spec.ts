@@ -4,7 +4,7 @@ import { awaitPreviewRebuild } from './_preview';
 import { elementPoint } from './_canvas';
 import { settleDurableWrites } from './_durable';
 import { previewFrame } from './_frame';
-import { intoProduction, SCOREBUG_SVG } from './_svg-import';
+import { dropSvg as dropSvg2, intoProduction, QUIZ_SVG, SCOREBUG_SVG } from './_svg-import';
 
 // The SVG import road, door to export (docs/SVG_IMPORT_PLAN.md P1): a layered
 // Illustrator-shaped SVG dropped on the Import door becomes a playable template whose text
@@ -848,9 +848,12 @@ test('svg import: a clock-shaped layer can bind as a countdown — the node tick
 //
 // The artwork has since left the step entirely (plan §6a step 1 — the preview is the one
 // canvas), so the budget got easier and the numbers below are re-measured, not inherited: the
-// scorebug's seven rows all fit on a 768-tall window, six of seven on a 720-tall one. Three
-// fitted before, at either size.
-for (const [width, height, rowsExpected] of [[1366, 768, 7], [1280, 720, 6]] as const) {
+// scorebug's seven rows all fit on a 768-tall window — and since the one-line-per-thing pass
+// (GOALS goal 4, 2026-08-26: the lead shrank to one line and the section paragraphs moved
+// behind their ⓘ) all seven fit on a 720-tall one too, where six did. Three fitted before the
+// artwork moved, at either size. Exact on purpose: a copy change that costs a row should fail
+// here, and one that buys a row should have to say so.
+for (const [width, height, rowsExpected] of [[1366, 768, 7], [1280, 720, 7]] as const) {
   test(`svg import: the mapping step's checklist is on screen at ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto('/app');
@@ -982,6 +985,9 @@ test('svg import: a value fills the panel it was drawn in before any of it shrin
   // panel stood empty. The budget is the ROOM: out to a right margin mirroring the left one.
   await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
   await page.locator('.wz-next').click();
+  // This test pins the SHRINK ladder, and a banner-shaped file now defaults to growing
+  // (GOALS goal 5) - so the shrink path is chosen explicitly, as an author would.
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
   await createProject(page);
 
   const frame = previewFrame(page);
@@ -1027,6 +1033,7 @@ test('svg import: copy too long for any size floors instead of vanishing, and sa
   // keeps, and reports the field rather than clipping the copy or reshaping the artwork.
   await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
   await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink'); // the shrink ladder is under test
   await createProject(page);
 
   const state = await previewFrame(page).locator('#f0').evaluate((el) => {
@@ -1540,8 +1547,11 @@ test('svg import: dragging a rectangle makes it the growing panel, and says whic
   await dropSvgMarkup(page, PICK_SVG, 'pick.svg');
   await page.locator('.wz-next').click();
 
+  // A banner with its name drawn inside it arrives already growing (GOALS goal 5), read from
+  // the artwork - the gestures below still own the answer.
   const mode = page.getByTestId('map-svg-stretch-mode');
-  await expect(mode).toHaveValue('shrink');
+  await expect(mode).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
   await awaitPickable(page, [0.11, 0.79]);
 
   // A drag ACROSS the banner says "grow this one, sideways" in one gesture - the relationship
@@ -1582,8 +1592,9 @@ test('svg import: the followers of a growing panel are proposed, then become the
   await dropSvgMarkup(page, FOLLOWERS_SVG, 'followers.svg');
   await page.locator('.wz-next').click();
 
-  // Nothing is proposed until something grows - a follower list for a fixed graphic would be a
-  // control with no effect.
+  // No list until there is something to DECIDE (GOALS goal 5): this board arrives growing
+  // sideways by the measured default, but nothing is drawn past its right edge, so the
+  // follower question would be a control with no effect - and it does not render.
   await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
   await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
   await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
@@ -1677,6 +1688,7 @@ test('svg import: a value wraps inside the height the design drew, and never pas
     'wrap.svg',
   );
   await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink'); // the wrap-then-shrink ladder is under test
   await createProject(page);
 
   const wrapped = await previewFrame(page).locator('#f0').evaluate((el) => {
@@ -1712,6 +1724,7 @@ test('svg import: a line with another drawn right below it stays on one line', a
   // second line straight through somebody else's layer.
   await dropSvgMarkup(page, LADDER_SVG, 'ladder.svg');
   await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink'); // the room measurement is under test
   await createProject(page);
 
   const state = await previewFrame(page).locator('#f0').evaluate((el) => {
@@ -1727,10 +1740,12 @@ test('svg import: a line with another drawn right below it stays on one line', a
   expect(state.bottom).toBeLessThanOrEqual(state.roleTop + 0.5);
 });
 
-// THE HUG (docs/SVG_IMPORT_PLAN.md §3): a lower third's banner is as wide as the name on it.
-// Fixed is the default and the board's behaviour; growing is a per-graphic answer the mapping
-// step asks for, because no geometry separates the two — the shipped lower third is drawn on a
-// full-frame artboard and the shipped scorebug is a small floating object.
+// THE HUG (docs/SVG_IMPORT_PLAN.md §3 + GOALS goal 5): a lower third's banner is as wide as
+// the name on it — and where the artwork says so unambiguously (one banner-shaped rectangle,
+// stacked start-anchored text inside it, room before the safe margin), the mapping step now
+// reads that off the render and turns growth ON with nothing chosen. Where it is ambiguous
+// (side-by-side text on one plate, non-start anchors, a quiz behaviour, a full-frame
+// backplate) the default stays shrink and the step asks, exactly as before.
 const HUG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
   <g id="Panel">
     <rect x="140" y="760" width="600" height="190" rx="8" fill="#0d1017"/>
@@ -1740,13 +1755,28 @@ const HUG_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"
   <rect id="Logo" x="800" y="780" width="90" height="90" fill="#ffffff"/>
 </svg>`;
 
-test('svg import: the panel hug is offered, off, with the widest rectangle proposed', async ({ page }) => {
+test('svg import: an ordinary lower third arrives already growing, read from the artwork', async ({ page }) => {
   await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
   await page.locator('.wz-next').click();
 
+  // The banner holds its one start-anchored name and has most of the frame to grow into, so
+  // the measured default is grow-x on the widest rectangle - and the summary SAYS it was read
+  // from the artwork, so a proposal is never mistaken for something the reader chose.
   const mode = page.getByTestId('map-svg-stretch-mode');
+  await expect(mode).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch-shape')).toHaveValue('s0');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('read from your artwork');
+
+  // Nothing PAST the growing edge needs a decision here… the Logo is past it, so the follower
+  // list shows (proposed). The ordinary case with an empty proposal renders no list at all -
+  // pinned in the followers block above.
+  await expect(page.getByTestId('map-svg-followers')).toContainText('proposed');
+
+  // An authored answer replaces the measurement and stops advertising itself as one.
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
   await expect(mode).toHaveValue('shrink');
-  // Nothing to pick until the answer is "grow" — a shape picker for a graphic that never
+  await expect(page.getByTestId('map-svg-stretch')).not.toContainText('read from your artwork');
+  // Nothing to pick while the answer is "shrink" — a shape picker for a graphic that never
   // resizes is a control with no effect.
   await expect(page.getByTestId('map-svg-stretch-shape')).toHaveCount(0);
 
@@ -1759,6 +1789,50 @@ test('svg import: the panel hug is offered, off, with the widest rectangle propo
     'Panel — 10 × 190',
   ]);
   await expect(shape).toHaveValue('s0');
+});
+
+test('svg import: with NOTHING chosen, a long name grows the banner instead of shrinking', async ({ page }) => {
+  // GOALS goal 5, the owner's bar verbatim: "of course that text should be able to become
+  // longer and the background should grow with it. I don't know why we need to choose them."
+  // So this walk touches NO growth control at all - drop, next, create - and the created
+  // graphic must still hug.
+  await dropSvgMarkup(page, HUG_SVG, 'hug.svg');
+  await page.locator('.wz-next').click();
+  await expect(page.getByTestId('map-svg-fields')).toBeVisible();
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const grown = await frame.locator('#f0').evaluate((el) => {
+    const w = window as unknown as { update: (json: string) => void };
+    const panel = document.querySelector('rect[data-noacg-el="g0"]')!;
+    const before = parseFloat(panel.getAttribute('width')!);
+    w.update(JSON.stringify({ f0: 'Alexandra Konstantinopolous-Riva' }));
+    return {
+      before,
+      after: parseFloat(panel.getAttribute('width')!),
+      size: parseFloat(getComputedStyle(el).fontSize),
+    };
+  });
+  expect(grown.before).toBe(600);
+  expect(grown.after).toBeGreaterThan(600);
+  // …and the type stayed the size the designer drew it, which is what growing is FOR.
+  expect(grown.size).toBeCloseTo(56, 0);
+});
+
+test('svg import: a scorebug and a quiz board still default to shrink - growth is refused', async ({ page }) => {
+  // The other half of goal 5: the default must be right on the graphics that must NOT move.
+  // The shipped scorebug sample is side-by-side text with end/middle anchors on one plate -
+  // every one of those refuses the measured default - and the quiz board proposes a BEHAVIOUR,
+  // which declares a stage.
+  await page.goto('/app');
+  await dropSvg2(page, SCOREBUG_SVG);
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
+  await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
+
+  await page.goto('/app');
+  await dropSvg2(page, QUIZ_SVG);
+  await expect(page.getByTestId('map-svg-behaviour-kind')).toHaveValue('quiz');
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('shrink');
 });
 
 test('svg import: a hugging panel grows with its text, and what is beyond it travels', async ({ page }) => {

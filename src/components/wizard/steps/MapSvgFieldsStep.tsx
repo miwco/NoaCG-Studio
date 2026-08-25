@@ -22,6 +22,7 @@ import {
   type CustomFont,
 } from '../../../model/fonts';
 import { fetchGoogleFont, loadGoogleFontIndex } from '../../../model/googleFonts';
+import SectionHead from '../SectionHead';
 import './mapSvgFields.css';
 
 interface Props {
@@ -79,6 +80,74 @@ function proposeFollowers(
     if ((axis === 'y' ? r.top : r.left) >= edge - 0.5) hits.push({ id: c.id, el });
   }
   return hits.filter((h) => !hits.some((o) => o !== h && o.el.contains(h.el))).map((h) => h.id);
+}
+
+/**
+ * THE ORDINARY LOWER THIRD WORKS WITH NOTHING CHOSEN (owner 2026-08-25; docs/GOALS.md NOW
+ * goal 5). "Of course that text should be able to become longer and the background should
+ * grow with it" - so where the artwork says so unambiguously, growth defaults ON and nobody
+ * is asked. This measures that, on the step's rendered artwork, and answers with the banner's
+ * candidate id or null.
+ *
+ * What counts as unambiguous - every condition is a case that would otherwise mis-grow:
+ *  - a RECTANGLE wider than tall (a banner strip; a chip or a card is not one), with room to
+ *    grow before the frame's safe margin (a full-frame backplate has none, and it is also the
+ *    thing that must never resize);
+ *  - holding at least one bound text line, every one of them START-anchored (an end- or
+ *    middle-anchored line is composed against a point growth would move away from - the
+ *    scorebug's score figures and centred clock);
+ *  - the lines STACKED, never side by side (two lines sharing a baseline on one plate is a
+ *    composed row - a scorebug, a strap with a place and a clock - where widening the plate
+ *    helps nobody: the inner line's room is bounded by its neighbour, not by the panel).
+ *
+ * Deliberately NOT measured: the artboard, or the panel's size against it. The 2026-08-23
+ * ruling stands - the shipped lower third is a full-frame artboard and the shipped scorebug a
+ * small floating object, so any size-against-frame rule mislabels one of them. A quiz
+ * BEHAVIOUR also refuses the default (checked by the caller): a board that selects and
+ * reveals declares a stage.
+ */
+function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds: string[]): string | null {
+  if (onTextIds.length === 0) return null;
+  const root = stage.querySelector('svg');
+  if (!root) return null;
+  const frame = root.getBoundingClientRect();
+  if (!(frame.width > 0)) return null;
+  const el = (id: string) => stage.querySelector(`[${SVG_CANDIDATE_ATTR}="${id}"]`);
+  const lines = onTextIds.flatMap((id) => {
+    const node = el(id);
+    if (!node) return [];
+    const r = node.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) return [];
+    return [{ r, anchor: getComputedStyle(node).textAnchor || 'start' }];
+  });
+  const tol = 2;
+  for (const s of svg.shapes) {
+    // Widest first, which the inventory already is: the banner is the widest rectangle on it.
+    const node = el(s.id);
+    if (!node) continue;
+    const sr = node.getBoundingClientRect();
+    if (!(sr.width > 0) || !(sr.height > 0) || sr.width / sr.height < 1.5) continue;
+    if (sr.right > frame.left + frame.width * 0.94) continue;
+    const inside = lines.filter(
+      (l) =>
+        l.r.left >= sr.left - tol &&
+        l.r.right <= sr.right + tol &&
+        l.r.top >= sr.top - tol &&
+        l.r.bottom <= sr.bottom + tol,
+    );
+    if (inside.length === 0) continue;
+    if (inside.some((l) => l.anchor !== 'start')) continue;
+    const sideBySide = inside.some((a, i) =>
+      inside.some((b, j) => {
+        if (j <= i) return false;
+        const overlap = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        return overlap > Math.min(a.r.height, b.r.height) * 0.5;
+      }),
+    );
+    if (sideBySide) continue;
+    return s.id;
+  }
+  return null;
 }
 
 /** The published weight closest to the one the file's own name asked for. */
@@ -294,6 +363,32 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   const [proposed, setProposed] = useState<string[]>([]);
   const growId = draft.svgStretch.on ? draft.svgStretch.shapeId : null;
   const growAxis = draft.svgStretch.axis ?? 'x';
+
+  // ── GROWTH DEFAULTS ON WHERE THE ARTWORK IS UNAMBIGUOUS (docs/GOALS.md NOW goal 5) ──
+  // Measured on the step's own render, and only while the author has not touched a growth
+  // control: an authored answer is never recomputed, while the proposal follows the rows (a
+  // banner whose only line was unticked stops proposing) and stands down the moment a
+  // behaviour is attached - a quiz board is a stage. The no-patch-when-equal guard is what
+  // keeps this from re-running itself forever.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!svg || !stage || draft.svgStretch.authored) return;
+    const banner = draft.svgBehaviour
+      ? null
+      : proposeBannerGrowth(
+          stage,
+          svg,
+          draft.svgFields.filter((f) => f.on).map((f) => f.candidateId),
+        );
+    const cur = draft.svgStretch;
+    const settled = banner ? cur.on && cur.shapeId === banner && (cur.axis ?? 'x') === 'x' : !cur.on;
+    if (settled) return;
+    onDraft({
+      svgStretch: banner
+        ? { on: true, shapeId: banner, axis: 'x' }
+        : { on: false, shapeId: svg.shapes[0]?.id ?? null },
+    });
+  }, [svg, draft.svgFields, draft.svgBehaviour, draft.svgStretch, onDraft]);
   useEffect(() => {
     const stage = stageRef.current;
     if (!svg || !stage || !growId) {
@@ -307,9 +402,10 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   const declaredFollowers: SvgFollowerDraft[] =
     draft.svgStretch.followers ?? proposed.map((candidateId) => ({ candidateId, mode: 'move' as const }));
 
-  /** Every follower edit commits the whole set, so an untouched proposal never half-materializes. */
+  /** Every follower edit commits the whole set, so an untouched proposal never half-materializes.
+   *  It also marks the growth AUTHORED: a reader editing what travels has adopted the rule. */
   const setFollowers = (next: SvgFollowerDraft[]) =>
-    onDraft({ svgStretch: { ...draft.svgStretch, followers: next } });
+    onDraft({ svgStretch: { ...draft.svgStretch, authored: true, followers: next } });
 
   const labelOfCandidate = (id: string): string => {
     const all = svg
@@ -335,6 +431,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         onDraft({
           svgStretch: {
             ...draft.svgStretch,
+            authored: true,
             followers: already
               ? set.filter((f) => f.candidateId !== candidateId)
               : [...set, { candidateId, mode: 'move' as const }],
@@ -378,12 +475,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       if (!svg?.shapes.some((s) => s.id === candidateId)) return;
       const isPanel = draft.svgStretch.on && draft.svgStretch.shapeId === candidateId;
       if (isPanel && !drag) {
-        onDraft({ svgStretch: { ...draft.svgStretch, on: false } });
+        onDraft({ svgStretch: { ...draft.svgStretch, authored: true, on: false } });
         return;
       }
       onDraft({
         svgStretch: {
           on: true,
+          authored: true,
           shapeId: candidateId,
           axis: drag ?? (isPanel ? draft.svgStretch.axis : undefined) ?? 'x',
         },
@@ -588,18 +686,14 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           dangerouslySetInnerHTML={{ __html: svg.markup }}
         />
       </div>
+      {/* ONE LINE PER THING (docs/GOALS.md NOW goal 4): what is automatically visible is one
+          line, and the rest of every section sits behind its ⓘ — which also says WHY the
+          section exists at all, the half the owner asked for by name. */}
       <div className="map-svg-lead">
         <h3>Choose what the operator can change</h3>
         {svg.candidates.length > 0 ? (
-          /* The promise used to be "your artwork airs exactly as drawn", and the markup does
-             still ship verbatim. But it became a half-truth the moment a declared element could
-             move (plan §6c): a panel the author tells to grow WILL change size on air, and only
-             because they asked for it. The sentence now says what is actually guaranteed. */
           <p className="hint">
-            Your artwork ships exactly as you drew it, and nothing moves unless you say so. Tick
-            the layers below that an operator should be able to retype — hover a row to see which
-            layer it is in the preview, and type a real length into its text to watch the graphic
-            take it.
+            Tick what an operator can retype — hover a row to see it in the preview.
           </p>
         ) : (
           <p className="hint">
@@ -635,12 +729,21 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         </div>
       ) : (
         <div className="panel-section" data-testid="map-svg-fields">
-          <h3>
-            Editable text{' '}
-            <span className="muted">
-              {onCount} of {draft.svgFields.length} on air as operator fields
-            </span>
-          </h3>
+          <SectionHead
+            title="Editable text"
+            summary={`${onCount} of ${draft.svgFields.length} on air as operator fields`}
+            testid="map-svg-why-fields"
+          >
+            <p>
+              Every text layer in your file was found and starts ON — a ticked layer becomes a
+              field the operator retypes live, in exactly the typography you drew. Untick a
+              layer and its words stay part of the artwork.
+            </p>
+            <p>
+              The text box is live: type a real, long value into it and the preview shows
+              exactly what would happen on air.
+            </p>
+          </SectionHead>
           {draft.svgFields.map((f) => (
             <div
               key={f.candidateId}
@@ -712,20 +815,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           seven-layer scorebug put it 553px below the fold when it sat last, which is where a
           reader who has never been told it exists would never find it. */}
       <div className="panel-section" data-testid="map-svg-added">
-        <h3>
-          Add a field{' '}
-          <span className="muted">
-            {draft.designFields.length === 0
-              ? 'nothing added'
-              : `${draft.designFields.length} added`}
-          </span>
-        </h3>
-        {/* Two lines, not four: the rows above have already shown what a field IS, so this only
-            has to say where a new one comes from. */}
-        <p className="hint">
-          Your artwork is the stage, not the whole graphic. Draw a box on the preview to put a
-          real editable field where the file drew nothing.
-        </p>
+        <SectionHead
+          title="Add a field"
+          summary={
+            draft.designFields.length === 0 ? 'nothing added' : `${draft.designFields.length} added`
+          }
+          testid="map-svg-why-added"
+        >
+          <p>
+            Your artwork is the stage, not the whole graphic: a show sometimes needs a line the
+            file never drew. Arm the button and draw a box on the preview — a real editable
+            field lands exactly where you drew it, and the artwork underneath is untouched.
+          </p>
+        </SectionHead>
         <button
           className={drawArmed ? 'active' : ''}
           onClick={() => setDrawArmed((a) => !a)}
@@ -768,14 +870,23 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           named anything, and nobody edits XML. */}
       {onFields.length >= 3 && (
         <div className="panel-section" data-testid="map-svg-behaviour">
-          <h3>
-            What it does{' '}
-            <span className="muted">{behaviour ? 'quiz — select, lock, reveal' : 'nothing but in and out'}</span>
-          </h3>
-          <p className="hint">
-            A graphic can carry behaviour the operator drives live. Your artwork stays exactly as
-            you drew it — you say which layers show each moment, and NoaCG decides when.
-          </p>
+          <SectionHead
+            title="What it does"
+            summary={behaviour ? 'quiz — select, lock, reveal' : 'nothing but in and out'}
+            testid="map-svg-why-behaviour"
+          >
+            <p>
+              This section is here because a graphic can be more than a picture that comes on
+              and off: it can carry BEHAVIOUR the operator drives live, with real buttons on the
+              control page. Today that is the quiz — select an answer, lock it in, reveal the
+              right one. More behaviours join it over time.
+            </p>
+            <p>
+              Your artwork stays exactly as you drew it. You only say which drawn layers show
+              each moment; NoaCG decides when they are visible. A drawing you never made simply
+              shows nothing extra — the behaviour still works.
+            </p>
+          </SectionHead>
           <label className="save-field">
             <span>Behaviour</span>
             <select
@@ -837,9 +948,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </label>
               </div>
               <p className="hint">
-                For each answer: which text layer it is, and — if you drew them — which layers show
-                that answer picked, right and wrong. Leave a drawing empty and that moment simply
-                shows nothing extra; the board still selects, locks and reveals.
+                Per answer: its text layer, and the drawings for picked / right / wrong if you
+                made them.
               </p>
               {behaviour.answers.map((answerId, at) => (
                 <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>
@@ -911,29 +1021,36 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       )}
 
       {svg.candidates.length > 0 && svg.shapes.length > 0 && (
-        /* THE HUG (docs/SVG_IMPORT_PLAN.md §3). A lower third's banner should be as wide as
-           the name on it; a quiz board and a scorebug declare a stage and must not move. No
-           geometry separates the two — our own samples draw the banner on a full-frame
-           artboard and the scorebug as a small floating object — so this asks, with the
-           widest rectangle already proposed and OFF until somebody says otherwise. */
+        /* THE HUG (docs/SVG_IMPORT_PLAN.md §3, GOALS goal 5). A lower third's banner should be
+           as wide as the name on it; a quiz board and a scorebug declare a stage and must not
+           move. Where the artwork answers that unambiguously the default is already right (the
+           measuring effect above); where it does not, shrink stands and this asks. */
         <div className="panel-section" data-testid="map-svg-stretch">
-          <h3>
-            When the text is too long{' '}
-            <span className="muted">
-              {!draft.svgStretch.on
+          <SectionHead
+            title="When the text is too long"
+            summary={
+              !draft.svgStretch.on
                 ? 'the text shrinks to fit'
-                : draft.svgStretch.axis === 'y'
-                  ? 'the panel gets taller'
-                  : 'the panel gets wider'}
-            </span>
-          </h3>
-          <p className="hint">
-            A longer value than you drew for has to go somewhere. By default the line shrinks
-            until it fits — right for a board, whose layout is the design. A lower third can
-            instead let its banner grow WIDER, so the type stays the size you drew it; a panel
-            with room beneath it can grow TALLER, and the value wraps into the new height
-            before any of it shrinks.
-          </p>
+                : `${draft.svgStretch.axis === 'y' ? 'the panel gets taller' : 'the panel gets wider'}${
+                    draft.svgStretch.authored ? '' : ' — read from your artwork'
+                  }`
+            }
+            testid="map-svg-why-stretch"
+          >
+            <p>
+              An operator will someday type a longer value than you drew for, and it has to go
+              somewhere. Shrinking the line keeps your layout exactly as drawn — right for a
+              board or a scorebug, whose composition is the design. A lower third instead lets
+              its banner grow with the name, so the type stays the size you drew; a panel with
+              room beneath can grow taller and the value wraps into the new height.
+            </p>
+            <p>
+              Where your artwork makes the answer obvious — one banner with its text drawn
+              inside it — it is already set for you, and you can change it here or by dragging
+              a rectangle on the preview. Growth never passes the frame&rsquo;s safe margin,
+              and a short value always puts the artwork back exactly as drawn.
+            </p>
+          </SectionHead>
           <label className="save-field">
             <span>Too-long text</span>
             <select
@@ -942,6 +1059,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 onDraft({
                   svgStretch: {
                     on: e.target.value !== 'shrink',
+                    // Touching the select is AUTHORING: the measured default never overwrites
+                    // an answer a person gave (the effect above skips authored state).
+                    authored: true,
                     // Turning it on with nothing picked takes the proposal rather than
                     // leaving a switch that is on and does nothing.
                     shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
@@ -975,6 +1095,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     svgStretch: {
                       ...draft.svgStretch,
                       on: true,
+                      authored: true,
                       shapeId: e.target.value || null,
                       followers: null,
                     },
@@ -994,31 +1115,42 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             <p className="hint">
               {growAxis === 'y'
                 ? 'It gets taller and the value wraps into the new height — never past the frame’s safe margin.'
-                : 'It widens to the right and the type stays the size you drew — never past the frame’s safe margin.'}{' '}
-              Only rectangles can grow: a panel drawn as a freeform shape has no side to move.
+                : 'It widens to the right and the type stays the size you drew — never past the frame’s safe margin.'}
             </p>
           )}
           {/* WHAT TRAVELS (docs/SVG_IMPORT_PLAN.md §6c). Geometry proposes and the author edits,
               and the reason is the ruling itself: sideways "anything past the edge" is usually
               right, downwards it is not - below a panel sit things that should move, things that
               should stretch, and things pinned to the frame that must stay, and no measurement
-              tells them apart. So the guess is shown rather than trusted. */}
-          {draft.svgStretch.on && (
+              tells them apart. So the guess is shown rather than trusted.
+              SHOWN ONLY WHERE THERE IS SOMETHING TO DECIDE (GOALS goal 5 - the owner could not
+              understand being asked this on an ordinary lower third, and on one the honest
+              answer is that nothing needs to move): the section exists when the growth would
+              actually carry layers, or when the author has engaged with growth themselves. On
+              the measured default with nothing past the growing edge it does not render, and
+              the runtime derives at play time exactly as it always has. */}
+          {draft.svgStretch.on &&
+            (declaredFollowers.length > 0 || draft.svgStretch.followers != null || !!draft.svgStretch.authored) && (
             <div className="map-svg-followers" data-testid="map-svg-followers">
-              <h4>
-                What travels with it{' '}
-                <span className="muted">
-                  {declaredFollowers.length === 0
+              <SectionHead
+                title="What travels with it"
+                summary={
+                  (declaredFollowers.length === 0
                     ? 'nothing moves'
-                    : `${declaredFollowers.length} layer${declaredFollowers.length === 1 ? '' : 's'}`}
-                  {draft.svgStretch.followers ? '' : ' — proposed'}
-                </span>
-              </h4>
-              <p className="hint">
-                {draft.svgStretch.followers
-                  ? 'Your list. A layer that moves keeps its gap; one that stretches grows by the same amount.'
-                  : 'Measured from your artwork — everything drawn past the growing edge. Change it and the list becomes yours.'}
-              </p>
+                    : `${declaredFollowers.length} layer${declaredFollowers.length === 1 ? '' : 's'}`) +
+                  (draft.svgStretch.followers ? '' : ' — proposed')
+                }
+                testid="map-svg-why-followers"
+              >
+                <p>
+                  When the panel grows, whatever you drew beyond its moving edge — a logo after
+                  the name, a caption under a board — has to travel with it or be drawn over.
+                  This list is that answer. It starts as a measurement of your artwork
+                  (everything drawn past the growing edge); change it and it becomes yours. A
+                  layer that <em>moves</em> keeps its gap; one that <em>stretches</em> grows by
+                  the same amount.
+                </p>
+              </SectionHead>
               <button
                 className={followArmed ? 'active' : ''}
                 onClick={() => setFollowArmed((a) => !a)}
@@ -1074,16 +1206,18 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
 
       {draft.svgImages.length > 0 && (
         <div className="panel-section" data-testid="map-svg-images">
-          <h3>
-            Pictures{' '}
-            <span className="muted">
-              {draft.svgImages.filter((f) => f.on).length} of {draft.svgImages.length} swappable on air
-            </span>
-          </h3>
-          <p className="hint">
-            A ticked picture becomes a field the operator can swap — leaving it empty keeps
-            the picture you drew. Untouched pictures stay part of the artwork.
-          </p>
+          <SectionHead
+            title="Pictures"
+            summary={`${draft.svgImages.filter((f) => f.on).length} of ${draft.svgImages.length} swappable on air`}
+            testid="map-svg-why-images"
+          >
+            <p>
+              Your file carries pictures, and a ticked one becomes a field the operator can
+              swap on air — a guest photo, a crest. They start OFF because inside a design a
+              picture is usually the artwork itself. Leaving a swap field empty keeps the
+              picture you drew.
+            </p>
+          </SectionHead>
           {draft.svgImages.map((f) => (
             <div
               key={f.candidateId}
@@ -1118,22 +1252,22 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
            shapes were type. Hover shows which. A ticked group is hidden at create and a
            placed HTML field (the raster flow's exact field machinery) stands in for it. */
         <div className="panel-section" data-testid="map-svg-outlines">
-          <h3>
-            Outlined text{' '}
-            <span className="muted">
-              {draft.svgOutlines.filter((f) => f.on).length} of {draft.svgOutlines.length} replaced by live text
-            </span>
-          </h3>
-          <p className="hint">
-            {svg.candidates.length > 0
-              ? 'Shapes that may be text converted to outlines. '
-              : ''}
-            Tick a group that was text and a typed field replaces it — at the same spot, size
-            and colour, in a typeface of yours. Hover a row to see which shapes it means.
-            {draft.svgOutlines.some((f) => f.looksLikeText === false) && (
-              <> The ones that read as a line of type are listed first.</>
-            )}
-          </p>
+          <SectionHead
+            title="Outlined text"
+            summary={`${draft.svgOutlines.filter((f) => f.on).length} of ${draft.svgOutlines.length} replaced by live text`}
+            testid="map-svg-why-outlines"
+          >
+            <p>
+              Some of your shapes look like text that was converted to outlines on export —
+              letters that became drawings, with nothing left to type into. Tick a group that
+              really was text and a live typed field replaces it: same spot, same size and
+              colour, in a typeface of yours rather than the original. Hover a row to see which
+              shapes it means.
+              {draft.svgOutlines.some((f) => f.looksLikeText === false) && (
+                <> The ones that read as a line of type are listed first.</>
+              )}
+            </p>
+          </SectionHead>
           {/* RANKED, never filtered. A Figma export can carry dozens of icon groups, each of
               them "a group of paths" exactly like outlined copy is, and the one row that IS the
               headline should not be the twentieth. The measurement (measureOutline) does the
@@ -1189,12 +1323,19 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
 
       {draft.svgFonts.length > 0 && (
         <div className="panel-section" data-testid="map-svg-fonts">
-          <h3>Typefaces</h3>
-          <p className="hint">
-            The design names {draft.svgFonts.length === 1 ? 'this typeface' : 'these typefaces'}.
-            A resolved one ships inside the template, so the graphic looks the same on every
-            playout machine.
-          </p>
+          <SectionHead
+            title="Typefaces"
+            summary={`${draft.svgFonts.filter((f) => f.fontId || f.customFont).length} of ${draft.svgFonts.length} ship inside the template`}
+            testid="map-svg-why-fonts"
+          >
+            <p>
+              Your design names {draft.svgFonts.length === 1 ? 'this typeface' : 'these typefaces'},
+              and an SVG only carries the NAME — not the font itself. A resolved family is
+              embedded in the template, so the graphic looks the same on every playout machine;
+              an unresolved one falls back to whatever that machine has installed, which is why
+              the row warns rather than staying quiet.
+            </p>
+          </SectionHead>
           {draft.svgFonts.map((f) => (
             <div className="map-svg-font" key={f.family} data-testid={`map-svg-font-${f.family}`}>
               <strong className="map-svg-font-name">{f.family}</strong>

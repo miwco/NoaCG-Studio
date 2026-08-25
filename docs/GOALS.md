@@ -125,7 +125,7 @@ on a graphic somebody else drew.
 *"I like that it's only one canvas... It works great"* - and everything below is about the WORDS
 around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue/` items.
 
-- [ ] **4. ONE LINE PER THING, and an ⓘ for the rest.** *"There's kind of a lot of text in this
+- [x] **4. ONE LINE PER THING, and an ⓘ for the rest.** *"There's kind of a lot of text in this
       fields page. I would like that there will be less text and it would be so intuitive so you
       don't have to read that much."* The rule he stated: **everything automatically visible is ONE
       LINE**, and anything more sits behind a small eye/ⓘ per section that also says *why this
@@ -133,7 +133,11 @@ around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue
       mapping step's information design, not a copy trim, and the same rule applies to every wizard
       step. A documentation page is wanted eventually, with no illusions about it: *"no one wants
       to read documentation. They just want everything to work."*
-- [ ] **5. "What travels with it" must explain itself, or not be asked.** The one thing on the walk
+      **Built 2026-08-26** (`SectionHead.tsx`): every mapping-step section, the Animation step
+      and the Import Design step are one line + ⓘ carrying the why; Finish/Entry/Fields/Style
+      already read one-line-per-thing. Not yet swept: the raster Prepare/Place steps and the AI
+      step. Awaiting the owner's walk (owner-queue).
+- [x] **5. "What travels with it" must explain itself, or not be asked.** The one thing on the walk
       he could not understand: *"my brain does not really understand how I choose what travels with
       it. What am I choosing?"* Two problems under it, and the second is the deeper one:
       - the picker offers **fields**, so clicking under a lower third only ever hits text layers -
@@ -146,13 +150,24 @@ around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue
         ordinary lower third work with nothing chosen, and ask only where it is genuinely ambiguous.
       His bar, worth quoting on any surface: *"If I can't automatically understand what it is, it's
       probably not good enough yet."*
-- [ ] **6. SPEED must visibly change the preview, or not be a control.** The animations and the
+      **Built 2026-08-26** (docs/SVG_IMPORT_PLAN.md §3): the ordinary lower third defaults to
+      GROW, measured off the artwork (containment + arrangement, never size-against-frame); a
+      scorebug, quiz or full-frame backplate keeps shrink; the follower list renders only where
+      something would actually move, and named groups joined the canvas picker so "pick what
+      travels" can reach a layer. E2E-pinned both ways; awaiting the owner's walk (owner-queue).
+- [x] **6. SPEED must visibly change the preview, or not be a control.** The animations and the
       easing list are accepted and liked - *"I think they look good. Nice job... for once I can see
       a difference with the easing"* - but **Speed does nothing visible on most presets**: *"if it
       doesn't work in the preview, it will not impress the customer... Even if it would work in real
       life, it's as bad."* His own hypothesis to test first: speed may only show once an EASE is on
       (slide + bounce is where he could see it), which would mean Speed silently does nothing at the
       default. The standing rule he restated: **"we can't show buttons if they're not working."**
+      **Measured 2026-08-26** (his hypothesis tested, verdict in the owner-queue item): the knob
+      always reached the data - a universal-bank entrance genuinely ran 1.07 / 0.80 / 0.53 s -
+      so nothing was broken; a ±33% step compared from memory across two replays is simply below
+      the noticing threshold on a smooth curve, and bounce reads because its RHYTHM changes, not
+      its duration. The buttons now write 0.6 / 1 / 1.8 (≈1.33 / 0.80 / 0.44 s on the same
+      entrance), on every surface that offers the knob. Awaiting the owner's eyes (owner-queue).
 
 **Deliberately NOT in the three weeks: CUSTOMIZING that behaviour.** Owner, 2026-08-22 - *"what if
 I don't want to be able to lock it? I just want to reveal it immediately."* Same question one level
