@@ -1,0 +1,273 @@
+# THE SAME SUITE, AGAINST A REAL HOSTED DATABASE — the one thing the nightly cannot be.
+#
+# configured-suite.yml runs `e2e/configured/` against a local `supabase start` stack. That is the
+# right default: no Supabase secret in GitHub, nothing written to production, $0. It has one
+# blind spot, and this job exists for exactly that blind spot and nothing else.
+#
+# A LOCAL STACK ANSWERS IN ~1 ms. A HOSTED ONE ANSWERS IN ~207 ms FROM A RUNNER.
+#
+# Measured 2026-08-24, and it was not academic. Cloud sync re-fetched every tombstone in its own
+# sequential HTTP round trip - 141 of them on a seven-week-old account. On a laptop beside the
+# database that is 5 ms each and under a second; from an Azure-hosted runner it is 207 ms each and
+# 29.4 seconds, which blew a 30-second wait and failed six specs. A REAL user-facing defect, whose
+# cost grew with every delete an account had ever made, and which was invisible at 1 ms. The local
+# nightly would never have caught it, and after the fix nothing could catch its successor either.
+#
+# So this job is not "the suite again". It is the only place a latency-shaped regression can show
+# up before a user finds it.
+#
+# WHY IT POINTS AT STAGING AND NOT PRODUCTION. The suite creates and deletes real rows on every
+# run. Until 2026-08-25 those landed in the owner's PRODUCTION project, against
+# playwright.live.config.ts's own advice ("point .env at a test/staging Supabase project ... never
+# a production tenant"). `noacg-staging` is a separate project in a separate FREE organisation -
+# $0, because an extra project inside the Pro org would bill $10/month. Its service-role key is in
+# this repository's secrets and that is deliberate and safe: the project holds nothing but
+# migrations and a throwaway account, so a leak costs nothing. The PRODUCTION service-role key is
+# still nowhere near GitHub, and must stay that way.
+#
+# EVERY 3-4 DAYS, NOT WEEKLY. A free Supabase project pauses after 7 days of inactivity, and a
+# paused project fails this job in a way that reads like a regression. Sunday and Wednesday keeps
+# the longest gap at four days, comfortably inside the window, and the run itself is what keeps
+# the project awake.
+#
+# WHAT IT DOES NOT DO: gate on a duration threshold. The honest signal today is the recorded
+# number, not a line drawn through it - a too-tight threshold becomes the next flaky alarm, and
+# this repository has spent enough of its attention on those. The job records per-spec durations
+# in its summary so a regression is visible to a person; turn that into a gate only once several
+# runs have shown what "normal" is.
+
+name: hosted-latency
+
+on:
+  schedule:
+    - cron: '40 2 * * 0,3' # Sundays and Wednesdays, 02:40 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: hosted-latency
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write # the rolling-issue steps
+
+jobs:
+  hosted:
+    name: Configured E2E against hosted staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Staging only. These names are prefixed so nobody can confuse them with the production pair
+      # that still lives in .env on the owner's machine and nowhere else.
+      VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+      # The account is minted per run against staging, so it needs no secret - the same reasoning
+      # as the local job. Six characters is GoTrue's minimum and account.spec.ts round-trips a
+      # password change.
+      E2E_EMAIL: e2e@noacg.staging
+      E2E_PASSWORD: noacg-e2e-staging-pw
+      MIN_TESTS: 33
+      ALLOWED_SKIPS: ''
+    steps:
+      # Before anything is installed, and specific about WHICH secret is missing. Without these the
+      # specs all skip themselves and the run exits 0 having executed nothing.
+      - name: Require the staging secrets
+        run: |
+          missing=""
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+            eval "value=\${$name}"
+            [ -n "$value" ] || missing="${missing} STAGING_${name#VITE_}"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Staging secrets missing::Missing:${missing}. Every spec in e2e/configured/ gates on these and would SKIP itself, so the run would pass having executed nothing. They belong to the noacg-staging project in the FREE org - never production's."
+            exit 1
+          fi
+          # A wrong-project secret is the one mistake that would be catastrophic rather than
+          # merely broken: this suite DELETES rows. Refuse to run against the production ref.
+          case "$VITE_SUPABASE_URL" in
+            *kprolrchuldgfrzspthy*)
+              echo "::error title=Refusing to run against production::STAGING_SUPABASE_URL points at the PRODUCTION project. This suite creates and deletes real rows. Point it at noacg-staging."
+              exit 1 ;;
+          esac
+          echo "Staging secrets present, and not production."
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - uses: ./.github/actions/playwright-chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+
+      # STAGING'S SCHEMA IS APPLIED BY A HUMAN, ON PURPOSE, AND THIS JOB DOES NOT TRY TO ASSERT IT.
+      #
+      # The obvious design was `supabase db push` here, plus a ledger check. Both were written and
+      # both were removed, because both need a Supabase PERSONAL ACCESS TOKEN, and that token is
+      # ACCOUNT-WIDE: it enumerates every organisation and project, and the same API deletes them.
+      # This repository is public. Putting it in Actions to keep a throwaway database tidy would
+      # hand over a credential that can destroy production - a far worse trade than the one this
+      # whole staging setup was built to avoid (docs/VERIFICATION.md, "Migrations reach production
+      # only when a human pushes them", which refuses the same token for the same reason).
+      #
+      # The migration ledger lives in `supabase_migrations.schema_migrations`, which PostgREST does
+      # not expose, so there is no lower-privilege way to read it from here either.
+      #
+      # What happens if staging IS behind: the specs fail, loudly, because they exercise most of
+      # the schema. That is a worse diagnosis than a ledger mismatch would give, and it is the
+      # honest cost of not shipping the token. Keep staging current with, from a checkout:
+      #     supabase link --project-ref <staging-ref> && supabase db push --linked
+      # and read `node scripts/migration-drift.mjs` for the production half.
+      #
+      # Note this job is still the ONLY place in CI where the schema meets a hosted Postgres at
+      # all. The local nightly cannot stand in: the CLI's local image ships pgcrypto already
+      # reachable, so it applied all 51 migrations green while a fresh hosted project failed
+      # outright on 0003 (supabase/AGENTS.md, "An extension must exist before the migration that
+      # calls it").
+
+      - name: Create the test account and prove it can sign in
+        run: |
+          set -euo pipefail
+          create="$(curl -s -o /tmp/create.json -w '%{http_code}' \
+            -X POST "${VITE_SUPABASE_URL}/auth/v1/admin/users" \
+            -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\",\"email_confirm\":true}")"
+          case "$create" in
+            2*) echo "Account created." ;;
+            422) echo "Account already existed - continuing." ;;
+            *)  echo "::error title=Could not create the test account::admin/users answered ${create}."
+                cat /tmp/create.json; exit 1 ;;
+          esac
+          token="$(curl -s -X POST "${VITE_SUPABASE_URL}/auth/v1/token?grant_type=password" \
+            -H "apikey: ${VITE_SUPABASE_ANON_KEY}" -H 'Content-Type: application/json' \
+            -d "{\"email\":\"${E2E_EMAIL}\",\"password\":\"${E2E_PASSWORD}\"}" | jq -r '.access_token // empty')"
+          if [ -z "$token" ]; then
+            echo "::error title=The test account cannot sign in::The password grant returned no access_token, so all signed-in specs would fail at the sign-in step. Environment fault, not a regression."
+            exit 1
+          fi
+          echo "Test account authenticates against staging."
+
+      # THE MEASUREMENT. Round-trip latency to the hosted project from THIS runner, recorded before
+      # the suite so a slow run can be read against a number rather than a guess. Twenty requests
+      # over one connection, because a fresh TLS handshake per request measures the handshake: the
+      # same mistake made by hand on 2026-08-24 produced 244 ms/request against a true 5 ms.
+      - name: Measure round-trip latency
+        run: |
+          set -euo pipefail
+          # ONE curl invocation with the URL repeated, so the connection is REUSED. A loop of
+          # separate curls measures the TLS handshake instead: done by hand on 2026-08-24 it
+          # reported 244 ms/request against a true 5 ms, and nearly sent the whole diagnosis in the
+          # wrong direction.
+          urls=""
+          for _ in $(seq 1 20); do urls="$urls ${VITE_SUPABASE_URL}/rest/v1/"; done
+          start=$(date +%s%N)
+          curl -s -o /dev/null -H "apikey: ${VITE_SUPABASE_ANON_KEY}" $urls || true
+          end=$(date +%s%N)
+          per=$(( (end - start) / 1000000 / 20 ))
+          echo "round trip to staging: ~${per} ms/request from this runner"
+          {
+            echo "### Hosted latency"
+            echo ""
+            echo "Round trip to \`noacg-staging\` from this runner: **~${per} ms/request**."
+            echo ""
+            echo "For contrast: the local-stack nightly answers in ~1 ms, and the sync defect fixed"
+            echo "on 2026-08-24 needed ~200 ms/request to become visible."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Configured E2E suite against staging
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: hosted-report.json
+        run: npm run test:e2e:live -- --reporter=list,json || true
+
+      # The SAME verdict as the local nightly, from the same script, so the two cannot drift.
+      - name: Assert the suite actually ran
+        id: assert
+        run: >-
+          node scripts/configured-verdict.mjs hosted-report.json
+          --min "$MIN_TESTS" --allow "$ALLOWED_SKIPS"
+          --label "Configured suite (hosted staging)"
+
+      # Per-spec durations, because latency is what this job is for. Reported, never gated - see
+      # the header for why a threshold would be the next flaky alarm.
+      - name: Record per-spec durations
+        if: ${{ !cancelled() }}
+        run: |
+          [ -f hosted-report.json ] || exit 0
+          {
+            echo "### Slowest specs against hosted staging"
+            echo ""
+            jq -r '[.. | objects | select(has("specs")) | .specs[]]
+                   | map({t: .title, ms: ([.tests[]?.results[]?.duration] | add // 0)})
+                   | sort_by(-.ms) | .[0:10][]
+                   | "- \(.ms / 1000 | floor)s — \(.t)"' hosted-report.json
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: hosted-report
+          path: |
+            hosted-report.json
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # Its OWN rolling issue, separate from the local nightly's: a failure here means something
+      # different (hosted-only, latency-shaped, or the staging project itself), and folding the two
+      # together would make each one harder to read.
+      - name: File / update the rolling issue
+        if: ${{ always() && steps.assert.outputs.green != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SUMMARY: ${{ steps.assert.outputs.summary }}
+          FAILHASH: ${{ steps.assert.outputs.failhash }}
+          HARDFAIL: ${{ steps.assert.outputs.hardfail }}
+        run: |
+          TITLE="Hosted-latency suite is red"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MARKER="hosted-failure-set: ${FAILHASH:-unknown}"
+          BODY="$(printf 'The hosted-latency suite failed at %s.\n\n%s\n\nThis tier runs the SAME specs as the nightly but against the hosted staging project, so a failure here that the nightly does not show is the interesting case: it is hosted-only, and most likely latency-shaped. The run summary records the measured round trip and the slowest specs. It can also go red for reasons outside the repository - a paused free project (7 days idle), or staging schema drift.\n\nRun: %s\n\n<!-- %s -->' \
+            "${{ github.sha }}" "${SUMMARY:-the suite never produced a report}" "$RUN_URL" "$MARKER")"
+          EXISTING="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -z "$EXISTING" ]; then
+            gh issue create --title "$TITLE" --body "$BODY"
+            exit 0
+          fi
+          if [ -n "${FAILHASH:-}" ] && [ "${HARDFAIL:-1}" = "0" ]; then
+            LAST="$(gh issue view "$EXISTING" --json comments,body --jq '(.comments | map(.body) | last) // .body')"
+            if printf '%s' "$LAST" | grep -q "$MARKER"; then
+              echo "::notice title=Same failure set already reported::${MARKER} already stands on issue #${EXISTING} and nothing failed outright, so this run adds no comment. The run is still red."
+              exit 0
+            fi
+          fi
+          gh issue comment "$EXISTING" --body "Still red. $BODY"
+
+      - name: Close the rolling issue
+        if: ${{ steps.assert.outputs.green == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TITLE="Hosted-latency suite is red"
+          EXISTING="$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')"
+          if [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --comment "Hosted-latency green again at ${{ github.sha }} (${{ steps.assert.outputs.summary }}): ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+      - name: Fail the run when the suite was not a clean verdict
+        if: ${{ steps.assert.outputs.green != 'true' }}
+        run: exit 1
