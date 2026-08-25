@@ -20,60 +20,22 @@
 //
 //   node scripts/migration-drift.mjs          # human-readable
 //   node scripts/migration-drift.mjs --json   # one JSON line, for the preflight
-import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { ambientEnv } from './read-dotenv.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TIMEOUT_MS = 15_000;
 
-/**
- * Where a .env might be. THE PRIMARY CHECKOUT IS IN THIS LIST ON PURPOSE: `.env` is gitignored, so
- * a linked worktree does not have one, and this check's whole point is to run from a worktree
- * during safe-merge. Looking only beside the script would make it skip in exactly the place it was
- * added for - a check that is always "not checked" is worse than no check, because it reads as
- * reassurance.
- */
-function envCandidates() {
-  const paths = [path.join(ROOT, '.env')];
-  try {
-    // `--git-common-dir` is the SHARED .git; its parent is the primary working tree. In the
-    // primary checkout this resolves to the same file already listed, which is harmless.
-    const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
-    if (common) paths.push(path.join(path.dirname(common), '.env'));
-  } catch {
-    // Not a git checkout, or an old git without --path-format: the local .env is all we have.
-  }
-  return paths;
-}
-
-/** Read a key from the nearest .env WITHOUT pulling in a dependency, and without exporting it into
- *  the environment - the value is used for one fetch and then forgotten. */
-function fromEnvFile(key) {
-  if (process.env[key]) return process.env[key];
-  let text;
-  for (const candidate of envCandidates()) {
-    try {
-      text = readFileSync(candidate, 'utf8');
-      break;
-    } catch {
-      // try the next one
-    }
-  }
-  if (text === undefined) return '';
-  // Last assignment wins, matching how a shell would source the file.
-  let value = '';
-  for (const line of text.split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*)$/.exec(line);
-    if (match && match[1] === key) value = match[2].trim().replace(/^['"]|['"]$/g, '');
-  }
-  return value;
-}
+// ONE definition of "read the checkout's .env", shared with the freshness checks and the paid bench
+// runners (scripts/read-dotenv.mjs). THE PRIMARY CHECKOUT IS IN ITS SEARCH ON PURPOSE: `.env` is
+// gitignored, so a linked worktree does not have one, and this check's whole point is to run from a
+// worktree during safe-merge. Looking only beside the script would make it skip in exactly the place
+// it was added for - and a check that is always "not checked" is worse than no check, because it
+// reads as reassurance.
+const env = ambientEnv(ROOT);
 
 /**
  * The project this repository calls production, taken from the URL the CLIENT is built against.
@@ -83,8 +45,7 @@ function fromEnvFile(key) {
  * database - which is exactly the kind of confident wrong answer this script exists to prevent.
  */
 function productionRef() {
-  const url = fromEnvFile('VITE_SUPABASE_URL');
-  const match = /^https:\/\/([a-z0-9]+)\.supabase\.co/i.exec(url || '');
+  const match = /^https:\/\/([a-z0-9]+)\.supabase\.co/i.exec(env.VITE_SUPABASE_URL || '');
   return match ? match[1] : '';
 }
 
@@ -138,7 +99,7 @@ async function drift() {
   if (local.length === 0) return { status: 'skipped', detail: 'no migrations found on disk' };
 
   const ref = productionRef();
-  const token = fromEnvFile('SUPABASE_ACCESS_TOKEN');
+  const token = env.SUPABASE_ACCESS_TOKEN || '';
   if (!ref || !token) {
     return {
       status: 'skipped',
@@ -165,7 +126,8 @@ if (process.argv.includes('--json')) {
   console.log(JSON.stringify(result));
 } else if (result.status === 'drift') {
   console.error(`Production is missing ${result.missing.length} migration(s): ${result.missing.join(', ')}`);
-  console.error('Apply them from the MAIN checkout (which is linked to production): npx supabase db push --linked');
+  console.error('Apply them from any checkout: npm run db:push (it classifies each statement and');
+  console.error('refuses anything that can remove something, so it needs no permission to run).');
 } else if (result.status === 'ok') {
   console.log(`Production holds all ${result.local} migration(s).`);
 } else {

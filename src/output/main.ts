@@ -10,6 +10,7 @@
 
 import { isBackendConfigured } from '../backend/config';
 import {
+  CONTROL_POLL_MS,
   CONTROL_TAIL_PAGE,
   controlOutputBySlug,
   controlOutputReport,
@@ -336,7 +337,18 @@ async function boot(): Promise<void> {
     }, CATCH_UP_SETTLE_MS);
   }
 
-  // ── Follow the log live (shared discipline: dedupe, hole → tail, refill on resubscribe). ──
+  // ── Follow the log live (shared discipline: dedupe, hole → tail, refill on resubscribe, and
+  // the CONTROL_POLL_MS floor under all three — every recovery above is driven by an event the
+  // socket produces, and a channel that never joins produces none of them). ──
+  //
+  // A renderer that is only ever POLLING is a production running on a 30 s floor instead of a
+  // sub-second stream, and it looks identical to a quiet show from every seat. So it is said in
+  // both places this page can say anything: the debug overlay while it lasts, and the browser
+  // console once — which is what reaches a CasparCG or OBS log when nobody thought to add
+  // `&debug=1` first.
+  const followStartedAt = Date.now();
+  let warnedNotJoined = false;
+  dbg('realtime', 'subscribing…');
   await followControlLog({
     showId: resolved.id,
     // Everything up to here is applied — including the catch-up rows replayed above, which is
@@ -350,8 +362,20 @@ async function boot(): Promise<void> {
       return tail.ok ? tail.value : [];
     },
     onRow: apply,
+    onStatus: ({ status, everJoined }) => {
+      const poll = `${Math.round(CONTROL_POLL_MS / 1000)} s`;
+      dbg('realtime', everJoined ? `following (${status})` : `NOT JOINED (${status || 'no status'}) — polling every ${poll}`);
+      // Only after a full interval with no join: the first status a healthy channel reports can
+      // be CHANNEL_ERROR, and supabase-js rejoins from it within seconds. Warning on that would
+      // teach an operator to ignore this line.
+      if (everJoined || warnedNotJoined || Date.now() - followStartedAt < CONTROL_POLL_MS) return;
+      warnedNotJoined = true;
+      console.warn(
+        `NoaCG output: the Realtime channel has never joined (${status || 'no status'}). ` +
+          `Following the control log by polling every ${poll} — commands can be that late on air.`,
+      );
+    },
   });
-  dbg('realtime', 'following');
 
   // ── Heartbeat: operator surfaces read output_seen_at staleness as "renderer connected". ──
   void controlOutputSeen(outputSlug);

@@ -30,6 +30,17 @@ import type { LimitKey } from '../../src/entitlements/contract.js';
 const MAX_DIRECTORY = 2000;
 const PAGE = 200;
 
+/** Where a user's externalized fonts and images actually live: one flat folder per account, keyed
+ *  `${uid}/${contentHash}` by src/backend/assets.ts. The `public.assets` table this figure used to
+ *  read was a back-reference nothing ever wrote (0 rows against 294 documents), so "Cloud storage"
+ *  was structurally 0 for every account; migration 0052 removed the table and this reads the
+ *  bucket. The 50 MB ceiling has always been enforced elsewhere - `storage_within_quota` (0039)
+ *  sums these same objects - so this is the operator's view, not a limit. */
+const ASSET_BUCKET = 'user-assets';
+/** A 50 MB account at a few hundred kB per font or image cannot approach this; the cap only exists
+ *  so a corrupted folder cannot turn one admin page view into an unbounded listing. */
+const MAX_ASSET_OBJECTS = 1000;
+
 interface DirectoryUser {
   id: string;
   email: string;
@@ -190,7 +201,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
       .gte('created_at', since30)
       .order('created_at', { ascending: false }),
     db.from('documents').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    db.from('assets').select('bytes').eq('user_id', userId),
+    db.storage.from(ASSET_BUCKET).list(userId, { limit: MAX_ASSET_OBJECTS }),
     db.from('admin_users').select('role').eq('user_id', userId).maybeSingle(),
     db
       .from('admin_audit_log')
@@ -219,7 +230,12 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     aiGenerationsToday: ledger.filter((row) => row.created_at >= since1).length,
     renderJobs30d: renders.data?.length ?? 0,
     documents: documents.count ?? 0,
-    storageBytes: (assets.data ?? []).reduce((sum, row) => sum + Number((row as { bytes: number }).bytes ?? 0), 0),
+    // `list()` returns a `.emptyFolderPlaceholder` entry with no metadata for a folder that has
+    // been emptied, so sum only the entries that describe a real object.
+    storageBytes: (assets.data ?? []).reduce(
+      (sum, row) => sum + Number((row as { metadata?: { size?: number } }).metadata?.size ?? 0),
+      0,
+    ),
   };
   const usage: AdminUsage = { ...usageBase, atLimit: atLimit(access, usageBase) };
 

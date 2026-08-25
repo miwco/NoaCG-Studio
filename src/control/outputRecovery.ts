@@ -72,3 +72,49 @@ export function alreadyInSnapshot(
   const at = snapshotAt.get(graphic);
   return at !== undefined && rowId <= at;
 }
+
+// ── THE SAME RULE ON THE RELAY PLANE (control/hostedReceiver.ts) ──────────────────────────────
+//
+// An exported graphic carrying the hosted-control receiver follows the same log, for ONE graphic,
+// through a block of generated ES5 that can import nothing. So the decision lives here — beside
+// the renderer's — rather than being hand-written into the emitted text, and the two forms below
+// are pinned equal by `e2e/hosted-control.spec.ts` rather than trusted to stay that way.
+//
+// IT DIVERGES IN ONE CASE, deliberately, and the divergence is the whole reason this is a second
+// function rather than a call to `planOutputRecovery`:
+//
+//   - A DATED report (`event`, migration 0033) → that row. Identical to the renderer.
+//   - NO report at all → the log START. Identical to the renderer, and the hole this closes:
+//     seeded with the log HEAD, a graphic loaded after the cue was taken dropped that cue for
+//     good — no snapshot to rebuild from, no row left to replay.
+//   - A report with NO baseline → the log HEAD, where the renderer would replay from the start.
+//     Two facts force it. `control_report` (migration 0008) has no `p_event` parameter, so a
+//     report written on THIS plane can never carry a baseline — the renderer's "pre-0033 reader"
+//     edge case is this plane's every single report. And this block has no hidden catch-up pass:
+//     the renderer replays behind `setVisible(false)` and settles off air, while a graphic is its
+//     own stage and would play the outage's whole history out on screen. Replaying a 7-day log
+//     visibly onto a live layer is worse than the gap it would close.
+//
+// So the outage window a report cannot date is still lost HERE, and closing it is a migration
+// (`p_event` on `control_report`) plus a catch-up that hides the graphic — named in
+// docs/CLOUD_PLAYOUT.md §3 rather than left to be rediscovered on air.
+
+/** Where a booting SINGLE-graphic receiver starts reading the log. `logHead` is the resolve's
+ *  `last_event_id`. See the block above for why the middle case differs from the renderer's. */
+export function receiverFollowFrom(graphic: string, live: LiveReportMap, logHead: number): number {
+  const plan = planOutputRecovery([graphic], live);
+  const dated = plan.snapshotAt.get(graphic);
+  if (dated !== undefined) return dated;
+  if (!live[graphic]) return plan.followFrom; // never reported → the log START
+  return typeof logHead === 'number' ? logHead : 0;
+}
+
+/** `receiverFollowFrom` as the ES5 the receiver block emits (no `?.`, no `??` — a CasparCG 2.3
+ *  CEF is ~Chromium 65). Emitted into a template literal, so: no backticks and no `${`. */
+export const RECEIVER_FOLLOW_FROM_JS = `// Where this boot starts reading the log (control/outputRecovery.ts owns the rule).
+  function followFrom(graphic, live, logHead) {
+    var mine = (live || {})[graphic];
+    if (mine && typeof mine.event === 'number') return mine.event;  // a dated report: replay after it
+    if (!mine) return 0;                                            // never reported: the log START
+    return typeof logHead === 'number' ? logHead : 0;               // reported, undatable: the head
+  }`;
