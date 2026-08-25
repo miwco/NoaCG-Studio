@@ -298,10 +298,11 @@ Six rules; the full procedure is **`docs/VERIFICATION.md`**.
   localStorage after 4 s (`durableStoreHealth` -> StorageHealthNotice), and a boot that never
   mounts paints a plain-HTML diagnosis. Pinned by `e2e/network-resilience.spec.ts`; ops view
   in docs/DEPLOYMENT.md ("Where to look").
-- **Every trap a SPEC falls into is in `e2e/AGENTS.md`** (with its thin `CLAUDE.md`), which
-  loads when you work in that directory: the reused dev server, the ghost store, the
-  `addInitScript` storage trap, the preview debounce, waiting for a durable write, where focus
-  is before a Space press, and the video project that generates on its own.
+- **Every trap a SPEC falls into, and every trap of RUNNING the suite, is in `e2e/AGENTS.md`**
+  (with its thin `CLAUDE.md`), which loads when you work in that directory. The same rule holds
+  everywhere: a trap lives in the contract that loads where it fires, not in a list somebody has
+  to remember to read - `supabase/AGENTS.md`, `api/AGENTS.md` and `docs/VERIFICATION.md` carry
+  theirs the same way.
 
 ## Git
 

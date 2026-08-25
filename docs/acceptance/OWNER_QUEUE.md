@@ -53,6 +53,17 @@ Seeded 2026-08-25 from the work that landed in the preceding week.
       a production dashboard.
 - [ ] **ig39 "Key Figures"** - `18d34f2b` (2026-08-20). Route: Browse -> infographics -> ig39.
 
+## Owner actions
+
+Not walks - things only the owner can do, because they cannot be taken back by a later commit.
+
+- [ ] **`npm-publish`** - publish the agent door: `cd cli && npm publish` (npm `noacg` 0.2.0), then
+      `git push` so `.claude-plugin/marketplace.json` goes live and
+      `claude plugin install noacg@noacg-studio` works for anyone. Until this runs, nobody outside
+      this laptop can reach the CLI or MCP server at all. Owner asked to be reminded (2026-08-24).
+      **Sequencing:** any branch adding a new `cli/src/commands/` entry should land first -
+      `claude/caspar-connect-51d22d` has one - or it misses 0.2.0.
+
 ## Blocked on hardware or real conditions
 
 These do not expire. They need equipment or people, not a walkthrough.
