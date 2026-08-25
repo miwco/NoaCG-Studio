@@ -339,9 +339,24 @@ required for the feature and never participates in the runtime fit.
      so a pointer arriving before that finds nothing under it and never asks again. That is a
      property of the surface, not of the test: anything driving this canvas has to wait for a
      layer to actually answer (`awaitPickable` in the spec) rather than for the surface to exist.
-   **Still dropdown-authored:** the FOLLOWERS of a growth rule. §6c's "geometry proposes, the
-   author edits" has its format (step 4) and now its gestures, but nothing yet asks which layers
-   travel - so a real graphic still gets the derived guess. That is the remaining work here.
+   **Followers - the last half - shipped 2026-08-25.** §6c's "geometry proposes, the author
+   edits" is now whole: the proposal is measured on the STEP's own artwork (the same rule the
+   runtime guesses by, outermost-first so a named group and its contents are never both offered),
+   listed with a per-follower Moves/Stretches choice, and editable either in the list or by
+   arming "⌖ Pick what travels" and clicking layers on the artwork. Two rules make it honest:
+   - **An untouched proposal is NEVER written down.** No `followers` field is emitted and the
+     runtime derives exactly as the hug always has. Freezing a design-time guess into every
+     future playout would be worse than the guess, and it would have changed shipped horizontal
+     behaviour.
+   - **The first edit MATERIALIZES the whole set** (the derived-machine idiom,
+     docs/STATE_MACHINE_SCHEMA.md §6a): a no-op at the moment it happens, and from then on the
+     list stops calling itself "proposed" and what the reader sees is what ships.
+   Changing WHICH panel grows clears the set back to a proposal - it was measured against a
+   different element, so keeping it would be stale rows about the wrong panel.
+   **A defect this found, worth keeping:** the panel picker rebuilt its answer as a fresh object,
+   so choosing a panel silently reset the AXIS - a "grows taller" graphic went back to growing
+   sideways with nothing on screen to say so. Two controls where one quietly resets the other is
+   the kind of thing only a walk catches; it now has a mutation-tested guard.
 
 **Why 2 before 4, though 4 is the higher-value feature** (owner: "I don't want vertical growth
 implemented against a field distinction we're about to remove"): the growth half - moving a panel

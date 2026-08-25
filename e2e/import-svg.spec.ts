@@ -1536,6 +1536,109 @@ test('svg import: dragging a rectangle makes it the growing panel, and says whic
   await expect(mode).toHaveValue('shrink');
 });
 
+// ── FOLLOWERS ARE DECLARED, GEOMETRY ONLY PROPOSES (docs/SVG_IMPORT_PLAN.md §6c) ──────────
+// Sideways, "anything drawn past the growing edge" is a fair guess. Downwards it is not: below a
+// panel sit things that should move, things that should stretch, and things pinned to the frame
+// that must stay, and no measurement separates them. So the guess is SHOWN and the author edits
+// it - and the moment they do, the whole set becomes theirs and is emitted as data.
+//
+// The board grows down; the caption below it should travel and the footer pinned to the frame
+// bottom should not - which is exactly the distinction geometry cannot make.
+const FOLLOWERS_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="1200" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="260" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Caption" x="300" y="340" width="1200" height="60" rx="8" fill="#f6a623"/>
+  <rect id="Strap" x="0" y="1000" width="1000" height="60" fill="#20242c"/>
+</svg>`;
+// Shape ids are ranked WIDEST FIRST, not by document order: s0 Board (1200), s1 Caption (1200,
+// tied and second in the file), s2 Strap (1000).
+
+test('svg import: the followers of a growing panel are proposed, then become the author’s own', async ({ page }) => {
+  await dropSvgMarkup(page, FOLLOWERS_SVG, 'followers.svg');
+  await page.locator('.wz-next').click();
+
+  // Nothing is proposed until something grows - a follower list for a fixed graphic would be a
+  // control with no effect.
+  await expect(page.getByTestId('map-svg-followers')).toHaveCount(0);
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-y');
+  await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
+
+  // THE PROPOSAL, measured off the artwork: everything drawn below the board. It says so - the
+  // reader must be able to tell a guess from their own answer.
+  const list = page.getByTestId('map-svg-followers');
+  await expect(list).toContainText('proposed');
+  await expect(page.getByTestId('map-svg-follower-s1')).toBeVisible(); // the caption
+  await expect(page.getByTestId('map-svg-follower-s2')).toBeVisible(); // the frame-bottom strap
+
+  // …and the strap is exactly the thing geometry got wrong: it is pinned to the frame, so the
+  // author drops it. That first edit MATERIALIZES the set, and the list stops calling itself a
+  // proposal.
+  await page.getByTestId('map-svg-follower-drop-s2').click();
+  await expect(page.getByTestId('map-svg-follower-s2')).toHaveCount(0);
+  await expect(list).not.toContainText('proposed');
+  await page.getByTestId('map-svg-follower-mode-s1').selectOption('grow');
+
+  await createProject(page);
+
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  // WHAT THE READER SAW IS WHAT SHIPPED: one rule, growing down, with exactly the follower they
+  // kept and the behaviour they chose - and the strap is nowhere in the table.
+  const table = /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(js)![0];
+  expect(table).toContain('version: 1');
+  expect(table).toContain("axis: 'y'");
+  expect(table).toMatch(/followers: \[\{ el: 'g0f0', mode: 'grow' \}\]/);
+  // One follower, not two - the dropped strap left no row behind.
+  expect(table.match(/mode: '/g)).toHaveLength(1);
+});
+
+test('svg import: picking WHICH panel grows does not quietly change which WAY', async ({ page }) => {
+  // A real defect, found by the test above rather than by reading the code: the panel picker
+  // rebuilt the whole answer as a fresh object, so choosing a panel dropped the direction the
+  // reader had just chosen and sent a "grows taller" graphic back to growing sideways - with
+  // nothing on screen to say it had happened. Two controls, one of them silently resetting the
+  // other, is the kind of thing only a walk catches.
+  await dropSvgMarkup(page, FOLLOWERS_SVG, 'followers.svg');
+  await page.locator('.wz-next').click();
+
+  const mode = page.getByTestId('map-svg-stretch-mode');
+  await mode.selectOption('grow-y');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
+
+  // Pick a DIFFERENT panel, then the original one back. Neither may touch the direction.
+  await page.getByTestId('map-svg-stretch-shape').selectOption('s1');
+  await expect(mode).toHaveValue('grow-y');
+  await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
+  await expect(mode).toHaveValue('grow-y');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
+
+  // …and the follower set goes back to being a PROPOSAL, because the one that was there was
+  // measured against a different element and would be stale rows about the wrong panel.
+  await expect(page.getByTestId('map-svg-followers')).toContainText('proposed');
+});
+
+test('svg import: an untouched proposal is left to the runtime, not frozen into the graphic', async ({ page }) => {
+  // A reader who never opens the follower list has expressed no opinion, so the graphic ships
+  // WITHOUT a follower table and the runtime derives the set the way the hug always has. Writing
+  // the proposal down instead would freeze a design-time guess into every future playout.
+  await dropSvgMarkup(page, FOLLOWERS_SVG, 'followers.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-x');
+  await createProject(page);
+
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  const table = /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(js)![0];
+  expect(table).toContain("axis: 'x'");
+  expect(table).not.toContain('followers:');
+  // …and the comment above the row says which of the two it is, in the file the user can read.
+  expect(table).toContain('drawn past its moving edge travels with it');
+});
+
 test('svg import: a value wraps inside the height the design drew, and never past it', async ({ page }) => {
   // Wrapping is allowed only into room the artwork already has: the panel's own height, down to
   // whatever is drawn below the line. How many lines that is depends on the SIZE - a 190px panel

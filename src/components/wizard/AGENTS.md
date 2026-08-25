@@ -270,7 +270,17 @@ a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the 
 with no drag turns it off). The handler is held in a REF, never state - see the draw handler
 above for what state costs. **A pointer is a ONE-SHOT and the rects arrive a frame after the
 document commits**, so anything driving this canvas must wait for a layer to ANSWER, not for the
-surface to exist (`awaitPickable`). Followers are NOT yet pickable - that is the open half.
+surface to exist (`awaitPickable`).
+**FOLLOWERS: geometry proposes, the author edits** (plan §6c). `proposeFollowers` measures the
+same guess the runtime makes, but on the step's own render so the reader can see it, outermost-
+first (a named group and its contents are never both offered). **An untouched proposal emits
+NOTHING** - the runtime derives, as the hug always did; writing the guess down would freeze a
+design-time measurement into every playout. **The first edit materializes the whole set**
+(`svgStretch.followers`, the derived-machine idiom) and the label stops saying "proposed".
+Arming `followArmed` makes a canvas pick toggle a FOLLOWER instead of a binding - two meanings
+for one gesture need a visible mode, not a modifier key. **Every handler that patches
+`svgStretch` must SPREAD it**: rebuilding the object dropped the axis, and picking a panel
+silently sent a "grows taller" graphic back to sideways.
 The step also asks THE HUG (`svgStretch` -> `DesignSvg.stretch`): when the text is too long,
 does the line shrink (default, and every board's answer) or does a picked RECTANGLE grow? Never
 inferred from geometry - the shipped lower third is a full-frame artboard and the shipped
