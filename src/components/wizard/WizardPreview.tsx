@@ -171,6 +171,9 @@ export default function WizardPreview({
   const drawRect = drawIn ? rects[drawIn] ?? null : null;
   // The marquee being dragged, in canvas px; null when no drag is in flight.
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // A finished drag the ARTWORK HAS NOT BEEN MEASURED FOR YET (see onDrawUp). Held in canvas
+  // px, exactly as the marquee was, until a rect turns up to report it against.
+  const [heldBox, setHeldBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const dragFrom = useRef<{ x: number; y: number } | null>(null);
   // Whichever pointer layer is mounted - draw or pick, never both. Pointer positions become
   // canvas px against ITS box, so the two share one ref rather than one each.
@@ -362,23 +365,54 @@ export default function WizardPreview({
     });
   };
 
+  // Reported RELATIVE TO THE ARTWORK, as fractions of its box: the step knows what a design
+  // px is and this component deliberately does not. Clamped to the artwork because a placed
+  // field is positioned inside the design unit — a box half outside it would be authored at
+  // a coordinate the emitted rule cannot express.
+  const reportDrawnBox = useCallback(
+    (box: { x: number; y: number; w: number; h: number }, rect: CanvasRect) => {
+      const clamp = (v: number) => Math.min(1, Math.max(0, v));
+      const x0 = clamp((box.x - rect.left) / rect.width);
+      const y0 = clamp((box.y - rect.top) / rect.height);
+      const x1 = clamp((box.x + box.w - rect.left) / rect.width);
+      const y1 = clamp((box.y + box.h - rect.top) / rect.height);
+      onDraw?.({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    },
+    [onDraw],
+  );
+
+  // A DROP IS NEVER THROWN AWAY, even when there is nothing yet to measure it against. The
+  // artwork's rect arrives from INSIDE the document — a `track` post, then a frame, then a
+  // message back — and every rebuild clears the whole map outright, so a reader who arms the
+  // tool and drags straight away can finish the gesture in a window where `drawRect` is null.
+  // This used to `return` here: the marquee vanished, no field appeared, and nothing anywhere
+  // said why. It is also what red-mained CI on 2026-08-24 (issue #40) and then cleared its own
+  // alarm without a fix - unreproducible in 20 local runs, and exact on the first run with the
+  // rect delivery delayed by 4s. Holding the box costs a frame or two and cannot lose it.
   const onDrawUp = () => {
     const box = marquee;
     dragFrom.current = null;
     setMarquee(null);
-    if (!box || !drawRect || !onDraw) return;
-    if (!(drawRect.width > 0) || !(drawRect.height > 0)) return;
-    // Reported RELATIVE TO THE ARTWORK, as fractions of its box: the step knows what a design
-    // px is and this component deliberately does not. Clamped to the artwork because a placed
-    // field is positioned inside the design unit — a box half outside it would be authored at
-    // a coordinate the emitted rule cannot express.
-    const clamp = (v: number) => Math.min(1, Math.max(0, v));
-    const x0 = clamp((box.x - drawRect.left) / drawRect.width);
-    const y0 = clamp((box.y - drawRect.top) / drawRect.height);
-    const x1 = clamp((box.x + box.w - drawRect.left) / drawRect.width);
-    const y1 = clamp((box.y + box.h - drawRect.top) / drawRect.height);
-    onDraw({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    if (!box || !onDraw) return;
+    if (drawRect && drawRect.width > 0 && drawRect.height > 0) reportDrawnBox(box, drawRect);
+    else setHeldBox(box);
   };
+
+  // The held drop, placed the moment the artwork reports a box. The rect describes the artwork,
+  // which does not move while the step is open, so a box measured a frame late lands where it
+  // was drawn rather than where the artwork drifted to.
+  useEffect(() => {
+    if (!heldBox || !drawRect || !onDraw) return;
+    if (!(drawRect.width > 0) || !(drawRect.height > 0)) return;
+    setHeldBox(null);
+    reportDrawnBox(heldBox, drawRect);
+  }, [heldBox, drawRect, onDraw, reportDrawnBox]);
+
+  // Disarming — cancelling, or leaving the step — drops anything still held. A field appearing
+  // in a graphic nobody is mapping any more is worse than the gesture that was lost.
+  useEffect(() => {
+    if (!drawing) setHeldBox(null);
+  }, [drawing]);
 
   // The view: whole canvas by default; zoomed reframes onto the graphic's box.
   const fitScale = Math.min(stage.w / width, stage.h / height) || 0.2;
@@ -471,6 +505,10 @@ export default function WizardPreview({
                 ref={canvasLayerRef}
                 className="wz-stage-draw"
                 data-testid="wz-preview-draw"
+                // Whether the artwork has reported a box yet. A drop before it has is HELD
+                // rather than lost (onDrawUp), and this is how that window is observable —
+                // from a spec, and to anyone reading the DOM to work out why a drag paused.
+                data-measured={drawRect && drawRect.width > 0 && drawRect.height > 0 ? 'true' : 'false'}
                 onPointerDown={onDrawDown}
                 onPointerMove={onDrawMove}
                 onPointerUp={onDrawUp}

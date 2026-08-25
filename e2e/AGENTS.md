@@ -64,6 +64,24 @@ belong where specs are written rather than in the contract every session loads.
   tween touches none of what it asserted. For a HELD key use real auto-repeat
   (`e2e/_keys.ts holdKeyRepeats`, CDP `autoRepeat: true`); `keyboard.down()` sends one keydown and
   never repeats, so it cannot exercise the gesture at all.
+- **A race you cannot reproduce is FAULT-INJECTED, never repeated harder.** `--repeat-each=20`
+  proves nothing when it passes: the window is narrower on this laptop than on a loaded runner,
+  so the honest report is "not reproduced in 20 runs" and the next move is to widen the window on
+  purpose. Find the code path that could produce the EXACT failure signature, force its condition
+  with a temporary source patch, and check the signature matches down to the line and column.
+  `import-svg.spec.ts:1207` red-mained main for ~7h (issue #40) and then went green with no fix;
+  20 repeats could not reproduce it, and one run with the preview's rect delivery delayed by 4s
+  reproduced it exactly - `toContainText` failing at `1207:51`, the same assertion, after the
+  marquee assertion above it had passed. That is a measurement; a green repeat-each is not.
+  Revert the patch before doing anything else, and mutation-test the fix by re-injecting it.
+- **A gesture that a handler can silently DISCARD makes an intermittent spec, and the spec cannot
+  say so.** When a drop, a click or a key is guarded by state that arrives asynchronously
+  (`if (!measuredRect) return`), the failure is a missing result rather than an error, and every
+  assertion above it still passes - so the spec fails somewhere that describes the symptom and
+  never the cause. Two things fix it and both are needed: the handler must HOLD the gesture until
+  it can honour it rather than dropping it, and the readiness must be observable in the DOM
+  (`wz-preview-draw`'s `data-measured`) so a spec can open the window deliberately instead of
+  racing it. Asserting harder on the symptom just moves the flake.
 
 ## Traps when RUNNING the suite
 

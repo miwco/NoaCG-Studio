@@ -1204,7 +1204,14 @@ test('svg import: a field drawn on the artwork becomes a real field, where it wa
 
   // One row, and the tool disarms itself: drawing a field is one gesture, not a mode the
   // reader has to remember to leave.
-  await expect(page.getByTestId('map-svg-added')).toContainText('1 added');
+  // THE MESSAGE IS THE POINT. This assertion red-mained main for ~7h on 2026-08-24 (issue #40)
+  // and then went green with no fix, because the only thing it could say was that some text was
+  // missing. The marquee above proves the drag happened, so a failure HERE means the drop was
+  // swallowed between mouseup and the row - which is one specific bug, worth naming.
+  await expect(
+    page.getByTestId('map-svg-added'),
+    'the drag was made (the marquee showed) but no field arrived - the drop was swallowed',
+  ).toContainText('1 added');
   await expect(page.getByTestId('wz-preview-draw')).toHaveCount(0);
   await page.locator('[data-testid^="map-svg-added-title-"]').fill('Subtitle');
   await page.locator('[data-testid^="map-svg-added-sample-"]').fill('Live from the studio');
@@ -1274,6 +1281,49 @@ test('svg import: a field drawn on the artwork becomes a real field, where it wa
   expect(reported.room.height).toBe(0);
   expect(reported.room.width).toBeGreaterThan(0);
   expect(reported.over).toEqual(['f1']);
+});
+
+// ── A DROP BEFORE THE ARTWORK HAS BEEN MEASURED ──────────────────────────────────────────
+// The box a drag reports is a fraction of the ARTWORK's rect, and that rect is pushed from
+// inside the preview document - a `track` post, a frame, a message back - and cleared outright
+// on every rebuild. So there is a real window, hundreds of ms wide after any rebuild, in which
+// the tool is armed and there is nothing to measure a drop against. That window used to
+// DISCARD the gesture silently: marquee gone, no field, no error.
+//
+// It is the whole of issue #40. Twenty repeats could not reproduce it, and delaying the rect by
+// 4s reproduced it exactly, on the first run, at the assertion above. This spec closes it for
+// good by opening the window on purpose rather than racing it: `data-measured` says when the
+// artwork has a box, editing a sample rebuilds the document and takes it away, and the drag
+// then happens while it is provably absent. Break the hold in WizardPreview's `onDrawUp` (go
+// back to `if (!drawRect) return`) and this goes red every time.
+test('svg import: a field drawn before the artwork is measured is held, not lost', async ({ page }) => {
+  await dropSvgMarkup(page, STAGE_SVG, 'stage.svg');
+  await page.locator('.wz-next').click();
+
+  const surface = page.getByTestId('wz-preview-draw');
+  await page.getByTestId('map-svg-add-field').click();
+  await expect(surface).toBeVisible();
+  // Settled first, so the state under test is one the spec CREATED rather than one it inherited.
+  await expect(surface).toHaveAttribute('data-measured', 'true');
+
+  // Editing a sample writes it into the artwork, which rebuilds the document and drops every
+  // measured rect with it. The tool stays armed across that - the reader never touched it.
+  await page.getByTestId('map-svg-sample-t0').fill('Later tonight');
+  await expect(surface).toHaveAttribute('data-measured', 'false');
+
+  // …and the drag lands anyway.
+  await drawField(page, [0.25, 0.5], [0.55, 0.56]);
+  await expect(
+    page.getByTestId('map-svg-added'),
+    'a drop made before the artwork reported its box was thrown away instead of held',
+  ).toContainText('1 added');
+
+  await createProject(page);
+  const fields = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.fields.map((f) => `${f.field}:${f.title}`);
+  });
+  expect(fields).toEqual(['f0:Headline', 'f1:Text 1']);
 });
 
 test('svg import: a drawn field can be renamed and removed, and cancelling draws nothing', async ({ page }) => {

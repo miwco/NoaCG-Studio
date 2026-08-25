@@ -31,6 +31,11 @@ Seeded 2026-08-25 from the work that landed in the preceding week.
       sessions. Route: `/app` -> Create -> Import graphic, bring in any SVG, add a field on the
       canvas, then type past the box and watch it grow. What to look at: whether growth happens
       where you expect it, and whether the field you drew lands where you drew it.
+      **Updated 2026-08-25**: a box drawn before the artwork had been measured used to be thrown
+      away silently - the marquee vanished on release and no field appeared, with no error anywhere.
+      The drop is now held and placed as soon as the artwork reports its box.
+      Worth one deliberate try: arm '+ Draw a field on the artwork' and drag IMMEDIATELY, without
+      waiting for the preview to settle. The field should still land where you dragged.
 - [ ] **Wizard motion sense** (merged) - travel raised to about 10% of frame, the easing list now
       reacts to the motion, ten cards collapsed to six families, a universal bank in every
       category. Route: Create -> any category -> Animation step. What to look at: whether Speed and
