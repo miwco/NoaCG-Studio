@@ -182,6 +182,36 @@ jobs:
             echo "::warning title=E2E plan::No origin/main to measure a merge against - running the FULL suite."
             BASE=""
           fi
+          # RECOVER A BASE INSTEAD OF ESCALATING - but only for an ordinary branch PUSH.
+          # `github.event.before` is all zeros on the FIRST push of a branch, so a brand-new
+          # branch had no diff base and ran the FULL suite whatever it contained. That is not a
+          # rare corner here: the rhythm is a fresh worktree and a new branch per task, and
+          # safe-merge Phase 3 pushes that branch to get its verdict - so EVERY safe-merge paid
+          # for a full suite before anything else happened. Measured 2026-08-25 on
+          # `claude/vercel-team-rename`: two files, both already in the planner's IGNORE list
+          # (`docs/` and `.github/`), classifier verdict `mode: none` - and 9 shards ran.
+          #
+          # The fork point answers the same question honestly. It is an ancestor of HEAD, so its
+          # diff covers this branch's own work PLUS anything main did since the fork: it can only
+          # ever plan MORE than the truth, never less. That is the same argument `--integration`
+          # below already rests on.
+          #
+          # Deliberately NOT applied to `workflow_dispatch`. A dispatched run has no base either,
+          # and that is exactly how `gh workflow run ci.yml --ref <branch>` forces a full suite -
+          # the documented way to answer a preflight that refuses a skipped-shard run. Recovering
+          # a base there would quietly remove the one manual door for demanding everything.
+          # `main` is untouched too: it runs everything by the block below, on purpose.
+          if [ "$EVENT" = "push" ] && [ "$REF" != "refs/heads/main" ] \
+            && { [ -z "$BASE" ] \
+              || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+              || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; } \
+            && git rev-parse --verify --quiet origin/main >/dev/null; then
+            FORK="$(git merge-base origin/main HEAD 2>/dev/null || true)"
+            if [ -n "$FORK" ] && git cat-file -e "${FORK}^{commit}" 2>/dev/null; then
+              echo "::notice title=E2E plan::No push base ('${BASE}') - measuring from the fork point ${FORK} rather than running everything."
+              BASE="$FORK"
+            fi
+          fi
           # MAIN RUNS EVERYTHING. Every other run tests what THIS change can affect, which is
           # the right economics for a branch and the wrong one for the branch production ships
           # from: a spec no change maps to is never selected, so it can break and stay green
@@ -199,9 +229,11 @@ jobs:
           if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ]; then
             echo "::notice title=E2E plan::main - running the FULL suite regardless of the diff."
             PLAN="$(node scripts/e2e-affected.mjs --json --all)"
-          # An absent, all-zero (first push of a branch) or garbage-collected base means we
-          # cannot know what changed. Then we do not guess: the fallback is the whole suite,
-          # because the one thing a fallback must never do is run LESS than the truth.
+          # An absent, all-zero or garbage-collected base means we cannot know what changed.
+          # Then we do not guess: the fallback is the whole suite, because the one thing a
+          # fallback must never do is run LESS than the truth. Since the fork-point recovery
+          # above, this is the LAST resort rather than the first push of every branch - it is
+          # what a dispatched run, or a branch with no reachable `origin/main`, still lands on.
           elif [ -z "$BASE" ] \
             || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
             || ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
