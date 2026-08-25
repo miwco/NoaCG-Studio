@@ -121,6 +121,39 @@ on a graphic somebody else drew.
       from the dashboard - lock, reveal, +1, -1 - with the operator never seeing code. That walk is
       the acceptance test for the whole goal, and it is the rehearsal for 2026-09-12.
 
+**From the owner's walk of the SVG road, 2026-08-25.** The canvas itself was accepted outright -
+*"I like that it's only one canvas... It works great"* - and everything below is about the WORDS
+around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue/` items.
+
+- [ ] **4. ONE LINE PER THING, and an ⓘ for the rest.** *"There's kind of a lot of text in this
+      fields page. I would like that there will be less text and it would be so intuitive so you
+      don't have to read that much."* The rule he stated: **everything automatically visible is ONE
+      LINE**, and anything more sits behind a small eye/ⓘ per section that also says *why this
+      section is here at all* - the quiz behaviour block reads as random without it. This is the
+      mapping step's information design, not a copy trim, and the same rule applies to every wizard
+      step. A documentation page is wanted eventually, with no illusions about it: *"no one wants
+      to read documentation. They just want everything to work."*
+- [ ] **5. "What travels with it" must explain itself, or not be asked.** The one thing on the walk
+      he could not understand: *"my brain does not really understand how I choose what travels with
+      it. What am I choosing?"* Two problems under it, and the second is the deeper one:
+      - the picker offers **fields**, so clicking under a lower third only ever hits text layers -
+        he asked, reasonably, whether he was meant to add all three fields, and what that would do;
+      - he expects the ordinary case to need no question at all: *"of course that text should be
+        able to become longer and the background should grow with it. I don't know why we need to
+        choose them."* The declared set exists because geometry cannot tell a strap pinned to the
+        frame from a caption that should move (`docs/SVG_IMPORT_PLAN.md` §6c) - but if the common
+        case has to be authored by hand, **the default is wrong, not the reader**. Make the
+        ordinary lower third work with nothing chosen, and ask only where it is genuinely ambiguous.
+      His bar, worth quoting on any surface: *"If I can't automatically understand what it is, it's
+      probably not good enough yet."*
+- [ ] **6. SPEED must visibly change the preview, or not be a control.** The animations and the
+      easing list are accepted and liked - *"I think they look good. Nice job... for once I can see
+      a difference with the easing"* - but **Speed does nothing visible on most presets**: *"if it
+      doesn't work in the preview, it will not impress the customer... Even if it would work in real
+      life, it's as bad."* His own hypothesis to test first: speed may only show once an EASE is on
+      (slide + bounce is where he could see it), which would mean Speed silently does nothing at the
+      default. The standing rule he restated: **"we can't show buttons if they're not working."**
+
 **Deliberately NOT in the three weeks: CUSTOMIZING that behaviour.** Owner, 2026-08-22 - *"what if
 I don't want to be able to lock it? I just want to reveal it immediately."* Same question one level
 up, soft deadline, and the north star note above says why it is the one that matters most. For the
