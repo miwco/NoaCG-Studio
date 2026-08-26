@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-26
+---
 # Browse: searching "credit", and what the first row looks like
 
 **Date:** 2026-08-26 · **Branch:** `claude/browse-template-discovery-142aa1`
