@@ -22,6 +22,8 @@ What to look at:
   Claude Code shorthand (one of the three marketplaces already on this machine is a personal
   handle). Taking it out had cost the one-command plugin install, so it is back:
   `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`,
-  both run end to end and removed again before being written down. Nothing is owed a decision here.
+  both run end to end and removed again before being written down. If you ever want the handle
+  gone anyway, the two ways are in `2026-08-26-a-marketplace-address-without-your-handle.md`, and
+  neither is urgent.
 - **Do the copy buttons feel right?** All sixteen command blocks have one. The page is complete
   with JavaScript off: the buttons are added by `src/docs/docs.ts`, so nothing is lost without it.

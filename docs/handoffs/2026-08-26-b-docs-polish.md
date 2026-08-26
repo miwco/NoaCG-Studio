@@ -147,6 +147,36 @@ A wave view that reads branch-ahead state rather than job history will report it
 - **The handle in `href`s** (about 500 exported template footers, the terms and privacy pages, the
   npm `repository` field). Only a repository move fixes those, which is the owner-queue item.
 
+## Follow-up: the handle came back
+
+Branch `claude/restore-plugin-marketplace-command`, off main after this one landed.
+
+The handle removal was an over-correction and the owner withdrew the reason for it the same day:
+the worry was looking like a hobby project, not the name itself, and `owner/repo` is the
+documented Claude Code shorthand (one of the three marketplaces already configured on this machine
+is a personal handle). Removing the command had cost the only one-command plugin install, which is
+the skill and `/noacg:graphic` as well as the server. In the owner's words it was **"a vanity
+reason and not our true reason to break the functionality"**.
+
+So `claude plugin marketplace add miwco/NoaCG-Studio` + `claude plugin install noacg@noacg-studio`
+are documented again in `/docs`, both READMEs, the plugin README, `AGENT_CLI.md` and the
+`check-tree-shape.mjs` comment - proven end to end against the published marketplace and removed
+again before being written down, the same rule the npm routes got. Everything else from the polish
+round stands: the plain voice, zero em-dashes, the copy buttons, the per-step loop.
+
+The spec that failed if the handle appeared is replaced by one pinning both install routes and the
+marketplace name, because the way this guide breaks now is a command that silently installs nothing.
+
+**The lesson worth keeping** is not about a handle. A preference was written into memory as an
+absolute ("appears nowhere user-facing"), and enforcing it as one deleted a working feature that
+nobody had asked to lose. The memory now records the test as *does this read as amateur*, not *does
+my name appear*. If an ask sounds like a hard rule, check what outcome it protects before treating
+it as one.
+
+The owner-queue item about an org or a hosted manifest STAYS, reframed as optional - he said he
+would look if it were easy and free, and it is both. Deleting it read his "that is totally fine" as
+more final than it was.
+
 ## For the owner
 
 Two files in `docs/acceptance/owner-queue/`: the marketplace-address decision (needs an answer),
