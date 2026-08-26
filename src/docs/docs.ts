@@ -42,4 +42,67 @@ if (nav) {
   update();
 }
 
+
+// Copy buttons. Every command block on this page is meant to be one copy-paste, so each
+// <pre> gets a button that puts its text on the clipboard. The markup in docs.html stays a
+// plain <pre>: the wrapper and the button are built here, so a page with no JavaScript is
+// still a complete, readable, selectable document with nothing missing but the shortcut.
+const RESET_MS = 1600;
+
+const copyText = async (text: string): Promise<boolean> => {
+  // The Clipboard API needs a secure context. The docs are served over HTTPS (and localhost
+  // counts), but a saved or file:// copy of this page is neither, so fall back to the old
+  // selection trick rather than leaving the button dead.
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // A rejected write is not a reason to give up: fall through to the fallback.
+  }
+  const field = document.createElement('textarea');
+  field.value = text;
+  field.setAttribute('readonly', '');
+  field.style.cssText = 'position:fixed;top:0;left:-9999px;opacity:0';
+  document.body.appendChild(field);
+  field.select();
+  let ok: boolean;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  field.remove();
+  return ok;
+};
+
+for (const pre of Array.from(document.querySelectorAll<HTMLPreElement>('.doc-body pre'))) {
+  const shell = document.createElement('div');
+  shell.className = 'cmd';
+  pre.parentNode?.insertBefore(shell, pre);
+  shell.appendChild(pre);
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'cmd-copy';
+  button.textContent = 'Copy';
+  // The label carries the result, so a screen reader hears it without a second live region.
+  button.setAttribute('aria-live', 'polite');
+  shell.appendChild(button);
+
+  let timer = 0;
+  button.addEventListener('click', () => {
+    void copyText(pre.innerText).then((ok) => {
+      window.clearTimeout(timer);
+      button.textContent = ok ? 'Copied' : 'Press Ctrl+C';
+      button.classList.toggle('is-done', ok);
+      timer = window.setTimeout(() => {
+        button.textContent = 'Copy';
+        button.classList.remove('is-done');
+      }, RESET_MS);
+    });
+  });
+}
+
 export {};
