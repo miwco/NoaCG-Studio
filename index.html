@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NoaCG Studio — Create live graphics. Run the show.</title>
+  <title>NoaCG Studio - Create live graphics. Run the show.</title>
   <!-- The description opens with the plain category label the headline deliberately does not
        carry: a search result has no screenshots under it, so the first four words have to say
        what kind of product this is. -->
   <meta
     name="description"
-    content="Live graphics, made simple. NoaCG Studio is a free browser tool for making premium broadcast graphics — from a template, with AI, or from your own artwork — and running them live from an online playout dashboard or exporting them to whatever system you already use."
+    content="Live graphics, made simple. NoaCG Studio is a free browser tool for making premium broadcast graphics from a template, with AI, or from your own artwork, then running them live from an online playout dashboard or exporting them to whatever system you already use."
   />
   <meta name="theme-color" content="#0a0c10" />
   <link rel="canonical" href="https://noacg.studio/" />
@@ -18,7 +18,7 @@
   <link rel="apple-touch-icon" href="/noacg-icon-256.png" />
   <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin />
-  <meta property="og:title" content="NoaCG Studio — Create live graphics. Run the show." />
+  <meta property="og:title" content="NoaCG Studio - Create live graphics. Run the show." />
   <meta property="og:description" content="Live graphics, made simple. Make premium on-air graphics in your browser, run the show from a live playout dashboard, and export to whatever you already use. Free, no sign-up to try." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://noacg.studio/" />
@@ -26,7 +26,7 @@
 
   <!-- Old share links point at the root with a query (?chat=<slug> send-in pages,
        ?template=<slug> community deep links, ?control=<slug> hosted control pages).
-       The app now lives at /app — forward them
+       The app now lives at /app, so forward them
        before anything paints. -->
   <script>
     (function () {
@@ -38,7 +38,7 @@
   <!-- Motion gate: the entrance choreography needs the hero pre-hidden BEFORE first
        paint. The class is only added when motion is wanted (never for
        prefers-reduced-motion), and a fallback timer removes it if the motion module
-       fails to boot — no JS, old browser, blocked chunk — so content can never stay
+       fails to boot (no JS, old browser, blocked chunk), so content can never stay
        hidden. The motion module itself is loaded at the end of <body>. -->
   <script>
     (function () {
@@ -52,7 +52,7 @@
   </script>
 
   <style>
-    /* NoaCG Studio landing — brand system: dark control-room ground, one amber "on-air"
+    /* NoaCG Studio landing. Brand system: dark control-room ground, one amber "on-air"
        accent, restrained glow (NoaCG-Brand-Kit/BRAND-MANUAL.md §3). */
     @font-face {
       font-family: "Space Grotesk";
@@ -201,7 +201,7 @@
     }
     .card code { font-family: var(--mono); font-size: 12.5px; color: var(--paper); background: rgba(232,237,242,0.06); padding: 1px 6px; border-radius: 4px; }
 
-    /* ── The agent door: real, installable commands — never a faked terminal session.
+    /* ── The agent door: real, installable commands, never a faked terminal session.
        Shown as the commands a user types, without invented output. ── */
     .agent-cli {
       margin-top: 30px; padding: 18px 22px; overflow-x: auto;
@@ -306,8 +306,8 @@
     .walk-rail { position: absolute; left: 7px; top: 12px; bottom: 12px; width: 2px; border-radius: 1px; background: var(--line); }
     .walk-rail-fill { position: absolute; inset: 0; border-radius: 1px; background: var(--amber); box-shadow: 0 0 10px rgba(246, 166, 35, 0.45); transform: scaleY(0); transform-origin: 50% 0; }
     html:not(.js-motion) .walk-rail-fill { transform: none; }
-    /* Each step owns roughly a screen of scroll — that is what gives the viewer beside it time
-       to be read before the next shot cuts in — and its copy is CENTRED in that screen, so the
+    /* Each step owns roughly a screen of scroll. That is what gives the viewer beside it time
+       to be read before the next shot cuts in, and its copy is CENTRED in that screen, so the
        text a reader is on always sits level with the picture it describes. */
     .walk-step {
       display: flex; align-items: center; min-height: 76vh;
@@ -346,7 +346,7 @@
       font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint);
     }
     /* Narrow: nothing is sticky, so each step carries its own picture and the viewer stands
-       down entirely — a 40vh sticky pane on a phone is a scroll trap, not a feature. */
+       down entirely: a 40vh sticky pane on a phone is a scroll trap, not a feature. */
     .walk-inline { display: none; margin-top: 20px; }
     @media (max-width: 900px) {
       .walk-grid { grid-template-columns: 1fr; gap: 0; }
@@ -390,7 +390,7 @@
        pre-paint hero gate, hover microinteractions, and the on-air showcase. All animation
        is transforms/opacity; GSAP owns the timing. */
 
-    /* Masked headline lines — the reveal slides the inner span up through the mask.
+    /* Masked headline lines. The reveal slides the inner span up through the mask.
        The tiny padding/margin pair keeps descenders (g, p) out of the clip. */
     h1 .hl { display: block; overflow: hidden; padding-bottom: 0.12em; margin-bottom: -0.12em; }
     h1 .hl-in { display: block; }
@@ -422,7 +422,7 @@
     .platforms .chip:hover, .targets .chip:hover { color: var(--paper); border-color: rgba(232, 237, 242, 0.24); }
 
     /* ── Hero showcase: a program monitor cycling real broadcast graphics.
-       Deliberately NOT an editor mockup — only the on-air output. ── */
+       Deliberately NOT an editor mockup: only the on-air output. ── */
     .showcase {
       margin-top: 48px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
       background: var(--panel); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
@@ -548,13 +548,13 @@
         <!-- The headline names two verbs, not the category, so the lede has to say plainly what
              this makes - it is the first line under a name nobody knows yet. -->
         <p class="lede">
-          NoaCG Studio makes broadcast graphics — lower thirds, tickers, scoreboards, timers,
-          title cards — through a guided wizard, from a template, a description, or artwork you
+          NoaCG Studio makes broadcast graphics (lower thirds, tickers, scoreboards, timers,
+          title cards) through a guided wizard, from a template, a description, or artwork you
           already have. Collect them into a production, then drive it live from your browser or
           export a package for whatever system your studio already uses.
         </p>
         <div class="cta-row">
-          <a class="btn btn-amber" href="/app#/new">Start creating — it's free<span class="arr" aria-hidden="true">→</span></a>
+          <a class="btn btn-amber" href="/app#/new">Start creating - it's free<span class="arr" aria-hidden="true">→</span></a>
           <a class="btn btn-ghost" href="#how">See how it works</a>
           <span class="cta-note">No account needed to create &amp; export</span>
         </div>
@@ -574,7 +574,7 @@
       </div>
 
       <!-- The showcase: a program monitor cycling through the kinds of graphics NoaCG
-           makes — lower third, ticker, title card, scoreboard, countdown (src/landing/
+           makes: lower third, ticker, title card, scoreboard, countdown (src/landing/
            demo.ts). Only on-air output, no editor mockup. Decorative for assistive tech. -->
       <div class="showcase" aria-hidden="true">
         <div class="show-top">
@@ -664,7 +664,7 @@
               <h3>Start from a template</h3>
               <p>
                 Hundreds of broadcast-grade designs, searchable and filterable, each previewing
-                live on its card. Pick one graphic — or a whole kit in one look, so a show's
+                live on its card. Pick one graphic, or a whole kit in one look, so a show's
                 package reads as one package.
               </p>
             </div>
@@ -677,11 +677,11 @@
             <div class="way-body">
               <h3>Create with AI <span class="tag">Beta</span></h3>
               <p>
-                Describe it, and get something you can actually run: any AI can generate HTML —
+                Describe it, and get something you can actually run: any AI can generate HTML.
                 NoaCG turns your idea into an editable, controllable, production-ready live
                 graphic, checked in a live playout test before you can create it. NoaCG Lite is
                 included free; NoaCG Pro designs your channel an on-air look and builds the
-                whole package in it. Always clean, editable code — never a black box.
+                whole package in it. Always clean, editable code, never a black box.
               </p>
             </div>
           </article>
@@ -694,7 +694,7 @@
               <h3>Import your own graphic</h3>
               <p>
                 Design it in Illustrator, Figma or Inkscape and drop the SVG in: your text layers
-                become operator fields and the pixel-exact graphic goes on air — nothing is
+                become operator fields and the pixel-exact graphic goes on air: nothing is
                 redrawn, the typography stays yours. Photos and flattened images work too, with
                 editable fields placed on top. <a href="/docs#svg">How to prepare your file →</a>
               </p>
@@ -722,7 +722,7 @@
         <p class="kicker" data-reveal>How it works</p>
         <h2 data-reveal>From nothing to on air, in one sitting.</h2>
         <p class="sub" data-reveal>
-          Every picture below is the real app — no mockups. Choose, customise, collect into a
+          Every picture below is the real app, with no mockups. Choose, customise, collect into a
           production, then export it or take it on air straight from the browser.
         </p>
 
@@ -752,7 +752,7 @@
                 <p class="walk-tag"><em>02</em> CUSTOMISE</p>
                 <h3>Make it yours</h3>
                 <p>
-                  Colours, your own fonts, your logo, size, position and animation — all from live
+                  Colours, your own fonts, your logo, size, position and animation: all from live
                   panels beside the real graphic. Every change writes readable code you can open,
                   or never look at.
                 </p>
@@ -786,7 +786,7 @@
                 <p class="walk-tag"><em>04</em> EXPORT</p>
                 <h3>Take it to whatever you already run</h3>
                 <p>
-                  One click builds a validated, plug-and-play package for the system you use —
+                  One click builds a validated, plug-and-play package for the system you use:
                   fonts and images bundled, relative paths, fully offline, no lock-in. Export a
                   single graphic or the whole production at once.
                 </p>
@@ -804,7 +804,7 @@
                 <h3>Run the show from your browser</h3>
                 <p>
                   Preview and program monitors, a cue rundown, the verbs an operator actually
-                  uses — select a cue, check it on preview, TAKE. Point OBS, vMix or CasparCG at
+                  uses: select a cue, check it on preview, TAKE. Point OBS, vMix or CasparCG at
                   the production's output URL and that is your on-air layer.
                 </p>
                 <div class="walk-facts"><span>PVW / PGM</span><span>Keyboard verbs</span><span>Drive it from anywhere</span></div>
@@ -840,7 +840,7 @@
         <p class="kicker" data-reveal>Operating</p>
         <h2 data-reveal>A graphic isn't finished when it looks good.</h2>
         <p class="sub" data-reveal>
-          Someone has to drive it on air — cue it, update it, feed it live data. Every graphic
+          Someone has to drive it on air: cue it, update it, feed it live data. Every graphic
           arrives ready to operate, and the same dashboard runs it whether it lives in the app,
           on a shared link, or inside an exported package.
         </p>
@@ -851,7 +851,7 @@
           </div>
           <div class="feat">
             <h4>Editable live data</h4>
-            <p>Change names, scores and text on air — staged first, aired on an explicit take.</p>
+            <p>Change names, scores and text on air: staged first, aired on an explicit take.</p>
           </div>
           <div class="feat">
             <h4>One output URL</h4>
@@ -890,7 +890,7 @@
           <span class="chip on">HTML overlay</span>
           <span class="chip on">Browser output</span>
         </div>
-        <p class="note" data-reveal>Every package is validated before it leaves — it just works.</p>
+        <p class="note" data-reveal>Every package is validated before it leaves. It just works.</p>
       </section>
 
       <!-- The differentiator that is hardest to see from outside, so it gets its own section
@@ -903,8 +903,8 @@
         <p class="sub" data-reveal>
           A lower third plays and stops. A quiz board has to know which question is up, which
           answer the contestant locked in, and whether it has been revealed yet. Traditional
-          playout gives you one Continue button and an operator remembering what comes next —
-          these graphics carry that logic themselves, as named states and real operator events.
+          playout gives you one Continue button and an operator remembering what comes next.
+          These graphics carry that logic themselves, as named states and real operator events.
           The control panel is generated from them, so a move that would be wrong is greyed out
           instead of being wrong.
         </p>
@@ -937,7 +937,7 @@
         <p class="sub" data-reveal style="margin-top: 26px; max-width: 700px;">
           16 graphic types ship with their own operator buttons today, and every pack adds more.
           Hand any of them to any playout system and they still step through in order like an
-          ordinary template — the extra states are what you get when you drive them from NoaCG,
+          ordinary template. The extra states are what you get when you drive them from NoaCG,
           never a reason they won't play somewhere else.
         </p>
         <p class="note" data-reveal>Export a graphic and its buttons come with it.</p>
@@ -961,11 +961,11 @@
         <p class="kicker" data-reveal>No lock-in</p>
         <h2 data-reveal>Stop using NoaCG, and your graphics keep working.</h2>
         <p class="sub" data-reveal>
-          Your graphics are not tenants in our cloud. Every one is real HTML, CSS and JavaScript —
-          clean, commented, and yours to edit — and every export is a self-contained package:
+          Your graphics are not tenants in our cloud. Every one is real HTML, CSS and JavaScript:
+          clean, commented, and yours to edit. Every export is a self-contained package:
           relative paths, fonts and images bundled, nothing phoning home. It runs from a local
           file, on your own machine, with no account and no internet. A show you built here keeps
-          going out whether or not we are still in the picture — and creating, editing and
+          going out whether or not we are still in the picture, and creating, editing and
           exporting are free, always.
         </p>
         <div class="walk-facts" data-reveal-group style="margin-top: 22px;">
@@ -977,7 +977,7 @@
       </section>
 
       <!-- The agent door (docs/AGENT_CLI.md): coding agents make NoaCG graphics directly
-           through the published @noacg/cli. Real and installable — the commands below are the
+           through the published @noacg/cli. Real and installable: the commands below are the
            actual CLI, never a mocked terminal, and validation is the studio's own gate. -->
       <section id="agents">
         <p class="kicker" data-reveal>For developers</p>
@@ -985,7 +985,7 @@
         <p class="sub" data-reveal>
           Claude Code, Codex, or any MCP-capable agent can build NoaCG graphics directly. The
           agent designs the way it already works best; <code>noacg</code> validates the result in
-          a live playout bench — the same gate the studio itself uses — and saves it into your
+          a live playout bench, the same gate the studio itself uses, and saves it into your
           library, editable, controllable, and ready to air or export.
         </p>
         <div class="agent-cli" data-reveal><span class="c"># scaffold a working chassis, iterate, validate with screenshots, save:</span>
@@ -1007,7 +1007,7 @@ npx -y @noacg/cli mcp</div>
         <h2 data-reveal>Need a video, not a live graphic?</h2>
         <p class="sub" data-reveal>
           Describe a stinger, an opening title, a logo reveal, or a countdown, and AI writes it as
-          a real composition you can edit — then render it to a file. It opens in its own Video
+          a real composition you can edit, then render it to a file. It opens in its own Video
           workspace, separate from the broadcast-graphics side, because it is a different job:
           nobody cues it live, you hand off the finished clip.
         </p>
@@ -1019,7 +1019,7 @@ npx -y @noacg/cli mcp</div>
           <span class="chip on">WebM</span>
         </div>
         <p class="cta-note" data-reveal style="margin-top: 18px;">
-          In beta, and the one part that needs a free account — it runs on AI.
+          In beta, and the one part that needs a free account, because it runs on AI.
         </p>
       </section>
 
@@ -1043,7 +1043,7 @@ npx -y @noacg/cli mcp</div>
   <div class="bottom">
     <h2 data-reveal>Make your next graphic in the browser.</h2>
     <div class="cta-row" style="margin-top: 26px;" data-reveal>
-      <a class="btn btn-amber" href="/app#/new">Start creating — free, no sign-up<span class="arr" aria-hidden="true">→</span></a>
+      <a class="btn btn-amber" href="/app#/new">Start creating - free, no sign-up<span class="arr" aria-hidden="true">→</span></a>
     </div>
   </div>
 
