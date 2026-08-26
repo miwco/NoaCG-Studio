@@ -28,11 +28,21 @@ function root(page: Page) {
 // These readers run inside the wizard's live iframe, which the debounced rebuild replaces
 // wholesale (srcdoc). A read caught mid-swap throws "execution context destroyed" — return
 // null instead so an expect.poll retries against the fresh document rather than aborting.
+//
+// ONLY that class of error. A bare `catch { return null }` turns a mistake in the reader itself
+// into a poll that quietly never satisfies, and then reports a timeout instead of naming the
+// fault: `expect.poll(reader)` calls the reader with NO arguments, so one written to take
+// `page` threw a TypeError on every attempt for fifteen seconds and blamed the product.
+const isMidSwap = (err: unknown): boolean =>
+  /execution context (?:was )?destroyed|Target (?:page |)closed|frame (?:was )?detached|not attached/i.test(
+    String((err as { message?: string })?.message ?? err),
+  );
 
 async function rootOpacity(page: Page): Promise<string | null> {
   try {
     return await root(page).evaluate((el) => getComputedStyle(el).opacity);
-  } catch {
+  } catch (err) {
+    if (!isMidSwap(err)) throw err;
     return null;
   }
 }
@@ -42,7 +52,8 @@ async function previewVar(page: Page, prop: string): Promise<string | null> {
     return await preview(page)
       .locator(':root')
       .evaluate((el, p) => getComputedStyle(el).getPropertyValue(p).trim(), prop);
-  } catch {
+  } catch (err) {
+    if (!isMidSwap(err)) throw err;
     return null;
   }
 }
@@ -226,7 +237,8 @@ async function trackCoverage(page: Page): Promise<number | null> {
         const overlap = Math.max(0, Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top));
         return b.height > 0 ? Math.round((overlap / b.height) * 100) : 0;
       });
-  } catch {
+  } catch (err) {
+    if (!isMidSwap(err)) throw err;
     return null; // caught mid-swap: let expect.poll retry against the fresh document
   }
 }
@@ -240,10 +252,10 @@ test('a credit roll is SETTLED in the preview, and Replay is what plays it', asy
   await page.getByRole('button', { name: 'Next →' }).click(); // Fields
 
   // Settled: the names are ON SCREEN as soon as the step renders, not on their way there.
-  await expect.poll(trackCoverage, { timeout: 15_000 }).toBeGreaterThan(30);
+  await expect.poll(() => trackCoverage(page), { timeout: 15_000 }).toBeGreaterThan(30);
 
   // …and the settle is a first frame, never a trap: Replay still runs the roll from the
   // bottom, so the step where somebody wants to watch it has lost nothing.
   await page.getByRole('button', { name: '▶ Replay' }).click();
-  await expect.poll(trackCoverage, { timeout: 8_000 }).toBeLessThan(30);
+  await expect.poll(() => trackCoverage(page), { timeout: 8_000 }).toBeLessThan(30);
 });

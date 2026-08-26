@@ -125,7 +125,28 @@ never the category).
 question from "where does this graphic rest", and changing it would change what every template
 emits.
 
-### 4. Owner queue (29986808)
+### 4. Two things the gates caught, and one gate that was wrong (041a4885, 625c528e)
+
+Both are the same shape - *changed something without checking what depended on it* - and
+they are worth reading before the next catalog edit:
+
+- **`src/templates/types/ticker.ts` carries its OWN copy of tk18 sample text.** A promoted
+  design keeps the copy it was written around, and `mergeCatalog` lets the type-COMPILED
+  variant REPLACE the hand-written one of the same id - so that copy is the one that ships and
+  the one the catalog baseline records. Changing the design file alone made the two disagree,
+  which the CI **Factory gates** job named exactly: `FAIL tk18 minimal ticker`, gate `samples`.
+  **Any change to a promoted design's sample has a second home.**
+- **The heavy-browser-work guard refused `npm run queue`.** Enqueueing starts nothing, and the
+  runner is the mutual exclusion the guard wants - but the payload is an argument and the
+  matcher splits on shell separators without regard for quoting, so the one moment queueing is
+  most obviously right was the one moment it was refused. `enqueuesWork` now lives in
+  `scripts/command-match.mjs` beside the other matchers, with its own test.
+- **The client-neutral gate was not reading `src/model/wizard.ts`**, which carries wizard copy
+  (a list plan's `itemLabel`/`itemHint`/`formatNote`, a fixed plan's `reason`, a style
+  choice's title). Same hole shape as the loose-components pathspec fix. Widened and
+  mutation-tested.
+
+### 5. Owner queue (29986808)
 
 The stale credits item is **rewritten**, not joined by a fourth: the paste box, the optional logo
 and the settle fix all land on the same field and are one walk. Two new items for the kicker and
@@ -149,15 +170,18 @@ blank card now shows names. If a thumbnail measurement was taken before this bra
 - `npm run build` green on every commit (typecheck, lint, dep-cruiser, 320+ node tests, vite,
   prerender, line endings, the instruction-chain ratchet at its new 112,000).
 - `scripts/ticker-parser.test.mjs`: 16 tests, in the build.
-- Catalog baselines re-recorded (`e2e/catalog-baseline.json`, `e2e/catalog-render-baseline.json`)
-  and carried in 09aab8ee.
-- CI pushed at `29986808`. **Read WHICH JOBS RAN**
+- CI dispatched on the branch head (run 32984222302). **Read WHICH JOBS RAN**
   (`gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`) — a green run that
   planned only the last push is not a verdict.
-- Queued locally and draining: `catalog-baseline` (verify, no update flags), `overflow-sweep
-  --baseline`, `type-floor`, `field-coverage`, `numerals`, `e2e-affected`. `npm run jobs` shows
-  where they are. **If `overflow-sweep --baseline` writes a diff, it belongs in this branch** —
-  five ticker samples changed (the shared fallback, tk05, tk16, tk18, tk20).
+- Catalog baselines re-recorded after the tk18 type fix and verified with no update flags.
+- **The four local catalog sweeps still owe a run**: `overflow-sweep --baseline`,
+  `type-floor`, `field-coverage`, `numerals`. They are NOT in CI (only the calibration
+  tripwire and the factory gates are), and they do NOT start a dev server of their own - every
+  queued attempt died on `navigating to http://localhost:5198/app`. Start one with
+  `preview_start {name: "dev"}` first, and run them AFTER any Playwright job, because a
+  hand-started server on this port is the `reuseExistingServer` trap in e2e/AGENTS.md. Five
+  ticker samples changed, so `overflow-sweep --baseline` may write a diff that belongs in this
+  branch.
 
 ## What is left, and what I would do next
 
