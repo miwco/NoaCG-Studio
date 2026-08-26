@@ -205,3 +205,45 @@ test('template cards frame onto the graphic, not the empty canvas around it', as
     expect(f.insideL && f.insideR).toBe(true); // and the zoom never crops the design away
   }
 });
+
+// ── MEASURED MOTION IN THE PREVIEW (preview/settleGraphic.ts, blocks/animData.ts
+// `hasMeasuredMotion`). A credit roll's entrance is not an entrance: it is eighteen seconds of
+// travel that starts with every name below the frame. Played from zero on the Fields step it
+// answers "what does this design look like" with an empty box for the first second and a half,
+// and is not recognisably a credit roll until about twelve. So off the Animation step a graphic
+// with measured motion SETTLES, and ▶ Replay is what plays it.
+
+/** How much of the credits viewport the travelling track actually covers, 0-100. */
+async function trackCoverage(page: Page): Promise<number | null> {
+  try {
+    return await preview(page)
+      .locator('.credits-box')
+      .evaluate((box) => {
+        const track = box.ownerDocument.querySelector('#credits-track');
+        if (!track) return 0;
+        const b = box.getBoundingClientRect();
+        const t = track.getBoundingClientRect();
+        const overlap = Math.max(0, Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top));
+        return b.height > 0 ? Math.round((overlap / b.height) * 100) : 0;
+      });
+  } catch {
+    return null; // caught mid-swap: let expect.poll retry against the fresh document
+  }
+}
+
+test('a credit roll is SETTLED in the preview, and Replay is what plays it', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await chooseType(page, 'Credits & thanks');
+  await pickDesign(page, 'Classic Roll');
+  await page.getByRole('button', { name: 'Next →' }).click(); // Fields
+
+  // Settled: the names are ON SCREEN as soon as the step renders, not on their way there.
+  await expect.poll(trackCoverage, { timeout: 15_000 }).toBeGreaterThan(30);
+
+  // …and the settle is a first frame, never a trap: Replay still runs the roll from the
+  // bottom, so the step where somebody wants to watch it has lost nothing.
+  await page.getByRole('button', { name: '▶ Replay' }).click();
+  await expect.poll(trackCoverage, { timeout: 8_000 }).toBeLessThan(30);
+});

@@ -92,7 +92,8 @@ Back returns to the graphic, and Video ↔ Graphics is plain history.
 **Card thumbnails are a LIVE render, never a stored picture** (`components/home/GraphicThumb.tsx`).
 Every Home graphic card renders the real template through `preview/composeDocument`, in a small
 iframe scaled from the template's own resolution and parked at its settled on-air state (the
-editor canvas's own settle recipe: `update()` → `buildInTimeline().progress(1, true)` →
+editor canvas's own settle recipe: `update()` → the entrance parked at the end of its
+FINITE motion, never `progress(1)` (docs/DYNAMIC_MOTION_SCOPE.md §11) →
 `update()`). Nothing about the record changes: no thumbnail field on `GraphicDoc`, so no format
 version bump, no migration, and no second copy of the artwork riding every cloud sync. It also
 cannot go stale — a template edited on another device shows its new look the moment it syncs,

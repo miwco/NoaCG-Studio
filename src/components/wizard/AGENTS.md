@@ -328,7 +328,17 @@ BUTTONS WRITE 0.6 / 1 / 1.8** (`AnimSpeed`, GOALS goal 6: ±33% was real on the 
 across separate replays; 0.75/1.5 stay valid stored values).
 **THE EASING DROPDOWN REACTS TO THE MOTION** (`blocks/motionPresets.ts` `easingsForMotions`) and
 shows the no-code `plain` names. Picking a motion that cannot render the current curve drops the
-choice to Auto rather than keeping a setting that does nothing. WizardPreview cancels pending lifecycle-demo timers when
+choice to Auto rather than keeping a setting that does nothing.
+
+**THE PREVIEW PLAYS AN ENTRANCE AND SETTLES A TRAVEL.** Off the Animation step, a graphic whose
+motion is MEASURED (`blocks/animData.ts` `hasMeasuredMotion` - a roll, a crawl, a marquee) is
+parked at rest instead of played: measured motion is CONTENT-LENGTH motion and starts with its
+content off-stage, so playing it answered "what does this design look like" with an empty box for
+1.5s and a roll nobody could recognise for 12 (docs/DYNAMIC_MOTION_SCOPE.md §11). The Animation
+step passes `rehearse`, and ▶ Replay always plays - both are the reader asking for the motion
+rather than the picture. Decide it from the DATA, never the category.
+
+WizardPreview cancels pending lifecycle-demo timers when
 a debounced srcdoc commits (a stale stop() must never blank the fresh document), pushes field
 values from a latest-template ref, and gates the auto-entrance on `document.fonts.ready`
 (capped) so a font choice shows on the entrance itself. Pinned by e2e/wizard-preview.spec.ts,

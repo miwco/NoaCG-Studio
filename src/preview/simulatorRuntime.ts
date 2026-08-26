@@ -26,7 +26,11 @@ export interface SimTimeline {
   /** suppressEvents=true jumps without firing callbacks (clocks/loops stay idle). */
   progress: (p: number, suppressEvents?: boolean) => void;
   duration: () => number;
-  time: () => number;
+  /** Read the playhead, or move it: `time(seconds, true)` jumps without firing callbacks. */
+  time: ((value: number, suppressEvents?: boolean) => void) & (() => number);
+  /** Direct children; `false` = do not descend into nested timelines. GSAP always has it - the
+   *  optionality is for the hand-written `buildInTimeline` a foreign import can ship. */
+  getChildren?: (nested: boolean) => { startTime: () => number; totalDuration: () => number }[];
   kill: () => void;
 }
 
@@ -150,6 +154,30 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     if (w.__simAutoOut) clearTimeout(w.__simAutoOut);
     w.__simAutoOut = null;
   }
+  /**
+   * Park `tl` at the end of the motion that HAS an end, callbacks suppressed.
+   *
+   * NOT `progress(1)`, for the reason `holdBaselineMs` below already guards against on the other
+   * side: one `repeat: -1` child makes GSAP report the whole timeline's duration as its
+   * "forever" sentinel, ~1e10 seconds. Seeking to the end of THAT is seeking to an arbitrary
+   * phase of whatever is still looping, which is how the two `credits-loop` designs parked on a
+   * completely empty canvas. preview/settleGraphic.ts carries the full account; this is the
+   * editor's own copy of the same recipe, and the two must agree.
+   */
+  function settleToFiniteEnd(tl: SimTimeline): SimTimeline {
+    if (typeof tl.getChildren !== 'function') {
+      tl.progress(1, true);
+      return tl;
+    }
+    let end = 0;
+    for (const child of tl.getChildren(false)) {
+      const total = child.totalDuration();
+      if (Number.isFinite(total) && total < 1e9) end = Math.max(end, child.startTime() + total);
+    }
+    (tl.time as (value: number, suppressEvents?: boolean) => void)(end, true);
+    return tl;
+  }
+
   /** A graphic with an entrance/loop reported as ~1e10s (GSAP's "forever") would otherwise
    *  schedule the auto-out at ~1e13ms — past setTimeout's 32-bit argument, wrapping to an
    *  arbitrary time. Mirrors render/runtimeScript.ts's CONTINUOUS_S threshold. */
@@ -223,7 +251,7 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     w.update?.(cmd.data ?? '{}');
     const tl = w.buildInTimeline();
     tl.pause();
-    tl.progress(1, true); // jump to the end; suppressed events keep clocks/loops idle
+    settleToFiniteEnd(tl); // park at the end of the FINITE motion; callbacks stay suppressed
     w.update?.(cmd.data ?? '{}'); // re-render truthful static state (suppressed callbacks skip it)
     return;
   }
@@ -248,15 +276,15 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
       } else if (phase.startsWith('step-')) {
         if (typeof w.revealNextStep !== 'function') return;
         const n = parseInt(phase.slice(5), 10); // 2-based
-        w.buildInTimeline().progress(1, true);
-        for (let k = 2; k < n; k++) w.revealNextStep()?.progress(1, true);
+        settleToFiniteEnd(w.buildInTimeline());
+        for (let k = 2; k < n; k++) { const t = w.revealNextStep(); if (t) settleToFiniteEnd(t); }
         const tw = w.revealNextStep();
         if (!tw) return;
         w.__scrubTl = { phase, tl: tw, runId: nextRun() };
       } else {
         if (typeof w.buildOutTimeline !== 'function') return;
-        w.buildInTimeline().progress(1, true); // settled on-air state, callbacks suppressed
-        while (typeof w.revealNextStep === 'function' && w.revealNextStep()?.progress(1, true)) { /* all steps */ }
+        settleToFiniteEnd(w.buildInTimeline()); // settled on-air state, callbacks suppressed
+        while (typeof w.revealNextStep === 'function') { const t = w.revealNextStep(); if (!t) break; settleToFiniteEnd(t); }
         w.__scrubTl = { phase: 'out', tl: w.buildOutTimeline(), runId: nextRun() };
       }
     }

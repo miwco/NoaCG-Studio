@@ -12,7 +12,11 @@ MotionPresetPicker paragraph, which belongs to a file that is still loose in com
 ## The surfaces
 
 - **PlayoutSimulator** - owns the running preview timeline `__activeTl`; settles the design view
-  after every rebuild (progress(1, true) + a second update()); auto-replays on replayNonce;
+  after every rebuild (`settleToFiniteEnd` + a second update() - **never `progress(1)`**: one
+  `repeat: -1` child makes GSAP report the timeline's duration as its ~1e10s "forever" sentinel,
+  so `progress(1)` parks on a loop phase and the two `credits-loop` designs settled to an EMPTY
+  canvas; docs/DYNAMIC_MOTION_SCOPE.md §11, and preview/settleGraphic.ts is the same recipe for
+  every other preview surface); auto-replays on replayNonce;
   resolves the SCRUB phases, including `state:<group>:<state>` for a BRANCH timeline
   (blocks/timelineLens.ts `scrubPhase`): snap the group to the state's canonical predecessor
   (`branchRoute`, off animMachine's `canonicalPath`, which the interpreter's own

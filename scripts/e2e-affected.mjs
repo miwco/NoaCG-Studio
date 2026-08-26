@@ -154,6 +154,12 @@ const MAP = [
     /^src\/components\/MotionPresetPicker\.tsx$/,
     ['motion-presets.spec.ts', 'ux.spec.ts', 'wizard-preview.spec.ts', 'import-svg.spec.ts', 'import-svg-behaviour.spec.ts'],
   ],
+  // animData.ts is the animation DATA MODEL, and one of its questions is read outside the
+  // timeline entirely: `hasMeasuredMotion` decides whether the wizard's preview plays a
+  // graphic or settles it (components/wizard/WizardPreview.tsx). A change to that predicate
+  // changes the FIRST FRAME somebody judges a template by, and both specs that measure it
+  // live here rather than under the timeline rule below.
+  [/^src\/blocks\/animData\.ts$/, ['wizard-preview.spec.ts', 'end-credits.spec.ts', 'public-service.spec.ts']],
   [/^src\/blocks\//, ['motion-presets.spec.ts', 'anim-engine.spec.ts', 'timeline-v2.spec.ts', 'inspector.spec.ts', 'canvas-keyframe.spec.ts', 'legacy-timeline.spec.ts', 'multi-select.spec.ts', 'pasteboard.spec.ts', 'ux.spec.ts', 'bench.spec.ts', 'import-graphic.spec.ts', 'state-machine.spec.ts', 'machine-graph.spec.ts', 'asset-workflow.spec.ts', 'template-insert.spec.ts']],
   // creative-routing rides along because ROUTING and SATISFACTION resolve live against the
   // catalog and the type registry (src/templates/structuralAnchor.ts): a structure the

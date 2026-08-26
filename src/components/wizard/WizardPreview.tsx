@@ -8,6 +8,7 @@ import {
   type CanvasRectsMessage,
 } from '../../preview/canvasControlProtocol';
 import type { SpxTemplate } from '../../model/types';
+import { hasMeasuredMotion, parseAnimData } from '../../blocks/animData';
 
 /** Screen px of breathing room between a highlighted layer and its box. */
 const HL_PAD = 4;
@@ -63,6 +64,18 @@ interface Props {
    * a second control to find.
    */
   onPick?: (selector: string, drag: 'x' | 'y' | null) => void;
+  /**
+   * This step is ABOUT the motion (the Animation step), so the entrance is played from zero
+   * on every rebuild even when that means watching a credit roll travel for eighteen seconds -
+   * which is exactly what the reader asked to see there.
+   *
+   * Off it, a graphic whose motion is MEASURED settles instead (blocks/animData.ts
+   * `hasMeasuredMotion`). Measured motion is content-length motion and starts with its content
+   * off-stage, so playing it on the Fields or Style step answers "what does this design look
+   * like" with an empty box for the first second and a half - measured on cr01, which is not
+   * recognisably a credit roll until about twelve. ▶ Replay still plays it on any step.
+   */
+  rehearse?: boolean;
 }
 
 /**
@@ -91,6 +104,7 @@ export default function WizardPreview({
   pickable,
   onPickHover,
   onPick,
+  rehearse = false,
 }: Props) {
   // A surface that never asks for a highlight pays nothing: the rect channel is installed only
   // for one that does (the prop present at all, even as null, is the step saying so).
@@ -187,6 +201,14 @@ export default function WizardPreview({
     () => composeDocument(template, { liveControl: true, ...(tracking ? { canvasControl: true } : {}) }),
     [template, tracking],
   );
+  // Whether this graphic's motion is measured rather than keyframed - read off the emitted
+  // animation data, so it is known before the document exists (see `showFirstFrame`). A
+  // template with no readable region (blank, hand-written, foreign import) has no measured
+  // motion to find and plays, exactly as it always did.
+  const measured = useMemo(() => {
+    const data = parseAnimData(template.js);
+    return !!data && hasMeasuredMotion(data);
+  }, [template.js]);
   useEffect(() => {
     const t = setTimeout(() => {
       clearDemo();
@@ -257,6 +279,25 @@ export default function WizardPreview({
       );
     }
   }, [clearDemo, demoOut, postCmd]);
+
+  /**
+   * The first frame after a rebuild: the graphic as it looks ON AIR.
+   *
+   * Usually that means playing the entrance, because an entrance is under a second and seeing
+   * it is half of what the reader is judging. MEASURED motion is the exception, and it is a
+   * different kind of thing: its length comes from the operator's text and it starts with that
+   * text off-stage, so playing it from zero answers a question about the design with an empty
+   * frame. Those settle instead - the parked pose the thumbnails and the operator preview
+   * already use (preview/settleGraphic.ts, which carries the other half of this note).
+   *
+   * ▶ Replay and the Animation step (`rehearse`) always play: both are the reader asking for
+   * the motion rather than for the picture.
+   */
+  const showFirstFrame = useCallback(() => {
+    if (rehearse || !measured) { playIn(); return; }
+    clearDemo();
+    postCmd({ cmd: 'settle', data: JSON.stringify(pushValues(templateRef.current)) });
+  }, [rehearse, measured, playIn, clearDemo, postCmd]);
 
   // Replay when the parent asks (e.g. animation preset changed but srcdoc identical).
   useEffect(() => {
@@ -456,7 +497,7 @@ export default function WizardPreview({
             trackSelector(); // a fresh document tracks nothing until it is told again
             const gen = docGenRef.current;
             setTimeout(() => {
-              if (docGenRef.current === gen) playIn(); // else a newer document has since loaded
+              if (docGenRef.current === gen) showFirstFrame(); // else a newer document has since loaded
             }, 60);
           }}
           style={{ width, height, transform: `translate(-50%, -50%) scale(${z}) translate(${tx}px, ${ty}px)` }}

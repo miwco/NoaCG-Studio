@@ -281,6 +281,32 @@ export function parseAnimData(js: string): AnimData | null {
   return raw;
 }
 
+/**
+ * Does this graphic's motion have to be MEASURED - a credits roll, a ticker marquee, a page
+ * swap - rather than described in keyframes?
+ *
+ * The distinction a surface needs it for is LENGTH. Keyframed motion is authored motion: under
+ * a second, the same every time, and worth watching. Measured motion takes as long as the
+ * OPERATOR'S TEXT takes to travel past, and it starts with its content off-stage by
+ * construction - a roll begins below the frame, a crawl beside it. Playing one from zero shows
+ * an empty box: cr01's default roll covers 0% of its viewport for the first 1.5 seconds and is
+ * not recognisably a credit roll until about 12 (measured 2026-08-26). That is the wrong first
+ * frame for any surface whose job is "what does this graphic look like", which is why the
+ * wizard's preview settles these and plays everything else.
+ *
+ * Asked of the DATA rather than the DOM on purpose: the answer is a property of how the
+ * graphic was authored, so a caller can have it before a document exists to measure.
+ */
+export function hasMeasuredMotion(data: AnimData): boolean {
+  if (data.steps.some((step) => (step.dynamics?.length ?? 0) > 0)) return true;
+  for (const group of data.machine?.groups ?? []) {
+    for (const state of group.states) {
+      if ((state.timeline?.dynamics?.length ?? 0) > 0) return true;
+    }
+  }
+  return false;
+}
+
 /** The canonical transition order (the serializer's sort): from-state's index in `states`,
  *  then trigger, then event, then to-state's index. Shared by serializeGroup and the
  *  lifecycle-edge injection, so an injected edge lands exactly where serialization will

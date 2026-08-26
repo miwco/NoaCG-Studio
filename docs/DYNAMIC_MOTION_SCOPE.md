@@ -225,3 +225,41 @@ templates this document is about. A hand-written measured region is precisely th
 never be auto-converted, so it is the ONE case that still needs the classic chart; an importable
 legacy region gets the step timeline read-only instead, with "use keyframes" one click away.
 Coverage: `e2e/legacy-timeline.spec.ts`.
+
+## 11. How measured motion SETTLES (2026-08-26)
+
+A surface that shows a graphic *without* a playback gesture - a Home card, a library thumbnail,
+the editor canvas at rest, the operator's preview before the first take, the wizard's preview on
+every step but Animation - has to park it somewhere. For keyframed motion that place is obvious:
+the end. Measured motion has no obvious end at all, and the two faults below are the same fact
+seen from either side.
+
+**Its END is not `progress(1)`.** GSAP reports a `repeat: -1` child's total duration as its
+"forever" sentinel, ~1e10 s, and a timeline holding one inherits it - so `progress(1)` seeks to
+t = 1e10, which is a phase of whatever is still looping rather than the end of anything. Every
+end-credits design carries an ambient background drift with `repeat: -1`, so every credits
+timeline reported 1e10; eleven of thirteen looked right anyway, because their travel is a finite
+tween long since finished by then. The two whose travel is ITSELF endless - the `credits-loop`
+reel, cr06 and cr08 - landed at an arbitrary loop phase and settled to a **completely empty
+frame**, 0% of the viewport covered, on every one of those surfaces. So a settled graphic is
+parked at **the end of the motion that HAS an end**: `preview/settleGraphic.ts` (the shared
+recipe, serialized into every preview document) and `preview/simulatorRuntime.ts` (the editor's
+own copy) both compute it by ignoring every endless child. An endless track is left where the
+finite motion put it, which for a reel is a full screen of names - there is nothing better to
+ask for, because "the end" of a thing that never ends is not a place. Gate:
+`e2e/end-credits.spec.ts` measures every credits design's settled coverage.
+
+**Its BEGINNING is not worth showing either.** Measured motion is content-length motion and it
+starts with its content off-stage by construction: cr01's roll covers 0% of its viewport for the
+first 1.5 s and is not recognisably a credit roll until about 12. The wizard's preview used to
+play it from zero on every rebuild, so the Fields and Style steps answered "what does this design
+look like" with an empty box at the exact moment somebody decides whether the template is any
+good. It now **settles** a graphic with measured motion and plays everything else, deciding from
+the data (`blocks/animData.ts` `hasMeasuredMotion`) rather than from the category. The Animation
+step (`WizardPreview`'s `rehearse`) and ▶ Replay still play from zero - both are the reader asking
+for the motion rather than for the picture.
+
+**Still `progress(1)`, deliberately:** the EMITTED runtime's step-to-step settle
+(`templates/shared/animRuntime.ts`), which finishes one step's timeline before the next begins.
+That is a different question - "is this step over" rather than "where does this graphic rest" -
+and changing it would change what every template emits.

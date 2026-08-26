@@ -204,3 +204,52 @@ test('the Style step picks which line of a credit is the loud one', async ({ pag
   const nameSize = px(await group.locator('.credits-name').first().evaluate((el) => getComputedStyle(el).fontSize));
   expect(nameSize).toBeGreaterThan(roleSize);
 });
+
+// A SETTLED credit roll must have names on screen. Every surface that shows a graphic without
+// a playback gesture - a Home card, a library thumbnail, the operator's preview before the
+// first take - drives it to rest with preview/settleGraphic.ts, and "at rest" for a roll or a
+// reel is not `progress(1)`: every credits design carries an ambient background drift with
+// `repeat: -1`, which makes GSAP report the whole timeline's duration as its infinity sentinel.
+// The two designs whose travel is ITSELF endless (the credits-loop reel, cr06 and cr08) landed
+// at an arbitrary phase of that loop and settled to a COMPLETELY EMPTY frame on every one of
+// those surfaces. Nothing measured it, so nothing said so.
+test('every credits design settles with its names ON SCREEN', async ({ page }) => {
+  test.setTimeout(120_000);
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await page.keyboard.press('Escape');
+
+  const covered = (await page.evaluate(`(async () => {
+    const { CATALOG } = await import('/src/templates/catalog.ts');
+    const { composeDocument } = await import('/src/preview/composeDocument.ts');
+    const out = [];
+    for (const variant of CATALOG['end-credits']) {
+      const f = document.createElement('iframe');
+      f.style.cssText = 'position:fixed;left:-4000px;top:0;width:1920px;height:1080px;';
+      document.body.appendChild(f);
+      // The REAL bootstrap - composeDocument serializes settleGraphic into the document, so
+      // this measures the shipped recipe rather than a copy of it.
+      await new Promise((res) => { f.onload = res; f.srcdoc = composeDocument(variant.create({}), { settleWithData: '{}' }); });
+      await new Promise((r) => setTimeout(r, 220));
+      const w = f.contentWindow;
+      const box = w.document.querySelector('.credits-box');
+      const track = w.document.querySelector('#credits-track');
+      let pct = null;
+      if (box && track) {
+        const b = box.getBoundingClientRect(); const t = track.getBoundingClientRect();
+        const overlap = Math.max(0, Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top));
+        pct = b.height > 0 ? Math.round((overlap / b.height) * 100) : 0;
+      }
+      out.push({ id: variant.id, pct });
+      f.remove();
+    }
+    return out;
+  })()`)) as { id: string; pct: number | null }[];
+
+  expect(covered.length).toBeGreaterThan(10);
+  for (const design of covered) {
+    // A number, not a truthy check: 0 is exactly the failure this exists for.
+    expect(design.pct, design.id).not.toBeNull();
+    expect(design.pct, design.id).toBeGreaterThan(20);
+  }
+});

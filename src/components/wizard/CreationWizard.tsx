@@ -2004,6 +2004,7 @@ export default function CreationWizard() {
                 }
                 replayKey={replayKey}
                 demoOut={demoOut}
+                rehearse={onAnimationStep}
                 demoText={mode === 'design' ? stretchDemo : null}
                 {...(mode === 'svg' && step === 2
                   ? {
