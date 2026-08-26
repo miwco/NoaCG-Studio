@@ -36,8 +36,9 @@
       <p class="kicker">Documentation</p>
       <h1>Guides for making a graphic and putting it on air.</h1>
       <p class="lede">
-        No account, no installs beyond what each guide names, and no code unless you want it.
-        The studio is at <a href="/app">noacg.studio/app</a> and it is free.
+        The studio is at <a href="/app">noacg.studio/app</a> and it is free. Each guide names the
+        software it needs. An account is required only to publish a production or to save from the
+        command line; everything else, including export, works without one.
       </p>
     </div>
 
@@ -71,9 +72,9 @@
             already uses.
           </p>
           <ol>
-            <li>Open <a href="/app#/new">the studio</a>. The creation wizard has four doors: a
-              template from the catalog, a description for AI, your own artwork, or a blank
-              start.</li>
+            <li>Open <a href="/app#/new">the studio</a>. The creation wizard offers four starting
+              points: a template from the catalog, a description for AI, your own artwork, or a
+              blank start.</li>
             <li>Set the colors, typefaces, logo and motion beside a live preview. Every change
               writes real HTML, CSS and JavaScript. You can open it, or never look at it.</li>
             <li>Finish, then either export a package straight away, or collect graphics into a
@@ -91,9 +92,8 @@
           <p>
             SVG import is how you bring a graphic you designed yourself into NoaCG. Design it in
             Illustrator, Figma or Inkscape, export an SVG, and drop it on the Import door. Your
-            text layers become operator fields. The drawing itself is not redrawn: your
-            typography and your geometry go on air as they are, and export to every target like
-            any other graphic.
+            text layers become operator fields. The drawing is not redrawn: the typography and
+            geometry go on air as drawn, and export to every target like any other graphic.
           </p>
           <p>
             Where to drop it: <a href="/app#/new">the studio</a> &rarr; <strong>New graphic</strong>
@@ -103,24 +103,27 @@
           <h3 id="svg-rules">The five rules that decide whether it works</h3>
           <ol>
             <li><strong>Give the file a size.</strong> A <code>viewBox</code> (or
-              <code>width</code>+<code>height</code>) is required. It is the design space every
-              field position is measured against. 1920&times;1080 with a transparent background is
-              the predictable choice for frame-exact artwork. A smaller artboard imports as a
-              free-floating object placed by the zone picker.</li>
+              <code>width</code>+<code>height</code>) is required, and a file with neither is
+              refused. It is the design space every field position is measured against. Use
+              1920&times;1080 with a transparent background for full-frame artwork. A smaller
+              artboard imports as a free-floating object, positioned by the wizard's zone picker
+              rather than pinned to exact coordinates.</li>
             <li><strong>Keep text as text.</strong> Every live <code>&lt;text&gt;</code> layer
               becomes an editable operator field, bound in place. Text converted to outlines
-              cannot be edited in place. The import offers a fallback, a matching editable line
-              placed over the measured outline, but re-exporting with real text gives a better
-              result.</li>
+              cannot be edited in place. The import offers a fallback: a matching editable line
+              placed over the measured outline. The stand-in is re-rendered type, so the kerning
+              is the font's and not the designer's. Re-export with live text where you can.</li>
             <li><strong>Name your layers.</strong> Layer names become the field labels an
               operator reads. "Home team" reads better than "Rectangle_3". No naming convention
               is required beyond that.</li>
             <li><strong>Embed your pictures.</strong> A linked image is a network reference and is
               stripped on import, because an exported graphic has to play out with no
               internet.</li>
-            <li><strong>Do not animate in the design app.</strong> SVG-native (SMIL) animation is
-              removed with a note. Motion is added in NoaCG's Animation step, where the timeline
-              and the playout server can drive it deterministically.</li>
+            <li><strong>Do not animate or script in the design app.</strong> SVG-native (SMIL)
+              animation is removed, as are <code>&lt;script&gt;</code>, <code>on*</code> handlers
+              and <code>&lt;foreignObject&gt;</code>. Every removal is reported on screen. Motion
+              is added in NoaCG's Animation step, where the timeline and the playout server can
+              drive it deterministically.</li>
           </ol>
 
           <h3 id="svg-layers">What each layer becomes</h3>
@@ -131,15 +134,14 @@
             <tr><td>A plain figure as the sample (<code>84</code>)</td><td>Proposes a number field</td></tr>
             <tr><td>A clock-shaped sample (<code>12:00</code>)</td><td>The row asks: ordinary text, or a countdown</td></tr>
             <tr><td>An embedded picture</td><td>A picture field the operator can swap. Clearing it restores your drawing.</td></tr>
-            <tr><td>Text converted to outlines</td><td>Offered as an outline row, off by default. Tick it and an editable line is placed over its measured box.</td></tr>
+            <tr><td>Text converted to outlines</td><td>Offered as an outline row, off by default. Tick it and an editable line is placed over its measured box, in re-rendered type.</td></tr>
             <tr><td>Panels, rules, gradients, masks</td><td>Ride along verbatim as the look</td></tr>
           </table></div>
           <p>
-            When a typed value is longer than the design was drawn for, the generated code answers
-            in one fixed order: fill the shape you drew the line in, grow the panel only if you
-            opted in, wrap into the room the design already has, shrink to a readability floor,
-            then warn the operator. The artwork is not reshaped behind your back, and copy is not
-            cut.
+            When a typed value is longer than the design was drawn for, the generated code tries
+            these in fixed order: fill the shape the line was drawn in; grow the panel, if you
+            opted in; wrap into the room the design already has; shrink to a readability floor;
+            warn the operator. It does not reshape the artwork and it does not cut text.
           </p>
 
           <h3 id="svg-fonts">Fonts</h3>
@@ -160,15 +162,17 @@
             <tr><td><strong>Inkscape</strong></td><td><em>Save As&hellip; &rarr; Plain SVG</em>. Label layers and objects. Do not run <em>Object to Path</em> on editable text, and do not use flowed text (drag-drawn text boxes): it exports as <code>&lt;flowRoot&gt;</code>, which no browser renders.</td></tr>
           </table></div>
           <p>
-            Ready-made files to try are in the repository's
+            Five files to try are in the repository's
             <a href="https://github.com/miwco/NoaCG-Studio/tree/main/docs/svg-samples">docs/svg-samples</a>
-            folder: a lower third, a scorebug, an outlined-text example and an Illustrator-shaped
-            export.
+            folder: a lower third, a scorebug, an outlined-text example, an Illustrator-shaped
+            export and a quiz board.
           </p>
           <p>
             A quiz board can carry its behaviour in the file too. Draw the base look, then one
-            hidden layer per moment (answer picked, right, wrong, locked in), and the import's
-            behaviour pickers wire them up. See <a href="#behaviour">graphics with behaviour</a>.
+            hidden layer per moment (answer picked, right, wrong, locked in). The behaviour
+            pickers on the import's field rows then wire those layers to the quiz events. See
+            <a href="#behaviour">graphics with behaviour</a>, and
+            <code>quiz-board.svg</code> in the samples folder.
           </p>
         </section>
 
@@ -202,7 +206,7 @@ Petri Salo</code></pre>
             <em>Camera</em> on five lines.
           </p>
 
-          <h3 id="credits-rules">The complete set</h3>
+          <h3 id="credits-rules">The marks</h3>
           <ul>
             <li><code>Director:</code> marks a role. Every line under it is one of its names.</li>
             <li><code>Director: Alex Rivera</code> is the same, inline, for a role with one
@@ -215,6 +219,9 @@ Petri Salo</code></pre>
               own if there is none.</li>
             <li><code>#&nbsp;PRODUCTION</code> is a department heading, above a run of roles.</li>
             <li>A blank line starts a new section.</li>
+            <li>The text before a colon has to be 48 characters or shorter to be read as a role.
+              A longer line is a name, so a sentence that happens to contain a colon is not turned
+              into a job title.</li>
           </ul>
           <p>
             A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
@@ -222,26 +229,26 @@ Petri Salo</code></pre>
           </p>
           <p>
             <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
-            line is read as a name, which gives a clean column of names. A heading is marked or it
-            is not a heading, which is what lets a roll end on "Special thanks to everyone who
-            made this show possible" without that sentence being set in accent capitals.
+            line is read as a name, which gives a clean column of names. A line is never promoted
+            to a heading because of where it sits, so a roll can end on "Special thanks to
+            everyone who made this show possible" without that line being set in accent capitals.
           </p>
 
           <h3 id="credits-designs">The same text in any design</h3>
           <p>
-            The format says what the content <em>is</em>, never how it is arranged, so switching
-            design does not mean retyping the credits. <strong>Classic Roll</strong> gives centred
-            blocks with the role over its names. <strong>Column Roll</strong> puts the role
-            right-aligned in a left column with its names stacked in the right.
-            <strong>Programme Roll</strong> sets it as serif leader rows on paper. Walls, donor
-            boards, sponsor crawls and schedules in the same category read the same text.
+            The format marks roles and names; the design decides the arrangement. Switching design
+            does not mean retyping the credits. <strong>Classic Roll</strong> gives centred blocks
+            with the role over its names. <strong>Column Roll</strong> puts the role right-aligned
+            in a left column with its names stacked in the right. <strong>Programme Roll</strong>
+            sets it as serif leader rows on paper. Walls, donor boards, sponsor crawls and
+            schedules in the same category read the same text.
           </p>
           <p>
             Classic Roll adds one choice in the wizard's <strong>Style</strong> step,
             <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
-            its names quieter beneath it, which is what stays right when one role credits five
-            people. <em>Name</em> sets the name big with the role as a small label above it: the
-            film convention, and the better read when nearly every role has exactly one person.
+            its names quieter beneath it. Use it when a role credits several people.
+            <em>Name</em> sets the name big with the role as a small label above it: the film
+            convention. Use it when nearly every role has one person.
           </p>
         </section>
 
@@ -252,32 +259,33 @@ Petri Salo</code></pre>
             A published production gives you <strong>one output URL</strong>,
             <code>&hellip;/output?production=&lt;slug&gt;</code>, that renders the whole show:
             transparent, all its graphics, driven live from the
-            <a href="#dashboard">playout dashboard</a>. Anything that can show a web page can
-            carry it. Load it once and leave it up. Graphics are cued by the operator, not by
+            <a href="#dashboard">playout dashboard</a>. Any source that can load a web page can
+            show it. Load it once and leave it up. Graphics are cued by the operator, not by
             reloading the source.
           </p>
           <p>Four rules apply to every browser-based playout:</p>
           <ul>
-            <li><strong>Transparency is built in.</strong> Do not set a chroma key. A black or
-              white box behind the graphic means the host is forcing an opaque background. Check
-              its custom-CSS and background settings.</li>
+            <li><strong>The page is already transparent.</strong> Do not set a chroma key. A black
+              or white box behind the graphic means the host is forcing an opaque background.
+              Check its custom-CSS and background settings.</li>
             <li><strong>Match the resolution exactly.</strong> Graphics are designed in real
               pixels (1920&times;1080 unless you chose otherwise). A mismatch does not crop, it
               scales, and scaled text is softer than text rendered at its own size.</li>
             <li><strong>Resize the source, never the resulting layer.</strong></li>
             <li><strong>Set the source's FPS to the channel's.</strong> Motion is authored in
               seconds and plays correctly at any rate, but a 30 fps source in a 50 Hz channel
-              judders in a way that looks like the graphic's fault.</li>
+              judders, which is easy to mistake for a fault in the graphic.</li>
           </ul>
 
           <h3 id="obs">OBS Studio</h3>
           <ol>
             <li><strong>Sources &rarr; + &rarr; Browser</strong>.</li>
-            <li>Paste the production's output URL. For an exported overlay, tick
-              <strong>Local file</strong> instead and pick the <code>.html</code>.</li>
+            <li>Paste the production's output URL. For an exported overlay, unzip the export
+              first, then tick <strong>Local file</strong> and pick
+              <code>&lt;name&gt;.html</code> from inside the unzipped folder.</li>
             <li>Set <strong>Width</strong> and <strong>Height</strong> to the graphic's own
               resolution, and <strong>FPS</strong> to your channel's.</li>
-            <li>Leave the background alone. The page is already transparent.</li>
+            <li>Leave the background alone.</li>
           </ol>
           <p>
             Leave <strong>"Shutdown source when not visible" off</strong> for a production output.
@@ -290,7 +298,7 @@ Petri Salo</code></pre>
             <code>start-controller.command</code> on macOS, <code>./start-controller.sh</code> on
             Linux). It serves the folder locally, opens the operator page, and relays every
             command into the graphic, which is the route into a page loaded by OBS's or vMix's own
-            browser engine. It works offline and installs nothing.
+            browser engine. It needs no network and no installation.
           </p>
 
           <h3 id="vmix">vMix</h3>
@@ -307,9 +315,9 @@ Petri Salo</code></pre>
             <tr><td>Black or white box behind the graphic</td><td>Clear any custom CSS setting a background. Do not add a chroma key.</td></tr>
             <tr><td>Graphic looks soft or wrong-sized</td><td>Set the browser source to the graphic's own resolution. Resize the source, never the layer.</td></tr>
             <tr><td>Motion judders</td><td>Set the source's FPS to the channel's.</td></tr>
-            <tr><td>Output URL shows "not available"</td><td>Re-copy the URL from the production page. Unpublishing removes the URL on purpose.</td></tr>
+            <tr><td>Output URL shows "not available"</td><td>Re-copy the URL from the production page. Unpublishing revokes the URL.</td></tr>
             <tr><td>Blank after a network drop</td><td>Wait. It rebuilds on its own without replaying animations on screen. If it does not, reload the layer.</td></tr>
-            <tr><td>A take airs nothing</td><td>Check the mode strip on the production page. <strong>Rehearse</strong> drives a local copy on purpose; <strong>Show</strong> drives the air.</td></tr>
+            <tr><td>A take airs nothing</td><td>Read the production page's header. <strong>NOT PUBLISHED</strong> means there is no output to air to, so press Publish. If it says <strong>SHOW</strong>, re-copy the output URL and check the browser source is still loading it.</td></tr>
           </table></div>
           <p>
             The full playout setup reference, including the self-hosted routes, is
@@ -343,8 +351,8 @@ Petri Salo</code></pre>
           <h3 id="casparcg-versions">Which server version you have matters</h3>
           <div class="doc-table"><table>
             <tr><th>Server</th><th>Engine</th><th>Consequence</th></tr>
-            <tr><td><strong>2.3.x</strong> (the common teaching install)</td><td>Old CEF (Chromium 6x to 8x era)</td><td>Rejects modern JavaScript syntax and drops modern CSS <em>silently</em>. NoaCG builds its output page down to that engine, so you do not have to do anything. But if you hand-edit template code, <code>?.</code> and <code>??</code> will kill the layer with a SyntaxError that only the server log shows.</td></tr>
-            <tr><td><strong>2.4.x</strong></td><td>CEF 117</td><td>The oldest version NoaCG targets with nothing special to do.</td></tr>
+            <tr><td><strong>2.3.x</strong> (the common teaching install)</td><td>Chromium 75 or 88, inferred</td><td>Rejects modern JavaScript syntax and drops modern CSS <em>silently</em>. The production output page is compiled down to that engine and carries shims for the APIs it lacks, so the live route works with nothing to do. A graphic's own CSS is a separate question: 2.4 is the version NoaCG builds designs against, so an exported template may not render exactly as designed here. Hand-edited template code using <code>?.</code> or <code>??</code> kills the layer with a SyntaxError that only the server log shows.</td></tr>
+            <tr><td><strong>2.4.x</strong></td><td>CEF 117</td><td>The oldest version NoaCG designs against. Nothing special to do.</td></tr>
             <tr><td><strong>2.5.x</strong></td><td>CEF 142</td><td>Current.</td></tr>
           </table></div>
           <p>
@@ -369,8 +377,9 @@ Petri Salo</code></pre>
             machine on the studio LAN, exactly as with the Client. <strong>Test
             connection</strong> round-trips a real AMCP <code>VERSION</code> and shows the
             server's own version string. On the hosted studio, Chrome asks once whether the site
-            may reach your local network; answer the prompt and it sticks. Safari refuses this
-            outright, so there, use the terminal route:
+            may reach your local network; answer the prompt and it sticks. Safari is expected to
+            refuse this outright, with nothing to grant, though that has not been tested here.
+            Either way the terminal route works:
           </p>
           <pre><code>npx @noacg/cli caspar play --url "https://noacg.studio/output?production=&lt;slug&gt;" --channel 1 --layer 20</code></pre>
           <p class="callout truth">
@@ -386,8 +395,11 @@ Petri Salo</code></pre>
           <h3 id="casparcg-file">Playing an exported file</h3>
           <p>
             Export with the <strong>CasparCG</strong> target and you get one self-contained
-            <code>.html</code>, with fonts and images inlined and no network needed. Drop it into
-            the server's template folder and drive it as a normal HTML template:
+            <code>.html</code>, with fonts and images inlined and no network needed. Put it in the
+            server's template folder, which is the <code>template-path</code> set in
+            <code>casparcg.config</code>, and drive it as a normal HTML template.
+            <code>&lt;template-name&gt;</code> below is the filename without its
+            <code>.html</code> extension, relative to that folder:
           </p>
           <pre><code>CG 1-20 ADD 1 "&lt;template-name&gt;" 1 "&lt;templateData&gt;&hellip;&lt;/templateData&gt;"
 CG 1-20 PLAY
@@ -407,20 +419,39 @@ CG 1-20 STOP</code></pre>
           <p>
             A <strong>production</strong> is the live unit: a pool of graphics, a cue rundown
             prepared in advance, and one persistent output URL. Each graphic is its own layer, so
-            a bug, a lower third and a ticker can be on air at once. Publish the production and
-            the dashboard drives it from anywhere: another tab, an OBS dock, a phone at the desk.
+            a bug, a lower third and a ticker can be on air at once.
           </p>
+
+          <h3 id="production-make">Making one</h3>
+          <ol>
+            <li>In your library, press <strong>+ Production</strong> on a graphic's row. The menu
+              lists the productions you already have, and has a <strong>New production&hellip;</strong>
+              field at the bottom. Naming a new one creates it and puts that graphic in it.</li>
+            <li>Add the show's other graphics the same way.</li>
+            <li>Build the rundown on the production page. A cue is a graphic plus the values it
+              airs with.</li>
+            <li>Press <strong>Publish</strong>. That mints the output URL a browser source loads,
+              and a control page URL for operating from another device. Publishing needs an
+              account, because the hosted pages live in your cloud space. Everything before it
+              works offline.</li>
+          </ol>
+          <p>
+            The production page's header reads <strong>NOT PUBLISHED</strong> until you publish
+            and <strong>SHOW</strong> afterwards. Changes made after publishing reach the output
+            on the next publish.
+          </p>
+
+          <h3 id="production-run">Running it</h3>
           <ul>
             <li><strong>Preview and program.</strong> Two monitors and the verbs an operator uses:
-              select a cue, check it on preview, <strong>Take</strong>. Staged edits air on an
-              explicit take, never mid-keystroke.</li>
-            <li><strong>Rehearse vs Show.</strong> Rehearse drives a local copy, so you can walk
-              the rundown without touching the air. Show drives the published output. The mode
-              strip on the production page says which you are in.</li>
-            <li><strong>Recovery is built in.</strong> Every command is a row in a durable log.
-              The on-air renderer applies rows in order and, after a network drop or restart,
-              catches up in order, rebuilding what was on air without replaying animations on
-              screen.</li>
+              select a cue, check it on preview, <strong>Take</strong>. Selecting and previewing
+              never reach air; Take is what airs. Staged edits air on an explicit take, never
+              mid-keystroke.</li>
+            <li><strong>Drive it from any browser</strong>, including an OBS dock or a phone at
+              the desk.</li>
+            <li><strong>Recovery.</strong> Every command is a row in a durable log. The on-air
+              renderer applies rows in order and, after a network drop or restart, catches up in
+              order, rebuilding what was on air without replaying animations on screen.</li>
             <li><strong>Pictures without templates.</strong> "&#65291; Add pictures&hellip;" turns
               image files into cues, such as a holding slide or a sponsor card, aired like any
               other cue. There is one picture layer per production, so stills replace rather than
@@ -438,8 +469,8 @@ CG 1-20 STOP</code></pre>
           </p>
           <ul>
             <li><strong>Nothing viewer-written airs on its own.</strong> Send-ins land in a
-              moderation inbox, and an operator picks what goes into the graphic. That separation
-              is structural, not a setting.</li>
+              moderation inbox, and an operator picks what goes into the graphic. There is no
+              setting that airs a send-in automatically.</li>
             <li><strong>Votes tally live</strong> into poll graphics. Open the vote, close it, put
               the result on air when you are ready.</li>
             <li><strong>A presenter view</strong> (a separate link) shows the host what is coming
@@ -453,9 +484,8 @@ CG 1-20 STOP</code></pre>
           <p>
             A lower third plays and stops. A quiz board has to know which answer the contestant
             locked in and whether it has been revealed yet. NoaCG graphics can carry that logic
-            themselves, as named states and real operator events, and the control panel is
-            generated from them, so a move that would be wrong is greyed out instead of being
-            wrong.
+            themselves, as named states and real operator events. The control panel is generated
+            from them, so a move the current state does not allow is greyed out.
           </p>
           <ul>
             <li><strong>A quiz</strong> runs Select answer, Lock it in, Reveal. Each one is a
@@ -464,12 +494,11 @@ CG 1-20 STOP</code></pre>
             <li><strong>A scoreboard</strong> carries score up/down and clock start/stop as
               events. The numbers are data an operator or a <a href="#data">feed</a> writes.</li>
             <li><strong>Data never causes a state change.</strong> Updating a name or a score
-              re-renders fields. States move only on operator events, which is what makes a feed
-              safe to leave running.</li>
+              re-renders fields. States move only on operator events, so a feed can be left
+              running.</li>
             <li><strong>Everything still degrades to plain stepping.</strong> Hand the same
               graphic to any playout system and it walks its steps in order like an ordinary
-              template. The extra buttons are what you get when you drive it from NoaCG, not a
-              reason it will not play elsewhere.</li>
+              template. The extra buttons appear when NoaCG drives it.</li>
           </ul>
           <p>
             You can author behaviour without code. An imported SVG quiz board is layers: draw each
@@ -483,34 +512,36 @@ CG 1-20 STOP</code></pre>
         <section id="data">
           <h2>Live data</h2>
           <p>
-            Three doors, from no setup to fully automated. All of them follow the same rule: data
-            updates change what a graphic shows, never what state it is in. The operator always
-            wins, because their command lands later in the same log.
+            Three ways to get data in, from no setup to fully automated. All of them follow the
+            same rule: data updates change what a graphic shows, never what state it is in. An
+            operator's command lands later in the same log than a feed's, so it applies last.
           </p>
 
           <h3 id="data-typed">Type it on the dashboard</h3>
           <p>
             Every field is editable live from the production page: edit, stage, take. For most
-            shows this is the whole answer.
+            shows nothing else is needed.
           </p>
 
           <h3 id="data-sheets">A Google Sheet (or any published CSV)</h3>
           <p>
-            Point a graphic at a published sheet and its fields follow the sheet, from anywhere,
-            by anyone you share the sheet with. In the sheet: <em>File &rarr; Share &rarr; Publish
-            to web &rarr; CSV</em>. In the studio, add the live-data source and paste the link.
-            The generated polling code is ordinary, commented JavaScript appended to the graphic's
-            own code, with column headers mapped to field titles. It runs wherever the graphic
-            runs: the preview, an OBS browser source, an exported package. You can open and edit
-            the mapping like anything else.
+            Point a graphic at a published sheet and its fields follow the sheet. Anyone with edit
+            access to the sheet can change them. In the sheet: <em>File &rarr; Share &rarr;
+            Publish to web &rarr; CSV</em>. In the studio, add the live-data source and paste the
+            link. The generated polling code is ordinary, commented JavaScript appended to the
+            graphic's own code, with column headers mapped to field titles. It runs wherever the
+            graphic runs: the preview, an OBS browser source, an exported package. The mapping is
+            editable like the rest of the code.
           </p>
 
           <h3 id="data-api">The Production Data API</h3>
           <p>
             For a timing system, a results service or your own scripts: push values into a
-            published production over plain HTTPS, authenticated by the production's own data key
-            (minted when it is published). Writes become rows in the production's command log, so
-            the renderer cannot tell your update from an operator's.
+            published production over plain HTTPS, authenticated by the production's own data key.
+            The key is minted when the production is published. There is no screen that shows it
+            yet, so this route currently needs access to the production's row in the database;
+            self-hosted deployments can read it there. Writes become rows in the production's
+            command log, so the renderer cannot tell your update from an operator's.
           </p>
           <pre><code>curl -s https://noacg.studio/api/data/update \
   -H "Authorization: Bearer $NOACG_DATA_KEY" \
@@ -518,12 +549,13 @@ CG 1-20 STOP</code></pre>
   -d '{"graphic": "House Scorebug", "values": {"Score A": 2, "Clock": "43:12"}}'</code></pre>
           <ul>
             <li>Fields are addressed by the <strong>labels the graphic shows its operator</strong>
-              ("Score A"), so a feed and a spreadsheet speak the same language.</li>
-            <li>The key can write data only. It cannot play, stop, take or clear anything. A feed
-              that could clear the frame would be a second operator with no face.</li>
-            <li><code>PATCH /api/data/patch</code> goes one step further: write to a data path
-              (<code>match.home.score</code>) and every graphic bound to it follows, without the
-              feed knowing the rundown.</li>
+              ("Score A").</li>
+            <li>The key writes data and reads the production's current data back. It cannot play,
+              stop, take or clear anything. Cueing and clearing stay with the operator.</li>
+            <li><code>/api/data/patch</code> (PATCH, or POST behind a proxy that eats PATCH)
+              writes to a data path such as <code>match.home.score</code> instead of to a named
+              graphic. Every graphic whose field is bound to that path follows, so the feed does
+              not have to know the rundown. The binding is set up in the studio first.</li>
             <li>A worked example ships in the repository: a weather mini-pack driven by a small
               Node connector polling Open-Meteo. The full reference, limits and error shapes are in
               <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/DATA_API.md">DATA_API.md</a>.</li>
@@ -543,16 +575,26 @@ CG 1-20 STOP</code></pre>
 
           <h3 id="agent-install">Install</h3>
           <p>
-            One command. It registers the <code>noacg</code> MCP server with Claude Code, and
-            fetches the tool the first time an agent uses it:
+            With Claude Code already installed, this registers the <code>noacg</code> MCP server
+            and fetches the tool the first time an agent uses it:
           </p>
           <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
           <p>
-            You need Node.js 20 or newer, and a system Chrome or Edge, which the validator drives
-            in headless mode. No account is needed until you want to save a graphic into a
-            library.
+            That registers it for the directory you run it in. Add <code>--scope user</code> to
+            have it in every project. You also need Node.js 20 or newer, and a system Chrome or
+            Edge, which the validator drives in headless mode. No account is needed until you want
+            to save a graphic into a library.
           </p>
-          <p>To type the commands yourself, install the tool once:</p>
+          <p>
+            The server carries the contract with it: the agent can read the reference texts
+            through its <code>noacg_docs</code> tool, and <code>noacg types</code> lists the
+            graphic types, their fields and their operator events, which is where the
+            <code>--type</code> value below comes from. The repository also ships a Claude Code
+            plugin (<code>cli/plugin/</code>) bundling the <code>noacg-graphic</code> skill, a
+            <code>/noacg:graphic</code> command and this same server; it is installed from a clone,
+            and <code>cli/plugin/README.md</code> has the two commands.
+          </p>
+          <p>To run the commands yourself, install the tool once:</p>
           <pre><code>npm i -g @noacg/cli</code></pre>
           <p>
             That gives you <code>noacg</code>. Every command below also works as
@@ -563,6 +605,13 @@ CG 1-20 STOP</code></pre>
           <h3 id="agent-setup">Other agents</h3>
           <p><strong>Codex.</strong> The same server, its own command:</p>
           <pre><code>codex mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
+          <p>
+            Codex loads every <code>~/.codex/skills/*/SKILL.md</code>, so copy
+            <code>skill/noacg-graphic/</code> out of the package (or
+            <code>cli/plugin/skills/noacg-graphic/</code> from a clone) to
+            <code>~/.codex/skills/noacg-graphic/</code> as well. Without it Codex has the tools but
+            no reason to reach for them.
+          </p>
           <p>
             <strong>Any other MCP client.</strong> Run the server over stdio. It exposes types,
             scaffold, validate, inspect, screenshot, save and the contract references as tools:
@@ -584,12 +633,18 @@ CG 1-20 STOP</code></pre>
           </p>
           <ol>
             <li>
-              Start from a working chassis. This step is optional, because an agent can also
-              author from scratch against the contract.
+              Start from a working chassis. The directory is created relative to where you run
+              the command, and it has to be new or empty. This step is optional, because an agent
+              can also author from scratch against the contract.
               <pre><code>npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug</code></pre>
             </li>
-            <li>Author it. Edit the package's HTML, CSS and JavaScript the way you normally
-              work.</li>
+            <li>Author it. Edit the sources: <code>&lt;name&gt;.html</code>,
+              <code>css/template.css</code>, <code>js/template.js</code>, and the
+              <code>images/</code> and <code>fonts/</code> folders. Leave
+              <code>&lt;name&gt;.ograf.json</code>, <code>graphic.mjs</code>,
+              <code>FIELDS.md</code>, <code>README.md</code> and <code>controlpanel.html</code>
+              alone: the next step rewrites them from the sources, so an edit made there is
+              lost.</li>
             <li>
               Validate. This is the studio's own gate plus a live playout bench, with off-air,
               on-air and stress screenshots, so the agent can see what it made.
@@ -607,9 +662,15 @@ CG 1-20 STOP</code></pre>
           <p>
             <code>validate</code> reports findings the way a compiler reports errors, and the
             agent iterates until it is clean. <code>save</code> refuses anything that does not
-            pass. The saved graphic opens in your library like any other: editable in the studio,
-            exportable to every target, ready for a production.
+            pass. The saved graphic is editable in the studio and exportable to any target.
           </p>
+          <p>
+            When something fails for a reason the findings do not explain, <code>noacg doctor</code>
+            prints what the tool resolved: which browser it will drive, which deployment
+            <code>NOACG_URL</code> points at, the bridge version it found there, and whether a key
+            is held.
+          </p>
+          <pre><code>npx @noacg/cli doctor</code></pre>
           <p>
             The package on disk is at the same time a valid <strong>SPX</strong> package and an
             <strong>EBU OGraf v1</strong> graphic. Zip it and it also imports through the studio's
