@@ -61,6 +61,20 @@ With no branch it queues THIS worktree's. Then:
 
     npm run jobs        # position, what is running, why anything waits
 
+**The job pushes for you - do not push by hand.** The pin is `git rev-parse <branch>`, the LOCAL
+ref (`jobs.mjs` `branchTip`), so a commit that has never left this machine is covered; and the job
+pushes the branch itself before it waits on CI (`auto-merge.mjs`, just above the `awaitCi` call).
+The rhythm is **commit everything, then queue** - not commit, push, queue. Two sessions reached
+for the hand push by habit on 2026-08-26 and neither needed it.
+
+The one exception is a PRE-CHECK of your own work before handing it to the queue. That is worth
+having - it is how one branch found a spec that passed locally and failed on CI's fonts - but it
+must be a FULL DISPATCH (`gh workflow run ci.yml --ref <branch>`), never a bare push: an ordinary
+push plans from the PREVIOUS push, and preflight phase 3 refuses a run that skipped every shard as
+loudly as it refuses a red one. A bare markdown-only push is therefore a refusal, not a delay.
+And the pre-check is only ever the run the GATE consumes when main has not moved by your turn - if
+it has, phase 2 makes a merge commit and the gate waits on a fresh run for that sha regardless.
+
 Nothing else to do. Merge jobs never run beside each other, so queued landings drain strictly one
 at a time in order. If `main` moves under yours mid-gate it re-integrates and re-verifies by
 itself, up to three times.
