@@ -206,7 +206,7 @@ editor <-> runtime parity is pinned by e2e/anim-engine.spec.ts.
   BREAKING shape change bumps it and ships its migration here the same commit; an unknown
   version degrades to hand-crafted, never a crash.
 - **machineEdit.ts** - the NODE EDITOR's pure mutators (Phase 4; the UI is
-  components/MachineGraph.tsx). Same contract as animEdit: `(data) => data | null`, caller
+  components/timeline/MachineGraph.tsx). Same contract as animEdit: `(data) => data | null`, caller
   applies via `writeAnimData` + ONE applyTemplate. Every mutator starts from
   `withExplicitMachine` - a machine-less template's first graph edit MATERIALIZES the derived
   machine into the literal (behaviourally a no-op at that moment). Legality is delegated to
@@ -388,12 +388,12 @@ more, and the ~2,000-line literal-patch layer that used to rewrite one in place 
 
 What survives, and why it is NOT dead code: a legacy region still exists in SAVED templates - a
 project made before the migration, an import, hand-written GSAP. **The dock picks the editing
-surface from the CODE, never from the category** (components/StepTimeline.tsx `TimelineDock`),
+surface from the CODE, never from the category** (components/timeline/StepTimeline.tsx `TimelineDock`),
 which is exactly what keeps those working:
 
 - a region the importer CAN read -> the step timeline, READ-ONLY, with "◆ use keyframes" one click
   away (one undoable apply). It shows the real choreography, converted - not a lesser second editor.
-- a region it CANNOT read (measured motion written inline) -> `components/LegacyTimeline.tsx`:
+- a region it CANNOT read (measured motion written inline) -> `components/timeline/LegacyTimeline.tsx`:
   charted read-only, honest about why, offering no affordance it lacks. RATIFIED
   (docs/DYNAMIC_MOTION_SCOPE.md §8.1): such a template can never be auto-converted (the importer
   refuses rather than guessing) and silently regenerating it would discard the owner's tuning -

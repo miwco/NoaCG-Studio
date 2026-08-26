@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useTemplateStore } from '../store/templateStore';
-import { parseAnimData, type AnimData } from '../blocks/animData';
-import { importAnimData } from '../blocks/animImport';
+import { useTemplateStore } from '../../store/templateStore';
+import { parseAnimData, type AnimData } from '../../blocks/animData';
+import { importAnimData } from '../../blocks/animImport';
 import {
   addStep,
   deleteKeyframe,
@@ -17,19 +17,19 @@ import {
   setKeyframeEase,
   setLayerHide,
   setStepEase,
-} from '../blocks/animEdit';
-import { deriveMachine, spxSteps, timelineKind, walkEntry } from '../blocks/animMachine';
-import { lensRead, lensWrite, PATH_TARGET, scrubPhase, targetState } from '../blocks/timelineLens';
-import { EASINGS } from '../model/easings';
-import { replaceRegionWithAnimData, writeAnimData } from '../templates/shared/animRuntime';
-import { activationStep, animatedProps, hideStep, stepSeconds } from '../blocks/animEval';
-import { changePartPress } from '../blocks/stepAssign';
-import { getTemplateParts } from '../model/structure';
-import { replaceDefinitionInHtml } from '../model/spxDefinition';
+} from '../../blocks/animEdit';
+import { deriveMachine, spxSteps, timelineKind, walkEntry } from '../../blocks/animMachine';
+import { lensRead, lensWrite, PATH_TARGET, scrubPhase, targetState } from '../../blocks/timelineLens';
+import { EASINGS } from '../../model/easings';
+import { replaceRegionWithAnimData, writeAnimData } from '../../templates/shared/animRuntime';
+import { activationStep, animatedProps, hideStep, stepSeconds } from '../../blocks/animEval';
+import { changePartPress } from '../../blocks/stepAssign';
+import { getTemplateParts } from '../../model/structure';
+import { replaceDefinitionInHtml } from '../../model/spxDefinition';
 import LegacyTimeline from './LegacyTimeline';
 import MachineGraph from './MachineGraph';
-import { activatableFocus, editorShortcutsLive, spacePansCanvas } from './spaceKey';
-import { PREVIEW_PLAYHEAD_TYPE, type PreviewPlayheadMessage } from '../preview/previewProtocol';
+import { activatableFocus, editorShortcutsLive, spacePansCanvas } from '../spaceKey';
+import { PREVIEW_PLAYHEAD_TYPE, type PreviewPlayheadMessage } from '../../preview/previewProtocol';
 
 // Timeline v2 Phase 3 (docs/TIMELINE_V2_PLAN.md) — the step timeline, read-first.
 // A familiar clip-style timeline where the clips are the graphic's STEPS: a time ruler
@@ -1807,7 +1807,7 @@ function StepTimeline({
             onChange={(e) =>
               setOutMode(e.target.value === 'auto' ? (outMs !== null ? String(outMs) : '5000') : e.target.value)
             }
-            title="How the graphic leaves air — the SPX out setting in the template definition"
+            title="How the graphic leaves air — the out setting in the template definition"
             data-testid="tlv2-out-mode"
           >
             <option value="manual">until ■ Stop plays the exit</option>

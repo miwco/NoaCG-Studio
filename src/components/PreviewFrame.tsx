@@ -318,7 +318,7 @@ export default function PreviewFrame({ iframeRef }: Props) {
         <iframe
           ref={iframeRef}
           className="preview-frame"
-          title="SPX live preview"
+          title="Live preview"
           sandbox="allow-scripts"
           style={{
             width: docW,

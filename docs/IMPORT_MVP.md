@@ -34,7 +34,7 @@ Not a bug — an absent path. Three separate systems all gate on ONE fact: the H
 |---|---|---|
 | Layer registry | `structure.ts:61` — the `[class*="-box"]` spine | no prefix → no root/panel/parts → nothing is canvas-selectable |
 | Presets | `blocks/presetRegistry.ts:67` `emitPresetRegion` | returns `null` immediately → `presetApply` has no donor keyframes |
-| Timeline dock | `components/StepTimeline.tsx:82` `TimelineDock` | no `NOACG_ANIM` + no legacy region → `LegacyTimeline` → renders `null` (no strip at all) |
+| Timeline dock | `components/timeline/StepTimeline.tsx:82` `TimelineDock` | no `NOACG_ANIM` + no legacy region → `LegacyTimeline` → renders `null` (no strip at all) |
 
 An imported PNG never reached those gates anyway: the import flow assigns the first image to
 `logoAssetPath` and places it in a **64–96 px logo box** inside a *different* house design. On

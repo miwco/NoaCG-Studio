@@ -220,7 +220,7 @@ The quiz then flipped on §3b calls (`docs/TIMELINE_V2_PLAN.md` §3c), and INFO 
 so **every category now creates as a data block and the migration is complete**.
 
 **Phase 8 then shipped (2026-07-15), and §8.1 held exactly as ratified**: the strip's *editing*
-patchers are deleted, and a read-only renderer stayed — `components/LegacyTimeline.tsx` — for the
+patchers are deleted, and a read-only renderer stayed — `components/timeline/LegacyTimeline.tsx` — for the
 templates this document is about. A hand-written measured region is precisely the thing that can
 never be auto-converted, so it is the ONE case that still needs the classic chart; an importable
 legacy region gets the step timeline read-only instead, with "use keyframes" one click away.

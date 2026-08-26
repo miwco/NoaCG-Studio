@@ -1169,7 +1169,7 @@ now full: every one of the 12 types ships in all four families (noacg / glass / 
 
 ### The node editor (2026-07-21 — Phase 4 of the template-library stage)
 
-The visual state-machine editor beneath the canvas (`src/components/MachineGraph.tsx`): one
+The visual state-machine editor beneath the canvas (`src/components/timeline/MachineGraph.tsx`): one
 generic graph surface for every graphic — what differs between templates is the graph inside
 it, never the editor. Optimized for inspect-and-tweak first, authoring-from-blank second.
 

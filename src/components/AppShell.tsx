@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTemplateStore } from '../store/templateStore';
 import PreviewFrame from './PreviewFrame';
-import PlayoutSimulator from './PlayoutSimulator';
-import TimelineDock from './StepTimeline';
+import PlayoutSimulator from './timeline/PlayoutSimulator';
+import TimelineDock from './timeline/StepTimeline';
 import SidePanel from './SidePanel';
-import Inspector from './Inspector';
+import Inspector from './timeline/Inspector';
 import SampleDataPanel from './SampleDataPanel';
 import ControlPanel from './ControlPanel';
 import StylePanel from './StylePanel';

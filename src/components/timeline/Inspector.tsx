@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTemplateStore } from '../store/templateStore';
-import { getTemplateParts } from '../model/structure';
+import { useTemplateStore } from '../../store/templateStore';
+import { getTemplateParts } from '../../model/structure';
 import {
   designBoxInfo,
   lineFit,
@@ -16,27 +16,27 @@ import {
   type LinePlacement,
   type LineTextPatch,
   type LineTextStyle,
-} from '../blocks/designLayout';
-import { setFieldDefault, setFieldTitle } from '../blocks/edit';
-import { changePartPress } from '../blocks/stepAssign';
-import { setLayerHide } from '../blocks/animEdit';
-import { FONTS } from '../model/fonts';
-import type { SpxTemplate } from '../model/types';
-import { parseAnimData, type AnimData } from '../blocks/animData';
-import { writeAnimData } from '../templates/shared/animRuntime';
-import { importAnimData } from '../blocks/animImport';
-import { lensRead, lensWrite, scrubPhase } from '../blocks/timelineLens';
-import { deleteKeyframe, setFilterComponent, setKeyframe } from '../blocks/animEdit';
-import { filterComponent } from '../blocks/filterTrack';
-import { applyPresetData, presetDonor } from '../blocks/presetApply';
-import { swappablePresetsForType, anyPresetById } from '../blocks/presetRegistry';
-import { isSlidePreset } from '../templates/lowerThirds/animPresets';
-import { activationStep, animatedProps, hideStep, resolveValue, stepSeconds } from '../blocks/animEval';
-import { createStepFromLayer } from '../blocks/layerTimeline';
-import type { AnimPresetId } from '../model/wizard';
-import { EASINGS, resolveEasing, type EasingId } from '../model/easings';
+} from '../../blocks/designLayout';
+import { setFieldDefault, setFieldTitle } from '../../blocks/edit';
+import { changePartPress } from '../../blocks/stepAssign';
+import { setLayerHide } from '../../blocks/animEdit';
+import { FONTS } from '../../model/fonts';
+import type { SpxTemplate } from '../../model/types';
+import { parseAnimData, type AnimData } from '../../blocks/animData';
+import { writeAnimData } from '../../templates/shared/animRuntime';
+import { importAnimData } from '../../blocks/animImport';
+import { lensRead, lensWrite, scrubPhase } from '../../blocks/timelineLens';
+import { deleteKeyframe, setFilterComponent, setKeyframe } from '../../blocks/animEdit';
+import { filterComponent } from '../../blocks/filterTrack';
+import { applyPresetData, presetDonor } from '../../blocks/presetApply';
+import { swappablePresetsForType, anyPresetById } from '../../blocks/presetRegistry';
+import { isSlidePreset } from '../../templates/lowerThirds/animPresets';
+import { activationStep, animatedProps, hideStep, resolveValue, stepSeconds } from '../../blocks/animEval';
+import { createStepFromLayer } from '../../blocks/layerTimeline';
+import type { AnimPresetId } from '../../model/wizard';
+import { EASINGS, resolveEasing, type EasingId } from '../../model/easings';
 import { phaseIdOf } from './StepTimeline';
-import { partLocked } from './canvas/partLocks';
+import { partLocked } from '../canvas/partLocks';
 
 // Timeline v2 Phase 2/4 (docs/TIMELINE_V2_PLAN.md) — the Inspector: the persistent,
 // context-sensitive panel to the right of the preview, and the third consumer of the
@@ -1101,7 +1101,7 @@ function PlacedFieldStyle({
         label="Label"
         value={fieldTitle}
         testid="inspector-style-label"
-        hint="The name the operator sees in SPX and every panel — the element id never changes"
+        hint="The name the operator sees in every control panel — the element id never changes"
         onCommit={onTitle}
       />
       {fieldText !== null && (

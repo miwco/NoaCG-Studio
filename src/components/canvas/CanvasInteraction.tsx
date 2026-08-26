@@ -24,7 +24,7 @@ import { ASSET_DRAG_TYPE } from '../AssetsPanel';
 import CanvasSelection, { type CanvasRect } from './CanvasSelection';
 import { partLocked } from './partLocks';
 import { editorShortcutsLive } from '../spaceKey';
-import { phaseIdOf } from '../StepTimeline';
+import { phaseIdOf } from '../timeline/StepTimeline';
 import {
   postCanvasCmd,
   queryCanvas,

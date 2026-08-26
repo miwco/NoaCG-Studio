@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useTemplateStore } from '../store/templateStore';
+import { useTemplateStore } from '../../store/templateStore';
 import {
   parseAnimData,
   serializeAnimData,
@@ -7,7 +7,7 @@ import {
   type AnimData,
   type AnimGroup,
   type AnimTransition,
-} from '../blocks/animData';
+} from '../../blocks/animData';
 import {
   deriveMachine,
   spxSteps,
@@ -17,12 +17,12 @@ import {
   timelineLayer,
   type StateProblem,
   type TimelineKind,
-} from '../blocks/animMachine';
-import { addStep, deleteStep, renameStep } from '../blocks/animEdit';
-import { createStepFromLayer } from '../blocks/layerTimeline';
-import { getTemplateParts } from '../model/structure';
-import { replaceDefinitionInHtml } from '../model/spxDefinition';
-import { EASINGS } from '../model/easings';
+} from '../../blocks/animMachine';
+import { addStep, deleteStep, renameStep } from '../../blocks/animEdit';
+import { createStepFromLayer } from '../../blocks/layerTimeline';
+import { getTemplateParts } from '../../model/structure';
+import { replaceDefinitionInHtml } from '../../model/spxDefinition';
+import { EASINGS } from '../../model/easings';
 import {
   addGroup,
   addState,
@@ -39,10 +39,10 @@ import {
   setTransitionStyleEase,
   setStateTimeline,
   setTransitionTrigger,
-} from '../blocks/machineEdit';
-import { emptyStateTimeline } from '../blocks/timelineLens';
-import { writeAnimData } from '../templates/shared/animRuntime';
-import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../preview/previewProtocol';
+} from '../../blocks/machineEdit';
+import { emptyStateTimeline } from '../../blocks/timelineLens';
+import { writeAnimData } from '../../templates/shared/animRuntime';
+import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../../preview/previewProtocol';
 
 // Phase 4 (docs/noacg-master-goals.md): the node editor's read-first surface. The machine
 // GRAPH beneath the canvas — states as boxes, transitions as arrows, the default path as the

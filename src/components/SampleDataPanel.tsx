@@ -73,7 +73,7 @@ export default function SampleDataPanel() {
     }
     const typeLabel = ADD_FTYPES.find((t) => t.value === newType)?.label ?? newType;
     setAddNote(
-      `This design has no place for a ${typeLabel} field — it would exist in the SPX ` +
+      `This design has no place for a ${typeLabel} field — it would exist in the template ` +
         `definition, but nothing on screen would show it, so on air it would silently do ` +
         `nothing. Fields this design supports are added where its layout can adapt to them.`,
     );

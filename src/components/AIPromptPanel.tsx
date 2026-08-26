@@ -113,7 +113,7 @@ export default function AIPromptPanel() {
         <h3>AI assistant</h3>
         <p className="hint">
           Describe what you want. The assistant proposes a change you review before applying. Every
-          result is validated for SPX compatibility.
+          result is validated against the template contract.
           {!aiConfigured() && (
             <>
               {' '}Currently using the offline stub — add an AI provider key (New graphic →
@@ -180,7 +180,7 @@ export default function AIPromptPanel() {
           disabled={busy}
           onClick={() => runChange(() => getAiProvider().makeSpxReady(template, { validate: productionSpxValidator(template) }))}
         >
-          Make SPX-ready
+          Make it playout-ready
         </button>
         <button
           disabled={busy}

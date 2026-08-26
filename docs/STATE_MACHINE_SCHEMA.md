@@ -3,7 +3,7 @@
 The contract for how a graphic's STATES live in the code. Phase 1 of the template-library /
 state-machine / control-layer stage put the model in the schema, the runtime, the serializer
 and the validator; Phase 4 added the NODE EDITOR on top (the machine graph surface,
-`src/components/MachineGraph.tsx` + `src/blocks/machineEdit.ts` — see §6a); Phase 5 built the
+`src/components/timeline/MachineGraph.tsx` + `src/blocks/machineEdit.ts` — see §6a); Phase 5 built the
 GENERATED CONTROL PAGES on it (`docs/CONTROL_LAYER.md` — every operator event a button via
 the additive `machine.controls` metadata, the event/snap transport cues, staging, the event
 log, hosted control).
@@ -248,7 +248,7 @@ land under an interpreter that predates the machine engine: check
 ## 6a. The node editor (Phase 4 — shipped)
 
 The machine GRAPH surface, toggling with the step timeline in the bottom dock (Rive-style):
-`src/components/MachineGraph.tsx` over the pure mutators in `src/blocks/machineEdit.ts`.
+`src/components/timeline/MachineGraph.tsx` over the pure mutators in `src/blocks/machineEdit.ts`.
 
 - **One generic editor for every graphic.** A template without an authored machine shows its
   DERIVED machine, labelled "derived from the steps"; the first graph edit MATERIALIZES exactly
@@ -308,10 +308,10 @@ landing, and the styles pairing rule).
 | `src/blocks/animData.ts` | The contract: types, normalizing parse + `migrateAnimData`, shape gate, canonical serializer, `TRANSITION_STYLES`. |
 | `src/blocks/animMachine.ts` | The graph seam: `deriveMachine`, `spxSteps`, `canonicalPath`, `operatorEvents`, `validateMachine`. |
 | `src/blocks/machineEdit.ts` | The node editor's pure mutators: materialization, transitions (trigger/event/timer/style), states, groups, box positions. |
-| `src/components/MachineGraph.tsx` | The graph surface (§6a): boxes, arrows, lanes, cards, port-drag, live state. |
+| `src/components/timeline/MachineGraph.tsx` | The graph surface (§6a): boxes, arrows, lanes, cards, port-drag, live state. |
 | `src/templates/shared/animRuntime.ts` | The emitted ES5 interpreter: the version-1 statements verbatim + the machine engine (queue, dispatch, timers, snap, introspection, `noacgStyleTimeline`) + `hasMachineRuntime` / `hasTransitionStyleRuntime` + the pairing-safe `writeAnimData`. |
 | `src/validation/validateTemplate.ts` | Semantic machine errors/warnings + the pairing-rule errors (machine, styles). |
-| `src/components/PlayoutSimulator.tsx` | `event` / `snap` commands, the event strip. |
+| `src/components/timeline/PlayoutSimulator.tsx` | `event` / `snap` commands, the event strip. |
 | `src/store/templateStore.ts` | `sendEvent` / `sendSnap`. |
 | `e2e/_machines.ts` + `e2e/state-machine.spec.ts` | The five acceptance criteria, hand-written. |
 | `e2e/machine-graph.spec.ts` | The node editor's acceptance walk (Phase 4). |

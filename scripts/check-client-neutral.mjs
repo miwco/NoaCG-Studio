@@ -39,7 +39,11 @@ const CLIENTS = ['SPX'];
  * engineering vocabulary about the internal format, which is correct and staying.
  */
 const SCANNED = [
-  'src/components/**/*.tsx',
+  // The DIRECTORY, not a glob. `src/components/**/*.tsx` matches the 84 nested files and ZERO of
+  // the ~39 loose top-level ones - git's default pathspec lets `*` cross a `/`, and `**/` still
+  // wants a directory to match. That hole hid three user-visible strings until timeline/ was
+  // split out on 2026-08-26 and they moved into a subdirectory. Extensions are filtered below.
+  'src/components',
   'index.html',
   'docs.html',
   'app.html',
@@ -103,7 +107,10 @@ function scan() {
   const listed = execFileSync('git', ['ls-files', '--', ...SCANNED], { cwd: projectRoot, encoding: 'utf8' })
     .split('\n')
     .map((f) => f.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    // A directory pathspec sweeps in CSS and the nested AGENTS.md contracts; only source and
+    // markup carry strings a user reads, and a contract naming SPX is engineering prose.
+    .filter((f) => /\.(tsx|ts|html)$/.test(f));
 
   const findings = [];
   for (const file of listed) {

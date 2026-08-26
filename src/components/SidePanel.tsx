@@ -1,5 +1,5 @@
 import { useTemplateStore, type SidePanel as PanelId } from '../store/templateStore';
-import Inspector from './Inspector';
+import Inspector from './timeline/Inspector';
 import SampleDataPanel from './SampleDataPanel';
 import ControlPanel from './ControlPanel';
 import StylePanel from './StylePanel';

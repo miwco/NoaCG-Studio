@@ -57,7 +57,7 @@ replaced them:
   (`presetsForType` / `anyPresetById`) plus `emitPresetRegion`, the ONE way to emit a preset's
   region for a template. presetApply derives keyframes from it; the legacy timeline's "start over"
   writes it, converted.
-- **`components/LegacyTimeline.tsx`** — the read-only chart §8.1 requires, for a region the importer
+- **`components/timeline/LegacyTimeline.tsx`** — the read-only chart §8.1 requires, for a region the importer
   REFUSES (measured motion written inline). It renders the truth, follows the playhead, scrubs, and
   offers no affordance it lacks. Its one write is "start over with a preset", which emits DATA — so
   the way out of unconvertible code leads forward, never to another legacy region.

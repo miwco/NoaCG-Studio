@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useTemplateStore } from '../store/templateStore';
-import { parseAnimData } from '../blocks/animData';
-import { canonicalPath, deriveMachine, machineControls } from '../blocks/animMachine';
-import { parseStatePhase } from '../blocks/timelineLens';
-import { eventLegality, formatMachineState, isEventLegal, machineStateNames } from '../control/controlModel';
-import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../preview/previewProtocol';
+import { useTemplateStore } from '../../store/templateStore';
+import { parseAnimData } from '../../blocks/animData';
+import { canonicalPath, deriveMachine, machineControls } from '../../blocks/animMachine';
+import { parseStatePhase } from '../../blocks/timelineLens';
+import { eventLegality, formatMachineState, isEventLegal, machineStateNames } from '../../control/controlModel';
+import { postPreviewCmd, PREVIEW_STATE_TYPE, type PreviewStateMessage } from '../../preview/previewProtocol';
 
 interface Props {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -191,7 +191,7 @@ export default function PlayoutSimulator({ iframeRef }: Props) {
       <button onClick={sendUpdate} title="Send current sample data to update()">
         ⟳ Update
       </button>
-      <button onClick={playNext} title="Advance multi-step templates (SPX Continue)">
+      <button onClick={playNext} title="Advance multi-step templates">
         » Next
       </button>
       {machineEvents && machineEvents.length > 0 && (

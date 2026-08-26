@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { useTemplateStore } from '../store/templateStore';
-import { parseTimeline, buildOverview, type TimelineTween } from '../blocks/timelineModel';
-import { detectPrefix, getTemplateParts } from '../model/structure';
-import { emitPresetRegion, swappablePresetsForType } from '../blocks/presetRegistry';
-import { importAnimData } from '../blocks/animImport';
-import { replaceRegionWithAnimData } from '../templates/shared/animRuntime';
-import type { AnimPresetId } from '../model/wizard';
-import { PREVIEW_PLAYHEAD_TYPE, type PreviewPlayheadMessage } from '../preview/previewProtocol';
+import { useTemplateStore } from '../../store/templateStore';
+import { parseTimeline, buildOverview, type TimelineTween } from '../../blocks/timelineModel';
+import { detectPrefix, getTemplateParts } from '../../model/structure';
+import { emitPresetRegion, swappablePresetsForType } from '../../blocks/presetRegistry';
+import { importAnimData } from '../../blocks/animImport';
+import { replaceRegionWithAnimData } from '../../templates/shared/animRuntime';
+import type { AnimPresetId } from '../../model/wizard';
+import { PREVIEW_PLAYHEAD_TYPE, type PreviewPlayheadMessage } from '../../preview/previewProtocol';
 
 // Phase 8 (docs/TIMELINE_V2_PLAN.md · DYNAMIC_MOTION_SCOPE §8.1) — the LEGACY timeline,
 // read-only by design.
