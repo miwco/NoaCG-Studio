@@ -190,12 +190,11 @@ refuses out loud and the manual tools stand unchanged. Specs live in `draft.desi
 become REAL placed fields at build - draft.ts `withDesignFieldSpecs` runs addPlacedLine +
 setLineTextStyle + setLineFit, so wizard placement, editor, preview, and export agree by
 construction (browser-verified pixel-exact). The **FontPicker** (wizard/FontPicker.tsx,
-searchable): the bundled OFL library; **the ~1,900 Google Fonts families** (model/googleFonts.ts
-- fetched at DESIGN time and embedded, the emitted code never references Google, and the panel
-says a download shows the browser's IP to Google first); upload (woff2/woff/ttf/otf ->
-CustomFont, embedded in template.assets + every export); and Local Font Access (Chromium only,
-permission-gated), EMBEDDED exactly like an upload so playout never depends on the machine's
-fonts. The **Animation step** is the standard one - with ONE difference for this category:
+searchable): bundled OFL faces; the ~1,900 Google Fonts families (model/googleFonts.ts -
+fetched at DESIGN time, emitted code never references Google, the panel names the IP
+disclosure); upload (woff2/woff/ttf/otf -> CustomFont in template.assets + every export); Local
+Font Access (Chromium, permission-gated). Every source EMBEDS, so playout never depends on the
+machine's fonts. The **Animation step** is the standard one - with ONE difference for this category:
 the UNIVERSAL in/out bank LEADS (`components/MotionPresetPicker.tsx` over
 `blocks/motionPresets.ts` - ten unit motions drawn as SIX family cards) in place of the
 category's four whole-unit presets, which the bank stands in for (`draft.ts`
@@ -242,25 +241,21 @@ hidden layers and `<defs>`/`<symbol>` text are never offered; outline rows are R
 the measured shapes read as a line of type, and never filtered.
 **EVERY detected text row starts ON** - the `f:` prefix names a field and guarantees it, and
 never turns the unmarked rows off (only a PICTURE, which defaults off, is switched on by it).
-The step has a measured HEIGHT BUDGET like the Entry step's: the artwork is capped to a share
-of the window (`--map-svg-cap`, a height applied as a max WIDTH at the artwork's own aspect -
-letterboxing would break `measureOutline`'s scale) and sits in a STICKY band beside the
-sentence that says what to do, so the checklist starts above the fold and the hover highlight
-still has something to point at. Editing a row's sample WRITES IT INTO THAT ARTWORK the way
-`update()` writes it on air, which is what makes a real length testable here.
+The step has a measured HEIGHT BUDGET, e2e-pinned EXACTLY (the fold cases in
+e2e/import-svg.spec.ts): a copy change that costs a checklist row fails, one that buys a row
+must update the number. Editing a row's sample writes it into the PREVIEW the way `update()`
+writes it on air, which is what makes a real length testable here.
 The step also lets a reader **ADD A FIELD THE FILE NEVER DREW** (plan §6a step 3): "＋ Draw a
-field on the artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn` + `drawing` +
-`onDraw`), and the box comes back as FRACTIONS of the artwork's own rect - the preview never
-learns what a design px is, the step does the conversion because it holds the SVG. The result is
-an ordinary `DesignFieldSpec` in `draft.designFields`, which `buildDraftTemplate` already applied
-for this category. Three rules: the spec asks for `fit: 'shrink'`, because the ladder measures
-`data-fit="shrink"` and a wrapping line would be the one field the too-long warning cannot see
-(plan §6b); the drawn box IS the type's em box (`lineHeight: 1`), and a CLICK gets a
-field-shaped default rather than a two-pixel field; and `drawIn` is tracked for the WHOLE step,
-because the artwork's rect arrives a frame later and arming it at the gesture lost the first
-drag. The step reports its drop HANDLER up, not a flag - and the wizard holds that handler in a
-REF with only a boolean in state, or every re-report is a render and React stops the wizard with
-"Maximum update depth exceeded" while every assertion still passes.
+field on the artwork" arms a marquee on the PREVIEW (`WizardPreview` `drawIn`/`drawing`/
+`onDraw`); the box comes back as FRACTIONS of the artwork's rect and the step converts to
+design px (it holds the SVG), landing as an ordinary `DesignFieldSpec` in `draft.designFields`.
+Three rules: the spec asks `fit: 'shrink'` (the ladder measures `data-fit="shrink"`; a wrapping
+line would dodge the too-long warning - plan §6b); the drawn box IS the em box (`lineHeight: 1`)
+and a CLICK gets a field-shaped default; `drawIn` is tracked for the WHOLE step, because the
+rect arrives a frame late and arming at the gesture lost the first drag. The step reports its
+drop HANDLER up, held in a REF with only a boolean in state - held as state, every re-report is
+a render and React stops the wizard with "Maximum update depth exceeded" while every assertion
+still passes.
 **THE ARTWORK IS ALSO THE CONTROL SURFACE** (plan §6a step 5): every offered layer is tracked
 (`WizardPreview` `pickable` + `onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
 the iframe has no allow-same-origin and nothing reaches in. Tie-break is the editor canvas's:
