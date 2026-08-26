@@ -204,7 +204,7 @@ const SPEC_INPUT_SCHEMA: Record<string, unknown> = {
         properties: {
           // The range lives in the description and the clamp, NOT as `minimum`/`maximum` - the
           // gateway rejects an out-of-range number, and on a clamped field that spends one of
-          // two attempts to achieve what the clamp does for free (liteContract.ts carries the
+          // two attempts to achieve what the clamp does for free (lite/contract.ts carries the
           // full reasoning). The old wording also had the scale backwards: measured across the
           // six audited lower thirds, the designs author 2.0-2.85, so a LOW ratio is the
           // dramatic one - it enlarges the body line toward the heading, which
@@ -396,7 +396,7 @@ export interface AssembleOptions {
    * The legal `sizeScale` range. Defaults to the permissive one every caller has always had,
    * because the bounds belong to the SCHEMA the spec was authored against and there are two:
    * the harness's design tool says "0.85 compact … 1.2 large", NoaCG Lite's server-owned
-   * contract declares 0.7–1.4 (`liteContract.ts`). Clamping every caller to the harness's
+   * contract declares 0.7–1.4 (`lite/contract.ts`). Clamping every caller to the harness's
    * numbers told the Lite model 1.35 was legal, accepted it in server validation, and then
    * discarded it at compile - the same shown-but-illegal mismatch `narrowVariantTool` exists
    * to prevent, one field over.

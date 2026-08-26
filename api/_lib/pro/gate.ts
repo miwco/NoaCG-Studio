@@ -14,7 +14,7 @@ import { liteLedgerConfigured } from '../aiLiteStore.js';
 import { resolveUserEntitlement } from '../entitlements.js';
 import { routeDisabled, systemSettings } from '../systemSettings.js';
 import { allows, type Entitlement } from '../../../src/entitlements/contract.js';
-import type { ProUnavailableReason } from '../../../src/ai/proTypes.js';
+import type { ProUnavailableReason } from '../../../src/ai/pro/types.js';
 
 export interface ProGate {
   profile: ProProfile;

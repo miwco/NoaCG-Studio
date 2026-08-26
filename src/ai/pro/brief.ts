@@ -10,7 +10,7 @@
 
 import type { GenerationSpec } from '../../model/generationSpec';
 import type { LineSpec } from '../../model/wizard';
-import { markShapeFromAspect, type LiteMarkDescriptor } from '../liteTypes';
+import { markShapeFromAspect, type LiteMarkDescriptor } from '../lite/types';
 import { PRO_LIMITS } from './contract';
 import type { LanguagePalette } from './language/contract';
 import type { LanguageBrief } from './language/prompt';

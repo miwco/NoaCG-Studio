@@ -170,7 +170,7 @@ result is the scoring bug the Pro round's re-diagnosis names.
 
 ### 6.4 The metadata, measured and gated
 
-`LiteCatalogEntry.logoSlot` (`src/ai/liteContract.ts`) - the `supportingLineChars` contract
+`LiteCatalogEntry.logoSlot` (`src/ai/lite/contract.ts`) - the `supportingLineChars` contract
 applied to logos: **measured, never authored**, and gated by
 `node scripts/ai-lite-brand-audit.mjs --lite --check`.
 

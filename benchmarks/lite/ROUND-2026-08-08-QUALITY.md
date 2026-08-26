@@ -250,7 +250,7 @@ The Lite spec object is `additionalProperties: false`. A property the model **st
 becomes a schema refusal, a retry, and then a user-visible `generation_failed`. `presetId` was
 safe to delete *because v8 had already driven its emission rate to zero*; `zone` was emitted
 every single time, which made it the most dangerous property in the schema to remove, not the
-safest. The rule had been written into `liteContract.ts` one edit earlier and was broken in the
+safest. The rule had been written into `lite/contract.ts` one edit earlier and was broken in the
 same change.
 
 **v10 applied the `presetId` treatment to `zone`:** the field back on the wire with *"omit this

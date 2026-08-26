@@ -8,7 +8,7 @@
 //
 // Two facts made that possible, and this module answers both:
 //
-//   · `logo_ink_unreadable_on_surface` (src/ai/liteContract.ts) is RECORDED and nothing is done
+//   · `logo_ink_unreadable_on_surface` (src/ai/lite/contract.ts) is RECORDED and nothing is done
 //     with it. That was a deliberate §3.7 decision - the painted well was worse than the defect -
 //     but recording is not telling, and the ledger is not a place a user looks.
 //   · the wizard's own branding records nothing at all: `variant.create()` puts the mark where the

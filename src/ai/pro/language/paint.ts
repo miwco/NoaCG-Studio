@@ -13,7 +13,7 @@
 // chose.
 
 import { contrastRatio, parseCssColor } from '../../../blocks/cssVars';
-import { applyLiteBrandPalette, clampLitePalette } from '../../liteContract';
+import { applyLiteBrandPalette, clampLitePalette } from '../../lite/contract';
 import type { AssetFile } from '../../../model/types';
 import type { Palette } from '../../../model/wizard';
 import type { DesignLanguage, LanguagePalette } from './contract';

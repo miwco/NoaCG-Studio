@@ -1061,7 +1061,7 @@ if (control) {
     // unreachableFields walks a shipped type's explicit machine).
     const paint = await page.evaluate(async ({ template, skipPaint }) => {
       const bust = '?t=' + Date.now();
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
       const validate = productionSpxValidator(null, [], { fieldPaints: true });
       const v = await validate(template);
       return v.warnings
@@ -1284,7 +1284,7 @@ for (const entry of briefs) {
       const emitRes = await page.evaluate(async (input) => {
         const bust = '?t=' + Date.now();
         const { iterateEmit } = await import('/src/ai/spike/iterate.ts' + bust);
-        const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+        const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
         const [provider, ...model] = input.route.split(':');
         const result = await iterateEmit({
           brief: input.brief,

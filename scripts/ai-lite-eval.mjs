@@ -155,7 +155,7 @@ const browser = await chromium.launch();
  * The fixture knows its own shape and ink because the SVG is authored beside it, so a descriptor
  * could be assembled here for free - and it would be a second implementation of the one thing
  * this round exists to exercise. `probeMark` + `markShapeFromAspect` are what a real upload goes
- * through (src/ai/liteClient.ts `describeMark`), so a bug in either has to show up as a wrong
+ * through (src/ai/lite/client.ts `describeMark`), so a bug in either has to show up as a wrong
  * request, not be quietly routed around by the runner.
  */
 async function probeBrandMarks() {
@@ -165,7 +165,7 @@ async function probeBrandMarks() {
     await page.goto(`${BASE}/app`, { waitUntil: 'domcontentloaded' });
     return await page.evaluate(async (marks) => {
       const { probeMark } = await import('/src/assets/assetInfo.ts');
-      const { markShapeFromAspect } = await import('/src/ai/liteTypes.ts');
+      const { markShapeFromAspect } = await import('/src/ai/lite/types.ts');
       const out = {};
       for (const mark of marks) {
         const probe = await probeMark({ path: mark.path, data: mark.data });
@@ -201,10 +201,10 @@ async function measureAndCapture(spec, fixtureId, skin = null, brandContext = nu
     ffmpeg: FFMPEG,
     buildArg: { spec, skin, brand: brandContext, updateCopy: UPDATE_COPY },
     buildFn: async ({ spec: designSpec, skin: skinPatch, brand, updateCopy }) => {
-      // The ONE shared compile pipeline (src/ai/litePipeline.ts) - identical to what
+      // The ONE shared compile pipeline (src/ai/lite/pipeline.ts) - identical to what
       // production runs after the same server decision. Never re-inline the steps here:
       // a benchmark-only compile path is exactly the drift the module exists to prevent.
-      const { compileLiteDecision } = await import('/src/ai/litePipeline.ts');
+      const { compileLiteDecision } = await import('/src/ai/lite/pipeline.ts');
       const { parseAnimData } = await import('/src/blocks/animData.ts');
       const { variantById } = await import('/src/templates/catalog.ts');
       // The brand bank supplies what a real user brings: the mark as a project asset (so the

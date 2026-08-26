@@ -1,7 +1,7 @@
 import { json, methodGuard } from '../http.js';
 import { getLiteGenerationStore } from '../aiLiteStore.js';
 import { resolveProGate } from './gate.js';
-import type { ProStatusResponse } from '../../../src/ai/proTypes.js';
+import type { ProStatusResponse } from '../../../src/ai/pro/types.js';
 
 /** GET /api/ai/pro-status - is hosted Pro available to this caller, and what is left of the
  *  allowance? The wizard branches on `available` alone; every other field is read-back. */

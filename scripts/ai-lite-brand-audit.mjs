@@ -124,7 +124,7 @@ await page.evaluate(async () => {
   window.__cat = await import('/src/templates/catalog.ts');
   window.__comp = await import('/src/preview/composeDocument.ts');
   window.__struct = await import('/src/model/structure.ts');
-  window.__lite = await import('/src/ai/liteContract.ts');
+  window.__lite = await import('/src/ai/lite/contract.ts');
 });
 
 // The target set comes from the CATALOG's own `logo` capability, never from a list kept here:
@@ -600,7 +600,7 @@ if (codes.size) {
 // ── The declaration gate: LITE_CATALOG.logoSlot against this render ───────────────────
 //
 // Same contract as `supportingLineChars` and `lite-line-capacity.mjs --check`: the expected
-// values live in `src/ai/liteContract.ts`, never in a copy beside the gate, because a gate
+// values live in `src/ai/lite/contract.ts`, never in a copy beside the gate, because a gate
 // holding its own answers is checking its homework. `--lite --check` is the form that gates it.
 function checkLiteDeclarations(declared) {
   const problems = [];
@@ -659,7 +659,7 @@ if (CHECK) {
     problems = checkLiteDeclarations(declaredLogoSlots);
     for (const line of problems) console.log(`  x ${line}`);
     if (problems.length) {
-      console.log(`\n${problems.length} declaration problem(s). Update logoSlot in src/ai/liteContract.ts.`);
+      console.log(`\n${problems.length} declaration problem(s). Update logoSlot in src/ai/lite/contract.ts.`);
     } else {
       console.log('\nLITE_CATALOG.logoSlot agrees with the render on every audited chassis.');
     }

@@ -9,7 +9,7 @@ import type { ValidationIssue, ValidationResult } from '../validation/validateTe
 import type { DesignSpec } from './designSpec';
 import type { ChatMessage } from './brainstorm';
 import type { GenerationSpec } from '../model/generationSpec';
-import type { CreativeAiProfileId } from './liteTypes';
+import type { CreativeAiProfileId } from './lite/types';
 import type { StyleReference } from '../model/imagePurpose';
 import type { GenerationMode, RouteDecision, StructuralIntent } from '../model/structuralIntent';
 import type { ResolvedLegibility } from '../model/designRules';

@@ -23,7 +23,7 @@ const FLOOR_PX = 20; // lower-third, from src/validation/typeFloor.ts
 /** Compile one Lite decision through the real grounded path. */
 async function compile(page: import('@playwright/test').Page, scaleRatio: number) {
   return page.evaluate(async (ratio) => {
-    const mod = await import('/src/ai/litePipeline.ts');
+    const mod = await import('/src/ai/lite/pipeline.ts');
     type Decision = Parameters<typeof mod.compileLiteDecision>[0];
     type Context = Parameters<typeof mod.compileLiteDecision>[1];
     const decision = {
@@ -76,7 +76,7 @@ test.describe('a Lite graphic is never adjusted below its type floor', () => {
     // The mutation half. Compile normally, then shrink a field in the template's own CSS and
     // re-bench. Without this, the spec above would pass identically if the check were deleted.
     const raised = await page.evaluate(async () => {
-      const pipeline = await import('/src/ai/litePipeline.ts');
+      const pipeline = await import('/src/ai/lite/pipeline.ts');
       const bench = await import('/src/validation/runtimeBench.ts');
       type Decision = Parameters<typeof pipeline.compileLiteDecision>[0];
       type Context = Parameters<typeof pipeline.compileLiteDecision>[1];
@@ -109,7 +109,7 @@ test.describe('a Lite graphic is never adjusted below its type floor', () => {
   test('the floor is off unless a caller asks for it', async ({ page }) => {
     // A hand-written template may set any size it likes, so the check must not be ambient.
     const raised = await page.evaluate(async () => {
-      const pipeline = await import('/src/ai/litePipeline.ts');
+      const pipeline = await import('/src/ai/lite/pipeline.ts');
       const bench = await import('/src/validation/runtimeBench.ts');
       type Decision = Parameters<typeof pipeline.compileLiteDecision>[0];
       type Context = Parameters<typeof pipeline.compileLiteDecision>[1];

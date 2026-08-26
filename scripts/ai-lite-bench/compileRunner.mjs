@@ -1,6 +1,6 @@
 // Shared browser-side compile driver for the FREE benchmark modes (calibration,
 // regression). Loads the dev server's /app page and compiles decisions through
-// src/ai/litePipeline.ts compileLiteDecision - the SAME function production is built
+// src/ai/lite/pipeline.ts compileLiteDecision - the SAME function production is built
 // from - then optionally captures a settled screenshot and a short motion clip.
 // No provider is ever contacted; the only network traffic is the local dev server.
 
@@ -58,7 +58,7 @@ export async function assertDevServer(base) {
  */
 async function compileInPage(page, decision) {
   return page.evaluate(async ({ spec, skin }) => {
-    const { compileLiteDecision } = await import('/src/ai/litePipeline.ts');
+    const { compileLiteDecision } = await import('/src/ai/lite/pipeline.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
     const context = {
       images: [],
@@ -100,7 +100,7 @@ async function compileInPage(page, decision) {
 async function measureContext(page) {
   return page.evaluate(async () => {
     const t = (s) => Math.round(s.length / 4);
-    const contract = await import('/src/ai/liteContract.ts');
+    const contract = await import('/src/ai/lite/contract.ts');
     const { catalogDigest } = await import('/src/ai/designSpec.ts');
     const system = contract.liteSystemPrompt('measure');
     const digest = contract.liteCatalogDigest();

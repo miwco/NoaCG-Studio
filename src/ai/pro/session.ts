@@ -18,7 +18,7 @@ import type {
   ProOutcomeStatus,
   ProReservationResponse,
   ProStatusResponse,
-} from '../proTypes';
+} from '../pro/types';
 
 export class ProHostedError extends Error {
   readonly code: string;

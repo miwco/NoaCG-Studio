@@ -14,7 +14,7 @@ import { admitTaskIp, jitteredCapacityDelay } from '../aiLiteRateLimit.js';
 import { proCapacityRetryPlan, type ProCapacityRetryPlan } from '../aiProProfile.js';
 import { PRO_TASK_ID } from '../aiTaskRegistry.js';
 import { getLiteGenerationStore, type LiteGenerationStore, type LiteReservation } from '../aiLiteStore.js';
-import type { ProReservationResponse } from '../../../src/ai/proTypes.js';
+import type { ProReservationResponse } from '../../../src/ai/pro/types.js';
 
 const MAX_BODY_BYTES = 2_000;
 const IDEMPOTENCY = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;

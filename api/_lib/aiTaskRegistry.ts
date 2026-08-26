@@ -101,7 +101,7 @@ export function liteTaskProfile(profile: LiteProfile = liteProfile()): TaskProfi
     enabled: profile.enabled,
     schema: {
       // The skin experiment widens the structured contract, so the ref names which
-      // shape the managed model is actually held to (liteContract.LITE_READY_OUTPUT*).
+      // shape the managed model is actually held to (lite/contract.LITE_READY_OUTPUT*).
       id: profile.skinEnabled ? 'lite-ready-decision-skin' : 'lite-ready-decision',
       version: profile.promptVersion,
     },

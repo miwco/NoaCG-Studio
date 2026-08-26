@@ -46,6 +46,15 @@ test('a quoted path is compared as git prints it, in both commands', () => {
   assert.equal(unquote('"src/a b.ts"'), 'src/a b.ts');
 });
 
+test('a staged rename that was then edited compares its DESTINATION, not the arrow', () => {
+  // `RM` is what `git mv` plus an in-place edit produces, and `git diff --name-only` prints only
+  // the destination. Comparing the whole `old -> new` field called every moved file a phantom,
+  // which failed the build for the one commit shape that moves files.
+  const porcelain = 'RM src/ai/liteClient.ts -> src/ai/lite/client.ts\n';
+  assert.deepEqual(findPhantoms(porcelain, 'src/ai/lite/client.ts\n'), []);
+  assert.deepEqual(findPhantoms(porcelain, ''), ['src/ai/lite/client.ts']);
+});
+
 test('a clean tree has no phantoms', () => {
   assert.deepEqual(findPhantoms('', ''), []);
 });

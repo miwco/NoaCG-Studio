@@ -283,7 +283,7 @@ for (const brief of selected) {
     try {
       row = await page.evaluate(async ({ brief, intent, arm, critiqueModel, referenceModel, references, plateCss }) => {
         const { runCreativeArm } = await import('/src/ai/creative/pipeline.ts');
-        const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+        const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
         const { benchStructuralIntent } = await import('/src/validation/structuralIntentCheck.ts');
         const { composeDocument } = await import('/src/preview/composeDocument.ts');
         const { parseAnimData } = await import('/src/blocks/animData.ts');

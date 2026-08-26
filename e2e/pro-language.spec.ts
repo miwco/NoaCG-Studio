@@ -786,7 +786,7 @@ test.describe('one design language, the whole package', () => {
    */
   test('Pro repairs the supporting tone to its own floor, and Lite keeps hers', async ({ page }) => {
     const out = await page.evaluate(async () => {
-      const { clampLitePalette, LITE_CONTRAST_FLOOR } = await import('/src/ai/liteContract.ts');
+      const { clampLitePalette, LITE_CONTRAST_FLOOR } = await import('/src/ai/lite/contract.ts');
       const { resolvePalette } = await import('/src/ai/pro/language/paint.ts');
       const { HOUSE_LANGUAGE } = await import('/src/ai/pro/language/contract.ts');
       // WCAG contrast from first principles: the ladder's own helper is module-private, and

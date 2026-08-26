@@ -10,7 +10,7 @@
 import { uuid } from '../model/id';
 import type { AiPath } from './provider';
 import type { ModelUsage } from './modelTypes';
-import type { CreativeAiProfileId } from './liteTypes';
+import type { CreativeAiProfileId } from './lite/types';
 
 /** Normalized token and optional cost metadata from any model provider. */
 export type AiUsage = Pick<ModelUsage, 'inputTokens' | 'outputTokens'>

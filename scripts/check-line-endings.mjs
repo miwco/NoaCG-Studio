@@ -54,10 +54,15 @@ export function findPhantoms(porcelain, diffNames) {
   const phantoms = [];
   for (const line of porcelain.split('\n')) {
     if (line.length < 4) continue;
-    // Renames carry `old -> new`; the working-tree side of one is never a phantom, and taking the
-    // whole field would compare a string `git diff --name-only` never prints.
+    // Renames carry `old -> new`, and taking the whole field would compare a string
+    // `git diff --name-only` never prints - it prints the DESTINATION alone. `R ` (a staged
+    // rename with no further edit) is skipped by the column test below, but `RM` - the shape a
+    // file move plus an in-place edit produces, which is every move commit this repo has ever
+    // made - reaches here, so the arrow is stripped rather than compared.
     if (line[1] !== 'M') continue;
-    const path = line.slice(3);
+    const field = line.slice(3);
+    const arrow = field.indexOf(' -> ');
+    const path = arrow === -1 ? field : field.slice(arrow + 4);
     if (!changed.has(path)) phantoms.push(path);
   }
   return phantoms;

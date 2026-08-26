@@ -57,7 +57,7 @@ if (!fixture) {
 
 const runtime = await buildApiRuntime(['api/_lib/aiGateway.ts', 'api/_lib/aiLiteProfile.ts']);
 try {
-  const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/liteContract.js')).href);
+  const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/lite/contract.js')).href);
   const gateway = await import(pathToFileURL(path.join(runtime.outputDir, 'api/_lib/aiGateway.js')).href);
   const { liteProfile } = await import(pathToFileURL(path.join(runtime.outputDir, 'api/_lib/aiLiteProfile.js')).href);
 

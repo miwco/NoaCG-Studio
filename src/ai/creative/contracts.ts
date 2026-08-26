@@ -16,7 +16,7 @@
 import type { Zone9 } from '../../model/wizard';
 import type { StructuralIntent } from '../../model/structuralIntent';
 import { intentCoversFrame } from '../../templates/structuralAnchor';
-import { clampLightnessForContrast } from '../liteContract';
+import { clampLightnessForContrast } from '../lite/contract';
 
 // ── ConceptDirection v1 (stage 4) ────────────────────────────────────────────
 
@@ -206,7 +206,7 @@ const toHex = ({ r, g, b }: Rgba): string =>
  *
  * The 2026-08-02 rounds produced correct-looking contracts that rendered unreadable - white
  * ink on a near-white panel at 1.1:1, dark brown on a dark plate. The contrast maths already
- * exists (`liteContract.ts clampLightnessForContrast`, stepped rather than binary-searched
+ * exists (`lite/contract.ts clampLightnessForContrast`, stepped rather than binary-searched
  * because travelling toward an extreme can pass THROUGH the panel's own luminance), so this
  * reuses it rather than writing a third implementation.
  *

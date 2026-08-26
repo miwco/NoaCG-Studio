@@ -61,7 +61,7 @@ brief + images/references + conversation + GenerationSpec
    `catalogDigest` in the system prompt)
 -> `DesignSpec { fit:'catalog', variantId, lines<=3, palette, typography, density, shape,
    referenceSystem, flourish }`
--> `assembleGroundedTemplate` (litePipeline: `specToTemplate` -> real `variant.create()` ->
+-> `assembleGroundedTemplate` (lite/pipeline: `specToTemplate` -> real `variant.create()` ->
    `applyDesignAdjustments` -> `ensureSpecFonts` -> `applySpecOutPreset`), every value clamped
 -> injected validator (validateTemplate + runtimeBench) -> optional bounded polish.
 
@@ -807,7 +807,7 @@ Owner decisions for Mirko [owner]:
 >    structural check (stub provider + mutation-pinned specs, the house pattern).
 > Verification: npm run build; free rigs only - no paid calls without explicit approval.
 > Prepare, but do not run, the bench:harness routing comparison over the off-catalog
-> briefs. Do not touch litePipeline compile behavior, grounded assembly, provider policy,
+> briefs. Do not touch lite/pipeline compile behavior, grounded assembly, provider policy,
 > or the custom coder's generation behavior.
 
 ---

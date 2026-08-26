@@ -111,7 +111,7 @@ missing. Two outcomes:
 ### Stage 2 - the comparison, only if stage 1 warrants it
 
 **Two candidate arms × the same 30 fixtures**, same prompt version, same fixture set, same
-compile path (`litePipeline.ts` - the runners and production share it by construction). Arms are
+compile path (`lite/pipeline.ts` - the runners and production share it by construction). Arms are
 served by restarting the dev server with the candidate route injected; the runner cannot ask the
 server which model it holds, which is exactly why the preflight is mandatory.
 

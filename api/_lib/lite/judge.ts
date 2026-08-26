@@ -31,8 +31,8 @@ import {
   liteJudgeSystemPrompt,
   liteJudgeVerdict,
   validateLiteJudgeScores,
-} from '../../../src/ai/liteContract.js';
-import type { LiteSkinJudgeRequest, LiteSkinJudgeResult } from '../../../src/ai/liteTypes.js';
+} from '../../../src/ai/lite/contract.js';
+import type { LiteSkinJudgeRequest, LiteSkinJudgeResult } from '../../../src/ai/lite/types.js';
 
 // The image ceiling plus room for the three small text fields and JSON syntax (base64
 // needs no escaping, so the overhead is bounded by briefChars + summaryChars + the id).

@@ -3,7 +3,7 @@ import { verifyUser } from '../auth.js';
 import { liteError } from '../aiLiteHttp.js';
 import { getLiteGenerationStore, liteLedgerConfigured } from '../aiLiteStore.js';
 import { LITE_DISCARD_REASONS } from '../../../src/feedback/contract.js';
-import type { LiteOutcomeRequest, LiteOutcomeResponse } from '../../../src/ai/liteTypes.js';
+import type { LiteOutcomeRequest, LiteOutcomeResponse } from '../../../src/ai/lite/types.js';
 
 const ID = /^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i;
 const RULE = /^[a-z0-9][a-z0-9_.:-]{0,79}$/i;

@@ -762,7 +762,7 @@ async function captureStressHold(item) {
 // (docs/ARCHITECTURE.md §3, enforced by .dependency-cruiser.cjs), and a bench rig is a bad
 // reason to widen a layering rule permanently - this script is outside the module graph and is
 // the composition root that is allowed to reach any domain, which is the same way
-// the retired pro-bench.mjs reached pro/, litePipeline and preview/ in one evaluate.
+// the retired pro-bench.mjs reached pro/, lite/pipeline and preview/ in one evaluate.
 //
 // FOUR THINGS IT HAS TO GET RIGHT, all load-bearing:
 //   1. SEEKS ARE MONOTONIC - the runtime throws on a backward seek, so sample times are
@@ -1332,7 +1332,7 @@ if (paid) {
           const { validateProLanguage } = await import('/src/ai/pro/language/gate.ts' + bust);
           const { brandBlock } = await import('/src/ai/spike/brand.ts' + bust);
           const spikeAnchors = await import('/src/ai/spike/anchors.ts' + bust);
-          const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+          const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
           const [provider, ...model] = input.route.split(':');
 
           const generated = await generateDesignLanguage(
@@ -1511,7 +1511,7 @@ if (paid) {
           const bust = '?t=' + Date.now();
           const spikeRun = await import('/src/ai/spike/run.ts' + bust);
           const spikeAnchors = await import('/src/ai/spike/anchors.ts' + bust);
-          const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+          const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
           const [provider, ...model] = input.route.split(':');
           const result = await spikeRun.runSpikeBrief({
             brief: input.brief,

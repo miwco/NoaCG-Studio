@@ -586,7 +586,7 @@ and every bench round made that signal stronger while the eventual real signal g
 
 **The immediate effect is that the prompt receives no priors at all, and that is correct rather
 than a regression.** The feature has no user data yet; feeding it ours is not a weaker version
-of it but a different one nobody asked for. `liteContract.ts` already treats an empty prior set
+of it but a different one nobody asked for. `lite/contract.ts` already treats an empty prior set
 as normal - it is a tie-breaker applied only after brief, intent and chassis fit - so nothing
 downstream changes and no generation can fail for want of one.
 

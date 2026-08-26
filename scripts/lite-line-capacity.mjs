@@ -80,7 +80,7 @@ await page.evaluate(async () => {
   window.__cat = await import('/src/templates/catalog.ts');
   window.__comp = await import('/src/preview/composeDocument.ts');
   window.__struct = await import('/src/model/structure.ts');
-  window.__lite = await import('/src/ai/liteContract.ts');
+  window.__lite = await import('/src/ai/lite/contract.ts');
 });
 
 // The audited chassis and what each CLAIMS come from LITE_CATALOG itself, never from a copy
@@ -221,7 +221,7 @@ if (!CHECK) {
   for (const line of [...failedToMeasure, ...problems]) console.log(`  x ${line}`);
   if (problems.length || failedToMeasure.length) {
     console.log(`\n${problems.length + failedToMeasure.length} problem(s). Update supportingLineChars in `
-      + 'src/ai/liteContract.ts to the measured column, or fix the design.');
+      + 'src/ai/lite/contract.ts to the measured column, or fix the design.');
     process.exitCode = 1;
   } else {
     console.log(`\nLITE_CATALOG agrees with the render on all ${measured.length} chassis.`);

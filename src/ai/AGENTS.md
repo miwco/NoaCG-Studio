@@ -4,6 +4,14 @@ Loaded alongside the root AGENTS.md when working in this directory (Claude reads
 directory's CLAUDE.md import; Codex reads it directly). Keep it accurate.
 (The VIDEO harness is its own world: src/ai/video + src/video - see the root map.)
 
+**Two subdirectories own their own contract** - `lite/` and `pro/`, each an `AGENTS.md` with a
+thin `CLAUDE.md` importing it, loaded only when you work in that directory. A section that
+describes ONE directory belongs there, not here: this file is read in full by every session
+touching the harness, and `npm run check:shared-instructions` prints how much room is left. When
+it runs short, MOVE a directory's section into that directory - and if the files it describes are
+still loose in this folder, moving them into one is the fix, not shorter prose (`lite/` on
+2026-08-26 is the worked example).
+
 **Every `##` section states its STATUS in its first line:** **LIVE** (a user reaches it today),
 **EXPERIMENT** (built, but flagged off or bench-only - no user reaches it), **RETIRED** (kept only
 because code still names it). A section's status is not derivable from its content, and reading an
@@ -265,155 +273,28 @@ loop, so blocking there changes no repair rounds. `groundedResult` reports the R
 (`pickVariant` clamps an unknown one), which is also what makes a spec-level `modify` refine the graphic
 the user is looking at. Free coverage: `e2e/creative-routing.spec.ts`.
 
-## NoaCG Lite - the managed free profile
+## NoaCG Lite - the managed free profile (`lite/`)
 
 **LIVE in production since 2026-08-07; quality is the open problem and the deadline plan is
-`docs/AI_LITE_PLAN.md`.** The catalog-only, one-result profile selected with `GenerateOptions.profile =
-'lite'`. Its model-bound design call goes through the trusted `/api/ai/lite/generations` endpoint and
-the compact allowlist in `liteContract.ts`; the browser cannot supply a model, route, fallback, system
-prompt, or cost policy. A ready response rejoins the `groundedResult` path above, so `specToTemplate`,
-real catalog assemblers, deterministic adjustments, fields, NOACG_ANIM, assets, validation, runtime
-checks, and exports stay shared. **That sharing is the control-panel guarantee** in the doctrine: a Lite
-graphic drives through the same machine, fields and events as a hand-picked one because it IS a catalog
-assembly.
+`docs/AI_LITE_PLAN.md`.** The catalog-only, one-result profile selected with
+`GenerateOptions.profile = 'lite'` moved to **`src/ai/lite/AGENTS.md`** (with its thin
+`CLAUDE.md`), which loads when you work in that directory; the Lite SKIN and its vision judge
+went with it. Four things about it bind from out here:
 
-Lite must never call `generateRaw`, `generateAlternatives`, custom code generation, polish, import
-conversion, or code repair. `modify` is allowed only while the caller passes the grounded DesignSpec and
-the template remains house-shaped. A grounded failure is reported to the server as a platform validation
-failure. No model call may rewrite the compiled code. Unsupported scope returns a typed explanation and
-simplification, never an automatic expensive fallback.
+- **A ready response rejoins the `groundedResult` path above**, so `specToTemplate`, the real
+  catalog assemblers, deterministic adjustments, fields, NOACG_ANIM, assets, validation, runtime
+  checks and exports stay shared. **That sharing is the control-panel guarantee** in the doctrine:
+  a Lite graphic drives through the same machine, fields and events as a hand-picked one because
+  it IS a catalog assembly.
+- **`lite/pipeline.ts` is the ONE grounded compile path**, and `claudeProvider` is built FROM
+  it - the benchmark runners compile through the identical function, and
+  `scripts/ai-lite-bench.test.mjs` pins that no second copy exists.
+- **Lite must never call** `generateRaw`, `generateAlternatives`, custom code generation,
+  polish, import conversion, or code repair. No model call may rewrite the compiled code, and
+  unsupported scope returns a typed explanation, never an automatic expensive fallback.
+- **`lite/types.ts` is dependency-light on purpose**, because both the browser and the API
+  TypeScript trees import it - do not import catalog or DOM-bearing model modules from it.
 
-**`litePipeline.ts` is the ONE grounded compile path** - `normalizeLiteSpec` + `assembleGroundedTemplate`
-(specToTemplate → applyDesignAdjustments → ensureSpecFonts → applySpecOutPreset) +
-`productionSpxValidator`. `claudeProvider` is built FROM it and the benchmark runners compile through the
-identical function; `scripts/ai-lite-bench.test.mjs` pins that no second copy exists.
-
-**Lite category meaning lives in one `CATEGORY_CONTRACTS` registry.** A contract names the graphic
-type, visible field range, allowed kinds, named slots, compatible measured chassis, type-owned
-machine, and operator events. The same constrained model call returns category confidence and
-alternatives plus structured style intent. Manual category is authoritative; auto mode proceeds
-only above the confidence and margin floors, while ambiguity returns choices for the UI. Trusted
-server retrieval shows at most five relevant, diverse compatible chassis and narrows the output
-enum to the same ids. The compiler owns fields and state and may retry ranked fallback chassis
-when the rendered hold rejects generic treatment, weak brief fit, overflow, or poor contrast.
-
-**Lite composes its OWN validator** (`claudeProvider.liteValidator`), for the same reason it passes its
-own `AssembleOptions`: `ProductionBenchOptions` can only be answered from the DECISION - which lines must
-hold one line (`singleLineIdentityFields`, off the spec's declared roles) and which category's type floor
-the ADJUSTED result is held to - and the browser builds its injected validator in AiStep long before a
-decision exists. While they were unset, `bench-line-wrap` and `bench-type-floor` were findings every
-BENCHMARK measured and no user ever did: **the round scored a stricter gate than the product ran.** All
-three are WARNINGS, so composing them in cannot fail a generation that used to pass. Pinned by
-`e2e/lite-line-fit.spec.ts`.
-
-**Lite gets NO structural check, which is why field paint is composed in explicitly.**
-`withStructuralFindings` returns early without a `StructuralIntent` and Lite runs no intent stage, so the
-one question that measures whether a declared field REACHES THE SCREEN never ran on the one path with no
-repair loop. The 2026-08-08 quality round produced the proof: a strap that painted its name, reserved a
-band under it, drew nothing there, and answered `update()` with fresh data by changing nothing -
-`fieldCount: 2`, every rule code silent. The drive lives in `validation/fieldPaint.ts`, shared by the
-structural check and the bench's opt-in `fieldPaints`, which `liteValidator` and `compileLiteDecision`
-both turn on. **It reads ONE state** (the settled default path), which is why it is opt-in: a field a
-later operator event reveals would read as unpainted, and Lite is safe today only because it ships
-single-step lower thirds. **Widening Lite past those revisits this note first.** Pinned by
-`e2e/lite-field-paint.spec.ts`.
-
-**A chassis's fit metadata is MEASURED where it can be, and `supportingLineChars` is the precedent.** It
-was a hand-authored adjective that ranked the designs almost backwards - three of them set their
-supporting line in tracked uppercase, costing about a third of the characters a reader expects, and **no
-gate in the tree can see the consequence** because a wrapped line does not escape its frame. The number
-comes from `node scripts/lite-line-capacity.mjs --check` - run it after any change to a Lite chassis, its
-stylesheet, or the bundled fonts. A claim ABOVE the measurement fails as the defect it is; one more than
-four characters below fails as stale. **An adjective is what a chassis may say only where nothing can
-measure it.**
-
-**A STRAP SPENDS WIDTH, NEVER HEIGHT, and a mark carries NO PLATE** (owner, 2026-08-14 - the
-rule the matrix gallery bought). The shared slot places a lower third's mark BESIDE the words:
-stacking it made `lt02` 83% taller, `lt11` 57%, and lt11 served 44% of the volume matrix, so most
-branded output was a strap turning into a block (`docs/AI_LITE_BRAND_PLAN.md` §3.7,
-`src/templates/AGENTS.md` for the injection rules). The platform's painted well is REMOVED with
-it: a dark-ink mark on a dark package is the USER's palette defeating the mark, no chassis re-pick
-can fix that, and the two remaining moves - dropping the customer's mark or pasting a white box
-over the design - are both worse than the defect. The mark ships where the design puts it and the
-pairing is recorded (`logo_ink_unreadable_on_surface`). `ls12`'s fixed dark tile is the one
-ratified exception, because it is a designed part of that composition rather than a repair.
-
-**RECORDING IT WAS NOT ENOUGH, and the value gate is what proved it** (owner's blind ballot,
-2026-08-14 - `docs/AI_LITE_BRAND_PLAN.md` §2.2). A ledger column is not a place anyone looks: a
-knockout mark on a light package shipped invisible on the generated arm AND on the arm a person
-branded by hand, where nothing was recorded at all. `validation/markLegibility.ts` now MEASURES it
-on the rendered frame - the mark's ink probed with the same `probeMarkElement` a real upload goes
-through, against every surface it could be composited over - and says so twice: as the always-on
-`bench-mark-unreadable` warning in the runtime bench, and live in the wizard's Style step, beside
-the palette that broke it. Still no repair, for the reasons above; the change is that the person
-who can fix it is told. **Judged for TRANSPARENT ink only**: swept over all 23 mark-capable lower
-thirds, luminance flagged 2 own-field crests that render perfectly (a blue crest on a red tile
-separates by hue), and a gate whose false positives are the designs that carry a crest best would
-teach authors to ignore it. Pinned by `e2e/mark-legibility.spec.ts`, including the wizard path.
-
-**A BRAND MARK is under the same rule, and `LiteCatalogEntry.logoSlot` is the measurement.**
-`node scripts/ai-lite-brand-audit.mjs --lite --check` renders a real mark into a real slot and
-reads the frame back - size, aspect, crop, clear space, containment, ink contrast against the
-surface the slot actually paints - and gates the declaration against it. **The design declares
-the slot and the compiler fills it; the model never places a mark.** The declaration is split
-because the halves go stale differently: `fits` is GEOMETRY (which mark shapes land legibly; no
-palette changes it) and `surface` is TONE - `palette` when the slot sits on the design's own
-panel, `dark` when it sits on the picture, which means a brand owning only a dark version of its
-mark cannot use that chassis at all. **The other half of the answer is the REQUEST**: `hasLogo`
-was a boolean, so the model knew a mark existed and nothing about it. `LiteGenerationRequest.mark`
-now carries shape, backing and ink, all measured in the browser by `assets/assetInfo.ts`
-`probeMark` and content-free by construction; `hasLogo` stays beside it because the quota check
-reads it and the request validator is a strict key allowlist. **Retrieval itself narrows a
-marked request to slot-carrying chassis** (`retrieveLiteReferenceSet`, and by shape when the
-descriptor names one) - the 2026-08-13 baseline traced three of five brand failures to slotless
-chassis being shown to marked requests after the semantic round added seven chassis without
-slots (`benchmarks/lite/BRAND-BASELINE-2026-08-13.md`). **All thirteen chassis now carry a
-measured slot** (2026-08-13): two already drew a well and only the metadata denied it, five had a
-well designed for them, and `--lite --check` agrees with the render on every one. A `surface` of
-`dark` now covers TWO different facts - a slot sitting on the picture, and `ls12`'s well, which is
-painted a fixed opaque dark whatever the package says so a knockout-only brand can use a light
-package with no repair (`docs/AI_LITE_BRAND_PLAN.md` §3.4). The validator needs no new vocabulary
-for the second: both mean "a surface the palette cannot repaint". Design, findings and the catalog
-work they bought: `docs/AI_LITE_PLAN.md` §7, `benchmarks/lite/BRAND-AUDIT-2026-08-09.md`.
-
-**A REQUESTED palette is the platform's to apply, not the model's to return** (`applyLiteBrandPalette`).
-Colour splits in two: **identity** (accent, panel) is copied verbatim from the REQUEST - never
-altered, never dropped - and **furniture** (text, textDim) is legibility-owned, repaired by a
-three-rung ladder (re-map the two furniture slots, clamp lightness with hue and saturation
-untouched, neutralize to white or black). The old repair dropped the whole bespoke palette when
-the clamp could not reach, and the compile read the MODEL's echo of the palette rather than the
-request - so "exactly the brand's colours" could fail three silent ways at once: a near-miss hex,
-an omitted palette, a legibility floor deleting the package. Every divergence is now an
-`adjustments` code, and those reach `ai_generations.adjustments` (migration 0043) because a repair
-the ledger cannot count is a promise nobody can check. The audit's positive twin is
-`brand-accent-verbatim` at TOLERANCE 0 - a near miss is the defect, not a pass. A palette nobody
-requested is still dropped: the contract widened for the user's colours, not for the model's.
-Design and what is deliberately NOT built (chassis re-pick and well, which need §3.3's measured
-per-chassis surface metadata): `docs/AI_LITE_BRAND_PLAN.md` §3.1-3.2.
-
-**`zone` and `animation.presetId` stay in the schema although both decisions are dead.** The Lite spec
-object is `additionalProperties: false`, so a property the model still EMITS becomes a refusal rather
-than a no-op - deleting them cost 29/30 → 26/30. Teach a field away in its DESCRIPTION first, measure the
-emission rate reach zero across more than one round, then delete. Pinned by PRESENCE in
-`api/_lib/aiLite.test.ts`; the account is in `docs/AI_ATTEMPTS.md`.
-
-`liteTypes.ts` is intentionally dependency-light because both the browser and API TypeScript trees import
-it - do not import catalog or DOM-bearing model modules from it. Model/provider configuration, quota,
-price, privacy, and endpoint policy live only in `api/_lib/aiLiteProfile.ts`; the server task registry
-(`api/_lib/aiTaskRegistry.ts`, `docs/AI_TASK_REGISTRY.md`) re-expresses that profile as task
-`lite-design-spec` and fails closed unless every managed route is in the approved-route catalog. The
-generated template carries no profile marker or generation ledger id.
-
-The first quality release is LOWER-THIRD-ONLY: 13 measured chassis with positive and negative fit
-metadata, semantic style signals and geometry, a broad intent facet, and an explicit named slot for
-each of one to four visible lines. Server semantic validation
-enforces requested roles and custom-palette contrast before deterministic compilation. **Do not widen the
-category or variant allowlist without the versioned lower-third benchmark and human visual review.**
-
-Lite's improvement signal is content-free: the ledger keeps only the resolved chassis, broad intent
-facet, accepted/discarded outcome, and an optional enumerated discard reason. Aggregate per-intent
-outcomes enter the trusted prompt only after the server-configured sample threshold and only as a subtle
-tie-breaker. Prompts, templates, screenshots, generated code, and full DesignSpecs never enter it.
 
 ## The alternatives path and the raw off switch
 
@@ -558,27 +439,6 @@ unconfigured, or not pairwise distinct. Each of those wasted a real round: they 
 OUTPUT, because a comparison whose arms resolve to one model still produces differences - sampling noise
 reads as model character.
 
-## The Lite SKIN and its vision JUDGE
-
-**EXPERIMENT - both server-flagged OFF by default (`AI_LITE_SKIN_ENABLED`, `AI_LITE_JUDGE_ENABLED`). No
-user reaches either; only the eval rig calls the judge, whose agreement with a human is 3 of 6, which is
-chance.** Not strategy. Mechanics, thresholds and rulings: `docs/AI_LITE_BENCHMARK.md` (parked)
-Appendix B. Verdicts and retry conditions: `docs/AI_ATTEMPTS.md`.
-
-Three rules bind anyone touching the code even while the flags are off:
-
-- **A skin can decline to land, never cost the user a working result.** Any failure - an illegal patch
-  (`liteSkinPatchErrors`), a gate rejection, a failing bench - REVERTS silently to the spec's house
-  chassis. With the flag off the schema, prompt and behaviour are byte-identical to before the skin
-  existed, and a skin a model emits anyway is stripped server-side.
-- **A skin may not use `clip-path`, because our checks measure LAYOUT and it changes PAINT.** Two skins
-  lost their secondary line's last letter to an angled cut; the runtime bench read a perfectly placed
-  box and passed, and so did the judge. `background-clip: text` stays legal.
-- **The judge passes admission of its OWN** (`store.reserveJudge`, migration 0013): ownership, liveness,
-  the per-generation cap (attempts, not successes) and the daily fleet ceiling are decided ATOMICALLY in
-  one RPC under the same advisory locks `reserve_ai_lite_generation` takes, and the worst-case cost is
-  BOOKED before the call. **A new paid Lite route repeats this shape** - the per-IP burst limiter is
-  pre-body protection, never an entitlement.
 
 ## Import analysis - the proposal-only vision task (`importAnalysis/`)
 
@@ -594,74 +454,15 @@ absence is mutation-pinned).
 
 ## NoaCG Pro - the design-language tier (`pro/`)
 
-**LIVE since 2026-08-15 (hosted deployments where `AI_PRO_ENABLED` is on).** Pressing Create on the
-Pro tier runs **ONE text call for a design LANGUAGE**, then the platform composes **every graphic
-the user asked for** in it - a lower third, a sponsor bug and a countdown by default
-(`pro/language/graphics.ts`, docs/NOACG_PRO_PLAN.md §15.9). The package is the tier's promise and
-it costs what one graphic costs, because only the language is generated; the wizard's own picker
-and the set-shaped Finish are src/components/wizard/AGENTS.md's. The composer:
-`pro/brief.ts` maps the shared wizard brief onto it, `pro/language/pipeline.ts` is the one route
-from the wizard to a Pro graphic, and `pro/language/gate.ts` is the one seam it is scored through.
-The Phase A section below holds the four rules that bind the composer.
-
-Three things this shape changed, all of them consequences rather than choices:
-
-- **There is no browser cost ceiling on the live path.** `PRO_MAX_GENERATION_COST_USD` guarded a
-  TWO-call pipeline - it existed to stop the second call once the first had spent the budget. With
-  one call the money is already spent by the time a browser could refuse it, and throwing then
-  destroys a finished graphic for no saving (the 2026-08-08 lesson). The server's `pro-generate`
-  booking is the bound that still binds, against the same constant.
-- **The ledger row carries WARNINGS as well as errors**, filtered to a `pro-` prefix
-  (`proRuleCodes`). Errors stay unfiltered because an error is why a row says `failed`; warnings
-  are filtered because the runtime bench is chatty by design and the wire caps the list at 30, so
-  bench noise would evict the Pro-owned codes. Sending errors alone is what let a repaired graphic
-  write an EMPTY `validation_rule_codes` beside `usable` (§16).
-- **THE MARK IS KNOCKED, NEVER PLATED** (owner, 2026-08-16, after reading the first accepted Pro
-  set - `docs/NOACG_PRO_PLAN.md` §17.1). A single-ink mark that measures under the contrast floor
-  on the chosen panel has its ONE INK recoloured to white or black, whichever reads, and sits on
-  the panel itself; a full-colour mark keeps its colours and waits for a well the DESIGN provides.
-  **The platform paints no repair field at all any more.** The read that produced the rule is
-  subtler than "no boxes": lt07's blue well and ls10's red well were both liked, because a well a
-  design DRAWS is composition while a neutral field the platform paints around the artwork is a
-  patch. `markTreatmentFor` still fires only on a measured single ink (`MarkProbe.inkSpread`), and
-  a knock that cannot clear the floor is NOT applied - the mark is left exactly as supplied and
-  `pro-mark-unreadable` says so, because recolouring somebody's logo to something still unreadable
-  spends the alteration and buys nothing.
-  **A knock is a `filter`, and the as-is screen refuses every filter on a protected picture** - so
-  `assetIntegrity.ts` admits exactly one shape on exactly one platform-owned class
-  (`…-logo--knocked`), with nothing else in the rule. Mutation-checked: a blur, a partial
-  brightness, a drop-shadow, the same filter on another selector, and the knock smuggling a
-  `clip-path`, `border-radius` or `object-fit: cover` beside it are all still blocking errors.
-  Pinned by `e2e/pro-language.spec.ts`, which measures the emit through the REAL screen.
-
-**The concept-and-reconstruct engine is DELETED (2026-08-15).** `pro/reconstruct/` held it behind
-a build-time import boundary for one day, and both went in the same change once the last thing
-reading it - a fixture bank, four `scripts/pro-*` runners and nine `e2e/pro.spec.ts` tests - had
-somewhere else to be. The fixture bank was archived outside the repo first; the paid rounds that
-produced it stay in `benchmarks/pro/round-2026-08-0{8,9,10}/` and in `docs/AI_ATTEMPTS.md`,
-because they are the measurement Phase A rests on.
-
-### What the retired engine measured, kept because Phase A rests on it
-
-**RETIRED - the reconstruction path was PARKED on measurement (2026-08-08), replaced
-(2026-08-15) and deleted the same day.** The concept stage worked and the compiler could not keep
-what it designed: visibly broken on 5 of 12 while the gates reported 11 of 12 passing. The three
-findings worth carrying forward, none of them about images:
-
-- **A gate that measures the right dimension and DISCARDS the answer is a scoring bug.** The
-  compiler's own `ProCompileReport.warnings` separated broken from usable on 11 of 12, and the
-  bench computed `pass` without reading them. The same bug reached production a layer nearer the
-  student: the first real hosted generation shipped a graphic printing its own words twice with
-  `validation_rule_codes` EMPTY and the ledger row saying `usable`. That is why `pro/language/`
-  has exactly ONE scoring seam (`gate.ts`) and why the ledger row now carries `pro-` warnings as
-  well as errors.
-- **No gate asked whether the compiled graphic RESEMBLED the concept**, so a wrong graphic scored
-  `editability 1.00`. A deterministic gate cannot catch a defect in a dimension it does not
-  measure - the doctrine at the top of this file, paid for here.
-- **A control that does not execute the product path is not a control.** Two paid rounds were
-  mis-read as model failure while the platform was at fault (`docs/AI_ATTEMPTS.md`), and for two
-  months the product ran an engine the plan had already replaced while the composer nobody could
-  reach scored 26 of 30.
+**LIVE since 2026-08-15 (hosted deployments where `AI_PRO_ENABLED` is on).** Pressing Create on
+the Pro tier runs **ONE text call for a design LANGUAGE**, and the platform composes **every
+graphic the user asked for** in it. The tier, its Phase A composer (`pro/language/`), its server
+booking and the findings the deleted concept-and-reconstruct engine paid for moved to
+**`src/ai/pro/AGENTS.md`** (with its thin `CLAUDE.md`), which loads when you work in that
+directory. Two things about it bind from out here: `pro/language/pipeline.ts` is the ONE route
+from the wizard to a Pro graphic and `pro/language/gate.ts` the ONE seam a composed graphic is
+scored through, and `pro/types.ts` is the wire vocabulary both TypeScript trees compile against
+- dependency-light for the same reason `lite/types.ts` is.
 
 **Lite and Pro are SEPARATE PROJECTS with different purposes and constraints (owner decision,
 2026-08-09).** Pro is not the continuation of Lite and Lite is not a reduced Pro. Lite is a
@@ -674,139 +475,6 @@ one deterministic mapping seam - `pro/brief.ts` maps that shared brief onto the 
 call so there is no parallel brief vocabulary. That is a UI and contract economy, not a shared
 strategy.
 
-**A Pro generation is capped at `PRO_MAX_GENERATION_COST_USD` = $0.15** (`pro/contract.ts`),
-booked by the server's `pro-generate` reservation. The number was sized against the retired
-engine's measured $0.0777; Phase A measures $0.0039, so it is now loose by roughly 38x and
-catches only a runaway - stated in the constant's own note rather than quietly retuned, because
-too low a ceiling destroys a finished graphic somebody was already billed for. There is no
-browser ceiling any more: with one call the money is spent before a browser could refuse.
-
-**HOSTED Pro is a server BOOKING** (`AI_PRO_ENABLED`, default off; `docs/AI_TASK_REGISTRY.md`).
-`src/ai/pro/session.ts` opens ONE reservation per generation (`POST /api/ai/pro-generations`) and
-the pipeline forwards `proGenerationId` on every model call; `/api/ai/generate` admits each call
-against it and settles the provider's real cost into `ai_generations` (migration 0044). **A
-`session` of null is the bring-your-own-key and offline-stub path, unchanged** - a caller
-spending their own key is never metered.
-
-**A FLEET SLOT FOLLOWS THE WORK, NOT THE CLOCK, and that is what makes Pro usable by a class.**
-Thirty students press Create within seconds of each other. Two things were wrong together: the
-reservation answered `shared_capacity` on its first observation, and it booked the slot for the
-profile's whole 15-minute expiry - so most of the room got an error, waiting on slots that did
-not turn over. Now the admission RETRIES the shared slot with jitter (`reserveProCapacity`,
-Lite's shape), and the reservation is taken on a lease covering ONE call which every settled call
-renews (`proCapacityRetryPlan`, migration 0046). A live generation keeps its seat; an abandoned
-tab frees it within a lease instead of a quarter of an hour. **Only the fleet slot is retried** -
-a quota, the user's own overlap, the spend ceiling and a duplicate are durable answers, and
-re-asking them would just spend the classroom's request budget.
-
-**The retry SPACING follows the first measured turnover** - 62 s for a real slot cycle, so the
-default is ~31 s (half the cycle, Lite's rule; three attempts straddle one full turnover).
-`AI_PRO_RETRY_SPACING_MS` moves it without a deploy, and `/api/ai/pro-outcome` keeps recording
-`runtime_ms` so the number keeps following the fleet.
-
-**AN UNSPENT RESERVATION IS RELEASED, so infra failure costs no allowance and no fleet budget.**
-A reservation books the whole $0.15 ceiling; only the first SETTLED call replaces it with real
-spend. A run with ZERO settled calls (a 503, a timeout, an abandoned tab) provably paid for
-nothing - `pro_call_count` is server truth - so once it is terminal or its lease runs out it
-stops counting toward the daily starts and the fleet spend sum (migration 0049 in
-`ai_task_usage`; the same rule mirrored in the memory store, and `/api/ai/pro-outcome` zeroes
-the row and expires the reservation on `failed`). A run with ANY settled call keeps its start
-and its real cost - a validation failure spent real money and counts. The browser adds ONE
-bounded in-session retry on a provider outage only (`shouldRetryModelCall`, modelTypes.ts):
-safe because an unsettled call left the reservation's budget untouched, and a retry is a new
-admission against the SAME booking - never a re-POSTed reservation
-(`api/_lib/pro/reservationAccounting.test.ts` pins all of it, both directions).
-
-**`PRO_STANDARD_ROUTES` (`pro/contract.ts`) is ONE route, pinned so a normal Pro user never picks
-models**, and `api/_lib/aiProProfile.ts` funds exactly that one. **The funded list is ANDed by
-`resolveProGate`** - every entry must be priced, catalog-approved and not switched off from
-`/admin`, or hosted Pro is unavailable to everyone - so a route the product does not spend on is
-a live foot-gun rather than a harmless leftover. It carried the retired image route until
-2026-08-15, where disabling a model nothing called would have taken the whole tier down. Do not
-add a route Pro does not spend on. The audited image entry stays in `aiModelCatalog.ts` as an
-audit record and is marked in use by nothing.
-
-## NoaCG Pro PHASE A - the design language (`pro/language/`)
-
-**LIVE since 2026-08-15 - this is what a Pro user gets.** The premise change in
-`docs/NOACG_PRO_PLAN.md` §15: **the platform owns each graphic type's structure and spacing, and
-the model's entire contribution is the design LANGUAGE** - palette, type scale and weight, shape
-and corner language, accent form and weight, density, motion character. Three paid rounds moved
-the owner's verdict 6 → 7 of 12 while every machine measure improved, and all five remaining
-failures were panel layout; §15.3 ranks what has ever moved a rate (asking for judgement moved
-nothing, a boundary moved a lot, **removing the decision** moved most and stayed removed).
-
-Five rules bind anyone editing it:
-
-- **ONE ENGINE, AND THE PRODUCT IS ON IT.** `pipeline.ts` is the only route from the wizard to a
-  Pro graphic and `gate.ts` the only seam a composed graphic is scored through - product, bench
-  and control alike. Both exist because the alternative was measured: for two months the product
-  ran an engine the plan had already replaced, and the composer nobody could reach scored 26/30
-  while the live one shipped a graphic printing its own words twice.
-- **THERE IS NO NUMBER IN THE MODEL'S ANSWER.** `contract.ts` is enums, four hex colours and a
-  bundled font id. A geometry field would be a panel decision wearing a different name, and the
-  five failure classes would come straight back through it. `normalizeDesignLanguage` never fails
-  and never invents: every field is one of the values the schema offered or the house value, so
-  the composer downstream has no defensive branches.
-- **THE PLATFORM COMPOSES IN THE UNITS THE INSTRUMENTS MEASURE IN, WHICH MAKES EVERY MARGIN
-  KNOWABLE - NOT CLEAR.** Every size in `structure.ts` is a ratio of the primary type size, the
-  same unit `spacingCheck` and `proportionCheck` report in, so the file can state a margin against
-  each threshold and one free sweep can check it. **`node scripts/spike-structure-margins.mjs` did
-  (2026-08-16, 582 compositions, 1164 readings) and nine of the eleven stated margins moved**
-  (docs/NOACG_PRO_PLAN.md §18): a DERIVED ratio is the CSS the composer wrote, not the box the
-  browser painted, and leading, the mask idiom, a size floor firing above its anchor and a
-  fit-content panel all move it. `text-crowds-rule` was stated at 0.45 and measures 0.14 - the
-  `block` accent's slab is a rule too, and the gap to it is the LINE gap, not `RULE_GAP_RATIO`.
-  **`footprint-large` is BREACHED** at the stress words (0.14 against a 0.10 ceiling, on 59 of the
-  162 strap stress readings that have a footprint, and none at the control's words); the
-  instrument reports and does not gate, so what changed is that the file no
-  longer claims a margin it does not have. `padding-lopsided` and `text-escapes-panel` are the two
-  that hold - opposite sides are equal in every declaration, and no text escaped its panel in any
-  of the 792 readings that have one. **State a margin only with the frame that produced it.**
-- **IT COMPOSES THROUGH THE CATALOG'S OWN ASSEMBLER.** `compose.ts` builds a real `TemplateVariant`
-  through `defineVariant`, so a Phase A graphic inherits the `:root` contract, the auto-fit
-  `width: fit-content` box (**which is why text can never escape its panel**), the mask idiom, the
-  NOACG_ANIM region, the SPX definition, the shared logo slot and export readiness. §16 is the
-  argument: Pro's own document-building lost a GOOD panel in reconstruction.
-- **THE CONTROL RUNS THE CODE UNDER TEST.** `stub.ts`'s four hand-written languages go through
-  `composeFromLanguage` - the identical function a model answer will - and ride the spike's free
-  pass (`languageAnchors`, `node scripts/pro-spike.mjs --control`), measured by the same
-  instruments a paid round is scored by. A control that does not execute the path is not a control,
-  and this repo has paid for that finding three times.
-- **AN INSTRUMENT MEASURES THE BOX ITS QUESTION IS ABOUT, and the two mark boxes are the
-  precedent.** `spacingCheck` reported the mark's clear space off the `<img>`'s BORDER box, so a
-  design expressing that clear space as image padding had it counted as zero. An instrument whose
-  false positives are the good designs is one authors learn to ignore, which is worse than no
-  instrument. It now measures the INK (`markContentRect`, inset by padding and border), and
-  `proportionCheck` deliberately does NOT follow: `mark-oversized` asks how much ROOM the mark
-  takes and a padded well takes all of it, which is also what `MARK_SCALE_CEILING` is calibrated
-  on. Two questions, two boxes, each stated where it is read.
-  **Measured over all 24 mark-capable lower thirds with a square crest**
-  (`node scripts/spike-mark-clearance-sweep.mjs`, which reports the border-box control and the ink
-  reading off ONE render): exactly three designs move and all three move up - lt07 0.22 -> 0.36,
-  lt41 0.31 -> 0.52, ls10 0.25 -> 0.56 - and the other 21 are byte-identical, because only those
-  three pad the image itself. lt07 was the only reading the artifact was pushing under the 0.25
-  floor. **The absolute ratios depend on the MARK**, since a slot that sizes itself from the
-  artwork's aspect paints a different height for each one; the set that MOVES does not.
-- **THE MARK-GAP UNIT IS THE PRIMARY TYPE SIZE, and it used to be the mark's own height - which
-  divided a design by its own generosity.** Under the old unit ls18 was called crowded at
-  **22px** of clear space while lt08 passed at exactly 22px, and ls25 at **30px** while lt15
-  passed at 26px; in both pairs the flagged design had the same or a LARGER gap and a much taller
-  mark (135px and 130px against 75px and 84px). Neither was a spacing defect - ls25 is a
-  `picture` well holding square cover art, ls18 stretches an institution's mark to the height of
-  the card - and this file's own doctrine is that an instrument whose false positives are the
-  good designs is one authors learn to ignore. **Recalibrated 2026-08-15 against the catalog**,
-  the way `spike-spacing-calibrate.mjs` requires and the way every OTHER ratio in `spacingCheck`
-  already worked: floor **0.35** type sizes (under the catalog's tightest shipped pairing, lt08
-  at 0.41, and inside a real gap - the next reading is 0.45), ceiling **2.1** (the same ~1.3x
-  headroom over the widest shipped lockup, lt54 at 1.61, that the old ceiling carried). In type
-  sizes the 24 mark-capable lower thirds run 0.41-1.61 and neither previously-flagged design is
-  an outlier: ls18 is 8th of 24, ls25 is 13th. The unit also clusters far tighter - p95/p05 is
-  **2.9x** against the mark-height unit's **4.3x**, and a distribution spread four-fold has no
-  floor to put under it. **Nothing is lost by dropping the mark's height as the unit**, because
-  `proportionCheck`'s `mark-oversized` still measures it (ceiling 3.2, on the BORDER box), so a
-  design cannot dodge the gap floor by growing its mark - it hits that ceiling instead. The
-  finding now carries all three raw numbers (`22px from 43px type, mark 135px`).
 
 ## The TASTE instrument (`spike/tasteCheck.ts`) - the owner's six rules as numbers
 

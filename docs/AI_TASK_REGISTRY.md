@@ -48,7 +48,7 @@ that reservation and settles its real provider cost into it
 (`api/_lib/pro/managedCall.ts`). `/api/ai/pro-status` reports availability and the
 allowance; `/api/ai/pro-outcome` records what became of the generation, never what it cost -
 the server that spent the money writes that. Profile `api/_lib/aiProProfile.ts`, browser
-session client `src/ai/pro/session.ts`, wire types `src/ai/proTypes.ts`.
+session client `src/ai/pro/session.ts`, wire types `src/ai/pro/types.ts`.
 
 **All three are SINGLE SEGMENTS under `/api/ai/`, and that is a platform constraint rather
 than a style choice.** Measured on production 2026-08-14: a `[...path].ts` function here

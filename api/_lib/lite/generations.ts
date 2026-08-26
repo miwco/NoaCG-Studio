@@ -40,8 +40,8 @@ import {
   liteSystemPrompt,
   retrieveLiteReferenceSet,
   validateLiteDecision,
-} from '../../../src/ai/liteContract.js';
-import type { LiteGenerationRequest, LiteGenerationResult } from '../../../src/ai/liteTypes.js';
+} from '../../../src/ai/lite/contract.js';
+import type { LiteGenerationRequest, LiteGenerationResult } from '../../../src/ai/lite/types.js';
 import type { ModelResult, ModelRoute, ModelUsage } from '../../../src/ai/modelTypes.js';
 import { validateProjectFormat } from '../../../src/model/projectFormat.js';
 
@@ -113,7 +113,7 @@ function validateRequest(value: unknown, profile: ReturnType<typeof liteProfile>
   }
   if (body.hasLogo !== undefined && typeof body.hasLogo !== 'boolean') throw new Error('logo');
   if (body.hasLogo === true && profile.limits.logos < 1) throw new Error('logo unsupported');
-  // The mark DESCRIPTOR (src/ai/liteTypes.ts): three enumerated facts the browser measured off
+  // The mark DESCRIPTOR (src/ai/lite/types.ts): three enumerated facts the browser measured off
   // the upload. Content-free by construction - no bytes, no name, no dimensions - and validated
   // as strictly as everything else here, because it reaches the prompt.
   if (body.mark !== undefined && body.mark !== null) {

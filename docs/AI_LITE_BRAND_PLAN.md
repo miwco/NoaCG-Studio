@@ -197,7 +197,7 @@ two designs, and a title with no contrast on a light package.
 default carried and the user's brand silently vanished. Correct for a model-invented palette;
 wrong for a requested brand.
 
-**Shipped** (`applyLiteBrandPalette` in `src/ai/liteContract.ts`, called from
+**Shipped** (`applyLiteBrandPalette` in `src/ai/lite/contract.ts`, called from
 `validateLiteDecision`): when the request carries a palette, that palette IS the graphic's
 colours and the model gets no vote on them. Identity slots are copied verbatim from the
 REQUEST, which closed a hole the plan had not named - the model's echo was what shipped, so a

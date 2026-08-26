@@ -328,7 +328,7 @@ const bareInPage = async ({ message, route, decoding }) => {
   const { callModelDetailed } = await import('/src/ai/modelGateway.ts' + bust);
   const { RAW_SYSTEM, TEMPLATE_TOOL, toTemplate } = await import('/src/ai/claudeProvider.ts' + bust);
   const { outputBudget } = await import('/src/ai/modelTypes.ts' + bust);
-  const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+  const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
   const { parseAnimData } = await import('/src/blocks/animData.ts' + bust);
   const result = await callModelDetailed({
     system: RAW_SYSTEM,
@@ -364,7 +364,7 @@ const bareInPage = async ({ message, route, decoding }) => {
 const harnessInPage = async ({ brief, route, decoding }) => {
   const bust = '?t=' + Date.now();
   const spikeRun = await import('/src/ai/spike/run.ts' + bust);
-  const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+  const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
   const { parseAnimData } = await import('/src/blocks/animData.ts' + bust);
   const result = await spikeRun.runSpikeBrief({
     brief,
@@ -868,7 +868,7 @@ if (DRY) {
       const { emitPresetRegion } = await import('/src/blocks/presetRegistry.ts' + bust);
       const { convertEmittedRegion, toTemplate } = await import('/src/ai/claudeProvider.ts' + bust);
       const { parseAnimData } = await import('/src/blocks/animData.ts' + bust);
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
       const variant = variantById('lt01');
       if (!variant) throw new Error('dry: lt01 missing from the catalog');
       const tpl = variant.create();
@@ -897,7 +897,7 @@ if (DRY) {
       const bust = '?t=' + Date.now();
       const { toTemplate } = await import('/src/ai/claudeProvider.ts' + bust);
       const { parseAnimData } = await import('/src/blocks/animData.ts' + bust);
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
       const template = toTemplate(emit);
       if (template.fields.length !== 2) throw new Error(`dry bare control: parsed ${template.fields.length} fields, expected 2`);
       if (parseAnimData(template.js)) throw new Error('dry bare control: authoring-shape js unexpectedly parsed as a data region');

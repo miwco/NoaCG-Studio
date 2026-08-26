@@ -8,29 +8,29 @@
 // a benchmark-only compile path is the drift this module exists to make impossible.
 // scripts/ai-lite-bench.test.mjs pins that claudeProvider has no second copy.
 
-import { specToTemplate, type AssembleOptions, type DesignSpec } from './designSpec';
-import { applyDesignAdjustments } from './designAdjust';
-import { applyPolish } from './polish';
-import { applySpecLocks, applySpecOutPreset } from './spec/specDesign';
-import { demoteSpecFields, ensureSpecFonts } from './spec/specValidate';
-import { withSafetyChecks } from './safety';
-import { mergeAssetIntegrity } from './assetIntegrity';
+import { specToTemplate, type AssembleOptions, type DesignSpec } from '../designSpec';
+import { applyDesignAdjustments } from '../designAdjust';
+import { applyPolish } from '../polish';
+import { applySpecLocks, applySpecOutPreset } from '../spec/specDesign';
+import { demoteSpecFields, ensureSpecFonts } from '../spec/specValidate';
+import { withSafetyChecks } from '../safety';
+import { mergeAssetIntegrity } from '../assetIntegrity';
 import {
   LITE_CATALOG,
   LITE_SINGLE_LINE_ROLES,
   liteSkinPatchErrors,
   liteTextHasVisibleGlyph,
   sanitizeLiteSkinPatch,
-} from './liteContract';
-import type { LiteDesignSpec, LiteLowerThirdLineRole, LiteSkinPatch } from './liteTypes';
-import type { GenerateContext, SpxValidator } from './provider';
-import type { AiDiversity } from './telemetry';
-import type { SpxTemplate } from '../model/types';
-import { ltc01 } from '../templates/lowerThirds/skinCanvas';
-import type { ValidationResult } from '../validation/validateTemplate';
-import { validateTemplate } from '../validation/validateTemplate';
-import { typeFloorFor } from '../validation/typeFloor';
-import { benchTemplateRuntime, mergeResults } from '../validation/runtimeBench';
+} from './contract';
+import type { LiteDesignSpec, LiteLowerThirdLineRole, LiteSkinPatch } from './types';
+import type { GenerateContext, SpxValidator } from '../provider';
+import type { AiDiversity } from '../telemetry';
+import type { SpxTemplate } from '../../model/types';
+import { ltc01 } from '../../templates/lowerThirds/skinCanvas';
+import type { ValidationResult } from '../../validation/validateTemplate';
+import { validateTemplate } from '../../validation/validateTemplate';
+import { typeFloorFor } from '../../validation/typeFloor';
+import { benchTemplateRuntime, mergeResults } from '../../validation/runtimeBench';
 
 export interface GroundedAssembly {
   template: SpxTemplate;

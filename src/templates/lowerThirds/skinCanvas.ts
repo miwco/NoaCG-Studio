@@ -1,7 +1,7 @@
 // ltc01 "Skin Canvas" — the NEUTRAL SKELETON that NoaCG Lite's model-authored skin paints.
 //
 // This variant is deliberately NOT in the browse catalog (lowerThirds/index.ts): it exists
-// only as the assembly target of the Lite skin path (src/ai/litePipeline.ts). The platform
+// only as the assembly target of the Lite skin path (src/ai/lite/pipeline.ts). The platform
 // assembles it deterministically — structure spine, #fN fields, NOACG_ANIM data region,
 // zone placement — and the skin call restyles it with an appended CSS override block, the
 // same bounded surface as the polish pass. Its own styling is therefore a competent, quiet

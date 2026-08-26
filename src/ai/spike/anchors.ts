@@ -21,7 +21,7 @@
 // the model call.
 
 import { variantById } from '../../templates/catalog';
-import { assembleGroundedTemplate } from '../litePipeline';
+import { assembleGroundedTemplate } from '../lite/pipeline';
 import { VETTED_EXEMPLAR_IDS } from './exemplars';
 import { fillBrandMark, type SpikeBrand } from './brand';
 import { composeFromLanguage } from '../pro/language/compose';

@@ -15,7 +15,7 @@ import { test } from 'node:test';
 import { MemoryLiteGenerationStore, type LedgerQuotaProfile } from '../aiLiteStore.js';
 import { proOutcomePatch } from './outcome.js';
 import { ModelGatewayError, shouldRetryModelCall } from '../../../src/ai/modelTypes.js';
-import type { ProOutcomeRequest } from '../../../src/ai/proTypes.js';
+import type { ProOutcomeRequest } from '../../../src/ai/pro/types.js';
 
 const PROFILE: LedgerQuotaProfile = {
   id: 'pro',

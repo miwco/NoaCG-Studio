@@ -22,7 +22,7 @@ benchmarks are weak priors here.
 Findings from the 2026-07 inspection, kept here because they shape the whole design:
 
 - **Lite sends a curated compact digest, never a full-catalog dump.** The server-owned
-  system prompt (`src/ai/liteContract.ts` `liteSystemPrompt`) always contains the whole
+  system prompt (`src/ai/lite/contract.ts` `liteSystemPrompt`) always contains the whole
   *Lite* catalog - the audited allowlist (6 lower-third chassis at first release), one
   pipe-delimited line each. There is no separate category-selection call and no per-call
   filtering: with one supported category there is nothing to filter yet. `'auto'` versus an
@@ -55,7 +55,7 @@ Findings from the 2026-07 inspection, kept here because they shape the whole des
 - **Eval-vs-production drift:** closed. The model-call side was already identical (the eval
   runner calls the production endpoint); the compile side drifted (the old eval skipped
   `applySpecLocks`/`ensureSpecFonts`/`applySpecOutPreset` and the safety screen). The whole
-  deterministic half now lives once in **`src/ai/litePipeline.ts`** and both production and
+  deterministic half now lives once in **`src/ai/lite/pipeline.ts`** and both production and
   every runner import it; `scripts/ai-lite-bench.test.mjs` pins that no second copy exists.
 - **Key exposure:** none found. Provider keys are server-only (`managedAiKey`); the eval
   runner authenticates with a bearer token and never sees keys, models, or provider bodies;
@@ -72,7 +72,7 @@ Findings from the 2026-07 inspection, kept here because they shape the whole des
 
 ## 2. The shared pipeline
 
-`src/ai/litePipeline.ts` is the one grounded compile path:
+`src/ai/lite/pipeline.ts` is the one grounded compile path:
 
 - `normalizeLiteSpec` - the lite decision's normalization (`fit: 'catalog'`, no flourish,
   `applySpecLocks` for the user's structured setup).
@@ -611,7 +611,7 @@ When the profile enables `AI_LITE_SKIN_ENABLED`, the same single model call may 
 `skin:{summary,css,html?}` - bounded restyling for the NEUTRAL canvas chassis
 (`templates/lowerThirds/skinCanvas.ts` `ltc01`, deliberately NOT in the browse catalog). The
 platform still compiles everything deterministically; the skin CSS lands as a marked override block
-through the SAME polish gate (`applyPolish`, `LITE_SKIN_MARKER`), and `litePipeline.attemptLiteSkin`
+through the SAME polish gate (`applyPolish`, `LITE_SKIN_MARKER`), and `lite/pipeline.attemptLiteSkin`
 is the ONE implementation both production (`liteGroundedResult`, path `grounded+skin`) and the
 benchmark runners use. Any failure - an illegal patch (`liteSkinPatchErrors`, shared with the
 server's semantic validation), a gate rejection, or a failing bench - REVERTS silently to the spec's
@@ -637,7 +637,7 @@ When a teaching change moves a rate, suspect the FRAMING before the rule.
 
 One server-owned, cost-capped vision call (`POST /api/ai/lite/judge`, flag `AI_LITE_JUDGE_ENABLED`)
 scoring the rendered HOLD frame on legibility / textIntegrity / hierarchy / briefFit / strapShape
-(contract + prompt in `liteContract.ts`, `LITE_JUDGE_*`, versioned independently as
+(contract + prompt in `lite/contract.ts`, `LITE_JUDGE_*`, versioned independently as
 `LITE_JUDGE_PROMPT_VERSION`); every axis must reach the server threshold or the caller reverts to
 the house chassis. It fails closed like the generation routes and stores nothing. Today only the
 eval rig calls it (Playwright captures the hold frame); production wiring waits on

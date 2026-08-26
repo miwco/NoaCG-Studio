@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAiProvider } from '../ai';
-import { productionSpxValidator } from '../ai/litePipeline';
+import { productionSpxValidator } from '../ai/lite/pipeline';
 import { benchStructuralIntent } from '../validation/structuralIntentCheck';
 import { mergeSafety } from '../ai/safety';
 import { aiConfigured } from '../ai/settings';
@@ -11,7 +11,7 @@ import { useTemplateStore } from '../store/templateStore';
 import { validateTemplate, type ValidationResult } from '../validation/validateTemplate';
 import { formatTemplate } from '../format/formatCode';
 import type { AiTemplateChange } from '../ai/provider';
-import { loadLiteStatus } from '../ai/liteClient';
+import { loadLiteStatus } from '../ai/lite/client';
 
 type Pending = { change: AiTemplateChange; validation: ValidationResult } | null;
 

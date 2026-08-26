@@ -29,8 +29,8 @@ test.describe('a Lite result is the same graphic as the catalog design it adapte
     test.setTimeout(120_000);
     const result = await page.evaluate(async () => {
       const { variantById } = await import('/src/templates/catalog.ts');
-      const mod = await import('/src/ai/litePipeline.ts');
-      const { LITE_CATALOG } = await import('/src/ai/liteContract.ts');
+      const mod = await import('/src/ai/lite/pipeline.ts');
+      const { LITE_CATALOG } = await import('/src/ai/lite/contract.ts');
       const control = await import('/src/control/controlModel.ts');
       type Decision = Parameters<typeof mod.compileLiteDecision>[0];
       type Context = Parameters<typeof mod.compileLiteDecision>[1];

@@ -7,7 +7,7 @@ import { LITE_SEMANTIC_FIXTURES } from './ai-lite-semantic-fixtures.mjs';
 import { readFileSync } from 'node:fs';
 
 const runtime = await buildApiRuntime(['api/_lib/aiLiteProfile.ts']);
-const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/liteContract.js')).href);
+const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/lite/contract.js')).href);
 after(async () => { await runtime.cleanup(); });
 
 test('one registry owns the complete lower-third contract', () => {

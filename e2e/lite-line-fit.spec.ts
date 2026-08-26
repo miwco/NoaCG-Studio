@@ -28,7 +28,7 @@ async function rulesFor(
 ): Promise<string[]> {
   return page.evaluate(
     async ([lineRole, lineSample]) => {
-      const mod = await import('/src/ai/litePipeline.ts');
+      const mod = await import('/src/ai/lite/pipeline.ts');
       type Decision = Parameters<typeof mod.compileLiteDecision>[0];
       type Context = Parameters<typeof mod.compileLiteDecision>[1];
       // `role` is required on a LITE decision's lines and absent from the shared DesignSpec

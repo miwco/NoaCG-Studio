@@ -1,6 +1,6 @@
 // The wire vocabulary of HOSTED NoaCG Pro - what the browser and api/ both compile against.
 //
-// Dependency-light on purpose, exactly like liteTypes.ts: both TypeScript trees import it, so
+// Dependency-light on purpose, exactly like lite/types.ts: both TypeScript trees import it, so
 // nothing catalog-bearing or DOM-bearing may enter. It describes the ALLOWANCE and the
 // RESERVATION, never the pipeline - docs/NOACG_PRO_PLAN.md §15 replaces the engine, and a wire
 // contract that named its stages would have to be rewritten with it.

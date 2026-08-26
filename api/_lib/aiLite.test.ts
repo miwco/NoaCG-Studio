@@ -15,8 +15,8 @@ import {
   obviousUnsupportedDecision,
   validateLiteDecision,
   validateLiteJudgeScores,
-} from '../../src/ai/liteContract.js';
-import type { LiteGenerationRequest } from '../../src/ai/liteTypes.js';
+} from '../../src/ai/lite/contract.js';
+import type { LiteGenerationRequest } from '../../src/ai/lite/types.js';
 import { estimateModelCost } from './aiGateway.js';
 import { liteJudgeConfigured, liteJudgePolicy, liteProfile, liteProfileConfigured, routePrice } from './aiLiteProfile.js';
 import type { ModelRoute } from '../../src/ai/modelTypes.js';

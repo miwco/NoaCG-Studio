@@ -36,7 +36,7 @@ schema-revalidated server-side. There is **no provider-specific branch in any ha
 |---|---|---|---|---|---|---|
 | W1 | Create with AI, harness ON (default): `generateAlternatives` | brief, last 10 talk turns, images + style references (<=3, base64, no SVG), palette, custom font, optional `GenerationSpec`, seed spec | `emit_design_alternatives` -> 3 `DesignSpec`; catalog-fit specs assemble deterministically, custom specs go to the coder (`emit_template`) | client-selected; default `anthropic:claude-sonnet-5` | injected `productionSpxValidator` (static + runtime bench + safety screen); grounded: 0 repair rounds; custom: 2 rounds, re-validated | hosted: signed-in; offline/BYO-key: open |
 | W2 | Harness OFF: `generateRaw` | same | one `emit_template` call, `RAW_SYSTEM` | same | static only, **no bench, no repair** (deliberate baseline) | same |
-| W3 | **NoaCG Lite** | brief <=2000 ch, <=6 turns, compact `LiteGenerationSpec` (<=2 fields), palette, font descriptor, resolution; **no images** | `LiteDecision`: one allowlisted catalog `LiteDesignSpec` or typed `unsupported` | **server-owned**: `openrouter:google/gemini-2.5-flash-lite` primary, `openrouter:qwen/qwen3-coder-next` fallback (env-overridable) | regex pre-screen + server semantic validation (roles, intent, contrast) + 1 server repair within a 2-attempt ceiling + client compile through `litePipeline.ts` + full bench; bench failure = platform failure, never model-repaired | free, signed-in, quota'd |
+| W3 | **NoaCG Lite** | brief <=2000 ch, <=6 turns, compact `LiteGenerationSpec` (<=2 fields), palette, font descriptor, resolution; **no images** | `LiteDecision`: one allowlisted catalog `LiteDesignSpec` or typed `unsupported` | **server-owned**: `openrouter:google/gemini-2.5-flash-lite` primary, `openrouter:qwen/qwen3-coder-next` fallback (env-overridable) | regex pre-screen + server semantic validation (roles, intent, contrast) + 1 server repair within a 2-attempt ceiling + client compile through `lite/pipeline.ts` + full bench; bench failure = platform failure, never model-repaired | free, signed-in, quota'd |
 | W4 | Spec-level refine (`modify` + spec) | prompt + prior DesignSpec + house-shaped template | new `DesignSpec` -> deterministic re-assembly | client-selected | as W1 grounded | as W1 |
 | W5 | Code-level modify / "Fix these" | prompt + template code | `emit_template` | client-selected | injected validator, 2 repair rounds | as W1 |
 | W6 | "3 more like this" (seeded alternatives) | seed `DesignSpec` | as W1 | client-selected | as W1 | as W1; hidden in Lite |
@@ -188,7 +188,7 @@ quota'd), a *pipeline restriction* (catalog-only structured spec, no code paths,
 `LiteRequestError` on every disallowed op), a *server-owned model policy* (routes, prices,
 ZDR, prompt version - config, not code), and a *prompt contract* (6 audited chassis,
 semantic line roles, versioned `lite-lower-third-v3`). It is **not a separate harness**:
-a ready decision rejoins the identical `groundedResult` / `litePipeline.ts` compile path
+a ready decision rejoins the identical `groundedResult` / `lite/pipeline.ts` compile path
 the main harness uses, pinned by `ai-lite-bench.test.mjs`.
 
 - Input/output contracts: `LiteGenerationRequest` -> `LiteDecision` (versioned by prompt
@@ -210,7 +210,7 @@ catalog-grounded creation harness, unchanged in scope. Generalize its *infrastru
 (profile, allowlist, quota ledger, rate limit, ZDR policy, outcome telemetry, benchmark
 pattern) into a shared task layer that new focused harnesses plug into. Components shared
 even when harnesses are separate: the gateway adapters, schema revalidation, the policy/
-budget/ledger layer, the compile/validation pipeline (`litePipeline`, `validateTemplate`,
+budget/ledger layer, the compile/validation pipeline (`lite/pipeline`, `validateTemplate`,
 `runtimeBench`, safety screen), the repair-loop seam, and the bench calibration pattern.
 
 ---
@@ -506,7 +506,7 @@ manifest identity, blind gallery, taxonomy, hard cost caps) rather than building
    `/api/ai/lite/*` keeps working unchanged (Lite becomes task id `lite-design-spec`
    internally; public URLs unchanged until a major cleanup).
 2. `ai_generations` gains a nullable `task` column (additive migration, no backfill).
-3. Browser: `liteClient.ts` patterns generalize into a small `taskClient.ts`; Lite's
+3. Browser: `lite/client.ts` patterns generalize into a small `taskClient.ts`; Lite's
    client keeps its API.
 4. Shared-seam extraction (repair loop, validator seam, telemetry) is behavior-neutral
    refactoring, each step proven by `ai-compare.mjs` regression mode + the free Lite
@@ -575,7 +575,7 @@ manifest identity, blind gallery, taxonomy, hard cost caps) rather than building
 `docs/AI_TASK_REGISTRY.md`.
 **Modified**: `api/_lib/{aiLiteProfile,aiLiteStore,aiLiteStoreSupabase,aiLiteRateLimit}.ts`
 (parameterize by task), `api/ai/generate.ts` (rate limit + ledger),
-`src/ai/{claudeProvider,liteClient,telemetry}.ts`, `src/ai/video/claudeVideoProvider.ts`
+`src/ai/{claudeProvider,lite/client,telemetry}.ts`, `src/ai/video/claudeVideoProvider.ts`
 (telemetry + shared seam), `src/components/AIPromptPanel.tsx` (validator + copy),
 `src/components/wizard/steps/{ImportDesignStep,PrepareDesignStep,PlaceFieldsStep}.tsx`
 (entry button + overlays), `src/components/wizard/draft.ts` (proposal->DraftPatch),

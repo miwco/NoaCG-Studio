@@ -1,7 +1,7 @@
 // The imported-graphic-analysis structured contract, v1 (docs/AI_PLATFORM_PLAN.md §6.2).
 // Dependency-light on purpose: the browser client, the normalizer, and the API endpoint
 // all import it, and neither catalog nor DOM-bearing modules may ride along (the
-// liteTypes.ts rule). The schema IS the contract: every constraint declared here is one
+// lite/types.ts rule). The schema IS the contract: every constraint declared here is one
 // the gateway's server-side revalidation actually enforces (docs/AI_PROVIDER_GATEWAY.md -
 // "a constraint the validator does not implement is not enforced anywhere").
 

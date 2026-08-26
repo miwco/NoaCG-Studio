@@ -68,7 +68,7 @@ const shield = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="260"
  * A real brand kit ships more than one of these, which is why a graphic has to say which
  * surface it offers rather than assuming the file will cope.
  *
- * `shape` is the bucket `LiteMarkShape` sorts this aspect into (src/ai/liteTypes.ts owns the
+ * `shape` is the bucket `LiteMarkShape` sorts this aspect into (src/ai/lite/types.ts owns the
  * cuts: portrait <0.85, square <=1.4, wordmark <=4.5, rail above). Declared rather than derived
  * because these five SVGs are authored here, and because the audit is a .mjs script that cannot
  * import the TypeScript that owns the boundaries - so the data lives here and the logic lives

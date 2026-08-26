@@ -28,7 +28,7 @@ authoritative. Auto mode proceeds only above the confidence and margin floors; a
 category choices for the UI instead of forcing a lower third. Category words are no longer a
 brittle regex refusal.
 
-`CATEGORY_CONTRACTS` in `src/ai/liteContract.ts` is the one registry for category structure. Its
+`CATEGORY_CONTRACTS` in `src/ai/lite/contract.ts` is the one registry for category structure. Its
 complete lower-third entry owns supported graphic types, 1-4 visible fields, field kinds, named
 content slots, compatible measured chassis, the type-owned linear state machine, and the standard
 operator events. The model never writes fields, lifecycle code, or a second scene model.
@@ -321,7 +321,7 @@ browser before anything is sent (`assets/assetInfo.ts` `probeMark`, one image, o
 pass) and sent as `LiteGenerationRequest.mark`:
 
 - **shape** - `markShapeFromAspect` buckets the natural aspect into `portrait` / `square` /
-  `wordmark` / `rail`. The cuts live in `liteTypes.ts` alone; the audit's fixture bank declares
+  `wordmark` / `rail`. The cuts live in `lite/types.ts` alone; the audit's fixture bank declares
   its five marks against them rather than re-deriving them.
 - **backing** - `own-field` or `transparent`, from the share of fully opaque pixels. A logo
   flattened onto a white tile is opaque and genuinely does bring its own field.

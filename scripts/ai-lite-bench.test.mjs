@@ -22,16 +22,16 @@ import { LITE_LOWER_THIRD_FIXTURES } from './ai-lite-lower-third-fixtures.mjs';
 const read = (relative) => readFileSync(path.join(projectRoot, relative), 'utf8');
 
 const runtime = await buildApiRuntime(['api/_lib/aiLiteProfile.ts']);
-const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/liteContract.js')).href);
+const contract = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/lite/contract.js')).href);
 after(async () => { await runtime.cleanup(); });
 
 const request = (prompt) => ({ prompt, resolution: { width: 1920, height: 1080 }, fps: 50 });
 
 // ── Pipeline equivalence pins ────────────────────────────────────────────────
 
-test('claudeProvider compiles grounded specs only through litePipeline', () => {
+test('claudeProvider compiles grounded specs only through lite/pipeline', () => {
   const source = read('src/ai/claudeProvider.ts');
-  assert.match(source, /from '\.\/litePipeline'/);
+  assert.match(source, /from '\.\/lite\/pipeline'/);
   assert.match(source, /assembleGroundedTemplate\(/);
   assert.match(source, /normalizeLiteSpec\(/);
   // No second copy of the assembly sequence may exist in the provider.
@@ -71,8 +71,8 @@ test('the prompt version has ONE source: the profile literal, never a value in .
   );
 });
 
-test('litePipeline holds the exact production assembly order', () => {
-  const source = read('src/ai/litePipeline.ts');
+test('lite/pipeline holds the exact production assembly order', () => {
+  const source = read('src/ai/lite/pipeline.ts');
   assert.match(source, /applySpecOutPreset\(\s*ensureSpecFonts\(applyDesignAdjustments\(/);
   assert.match(source, /withSafetyChecks\(/);
   assert.match(source, /demoteSpecFields\(/);
@@ -87,7 +87,7 @@ test('the app injects the shared production validator', () => {
 test('the benchmark runners compile through the shared pipeline, never inline', () => {
   for (const file of ['scripts/ai-lite-eval.mjs', 'scripts/ai-lite-bench/compileRunner.mjs']) {
     const source = read(file);
-    assert.match(source, /compileLiteDecision/, `${file} must use litePipeline`);
+    assert.match(source, /compileLiteDecision/, `${file} must use lite/pipeline`);
     assert.doesNotMatch(source, /specToTemplate\(/, `${file} must not re-inline the assembly`);
   }
 });
@@ -107,18 +107,20 @@ test('every contract symbol the browser-side runners reference exists', () => {
   // gate (LITE_DECISION_OUTPUT -> LITE_READY_OUTPUT broke the compile arms this way).
   const referenced = new Set();
   for (const file of ['scripts/ai-lite-bench/compileRunner.mjs', 'scripts/ai-lite-calibrate.mjs', 'scripts/ai-lite-regress.mjs']) {
-    for (const match of read(file).matchAll(/\bcontract\.([A-Za-z_$][\w$]*)/g)) {
+    // The lookbehind excludes a PATH ending in the module's own name - a comment naming
+    // `src/ai/lite/contract.ts` used to be read as a reference to an export called `ts`.
+    for (const match of read(file).matchAll(/(?<![\w/])contract\.([A-Za-z_$][\w$]*)/g)) {
       referenced.add(match[1]);
     }
   }
   for (const name of ['liteSystemPrompt', 'liteCatalogDigest', 'LITE_READY_OUTPUT', 'LITE_CATALOG']) referenced.add(name);
   for (const name of referenced) {
-    assert.ok(name in contract, `liteContract no longer exports "${name}" (referenced by a runner)`);
+    assert.ok(name in contract, `lite/contract no longer exports "${name}" (referenced by a runner)`);
   }
 });
 
 test('mark shapes: the aspect cuts, and no shape servable by only one chassis', async () => {
-  const types = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/liteTypes.js')).href);
+  const types = await import(pathToFileURL(path.join(runtime.outputDir, 'src/ai/lite/types.js')).href);
   // The boundaries, at and either side of each cut - a mark's shape decides which slots can
   // hold it, so an off-by-one here silently routes a wordmark into a crest well.
   assert.equal(types.markShapeFromAspect(180 / 260), 'portrait');

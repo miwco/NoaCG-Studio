@@ -12,9 +12,9 @@ import type {
   LiteSkinPatch,
   LiteUnsupportedCode,
   LiteVariantQualityPrior,
-} from './liteTypes';
-import type { StructuredOutput } from './modelTypes';
-import { pickRelevantDiverse } from './referenceSelect.js';
+} from './types';
+import type { StructuredOutput } from '../modelTypes';
+import { pickRelevantDiverse } from '../referenceSelect.js';
 
 export type LiteFieldKind = 'text' | 'image';
 

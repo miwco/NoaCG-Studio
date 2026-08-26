@@ -2,7 +2,7 @@
   "suiteId": "lite-spec-v2",
   "gitCommit": "f6a846e28f7d16dc5e2c4d93f939072a79cbdcb9",
   "hashes": {
-    "liteContract": "bd8c716bbe6306f0",
+    "lite/contract": "bd8c716bbe6306f0",
     "pipeline": "a1f8fa61f79a0d23",
     "catalog": "a0beaac340495167",
     "validators": "6e6b8fef571a34d3",

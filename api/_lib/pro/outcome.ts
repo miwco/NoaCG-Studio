@@ -14,7 +14,7 @@ import { bearerToken, json, methodGuard, readJson } from '../http.js';
 import { verifyUser } from '../auth.js';
 import { proError } from './http.js';
 import { liteLedgerConfigured, getLiteGenerationStore, type LiteGenerationRecord } from '../aiLiteStore.js';
-import type { ProOutcomeRequest } from '../../../src/ai/proTypes.js';
+import type { ProOutcomeRequest } from '../../../src/ai/pro/types.js';
 
 const ID = /^[0-9a-f]{8}-[0-9a-f-]{27,36}$/i;
 const CODE = /^[a-z0-9][a-z0-9_.:-]{0,79}$/i;

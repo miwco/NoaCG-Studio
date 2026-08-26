@@ -32,7 +32,7 @@
 // other element, `markMotionState` samples it through the virtual clock, and whether the motion
 // is MEANINGFUL stays a human read of the strips - a measurement can only say whether it moved.
 
-import { markShapeFromAspect } from '../liteTypes';
+import { markShapeFromAspect } from '../lite/types';
 import { fontById, fontFaceCss, fontStack } from '../../model/fonts';
 import { replaceDefinitionInHtml } from '../../model/spxDefinition';
 import { uniqueAssetPath } from '../../assets/assetUtils';
@@ -63,7 +63,7 @@ export interface SpikeBrand {
   };
 }
 
-/** The same ink-word cuts the Lite client applies to the identical probe (liteClient.ts). */
+/** The same ink-word cuts the Lite client applies to the identical probe (lite/client.ts). */
 export function inkWord(probe: MarkProbe): 'light' | 'dark' | 'mid' {
   return probe.inkLuminance >= 0.65 ? 'light' : probe.inkLuminance <= 0.35 ? 'dark' : 'mid';
 }

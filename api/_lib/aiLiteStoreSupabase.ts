@@ -12,7 +12,7 @@ import type {
 import type {
   LiteLowerThirdIntentKind,
   LiteVariantQualityPrior,
-} from '../../src/ai/liteTypes.js';
+} from '../../src/ai/lite/types.js';
 
 interface GenerationRow {
   id: string;

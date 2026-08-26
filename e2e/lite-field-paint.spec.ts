@@ -34,7 +34,7 @@ type Page = import('@playwright/test').Page;
 /** Compile one ordinary Lite decision through the shared grounded path. */
 async function rulesFor(page: Page, mutate: 'none' | 'hide-second-field'): Promise<string[]> {
   return page.evaluate(async (how) => {
-    const pipeline = await import('/src/ai/litePipeline.ts');
+    const pipeline = await import('/src/ai/lite/pipeline.ts');
     const bench = await import('/src/validation/runtimeBench.ts');
     type Decision = Parameters<typeof pipeline.compileLiteDecision>[0];
     type Context = Parameters<typeof pipeline.compileLiteDecision>[1];
@@ -85,7 +85,7 @@ test.describe('a Lite graphic paints every field it declares', () => {
 
   test('the drive is off unless a caller asks, and leaves the default data behind it', async ({ page }) => {
     const out = await page.evaluate(async () => {
-      const pipeline = await import('/src/ai/litePipeline.ts');
+      const pipeline = await import('/src/ai/lite/pipeline.ts');
       const bench = await import('/src/validation/runtimeBench.ts');
       type Decision = Parameters<typeof pipeline.compileLiteDecision>[0];
       type Context = Parameters<typeof pipeline.compileLiteDecision>[1];

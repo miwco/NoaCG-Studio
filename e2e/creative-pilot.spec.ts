@@ -368,7 +368,7 @@ test.describe('creative pilot (phase C)', () => {
       const { normalizeCreativeSpec } = await import('/src/ai/creative/contracts.ts');
       const { compileScaffoldOnly } = await import('/src/ai/creative/pipeline.ts');
       const { applyCreativeStyle } = await import('/src/ai/creative/style.ts');
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
       const i = normalizeIntent(intent);
       const { scaffold } = compileScaffoldOnly(normalizeCreativeSpec(spec, i), i);
       const poisoned = applyCreativeStyle(scaffold, {
@@ -425,7 +425,7 @@ test.describe('creative pilot (phase C)', () => {
       const { normalizeCreativeSpec } = await import('/src/ai/creative/contracts.ts');
       const { compileScaffoldOnly } = await import('/src/ai/creative/pipeline.ts');
       const { applyCreativeStyle } = await import('/src/ai/creative/style.ts');
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
       const i = normalizeIntent(intent);
       const { scaffold } = compileScaffoldOnly(normalizeCreativeSpec(spec, i), i);
       const styled = applyCreativeStyle(scaffold, {
@@ -849,7 +849,7 @@ test.describe('creative pilot (phase C)', () => {
     await open(page);
     // Correct-looking contracts rendered unreadable across the 2026-08-02 rounds: white ink on
     // a near-white panel at 1.1:1, translucent grey on pale at 1.8:1. The contrast maths is
-    // reused from liteContract (stepped, because travelling toward an extreme can pass THROUGH
+    // reused from lite/contract (stepped, because travelling toward an extreme can pass THROUGH
     // the panel's own luminance) - what could not be reused was its ENTRY POINT, which works on
     // hex while 48 of 61 archived creative panels are rgba. Handed one it silently no-ops.
     const report = await page.evaluate(async () => {
@@ -964,7 +964,7 @@ test.describe('creative pilot (phase C)', () => {
       const { normalizeIntent } = await import('/src/ai/structuralIntent.ts');
       const { normalizeCreativeSpec } = await import('/src/ai/creative/contracts.ts');
       const { compileScaffoldOnly } = await import('/src/ai/creative/pipeline.ts');
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
       const i = normalizeIntent(intent);
       const { scaffold } = compileScaffoldOnly(normalizeCreativeSpec(spec, i), i);
       // The SAME validator the arms inject: static validation + the live runtime bench +
@@ -1313,7 +1313,7 @@ test.describe('creative pilot (phase C)', () => {
     const runs = await page.evaluate(async ({ intent }) => {
       const { normalizeIntent } = await import('/src/ai/structuralIntent.ts');
       const { runCreativeArm } = await import('/src/ai/creative/pipeline.ts');
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
       const { benchStructuralIntent } = await import('/src/validation/structuralIntentCheck.ts');
       const i = normalizeIntent(intent);
       const input = {
@@ -1415,7 +1415,7 @@ test.describe('creative pilot (phase C)', () => {
     const runArm = async (arm: 'A' | 'B') => page.evaluate(async ({ intent, arm }) => {
       const { normalizeIntent } = await import('/src/ai/structuralIntent.ts');
       const { runCreativeArm } = await import('/src/ai/creative/pipeline.ts');
-      const { productionSpxValidator } = await import('/src/ai/litePipeline.ts');
+      const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts');
       const { benchStructuralIntent } = await import('/src/validation/structuralIntentCheck.ts');
       const r = await runCreativeArm(arm as 'A' | 'B', {
         brief: 'A four-team playoff bracket.',

@@ -1,8 +1,8 @@
-import type { ModelUsage } from './modelTypes';
+import type { ModelUsage } from '../modelTypes';
 // Both trees import this file, so it stays dependency-light - and src/feedback/contract.ts is
 // held to the same discipline (pure, no DOM, no env), which is why the discard vocabulary can
 // live there instead of being copied here.
-import type { LiteDiscardReason } from '../feedback/contract';
+import type { LiteDiscardReason } from '../../feedback/contract';
 
 export type CreativeAiProfileId = 'lite';
 
@@ -18,7 +18,7 @@ export type LiteUnsupportedCode =
   | 'too-complex';
 
 /** Category vocabulary shared by the browser request, server contract, and future category
- * picker. A category becomes compilable only when liteContract.ts has a CategoryContract for
+ * picker. A category becomes compilable only when lite/contract.ts has a CategoryContract for
  * it - naming it here is not an allowlist expansion. */
 export type LiteCategoryId =
   | 'lower-third'
@@ -160,14 +160,14 @@ export interface LiteDesignSpec {
   useLogoSlot?: boolean;
   /** Still on the wire, deliberately IGNORED by the compile since v9 - Lite assembles with
    *  `keepChassisZone`, so placement is the chosen design's own `defaultZone`. It cannot be
-   *  deleted while the model still emits it (liteContract.ts). */
+   *  deleted while the model still emits it (lite/contract.ts). */
   zone?: string;
   paletteId?: string;
   palette?: { accent: string; text: string; textDim: string; panel: string };
   fontId?: string;
   sizeScale?: number;
   /** `presetId` is still on the wire and still ignored by the compile, for the same reason
-   *  `zone` is - see liteContract.ts. Motion is the chosen design's own. */
+   *  `zone` is - see lite/contract.ts. Motion is the chosen design's own. */
   animation?: { presetId?: string; easing?: string; speed?: number; steps?: boolean };
   motionCharacter?: string;
   typography?: {

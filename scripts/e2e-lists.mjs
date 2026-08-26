@@ -83,7 +83,7 @@ export const CONFIGURED_TRIGGERS = [
   // The hosted-Pro door and its wire contract: absent offline, so only the configured suite
   // can walk it (e2e/configured/pro-wizard.spec.ts).
   /^src\/ai\/pro\/session\.ts$/,
-  /^src\/ai\/proTypes\.ts$/,
+  /^src\/ai\/pro\/types\.ts$/,
   /^api\/_lib\/pro\//,
   /^api\/ai\/\[\.\.\.path\]\.ts$/,
   /^scripts\/aiDevPlugin\.mjs$/,

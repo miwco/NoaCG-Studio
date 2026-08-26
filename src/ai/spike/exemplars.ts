@@ -10,7 +10,7 @@
 // nothing else.
 //
 // WHAT "HAND-VETTED" MEANS HERE, since a taste claim invented in a bench file is worth
-// nothing: the pool is the THIRTEEN measured Lite chassis (`liteContract.ts`). Those designs
+// nothing: the pool is the THIRTEEN measured Lite chassis (`lite/contract.ts`). Those designs
 // are already the catalog's hand-picked, individually measured lower thirds - each one
 // carries a measured `supportingLineChars`, a brand-audited `logoSlot`, and positive and
 // negative fit metadata a human wrote and a script checked. Reusing that curation is honest;
@@ -27,7 +27,7 @@ import { variantById } from '../../templates/catalog';
 import type { TemplateVariant } from '../../model/wizard';
 
 /**
- * The vetted pool, in the order `liteContract.ts` declares it. That order is deliberate on
+ * The vetted pool, in the order `lite/contract.ts` declares it. That order is deliberate on
  * the Lite side (the house strap first, then the style spread), and it is the fallback order
  * here when retrieval cannot rank enough of the pool for a brief.
  *

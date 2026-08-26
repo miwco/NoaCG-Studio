@@ -18,4 +18,15 @@
 # To lower it again: run the check, read the largest chain off its own output, allow a little
 # headroom, and only ever reduce.
 # Raising it hides the problem it exists to surface - shorten a contract instead.
-project_doc_max_bytes = 120000
+#
+# Ratcheted 2026-08-26, after two splits took the two largest single sections out of files every
+# session in their area loads: src/components/timeline/ (16 KB, from src/components/AGENTS.md)
+# and src/ai/lite/ + src/ai/pro/ (14 KB and 17 KB, from src/ai/AGENTS.md). Nothing was shortened
+# in either - the sections moved whole, into directories that hold the files they describe. The
+# largest chain was src/ai/AGENTS.md at 107,750 bytes and is now src/components/wizard/AGENTS.md
+# at 104,576, so 112,000 leaves about 7 KB of headroom.
+#
+# Splitting only pays when the sections go to DIFFERENT directories. One split moves the bytes
+# from the parent into the child's own chain and the maximum does not move; two splits mean no
+# single chain carries both.
+project_doc_max_bytes = 112000

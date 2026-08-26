@@ -1,8 +1,8 @@
-import { getAccessToken } from '../backend/auth';
-import { probeMark } from '../assets/assetInfo';
-import type { DesignSpec } from './designSpec';
-import type { GenerateContext } from './provider';
-import { markShapeFromAspect } from './liteTypes';
+import { getAccessToken } from '../../backend/auth';
+import { probeMark } from '../../assets/assetInfo';
+import type { DesignSpec } from '../designSpec';
+import type { GenerateContext } from '../provider';
+import { markShapeFromAspect } from './types';
 import type {
   LiteMarkDescriptor,
   LiteCategoryAlternative,
@@ -11,7 +11,7 @@ import type {
   LiteOutcomeRequest,
   LiteStatusResponse,
   LiteUnsupportedCode,
-} from './liteTypes';
+} from './types';
 
 interface LiteApiError {
   error?: { code?: string; message?: string; retryable?: boolean };

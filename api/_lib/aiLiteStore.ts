@@ -3,7 +3,7 @@ import type { ModelResult } from '../../src/ai/modelTypes.js';
 import type {
   LiteLowerThirdIntentKind,
   LiteVariantQualityPrior,
-} from '../../src/ai/liteTypes.js';
+} from '../../src/ai/lite/types.js';
 import { supabaseSecretKey } from './jobStore.js';
 import type { LiteProfile } from './aiLiteProfile.js';
 

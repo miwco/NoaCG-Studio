@@ -63,7 +63,7 @@ import { useModalGate } from '../spaceKey';
 import { useIsMobile } from '../useIsMobile';
 import { useRouter } from '../../app/router';
 import { saveGraphicAs } from '../../store/saveActions';
-import { recordLiteOutcome } from '../../ai/liteClient';
+import { recordLiteOutcome } from '../../ai/lite/client';
 import { DEFAULT_VIDEO_FORMAT, formatProjectSummary } from '../../model/projectFormat';
 import { trackEvent } from '../../backend/events';
 import { captureLookFromTemplate } from '../../model/packets';

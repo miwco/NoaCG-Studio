@@ -764,7 +764,7 @@ read-only scheduled cloud agent. Job A (the health/CI gates) is built (push CI +
       broadcast genres and text stress; thresholded accepted/discarded chassis outcomes feed a
       content-free server-side tie-breaker without storing prompts or generated artifacts
 - [x] **Lite evaluation benchmark, free phases (2026-07-27)** - the one shared compile
-      pipeline (`src/ai/litePipeline.ts`, production and benchmark build from it; equivalence
+      pipeline (`src/ai/lite/pipeline.ts`, production and benchmark build from it; equivalence
       pinned in the build gate); versioned core/holdout/repair suites with labelled expected
       outcomes; zero-cost calibration (gold ceiling + seeded floor, both machine-valid) and
       regression mode with pipeline-identity hashing; blind review gallery with planted

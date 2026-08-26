@@ -53,7 +53,7 @@ const runtime = await buildApiRuntime(['api/_lib/aiLiteProfile.ts']);
 let repairPassed = 0;
 try {
   const contract = await import(
-    pathToFileURL(path.join(runtime.outputDir, 'src/ai/liteContract.js')).href
+    pathToFileURL(path.join(runtime.outputDir, 'src/ai/lite/contract.js')).href
   );
   for (const item of REPAIR_SUITE) {
     const result = contract.validateLiteDecision(item.decision, item.request);
@@ -114,7 +114,7 @@ if (!NO_COMPILE) {
       process.exit(1);
     }
     liteCatalog = await page.evaluate(async () =>
-      (await import('/src/ai/liteContract.ts')).LITE_CATALOG.map((entry) => ({ ...entry })));
+      (await import('/src/ai/lite/contract.ts')).LITE_CATALOG.map((entry) => ({ ...entry })));
   } finally {
     await probe.close();
   }

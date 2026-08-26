@@ -1312,7 +1312,7 @@ if (control) {
         return page.evaluate(async (input) => {
           const bust = '?t=' + Date.now();
           const { recreateEmit } = await import('/src/ai/spike/recreate.ts' + bust);
-          const { productionSpxValidator } = await import('/src/ai/litePipeline.ts' + bust);
+          const { productionSpxValidator } = await import('/src/ai/lite/pipeline.ts' + bust);
           const [provider, ...model] = input.route.split(':');
           const result = await recreateEmit({
             name: input.name,

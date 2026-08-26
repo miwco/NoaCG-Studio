@@ -69,10 +69,10 @@ export function buildRunManifest({ mode, candidate = null, extra = {} }) {
     gitCommit: gitCommit(),
     hashes: {
       // The Lite prompt contract: system prompt text, catalog digest, schema, semantics.
-      liteContract: hashPaths(['src/ai/liteContract.ts']),
+      liteContract: hashPaths(['src/ai/lite/contract.ts']),
       // The shared deterministic compile pipeline.
       pipeline: hashPaths([
-        'src/ai/litePipeline.ts',
+        'src/ai/lite/pipeline.ts',
         'src/ai/designSpec.ts',
         'src/ai/designAdjust.ts',
         'src/ai/spec/specDesign.ts',

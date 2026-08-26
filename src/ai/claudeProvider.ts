@@ -41,7 +41,7 @@ import {
   normalizeLiteSpec,
   productionSpxValidator,
   singleLineIdentityFields,
-} from './litePipeline';
+} from './lite/pipeline';
 import { applyPolish, POLISH_TOOL, type PolishPatch } from './polish';
 import { variantsFor } from '../templates/catalog';
 import type { TemplateVariant } from '../model/wizard';
@@ -53,7 +53,7 @@ import { convertToDataRegion } from '../templates/shared/standard';
 import { specSections } from './spec/specPrompt';
 import { applySpecLocks, applySpecOutPreset, narrowedSpecTool } from './spec/specDesign';
 import { demoteSpecFields, ensureSpecFonts, withSpecChecks } from './spec/specValidate';
-import { generateLiteDesign, LiteRequestError, recordLiteOutcome } from './liteClient';
+import { generateLiteDesign, LiteRequestError, recordLiteOutcome } from './lite/client';
 import { findingsList, repairLoop } from './shared/repairLoop';
 import {
   INTENT_TOOL,
@@ -857,7 +857,7 @@ async function groundedResult(
 ): Promise<AiTemplateChange> {
   options?.onProgress?.('Assembling…');
   const t0 = Date.now();
-  // The deterministic assembly sequence lives in litePipeline, shared verbatim with the
+  // The deterministic assembly sequence lives in lite/pipeline, shared verbatim with the
   // Lite benchmark runners — one compile path, so a benchmark result describes the product.
   const assembled = assembleGroundedTemplate(spec, ctx, assembly);
   let template = assembled.template;

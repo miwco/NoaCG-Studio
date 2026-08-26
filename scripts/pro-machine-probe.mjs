@@ -142,7 +142,7 @@ async function runArm(page, brief) {
   return page.evaluate(async (input) => {
     const bust = `?t=${Date.now()}`;
     const { getAiProvider } = await import(`/src/ai/index.ts${bust}`);
-    const { productionSpxValidator } = await import(`/src/ai/litePipeline.ts${bust}`);
+    const { productionSpxValidator } = await import(`/src/ai/lite/pipeline.ts${bust}`);
     const validate = productionSpxValidator();
     const context = { images: [], palette: null, resolution: { width: 1920, height: 1080 }, fps: 50 };
     let change;

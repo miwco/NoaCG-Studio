@@ -3,7 +3,7 @@
 //
 //   npm run bench:calibrate [-- out-dir]
 //
-// Two arms through the production compile pipeline (src/ai/litePipeline.ts):
+// Two arms through the production compile pipeline (src/ai/lite/pipeline.ts):
 //   gold  - hand-written ceiling specs. If these do not review well, the CATALOG is the
 //           ceiling and no model choice will move it.
 //   floor - seeded-random valid chassis carrying the labelled fields. A model that does
@@ -45,7 +45,7 @@ try {
     process.exit(1);
   });
   liteCatalog = await page.evaluate(async () =>
-    (await import('/src/ai/liteContract.ts')).LITE_CATALOG.map((entry) => ({ ...entry })));
+    (await import('/src/ai/lite/contract.ts')).LITE_CATALOG.map((entry) => ({ ...entry })));
 } finally {
   await probe.close();
 }

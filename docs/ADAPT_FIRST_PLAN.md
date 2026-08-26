@@ -263,7 +263,7 @@ prompt does, moved from the model to the platform.
 `liteGroundedResult` calls it with `profile` stripped, so nothing inside can detect Lite - which
 is why the policy travels as an explicit argument (`AssembleOptions`) rather than a constant. It
 was a constant first, and Lite was silently opted in. Lite keeps compiling under its own declared
-contract: its prompt already carries the rule as an instruction (`liteContract.ts`, "keep it in a
+contract: its prompt already carries the rule as an instruction (`lite/contract.ts`, "keep it in a
 bottom zone") and changing what it compiles requires a paid re-baseline of the lower-third
 benchmark. Folding Lite onto the platform rule and deleting that prompt line is a follow-up with a
 cost attached, recorded in §6.
@@ -277,7 +277,7 @@ the range it documents, and the tool schema now declares those bounds too - a de
 constraint.
 
 **The range belongs to the SCHEMA the spec was authored against, and there are two.** NoaCG Lite's
-server-owned contract declares 0.7-1.4 (`liteContract.ts`), and both profiles compile through the
+server-owned contract declares 0.7-1.4 (`lite/contract.ts`), and both profiles compile through the
 same `specToTemplate`. Clamping every caller to the harness's numbers told the Lite model 1.35 was
 legal, accepted it in server semantic validation, and then discarded it at compile - the exact
 shown-but-illegal mismatch `narrowVariantTool` exists to prevent, one field over. It is therefore

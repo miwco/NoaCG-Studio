@@ -7,7 +7,7 @@ import { liteTaskProfile, taskConfigured } from '../aiTaskRegistry.js';
 import { approvedModelRoute } from '../aiModelCatalog.js';
 import { applyEntitlementToLiteProfile, resolveUserEntitlement } from '../entitlements.js';
 import { allows } from '../../../src/entitlements/contract.js';
-import type { LiteStatusResponse } from '../../../src/ai/liteTypes.js';
+import type { LiteStatusResponse } from '../../../src/ai/lite/types.js';
 
 export default {
   async fetch(req: Request): Promise<Response> {

@@ -1,5 +1,5 @@
 // Browser client for the imported-graphic-analysis task (docs/AI_TASK_REGISTRY.md).
-// The liteClient pattern: typed wire calls, bearer token when signed in, stable error
+// The lite/client pattern: typed wire calls, bearer token when signed in, stable error
 // codes - the browser never supplies a model, route, prompt, or policy. It also owns the
 // client-side DATA MINIMIZATION step: the artwork is downscaled to the task's ceiling
 // and re-encoded before anything leaves the machine (ratified decision 3).

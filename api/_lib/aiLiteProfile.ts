@@ -1,8 +1,8 @@
 import type { GatewayRoutingPolicy, ModelPrice } from './aiGateway.js';
 import { approvedModelPrices } from './aiModelCatalog.js';
 import type { AiProviderId, ModelRoute } from '../../src/ai/modelTypes.js';
-import { LITE_AI_CATEGORIES } from '../../src/ai/liteContract.js';
-import type { LitePublicLimits } from '../../src/ai/liteTypes.js';
+import { LITE_AI_CATEGORIES } from '../../src/ai/lite/contract.js';
+import type { LitePublicLimits } from '../../src/ai/lite/types.js';
 
 // Shared AI-profile env readers: exported because every managed task profile
 // (aiImportAnalysisProfile.ts is the second) parses its knobs the same clamped,
@@ -280,7 +280,7 @@ export function liteProfile(): LiteProfile {
       // slot now (`LiteCatalogEntry.logoSlot`), so the 0 had become the one thing refusing the
       // feature the rest of the profile can serve - `validateRequest` rejects both `hasLogo` and
       // `mark` while it stands. Bounded 0..1 rather than left open: Lite is a one-mark profile by
-      // construction (`liteClient.ts` sends `hasLogo` only for exactly one image), and 0 stays
+      // construction (`lite/client.ts` sends `hasLogo` only for exactly one image), and 0 stays
       // reachable so the door can be shut without a deploy.
       logos: intEnv('AI_LITE_LOGOS', 1, 0, 1),
       logoBytes: intEnv('AI_LITE_LOGO_BYTES', 2_000_000, 100_000, 5_000_000),

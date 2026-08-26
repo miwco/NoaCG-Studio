@@ -1,5 +1,5 @@
 import { json } from '../http.js';
-import type { ProErrorBody, ProErrorCode } from '../../../src/ai/proTypes.js';
+import type { ProErrorBody, ProErrorCode } from '../../../src/ai/pro/types.js';
 
 /** Hosted Pro's error shape - the same one Lite answers in, because the browser branches on
  *  the same set of reasons and one vocabulary is one set of UI branches. */

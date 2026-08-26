@@ -22,7 +22,7 @@ import { AI_CATEGORIES, aiCategoryForAssemblerId } from '../../../ai/spec/catego
 import { variantById } from '../../../templates/catalog';
 import type { TemplateVariant } from '../../../model/wizard';
 import { mergeSafety } from '../../../ai/safety';
-import { assembleGroundedTemplate, productionSpxValidator } from '../../../ai/litePipeline';
+import { assembleGroundedTemplate, productionSpxValidator } from '../../../ai/lite/pipeline';
 import { benchStructuralIntent } from '../../../validation/structuralIntentCheck';
 import { demoteSpecFields, withSpecChecks } from '../../../ai/spec/specValidate';
 import { PRO_STANDARD_ROUTES } from '../../../ai/pro/contract';
@@ -44,7 +44,7 @@ import {
 } from '../../../ai/pro/language/graphics';
 import { loadProStatus, openProSession, reportProOutcome } from '../../../ai/pro/session';
 import { isBackendConfigured } from '../../../backend/config';
-import type { ProStatusResponse } from '../../../ai/proTypes';
+import type { ProStatusResponse } from '../../../ai/pro/types';
 import {
   PRO_SUPPORTED_CATEGORIES,
   proBrandPalette,
@@ -95,9 +95,9 @@ import ViewingControls from '../ViewingControls';
 import { resolveLegibility, type ProjectLegibility, type ResolvedLegibility } from '../../../model/designRules';
 import MoreControlPanel from './ai/MoreControlPanel';
 import { GenerationRating } from '../../feedback/GenerationRating';
-import { LITE_AI_CATEGORIES } from '../../../ai/liteContract';
-import { LiteUnsupportedError, loadLiteStatus, recordLiteOutcome } from '../../../ai/liteClient';
-import type { LiteStatusResponse } from '../../../ai/liteTypes';
+import { LITE_AI_CATEGORIES } from '../../../ai/lite/contract';
+import { LiteUnsupportedError, loadLiteStatus, recordLiteOutcome } from '../../../ai/lite/client';
+import type { LiteStatusResponse } from '../../../ai/lite/types';
 
 interface Props {
   format: ProjectFormatSelection;
@@ -625,7 +625,7 @@ export default function AiStep({
   };
 
   // The harness's injected validation pipeline (static rules + the live runtime bench,
-  // wrapped in the safety screen) comes from litePipeline.productionSpxValidator — the ONE
+  // wrapped in the safety screen) comes from lite/pipeline.productionSpxValidator — the ONE
   // composition, shared with the Lite benchmark runners. The safety screen sits INSIDE the
   // injected validator on purpose: the bench executes the result the moment it lands, so a
   // finding has to reach the provider's repair loop rather than a review step the code has
