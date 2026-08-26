@@ -467,9 +467,12 @@ would be a second, unenforced vocabulary drifting beside it.
   **Superseded in fact 2026-07-23**: `editorial` and `cinematic` shipped as real families
   (36 core lower thirds, main), so the axis is now SIX - and the design held without
   amendment, which is the point of filtering on the axis rather than on a fixed list. The
-  live labels are `STYLE_FAMILY_LABELS` in `src/model/taxonomy.ts`; two of the original four
-  were re-worded there ("Minimal & clean", "Elegant & glass") because the new families took
-  the words the old labels had borrowed.
+  live labels are `STYLE_FAMILY_LABELS` in `src/model/taxonomy.ts`.
+  **Amended 2026-08-26**: "fuller labels" was the wrong instinct and is withdrawn. The pairs
+  the fuller labels grew into ("Minimal & clean", "Sport & energetic", "Bold & on-air") read as
+  AI copywriting to the owner; the axis is now ONE PLAIN WORD per family, with the chip row
+  carrying a "Style:" caption so the shorter words still say what kind of answer they are.
+  Reasoning and the owner's words are in §18's reversed ruling.
 - The brief's adjectives become **style aliases** for search, mapped many-to-one:
   corporate/editorial/broadcast-news/flat/light → `minimal`; esports/gaming/energetic/bold →
   `sport`; luxury/cinematic/glass/futuristic/tech → `glass`; playful/youthful/retro? → `noacg`.
@@ -629,8 +632,13 @@ Lists & schedules · agenda            ← primary category · subtype
 Business · Education                  ← top 2 families (by rank), never all
 2 fields: heading + repeating rows    ← from fieldCounts + semantics
 ↻ repeating · ⏱ steps                 ← max 3 capability badges
-Bold & on-air · Standard              ← style family · complexity
+Standard · NOACG                      ← complexity · style family (dim, one plain word)
 ```
+
+**Amended 2026-08-26**: the style family used to sit on the FIRST line, opposite the name and
+in a per-family accent colour. It has moved to the last line and lost the colour - see §18's
+"the style family is not a card TITLE". The card's info budget is otherwise unchanged: what
+moved is which line the eye lands on second, and the answer is now the category.
 
 (Example is the real ig08; a made-up flagship would be exactly the fabrication this doc bans.)
 
@@ -1083,9 +1091,85 @@ none needs revisiting unless that evidence changes.
   questions - what the SHOW is versus what is being discussed NOW - and the workbook demands
   both heavily (23 and 29 formats). Today's 4 + 4 designs look thin, but the pending pack
   work (card10-card18) grows both; merging now and re-splitting later is churn.
-- **The house family stays labelled "Bold & on-air".** A taste call with no evidence either
-  way; the shipped label reads as a look rather than a brand name, which is what a
-  first-time non-technical user needs. (`noacg` remains the stable id.)
+- ~~**The house family stays labelled "Bold & on-air".**~~ **REVERSED 2026-08-26 — the whole
+  label row is one plain word each.** The original call recorded itself as "a taste call with
+  no evidence either way". The evidence arrived: the owner read the Browse grid cold looking
+  for a credit roll and named the labels unprompted - "Bold & on-air, Sport & energetic… I get
+  the AI slop feeling with those names… it makes me feel that it's AI-generated and not
+  genuine. We don't want any hype AI words here anywhere; it should just be simple and good."
+  The tell is the SHAPE, not the individual words: in every pair the second half is an
+  adjective doing no work, because the family is already named by the first, and six of those
+  in a row reads as copywriting. `STYLE_FAMILY_LABELS` is now Minimal / Editorial / Cinematic /
+  Sport / Glass / NoaCG - which is what the older Template step had printed all along, so the
+  rename removed a second vocabulary rather than inventing one. (`noacg` remains the stable id;
+  the public template pages print the label, never the id.)
+- **The style family is not a card TITLE.** It sat opposite the design's name in the caption,
+  in a per-family accent colour, which made a filter value the second-loudest thing on every
+  card. It is now a dim tag on the card's last line beside complexity, and the line under the
+  name is the CATEGORY. Same session, same reading: a search for "credit" returned thirteen
+  credits designs called Crawl, Pager and Column Roll, and the word "Credits" was in the dim
+  block rather than where a reader was looking.
 - **Light/dark stays OUT of discovery.** `porcelain` is a genuinely light palette, but
   palettes are swapped freely in the Style step immediately after picking - filtering
   templates by a knob the very next step changes would mislead.
+
+---
+
+## 19. RULING REQUEST - how many finding mechanisms does Browse offer? [OPEN, 2026-08-26]
+
+**Who this is for: the owner.** Nothing below is built. It is one decision with a recommended
+option, raised because the owner tried to make a credit roll for his own programme, could not
+find one, and named the cause while looking at the step.
+
+### What he said
+
+- "I think the search is what people will use the most."
+- On the type dropdown: credits is buried third inside "Timers, breaks and credits".
+- On the chip row under it ("timer clocks, holding screens…"): "a third way of looking at
+  things… I think those tabs might be unnecessary."
+
+### What is actually there [FACT, measured]
+
+Three controls, and they are NOT three parallel axes - two of them are one question asked in
+two levels:
+
+1. **Search** (`.wz-browse-search`) - the whole catalog, alias-aware. A genuine axis.
+2. **The type SELECT** - the ten category GROUPS (§4c), each with a live count.
+3. **The chip row under it** (`.wz-browse-cats`) - the SELECTED group's member categories.
+   It renders only when the group has more than one member, and it disappears when the group
+   is cleared. This is level two of control 2, not a control of its own.
+
+The reason it reads as a third mechanism is drawn, not structural: it is a row of `.wz-filter`
+pills sitting directly above the STYLE row, which is a different facet drawn with the same
+pills. Two identical chip rows, neither captioned. Shipped tonight as the cheap half of the
+fix: each row now carries a caption ("Inside Timers, breaks & credits:" and "Style:"), so the
+hierarchy is visible without moving any control.
+
+### The open question
+
+Should level two become part of the dropdown - the two-level "main category → sub-kind" shape
+the owner sketched - or stay chips?
+
+- **Option A (RECOMMENDED) - one select, two levels, `<optgroup>`.** The single control offers
+  the ten shelves as group headings with their member categories as options under them, so
+  "Credits & thanks · 13" is a row a reader can SEE while scanning, not a chip that only exists
+  after picking the right shelf. The chip row disappears; the style row is then the only chip
+  row on the step and cannot be mistaken for a second axis. Cost: one control rewrite plus the
+  `chooseType` helper in `e2e/_browse.ts`; no taxonomy change, no re-categorization.
+- **Option B - two selects side by side** (shelf, then kind). Explicitly two levels, but it is
+  two controls to operate for one question and the second is empty until the first is answered.
+- **Option C - keep the chips, now captioned.** What ships tonight. Costs nothing further; the
+  member categories stay invisible until a shelf is picked, which is the part that made
+  "credits" hard to find in the first place.
+
+**What the answer does NOT depend on any more:** categories no longer bind the playout backend
+(any graphic can have any field), so a category exists ONLY for finding. That removes the one
+argument for keeping the vocabulary conservative - this is now purely a question about reading.
+
+### Not raised here, deliberately
+
+**The credits designs' NAMES.** "Classic Roll", "Column Roll", "Pager", "Crawl", "Credit Reel"
+are what the owner read as "reels and crawls". Renaming them is the honest fix and it is not a
+Browse change: the name slugs the public template page's URL, and `e2e/end-credits.spec.ts`,
+`images.spec.ts`, `package.spec.ts` and `holding-pack.spec.ts` all reach designs by it. It
+belongs to a session that owns the credits pack, with the redirect question answered.

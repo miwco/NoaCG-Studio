@@ -34,6 +34,7 @@ Layers of documentation, top to bottom:
 | `CONTROL_PANEL_PARITY.md` | MEASURED, 2026-08-09: what an operator can actually do on `#/control/<id>` for a lower third and for each interactive type (quiz, live vote, scoreboard, countdown), the nine gaps ranked, and what a Lite-generated interactive graphic would need on top. |
 | `SAVED_CONTENT_MODEL.md` | The library: GraphicDoc, packages-as-folders, hash routes, control entries, Save semantics. |
 | `DESIGN_LANGUAGE.md` | The taste bar: typography, color, motion doctrine, the §8 family tokens, generated-code style. |
+| `TASTE_RUBRIC.md` | THE REVIEWER: four yes/no checks a person can answer from a screenshot - too much text, generic AI copy, dead controls, self-evident. Owner rulings only; it never changes from an agent decision or a measurement. The machine-checkable half of check 2 is `scripts/check-copy.mjs` in the build; anything needing a threshold belongs in the instrument that measures it, not here. |
 | `FOOTPRINT_STABILITY.md` | The STAGE contract: which graphics may change size with the operator text and which may not, the width and height mechanism behind it, and the measurements that shaped both. Summarised in `src/templates/AGENTS.md`. |
 | `KIT_MATRIX_GAPS.md` | The standing kit gap report: the (type × family) matrix as it resolves, the core six a kit owes a show, and which designs no kit can reach. |
 | `CATALOG_VARIETY.md` | INVESTIGATION, unscheduled (2026-08-09): where the catalog's sameness actually comes from, measured off the emitted code — the style family predicts 3 of 14 visible decisions and the graphic category predicts the rest; the 119 kit-unreachable designs triaged; what is missing entirely; a proposal for design DIRECTIONS scoped to a kit, with a distinctness gate and a cost per direction; and the palette-freedom measurement (148 designs cannot take a light palette). |
@@ -54,6 +55,7 @@ Layers of documentation, top to bottom:
 | `NATIVE_PLAYOUT_RESEARCH.md` | RESEARCH, nothing built (2026-08-16): what it would take for NoaCG to reach SDI / NDI / IP without CasparCG, OBS or vMix. Why SDI is inherently a local box (Singular included), the four routes with their real costs and licences (AMCP client, forking the server, our own CEF-based agent, GStreamer), the playout problems a graphics-only scope avoids, and the staged order if it is ever done. Verdict: own the client and the agent, rent the engine. |
 | `GRAPHIC_BEHAVIOUR_PLAN.md` | How an imported graphic gets its BEHAVIOUR without code. §1-§9 are the plan as written for review on 2026-08-22 (a shipped behaviour taken apart into machine, controls, structure and LOOK; three doors offered without picking; the now-vs-later scoping). **§10 is what was BUILT the same day and is what stands**: the scoreboard needed no code, the quiz is a pilot reusing the answer board's machine and buttons with a new paint - the designer's own hidden layers shown by the machine - and the registry stays deferred until a third behaviour exists. Walked in a browser, pinned by `e2e/import-svg-behaviour.spec.ts`; designer-facing half in `SVG_AUTHORING.md` §5b. |
 | `COMPETITOR_MXMZ.md` | RESEARCH, 2026-08-22, public sources only: what MXMZ (named by Yle as the working model) actually ships - the Illustrator/Figma → SVG → browser keyframe timeline → one-URL-per-channel workflow, their prices and customers - and the finding that shapes our own road: nothing public shows them AUTHORING logic. They train the designer for a day, keep the operator as the non-technical one, and hand-build a control panel per sport. What to take, what not to. |
+| `COMPETITORS.md` | The capability matrix: MXMZ, Singular.live, Loopic and Rive, each capability marked they-have / we-match / we-beat / GAP, with UNRESEARCHED said out loud where nobody has looked. Assembled from the docs below rather than from new research; refreshed on TIME, not on commits. A GAP row is candidate work. |
 | `FORMATTING.md` | What Prettier may and may not touch, and why. |
 | `DEV_PORTS.md` | Per-worktree dev-port reservation. |
 | `DEPLOYMENT.md` | CI + Vercel production runbook: the pipeline, the 12-function budget, deploy verification (`deploy-verify.yml`, `version.json`), opt-in previews, rolling-issue alerts, and where to look when production stops updating. |
@@ -94,6 +96,10 @@ Layers of documentation, top to bottom:
 
 - `live_format_graphics_needs.xlsx` (repo root) — the 60-format source data behind
   `PACK_TAXONOMY.md` and the type frequencies.
+
+## The shelf
+
+- `backlog/` - the shelf: one file per unscheduled idea, a mandatory `## Why`, graduate-into-GOALS-or-die, and the drain order that puts it LAST behind owner feedback, handoffs and the current push. Its own `README.md` is the contract.
 
 ## Where the roadmap lives
 

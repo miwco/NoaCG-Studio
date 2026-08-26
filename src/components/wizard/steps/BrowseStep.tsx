@@ -98,6 +98,16 @@ const BUCKET_LABEL: Record<FieldBucket, string> = {
 };
 const COMPLEXITY_RANK = { simple: 0, standard: 1, advanced: 2 } as const;
 
+/** "2 names", "3 items" — a counted field semantic. The plural is not a bare `+ 's'`: a
+ *  semantic whose own label is already plural takes none, or the results card offered
+ *  "3 itemss" and every reader who noticed learned something true about how the line was
+ *  written. */
+function countedSemantic(semantic: string, n: number): string {
+  const word = SEMANTIC_LABELS[semantic as keyof typeof SEMANTIC_LABELS].toLowerCase();
+  if (n === 1) return word;
+  return word.endsWith('s') ? `${n} ${word}` : `${n} ${word}s`;
+}
+
 /** "2 names + 2 roles" — the card's field summary off counts + semantics (proposal §12.3). */
 function fieldSummary(meta: TemplateMeta): string {
   const { visible, visibleRange } = meta.fieldCounts;
@@ -105,9 +115,7 @@ function fieldSummary(meta: TemplateMeta): string {
   meta.fieldSemantics.slice(0, visible).forEach((s) => {
     bySemantic.set(s, (bySemantic.get(s) ?? 0) + 1);
   });
-  const parts = [...bySemantic.entries()]
-    .slice(0, 3)
-    .map(([s, n]) => (n > 1 ? `${n} ${SEMANTIC_LABELS[s as keyof typeof SEMANTIC_LABELS].toLowerCase()}s` : SEMANTIC_LABELS[s as keyof typeof SEMANTIC_LABELS].toLowerCase()));
+  const parts = [...bySemantic.entries()].slice(0, 3).map(([s, n]) => countedSemantic(s, n));
   const range = visibleRange[1] > visible ? ` (up to ${visibleRange[1]})` : '';
   return `${visible} field${visible === 1 ? '' : 's'}${range}: ${parts.join(' + ')}`;
 }
@@ -187,11 +195,16 @@ function ResultCard({
     <div className="wz-variant-cell">
     <button className={`wz-variant ${selected ? 'selected' : ''}`} onClick={onPick} title={r.meta.description}>
       <MiniPreview variant={r.variant} />
+      {/* THE CAPTION IS THE NAME, AND THE LINE UNDER IT IS WHAT THE GRAPHIC IS.
+          The style family used to sit here, opposite the name, in its own family colour — the
+          second-loudest thing on every card, and the owner read the grid cold on 2026-08-26:
+          "I get the AI slop feeling with those names". It is a FILTER, not an identity, so it
+          has moved down to the quiet last line beside the complexity. What takes its place in
+          the eye is the category line, which is the answer to the question a search was asked:
+          typing "credit" and getting cards headed Crawl, Pager and Column Roll reads as the
+          wrong result until the card says "Credits & thanks" where a reader is looking. */}
       <div className="wz-variant-cap">
         <strong>{r.meta.name}</strong>
-        <span className="wz-style-tag" data-style={r.meta.styleFamily}>
-          {STYLE_FAMILY_LABELS[r.meta.styleFamily]}
-        </span>
       </div>
       <div className="wz-browse-meta">
         <span className="wz-browse-cat">
@@ -205,7 +218,10 @@ function ResultCard({
         {capabilityBadges(r.meta).length > 0 && (
           <span className="wz-browse-caps">{capabilityBadges(r.meta).join(' · ')}</span>
         )}
-        <span className="wz-browse-complexity">{COMPLEXITY_LABELS[r.meta.complexity]}</span>
+        <span className="wz-browse-complexity">
+          {COMPLEXITY_LABELS[r.meta.complexity]} ·{' '}
+          <span className="wz-style-tag">{STYLE_FAMILY_LABELS[r.meta.styleFamily]}</span>
+        </span>
       </div>
     </button>
       <button
@@ -480,8 +496,17 @@ export default function BrowseStep({
             chips collapsed into a vertical stack there). */}
         {/* The selected shelf's member categories, only when there is a real choice to make.
             Chips, not a second select: at most four short answers, re-picked freely. */}
-        {memberTiles.length > 1 && (
+        {filters.group && memberTiles.length > 1 && (
           <div className="wz-filter-row wz-browse-cats" role="group" aria-label="Narrow the group">
+            {/* NAME THE SHELF THESE BELONG TO. The row is a NARROWING of the dropdown above it
+                — the second level of one question — but it renders as chips directly over the
+                style chips, which are a different facet drawn identically, so the owner read
+                the pair as two more ways of finding a graphic on top of the dropdown and the
+                search ("a third way of looking at things"). Saying "Inside Timers, breaks &
+                credits:" is what makes the hierarchy visible without moving the control; the
+                two-level select he sketched instead is a ruling request in
+                docs/TEMPLATE_TAXONOMY_PROPOSAL.md §19. */}
+            <span className="wz-filter-lead">Inside {categoryGroupById(filters.group).name}:</span>
             {memberTiles.map((tile) => (
               <button
                 key={tile.category}
@@ -495,7 +520,11 @@ export default function BrowseStep({
             ))}
           </div>
         )}
+        {/* …and the style row says so too. One-word family labels ("Sport", "Cinematic") are
+            plainer than the adjective pairs they replaced, but they also stop announcing what
+            KIND of answer they are, so the caption carries that now. */}
         <div className="wz-filter-row" role="group" aria-label="Filter by style">
+          <span className="wz-filter-lead">Style:</span>
           {(Object.keys(STYLE_FAMILY_LABELS) as StyleTag[]).map((t) => (
             <button
               key={t}

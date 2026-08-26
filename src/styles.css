@@ -2361,13 +2361,12 @@ kbd {
    A fixed scale here would put that decision in two places and let them disagree. */
 .wz-mini iframe { position: absolute; top: 50%; left: 50%; border: 0; transform-origin: center center; }
 .wz-variant-cap { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
+/* The style family a design belongs to. ONE dim tone, whatever the family: it used to carry a
+   per-family accent colour (amber for the house look, lime for sport, ice blue for glass),
+   which made a FILTER value the brightest thing on a card after the name. Six coloured labels
+   shouting one word each is what a grid of catalog cards reads as decoration; the design's own
+   preview is the colour on this card. */
 .wz-style-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
-.wz-style-tag[data-style='minimal'] { color: #e8c547; }
-.wz-style-tag[data-style='editorial'] { color: #e2593f; }
-.wz-style-tag[data-style='cinematic'] { color: #e0a458; }
-.wz-style-tag[data-style='sport'] { color: #c8f31d; }
-.wz-style-tag[data-style='glass'] { color: #7dd3fc; }
-.wz-style-tag[data-style='noacg'] { color: var(--amber); }
 
 /* Step 3: field rows */
 .wz-line-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -2531,6 +2530,16 @@ kbd {
 /* Step 5: animation */
 /* The Template step's discovery filters: small chips above the variant grid. */
 .wz-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+/* What a chip row is ASKING. Two rows of identical pills stacked on the Browse step read as
+   two parallel ways of finding a graphic; one word in front of each says which question it
+   answers. Cap-aligned with the pills' text, never a chip itself — it is not clickable. */
+.wz-filter-lead {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-right: 2px;
+}
 .wz-filter { padding: 4px 12px; border-radius: 999px; font-size: 12px; }
 .wz-filter.active { border-color: var(--accent); color: var(--accent); }
 .wz-filter-clear { opacity: 0.8; }

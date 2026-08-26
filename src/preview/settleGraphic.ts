@@ -7,10 +7,24 @@
  * so those surfaces can never drift into a second render path (the editor canvas settles the
  * same way in PlayoutSimulator).
  *
- * The recipe: write the data, jump the house entrance builder to its end, write the data AGAIN.
- * The second `update()` is load-bearing - `progress(1, true)` suppresses GSAP callbacks, so
- * anything a callback writes (a counter's digits, a bar's fill) would otherwise be left at its
- * pre-entrance value while the layout around it sits at the end state.
+ * The recipe: write the data, jump the house entrance builder to its end, write the data AGAIN,
+ * and jump again. The second `update()` is load-bearing - `progress(1, true)` suppresses GSAP
+ * callbacks, so anything a callback writes (a counter's digits, a bar's fill) would otherwise be
+ * left at its pre-entrance value while the layout around it sits at the end state.
+ *
+ * THE SECOND JUMP IS LOAD-BEARING TOO, and for the opposite reason: a design whose `update()`
+ * RE-RENDERS its own rows throws the settled frame away with the elements it was written on. The
+ * credits family is the worked example (templates/endCredits/shared.ts `rebuildCredits` assigns
+ * `track.innerHTML`), and both of its failure modes were on the Browse grid on 2026-08-26:
+ *
+ *   - the one-pager design came back with EVERY page at its CSS opacity, so all six sections
+ *     drew on top of each other - the "mess" the owner reported;
+ *   - the roll, the crawl and the repeating reel kept the travel transform on the surviving
+ *     track while its content was replaced, parking a full list off-screen: a blank card.
+ *
+ * Re-deriving the jump over whatever `update()` just built fixes both, and costs nothing on a
+ * design that does not rebuild: the builder is measured from the same DOM and writes the same
+ * end values onto the same elements.
  *
  * A template with no builder (blank, hand-written, foreign import) has no entrance to jump, so
  * it gets its own `play()` and is allowed to come to rest on its own clock.
@@ -36,13 +50,20 @@ export interface SettleWindow {
  */
 export function settleGraphic(win: SettleWindow | null | undefined, data: string): void {
   if (!win) return;
+  // Build the entrance and park it at its end. Declared here rather than inlined twice so the
+  // two jumps can never drift into doing different things.
+  const jump = () => {
+    const tl = win.buildInTimeline?.();
+    if (!tl) return;
+    tl.pause();
+    tl.progress(1, true);
+  };
   try {
     win.update?.(data);
     if (typeof win.buildInTimeline === 'function') {
-      const tl = win.buildInTimeline();
-      tl.pause();
-      tl.progress(1, true);
+      jump();
       win.update?.(data);
+      jump();
     } else {
       win.play?.();
     }
