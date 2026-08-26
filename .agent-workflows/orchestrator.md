@@ -291,24 +291,34 @@ the day begins in one tap rather than a paragraph.
 
 **Only for a wave that has already run** - when the plan is first written this section is one line
 saying when the report will be available. It is what the user reads instead of opening six
-sessions, and it is produced entirely from read-only commands in this session:
+sessions, produced entirely from read-only commands in this session, and **ordered by who is
+blocked** - the reader acts on it over coffee, so the report is short and everything long sits
+behind a link:
 
-- **Landed** - from `npm run jobs`: branch, session, in the order the queue took them.
-- **Refused, and WHICH KIND** - `auto-merge.mjs` refuses loudly with a reason, and the four are four
-  different mornings: a red gate, a conflict integrating `main`, a dirty worktree, and a stale pin
-  (the branch moved after it was queued). Name the kind, not just the failure.
-- **Still holding** - `node scripts/merge-order.mjs` for anything ahead of `main`, and
-  `node scripts/worktree-activity.mjs` for work a session left uncommitted.
-- **Every session's handoff**, collected from `docs/handoffs/<date>-*.md` - the reason the prompts
-  write those files. Quote each one's "what is left", not the whole file.
-- **How the follow-ons went** - which fired and when, which did not and why the trigger never
-  landed, and for a conditional one, which arm the handoff file selected. Say plainly if a
-  follow-on would have fired but the loop was not there to fire it.
-- **The loop's own vital signs** - ticks fired, and the time of the last one. See "The watch
-  loop": a report that cannot show a live tick late in the night is reporting a dead loop.
-- **What the night opened up** - work that is now unblocked and was not in the wave, including any
-  follow-on that was NOT launched because its trigger never landed. This is the input to the next
-  invocation, so write it as candidate rows, not prose.
+1. **Needs you, FIRST, and step-by-step.** Anything waiting on the user carries its FULL
+   instructions inline - never a pointer to a file they must open. The user is the critical path:
+   a night's work postponed because their part was unclear is the whole night wasted (owner,
+   2026-08-26). Walk items stay one line each - `/walk` carries the detail - it is the non-walk
+   actions (a registry setting, a token to revoke, anything with a form to fill) that get every
+   step written out.
+2. **Landed** - a one-line-per-branch table from `npm run jobs`: branch, commit, five words.
+3. **Continue prompts, pasteable - only where the work is real.** One fenced block per session
+   whose handoff leaves genuinely valuable follow-up, in the section-5 format, so the user can
+   scroll and paste. **A finished session gets no prompt.** Never invent work to fill this
+   section - most mornings it holds zero or one block, and an empty section is the good outcome.
+4. **Handoffs** - one quoted "what is left" line each, plus the `docs/handoffs/` file link. Never
+   the full text.
+5. **Refused, and WHICH KIND** - `auto-merge.mjs` refuses loudly with a reason, and the four are
+   four different mornings: a red gate, a conflict integrating `main`, a dirty worktree, and a
+   stale pin (the branch moved after it was queued). Name the kind, not just the failure - and
+   check the LANDING JOBS' own logs, not just the queue listing: a refused landing drops out of
+   `npm run jobs` by morning and reads as "never queued", which is a different (wrong) story.
+6. **Still holding** - `node scripts/merge-order.mjs` for anything ahead of `main`,
+   `node scripts/worktree-activity.mjs` for work a session left uncommitted.
+7. **Follow-ons and loop vitals, brief, last** - which fired and when, which did not and why; for
+   a conditional one, which arm the handoff file selected; ticks fired and the time of the last
+   one. A report that cannot show a live tick late in the night is reporting a dead loop. Work
+   the night opened up that fits no prompt goes here as candidate rows.
 
 In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
 loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's

@@ -92,6 +92,10 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // The loop can die silently, so nothing the wave NEEDS may depend on it - every starting
       // prompt queues itself, and a follow-on only ever carries work the night can afford to lose.
       'The loop is ADDITIVE, never load-bearing',
+      // The report is read over coffee by the one person who can unblock the night's output, so
+      // their steps come first and complete, and the prompt section never manufactures work.
+      'Needs you, FIRST, and step-by-step.',
+      'A finished session gets no prompt.',
       // Big prompts are the point: one branch, one gate, one landing instead of three.
       'A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
