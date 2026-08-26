@@ -185,7 +185,7 @@
       "em-dash": 8
     },
     "src/components/wizard/steps/ImportDesignStep.tsx": {
-      "em-dash": 11
+      "em-dash": 3
     },
     "src/components/wizard/steps/ImportStep.tsx": {
       "em-dash": 1
@@ -200,7 +200,7 @@
       "em-dash": 2
     },
     "src/components/wizard/steps/MapSvgFieldsStep.tsx": {
-      "em-dash": 40
+      "em-dash": 8
     },
     "src/components/wizard/steps/PlaceFieldsStep.tsx": {
       "em-dash": 4
@@ -652,9 +652,6 @@
     },
     "src/templates/importedDesign/stretch.ts": {
       "em-dash": 7
-    },
-    "src/templates/importedDesign/svg.ts": {
-      "em-dash": 25
     },
     "src/templates/infoCards/card01.ts": {
       "em-dash": 6
