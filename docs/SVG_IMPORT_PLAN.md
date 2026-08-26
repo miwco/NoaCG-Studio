@@ -102,11 +102,16 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   is how one file came to squish in the editor and run clean past the artwork on air. The drawn
   text is remembered as the page parses (before `update()` can be called) and the budget is
   re-MEASURED, not re-taken, once the real typeface has loaded.
-- **THE FIT LADDER** (owner-ruled 2026-08-23, shipped, after the owner walked the hug): a value
-  longer than the design was drawn for is answered in ONE fixed order - **fill the panel, grow it
-  only where the author opted in, wrap into the room the design already has, shrink to the
-  readability floor, then report the field.** The artwork is never reshaped to make copy fit and
-  the copy is never cut to hide that it does not.
+- **THE FIT LADDER** (owner-ruled 2026-08-23, extended 2026-08-26, shipped, after the owner
+  walked the hug): a value longer than the design was drawn for is answered in ONE fixed order -
+  **fill the room, grow the panel where the author opted in, wrap into the room the design
+  already has, shrink to the readability floor, squeeze what is still over, then report the
+  field.** The artwork is never reshaped to make copy fit and the copy is never cut to hide that
+  it does not.
+  **The ORDER is itself the ruling** (owner, 2026-08-26, near-verbatim): "first I want it to get
+  wider ... and then it should go to the next line. And the last thing is to shrink" - shrink
+  last "because that changes the design more". The mapping step's list is that order, with the
+  smaller-text rung last and never first.
   Each rung was a measured defect on the owner's own walk:
   - **The budget was the DRAWN TEXT'S width, not the room.** A name drawn 402px wide inside a
     1040px banner began shrinking at its 403rd pixel with 588px of banner standing empty - and
@@ -119,6 +124,25 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   - **There was no floor**: a 400-character value shrank to 3.7px, which reads on air as the text
     having disappeared. It stops at 55% of the drawn size, the raster import's floor
     (`shared/textFit.ts` `FIT_MIN_RATIO`), and sets `noacgTextOverflow()` instead.
+  - **A LINE'S ROOM STOPS AT ITS NEIGHBOUR** (owner, 2026-08-26: "a line's room is bounded by
+    what is drawn next to it"). Two labels placed apart on ONE baseline is how an exporter writes
+    a strap's place and its time; the panel behind them says nothing about where the first has to
+    stop. A long HELSINKI ran 160px through the 19:30 drawn beside it, because its room was
+    measured out to the banner's edge. `svgFitNeighbour` bounds it at the nearest thing drawn to
+    its right on its own rows, less half its drawn type; and such a PENNED line never drives the
+    panel's growth, because widening the panel would give it nothing.
+  - **THE FLOOR WAS NOT A CONTAINMENT RULE.** At the floor the ladder stopped and reported - and
+    the floored line kept painting, 127px past the banner and across the artwork beside it.
+    "Nothing may ever paint outside the panel" (owner, 2026-08-26), so a floored block is
+    SQUEEZED to its budget: `textLength` + `lengthAdjust="spacingAndGlyphs"` on a drawn layer, a
+    horizontal scale from its own start edge on a placed one. It is deliberately ugly, it is
+    still reported as too long, and it comes straight off when a shorter value arrives. This does
+    not reopen the 2026-08-22 shrink-never-condense ruling: condensing is not a DEFAULT, it is
+    the last rung under a value no size and no line count could hold.
+  - **Screen px convert through the element's CTM**, not through its own advance-length / ink-box
+    ratio. The old ratio was close and not exact - a glyph's side bearings are in one measurement
+    and not the other - and the error landed in the ROOM, so a grown banner missed the margin it
+    was mirroring by 1.4px on the shipped sample.
   - **Wrapping** uses only room the artwork already has: from the line down to the nearest thing
     drawn below it inside its panel. How many lines that is depends on the SIZE (a 112px board
     panel holds one 44px line and three 24px ones), so the ladder re-asks on every pass, and a
@@ -139,18 +163,36 @@ is its own graphic type so the derived machine/timeline stays the standard linea
   shipped scorebug a small floating object, so "smaller than the frame = a banner" mislabels
   both, and size against the frame is still never measured. What IS measured is containment
   and arrangement: a rectangle wider than tall, with room before the safe margin, holding
-  bound text that is STACKED and START-anchored, defaults to grow-x - the ordinary lower
-  third, working with nothing chosen. Side-by-side lines on one plate (a scorebug row - the
-  inner line's room is bounded by its neighbour, so growth helps nobody), an end- or
-  middle-anchored line (composed against a point growth would move), a full-frame backplate
-  (no room), and a quiz BEHAVIOUR (a stage by declaration) all refuse the default and keep
-  shrink. The measured default is marked unauthored (`SvgStretchDraft.authored`) and re-derives
+  bound text whose STACKED lines are all START-anchored, defaults to grow-x - the ordinary lower
+  third, working with nothing chosen. An end- or middle-anchored stacked line (composed against a
+  point growth would move), a full-frame backplate (no room), and a quiz BEHAVIOUR (a stage by
+  declaration) refuse the default and keep shrink.
+  **A pair sharing one baseline argues NEITHER way** (fixed 2026-08-26). It used to veto the
+  whole file, which is how the shipped Illustrator sample - three stacked lines above one such
+  pair - defaulted to shrinking on the owner's own walk. Widening the panel gives those two
+  nothing because each is bounded by the other, and the runtime now measures exactly that; a file
+  with NO stacked line at all is a composed row (the scorebug) and still refuses.
+  The measured default is marked unauthored (`SvgStretchDraft.authored`) and re-derives
   as rows are ticked; the author's first touch of any growth control freezes their answer.
   The runtime (`stretchRuntimeJs` in importedDesign/svg.ts) keeps the raster stretch's doctrine
   (`importedDesign/stretch.ts`): ONE measured deficit - how far the widest bound line inside the
   panel runs past the width it was drawn at - widens the picked rectangle, everything drawn past
-  its right edge travels with it, the growth stops at the frame's 4% safe margin, and the shrink
-  above answers only what the cap could not give.
+  its right edge travels with it, and the shrink above answers only what the cap could not give.
+  **THE CAP IS THE DESIGN'S OWN MARGIN, MIRRORED** (owner, 2026-08-26: "we cannot have templates
+  outgrow the screen, that should never happen", and growth is symmetrical). `svgGrowCap` mirrors
+  the inset the panel keeps from the frame edge it is ANCHORED to onto the edge it grows towards,
+  floored at the row's `safe` fraction. An inset is never negative, so outgrowing the frame is
+  structurally impossible rather than a number somebody has to keep right - and it is what the
+  flat 4% got wrong: a banner drawn 150px in from the left ran to 1843 on a 1920 frame, 73px past
+  its own mirror. It now stops at 1770, with the text ending exactly one drawn inset inside that.
+  **THE LADDER IS ALSO A CHOICE** (owner, 2026-08-26: "a real graphic sometimes wants a
+  combination ... we should let the customer choose whatever they want, that's the most important
+  thing"). The mapping step offers wider / wider-then-wrap / wrap / smaller, and the combination
+  needed no new format: the runtime already spends width BEFORE the fit and height after it, so
+  'xy' emits two ordinary rows naming one panel (`draft.ts` `svgGrowthOptions`). The
+  `data-noacg-el` stamp became a space-separated LIST for it, matched word-wise, and both rows
+  read their followers while the artwork is still at rest - a follower captured after the first
+  row had moved it would record the moved pose as its resting one.
   **What v1 handles, said out loud:** a RECTANGLE (a panel drawn as a freeform path has no width
   to change), growing RIGHTWARD, with start-anchored text inside it - the lower third everybody
   draws. Everything is measured in screen px and converted back through each element's own CTM,

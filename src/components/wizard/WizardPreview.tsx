@@ -13,6 +13,27 @@ import { hasMeasuredMotion, parseAnimData } from '../../blocks/animData';
 /** Screen px of breathing room between a highlighted layer and its box. */
 const HL_PAD = 4;
 
+/** How long the demo holds the settled graphic before taking it off, and how long it stays off
+ *  before coming back. Viewing rhythm rather than motion, so these stay fixed: the MOTION is
+ *  what the speed knob has to change, and a hold that scaled with it would cancel that out. */
+const DEMO_HOLD_MS = 900;
+const DEMO_GAP_MS = 350;
+
+/** When the lifecycle demo should stop and replay, from the template's own animation data.
+ *  Falls back to the fixed pair this used to hard-code for a template whose region does not
+ *  parse (a legacy or hand-rewritten one), which is the honest answer when the clock is
+ *  unreadable. */
+function demoCycle(js: string): { stopAt: number; replayAt: number } {
+  const data = parseAnimData(js);
+  const steps = data?.steps ?? [];
+  if (!data || steps.length < 2) return { stopAt: 1700, replayAt: 2800 };
+  const speed = data.speed || 1;
+  const inMs = ((steps[0].duration || 0) / speed) * 1000;
+  const outMs = ((steps[steps.length - 1].duration || 0) / speed) * 1000;
+  const stopAt = Math.round(inMs + DEMO_HOLD_MS);
+  return { stopAt, replayAt: Math.round(stopAt + outMs + DEMO_GAP_MS) };
+}
+
 interface Props {
   template: SpxTemplate;
   /** Bumping this replays the animation (used when the user changes the animation). */
@@ -155,6 +176,23 @@ export default function WizardPreview({
     return values;
   };
 
+  // ── THE LIFECYCLE DEMO'S CLOCK (measured 2026-08-26; GOALS goal 6) ─────────────────────────
+  // The owner reported that Speed and Easing did nothing on a FADE. Both reach the render: the
+  // emitted NOACG_ANIM carries speed 0.6/1/1.8, the built entrance measures 1.333/0.800/0.444s,
+  // and the four curves offered on a fade produce four measurably different opacity ramps. What
+  // hid them was THIS loop, whose stop and replay were 1700ms and 2800ms whatever the graphic
+  // did - so every speed played inside one fixed 2.8s beat, and the faster the setting the
+  // LONGER the graphic then sat still (367ms of hold at Slower, 1256ms at Faster: the cadence
+  // moved the wrong way). A slide survived it because travel gives a second cue - a distance
+  // covered in a time - which is exactly the cue a fade does not have.
+  //
+  // So the beat follows the animation: entrance, a moment to read it, exit, a moment of black.
+  // A ±80% speed step then changes the loop's own rhythm by well over a second, which is what
+  // makes it visible across separate replays. Read off the template's own data, so a preset or
+  // a speed the wizard has not been told about still gets an honest cycle.
+  const demoCycleRef = useRef({ stopAt: 1700, replayAt: 2800 });
+  demoCycleRef.current = useMemo(() => demoCycle(template.js), [template.js]);
+
   const { width, height } = template.resolution;
 
   // Track the stage size (the fit scale and the zoom framing both derive from it).
@@ -272,10 +310,12 @@ export default function WizardPreview({
     clearDemo();
     postCmd({ cmd: 'play', data: JSON.stringify(pushValues(templateRef.current)) });
     if (demoOut) {
-      // Show the exit too, then come back on air so the preview isn't left empty.
+      // Show the exit too, then come back on air so the preview isn't left empty. The two
+      // moments follow the graphic's OWN clock (demoCycleRef), never a fixed pair of numbers.
+      const { stopAt, replayAt } = demoCycleRef.current;
       demoTimers.current.push(
-        window.setTimeout(() => postCmd({ cmd: 'stop' }), 1700),
-        window.setTimeout(() => postCmd({ cmd: 'play' }), 2800),
+        window.setTimeout(() => postCmd({ cmd: 'stop' }), stopAt),
+        window.setTimeout(() => postCmd({ cmd: 'play' }), replayAt),
       );
     }
   }, [clearDemo, demoOut, postCmd]);

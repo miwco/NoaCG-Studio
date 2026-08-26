@@ -193,16 +193,18 @@ export default function ImportDesignStep({
       {!art && !templateFile && !svg && (
         <SectionHead title="Your design" summary="the artwork you already made" testid="import-design-why">
           <p>
-            A layered <strong>SVG</strong> (from Illustrator, Figma or Inkscape) is the best
-            import: it stays pixel-exact and its text layers become editable fields by
-            themselves. A PNG, JPEG or WebP works too — you place its text fields in the next
-            steps. A format that carries transparency (SVG, PNG or WebP) keeps everything
-            behind it visible on air.
+            A layered <strong>SVG</strong> from Illustrator, Figma or Inkscape is the best
+            import. It stays pixel-exact and its text layers turn into editable fields on their
+            own. PNG, JPEG and WebP work too; you place the text fields yourself in the next
+            steps.
           </p>
           <p>
-            Already have the finished graphic as an <strong>.html</strong> or{' '}
-            <strong>.zip</strong>? Drop that instead and it comes in as it is, with its own
-            fields.
+            Pick a format that carries transparency (SVG, PNG, WebP) and the video shows through
+            behind your graphic.
+          </p>
+          <p>
+            Already have the finished graphic as <strong>.html</strong> or <strong>.zip</strong>?
+            Drop that instead. It comes in as it is, with its own fields.
           </p>
         </SectionHead>
       )}
@@ -233,8 +235,7 @@ export default function ImportDesignStep({
             beside the step title above. */}
         {!art && !templateFile && !svg && (
           <span className="hint">
-            A layered <strong>SVG</strong> is the best import — a PNG, JPEG, WebP, .html or
-            .zip works too.
+            A layered <strong>SVG</strong> is best. PNG, JPEG, WebP, .html and .zip work too.
           </span>
         )}
       </div>
@@ -287,14 +288,13 @@ export default function ImportDesignStep({
               "it opened" into "it is bindable". */}
           {svg.candidates.length > 0 ? (
             <p className="hint" data-testid="import-svg-layers">
-              {svg.candidates.length} text layer{svg.candidates.length === 1 ? '' : 's'} detected —
-              choose which become operator fields in the next step.
+              {svg.candidates.length} text layer{svg.candidates.length === 1 ? '' : 's'} found.
+              Pick which ones the operator can retype, next step.
             </p>
           ) : (
             <p className="status-warn" data-testid="import-svg-nolayers">
-              No text layers were found in this SVG — its type was probably converted to
-              outlines. It still imports pixel-exact; the next step explains the two ways to
-              make its text editable.
+              No text layers here. The type was probably turned into outlines on export. It
+              still imports pixel-exact. The next step shows two ways to get editable text.
             </p>
           )}
           {svg.fonts.length > 0 && (
@@ -334,9 +334,9 @@ export default function ImportDesignStep({
           {fullFrame && opaque && (
             <p className="status-warn" data-testid="import-opaque-warning">
               This artwork fills the frame and has no transparent areas, so on air it covers the
-              whole picture. That is right for a full-screen card — and wrong for a lower third
-              exported with its background or mock-up footage behind it. If the video should show
-              through, export it again as a PNG or WebP with a transparent background.
+              whole picture. Right for a full-screen card. Wrong for a lower third exported with
+              its background behind it. If the video should show through, export again as PNG or
+              WebP with a transparent background.
             </p>
           )}
           {!scaled &&
@@ -354,10 +354,10 @@ export default function ImportDesignStep({
         <h3>What happens next</h3>
         <p className="hint">
           {templateFile
-            ? 'Name it, then send it to a production or export it — OGraf, CasparCG, SPX, LiveOS or an OBS/vMix overlay. The file is kept exactly as you wrote it; NoaCG adds nothing to it.'
+            ? 'Name it, then send it to a production or export it: OGraf, CasparCG, SPX, LiveOS or an OBS/vMix overlay. Your file is kept exactly as you wrote it.'
             : svg
-              ? 'The next steps choose which text layers the operator can edit, match the typefaces, and pick how it moves on and off air. The SVG itself is never redrawn — your exact artwork goes on air, and exports as a working template.'
-              : 'The next steps clean up the artwork if it needs it, place the text fields on it, and choose how it moves on and off air. Your artwork is never redrawn or regenerated — NoaCG only adds the broadcast behaviour around it, and exports it as a working template.'}
+              ? 'Next you pick which text layers the operator can edit, match the typefaces, and choose how it moves on and off air. The SVG is never redrawn. Your exact artwork goes on air.'
+              : 'Next you clean up the artwork if it needs it, place the text fields, and choose how it moves on and off air. Your artwork is never redrawn. NoaCG only adds the broadcast behaviour around it.'}
         </p>
       </div>
     </div>
