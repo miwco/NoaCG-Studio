@@ -243,9 +243,20 @@ one. All three are in the same twelve lines, so they are one pass:
   IS the sha being waited on. The grace period is what keeps the normal path at one run.
 - **It watches whatever ran last.** The selector is `gh run list --limit 1` with NO `--workflow`
   filter, so on a commit that also carries a deploy-verify run it can watch that one and return
-  the moment it finishes, while CI is still going. `safe-merge-preflight.mjs:454` fixed exactly
-  this for its own selector and the comment there says why; this one was missed. Verified
-  2026-08-26 by reading both.
+  the moment it finishes. Those runs are real on branch shas - `gh run list --workflow
+  deploy-verify.yml` lists them, concluding `success` even where the job-level `if:` skips the
+  work - and one can be NEWER than the ci.yml run the gate was meant to read.
+  `safe-merge-preflight.mjs:454` fixed exactly this for its own selector, with a comment saying
+  why; this one was missed.
+
+  **It cannot let a bad merge through, and the next reader needs to know that before deciding
+  what to build.** `auto-merge.mjs:303` runs the preflight after this wait, the preflight
+  re-selects with `--workflow ci.yml`, and `classifyCiRun:171` blocks on any conclusion that is
+  not `success` - an in-flight run carries `conclusion: null`. So the failure is a SPURIOUS
+  REFUSAL: the landing dies claiming CI was not green when CI had simply not finished. Loud and
+  wrong, not silent and dangerous. Ranked against the timeout, the timeout is the one that
+  actually loses landings.
+
 - **Every refusal prints the same line.** "no run appeared", "the run was cancelled" and "the run
   was red" are three different facts and one message, which is the whole reason a webhook delay
   reads as a fault in the tree. A dispatch and a late push webhook can also coexist on one sha,
