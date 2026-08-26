@@ -1,5 +1,6 @@
-import { enableAdvancedMode } from './_create';
+import { createProject, enableAdvancedMode } from './_create';
 import { awaitDurableReady, settleDurableWrites } from './_durable';
+import { awaitPreviewRebuild } from './_preview';
 import { test, expect, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 
@@ -659,5 +660,47 @@ test('every export target packages the new categories with no dangling reference
     if (pkg.id === 'al01') expect(html, label).toContain('alert-level-4');
     if (pkg.id === 'pi08') expect(html, label).toContain('public-info-lang-2');
     if (pkg.id === 'tk15') expect(html, label).toContain('ticker-track');
+
+    // THE KICKER TRAVELS WITH THE PACKAGE (docs/TICKERS.md). A format the studio understands
+    // and an offline export does not would be worse than no format at all: the operator types
+    // "SPORT: United win 3-0" into a strip already running on a playout server. The parser and
+    // its shared treatment are read across the WHOLE package rather than the page, because most
+    // targets ship the runtime and the stylesheet as files of their own.
+    if (pkg.id === 'tk15') {
+      const bundle = (
+        await Promise.all(names.map((n) => zip.file(n)!.async('string').catch(() => '')))
+      ).join('\n');
+      expect(bundle, `${label} carries the kicker parser`).toContain('parseTickerItems');
+      expect(bundle, `${label} carries the shared kicker treatment`).toContain('.ticker-kicker');
+    }
   }
+});
+
+// THE SAME RUNDOWN THROUGH THE OPERATOR'S OWN DOOR. A ticker is typed into on air, not in the
+// wizard, so the mark has to survive the route a real update takes: a field value written from
+// outside the graphic and pushed through the control path - which is the identical `update()`
+// the playout dashboard's monitors, the browser-output renderer and an exported package all
+// call. Proving it at the design-time preview alone would prove the parser and not the product.
+test('a kicker typed on air reaches the strip through the control path', async ({ page }) => {
+  await enableAdvancedMode(page);
+  await createProject(page, 'House Wire');
+  // The preview rebuilds on a debounce after the create; the control update has to land on the
+  // NEW document rather than the one it is replacing (e2e/AGENTS.md).
+  await awaitPreviewRebuild(page);
+
+  await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const store = useTemplateStore.getState();
+    store.setSampleValue('f0', 'SPORT:\nUnited win 3-0\nCity held at home\n\nStorm warning issued');
+    store.sendControl('update');
+  });
+
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('.ticker-kicker').first()).toHaveText('SPORT', { timeout: 10_000 });
+  // Two stories under one kicker, and the story after the blank line carrying none.
+  const strip = await frame.locator('#ticker-track').textContent();
+  expect(strip).toContain('United win 3-0');
+  expect(strip).toContain('City held at home');
+  expect(strip).toContain('Storm warning issued');
+  expect((strip!.match(/SPORT/g) ?? []).length).toBeGreaterThanOrEqual(2);
 });
