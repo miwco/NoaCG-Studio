@@ -227,11 +227,15 @@ result reading 0% for every option is the same defect one surface further in.
   that is the re-record `src/templates/AGENTS.md` warns bakes one loaded run's coin flips into the
   committed reference. **Do not pass `UPDATE_RENDER_BASELINE=1` on this branch.**
 
+- **GREEN END TO END on the INTEGRATED sha**, which is the one that counts: `origin/main` had moved
+  19 commits under this branch, so it was taken in (`efdeec9a`, a clean merge with **zero overlap** -
+  nothing on main had touched `src/templates/`, `src/preview/` or either baseline) and CI re-run.
+  Run `33014600794`: **all nine E2E shards ran and passed**, plus Build, Factory gates, Catalog
+  calibration gate and the CI gate. The only non-success is `skipped  Vercel accepted the commit`.
+
 ## What is left
 
-- **Read the CI run on the branch head and land it.** Everything else is done: the fix, the gate,
-  the docs and the re-recorded baseline are committed, and the only thing the previous run was red
-  on is the baseline this commit records.
+Nothing on this branch. It is queued to land.
 - `docs/backlog/settle-emitted-runtime-finite-end.md` - the emitted runtime's own settle, with its
   trigger.
 - Owner queue: `docs/acceptance/owner-queue/2026-08-27-stat-cards-show-their-real-number.md`.
