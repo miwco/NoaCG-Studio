@@ -293,6 +293,17 @@ one. All three are in the same twelve lines, so they are one pass:
   wrong, not silent and dangerous. Ranked against the timeout, the timeout is the one that
   actually loses landings.
 
+- **`--limit 1` ties, and the tie breaks toward the CANCELLED run.** Push and dispatch in one
+  command chain and both runs are created in the same second; `ci.yml` cancels in-progress runs
+  per ref, so the dispatch kills the push run - and then the selector returns the cancelled one
+  anyway, because a `createdAt` sort with a tie is decided deterministically toward the older
+  row. Measured by the docs-polish session on 2026-08-26: two runs at `17:46:22Z` on one sha,
+  the gate refusing with `run concluded "cancelled"` and `5 job(s) look DAMAGED` while the live
+  dispatch ran beside it. **`--workflow ci.yml` does NOT fix this one** - both runs are ci.yml.
+  The selector has to prefer a conclusive run over a cancelled one, or break the tie on
+  `databaseId`. Until it does, leave a gap between the push and the dispatch; and per
+  `.agent-workflows/queue-merge.md`, do not hand-push at all - the landing job pushes for you.
+
 - **Every refusal prints the same line.** "no run appeared", "the run was cancelled" and "the run
   was red" are three different facts and one message, which is the whole reason a webhook delay
   reads as a fault in the tree. A dispatch and a late push webhook can also coexist on one sha,
