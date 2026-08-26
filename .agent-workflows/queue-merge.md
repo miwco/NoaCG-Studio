@@ -75,48 +75,28 @@ loudly as it refuses a red one. A bare markdown-only push is therefore a refusal
 And the pre-check is only ever the run the GATE consumes when main has not moved by your turn - if
 it has, phase 2 makes a merge commit and the gate waits on a fresh run for that sha regardless.
 
-**IF THE GATE IS WAITING AND NO RUN APPEARS, HAND IT ONE.** `waitForCi` polls for a run on the
-verified sha for TEN MINUTES (`auto-merge.mjs`, `attempt < 60` at 10s apart) and then refuses with
-"no green CI run for the integrated commit" - which reads like a fault in your tree and is not. It
-is waiting on GitHub's PUSH WEBHOOK to create that run, and delivery is not bounded: on 2026-08-26
-three webhooks arrived 28-35 minutes late. When `main` has moved, the sha being verified is a merge
-commit the job has just minted, so no run can exist yet and the whole budget is spent hoping.
+**THE GATE NO LONGER WAITS ON A WEBHOOK - it hands itself a run.** When `main` has moved, the sha
+being verified is a merge commit the job has just minted, so its CI run arrives by GitHub's PUSH
+WEBHOOK - and delivery is not bounded: on 2026-08-26 three webhooks arrived 28-35 minutes late,
+each spending the gate's whole wait budget hoping and then refusing in words that read like a tree
+fault. So `waitForCi` (`auto-merge.mjs`) now gives the webhook ~30 seconds and then dispatches the
+run itself (`gh workflow run ci.yml --ref <branch>` - created by the API immediately, no webhook
+in the path, and `--ref` targets the branch tip, which after the job's own push IS the verified
+sha). It also reads runs properly: ci.yml runs only (never a deploy-verify run), ties between a
+push run and a dispatch broken on `databaseId` (`selectCiRun`, `safe-merge-preflight.mjs`), a
+cancelled shell never mistaken for a verdict, and the listing - not `gh run watch`'s exit, which
+returns immediately on a run still `pending` with zero jobs (j-0088) - decides when the wait ends.
 
-While it waits, dispatch one:
+**One caveat: a RUNNING runner keeps the code it started with.** A landing draining through a
+runner that started before this behaviour landed still waits passively; the manual move is the
+same as the automatic one - while the gate waits, run `gh workflow run ci.yml --ref <branch>`
+yourself (watch `node scripts/jobs.mjs log <job>` for the push line first, so the tip is the
+verified sha). The next `add` after the old runner exits starts a fresh one with the new code.
 
-    gh workflow run ci.yml --ref <branch>
-
-A `workflow_dispatch` is created by the API immediately, with no webhook in the path, and `--ref`
-targets the branch TIP - which after the job's own push IS the verified sha. `waitForCi` finds it
-on its next ten-second tick. Watch `node scripts/jobs.mjs log <job>` for the push line
-(`<old>..<new>  <branch> -> <branch>`) and dispatch as soon as it appears; that is what landed
-this file's own branch after its first attempt died on the ordering block.
-
-**But do not let the gate read that dispatch before GitHub has given it jobs.** `waitForCi` takes
-`gh run list --limit 1` - the NEWEST run for the sha, which is your dispatch - and hands it to
-`gh run watch --exit-status`, which **returns immediately on a run that is still `pending` with
-zero jobs**. Phase 3 then classifies a run that has not started, and refuses with
-
-    run concluded ""; no "CI gate" job
-
-which reads like a red suite and is neither. Measured 2026-08-26 on job `j-0088`: the dispatch was
-created 27 seconds after the push and the landing was refused inside the same minute, having
-changed nothing. Dispatching *the instant* the push line appears is exactly when this race is
-worst, so after dispatching, confirm the run has materialised:
-
-    gh run view <id> --json jobs -q '.jobs | length'   # must be non-zero
-
-If it refuses anyway, nothing is broken and nothing was touched: let that run finish green and
-**queue again**. The second attempt needs no dispatch at all - a completed green run for the tip
-already exists, so `waitForCi` consumes it on its first tick. The durable fix belongs in
-`waitForCi` (ignore a run with no jobs, and poll until `conclusion` is non-null rather than
-trusting `gh run watch` to block); it is named here and not done here.
-
-The rule under both halves: **never let the gate wait on a webhook.** Main has NOT moved - queue
-while a run for your tip already exists. Main HAS moved - hand the gate a run while it waits. The
-residual race is that the push's own webhook can arrive mid-watch and cancel your dispatch (the
-ci.yml concurrency group is the REF, not the sha), which refuses loudly; re-queue, and by then a
-run for that sha is on disk.
+The residual race remains: the push's own webhook can arrive mid-watch and cancel the dispatched
+run (the ci.yml concurrency group is the REF, not the sha). The gate keeps waiting through the
+cancelled shell and follows the replacement; if nothing conclusive ever arrives it refuses,
+loudly, exactly as before - re-queue, and by then a run for that sha is on disk.
 
 Nothing else to do. Merge jobs never run beside each other, so queued landings drain strictly one
 at a time in order. If `main` moves under yours mid-gate it re-integrates and re-verifies by

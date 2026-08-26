@@ -11,7 +11,8 @@
 //     difference between checking the right tree and checking a stranger's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, validateBranchName } from './safe-merge-preflight.mjs';
+import { readFile } from 'node:fs/promises';
+import { classifyCiRun, classifyEmptyPlan, classifyMainSync, mergeOrderVerdict, parseWorktrees, previewConflicts, selectCiRun, validateBranchName } from './safe-merge-preflight.mjs';
 
 test('main in sync with origin is promotable', () => {
   assert.deepEqual(classifyMainSync(0, 0), { state: 'in-sync', ok: true, stop: false });
@@ -110,6 +111,85 @@ test('merge-tree failing for any other reason is not reported as clean', () => {
     throw error;
   };
   assert.equal(previewConflicts('some-branch', runner).clean, false);
+});
+
+test('informational messages after the blank separator are never counted as conflicted paths', () => {
+  // merge-tree's sections are: the tree OID, the conflicted path names, a BLANK line, then
+  // messages like "Auto-merging x" and "CONFLICT (content): ...". Filtering blanks out instead
+  // of stopping at the separator counted the messages as paths - one real conflict read as
+  // "8 conflicted path(s)", and that number is what a person uses to judge whether a refusal
+  // is worth chasing.
+  const runner = () => {
+    const error = new Error('conflict');
+    error.status = 1;
+    error.stdout =
+      'treesha\nsrc/a.ts\n\nAuto-merging src/a.ts\nCONFLICT (content): Merge conflict in src/a.ts\n' +
+      'Auto-merging src/other.ts\n';
+    throw error;
+  };
+  const verdict = previewConflicts('some-branch', runner);
+  assert.equal(verdict.clean, false);
+  assert.match(verdict.detail, /^1 conflicted path\(s\): src\/a\.ts$/);
+});
+
+// WHICH run to act on, before anything judges it. `gh run list --limit 1` answers with creation
+// order, and a push run and a dispatched run created in the same SECOND sort arbitrarily - the
+// tie broke toward a CANCELLED push run on 2026-08-26 and refused a real landing. databaseId is
+// strict creation order, so it is the tiebreak; and a cancelled shell is never the run to act on
+// while anything else exists.
+
+test('a live run outranks everything - the evidence is not settled yet', () => {
+  const picked = selectCiRun([
+    { databaseId: 100, status: 'completed', conclusion: 'cancelled' },
+    { databaseId: 101, status: 'in_progress', conclusion: '' },
+  ]);
+  assert.equal(picked.action, 'watch');
+  assert.equal(picked.run.databaseId, 101);
+});
+
+test('the same-second tie breaks on databaseId, never on listing order', () => {
+  // The cancelled shell arrives FIRST in the listing - exactly how the real refusal happened.
+  const picked = selectCiRun([
+    { databaseId: 101, status: 'completed', conclusion: 'cancelled' },
+    { databaseId: 100, status: 'completed', conclusion: 'success' },
+  ]);
+  assert.equal(picked.action, 'judge');
+  assert.equal(picked.run.databaseId, 100, 'the cancelled shell proves nothing; the verdict does');
+});
+
+test('a red run NEWER than a green one is the one judged - refusals never weaken', () => {
+  const picked = selectCiRun([
+    { databaseId: 300, status: 'completed', conclusion: 'failure' },
+    { databaseId: 200, status: 'completed', conclusion: 'success' },
+  ]);
+  assert.equal(picked.action, 'judge');
+  assert.equal(picked.run.conclusion, 'failure', 'preferring the green run here would pass a refused tree');
+});
+
+test('nothing but cancelled shells is "none", carrying the newest so a refusal can name it', () => {
+  const picked = selectCiRun([
+    { databaseId: 400, status: 'completed', conclusion: 'cancelled' },
+    { databaseId: 401, status: 'completed', conclusion: 'cancelled' },
+  ]);
+  assert.equal(picked.action, 'none');
+  assert.equal(picked.run.databaseId, 401);
+});
+
+test('an empty listing is "none" with no run at all', () => {
+  assert.deepEqual(selectCiRun([]), { action: 'none', run: null });
+  assert.deepEqual(selectCiRun(undefined), { action: 'none', run: null });
+});
+
+test('phase 3 selects its run through selectCiRun, filtered to ci.yml', async () => {
+  // The wiring is a property of the source - a unit test cannot reach phase 3 without gh.
+  // Normalised, because the working tree may hold CRLF and the slice below needs LF to find
+  // the end of the function.
+  const source = (await readFile(new URL('./safe-merge-preflight.mjs', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+  const body = source.slice(source.indexOf('function phase3('));
+  const fn = body.slice(0, body.indexOf('\n}\n') + 3);
+  assert.match(fn, /'--workflow', 'ci\.yml'/);
+  assert.match(fn, /selectCiRun\(/);
+  assert.match(fn, /databaseId,status,conclusion/);
 });
 
 // What a CI run PROVES, as opposed to what its green tick suggests. Both halves below cost real

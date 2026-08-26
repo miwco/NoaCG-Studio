@@ -20,6 +20,7 @@ import {
   planMigrationPush,
   planOrderDecision,
   planPreconditions,
+  waitForCi,
 } from './auto-merge.mjs';
 
 const source = await readFile(new URL('./auto-merge.mjs', import.meta.url), 'utf8');
@@ -99,13 +100,39 @@ test('no verdict at all is a refusal, never a silent pass', () => {
   assert.equal(planOrderDecision(null).action, 'refuse');
 });
 
-test('blocked by a branch that is itself still waiting means requeue, not fail', () => {
+test('blocked by a branch that is itself QUEUED means requeue, not fail', () => {
+  // The queue will land the blocker, so deferring genuinely resolves - this is the
+  // queue-five-at-once case the deferral mechanism exists for.
   const decision = planOrderDecision(
     { severity: 'hold', reasons: [{ kind: 'stacked', text: 'sits on top of the other branch' }], landFirst: 'claude/first' },
-    { isAheadOfMain: (b) => b === 'claude/first' },
+    { isAheadOfMain: (b) => b === 'claude/first', isQueuedForLanding: (b) => b === 'claude/first' },
   );
   assert.equal(decision.action, 'blocked');
   assert.match(decision.message, /claude\/first is still ahead of main/);
+});
+
+test('a blocker NOBODY queued refuses at once instead of burning deferrals', () => {
+  // Deferring is a bet that the queue itself will land the blocker. With no landing queued for
+  // it the bet cannot pay: this used to spin through the whole deferral budget in minutes and
+  // then vanish - queue empty, branch "not queued", indistinguishable from unfinished work.
+  const decision = planOrderDecision(
+    { severity: 'hold', reasons: [{ kind: 'stacked', text: 'sits on top of the other branch' }], landFirst: 'claude/first' },
+    { isAheadOfMain: (b) => b === 'claude/first', isQueuedForLanding: () => false },
+  );
+  assert.equal(decision.action, 'refuse');
+  assert.match(decision.message, /claude\/first/);
+  assert.match(decision.message, /NO landing is queued/);
+  assert.match(decision.message, /--accept <kind>/);
+});
+
+test('one queued blocker among several is enough to keep waiting', () => {
+  // The queued one lands, the verdict is recomputed next turn, and only then does the unqueued
+  // remainder refuse - refusing now would fail a landing that real progress is coming for.
+  const decision = planOrderDecision(
+    { severity: 'hold', reasons: [{ kind: 'stacked', text: 'x' }], blockedBy: ['claude/queued', 'claude/idle'] },
+    { isAheadOfMain: () => true, isQueuedForLanding: (b) => b === 'claude/queued' },
+  );
+  assert.equal(decision.action, 'blocked');
 });
 
 test('the same verdict is a REFUSAL once the blocker has landed', () => {
@@ -142,7 +169,7 @@ test('an accepted kind does not make a waiting blocker land early', () => {
   // still ahead of main must still send this back to the queue.
   const decision = planOrderDecision(
     { severity: 'hold', reasons: [{ kind: 'stacked', text: 'x' }, { kind: 'shared-registry', text: 'y' }], blockedBy: ['claude/other'] },
-    { accept: ['shared-registry'], isAheadOfMain: () => true },
+    { accept: ['shared-registry'], isAheadOfMain: () => true, isQueuedForLanding: () => true },
   );
   assert.equal(decision.action, 'blocked');
 });
@@ -322,6 +349,119 @@ test('a failed push to origin/main is not recorded as a landing', async () => {
   const { outcome, landed } = await land({ fail: ['push origin main'] });
   assert.equal(outcome, 1);
   assert.deepEqual(landed, []);
+});
+
+// ── Waiting for CI: dispatch instead of hoping, and which run to act on ─────────────────────────
+//
+// The verified sha is a merge commit this job just pushed, so its run arrives by GitHub's push
+// webhook - which ran 28-40 minutes late on 2026-08-26, spending the whole wait budget on hope
+// and refusing in words that read as a tree fault. And the run it did find could be the wrong
+// one: `--limit 1` with no workflow filter once watched a deploy-verify run and handed phase 3
+// a CI run still in flight, which refused a real landing.
+
+/** Drive waitForCi over a scripted sequence of run listings, recording what it did. */
+async function waitOver(listings, { ticks = 8, graceTicks = 3 } = {}) {
+  const events = [];
+  let call = 0;
+  const log = console.log;
+  console.log = () => {};
+  let ok;
+  try {
+    ok = await waitForCi('v'.repeat(40), {
+      branch: 'claude/x',
+      ticks,
+      graceTicks,
+      listRuns: () => listings[Math.min(call++, listings.length - 1)],
+      watchRun: (id) => {
+        events.push(`watch ${id}`);
+        return { status: 0 };
+      },
+      dispatchRun: () => {
+        events.push('dispatch');
+        return { status: 0 };
+      },
+      sleep: async () => events.push('sleep'),
+    });
+  } finally {
+    console.log = log;
+  }
+  return { ok, events };
+}
+
+test('no run appearing gets one DISPATCHED after the grace period, exactly once', async () => {
+  const { ok, events } = await waitOver([[]], { ticks: 6, graceTicks: 3 });
+  // The dispatch changes HOW it waits, never whether it gates: with nothing conclusive by the
+  // end of the budget this is still a refusal.
+  assert.equal(ok, false);
+  assert.deepEqual(events.filter((e) => e === 'dispatch'), ['dispatch'], 'dispatched once, not per tick');
+  // Grace first: ticks 0-2 are the webhook's, the dispatch comes at tick 3.
+  assert.equal(events.indexOf('dispatch'), 3, 'three sleeps of grace before the dispatch');
+});
+
+test('a run appearing within the grace period means no dispatch at all', async () => {
+  const { ok, events } = await waitOver([
+    [],
+    [{ databaseId: 7, status: 'in_progress', conclusion: '' }],
+    [{ databaseId: 7, status: 'completed', conclusion: 'success' }],
+  ]);
+  assert.equal(ok, true);
+  assert.ok(!events.includes('dispatch'), 'the webhook delivered - nothing to dispatch');
+  assert.ok(events.includes('watch 7'));
+});
+
+test('a same-second tie with a cancelled push run watches the LIVE run, not the shell', async () => {
+  // The ci.yml concurrency group is the ref, so a dispatch cancels the late push run - and when
+  // both share a createdAt second, `gh run list` order is arbitrary and used to hand back the
+  // cancelled one. databaseId is strict creation order, so the tie is broken there.
+  const tie = [
+    { databaseId: 100, status: 'completed', conclusion: 'cancelled' },
+    { databaseId: 101, status: 'in_progress', conclusion: '' },
+  ];
+  const { ok, events } = await waitOver([
+    tie,
+    [tie[0], { databaseId: 101, status: 'completed', conclusion: 'success' }],
+  ]);
+  assert.equal(ok, true);
+  assert.deepEqual(events.filter((e) => e.startsWith('watch')), ['watch 101'], 'the cancelled shell is never watched');
+});
+
+test('a red run is conclusive - the wait ends and phase 3 gives the verdict', async () => {
+  const { ok, events } = await waitOver([[{ databaseId: 5, status: 'completed', conclusion: 'failure' }]]);
+  assert.equal(ok, true, 'true means "a run exists to judge", never "it passed"');
+  assert.ok(!events.includes('dispatch'), 'a verdict exists - re-running it would be retrying a refusal');
+});
+
+test('nothing but cancelled shells never reads as a run worth returning on', async () => {
+  // A cancelled run proves nothing either way, so the wait keeps going - dispatching a real run
+  // meanwhile - and gives up as a refusal if nothing conclusive ever arrives.
+  const { ok, events } = await waitOver([[{ databaseId: 9, status: 'completed', conclusion: 'cancelled' }]], {
+    ticks: 5,
+    graceTicks: 3,
+  });
+  assert.equal(ok, false);
+  assert.ok(events.includes('dispatch'));
+  assert.ok(!events.some((e) => e.startsWith('watch')), 'a completed shell is nothing to watch');
+});
+
+test('a watch returning instantly still costs a tick - the budget cannot burn in seconds', async () => {
+  // `gh run watch` returns immediately on a run still pending with zero jobs (j-0088). The
+  // listing is the truth and the sleep is unconditional, so a stuck-pending run spends the
+  // budget in ten-second ticks - ten minutes of patience - rather than spinning it away.
+  const { ok, events } = await waitOver([[{ databaseId: 7, status: 'queued', conclusion: '' }]], { ticks: 4 });
+  assert.equal(ok, false);
+  assert.equal(events.filter((e) => e === 'sleep').length, 4, 'every tick sleeps');
+  assert.equal(events.filter((e) => e === 'watch 7').length, 4, 'and every tick re-checks the listing first');
+});
+
+test('the run listing is filtered to ci.yml, so a deploy-verify run can never be watched', () => {
+  // The default listRuns is what production uses; the filter lives in its gh arguments.
+  // Normalised, because the working tree may hold CRLF and a match-assertion on a mis-sliced
+  // body would fail here (a doesNotMatch would pass vacuously, which is worse).
+  const normalised = source.replace(/\r\n/g, '\n');
+  const body = normalised.slice(normalised.indexOf('export async function waitForCi'));
+  const fn = body.slice(0, body.indexOf('\n}\n') + 3);
+  assert.match(fn, /'--workflow', 'ci\.yml'/);
+  assert.match(fn, /databaseId,status,conclusion/);
 });
 
 // ── The retry bound ─────────────────────────────────────────────────────────────────────────────
