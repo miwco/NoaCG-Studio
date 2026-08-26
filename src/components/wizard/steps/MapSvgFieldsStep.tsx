@@ -93,12 +93,15 @@ function proposeFollowers(
  *  - a RECTANGLE wider than tall (a banner strip; a chip or a card is not one), with room to
  *    grow before the frame's safe margin (a full-frame backplate has none, and it is also the
  *    thing that must never resize);
- *  - holding at least one bound text line, every one of them START-anchored (an end- or
- *    middle-anchored line is composed against a point growth would move away from - the
- *    scorebug's score figures and centred clock);
- *  - the lines STACKED, never side by side (two lines sharing a baseline on one plate is a
- *    composed row - a scorebug, a strap with a place and a clock - where widening the plate
- *    helps nobody: the inner line's room is bounded by its neighbour, not by the panel).
+ *  - holding at least one STACKED bound line - one that has its own baseline to itself. A pair
+ *    sharing a baseline (an exporter's usual shape for a strap's place and its time) is not an
+ *    argument either way: widening the panel gives those two nothing, because each is bounded by
+ *    the other, and the runtime now measures exactly that (svg.ts `svgFitNeighbour`). It used to
+ *    veto the whole file, which is why the shipped Illustrator lower third - three stacked lines
+ *    above one such pair - defaulted to shrinking (owner, 2026-08-26). A graphic whose lines are
+ *    ALL side by side still refuses: that is a composed row, a scorebug, and it declares a stage.
+ *  - those stacked lines every one START-anchored (an end- or middle-anchored line is composed
+ *    against a point growth would move away from - the scorebug's score figures, a centred clock);
  *
  * Deliberately NOT measured: the artboard, or the panel's size against it. The 2026-08-23
  * ruling stands - the shipped lower third is a full-frame artboard and the shipped scorebug a
@@ -136,19 +139,46 @@ function proposeBannerGrowth(stage: HTMLElement, svg: SvgImportResult, onTextIds
         l.r.bottom <= sr.bottom + tol,
     );
     if (inside.length === 0) continue;
-    if (inside.some((l) => l.anchor !== 'start')) continue;
-    const sideBySide = inside.some((a, i) =>
-      inside.some((b, j) => {
-        if (j <= i) return false;
-        const overlap = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
-        return overlap > Math.min(a.r.height, b.r.height) * 0.5;
-      }),
+    // The lines that have a baseline TO THEMSELVES. Those are the ones a wider panel actually
+    // helps, so they are the ones the question is asked about.
+    const stacked = inside.filter(
+      (a) =>
+        !inside.some((b) => {
+          if (b === a) return false;
+          const overlap = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+          return overlap > Math.min(a.r.height, b.r.height) * 0.5;
+        }),
     );
-    if (sideBySide) continue;
+    if (stacked.length === 0) continue;
+    if (stacked.some((l) => l.anchor !== 'start')) continue;
     return s.id;
   }
   return null;
 }
+
+/** The four rungs of the too-long ladder, as the select spells them. `shrink` is the absence of
+ *  a growth rule; the other three are one axis each — and 'xy' is BOTH, emitted as two rows on
+ *  one panel (draft.ts `svgGrowthOptions`). */
+type StretchMode = 'grow-x' | 'grow-xy' | 'grow-y' | 'shrink';
+
+const STRETCH_AXIS: Record<Exclude<StretchMode, 'shrink'>, 'x' | 'y' | 'xy'> = {
+  'grow-x': 'x',
+  'grow-xy': 'xy',
+  'grow-y': 'y',
+};
+
+const STRETCH_SUMMARY: Record<StretchMode, string> = {
+  'grow-x': 'the panel gets wider',
+  'grow-xy': 'the panel gets wider, then the text wraps',
+  'grow-y': 'the text wraps onto more lines',
+  shrink: 'the text gets smaller',
+};
+
+const STRETCH_HINT: Record<Exclude<StretchMode, 'shrink'>, string> = {
+  'grow-x': 'It widens to the right and the type stays the size you drew.',
+  'grow-xy': 'It widens first. Once it hits the margin, the text wraps into the height below.',
+  'grow-y': 'It gets taller and the text wraps into the new height.',
+};
 
 /** The published weight closest to the one the file's own name asked for. */
 function nearestWeight(weights: number[], want: number): number {
@@ -362,7 +392,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
   // answer rather than a preview of one.
   const [proposed, setProposed] = useState<string[]>([]);
   const growId = draft.svgStretch.on ? draft.svgStretch.shapeId : null;
-  const growAxis = draft.svgStretch.axis ?? 'x';
+  // The FOLLOWER proposal is a sideways measurement whenever the panel widens at all — the
+  // combination's declared set rides its sideways row (draft.ts `svgGrowthOptions`), and its
+  // downward row derives its own.
+  const growAxis = draft.svgStretch.axis === 'y' ? 'y' : 'x';
+  const stretchMode: StretchMode = !draft.svgStretch.on
+    ? 'shrink'
+    : draft.svgStretch.axis === 'y'
+      ? 'grow-y'
+      : draft.svgStretch.axis === 'xy'
+        ? 'grow-xy'
+        : 'grow-x';
 
   // ── GROWTH DEFAULTS ON WHERE THE ARTWORK IS UNAMBIGUOUS (docs/GOALS.md NOW goal 5) ──
   // Measured on the step's own render, and only while the author has not touched a growth
@@ -692,13 +732,11 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
       <div className="map-svg-lead">
         <h3>Choose what the operator can change</h3>
         {svg.candidates.length > 0 ? (
-          <p className="hint">
-            Tick what an operator can retype — hover a row to see it in the preview.
-          </p>
+          <p className="hint">Tick what can be retyped. Hover a row to see it in the preview.</p>
         ) : (
           <p className="hint">
-            Your artwork ships exactly as you drew it. This file has no text layers to bind —
-            what that means, and the two ways forward, are below.
+            No text layers in this file. Your artwork still ships exactly as drawn. Two ways
+            forward below.
           </p>
         )}
       </div>
@@ -709,21 +747,18 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         <div className="panel-section" data-testid="map-svg-outlined">
           <h3>This SVG has no text layers</h3>
           <p className="hint">
-            Its text was converted to outlines when it was exported — the letters are shapes
-            now, so there is nothing to type into. The graphic still imports exactly as drawn
-            and can go on air as a <strong>fixed graphic</strong>.
+            The text was turned into shapes on export, so there is nothing to type into. It
+            still airs fine as a <strong>fixed graphic</strong>.
           </p>
           <p className="hint">
-            To make its text editable, export it again with real text kept as text — in
-            Illustrator: <strong>File → Export → SVG, and set Fonts to “SVG”</strong> (not
-            “Convert to outlines”); in Figma, export without “Outline text” — and drop the new
-            file on the previous step.
+            To get editable text, export again keeping text as text. Illustrator:{' '}
+            <strong>File → Export → SVG, Fonts set to “SVG”</strong>. Figma: turn off “Outline
+            text”. Then drop the new file on the previous step.
           </p>
           {draft.svgOutlines.length > 0 && (
             <p className="hint">
-              Or keep this file: tick a group of shapes below that <em>was</em> text, and a
-              live text field takes its place — same spot, same size and colour, in a typeface
-              of yours rather than the original.
+              Or keep this file. Tick a group of shapes below that <em>was</em> text and a live
+              field takes its place: same spot, same size, same colour, your typeface.
             </p>
           )}
         </div>
@@ -731,17 +766,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         <div className="panel-section" data-testid="map-svg-fields">
           <SectionHead
             title="Editable text"
-            summary={`${onCount} of ${draft.svgFields.length} on air as operator fields`}
+            summary={`${onCount} of ${draft.svgFields.length} editable on air`}
             testid="map-svg-why-fields"
           >
             <p>
-              Every text layer in your file was found and starts ON — a ticked layer becomes a
-              field the operator retypes live, in exactly the typography you drew. Untick a
-              layer and its words stay part of the artwork.
+              We found every text layer and turned them all on. A ticked layer becomes a field
+              the operator retypes live, in the typography you drew. Untick one and its words
+              stay part of the artwork.
             </p>
             <p>
-              The text box is live: type a real, long value into it and the preview shows
-              exactly what would happen on air.
+              The Text box is live. Type a real, long value and the preview shows what would
+              happen on air.
             </p>
           </SectionHead>
           {draft.svgFields.map((f) => (
@@ -756,7 +791,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 type="checkbox"
                 checked={f.on}
                 onChange={(e) => patchField(f.candidateId, { on: e.target.checked })}
-                title={f.on ? 'On — this layer is an operator field' : 'Off — this text stays as drawn'}
+                title={f.on ? 'On. This layer is an operator field.' : 'Off. This text stays as drawn.'}
               />
               <label className="save-field grow">
                 <span>Field name</span>
@@ -790,7 +825,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                     onChange={(e) => patchField(f.candidateId, { kind: e.target.value as SvgFieldDraft['kind'] })}
                     title={
                       f.kind !== 'countdown' && countdownTaken
-                        ? 'Another layer is already the countdown — a graphic has one clock'
+                        ? 'Another layer is already the countdown. A graphic has one clock.'
                         : 'Text: the operator types what shows. Countdown: the operator sets minutes and this layer counts down on air.'
                     }
                     data-testid={`map-svg-kind-${f.candidateId}`}
@@ -823,9 +858,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           testid="map-svg-why-added"
         >
           <p>
-            Your artwork is the stage, not the whole graphic: a show sometimes needs a line the
-            file never drew. Arm the button and draw a box on the preview — a real editable
-            field lands exactly where you drew it, and the artwork underneath is untouched.
+            A show sometimes needs a line the file never drew. Press the button and draw a box
+            on the preview. A real editable field lands there, and the artwork underneath is
+            untouched.
           </p>
         </SectionHead>
         <button
@@ -833,7 +868,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
           onClick={() => setDrawArmed((a) => !a)}
           data-testid="map-svg-add-field"
         >
-          {drawArmed ? '✕ Cancel — or draw a box on the preview' : '＋ Draw a field on the artwork'}
+          {drawArmed ? '✕ Cancel, or draw a box on the preview' : '＋ Draw a field on the artwork'}
         </button>
         {draft.designFields.map((f) => (
           <div className="map-svg-row" key={f.id} data-testid={`map-svg-added-${f.id}`}>
@@ -855,7 +890,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             </label>
             <button
               onClick={() => removeAdded(f.id)}
-              title="Remove this field — the artwork is untouched either way"
+              title="Remove this field. The artwork is untouched either way."
               data-testid={`map-svg-added-remove-${f.id}`}
             >
               ✕
@@ -872,19 +907,18 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         <div className="panel-section" data-testid="map-svg-behaviour">
           <SectionHead
             title="What it does"
-            summary={behaviour ? 'quiz — select, lock, reveal' : 'nothing but in and out'}
+            summary={behaviour ? 'a quiz: select, lock, reveal' : 'it just comes on and off'}
             testid="map-svg-why-behaviour"
           >
             <p>
-              This section is here because a graphic can be more than a picture that comes on
-              and off: it can carry BEHAVIOUR the operator drives live, with real buttons on the
-              control page. Today that is the quiz — select an answer, lock it in, reveal the
-              right one. More behaviours join it over time.
+              A graphic can do more than come on and off. It can carry behaviour the operator
+              drives live, with real buttons on the control page. Today that is the quiz: select
+              an answer, lock it in, reveal the right one.
             </p>
             <p>
-              Your artwork stays exactly as you drew it. You only say which drawn layers show
-              each moment; NoaCG decides when they are visible. A drawing you never made simply
-              shows nothing extra — the behaviour still works.
+              Your artwork does not change. You say which drawn layer shows at each moment and
+              NoaCG turns them on and off. Left a layer undrawn? Nothing extra shows, and the
+              behaviour still works.
             </p>
           </SectionHead>
           <label className="save-field">
@@ -910,8 +944,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               }
               data-testid="map-svg-behaviour-kind"
             >
-              <option value="none">Nothing — it just comes on and off</option>
-              <option value="quiz">Quiz — select an answer, lock it in, reveal it</option>
+              <option value="none">Nothing. It comes on and off.</option>
+              <option value="quiz">Quiz. Select an answer, lock it in, reveal it.</option>
             </select>
           </label>
           {behaviour && (
@@ -948,8 +982,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 </label>
               </div>
               <p className="hint">
-                Per answer: its text layer, and the drawings for picked / right / wrong if you
-                made them.
+                Per answer: its text layer, plus the picked / right / wrong drawings if you made
+                them.
               </p>
               {behaviour.answers.map((answerId, at) => (
                 <div className="map-svg-quiz-row" key={at} data-testid={`map-svg-quiz-row-${at}`}>
@@ -1030,50 +1064,56 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             title="When the text is too long"
             summary={
               !draft.svgStretch.on
-                ? 'the text shrinks to fit'
-                : `${draft.svgStretch.axis === 'y' ? 'the panel gets taller' : 'the panel gets wider'}${
-                    draft.svgStretch.authored ? '' : ' — read from your artwork'
-                  }`
+                ? 'the text gets smaller'
+                : `${STRETCH_SUMMARY[stretchMode]}${draft.svgStretch.authored ? '' : ' — read from your artwork'}`
             }
             testid="map-svg-why-stretch"
           >
             <p>
-              An operator will someday type a longer value than you drew for, and it has to go
-              somewhere. Shrinking the line keeps your layout exactly as drawn — right for a
-              board or a scorebug, whose composition is the design. A lower third instead lets
-              its banner grow with the name, so the type stays the size you drew; a panel with
-              room beneath can grow taller and the value wraps into the new height.
+              Someone will type a longer name than you drew for. Pick where it goes.
             </p>
             <p>
-              Where your artwork makes the answer obvious — one banner with its text drawn
-              inside it — it is already set for you, and you can change it here or by dragging
-              a rectangle on the preview. Growth never passes the frame&rsquo;s safe margin,
-              and a short value always puts the artwork back exactly as drawn.
+              A lower third grows its banner. A board or a scorebug keeps its shape, so the text
+              gets smaller instead. Whatever you pick, text that still does not fit gets smaller
+              as the last resort, and the panel never grows past the margin you drew.
+            </p>
+            <p>
+              We read your artwork and set this for you. Change it here, or drag a rectangle on
+              the preview.
             </p>
           </SectionHead>
           <label className="save-field">
             <span>Too-long text</span>
+            {/* THE LADDER, IN THE OWNER'S ORDER (2026-08-26): "first I want it to get wider, and
+                then it should go to the next line. And the last thing is to shrink" - shrink last
+                "because that changes the design more". The runtime already runs in that order, so
+                the list is the order, and the combination is a real choice rather than a fourth
+                thing to explain: "There are many graphics that we do not want to scale ... we
+                should let the customer choose whatever they want." */}
             <select
-              value={!draft.svgStretch.on ? 'shrink' : draft.svgStretch.axis === 'y' ? 'grow-y' : 'grow-x'}
-              onChange={(e) =>
+              value={stretchMode}
+              onChange={(e) => {
+                const mode = e.target.value as StretchMode;
                 onDraft({
                   svgStretch: {
-                    on: e.target.value !== 'shrink',
+                    ...draft.svgStretch,
+                    on: mode !== 'shrink',
                     // Touching the select is AUTHORING: the measured default never overwrites
                     // an answer a person gave (the effect above skips authored state).
                     authored: true,
                     // Turning it on with nothing picked takes the proposal rather than
                     // leaving a switch that is on and does nothing.
                     shapeId: draft.svgStretch.shapeId ?? svg.shapes[0]?.id ?? null,
-                    axis: e.target.value === 'grow-y' ? 'y' : 'x',
+                    axis: mode === 'shrink' ? (draft.svgStretch.axis ?? 'x') : STRETCH_AXIS[mode],
                   },
-                })
-              }
+                });
+              }}
               data-testid="map-svg-stretch-mode"
             >
-              <option value="shrink">Shrinks to fit the space you drew</option>
-              <option value="grow-x">Grows the panel wider</option>
-              <option value="grow-y">Grows the panel taller, and the text wraps</option>
+              <option value="grow-x">The panel gets wider</option>
+              <option value="grow-xy">The panel gets wider, then the text wraps</option>
+              <option value="grow-y">The text wraps onto more lines</option>
+              <option value="shrink">The text gets smaller</option>
             </select>
           </label>
           {draft.svgStretch.on && (
@@ -1111,12 +1151,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               </select>
             </label>
           )}
-          {draft.svgStretch.on && (
-            <p className="hint">
-              {growAxis === 'y'
-                ? 'It gets taller and the value wraps into the new height — never past the frame’s safe margin.'
-                : 'It widens to the right and the type stays the size you drew — never past the frame’s safe margin.'}
-            </p>
+          {draft.svgStretch.on && stretchMode !== 'shrink' && (
+            <p className="hint">{STRETCH_HINT[stretchMode]}</p>
           )}
           {/* WHAT TRAVELS (docs/SVG_IMPORT_PLAN.md §6c). Geometry proposes and the author edits,
               and the reason is the ruling itself: sideways "anything past the edge" is usually
@@ -1138,16 +1174,17 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   (declaredFollowers.length === 0
                     ? 'nothing moves'
                     : `${declaredFollowers.length} layer${declaredFollowers.length === 1 ? '' : 's'}`) +
-                  (draft.svgStretch.followers ? '' : ' — proposed')
+                  (draft.svgStretch.followers ? '' : ' — read from your artwork')
                 }
                 testid="map-svg-why-followers"
               >
                 <p>
-                  When the panel grows, whatever you drew beyond its moving edge — a logo after
-                  the name, a caption under a board — has to travel with it or be drawn over.
-                  This list is that answer. It starts as a measurement of your artwork
-                  (everything drawn past the growing edge); change it and it becomes yours. A
-                  layer that <em>moves</em> keeps its gap; one that <em>stretches</em> grows by
+                  When the panel grows, anything drawn past its moving edge has to travel with
+                  it or get drawn over: a logo after the name, a caption under a board. This is
+                  that list. We measured it from your artwork. Change it and it becomes yours.
+                </p>
+                <p>
+                  A layer that <em>moves</em> keeps its gap. One that <em>stretches</em> grows by
                   the same amount.
                 </p>
               </SectionHead>
@@ -1157,7 +1194,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 data-testid="map-svg-followers-pick"
               >
                 {followArmed
-                  ? '✕ Done — or click layers on the artwork'
+                  ? '✕ Done, or click layers on the artwork'
                   : '⌖ Pick what travels, on the artwork'}
               </button>
               {declaredFollowers.map((f) => (
@@ -1212,10 +1249,9 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             testid="map-svg-why-images"
           >
             <p>
-              Your file carries pictures, and a ticked one becomes a field the operator can
-              swap on air — a guest photo, a crest. They start OFF because inside a design a
-              picture is usually the artwork itself. Leaving a swap field empty keeps the
-              picture you drew.
+              Tick a picture and the operator can swap it on air: a guest photo, a crest. They
+              start off, because a picture inside a design is usually the artwork itself. An
+              empty swap field keeps the picture you drew.
             </p>
           </SectionHead>
           {draft.svgImages.map((f) => (
@@ -1230,7 +1266,7 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                 type="checkbox"
                 checked={f.on}
                 onChange={(e) => patchImage(f.candidateId, { on: e.target.checked })}
-                title={f.on ? 'On — the operator can swap this picture' : 'Off — this picture stays as drawn'}
+                title={f.on ? 'On. The operator can swap this picture.' : 'Off. This picture stays as drawn.'}
               />
               <label className="save-field grow">
                 <span>Field name</span>
@@ -1258,13 +1294,12 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
             testid="map-svg-why-outlines"
           >
             <p>
-              Some of your shapes look like text that was converted to outlines on export —
-              letters that became drawings, with nothing left to type into. Tick a group that
-              really was text and a live typed field replaces it: same spot, same size and
-              colour, in a typeface of yours rather than the original. Hover a row to see which
-              shapes it means.
+              Some shapes look like text that was turned into outlines on export: letters that
+              became drawings. Tick a group that really was text and a live field replaces it,
+              same spot, same size, same colour, your typeface. Hover a row to see which shapes
+              it means.
               {draft.svgOutlines.some((f) => f.looksLikeText === false) && (
-                <> The ones that read as a line of type are listed first.</>
+                <> The ones that read as a line of type are first.</>
               )}
             </p>
           </SectionHead>
@@ -1289,8 +1324,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
                   !f.box
                     ? 'These shapes could not be measured, so no field can take their place'
                     : f.on
-                      ? 'On — these shapes are hidden and a text field stands in for them'
-                      : 'Off — these shapes stay as drawn'
+                      ? 'On. These shapes are hidden and a text field stands in for them.'
+                      : 'Off. These shapes stay as drawn.'
                 }
               />
               <label className="save-field grow">
@@ -1325,15 +1360,13 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
         <div className="panel-section" data-testid="map-svg-fonts">
           <SectionHead
             title="Typefaces"
-            summary={`${draft.svgFonts.filter((f) => f.fontId || f.customFont).length} of ${draft.svgFonts.length} ship inside the template`}
+            summary={`${draft.svgFonts.filter((f) => f.fontId || f.customFont).length} of ${draft.svgFonts.length} embedded in the template`}
             testid="map-svg-why-fonts"
           >
             <p>
-              Your design names {draft.svgFonts.length === 1 ? 'this typeface' : 'these typefaces'},
-              and an SVG only carries the NAME — not the font itself. A resolved family is
-              embedded in the template, so the graphic looks the same on every playout machine;
-              an unresolved one falls back to whatever that machine has installed, which is why
-              the row warns rather than staying quiet.
+              An SVG carries the typeface NAME, not the font file. A typeface we can find gets
+              embedded in the template, so the graphic looks the same on every playout machine.
+              One we cannot find falls back to whatever that machine has, so the row warns.
             </p>
           </SectionHead>
           {draft.svgFonts.map((f) => (
@@ -1352,8 +1385,8 @@ export default function MapSvgFieldsStep({ draft, onDraft, onHover, onArmDraw, o
               ) : (
                 <>
                   <span className="status-warn" data-testid={`map-svg-font-warn-${f.family}`}>
-                    Not embedded — previews and playout may show a substitute unless the
-                    playout machine has it installed.
+                    Not embedded. Playout will substitute another face unless that machine has
+                    this one installed.
                   </span>
                   <span className="map-svg-font-actions">
                     {/* The Google door is offered only for a family Google HAS. A licensed face

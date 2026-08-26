@@ -46,38 +46,57 @@ placed line's ROOM is its own SLOT, the width its wrapper declares: nothing was 
 the slot is the authored statement (measured from the outlined group's box, dragged on the
 canvas) and it beats any rectangle a container search might find under it - and being a width
 alone, a placed line never wraps. The ladder itself is overflow-only
-(owner ruling 2026-08-23, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
-panel, grow it only where the author opted in, wrap into the room the design already has, shrink
-to 55%, then report the field** (`noacgTextOverflow()`, read by every operator surface where a
-value is typed - the warning rides the machine-state answer, `control/controlModel.ts`). Three
-rules there are load-bearing and each was a measured defect: the budget is the ROOM the shape
-behind the line offers, NOT the width of the text the designer typed (that left 588px of a
-1040px banner permanently unused); wrapping uses only room already drawn - from the line to the
-nearest thing below it inside its panel, re-asked at every size, dropping a LINE rather than
-printing through the layer below; and the shrink is FLOORED, or a long value reaches 3.7px and
-reads as text that vanished. The drawn text is still measured in the real face and never
+(owner rulings 2026-08-23 and 2026-08-26, reasoning in docs/SVG_IMPORT_PLAN.md §3): **fill the
+room, grow the panel where the author opted in, wrap into the room the design already has, shrink
+to 55%, squeeze what is still over, and report the field** (`noacgTextOverflow()`, read by every
+operator surface where a value is typed - the warning rides the machine-state answer,
+`control/controlModel.ts`). Five rules there are load-bearing and each was a measured defect: the
+budget is the ROOM the shape behind the line offers, NOT the width of the text the designer typed
+(that left 588px of a 1040px banner permanently unused); a line's room STOPS at whatever is drawn
+beside it on its own rows (`svgFitNeighbour`) and such a PENNED line never drives the panel's
+growth, because widening it would give that line nothing; wrapping uses only room already drawn -
+from the line to the nearest thing below it inside its panel, re-asked at every size, dropping a
+LINE rather than printing through the layer below; the shrink is FLOORED, or a long value reaches
+3.7px and reads as text that vanished; and past that floor the block is SQUEEZED to its budget
+(`svgSqueeze` - `textLength` on a drawn layer, a horizontal scale on a placed one), because
+"nothing may ever paint outside the panel" and stopping at the floor let a floored name run
+127px across the artwork beside it. Screen px convert to the artwork's units through the
+element's CTM, never through its own advance/ink ratio - that carried a per-typeface error into
+the room. The drawn text is still measured in the real face and never
 re-taken from whatever is on screen, or a playout renderer's own first update becomes the budget
 and nothing ever fits it (owner ruling 2026-08-22: shrink, never condense). GROWTH is the
 per-graphic alternative the mapping step ASKS for, and it is a VERSIONED TABLE
 (`DesignSvg.growth` -> `NOACG_LAYOUT` version 1 + `growthRuntimeJs`, docs/SVG_IMPORT_PLAN.md §6c):
 each row names one element by its `data-noacg-el` stamp, the axis it may grow on, its safe margin,
-and optionally its FOLLOWERS. `layoutRules` is the NORMALIZING read - the old one-rectangle
+and optionally its FOLLOWERS. **The stamp is a LIST and the runtime matches word-wise**, because
+one element may be named by TWO rows: the wider-THEN-wrap ladder is one panel with an 'x' row and
+a 'y' row, which is how the combination the owner asked for needed no new format. Both rows read
+who travels and which lines are inside while the artwork is still AT REST, before either grows -
+a follower captured after the first row moved it would record the moved pose as its resting one.
+`layoutRules` is the NORMALIZING read - the old one-rectangle
 `stretch` becomes one axis-'x' row, so a saved option from before still builds what it described.
 `followers` is ADDITIVE, so declared-vs-derived cost no second version: absent = "whatever is
 drawn past the moving edge", a fair guess sideways and a poor one downwards. The table lives in
 the design-owned JS, NEVER in `NOACG_ANIM` - the timeline rewrites that region.
 **The two axes sit on opposite sides of the fit, and that is the point.** Sideways, growth is extra
-BUDGET, so it happens BEFORE the fit and the shrink answers what the 4% cap withheld. Downwards it
+BUDGET, so it happens BEFORE the fit and the shrink answers what the cap withheld. Downwards it
 is somewhere to WRAP into, so the fit runs first against the MOST that rule could ever give
 (measured at rest, `svgOfferHeights`), then the panel grows by what the settled block needed
 (`growSvgHeights`). One measure, one fit, one apply - never iterated, because wrap and grow are
 circular and an iterated answer would settle differently in the editor, in an export and under SPX.
 **Every re-measure RESTS the layout first** (`refitSvgText`), or the last pass's growth becomes
 this pass's room: the block reads as already fitting, the growth is dropped, and a graphic that
-grew in the editor collapses on air the moment `document.fonts.ready` fires. Default OFF and never
-inferred - no geometry separates a lower third from a scorebug (docs/SVG_IMPORT_PLAN.md §3 says
-why, and what v1 does not handle: rectangles, and ONE picked element per graphic in the wizard -
-the format expresses several rules and declared followers, the step does not ask for them yet). DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
+grew in the editor collapses on air the moment `document.fonts.ready` fires.
+**THE CAP IS THE DESIGN'S OWN MARGIN, MIRRORED** (owner 2026-08-26: "we cannot have templates
+outgrow the screen", and growth is symmetrical): `svgGrowCap` mirrors the inset the panel keeps
+from the frame edge it is ANCHORED to onto the edge it grows towards, floored at the row's `safe`
+fraction. An inset is never negative, so outgrowing the frame is structurally impossible rather
+than a number somebody has to keep right; the flat 4% it replaced let a banner drawn 150px in
+from the left run to 73px past its mirror.
+A graphic with an EMPTY table never moves; a lower third's default row is measured at design time
+by the wizard, never at play time (src/components/wizard/AGENTS.md). What v1 still does not handle:
+rectangles only, and the wizard picks ONE element per graphic (on one or both axes) while the
+format expresses several. DESIGN_PRESETS + `design-stagger`; `fieldPlan: fixed` (fields = the mapping
 step's choices). Bound nodes + top-level named `<g>`s are registry parts, lines channel 'rise'.
 E2E: e2e/import-svg.spec.ts.
 **importedDesign/quizBehaviour.ts is the BEHAVIOUR pilot** - all reasoning and the

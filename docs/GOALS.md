@@ -136,7 +136,12 @@ around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue
       **Built 2026-08-26** (`SectionHead.tsx`): every mapping-step section, the Animation step
       and the Import Design step are one line + ⓘ carrying the why; Finish/Entry/Fields/Style
       already read one-line-per-thing. Not yet swept: the raster Prepare/Place steps and the AI
-      step. Awaiting the owner's walk (owner-queue).
+      step. **The STRUCTURE was accepted on the 2026-08-26 walk** - *"I like that the long texts
+      are now behind this i button"* - and the WORDS were not: *"the actual texts themselves are
+      still way too long. It feels AI-generated ... it just needs to be more caveman style and not
+      an epic drama."* Every user-facing string on the import path was rewritten short and plain
+      (2026-08-26); code comments, `AGENTS.md` and `docs/` keep their reasoning density, which is
+      a different rule for a different reader. Awaiting the owner's walk (owner-queue).
 - [x] **5. "What travels with it" must explain itself, or not be asked.** The one thing on the walk
       he could not understand: *"my brain does not really understand how I choose what travels with
       it. What am I choosing?"* Two problems under it, and the second is the deeper one:
@@ -155,6 +160,18 @@ around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue
       scorebug, quiz or full-frame backplate keeps shrink; the follower list renders only where
       something would actually move, and named groups joined the canvas picker so "pick what
       travels" can reach a layer. E2E-pinned both ways; awaiting the owner's walk (owner-queue).
+      **The 2026-08-26 walk found the default still wrong on the shipped Illustrator sample**, and
+      ruled on the rest: a side-by-side pair used to veto the whole file, so a banner with three
+      stacked lines above one defaulted to shrinking (fixed - such a pair bounds those two lines
+      and argues neither way); the too-long control is a LADDER in his order - *"first I want it to
+      get wider ... and then it should go to the next line. And the last thing is to shrink"*,
+      shrink last *"because that changes the design more"* - with wider-then-wrap offered as a real
+      combination, because *"we should let the customer choose whatever they want"*; growth is
+      SYMMETRICAL and capped by the design's own mirrored margin, since *"we cannot have templates
+      outgrow the screen, that should never happen"*; and *"nothing may ever paint outside the
+      panel"* - past the legibility floor a value is now squeezed to fit rather than reported and
+      left running across the artwork. All five measured before and after
+      (`docs/SVG_IMPORT_PLAN.md` §3), E2E-pinned; awaiting the owner's walk (owner-queue).
 - [x] **6. SPEED must visibly change the preview, or not be a control.** The animations and the
       easing list are accepted and liked - *"I think they look good. Nice job... for once I can see
       a difference with the easing"* - but **Speed does nothing visible on most presets**: *"if it
@@ -167,7 +184,20 @@ around it. The full verbatim feedback is in the two `docs/acceptance/owner-queue
       so nothing was broken; a ±33% step compared from memory across two replays is simply below
       the noticing threshold on a smooth curve, and bounce reads because its RHYTHM changes, not
       its duration. The buttons now write 0.6 / 1 / 1.8 (≈1.33 / 0.80 / 0.44 s on the same
-      entrance), on every surface that offers the knob. Awaiting the owner's eyes (owner-queue).
+      entrance), on every surface that offers the knob.
+      **Round two, 2026-08-26: on a FADE both controls still read as dead**, and the measurement
+      says neither is. The emitted `NOACG_ANIM` carries 0.6 / 1 / 1.8, the BUILT entrance measures
+      1.333 / 0.800 / 0.444 s, and a fade's four offered curves produce four measurably different
+      opacity ramps - identical numbers to a slide, which he could see. What hid them was the
+      wizard's own lifecycle demo: it stopped at 1700 ms and replayed at 2800 ms whatever the
+      graphic did, so every setting played inside ONE fixed 2.8 s beat - and the faster the
+      setting, the LONGER the graphic then sat still (367 ms of hold at Slower against 1256 ms at
+      Faster: the cadence moved the wrong way). A slide survived it because travel is a second cue,
+      a distance covered in a time; a fade has no second cue, which is why it was the one that read
+      as broken - and it is also why Slide at Auto hid it, since a `power3.out` puts most of its
+      travel in the first third. The demo now runs on the template's own durations
+      (`WizardPreview` `demoCycle`), mutation-tested. **So the buttons stay: they work, and the
+      surface they were judged on was lying.** Awaiting the owner's eyes (owner-queue).
 
 **Deliberately NOT in the three weeks: CUSTOMIZING that behaviour.** Owner, 2026-08-22 - *"what if
 I don't want to be able to lock it? I just want to reveal it immediately."* Same question one level

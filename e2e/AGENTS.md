@@ -64,6 +64,20 @@ belong where specs are written rather than in the contract every session loads.
   tween touches none of what it asserted. For a HELD key use real auto-repeat
   (`e2e/_keys.ts holdKeyRepeats`, CDP `autoRepeat: true`); `keyboard.down()` sends one keydown and
   never repeats, so it cannot exercise the gesture at all.
+- **An assertion on rendered TEXT geometry needs a BOUND, and usually only one side of it is a
+  guarantee.** `import-svg.spec.ts` pinned the gap left at a grown banner's end to the inset the
+  designer drew, within half a pixel. It measured 50 on this laptop and 51 on CI's Linux fonts and
+  took a shard red with nothing wrong: the assertion was tighter than the thing it asserted. Half
+  that geometry genuinely IS exact and font-free - the panel edge is a computed cap - but where
+  the TEXT lands inside it belongs to the fit's size search, which stops as soon as the block fits
+  its budget rather than landing on it, so the last step leaves a remainder that depends on the
+  face's own metrics. **A local pass is no evidence here**, because this machine only ever
+  rasterises one of the two platforms. So: bound it, decide which DIRECTION is the defect (here a
+  gap SMALLER than the inset is text eating its own margin, while larger is only unspent slack,
+  so only the small side is asserted hard), and mutation-test the bound - otherwise it is a number
+  that happened to hold rather than a test. The same caution applies to any expected value derived
+  from `getComputedTextLength`, a text node's `getBoundingClientRect`, or a font-size the fit
+  chose.
 - **A race you cannot reproduce is FAULT-INJECTED, never repeated harder.** `--repeat-each=20`
   proves nothing when it passes: the window is narrower on this laptop than on a loaded runner,
   so the honest report is "not reproduced in 20 runs" and the next move is to widen the window on
