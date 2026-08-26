@@ -130,7 +130,7 @@ test('Lite creates one grounded graphic, records usability and acceptance, and o
   );
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.locator('.wz-step .status-ok')).toContainText(
-    'Passes SPX validation and the live playout test',
+    'Passes validation and the live playout test',
     { timeout: 25_000 },
   );
   await expect(page.getByTestId('ai-alternatives')).toHaveCount(0);

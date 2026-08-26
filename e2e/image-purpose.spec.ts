@@ -264,7 +264,7 @@ test('a reference is never bundled into the created template', async ({ page }) 
 
   await page.locator('.wz-step textarea').fill('A slate for a guest name.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', { timeout: 25_000 });
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', { timeout: 25_000 });
   await page.getByRole('button', { name: 'Next →' }).click();
   await page.getByTestId('wz-finish-editor').click();
 

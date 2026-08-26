@@ -131,7 +131,7 @@ test('a brief becomes a customized graphic adapted from a proven design', async 
   await openAiStep(page);
   await page.locator('.wz-step textarea').first().fill(BRIEF);
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   // ── 1. The design stage read a shortlist, not the catalog ───────────────────
   const design = seen.find((r) => r.tool.startsWith('emit_design'));
@@ -225,7 +225,7 @@ test('the shortlist is shown, and picking another design rebuilds on it for free
   await openAiStep(page);
   await page.locator('.wz-step textarea').first().fill(BRIEF);
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   // The designs the AI chose BETWEEN, as pictures - the claim's evidence.
   const cards = page.getByTestId('ai-shortlist').locator('.wz-shortlist-card');
@@ -257,7 +257,7 @@ test('the shortlist is shown, and picking another design rebuilds on it for free
     return (variantById(id!) as { name: string }).name;
   }, otherId);
   await expect(page.getByTestId('ai-adapted-from')).toContainText(otherName);
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation');
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation');
 
   // The brief's own content survived the swap - the spec carried over onto the new design.
   // Read from the wizard's live preview, which is where an un-created result actually is;

@@ -187,7 +187,7 @@ test('choosing denser type changes the AI request to the relaxed mode', async ({
   await page.getByTestId('wz-floors-relaxed').check();
   await page.locator('.wz-step textarea').fill('A dense stats panel, small type is fine');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   // The request the model actually received: the rules block rides the user message, and the
   // relaxed line states honestly that the customer chose the smaller scale.
@@ -209,7 +209,7 @@ test('with the defaults the AI request carries the binding rules and no relaxed 
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A clean news lower third');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   expect(requests[0]).toContain('BROADCAST LEGIBILITY RULES');
   expect(requests[0]).toContain('viewed on tv');
@@ -223,7 +223,7 @@ test('undersized primary text warns in the editor in plain language and still ex
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A tiny slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   await page.getByRole('button', { name: 'Next →' }).click();
   await page.getByTestId('wz-finish-editor').click();
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Tiny Slate');

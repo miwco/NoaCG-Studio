@@ -211,7 +211,7 @@ test('harness off (the toggle): one raw model call, no design stage', async ({ p
   await expect(page.getByLabel(/Design 3 options/)).not.toBeChecked();
   await page.locator('.wz-step textarea').fill('A simple test slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   expect(tools).toEqual(['emit_template']); // one call, straight to the coder tool
   await finishInEditor(page);
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Test Slate');
@@ -231,7 +231,7 @@ test('describe-it: prompt → validated template → create project', async ({ p
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A simple test slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   // The result renders live in the wizard preview.
   await expect(page.locator('.wz-side iframe')).toBeVisible();
   await awaitPreviewRebuild(page, async () => {
@@ -253,7 +253,7 @@ test('finish: Create with AI reaches the shared Finish step, gated on a valid re
 
   await page.locator('.wz-step textarea').fill('A simple test slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   // A valid result opens the gate; Next lands on the same Finish step every catalog mode ends on.
   await page.getByRole('button', { name: 'Next →' }).click();
@@ -278,7 +278,7 @@ test('finish: the Create-with-AI export door saves the graphic and opens the exp
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A simple test slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   await page.getByRole('button', { name: 'Next →' }).click();
   await page.getByTestId('wz-finish-name').fill('Election Night Slate');
@@ -318,7 +318,7 @@ test('harness on: three grounded alternatives, zero coder calls, the pick is rem
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A clean news lower third');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   expect(templateCalls).toBe(0); // grounded: the platform assembled all three, the model wrote no code
   await expect(page.locator('[data-alt]')).toHaveCount(3);
 
@@ -487,7 +487,7 @@ test('a failing result offers one press that sends the findings back', async ({ 
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.locator('.wz-step .status-bad')).toContainText('check(s) failing', GENERATED);
   await page.getByTestId('ai-fix').click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   await expect(page.getByTestId('ai-fix')).toHaveCount(0);
 });
 
@@ -756,7 +756,7 @@ test('readiness: the raw one-shot never claims the checks it did not run', async
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A simple test slate');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   // This path statically validates and never plays the graphic. The rows that depend on
   // playing it must say so rather than borrow the credit.
@@ -814,7 +814,7 @@ test('describe-it: a flourish runs the polish pass and lands as a marked overrid
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A lower third with a hairline edge');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   await finishInEditor(page);
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded Strap');
   const css = await page.evaluate(async () => {
@@ -843,7 +843,7 @@ test('describe-it: a contract-breaking polish patch reverts to the assembled tem
   await page.locator('.wz-step textarea').fill('A purple lower third');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   // The bad patch is rejected and the assembled template stands — still fully valid.
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   await finishInEditor(page);
   await expect(page.locator('.topbar .tpl-name')).toHaveText('Grounded Strap');
   const css = await page.evaluate(async () => {
@@ -864,7 +864,7 @@ test('describe-it: an invalid first answer triggers the automatic repair round',
   await openAiStep(page);
   await page.locator('.wz-step textarea').fill('A slate that needs a repair round');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   expect(templateCalls).toBe(2); // the coder emit + one validated repair
 });
 

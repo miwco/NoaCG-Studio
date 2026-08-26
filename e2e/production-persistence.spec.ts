@@ -242,8 +242,8 @@ test('the links panel is one line per capability, with the explanations behind t
   await page.getByTestId('output-url-help-toggle').click();
   await expect(links.locator('.prod-link-help')).toHaveCount(0);
 
-  // The SPX template is DEMOTED, not removed: a quiet row, still one click from the file.
-  const spx = links.locator('.prod-link-item', { hasText: 'SPX template' });
+  // The template FILE is DEMOTED, not removed: a quiet row, still one click from the file.
+  const spx = links.locator('.prod-link-item', { hasText: 'Template file' });
   await expect(spx).toHaveClass(/quiet/);
   const [download] = await Promise.all([
     page.waitForEvent('download'),

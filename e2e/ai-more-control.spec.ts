@@ -108,7 +108,7 @@ test('structured setup: pinned category + user fields + intensity land in the cr
 
   await page.locator('.wz-step textarea').first().fill('A guest strap for our tech show');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
   expect(templateCalls).toBe(0); // grounded — the platform assembled it
 
   // The design-stage request was narrowed to the pinned category and carried the setup.
@@ -189,7 +189,7 @@ test('prompt-only generation injects no structured setup and keeps the full cate
   await openAiStep(page);
   await page.locator('.wz-step textarea').first().fill('A clean news lower third');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', GENERATED);
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', GENERATED);
 
   const design = requests.find((r) => r.tool === 'emit_design_alternatives');
   expect(design).toBeTruthy();

@@ -247,7 +247,7 @@ test('NoaCG Lite receives and produces the selected 4K60 format', async ({ page 
   await pickFormat(page, 'ai-format', 'landscape-2160p', 60);
   await page.locator('.wz-step textarea').fill('A clean lower third for a presenter.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
-  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes SPX validation', {
+  await expect(page.locator('.wz-step .status-ok')).toContainText('Passes validation', {
     timeout: 25_000,
   });
   expect(requestFormat).toEqual({ resolution: { width: 3840, height: 2160 }, fps: 60 });
