@@ -55,6 +55,12 @@ Whatever the user pasted with or after the invocation, in any mix:
   in section 6.
 - **Nothing.** Then plan from repository state alone and say that is what happened.
 
+**Spare capacity fills in a fixed order, and never past it:** the user's own feedback first, then
+the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`, then
+`docs/backlog/` items whose stated why serves NOW. Capacity left after that is left over -
+never invent work to fill a wave. Backlog items graduate into GOALS or die in the folder; the
+morning report proposes graduations as candidate rows, and the user rules.
+
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, and
 expected to be landed and pushed by morning - roughly seven unattended hours, with the queue doing
 the merging. It is the default when the user says so, or when a wave is being started at the end
@@ -192,6 +198,9 @@ explicitly parked. Say plainly:
 - **Cheap-check-first.** Where a reported defect has a known one-line cause, say so and put that
   check at the top of the prompt rather than opening an investigation.
 - **A task you cannot write a WHY for.** Hand it over anyway, and say exactly that here.
+- **An ask that is a faster horse.** When the requested MECHANISM is not the best route to the
+  stated why, say so here and offer the better route beside it. The concern goes above, the
+  prompt still goes below, and the decision stays the user's - flagging is not vetoing.
 
 If there is genuinely nothing to push back on, one line saying so. Do not invent a concern.
 
@@ -263,6 +272,12 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **WHY says what breaks if this is not done**, where GOAL says what will be true. It exists so
   the receiving session can TEST the assignment instead of obeying it. Same rule and same reason
   as the handoff workflow's, pinned there.
+- **WHY is a TARGET, not a route.** The steps in DO are the planner's best route to the WHY - not
+  the assignment itself. A session that sees a better route to the same WHY builds it when it
+  fits inside its `TOUCHES` set and says so in the handoff; when the better route would change
+  scope, it does the asked work and makes the case in the handoff instead. Before step 1, every
+  session asks once: do these steps serve the WHY, or only the letter of the ask? A faster horse
+  built perfectly to the letter is a failed assignment.
 - **READ points, it never summarizes.** Name the files; the session reads them at current HEAD.
 - **TRAPS carries only what exists nowhere but a chat.** A trap already in a repo file gets a
   pointer. Reprinting an area contract is how these get fat.
