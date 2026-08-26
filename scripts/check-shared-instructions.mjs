@@ -103,6 +103,13 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // beat the route, and spare capacity drains a declared backlog instead of invented work.
       'WHY is a TARGET, not a route.',
       'never invent work to fill a wave',
+      // Paid-for on 2026-08-26: a build gate landing mid-wave turns every sibling's merge of
+      // main into a moving target, and their reds read as their own fault.
+      'A GATE LANDS ALONE.',
+      // The self-feeding wave is bounded by the report, not by pre-approval - the loop can
+      // extend a wave, never extend itself past the owner's checkpoint.
+      'THE REPORT IS THE CHECKPOINT.',
+      'Every wave improves this file',
       // Big prompts are the point: one branch, one gate, one landing instead of three.
       'A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.',
       // The whole workflow rests on this: it assigns work and does none of it, and it never

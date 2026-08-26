@@ -119,6 +119,14 @@ disjoint:
 - **A renamed or re-signatured shared export.** One session changes it, another writes callers.
   Any session that renames or re-signatures something shared is **sequential by construction**,
   whatever the file sets say.
+- **A GATE LANDS ALONE.** A session that adds or tightens a build gate - a new check in
+  `npm run build`, a new CI job, a ratchet on recorded counts - runs in its own wave, or is the
+  wave's designated LAST landing. The moment it lands, every sibling's next merge of `main`
+  brings a gate into their tree that did not exist when their prompt was written, and their red
+  reads as their own fault. Paid for on 2026-08-26: the copy gate landed in 35 minutes mid-wave
+  and two sibling sessions went silent on reds they could not have anticipated. An allowlist
+  note in a prompt does not cover this - the builder may rightly choose a better design than
+  the planner named.
 
 Then the second, unrelated limit: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
@@ -386,8 +394,29 @@ The rules that keep it from becoming an unattended agent doing whatever it likes
 - **It runs in its own worktree**, so it can never edit the files another session is holding.
 - **It queues itself and writes its own handoff**, exactly like a session the user started. This
   session still never merges and never pushes.
-- **Cap the chain at one.** A follow-on may not itself have a follow-on. Two hops of unattended
-  planning is how a night ends somewhere nobody chose.
+- **Cap the chain at one** for planned follow-ons. Deeper unattended planning runs through
+  handoff continuations below, which carry their own bounds.
+
+## Handoff continuations - the wave that feeds itself
+
+**A landed handoff that waits on no human may seed a new session without having been planned**
+(owner, 2026-08-26). This is the loosening the follow-on rules deliberately did not make, and it
+is bounded by the WHY chain instead of by pre-approval:
+
+- **The WHY must already exist in writing.** A continuation's GOAL and WHY come from the landed
+  handoff's own "what is left", and that WHY must trace to `docs/GOALS.md` ## NOW or to the
+  wave's stated goals. The loop writes the prompt in the section-5 format, quoting the handoff's
+  why verbatim. Work whose why the loop cannot trace is a candidate row in the report, never a
+  launch - the north star is what keeps an unattended loop from optimising toward nowhere.
+- **Waiting on the owner disqualifies.** A handoff item that needs a ruling, a walk, a payment
+  or a credential is never continued around - it goes to needs-you in the report.
+- **Bounds:** chain depth at most 2 from any owner-started session; total continuations per
+  wave at most the wave's own session count; each runs in its own worktree, queues itself, and
+  writes its own handoff, exactly like a planned session.
+- **THE REPORT IS THE CHECKPOINT.** Continuations run only inside the wave window; no chain
+  crosses a report. The report lists every continuation launched, with its traced why - and the
+  next wave needs the owner's go. This is the owner's protection against the day that went
+  happily in the wrong direction: the loop can extend a wave, never extend itself.
 
 ## The watch loop
 
@@ -437,6 +466,17 @@ prompt as one more step.
 report states how many ticks fired and when the last one was. A report that says "1 tick, 22:40"
 after a seven-hour night is the loop having died at the first tick, and it reads as a defect
 rather than as calm.
+
+## Every wave improves this file
+
+Each wave is also an experiment on the orchestration itself, and this contract is where the
+results accrue - the same failure must never fire twice. When a wave surfaces an orchestration
+lesson (a collision class the plan missed, a report section that failed its reader, a rule that
+was ambiguous under pressure), the orchestrator applies it HERE under its own-contract carve-out,
+lands it through the queue like everything else, and names the change in the report. Product
+lessons are not this: they go to the taste rubric via the owner's rulings, to `docs/backlog/`,
+or to a prompt. The test for which is which: would the fix change what a SESSION builds, or how
+a WAVE is planned? Only the second belongs here.
 
 ## How to ground it
 
