@@ -431,7 +431,10 @@ function svgSqueeze(el, budget) {
   svgUnsqueeze(el);
   if (!(budget > 0)) return;
   // A PLACED line is HTML and has no textLength, so it takes a horizontal scale pinned to
-  // whichever edge its own alignment reads from.
+  // whichever edge its own alignment reads from. Same caveat as a growth follower's transform:
+  // a line the TIMELINE animates in its own right is transformed by GSAP too, and the tween
+  // wins - so a floored value on a separately-animated placed line loses its squeeze. The
+  // artwork's own layers are what the design presets move, so this does not bite by default.
   if (svgFitPlaced(el)) {
     var w = svgTextWidth(el);
     if (!(w > budget + 0.5)) return;
