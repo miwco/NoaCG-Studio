@@ -34,7 +34,6 @@ test('the four guides carry their load-bearing content', async ({ page }) => {
   // (a) Coding agents: the one install command that has to work when copied cold, plus the
   // loop's verbs.
   const agents = page.locator('#claude-code');
-  await expect(agents).toContainText('claude mcp add noacg -- npx -y @noacg/cli mcp');
   await expect(agents).toContainText('npm i -g @noacg/cli');
   await expect(agents).toContainText('scaffold');
   await expect(agents).toContainText('validate');
@@ -75,16 +74,21 @@ test('every command block is one copy-paste, with a copy button', async ({ page 
   await install.locator('.cmd-copy').click();
   await expect(install.locator('.cmd-copy')).toHaveText('Copied');
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard.trim()).toBe('claude mcp add noacg -- npx -y @noacg/cli mcp');
+  expect(clipboard.trim()).toBe('claude plugin marketplace add miwco/NoaCG-Studio');
 });
 
-test('the docs carry no personal GitHub handle in their visible copy', async ({ page }) => {
+test('the agent guide offers both install routes, and they are the real ones', async ({ page }) => {
   await page.goto('/docs');
-  // The repository still lives under a personal account, so its URL is what a Source link
-  // has to point at. Nobody should have to READ or TYPE that handle: the install path is
-  // npm-only on purpose, and a marketplace command carrying it would put it back on screen.
-  const visible = await page.locator('body').innerText();
-  expect(visible).not.toMatch(/miwco/i);
+  const agents = page.locator('#claude-code');
+  // The plugin route is the one that carries the skill and the /noacg:graphic command, so it
+  // leads. `owner/repo` is the documented GitHub shorthand and the marketplace name comes from
+  // the `name` field in .claude-plugin/marketplace.json - if either half drifts the command
+  // silently installs nothing (owner, 2026-08-26: a personal handle here is fine, it is normal
+  // practice; what is not fine is the guide not working).
+  await expect(agents).toContainText('claude plugin marketplace add miwco/NoaCG-Studio');
+  await expect(agents).toContainText('claude plugin install noacg@noacg-studio');
+  // The server on its own stays documented for people who do not want the skill.
+  await expect(agents).toContainText('claude mcp add noacg -- npx -y @noacg/cli mcp');
 });
 
 test('the docs page routes back into the product', async ({ page }) => {

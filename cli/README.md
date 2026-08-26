@@ -19,21 +19,21 @@ npx @noacg/cli doctor                 # no install: runs the published build
 npm i -g @noacg/cli                   # or install it once
 ```
 
-**Claude Code**: one command, with nothing to install first.
+**Claude Code**: the `noacg` plugin ships the `noacg-graphic` skill, a `/noacg:graphic` command
+and this MCP server, with nothing to install first.
 
 ```
-claude mcp add noacg -- npx -y @noacg/cli mcp
+claude plugin marketplace add miwco/NoaCG-Studio
+claude plugin install noacg@noacg-studio
 ```
+
+For the MCP server on its own: `claude mcp add noacg -- npx -y @noacg/cli mcp`.
 
 **Codex**: copy `skill/noacg-graphic/` from this package (or `cli/plugin/skills/noacg-graphic/`
 in the repo) to `~/.codex/skills/noacg-graphic/`, then `codex mcp add noacg -- npx -y @noacg/cli mcp`.
 
 **Any MCP client**: run `npx -y @noacg/cli mcp` as a stdio server - command `npx`, args
 `-y @noacg/cli mcp`.
-
-There is also a Claude Code plugin bundling the `noacg-graphic` skill, a `/noacg:graphic`
-command and this same MCP server. It lives in the repository (`cli/plugin/`) and is installed
-from a clone; see `cli/plugin/README.md`.
 
 ## Use
 

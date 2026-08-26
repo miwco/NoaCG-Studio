@@ -17,8 +17,11 @@ What to look at:
   got blunter: CasparCG connect has still "not yet driven a real CasparCG server", outlined text
   still says the stand-in is re-rendered type and to re-export with live text where you can, and
   the Safari limit now says outright that it was never tested here.
-- **Is `miwco` gone?** It is nowhere you can read or type. It survives only inside the `href` of
-  the Source links, because that is where the repository actually is. What to do about that is
-  `2026-08-26-a-marketplace-address-without-your-handle.md`, which needs a decision from you.
+- **The install command still has your handle, on purpose.** You settled this the same day: the
+  worry was looking like a hobby project, not the name itself, and `owner/repo` is the documented
+  Claude Code shorthand (one of the three marketplaces already on this machine is a personal
+  handle). Taking it out had cost the one-command plugin install, so it is back:
+  `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`,
+  both run end to end and removed again before being written down. Nothing is owed a decision here.
 - **Do the copy buttons feel right?** All sixteen command blocks have one. The page is complete
   with JavaScript off: the buttons are added by `src/docs/docs.ts`, so nothing is lost without it.
