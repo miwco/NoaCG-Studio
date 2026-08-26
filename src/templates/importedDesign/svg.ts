@@ -2,14 +2,14 @@
 // own <text> layers bound to operator fields (docs/SVG_IMPORT_PLAN.md).
 //
 // Architecture B from the plan: the SVG's own text nodes get id="fN" and the standard
-// update() writes their textContent — the typography IS the designer's, nothing is redrawn.
+// update() writes their textContent - the typography IS the designer's, nothing is redrawn.
 // The only edits the markup takes are (a) id="fN" on the bound nodes, (b) sanitization
-// (already done at import — assets/svgImport.ts), (c) the candidate markers stripped, and
+// (already done at import - assets/svgImport.ts), (c) the candidate markers stripped, and
 // (d) a class on the root <svg> so the part registry can name it. Everything else ships
 // byte-for-byte as the designer exported it.
 //
 // Like the raster imported design (shared.ts) this self-assembles from shared/base.ts: the
-// ARTWORK decides the size, so the box is exactly the SVG's fitted width — never the standard
+// ARTWORK decides the size, so the box is exactly the SVG's fitted width - never the standard
 // assembler's fit-content text cap. The output is an ordinary standard-contract template
 // (.imported-design-box), so the canvas, the timeline, the exports and the validation gate
 // all work unchanged.
@@ -62,7 +62,7 @@ import { DESIGN_PRESETS } from './designPresets';
 import { PREFIX } from './shared';
 
 /** Stand-in used only when a preview (or the catalog baseline) renders the variant before an
- *  SVG exists. Deterministic on purpose — the baselines hash the emitted panes. */
+ *  SVG exists. Deterministic on purpose - the baselines hash the emitted panes. */
 const NO_SVG: DesignSvg = {
   markup:
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 270">` +
@@ -78,13 +78,13 @@ const NO_SVG: DesignSvg = {
 /**
  * Bind the chosen candidates: each gets id="fN" (in field order), every remaining candidate
  * marker is stripped, and the root <svg> gains the artwork class so the part registry names
- * it. Any pre-existing id that collides with a bound one is prefixed out of the way — the
+ * it. Any pre-existing id that collides with a bound one is prefixed out of the way - the
  * field ids are the one namespace the platform owns inside the file.
  *
  * `keepMarkers` is the ONE preview-only exception (`ResolvedOptions.previewMarkers`): the
  * mapping step's hover highlight needs a handle on the layer a checklist row means, and the
  * preview iframe is the only canvas that has the fit runtime. A ticked OUTLINE group still
- * loses its marker there — that group is hidden and its live stand-in wears the marker
+ * loses its marker there - that group is hidden and its live stand-in wears the marker
  * instead (components/wizard/draft.ts `withSvgOutlineFields`), so one marker always points at
  * whatever actually airs.
  */
@@ -128,7 +128,7 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
   const doc = new DOMParser().parseFromString(svg.markup, 'image/svg+xml');
   const root = doc.documentElement;
 
-  // The artwork identity (model/structure.ts `.{prefix}-art`) — appended, never replacing
+  // The artwork identity (model/structure.ts `.{prefix}-art`) - appended, never replacing
   // classes the designer put there.
   const classes = (root.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
   if (!classes.includes(`${PREFIX}-art`)) classes.push(`${PREFIX}-art`);
@@ -136,7 +136,7 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
 
   // Field ids are ours: a layer Illustrator happened to name "f0" would collide with the
   // binding, so any such id moves aside (references to it inside the file move with it). The
-  // behaviour's own fields count here too — its holders carry `fN` ids like any other field,
+  // behaviour's own fields count here too - its holders carry `fN` ids like any other field,
   // and the stamped state-layer ids (`q-sel-1`, …) are ours for the same reason.
   const behaviourFields = svg.behaviour ? 2 : 0;
   const taken = new Set([
@@ -160,7 +160,7 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     if (!el) return;
     if (i === clock) {
       // The countdown DISPLAY: the clock runtime paints into `.{prefix}-clock`, and the
-      // operator's minutes land in the hidden #fN holder instead — so this node takes the
+      // operator's minutes land in the hidden #fN holder instead - so this node takes the
       // class and NOT the field id, or update() would write "10" over the ticking readout.
       const own = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
       if (!own.includes(`${PREFIX}-clock`)) own.push(`${PREFIX}-clock`);
@@ -181,20 +181,26 @@ function bindSvgMarkup(svg: DesignSvg, keepMarkers = false): string {
     if (!own.includes(`${PREFIX}-outlined`)) own.push(`${PREFIX}-outlined`);
     el.setAttribute('class', own.join(' '));
   }
-  // THE ELEMENTS A LAYOUT RELATIONSHIP NAMES (plan §6c): every participant — an element that
-  // may GROW, and anything DECLARED to travel with it — is stamped with one token, and the
+  // THE ELEMENTS A LAYOUT RELATIONSHIP NAMES (plan §6c): every participant - an element that
+  // may GROW, and anything DECLARED to travel with it - is stamped with one token, and the
   // emitted NOACG_LAYOUT table says what each token does. One stamp kind for the whole
   // feature, so a rule can name several elements without minting a class per role.
   for (const [i, rule] of layoutRules(svg).entries()) {
+    // A SPACE-SEPARATED list of tokens, not a single value: one element may be named by two
+    // rules at once - the wider-then-wrap ladder is one panel growing on both axes - and a
+    // plain `setAttribute` would let the second rule erase the first one's stamp.
     const stamp = (candidateId: string, token: string) => {
       const el = root.querySelector(`[${SVG_CANDIDATE_ATTR}="${candidateId}"]`);
-      if (el) el.setAttribute(LAYOUT_EL_ATTR, token);
+      if (!el) return;
+      const own = (el.getAttribute(LAYOUT_EL_ATTR) ?? '').split(/\s+/).filter(Boolean);
+      if (!own.includes(token)) own.push(token);
+      el.setAttribute(LAYOUT_EL_ATTR, own.join(' '));
     };
     stamp(rule.candidateId, growToken(i));
     rule.followers?.forEach((f: DesignSvgFollower, j: number) => stamp(f.candidateId, followToken(i, j)));
   }
   // The drawn states of a bound behaviour: our id and the state class, so the runtime can turn
-  // each one on and off. Before the markers are stripped — that is what they are for.
+  // each one on and off. Before the markers are stripped - that is what they are for.
   if (svg.behaviour) markQuizLayers(root, svg.behaviour);
   const replaced = new Set(svg.outlines.map((o) => o.candidateId));
   for (const el of Array.from(root.querySelectorAll(`[${SVG_CANDIDATE_ATTR}]`))) {
@@ -212,8 +218,8 @@ function countdownIndex(svg: DesignSvg): number {
 }
 
 /** The SPX DataFields: one per bound text layer (numeric samples as real number fields;
- *  the countdown layer as its LENGTH in minutes, the drawn readout converted — "10:00" is
- *  ten), then one filelist per bound picture layer — update() swaps that node's href, and
+ *  the countdown layer as its LENGTH in minutes, the drawn readout converted - "10:00" is
+ *  ten), then one filelist per bound picture layer - update() swaps that node's href, and
  *  an empty value keeps the picture the designer drew. */
 function svgFields(svg: DesignSvg): SpxField[] {
   const clock = countdownIndex(svg);
@@ -248,13 +254,13 @@ function svgFields(svg: DesignSvg): SpxField[] {
 /**
  * Every @font-face the template ships (plan §4): a bundled face whose family name matches
  * what the SVG references, or a fetched/uploaded face embedded as an asset. An UNRESOLVED
- * family is stated in a comment — never blocked, because the designer may know the playout
+ * family is stated in a comment - never blocked, because the designer may know the playout
  * machine has the face installed; the wizard already warned out loud.
  */
-/** A bundled face declared under the name the artwork asks for — same file, second name. The
+/** A bundled face declared under the name the artwork asks for - same file, second name. The
  *  comment says which face it really is, so the emitted CSS is readable rather than mysterious. */
 function aliasFontFaceCss(font: BundledFont, family: string): string {
-  return `/* Bundled open-source font (the file ships with the export — no internet at playout).
+  return `/* Bundled open-source font (the file ships with the export - no internet at playout).
    Declared as "${family}" because that is the name this artwork's own CSS asks for; the file is ${font.family}. */
 @font-face {
   font-family: "${family}";
@@ -272,7 +278,7 @@ function svgFontCss(svg: DesignSvg): string {
     if (bundled) {
       // A face is declared under the name the ARTWORK asks for. Illustrator writes PostScript
       // names ("Archivo-Bold"), which the import matches to the bundled family they plainly are
-      // — but a `@font-face` declared as "Archivo" answers nothing in an SVG whose own CSS says
+      // - but a `@font-face` declared as "Archivo" answers nothing in an SVG whose own CSS says
       // `font-family: Archivo-Bold`, so the alias is the whole point of the match.
       blocks.push(
         bundled.family === font.family ? fontFaceCss(bundled) : aliasFontFaceCss(bundled, font.family),
@@ -282,7 +288,7 @@ function svgFontCss(svg: DesignSvg): string {
   }
   if (unresolved.length > 0) {
     blocks.push(
-      `/* UNRESOLVED ${unresolved.length === 1 ? 'FONT' : 'FONTS'}: ${unresolved.join(', ')} — the SVG references ${unresolved.length === 1 ? 'this family' : 'these families'} but no file ships
+      `/* UNRESOLVED ${unresolved.length === 1 ? 'FONT' : 'FONTS'}: ${unresolved.join(', ')} - the SVG references ${unresolved.length === 1 ? 'this family' : 'these families'} but no file ships
    with the template, so playout falls back to whatever the machine has installed. If the
    playout machine has the ${unresolved.length === 1 ? 'font' : 'fonts'}, this is fine; otherwise import the file in the Style panel. */`,
     );
@@ -294,7 +300,7 @@ function svgFontCss(svg: DesignSvg): string {
  * The overflow-only text fit (plan §3): SVG text neither wraps nor clips, so a longer
  * operator value would simply run past the artwork. The runtime records each bound node's
  * original length on first measure and applies `textLength` + `lengthAdjust` ONLY when a new
- * value overflows it — never distorting by default, mirroring the raster flow's
+ * value overflows it - never distorting by default, mirroring the raster flow's
  * shrink-not-condense rule. Design-owned JS OUTSIDE the marked region, so the data
  * conversion and every export carry it untouched.
  *
@@ -316,7 +322,7 @@ function svgFontCss(svg: DesignSvg): string {
 const SVG_FIT_JS = `
 // ── Text fit (SVG) ────────────────────────────────────────────────────────────
 // SVG text neither wraps nor clips: a longer value would run past the artwork. So each bound
-// layer has a BUDGET — the width of the text the DESIGNER drew — and a value wider than that
+// layer has a BUDGET - the width of the text the DESIGNER drew - and a value wider than that
 // is SHRUNK until it fits: a smaller line of the designer's own type, never a squeezed one.
 // (Condensing to the drawn width, which is what this did before, distorts tracking and glyph
 // shapes, so one extra letter visibly broke the typeface.) A value that fits is left exactly
@@ -341,8 +347,8 @@ var SVG_FIT_FLOOR = 0.55;                       // never smaller than 55% of the
 var SVG_LINE_HEIGHT = 1.2;                      // a wrapped line's step, in ems
 
 // EVERY line this design fits, of both kinds. The layers the DESIGNER drew are <text>/<tspan>
-// inside the artwork; a PLACED line is an HTML span the design got afterwards — a stand-in for
-// text that was exported as outlines, or a field added later — and it lives after </svg>, in
+// inside the artwork; a PLACED line is an HTML span the design got afterwards - a stand-in for
+// text that was exported as outlines, or a field added later - and it lives after </svg>, in
 // the same box. One list, so one ladder walks them and one report names them.
 function svgFitNodes() {
   var out = [];
@@ -360,13 +366,13 @@ function svgFitNodes() {
   return out;
 }
 
-/** A line PLACED on the artwork rather than drawn in it — an HTML span, which measures and
+/** A line PLACED on the artwork rather than drawn in it - an HTML span, which measures and
  *  paints through different calls than an SVG text node does. */
 function svgFitPlaced(el) {
   return typeof el.getComputedTextLength !== 'function';
 }
 
-/** Painted px per LAYOUT px for a placed line — what an entrance that scales the whole design
+/** Painted px per LAYOUT px for a placed line - what an entrance that scales the whole design
  *  puts between the two. A drawn layer never needs this: getComputedTextLength answers in the
  *  SVG's own user units, which no transform above it can move. */
 function svgPlacedScale(el) {
@@ -377,7 +383,7 @@ function svgPlacedScale(el) {
 
 /** The width of whatever text the node holds right now, in the space its room is measured in:
  *  user units for a drawn layer, LAYOUT px for a placed one. Each is compared only against its
- *  own room, and both spaces stand still while an entrance is mid-flight — so a value the design
+ *  own room, and both spaces stand still while an entrance is mid-flight - so a value the design
  *  cannot hold is caught during the animation exactly as it is at rest. */
 function svgTextWidth(el) {
   return svgFitPlaced(el)
@@ -385,12 +391,12 @@ function svgTextWidth(el) {
     : el.getComputedTextLength();
 }
 
-// THE ROOM A PLACED LINE GETS IS ITS OWN SLOT — the max-width its wrapper declares. Nothing was
+// THE ROOM A PLACED LINE GETS IS ITS OWN SLOT - the max-width its wrapper declares. Nothing was
 // drawn behind it (it sits on empty artwork, or over shapes this template hides), so there is no
 // shape to take a margin from, and the slot is the only statement anybody made about how much
 // room the line has: measured from the outlined group's own box at import, or dragged on the
-// canvas. That is the same sentence as the drawn line's fallback — a layer with no shape behind
-// it keeps the width it was DRAWN at — and it is a WIDTH, so a placed line never wraps: the room
+// canvas. That is the same sentence as the drawn line's fallback - a layer with no shape behind
+// it keeps the width it was DRAWN at - and it is a WIDTH, so a placed line never wraps: the room
 // below it belongs to artwork drawn for something else.
 function svgFitSlot(el) {
   var slot = el.parentNode;
@@ -398,6 +404,56 @@ function svgFitSlot(el) {
   var cap = parseFloat(getComputedStyle(slot).maxWidth);
   // No cap at all: the wrapper hugs its line, so its own box is the only room on offer.
   return cap > 0 ? cap : slot.offsetWidth;
+}
+
+// ── THE LAST RUNG: NOTHING PAINTS OUTSIDE ITS ROOM (owner ruling, 2026-08-26) ──
+// The ladder used to stop at the readability floor and simply REPORT a value it could not fit,
+// which left the floored line running straight across whatever the designer drew beside it. So a
+// floored block is squeezed into its budget as well: the same glyphs, narrower. It is deliberately
+// ugly, it is still reported as too long, and it comes off the moment a shorter value arrives.
+//
+// Never a default. Filling the room, growing the panel, wrapping and shrinking all happen first;
+// this only ever runs on a value no size and no line count could hold.
+function svgUnsqueeze(el) {
+  if (svgFitPlaced(el)) {
+    el.style.transform = '';
+    el.style.transformOrigin = '';
+    return;
+  }
+  var kids = el.children.length ? el.children : [el];
+  for (var i = 0; i < kids.length; i++) {
+    kids[i].removeAttribute('textLength');
+    kids[i].removeAttribute('lengthAdjust');
+  }
+}
+
+function svgSqueeze(el, budget) {
+  svgUnsqueeze(el);
+  if (!(budget > 0)) return;
+  // A PLACED line is HTML and has no textLength, so it takes a horizontal scale pinned to
+  // whichever edge its own alignment reads from. Same caveat as a growth follower's transform:
+  // a line the TIMELINE animates in its own right is transformed by GSAP too, and the tween
+  // wins - so a floored value on a separately-animated placed line loses its squeeze. The
+  // artwork's own layers are what the design presets move, so this does not bite by default.
+  if (svgFitPlaced(el)) {
+    var w = svgTextWidth(el);
+    if (!(w > budget + 0.5)) return;
+    var align = getComputedStyle(el).textAlign;
+    el.style.transformOrigin =
+      (align === 'right' ? 'right' : align === 'center' ? 'center' : 'left') + ' center';
+    el.style.transform = 'scaleX(' + (budget / w).toFixed(4) + ')';
+    return;
+  }
+  // A DRAWN layer takes SVG's own fit-to-width. Per painted line, because a wrapped block's
+  // tspans each have their own length and only the ones actually over need squeezing.
+  var kids = el.children.length ? el.children : [el];
+  for (var j = 0; j < kids.length; j++) {
+    var k = kids[j];
+    if (!k.getComputedTextLength) continue;
+    if (!(k.getComputedTextLength() > budget + 0.5)) continue;
+    k.setAttribute('textLength', budget.toFixed(2));
+    k.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+  }
 }
 
 // Runs as the page parses, with the artwork above it and update() not yet callable.
@@ -417,6 +473,7 @@ function measureSvgBudgets() {
     var drawn = svgFitDrawn[el.id];
     // Any previous fit has to come off first, or the measurement compounds.
     el.style.fontSize = '';
+    svgUnsqueeze(el);
     if (live !== drawn) el.textContent = drawn;   // measure the design, put the value back
     svgFitWidths[el.id] = svgTextWidth(el);
     svgFitSizes[el.id] = parseFloat(getComputedStyle(el).fontSize) || 0;
@@ -428,7 +485,7 @@ function measureSvgBudgets() {
 // The budget is NOT the width of the text the designer typed. A name drawn 402px wide inside a
 // 1040px banner has 588px of empty banner beside it, and taking the drawn text as the budget
 // spent none of it: the 403rd pixel shrank the type while more than half the panel stood
-// empty. So the budget is the ROOM — the shape drawn behind the line, out to a right margin
+// empty. So the budget is the ROOM - the shape drawn behind the line, out to a right margin
 // mirroring the left one the designer left. A line with no shape behind it keeps the drawn
 // width as its budget, which is the honest answer when nothing says otherwise.
 //
@@ -477,6 +534,30 @@ function svgFitCeiling(el, panel) {
   return top;
 }
 
+/** The nearest drawn thing to the RIGHT of this line, on its own rows - what a longer value would
+ *  run into (owner, 2026-08-26: "a line's room is bounded by what is drawn next to it"). Two
+ *  labels placed apart on ONE baseline is how an exporter writes a strap's place and its time, and
+ *  the panel behind them says nothing about where the first one has to stop: HELSINKI is bounded by
+ *  19:30, not by the banner, and widening the banner moves neither. The panel's own right edge is
+ *  the backstop, so a line with nothing beside it is unchanged. */
+function svgFitNeighbour(el, panel) {
+  var art = document.querySelector('.${PREFIX}-art');
+  var box = el.getBoundingClientRect();
+  var others = art.querySelectorAll('text, tspan, image, rect, path, polygon, ellipse, circle');
+  var left = panel.right;
+  for (var i = 0; i < others.length; i++) {
+    var o = others[i];
+    if (o === el || o.contains(el) || el.contains(o)) continue;
+    var r = o.getBoundingClientRect();
+    if (!(r.width > 0) || !(r.height > 0)) continue;
+    if (r.width * r.height >= panel.width * panel.height) continue;   // that IS the panel
+    if (r.bottom < box.top + 1 || r.top > box.bottom - 1) continue;   // not on this line's rows
+    if (r.left < box.right - 1) continue;                             // not to the right of it
+    if (r.left < left) left = r.left;
+  }
+  return left;
+}
+
 function measureSvgRoom() {
   var nodes = svgFitNodes();
   for (var i = 0; i < nodes.length; i++) {
@@ -485,24 +566,39 @@ function measureSvgRoom() {
     var drawn = svgFitDrawn[el.id];
     el.style.fontSize = '';
     if (live !== drawn) el.textContent = drawn;   // measure the DESIGN, then put the value back
-    // A PLACED line's room is its slot, and a slot has no height — one line, filled and then
+    // A PLACED line's room is its slot, and a slot has no height - one line, filled and then
     // shrunk. Nothing else about it is measured, because nothing else about it was drawn.
     if (svgFitPlaced(el)) {
-      svgFitRoom[el.id] = { width: svgFitSlot(el), height: 0, top: 0 };
+      svgFitRoom[el.id] = { width: svgFitSlot(el), height: 0, top: 0, penned: false };
       if (live !== drawn) el.textContent = live;
       continue;
     }
     var box = el.getBoundingClientRect();
-    var scale = box.width > 0 ? el.getComputedTextLength() / box.width : 1;   // screen px -> user units
+    // Screen px -> the artwork's own units, read off the element's CTM. This used to be derived
+    // from the line's own two widths (advance length / ink box), which is CLOSE and not exact:
+    // a glyph's side bearings are in one and not the other, so the ratio carried a per-typeface
+    // error of a percent or two straight into the ROOM - and a grown banner then missed the
+    // margin it was mirroring by a pixel or so (measured 2026-08-26: 51.4px against a drawn 50).
+    var ctm = el.parentNode && el.parentNode.getScreenCTM ? el.parentNode.getScreenCTM() : null;
+    var scale = ctm && ctm.a ? 1 / ctm.a : 1;
     var panel = svgFitContainer(el);
     // "height" is the room the BLOCK has, measured from this line's own top - not a line
     // count, because the count depends on the size and the size is what the ladder changes.
     // A 112px board panel holds one 44px line and three 24px ones, and only the height knows
     // that. Zero height (a line drawn hard against whatever is below it) means no wrapping.
-    var room = { width: svgFitWidths[el.id], height: 0, top: 0 };
+    var room = { width: svgFitWidths[el.id], height: 0, top: 0, penned: false };
     if (panel && box.width > 0) {
       var inset = box.left - panel.left;
-      room.width = Math.max(svgFitWidths[el.id], (panel.right - inset - box.left) * scale);
+      // Where this line has to stop: its neighbour if it has one, else the panel's own right
+      // edge less the margin the designer left on the left. A PENNED line (one bounded by a
+      // neighbour rather than by the panel) is marked, because widening the panel gives it
+      // nothing - so it must not drive the growth either.
+      var edge = svgFitNeighbour(el, panel);
+      room.penned = edge < panel.right - 0.5;
+      // The gap to keep: half the drawn type beside a neighbour (a readable space between two
+      // labels), the design's own left margin mirrored when the panel is the bound.
+      var pad = room.penned ? ((svgFitSizes[el.id] || 0) * 0.5) / scale : inset;
+      room.width = Math.max(svgFitWidths[el.id], (edge - pad - box.left) * scale);
       room.height = Math.max(0, (svgFitCeiling(el, panel) - box.top) * scale);
       // Where the drawn line starts, in the artwork's own units - the datum the painted block's
       // height is checked against. getBBox() answers in user units and ignores transforms, so
@@ -577,6 +673,7 @@ function fitSvgText() {
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
     if (svgFitRoom[el.id] == null) measureSvgRoom();
     el.style.fontSize = '';                     // back to the drawn size before measuring
+    svgUnsqueeze(el);                           // …and out of any previous pass's squeeze
     var room = svgFitRoom[el.id];
     var budget = room.width + (svgFitExtra[el.id] || 0);
     var drawnSize = svgFitSizes[el.id];
@@ -622,6 +719,10 @@ function fitSvgText() {
       var ratio = width > budget ? budget / width : 0.94;
       size = Math.max(floor, canGrowLines || tall ? size * 0.9 : size * ratio);
     }
+    // The floor is a legibility rule, not a licence to paint over the artwork: a value that
+    // reached it and is STILL wider than its room gets squeezed the rest of the way. It stays
+    // reported as too long - the operator is told, and the graphic still airs inside its shape.
+    if (svgFitOver[el.id]) svgSqueeze(el, budget);
     el.classList.toggle('${PREFIX}-overflow', !!svgFitOver[el.id]);
   }
   if (typeof growSvgHeights === 'function') growSvgHeights();
@@ -663,7 +764,7 @@ if (document.fonts && document.fonts.ready) {
 /**
  * THE HUG (docs/SVG_IMPORT_PLAN.md §3), emitted only for a design whose author said its panel
  * grows. Its doctrine is the raster stretch runtime's (importedDesign/stretch.ts): ONE measured
- * value — how far the longest bound line overflows the width it was drawn at — widens the
+ * value - how far the longest bound line overflows the width it was drawn at - widens the
  * panel, and the text fit above then answers only what the frame's safe margin could not give.
  *
  * Everything is measured in SCREEN px and converted back through each element's own CTM,
@@ -723,22 +824,23 @@ function growthRuntimeJs(): string {
 // The panel below grows with its text: a longer value widens it instead of shrinking the type,
 // which is what a lower third wants (a board wants the opposite, and simply has no such
 // function). Everything drawn PAST the panel's right edge travels with it, and the growth stops
-// at the frame's safe margin — past that, the text fit shrinks whatever is still over.
+// at the frame's safe margin - past that, the text fit shrinks whatever is still over.
 // Remove this block and the graphic becomes a fixed one.
 //
 // One limit worth knowing: a follower travels by its transform ATTRIBUTE, and a CSS transform
-// beats an attribute — so a layer the timeline animates in its own right (a per-layer stagger,
+// beats an attribute - so a layer the timeline animates in its own right (a per-layer stagger,
 // say) stays where its animation puts it instead of travelling with the edge.
 // Per rule, measured at rest and rebuilt on every pass: the element's drawn size, what travels
 // with its edge, and the bound lines inside it. Indexed by the rule's position in the table.
 var svgGrowRest = [];
 
-/** The element a table row names, by the stamp it carries in the artwork. */
+/** The element a table row names, by the stamp it carries in the artwork. The stamp is a LIST -
+ *  a panel that both widens and wraps is named by two rows - so the match is word-wise. */
 function svgLayoutEl(token) {
-  return document.querySelector('.${PREFIX}-art [${LAYOUT_EL_ATTR}="' + token + '"]');
+  return document.querySelector('.${PREFIX}-art [${LAYOUT_EL_ATTR}~="' + token + '"]');
 }
 
-/** Screen px per unit of the space an element's own measurements are written in — the CTM of
+/** Screen px per unit of the space an element's own measurements are written in - the CTM of
  *  the space a drawn layer's transform lives in, and for a PLACED line the painted-to-layout
  *  ratio, since that is the space its width and its slot are both measured in. */
 function svgUserScale(el) {
@@ -750,6 +852,22 @@ function svgUserScale(el) {
 /** The attribute a rule's axis grows: sideways it is the element's width, downwards its
  *  height. Both are plain attributes on a rect, which is what v1 handles (plan §3). */
 function svgGrowAttr(rule) { return rule.axis === 'y' ? 'height' : 'width'; }
+
+/** THE FURTHEST THE GROWING EDGE MAY REACH, in screen px on the frame's own axis.
+ *
+ * GROWTH IS SYMMETRICAL (owner, 2026-08-26): the margin the design keeps on the side the element
+ * is ANCHORED to is mirrored onto the side it grows towards, so a banner drawn 150px in from the
+ * left stops 150px short of the right and the graphic keeps the composition it was drawn with.
+ * The rule's own safe margin is the floor, for a panel drawn hard against its edge. An inset is
+ * never negative, so this can never permit growth past the frame - "we cannot have templates
+ * outgrow the screen" is structural here rather than a number somebody has to keep right.
+ */
+function svgGrowCap(rule, el, frame) {
+  var box = el.getBoundingClientRect();
+  return rule.axis === 'y'
+    ? frame.bottom - Math.max(box.top - frame.top, frame.height * rule.safe)
+    : frame.right - Math.max(box.left - frame.left, frame.width * rule.safe);
+}
 
 /** Put the artwork back exactly as drawn, so every measurement starts from the design. */
 function svgLayoutRest() {
@@ -776,7 +894,7 @@ function svgLayoutRest() {
 
 // WHAT TRAVELS, when the table does not say. A shape drawn entirely past the growing edge has
 // to move with it or the gap the designer left would close. A GROUP that straddles the edge is
-// looked inside instead of moved whole — half of it belongs on each side. A straddling SHAPE is
+// looked inside instead of moved whole - half of it belongs on each side. A straddling SHAPE is
 // left alone: it is either the growing element itself or something drawn across the boundary,
 // and moving it would tear the artwork. A rotated or skewed space is skipped for the same
 // reason.
@@ -824,7 +942,7 @@ function svgFollowersOf(rule, el, edge) {
 }
 
 /** Which bound lines live inside the growing element: the ones that START inside it, on its
- *  own rows. They are what drives the growth — the copy the element has to hold. */
+ *  own rows. They are what drives the growth - the copy the element has to hold. */
 function svgLinesInside(el) {
   var box = el.getBoundingClientRect();
   var nodes = svgFitNodes();
@@ -839,8 +957,25 @@ function svgLinesInside(el) {
 
 function growSvgLayout() {
   svgLayoutRest();
+  // WHO TRAVELS, AND WHICH LINES ARE INSIDE - read for EVERY rule while the artwork is still at
+  // rest, before any of them has moved. A panel that both widens and wraps carries TWO rows on
+  // one element, and a follower whose transform were captured after the first row had already
+  // translated it would record that translation as its resting pose - so the artwork would never
+  // come back to the design, which is the one thing this may not do.
+  for (var i = 0; i < NOACG_LAYOUT.rules.length; i++) svgRestOneRule(NOACG_LAYOUT.rules[i], i);
   for (var r = 0; r < NOACG_LAYOUT.rules.length; r++) growOneRule(NOACG_LAYOUT.rules[r], r);
   svgOfferHeights();
+}
+
+/** One rule's resting reading: the layers that travel with its edge, and the bound lines inside
+ *  it. Split out of growOneRule so it can run for every rule BEFORE any of them grows. */
+function svgRestOneRule(rule, index) {
+  var panel = svgLayoutEl(rule.el);
+  var rest = svgGrowRest[index];
+  if (!panel || !rest) return;
+  var box = panel.getBoundingClientRect();
+  rest.followers = svgFollowersOf(rule, panel, rule.axis === 'y' ? box.bottom : box.right);
+  rest.texts = svgLinesInside(panel);
 }
 
 function growOneRule(rule, index) {
@@ -849,12 +984,7 @@ function growOneRule(rule, index) {
   var art = document.querySelector('.${PREFIX}-art');
   if (!art) return;
   var rest = svgGrowRest[index];
-  var box = panel.getBoundingClientRect();
-
-  // The layers that move and the lines that drive the growth are read off the artwork AT REST,
-  // so an operator value already on screen can never change who is inside the panel.
-  rest.followers = svgFollowersOf(rule, panel, rule.axis === 'y' ? box.bottom : box.right);
-  rest.texts = svgLinesInside(panel);
+  if (!rest) return;
   var svgPanelTexts = rest.texts;
   // A DOWNWARD rule grows AFTER the fit, from the height the settled block actually needed
   // (growSvgHeights). All this pass owes it is who travels and which lines are inside.
@@ -869,25 +999,32 @@ function growOneRule(rule, index) {
     var el = svgPanelTexts[i];
     if (svgFitWidths[el.id] == null) measureSvgBudgets();
     if (svgFitRoom[el.id] == null) measureSvgRoom();
-    el.style.fontSize = '';                     // at the drawn size — the panel gives the room
+    // A PENNED line is bounded by whatever is drawn beside it, not by the panel, so widening
+    // the panel gives it nothing and it may not ask for any. Its own room already stops it
+    // short of its neighbour; the fit answers the rest.
+    if (svgFitRoom[el.id].penned) continue;
+    el.style.fontSize = '';                     // at the drawn size - the panel gives the room
     var over = (svgTextWidth(el) - svgFitRoom[el.id].width) * svgUserScale(el);
     if (over > need) need = over;
   }
   if (!(need > 0)) return;
 
-  // THE CAP: the growing edge stays inside the frame's safe margin. Anything the cap withholds
-  // is what fitSvgText() answers - by shrinking, which is why growing off the screen is never
-  // the fit.
+  // THE CAP: GROWTH IS SYMMETRICAL, and nothing may outgrow the screen (owner, 2026-08-26).
+  // The margin the designer left on the side the panel is ANCHORED to is mirrored onto the side
+  // it grows towards - a banner drawn 150px in from the left stops 150px short of the right - so
+  // the graphic keeps the composition it was drawn with instead of running out to a flat 4%.
+  // The table's own safe margin is the floor for a panel drawn hard against its edge. An inset is
+  // never negative, so this can never permit growth past the frame; anything the cap withholds
+  // is what fitSvgText() answers by shrinking.
   var frame = art.getBoundingClientRect();
   var live = panel.getBoundingClientRect();
-  var room = rule.axis === 'y'
-    ? frame.bottom - frame.height * rule.safe - live.bottom
-    : frame.right - frame.width * rule.safe - live.right;
+  var room = svgGrowCap(rule, panel, frame) - (rule.axis === 'y' ? live.bottom : live.right);
   var grant = Math.min(need, Math.max(0, room));
   if (!(grant > 0)) return;
 
   svgApplyGrowth(rule, panel, rest, grant);
   for (var k = 0; k < svgPanelTexts.length; k++) {
+    if (svgFitRoom[svgPanelTexts[k].id].penned) continue;
     svgFitExtra[svgPanelTexts[k].id] = grant / svgUserScale(svgPanelTexts[k]);
   }
 }
@@ -931,7 +1068,7 @@ function svgOfferHeights() {
     if (rule.axis !== 'y') continue;
     var el = svgLayoutEl(rule.el);
     if (!el) continue;
-    var most = Math.max(0, frame.bottom - frame.height * rule.safe - el.getBoundingClientRect().bottom);
+    var most = Math.max(0, svgGrowCap(rule, el, frame) - el.getBoundingClientRect().bottom);
     var texts = svgLinesInside(el);
     for (var i = 0; i < texts.length; i++) {
       svgFitExtraH[texts[i].id] = most / svgUserScale(texts[i]);
@@ -961,7 +1098,7 @@ function growSvgHeights() {
       var over = (bottom - (room.top + room.height)) * svgUserScale(t);
       if (over > need) need = over;
     }
-    var most = Math.max(0, frame.bottom - frame.height * rule.safe - el.getBoundingClientRect().bottom);
+    var most = Math.max(0, svgGrowCap(rule, el, frame) - el.getBoundingClientRect().bottom);
     var grant = Math.min(need, most);
     if (!(grant > 0)) continue;
     svgApplyGrowth(rule, el, rest, grant);
@@ -975,11 +1112,11 @@ function growSvgHeights() {
  *  blocks/designLayout does. */
 const PLACED_TEXT_HOOK = `  // Designs that fit text to a fixed slot re-measure here (no-op otherwise).
   if (typeof fitPlacedText === 'function') fitPlacedText();`;
-const SVG_FIT_HOOK = `  // The fit ladder re-measures here — every text layer, the ones the SVG drew and the ones
+const SVG_FIT_HOOK = `  // The fit ladder re-measures here - every text layer, the ones the SVG drew and the ones
   // placed on it alike (no-op otherwise).
   if (typeof fitSvgText === 'function') fitSvgText();`;
 
-/** The preset to build with — always one of this category's, whatever a carried-over draft says. */
+/** The preset to build with - always one of this category's, whatever a carried-over draft says. */
 function designPreset(id: string): AnimPreset {
   return DESIGN_PRESETS.find((p) => p.id === id) ?? DESIGN_PRESETS[0];
 }
@@ -995,7 +1132,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   const fields = quiz
     ? [...artworkFields, ...quizBehaviourFields(quiz, artworkFields.length)]
     : artworkFields;
-  // Steps are off: the whole design is one unit — a layer can still be given its own press
+  // Steps are off: the whole design is one unit - a layer can still be given its own press
   // later, from the timeline.
   const settings = baseSettings({ name, uicolor: '7' }, o, { steps: '1' });
   const scale = computeScale(o);
@@ -1004,11 +1141,11 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   // drawn; anything smaller is a free-floating object and gets a zone.
   const fullFrame = svg.width === o.resolution.width && svg.height === o.resolution.height;
   const rootPosition = fullFrame
-    ? `  left: 0;                         /* the artwork is frame-sized — it covers the canvas as drawn */
+    ? `  left: 0;                         /* the artwork is frame-sized - it covers the canvas as drawn */
   top: 0;`
     : zoneCssText(o.zone, o.nudge, o.resolution);
 
-  // The SVG rides inline, indented to sit inside the box — no asset path, no fetch, so every
+  // The SVG rides inline, indented to sit inside the box - no asset path, no fetch, so every
   // single-file export target stays single-file.
   const inlineSvg = bindSvgMarkup(svg, o.previewMarkers)
     .split('\n')
@@ -1017,12 +1154,12 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
 
   // The countdown (plan P2 "clock ftype"): the chosen layer is the clock DISPLAY
   // (`.{prefix}-clock`, painted by the shared runtime), and the operator's minutes live in a
-  // hidden data source the runtime reads — the exact contract every catalog countdown uses.
+  // hidden data source the runtime reads - the exact contract every catalog countdown uses.
   const clock = countdownIndex(svg);
   const clockField = clock === -1 ? null : artworkFields[clock];
   const clockHolder = clockField
     ? `
-    <!-- ${clockField.title} (${clockField.field}) — the countdown's length in minutes, written by SPX
+    <!-- ${clockField.title} (${clockField.field}) - the countdown's length in minutes, written by SPX
          and read by the clock runtime in template.js; the drawn clock layer shows the count. -->
     <div id="${clockField.field}" class="${DATA_SOURCE_CLASS}">${clockField.value}</div>`
     : '';
@@ -1030,7 +1167,7 @@ export function assembleImportedSvg(o: ResolvedOptions): SpxTemplate {
   const html = documentHtml({
     title: name,
     definitionBlock: definitionScriptBlock(settings, fields),
-    body: `  <!-- Imported SVG design — your artwork, exactly as exported. The text layers chosen at
+    body: `  <!-- Imported SVG design - your artwork, exactly as exported. The text layers chosen at
        import carry id="f0", "f1", … and update() writes the operator's values straight into
        them; everything else is untouched. -->
   <div class="${PREFIX}">
@@ -1041,7 +1178,7 @@ ${inlineSvg}${clockHolder}${quiz ? quizBehaviourHtml(quiz, artworkFields.length)
   });
 
   const fontCss = svgFontCss(svg);
-  const css = `/* ${name} — generated by NoaCG Studio. Edit freely: this file is yours. */
+  const css = `/* ${name} - generated by NoaCG Studio. Edit freely: this file is yours. */
 
 ${rootVarsCss(o, resolveHeadingFont(o).stack, scale, { typeScale: false })}
 
@@ -1062,7 +1199,7 @@ ${rootPosition}
 }
 .${PREFIX}-art {
   display: block;
-  width: 100%;                     /* fills the box — so --scale resizes art and text together */
+  width: 100%;                     /* fills the box - so --scale resizes art and text together */
   height: auto;                    /* the viewBox keeps the aspect */
 }
 ${svg.outlines.length > 0 ? `
@@ -1083,7 +1220,7 @@ ${quizBehaviourCss}
     prefix: PREFIX,
     lineCount: 0, // the design presets animate the whole box; the SVG's text is inside it
     hasAccent: false,
-    // The artwork's own top-level layers — what the per-layer stagger walks. Read off the
+    // The artwork's own top-level layers - what the per-layer stagger walks. Read off the
     // emitted HTML by the same function emitPresetRegion uses, so create and re-apply agree.
     layers: svgLayerSelectors(html),
     steps: false,
@@ -1122,7 +1259,7 @@ ${quizBehaviourCss}
 
   // The design presets know nothing of clocks, so the lifecycle hooks are added to the DATA
   // (the step-calls model, docs/TIMELINE_V2_PLAN.md §3b): startClock as the entrance lands,
-  // stopClock the moment the exit begins — exactly what the catalog's countdown presets emit.
+  // stopClock the moment the exit begins - exactly what the catalog's countdown presets emit.
   const withClockCalls = clockField
     ? (data: AnimData): AnimData => {
         const steps = data.steps.map((s) => ({ ...s }));
@@ -1146,7 +1283,7 @@ ${quizBehaviourCss}
     settings,
     // The SVG is inline; only embedded font files ride as assets.
     assets: svg.fonts.filter((f) => f.customFont).map((f) => f.customFont!.asset),
-    // The countdown's layer is the clock display, not a text field — left out here.
+    // The countdown's layer is the clock display, not a text field - left out here.
     layers: svg.fields.flatMap((f, i) =>
       i === clock
         ? []
@@ -1156,7 +1293,7 @@ ${quizBehaviourCss}
 
   // Compose the two data refinements: the clock's lifecycle calls, then the quiz's Reveal step.
   // Order matters only in that the clock's `stopClock` must stay on the LAST step, and the
-  // reveal is spliced in front of it — so the quiz refinement runs second.
+  // reveal is spliced in front of it - so the quiz refinement runs second.
   const refine =
     withClockCalls || quiz
       ? (data: AnimData): AnimData => {
@@ -1178,11 +1315,11 @@ export const IMPORTED_SVG: TemplateVariant = {
   description: 'Your own SVG artwork, its text layers bound as editable fields.',
   maxLines: 3,
   suggestedLines: [],
-  // The fields are the SVG's own text layers, chosen at import — never an open line list.
+  // The fields are the SVG's own text layers, chosen at import - never an open line list.
   fieldPlan: { kind: 'fixed', reason: 'The fields are the SVG’s own text layers, chosen at import.' },
-  // The artwork IS the design — a logo drawn into it needs no slot from us.
+  // The artwork IS the design - a logo drawn into it needs no slot from us.
   logo: 'none',
-  // The whole-unit presets plus the per-layer stagger — only an SVG has layers to stagger.
+  // The whole-unit presets plus the per-layer stagger - only an SVG has layers to stagger.
   animationPresets: ['design-fade', 'design-slide', 'design-pop', 'design-blur', 'design-stagger'],
   defaultPalette: paletteById('ivory'),
   defaultFontId: 'inter',
