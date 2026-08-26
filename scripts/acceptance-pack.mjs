@@ -10,7 +10,7 @@
 //
 // THE PACK IS COMMITTED, unlike a sweep's output. It is ~2 MB, three docs point at it as the
 // thing that answers a read they record as owed, and a picture nobody but this machine can see
-// answers nothing - the same reason re-design/ holds its mockups in the repo. Re-running
+// answers nothing. Re-running
 // updates it in place; the notes beside it carry the date.
 //
 // It ASKS, it never answers. Every frame is captioned with the exact question it puts in front

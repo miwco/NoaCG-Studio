@@ -4,8 +4,6 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { promises as fs } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
 import { BridgeClient } from './bridgeClient.js';
@@ -201,10 +199,3 @@ export async function runMcp(_args: ParsedArgs, _out: Out): Promise<number> {
   await new Promise<void>(() => undefined);
   return EXIT_OK;
 }
-
-/** Scratch space for tool calls that need a file (unused for now; kept for the save path). */
-export function scratchDir(): string {
-  return path.join(os.tmpdir(), 'noacg-mcp');
-}
-
-export { fs };

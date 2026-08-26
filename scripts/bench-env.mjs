@@ -14,7 +14,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { benchEnvPath, mainCheckout, mainEnv } from './lite-eval-paths.mjs';
-import { DEFAULT_EVAL_EMAIL, resolveUserId } from './lite-eval-token.mjs';
+import { defaultEvalEmail, resolveUserId } from './lite-eval-token.mjs';
 
 const PROFILES = ['lite', 'pro'];
 
@@ -47,7 +47,7 @@ const optional = (name) => (src[name] ? [`${name}=${src[name]}`] : []);
 // and no account identifier is committed to an open repo.
 let overrideIds = flag('ids') ?? src.AI_LITE_OVERRIDE_USER_IDS ?? '';
 if (!overrideIds && PROFILE === 'lite') {
-  const email = flag('user') ?? DEFAULT_EVAL_EMAIL;
+  const email = flag('user') ?? defaultEvalEmail();
   try {
     overrideIds = await resolveUserId(email);
   } catch (error) {
