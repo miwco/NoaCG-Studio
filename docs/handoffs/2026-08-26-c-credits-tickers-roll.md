@@ -235,10 +235,27 @@ Two ways round it, cheapest first:
   after the job pushes IS the sha it is waiting for, and a dispatch appears immediately with no
   webhook involved.
 
-The real fix is in `waitForCi` itself - a wait with no way to make the thing it waits for happen
-is a missing mechanism, and it could dispatch the run rather than give up. It is deliberately
-NOT done on this branch: that is shared landing machinery and several branches were queueing
-through it the same evening.
+The real fix is in `waitForCi` itself, and while looking at it three faults show up rather than
+one. All three are in the same twelve lines, so they are one pass:
+
+- **The wait cannot cause what it waits for.** After a short grace period it could dispatch the
+  run - `gh workflow run ci.yml --ref <branch>` targets the tip, which after the job's own push
+  IS the sha being waited on. The grace period is what keeps the normal path at one run.
+- **It watches whatever ran last.** The selector is `gh run list --limit 1` with NO `--workflow`
+  filter, so on a commit that also carries a deploy-verify run it can watch that one and return
+  the moment it finishes, while CI is still going. `safe-merge-preflight.mjs:454` fixed exactly
+  this for its own selector and the comment there says why; this one was missed. Verified
+  2026-08-26 by reading both.
+- **Every refusal prints the same line.** "no run appeared", "the run was cancelled" and "the run
+  was red" are three different facts and one message, which is the whole reason a webhook delay
+  reads as a fault in the tree. A dispatch and a late push webhook can also coexist on one sha,
+  and `ci.yml` cancels in-progress runs per ref - so CANCELLED is a third outcome that means
+  look again, never a red.
+
+Deliberately NOT done on this branch: that is shared landing machinery and several branches were
+queueing through it the same evening. Fixing the thing that lands everyone's work in order to
+land your own is a trade that looks rational per-branch and is wrong from above. The
+docs-polish session filed it as its own task; do it when the queue is quiet.
 
 ## What is left, and what I would do next
 
