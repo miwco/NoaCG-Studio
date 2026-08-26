@@ -43,7 +43,10 @@ what the queue did.
 
 Whatever the user pasted with or after the invocation, in any mix:
 
-- **Handoff blocks** from finished sessions - the pasteable prompt from the handoff workflow.
+- **The handoff folder, read by default.** `docs/handoffs/` is where night sessions leave their
+  handoffs, so read every file there FIRST - the user should never have to paste what a session
+  already wrote down. Pasted handoff blocks still work and take precedence when they are newer
+  than the file.
 - **Owner feedback from testing the newest build** - defects and reactions found by using the
   site. This OUTRANKS a handoff's own idea of what comes next: a handoff knows its own line of
   work, the owner knows what is actually broken.
@@ -140,6 +143,15 @@ by giving each session its own FILE rather than its own line:
   the directory).
 - **the handoff** - one file per session at `docs/handoffs/<date>-<letter>-<slug>.md`, so the
   morning report can collect every session's handoff without the user opening any of them.
+
+**Handoff files are CONSUMED, not archived - git is the archive.** A new plan classifies every
+file in `docs/handoffs/` it read: **consumed** (a prompt in section 5 was written from it),
+**spent** (nothing left worth a prompt - never invent work), or **deferred** (valuable, not this
+wave - it stays, and section 4 says why). Consumed and spent files are DELETED by the wave
+itself: exactly one session's prompt carries the line "delete these handoff files in your first
+commit: <list>", so the deletion lands with the successor work, distinct file deletions cannot
+conflict, and this session still changes nothing. A folder of stale handoffs makes every future
+plan start by re-litigating history - the folder holds only what is live.
 
 ### 3. Landing
 
