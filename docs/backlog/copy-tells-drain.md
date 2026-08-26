@@ -2,16 +2,16 @@
 
 **Filed:** 2026-08-26. **Source:** the gate that landed the same day (`scripts/check-copy.mjs`).
 
-`scripts/copy-baseline.json` freezes **5,818 lines across 540 files** that already carried a copy
-tell when the gate landed - overwhelmingly em-dashes. The gate refuses every NEW one. Nothing in the
-baseline has been fixed.
+`scripts/copy-baseline.json` froze **5,818 lines across 540 files** that already carried a copy
+tell when the gate landed - overwhelmingly em-dashes. The gate refuses every NEW one. **Slice 1 is
+drained; 5,717 lines across 538 files are left.**
 
 ## Why
 
 The owner's complaint is about text people actually read, and most of the frozen lines are exactly
 that: the product UI a user meets, and the comments inside every export a customer opens. A gate
 that only stops the next one leaves the accusation intact - the em-dash is *"the one thing people
-complain about, claiming it's AI-written"* (owner, 2026-08-26), and there are 5,818 of them on the
+complain about, claiming it's AI-written"* (owner, 2026-08-26), and there are 5,717 of them on the
 shelf right now.
 
 It is on the shelf rather than in the roadmap because it is a mechanical rewrite of five hundred
@@ -22,8 +22,12 @@ than the em-dash: the fix for a lot of these lines is a shorter sentence, not a 
 
 Not one job. The honest shape is a per-directory drain, each one small enough to land alone:
 
-1. **`index.html` + `docs.html`** - 101 lines, all of it public-facing marketing and
-   documentation copy, the highest-value and lowest-risk slice.
+1. ~~**`index.html` + `docs.html`** - 101 lines, all of it public-facing marketing and
+   documentation copy, the highest-value and lowest-risk slice.~~ **DONE 2026-08-26** in
+   `claude/b-docs-polish`, as part of the tone pass the owner asked for after walking both pages.
+   `/docs` was rewritten sentence by sentence; the landing kept its selling voice and only had the
+   punctuation swapped, because the owner had accepted its copy. Both files are now out of the
+   baseline entirely.
 2. **`src/components`** - 463 lines of product UI. Best done per surface (wizard, home,
    timeline) so it lands beside whoever is already editing that surface.
 3. **`src/templates`** - 5,254 lines inside emitted HTML, CSS and JS comments. The biggest
