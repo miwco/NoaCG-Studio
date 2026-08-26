@@ -33,10 +33,23 @@ mail; it does not have to be the same address that receives it):
 **An app password, never the account password.** It is scoped to SMTP, it can be revoked on its
 own from that same page, and revoking it does not touch the account.
 
-## Step 2 - three `gh secret set` commands
+## Step 2 - four `gh secret set` commands
+
+**All four are missing today.** A real run on 2026-08-26 (run `33013748824`) reported exactly
+this, which is what the workflow does instead of failing:
+
+    Missing secrets: SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY FEEDBACK_DIGEST_SMTP_USER FEEDBACK_DIGEST_SMTP_PASS
 
 Run these in the repository. Each one prompts for the value, so nothing lands in your shell
-history:
+history and nothing is echoed:
+
+```bash
+gh secret set SUPABASE_URL
+```
+
+```bash
+gh secret set SUPABASE_SERVICE_ROLE_KEY
+```
 
 ```bash
 gh secret set FEEDBACK_DIGEST_SMTP_USER
@@ -46,12 +59,10 @@ gh secret set FEEDBACK_DIGEST_SMTP_USER
 gh secret set FEEDBACK_DIGEST_SMTP_PASS
 ```
 
-The third is the service key, and **it may already exist** - check with `gh secret list` first. If
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both listed, skip this:
-
-```bash
-gh secret set SUPABASE_SERVICE_ROLE_KEY
-```
+`SUPABASE_URL` is the project URL (`https://<ref>.supabase.co`) and `SUPABASE_SERVICE_ROLE_KEY` is
+the service key from the Supabase dashboard - the same pair `.env` already holds locally. The
+digest uses the service key for one GET and never writes; the table's own grants refuse a delete
+regardless (migration 0028).
 
 `FEEDBACK_DIGEST_TO` is optional and defaults to `contact.noacg@gmail.com`. Set it only to send
 somewhere else.
