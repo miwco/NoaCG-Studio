@@ -1,10 +1,21 @@
 # Handoff: the queue heals itself - four landing-machinery defects fixed
 
-**Branch:** `claude/l-landing-machinery`, one commit (`e6b2bc3c`) plus this handoff.
+**Branch:** `claude/l-landing-machinery` - the four fixes (`e6b2bc3c`), this handoff, and one
+crash fix the first live landing attempt found (below).
 **Gate:** `npm run build` green (it runs all three touched test suites); dry-run landing of this
 very branch through the changed code passed 9/9 preflight checks with a `clear` verdict.
-**Queued:** through `npm run queue:merge` at the end of this session - `npm run jobs` shows the
-outcome; this landing is itself the first through the new gate code.
+**Queued:** through `npm run queue:merge` - `npm run jobs` shows the outcome; this landing is
+itself the first through the new gate code.
+
+**What the first live landing attempt taught.** j-0102 (pinned at `65cec487`) crashed at the
+exact moment the new code first ran for real: `DISPATCH_GRACE_TICKS` was declared below the
+entry guard, and the guard's top-level `await main()` runs mid-module-evaluation, so under
+direct execution the const was still in its temporal dead zone - a crash no import-based test
+can see, because importing evaluates the whole module before any call. Nothing touched main
+(the crash was after the no-op push, before the CI wait), the queue recorded a failed landing
+rather than a vanished one, and the fix (declare consts above the guard) is pinned by
+"no module-level const is declared after the entry guard" in auto-merge.test.mjs. The branch
+was re-queued at the fixed commit.
 
 ## What is true now
 

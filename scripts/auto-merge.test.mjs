@@ -507,6 +507,25 @@ test('a blocked landing exits with its own code, distinct from a failure', () =>
   assert.match(source, /outcome === 'blocked' \? BLOCKED_EXIT : outcome/);
 });
 
+test('no module-level const is declared after the entry guard', () => {
+  // `await main()` runs mid-module-evaluation, so a const declared after the guard is still in
+  // its temporal dead zone during a REAL landing - and only a real landing: tests import, which
+  // evaluates the whole module before any call. j-0102 crashed exactly this way on 2026-08-27
+  // (DISPATCH_GRACE_TICKS, referenced by waitForCi's defaults), after the push and before the
+  // CI wait. Function declarations hoist; consts must be initialised above the guard.
+  const guard = source.indexOf('await main();');
+  assert.ok(guard > 0, 'the entry guard must exist');
+  assert.ok(
+    source.indexOf('const DISPATCH_GRACE_TICKS') < guard,
+    'DISPATCH_GRACE_TICKS must initialise before main() can run',
+  );
+  assert.doesNotMatch(
+    source.slice(guard),
+    /^const /m,
+    'a top-level const after the entry guard is dead until main() has already run - declare it above the guard',
+  );
+});
+
 test('importing the module does not land anything', () => {
   // The tests above import it. The entry guard is what keeps that from merging a branch, so it is
   // pinned rather than trusted.

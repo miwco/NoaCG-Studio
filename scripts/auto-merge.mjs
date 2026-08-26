@@ -89,6 +89,23 @@ const noDbPush = argv.includes('--no-db-push');
  */
 const BLOCKED_EXIT = 3;
 
+/**
+ * How many poll ticks the push webhook gets before the gate creates the run itself.
+ *
+ * Short on purpose. The verified sha is a merge commit this job just pushed, so its run arrives
+ * by GitHub's push webhook - and webhook delivery is not bounded: on 2026-08-26 they ran 28-40
+ * minutes late, which spent the whole wait budget hoping and then refused in words that read as
+ * a tree fault. A `workflow_dispatch` is created by the API immediately, with no webhook in the
+ * path, so after this grace the gate stops hoping and hands itself a run
+ * (`.agent-workflows/queue-merge.md` documents the same move done by hand).
+ *
+ * DECLARED ABOVE THE ENTRY GUARD, deliberately: `await main()` below runs mid-module-evaluation,
+ * so any `const` after the guard is still in its temporal dead zone when a real landing reaches
+ * `waitForCi` - a crash only direct execution can see, because tests import (which evaluates the
+ * whole module first). j-0102 died exactly this way on 2026-08-27.
+ */
+const DISPATCH_GRACE_TICKS = 3;
+
 // Only land when invoked directly. Importing this module - which is how `scripts/auto-merge.test.mjs`
 // reaches the decisions above - must never merge anything.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -443,18 +460,6 @@ function recordLanding(entry) {
     // Reported nowhere on purpose - see above.
   }
 }
-
-/**
- * How many poll ticks the push webhook gets before the gate creates the run itself.
- *
- * Short on purpose. The verified sha is a merge commit this job just pushed, so its run arrives
- * by GitHub's push webhook - and webhook delivery is not bounded: on 2026-08-26 they ran 28-40
- * minutes late, which spent the whole wait budget hoping and then refused in words that read as
- * a tree fault. A `workflow_dispatch` is created by the API immediately, with no webhook in the
- * path, so after this grace the gate stops hoping and hands itself a run
- * (`.agent-workflows/queue-merge.md` documents the same move done by hand).
- */
-const DISPATCH_GRACE_TICKS = 3;
 
 /**
  * Wait for the CI run on this exact commit - and after a short grace, MAKE one rather than
