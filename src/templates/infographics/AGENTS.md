@@ -7,6 +7,23 @@ Keep it accurate.
 Split out of `src/templates/AGENTS.md` on 2026-08-22, which keeps the catalog-wide rules and
 the category index. Add a RULE here; leave the reasoning in the code's own comments.
 
+## THE SETTLE RULE: a readout's final value is a SET, never only a callback
+
+**Every count must END ON A `tl.set` of its real text, positioned at that count's own end.** A
+card, a thumbnail, a Browse preview and the editor canvas all park a graphic at the end of its
+entrance with GSAP's callbacks SUPPRESSED. A tween still writes its target under that jump; a
+callback does not. So a figure that reaches the DOM only from an `onUpdate` never arrives, and the
+graphic advertises itself with the `0` its opening `set` wrote. Measured 2026-08-27: **seventeen
+readouts across eleven designs shipped reading 0** against their own `data-target` - ig01 "Big
+Stat" showing `0%` where the data said `87%`.
+
+**The audit is "does this readout depend on a callback firing", not "is it a number".** A width, a
+dashoffset, a scale and an opacity are tween TARGETS and settle on their own, which is why the
+bars, the rings and the milestone nodes were right while every figure beside them was wrong. Add a
+readout, add its `set`. The full account is in `igMotion.ts`'s own header and
+`docs/DYNAMIC_MOTION_SCOPE.md` §11a; the gate is `e2e/counting-settle.spec.ts`, which discovers
+counting designs by the `data-target` mark in the composed document rather than from a list.
+
 ## infographics/ - the measured data graphics
 
 ig01…ig39 (prefix 'infographic'; design owns fields + runtimeExtraJs) +

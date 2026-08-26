@@ -39,6 +39,28 @@ function infographicStat(el) {
   };
 }
 
+// ---- THE SETTLE RULE: a readout's final value is a SET, never only a callback ----
+//
+// Every count below is a tween over a plain counter object whose digits reach the screen from
+// an onUpdate/onComplete. That is right for playback and WRONG for a jump: a surface that shows
+// a graphic without a playback gesture (a Home card, a library thumbnail, the operator's
+// preview before the first take, the editor canvas) parks the entrance at its end with
+// callbacks SUPPRESSED - preview/settleGraphic.ts. Under suppression a tween still writes its
+// target, but no callback fires, so the digits never leave the '0' the opening set wrote.
+// Measured 2026-08-26: seventeen catalog readouts across ig01, ig04, ig05, ig07, ig22, ig23,
+// ig30, ig31, ig34, ig35 and ig36 settled reading 0 against their own data-target.
+//
+// So every count ENDS ON A SET of the real text, positioned at the count's own end. A set() is
+// a zero-duration tween: it renders under suppression, which is the same property that caused
+// the bug, used the other way. Under normal playback it writes exactly what the onComplete
+// beside it already wrote and changes nothing; under a jump it is the only thing that writes.
+// (The onComplete stays: it is what restores the figure mid-flight when a replay is
+// interrupted, and a settle never runs it.)
+//
+// THE AUDIT THIS BELONGS TO IS "does this readout depend on a callback firing", not "is it a
+// number". A width, a dashoffset and an opacity are tween TARGETS and settle correctly on
+// their own; anything a callback types into the DOM does not. Add a readout, add its set.
+
 // infographicCountUp(): the headline number rolls from zero up to the operator's figure. The
 // target is their data, so it cannot be a keyframe — it is read here, at play time. A design
 // that pairs a progress bar with the stat grows it once the number lands.
@@ -62,6 +84,8 @@ function infographicCountUp(target, opts) {
       el.textContent = stat.text;                // restore the exact text (keeps decimals)
     }
   });
+  tl.set(el, { textContent: stat.text });        // the settle rule - appended at the count's end,
+                                                 // before the bars extend the timeline past it
 
   var bars = infographicBarsGrow('.infographic-bar-fill', opts);  // harmless when there are none
   if (bars) tl.add(bars);                        // the bar fills once the figure has landed
@@ -115,6 +139,7 @@ function infographicBarsGrow(target, opts) {
           el.textContent = figure.text;          // restore the exact figure (keeps decimals)
         }
       }, at);
+      tl.set(el, { textContent: figure.text }, at + grow);  // the settle rule, at THIS bar's end
     })(num, stat, i * stagger);                  // aligned with this bar's stagger slot
   }
   return tl;
@@ -154,6 +179,7 @@ function infographicRingFill(target, opts) {
         el.textContent = stat.text;
       }
     }, 0);
+    tl.set(el, { textContent: stat.text }, 1.4 / speed);  // the settle rule, at the draw's end
   }
   return tl;
 }
@@ -198,6 +224,7 @@ function infographicGoalRing(target, opts) {
         el.textContent = stat.text;              // restore the exact text the rebuild formatted
       }
     }, 0);
+    tl.set(el, { textContent: stat.text }, 1.4 / speed);  // the settle rule, at the draw's end
   }
   return tl;
 }
