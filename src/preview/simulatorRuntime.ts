@@ -247,22 +247,36 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     if (w.__activeTl || w.__scrubTl || w.__simSettled) return; // running, paused, or already settled
     w.__simSettled = true;
     resetGraphicInline(w); // a same-document settle after an exit must not inherit its leftovers
-    // Jump, write the data, jump AGAIN - preview/settleGraphic.ts's recipe, and the editor
-    // canvas has to match it or the same graphic reads differently in two places. Both jumps
-    // earn their keep, and on a `credits-loop` reel it is measurable: one jump at `progress(1)`
-    // covers 0% of the viewport, one jump at the finite end 51%, and the two together 100%.
-    // The second is for a design whose `update()` RE-RENDERS its rows (rebuildCredits assigns
-    // `track.innerHTML`), which throws the settled frame away with the elements it was on.
-    const jump = () => {
-      const tl = w.buildInTimeline?.();
-      if (!tl) return;
-      tl.pause();
-      settleToFiniteEnd(tl); // callbacks stay suppressed
-    };
+    // Jump, then write the data - and END on the data, which is where this deliberately
+    // DIVERGES from preview/settleGraphic.ts's jump/update/jump.
+    //
+    // The two orders serve two runtimes that want opposite things, and both faults are real:
+    //
+    //   - CREDITS want the jump last. `rebuildCredits` assigns `track.innerHTML`, so an
+    //     `update()` after the jump throws away the inline props the jump wrote on the ROWS
+    //     (settleGraphic.ts's note has the two symptoms that cost).
+    //   - AN INFOGRAPHIC wants the data last. `igMotion` opens its count-up with
+    //     `tl.set(el, { textContent: '0' + suffix })` and writes the figure from an `onUpdate`.
+    //     A `set` APPLIES under suppressed callbacks and an `onUpdate` does not, so any jump
+    //     leaves the readout reading 0 and only a following `update()` restores the figure.
+    //     Measured: `e2e/wave2.spec.ts` reads `0%` where the stat says `87%`.
+    //
+    // Ending on the data here keeps the editor canvas honest about the figure, and the finite
+    // end below still takes a `credits-loop` reel from 0% of its viewport to 51%.
+    //
+    // THIS DIVERGENCE IS MEANT TO BE TEMPORARY. The fix that removes it is one line per readout
+    // in the emitted runtime, not a reordering of either recipe: end the count-up timeline with
+    // `tl.set(el, { textContent: stat.text })`. A `set` renders under suppression - the same
+    // property that causes the bug - so under normal playback it writes what `onComplete`
+    // already wrote and changes nothing, and under a jump it wins. Once that lands, delete this
+    // note and take settleGraphic.ts's jump/update/jump verbatim, so the canvas and the
+    // thumbnails are one recipe again. The audit it belongs to is "does this readout depend on
+    // a callback firing" - a growing bar and a drawing ring have the same shape as a counter.
     w.update?.(cmd.data ?? '{}');
-    jump();
+    const tl = w.buildInTimeline();
+    tl.pause();
+    settleToFiniteEnd(tl); // park at the end of the FINITE motion; callbacks stay suppressed
     w.update?.(cmd.data ?? '{}'); // re-render truthful static state (suppressed callbacks skip it)
-    jump();
     return;
   }
 

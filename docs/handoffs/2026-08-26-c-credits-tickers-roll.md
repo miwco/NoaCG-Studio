@@ -218,6 +218,42 @@ blank card now shows names. If a thumbnail measurement was taken before this bra
   `catch { return null }` turned into a fifteen-second timeout blaming the product. The
   catches now re-throw anything that is not the mid-swap error they were written for.
 
+## A live defect on main this branch did not cause
+
+**Every counting infographic thumbnail reads zero.** Measured through composeDocument's real
+serialized bootstrap: ig01 "Big Stat" renders `0%` against `data-target="87%"`. Every Home card,
+library thumbnail and operator preview of a stat, a growing bar or a drawing ring.
+
+It comes from the settle fix that landed on main on 2026-08-26 - the one this branch merged and
+credits with repairing the blank credits card. `igMotion.ts:53` opens the count-up with
+`tl.set(el, { textContent: '0' + suffix })` and writes the figure only from an `onUpdate`. A
+`set` renders under suppressed callbacks and an `onUpdate` does not, so any jump leaves the
+readout at zero. The new recipe ends on a jump, so nothing puts the number back.
+
+It is two runtimes wanting opposite things and both faults are real: **credits want the jump
+last** (`rebuildCredits` reassigns `track.innerHTML`, so an `update()` after the jump destroys
+the row props), **an infographic wants the data last**. No ordering of those three calls
+satisfies both.
+
+**The fix is one line per readout, in the emitted runtime rather than in either recipe**: end
+the count-up timeline with `tl.set(el, { textContent: stat.text })`. A `set` renders under
+suppression, which is the same property that causes the bug, used the other way - under normal
+playback it writes what `onComplete` already wrote, and under a jump it wins. The audit that
+belongs with it is "does this readout depend on a callback firing", not "is it a number".
+
+What this branch did, and deliberately no more: `simulatorRuntime.ts` ends on the DATA, because
+`e2e/wave2.spec.ts` reads `0%` where the stat says `87%` and is the only thing in the tree that
+measures this at all. `settleGraphic.ts`'s order is UNTOUCHED - reverting a just-landed,
+measured change would bring the blank credits card back, and picking which defect ships is not a
+call to make blind. **The two recipes therefore diverge on purpose**; the note in
+`simulatorRuntime.ts` says how to delete the divergence once the runtime fix lands.
+
+The gate that would have caught it does not exist. The credits equivalent is in
+`e2e/end-credits.spec.ts` (every design's settled coverage); the infographic one is "every
+counting design's thumbnail shows its figure, not zero". It is not added here because it would
+land RED, and landing a red gate to make a point about somebody else's change is not a favour.
+Add it in the same commit as the fix.
+
 ## A landing hazard that is not about this branch
 
 `auto-merge.mjs` `waitForCi` polls `gh run list --commit <sha>` sixty times at ten seconds, so
