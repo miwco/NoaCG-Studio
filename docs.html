@@ -642,24 +642,29 @@ CG 1-20 STOP</code></pre>
 
           <h3 id="agent-install">Install</h3>
           <p>
-            With Claude Code already installed, this registers the <code>noacg</code> MCP server
-            and fetches the tool the first time an agent uses it:
+            For Claude Code the plugin is the whole thing: the <code>noacg-graphic</code> skill,
+            a <code>/noacg:graphic</code> command and the MCP server, in two commands with
+            nothing to install first.
+          </p>
+          <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
+          <pre><code>claude plugin install noacg@noacg-studio</code></pre>
+          <p>
+            Then ask your agent for a graphic, or run <code>/noacg:graphic a football scoreboard
+            for our school channel</code>. If you want the tools without the skill, register the
+            server on its own instead:
           </p>
           <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
           <p>
-            That registers it for the directory you run it in. Add <code>--scope user</code> to
-            have it in every project. You also need Node.js 20 or newer, and a system Chrome or
-            Edge, which the validator drives in headless mode. No account is needed until you want
-            to save a graphic into a library.
+            That form registers it for the directory you run it in; add <code>--scope user</code>
+            to have it everywhere. Either way you need Node.js 20 or newer, and a system Chrome
+            or Edge, which the validator drives in headless mode. No account is needed until you
+            want to save a graphic into a library.
           </p>
           <p>
-            The server carries the contract with it: the agent can read the reference texts
+            The server carries the contract with it: an agent can read the reference texts
             through its <code>noacg_docs</code> tool, and <code>noacg types</code> lists the
             graphic types, their fields and their operator events, which is where the
-            <code>--type</code> value below comes from. The repository also ships a Claude Code
-            plugin (<code>cli/plugin/</code>) bundling the <code>noacg-graphic</code> skill, a
-            <code>/noacg:graphic</code> command and this same server; it is installed from a clone,
-            and <code>cli/plugin/README.md</code> has the two commands.
+            <code>--type</code> value below comes from.
           </p>
           <p>To run the commands yourself, install the tool once:</p>
           <pre><code>npm i -g @noacg/cli</code></pre>

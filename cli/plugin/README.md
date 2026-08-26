@@ -15,17 +15,16 @@ marketplace name `noacg-studio`).
 
 ## Install
 
-**Claude Code**, from a clone of this repository:
+**Claude Code** (any machine):
 
 ```bash
-claude plugin marketplace add ./
+claude plugin marketplace add miwco/NoaCG-Studio
 claude plugin install noacg@noacg-studio
 ```
 
-`noacg-studio` is the `name` in the root `.claude-plugin/marketplace.json`, not something
-derived from where the marketplace came from. There is deliberately no `owner/repo` shorthand
-here: it would put a personal GitHub handle into a command people type. A published address for
-this marketplace is an owner decision, filed under `docs/acceptance/owner-queue/`.
+From a clone, `claude plugin marketplace add ./` reads the same root manifest. Either way the
+marketplace is named `noacg-studio`, which is the `name` field in
+`.claude-plugin/marketplace.json` rather than anything derived from the source.
 
 Then `/noacg:graphic a football scoreboard for our school channel`, or just ask for a graphic
 "for NoaCG" - the skill triggers on the description. The MCP server starts from npm on first use

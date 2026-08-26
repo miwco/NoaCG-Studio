@@ -2,55 +2,50 @@
 kind: owner-action
 date: 2026-08-26
 ---
-# A Claude Code marketplace address that is not your GitHub handle
 
-You asked that `miwco` appear nowhere user-facing. The command that bothered you,
-`claude plugin marketplace add miwco/NoaCG-Studio`, is gone from every place a person could type
-it: /docs, `README.md`, the npm README (`cli/README.md`), and the comment in
-`scripts/check-tree-shape.mjs`. `/docs` now leads with the npm route, which never names the
-handle:
+# Optional: a marketplace address that is not your handle
+
+**Nothing is blocked and nothing is broken.** The install command works and is documented, handle
+and all:
 
 ```bash
-claude mcp add noacg -- npx -y @noacg/cli mcp
-```
-
-That command was verified end to end before it was written down: added, listed, the stdio server
-handshaked, `tools/list` answered, and the test config removed again. `npm i -g @noacg/cli`
-installs the `noacg` binary and was installed and uninstalled to prove it.
-
-**What is left is a decision only you can make.** The MCP server is everything the CLI can do, but
-the Claude Code *plugin* also carries the `noacg-graphic` skill and the `/noacg:graphic` command,
-and a plugin can only be installed from a marketplace. Right now the only handle-free way in is
-from a clone (verified today, then removed again):
-
-```bash
-claude plugin marketplace add ./
+claude plugin marketplace add miwco/NoaCG-Studio
 claude plugin install noacg@noacg-studio
 ```
 
-Nobody who is not already cloning the repo can use that. To give strangers a one-line install that
-reads as "NoaCG Studio", pick one:
+Both were run end to end against the published marketplace and removed again before being written
+down. `owner/repo` is the documented Claude Code shorthand, and one of the three marketplaces
+already configured on this machine is a personal handle, so it reads as ordinary rather than as a
+hobby project. Your ruling stands: this was a vanity reason, and it was not worth breaking the
+plugin route over.
 
-**Option A - a GitHub organisation.** Create a free `noacg` (or similar) organisation and transfer
-the repository to it. The command becomes `claude plugin marketplace add noacg/NoaCG-Studio`, and
-the handle also disappears from every `github.com/miwco/...` link on /docs, the landing, the terms
-and privacy pages, the npm `repository` field and 500-odd exported template footers, which this
-branch could not fix. **Cost: free. Effort: yours, about ten minutes.** GitHub redirects the old
-URLs, so nothing breaks the moment you do it, but the trusted-publisher entry on npmjs.com names
-`miwco` as the organisation and would need updating in the same sitting (see
-`2026-08-25-trusted-publishing-for-the-cli.md`), or the next CLI release fails to authenticate.
+This file stays only because you said you would look at it if it turned out to be easy and free.
+**It is both.** If you ever want the handle gone, these are the two ways, and neither has to happen
+today.
 
-**Option B - host the marketplace file at noacg.studio.** `claude plugin marketplace add` accepts
-a plain HTTPS URL to a `marketplace.json`, so `claude plugin marketplace add
-https://noacg.studio/marketplace.json` would work and reads as the product. The catch: a
-URL-hosted marketplace cannot use a relative `source`, so the plugin entry inside that file would
-have to name `{"source": "github", "repo": "miwco/NoaCG-Studio"}`. The handle stops being
-something anyone types, but it is still in a file a curious person can open, and every
-`github.com/miwco/...` link elsewhere stays. **Cost: free. Effort: a small branch, plus a Vercel
-route.** A bare domain is not accepted, so it has to be the full path to the file.
+**A - a GitHub organisation.** Create a free org and transfer the repository to it. The command
+becomes `claude plugin marketplace add noacg/NoaCG-Studio`, and the handle also leaves every
+`github.com/miwco/...` link: `/docs`, the landing, the terms and privacy pages, the npm
+`repository` field, and roughly 500 exported template footers. Free, about ten minutes.
+GitHub redirects the old URLs, so nothing breaks the moment you do it.
 
-A is the real fix; B is the cheap one, and B does not rule out A later.
+**The one thing to do in the same sitting:** the npm trusted-publisher entry names `miwco` as the
+organisation (see `2026-08-25-trusted-publishing-for-the-cli.md`). Update it when you transfer, or
+the next CLI release fails to authenticate. That is the only sharp edge in this option.
 
-**Route to check it once you have decided:** open /docs, scroll to "Coding agents & the CLI", and
-read the Install block. It should name npm and nothing else. `e2e/docs.spec.ts` has a test that
-fails if `miwco` ever reappears in the page's visible text.
+**B - host the marketplace file at noacg.studio.** You said this one sounds good if it works, and
+it does work: `claude plugin marketplace add` accepts a plain HTTPS URL to a `marketplace.json`,
+so `claude plugin marketplace add https://noacg.studio/marketplace.json` would be the command. A
+bare domain is not accepted, so it has to be the full path to the file. Free, a small branch plus
+a Vercel route.
+
+**The catch, and it is why A is the better one:** a URL-hosted marketplace cannot use a relative
+plugin `source`, so the file itself would have to name
+`{"source": "github", "repo": "miwco/NoaCG-Studio"}`. The handle stops being something anyone
+types, but stays readable in the file, and every `github.com/miwco/...` link elsewhere is
+untouched. B moves the handle; A removes it.
+
+**If you want the professional signal rather than the name change**, the higher-value ten minutes
+is the npm trusted-publisher step in `2026-08-25-trusted-publishing-for-the-cli.md`. That puts a
+provenance badge on `@noacg/cli` linking every published version to the commit it was built from,
+which is a much stronger "this is a real project" mark than a username in a URL.
