@@ -293,6 +293,13 @@ export interface WizardDraft {
    * changes nothing.
    */
   content: Record<string, string>;
+  /**
+   * Answers to the picked design's declared `styleChoices` (model/wizard.ts), by key. A design
+   * decision the DESIGN owns and the user picks - cr01's role-or-name emphasis is the first.
+   * Untouched is `{}` and changes nothing, and an answer the picked design does not offer is
+   * dropped at resolve, so switching designs mid-wizard cannot carry a stale one across.
+   */
+  styleChoices: Record<string, string>;
   paletteId: string | null;
   /** User-defined colors (takes precedence over paletteId when set). */
   customPalette: Palette | null;
@@ -414,6 +421,7 @@ export function initialDraft(): WizardDraft {
     lines: [],
     extraFields: [],
     content: {},
+    styleChoices: {},
     paletteId: null,
     customPalette: null,
     cssVarOverrides: {},
@@ -499,6 +507,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
           : undefined,
     extraFields: draft.extraFields.length > 0 ? draft.extraFields : undefined,
     content: Object.keys(draft.content).length > 0 ? draft.content : undefined,
+    styleChoices: Object.keys(draft.styleChoices).length > 0 ? draft.styleChoices : undefined,
     palette: draft.customPalette ?? (draft.paletteId ? paletteById(draft.paletteId) : undefined),
     fontId: draft.fontId && draft.fontId !== 'custom' ? draft.fontId : undefined,
     customFont: draft.fontId === 'custom' && draft.customFont ? draft.customFont : undefined,

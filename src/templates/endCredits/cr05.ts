@@ -15,7 +15,7 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const SCHEDULE_SAMPLE = [
-  'TODAY',
+  '# TODAY',
   '09:30 | Doors open',
   '10:00 | Keynote — Designing for Live',
   '11:15 | Workshop: Motion in the Gallery',
@@ -118,7 +118,7 @@ export const cr05: TemplateVariant = defineCreditsVariant(
   overflow-wrap: break-word;       /* break very long unbroken words */
 }
 
-/* A pipe-less line inside a section — a note between items ("Lunch, foyer"), no time. */
+/* A line with no time of its own — a note between items ("Lunch, foyer"). */
 .credits-entry {
   padding: calc(11px * var(--scale)) 0;  /* the same list rhythm as a timed row */
   padding-left: calc(230px * var(--scale));  /* aligned to the item column, not the time column */
@@ -163,14 +163,14 @@ export const cr05: TemplateVariant = defineCreditsVariant(
 }`,
     rowBuilderJs: `// ── Schedule Hold row builders — rebuildCredits() calls these for every parsed line ──
 
-// renderCreditRow(entry): a timed item, a section heading, or an untimed note.
+// renderCreditRow(entry): a timed item, a marked heading, or an untimed note.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // The line that opens a section — the day, the stage, the part of the programme.
+    // A marked heading — the day, the stage, the part of the programme.
     return '<div class="credits-heading">' + entry.text + '</div>';
   }
   if (entry.type === 'entry') {
-    // A pipe-less line inside a section: a note with no time of its own.
+    // A line with no time of its own: a note between the timed items.
     return '<div class="credits-entry">' + entry.text + '</div>';
   }
   // "09:30 | Doors open" — the time is the role column, the item is the name column.

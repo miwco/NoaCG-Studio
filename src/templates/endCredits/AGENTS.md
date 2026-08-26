@@ -9,20 +9,43 @@ the category index. Add a RULE here; leave the reasoning in the code's own comme
 
 ## endCredits/ - the LIST category
 
-cr01…cr12 (prefix 'credits') + creditsPresets.ts (credits-roll /
+cr01…cr13 (prefix 'credits') + creditsPresets.ts (credits-roll /
 credits-loop / credits-board / credits-pages / credits-crawl) + **creditsMotion.ts**;
-data-driven: a hidden #f0 textarea holds "Role | Name" lines, template JS parses and rebuilds
+data-driven: a hidden #f0 textarea holds the whole list, template JS parses and rebuilds
 #credits-track, ends with logo + year (.credits-end). DATA BLOCKS via convertToDataRegion.
 **The category is LISTS, not just credits** - the same data model at a different speed is a
 credit roll, a name wall, a donor board, a sponsor acknowledgement, a graduation roll or a
 schedule. Choosing a design is choosing that speed, which is what the index groups by.
-**Three line kinds, one rule each** (parseCredits): `Role | Name` is a credit; a pipe-less line
-that OPENS a section is that section's heading; any other pipe-less line is a plain `entry`
-(a name on a wall, a thank-you, an untimed note). The heading rule is POSITIONAL on purpose -
-a wall is one heading followed by names, a roll's sections already open with theirs, so both
-read correctly from the same text with nothing to mark up. **A row builder must answer all
-three kinds**; a design that only handles 'heading' and 'credit' renders `undefined` for a
-bare name.
+
+**THE TEXT FORMAT IS `docs/END_CREDITS.md`** - one mark, `A COLON ENDS A ROLE`, and everything
+else is a name. Three rules, no fourth:
+
+- `Role:` / `Role: Name` / `Role<TAB>Name` / `Role | Name` all open a ROLE. Every following bare
+  line joins it, which is how one "Camera Operators:" credits five people without repeating
+  itself. `;` is accepted wherever `:` is. A guard of `ROLE_LABEL_MAX` (48 chars) keeps a
+  sentence containing a colon from becoming a job title.
+- `# X` is a heading. **A heading is MARKED or it is not a heading** - nothing is promoted by
+  position. The old positional rule (a bare line OPENING a section became its heading) set the
+  sentence nearly every roll ends on - "Special thanks to everyone who made this show possible" -
+  in accent caps at kicker size, so it is gone and every sample marks its headings.
+- Anything else is a name: it joins the open role, or is a plain `entry` when there is none. A
+  list pasted with NO marks at all is therefore a clean column of names - the deliberate floor.
+
+**The parser emits GROUPS.** `{ type: 'group', role, names[] }`, plus `heading` and `entry`. A
+design defining **`renderCreditGroup(group)`** is handed the role and all its names at once - the
+only way one role lays out above (cr01) or beside (cr02) several names. A design without one is
+served the group flattened into the original row kinds by `creditGroupRows` (role + first name =
+`credit`, the rest = `entry`, no names = `heading`), so the whole category kept working when the
+groups landed. **A row builder must still answer all three row kinds**; a design that only handles
+'heading' and 'credit' renders `undefined` for a bare name.
+
+**cr01's Emphasis is the catalog's first `TemplateVariant.styleChoices`** (model/wizard.ts) - a
+design decision the DESIGN owns and the user picks in the Style step, resolved into
+`o.styleChoices`, illegal values dropped back to the design's default. It emits ONE class on
+`.credits-box` (`credits-box--emph-role` / `--emph-name`) writing six custom properties, so no
+rule below it branches. Reach for it only when both answers are genuinely right for different
+shows and neither is a different design - otherwise Browse gets two cards with nothing to choose
+between them. A style choice may never change fields or behaviour: those are a graphic TYPE's.
 `credits-board` is the one format with NO motion: the list fades up and holds. It exists
 because rolling a schedule or a wall past the audience means the line they need is the one
 that just left, and it is the reason a board design lays `.credits-page` out in normal flow

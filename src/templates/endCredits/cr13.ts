@@ -25,15 +25,15 @@
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
-// "Role | Name" per line; a pipe-less line that OPENS a section is that section's heading, any
-// other pipe-less line is a plain entry (see parseCredits in shared.ts).
+// A line ending in a colon is a role and every line beneath it is one of its names; "# X" is
+// a heading; anything else is a plain line (see parseCredits in shared.ts).
 const SAMPLE = [
-  'THE COMPANY',
+  '# THE COMPANY',
   'Director | Alex Rivera',
   'Producer | Sam Chen',
   'Dramaturg | Priya Raman',
   '',
-  'THE ORCHESTRA',
+  '# THE ORCHESTRA',
   'Conductor | Maria Santos',
   'Leader | Jonas Berg',
   'Répétiteur | Wren Okafor',
@@ -249,7 +249,7 @@ export const cr13: TemplateVariant = defineCreditsVariant(
 // renderCreditRow(entry): a section heading, a plain line, or a leader row.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // The line that opens a section — set centred over its own printed rule.
+    // A marked heading — set centred over its own printed rule.
     return '<div class="credits-heading">' + entry.text + '</div>';
   }
   if (entry.type === 'entry') {

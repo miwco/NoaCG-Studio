@@ -48,6 +48,7 @@
         <a href="#getting-started">Getting started</a>
         <p class="group">Guides</p>
         <a href="#svg">Import your own SVG graphic</a>
+        <a href="#end-credits">End credits</a>
         <a href="#browser-source">OBS, vMix &amp; browser sources</a>
         <a href="#casparcg">CasparCG</a>
         <p class="group">Run the show</p>
@@ -167,6 +168,78 @@
             A quiz board can carry its behaviour in the file too: draw the base look, then one
             hidden layer per moment (answer picked, right, wrong, locked in) and the import's
             behaviour pickers wire them up — see <a href="#behaviour">graphics with behaviour</a>.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ END CREDITS ═══════════════════════ -->
+        <section id="end-credits">
+          <h2>End credits</h2>
+          <p>
+            A credit roll is a list of people, and a list of people is not a list of fields. Every
+            end-credits design has <strong>one</strong> field for the whole roll — a text box you
+            paste into, in the studio or later in SPX, CasparCG or the production dashboard. A show
+            with five camera operators does not add five fields to the template.
+          </p>
+          <p>
+            So the format has to carry the one distinction a credit roll is made of: which part is
+            the <strong>role</strong>, and which part is the <strong>person</strong>. There is one
+            mark to learn.
+          </p>
+
+          <h3 id="credits-colon">A colon ends a role. Everything else is a name.</h3>
+          <pre><code>Director: Alex Rivera</code></pre>
+          <p>
+            A role with more than one person puts the colon at the end of its own line, and the
+            people follow beneath it — for as long as no new role appears:
+          </p>
+          <pre><code>Camera Operators:
+Jonas Berg
+Lena Fors
+Petri Salo</code></pre>
+          <p>
+            That is the whole idea: you type it the way you would write it on paper, instead of
+            repeating the word <em>Camera</em> on five lines.
+          </p>
+
+          <h3 id="credits-rules">The complete set</h3>
+          <ul>
+            <li><code>Director:</code> — a role; every line under it is one of its names.</li>
+            <li><code>Director: Alex Rivera</code> — the same, inline, for a role with one person.</li>
+            <li><code>Director</code> TAB <code>Alex Rivera</code> — the same. This is what a paste
+              from a Google Doc table or a spreadsheet column looks like, so it just works.</li>
+            <li><code>Director | Alex Rivera</code> — the same, with the original separator. Older
+              lists keep working.</li>
+            <li><code>Alex Rivera</code> — a name: it joins the role above it, or stands on its own
+              if there is none.</li>
+            <li><code>#&nbsp;PRODUCTION</code> — a department heading, above a run of roles.</li>
+            <li>A blank line starts a new section.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
+            some other template systems use.
+          </p>
+          <p>
+            <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
+            line is read as a name — a clean column of names. And a heading is marked or it is not
+            a heading, which is what lets a roll end on <em>“Special thanks to everyone who made
+            this show possible”</em> without that sentence being set in accent capitals.
+          </p>
+
+          <h3 id="credits-designs">The same text in any design</h3>
+          <p>
+            The format says what the content <em>is</em>, never how it is arranged — so switching
+            design never means retyping the credits. <strong>Classic Roll</strong> gives you
+            centred blocks with the role over its names; <strong>Column Roll</strong> puts the role
+            right-aligned in a left column with its names stacked in the right;
+            <strong>Programme Roll</strong> sets it as serif leader rows on paper. Walls, donor
+            boards, sponsor crawls and schedules in the same category read the same text.
+          </p>
+          <p>
+            Classic Roll adds one choice in the wizard's <strong>Style</strong> step —
+            <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
+            its names quieter beneath it, which is what stays right when one role credits five
+            people. <em>Name</em> sets the name big with the role as a small label above it: the
+            film convention, and the better read when nearly every role has exactly one person.
           </p>
         </section>
 

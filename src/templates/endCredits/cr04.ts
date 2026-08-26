@@ -8,13 +8,14 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 // The multi-line credits sample - same authoring format the runtime parses:
-// "Role | Name" per line, a line without a pipe is a heading, a blank line starts a section.
+// A line ending in a colon is a role, every line beneath it is one of its names, "# X" is a
+// heading, a blank line starts a section (see parseCredits in shared.ts).
 const CRAWL_SAMPLE = [
-  'PRODUCTION',
+  '# PRODUCTION',
   'Director | Alex Rivera',
   'Producer | Sam Chen',
   '',
-  'CAMERA',
+  '# CAMERA',
   'Director of Photography | Maria Santos',
   'Camera Operator | Jonas Berg',
   '',

@@ -281,6 +281,10 @@ export interface WizardOptions {
    * default survives instead of the graphic acquiring an option nobody offers.
    */
   content?: Record<string, string>;
+  /** Answers to the variant's declared `styleChoices`, by key. An unknown key, or a value the
+   *  variant does not offer, is DROPPED rather than honoured — the design's own default then
+   *  stands, which is the same posture `content` takes. */
+  styleChoices?: Record<string, string>;
   palette?: Palette;
   fontId?: string;
   /** A user-imported font (embedded as an asset) — takes precedence over fontId. */
@@ -525,6 +529,10 @@ export interface ResolvedOptions {
   fps: number;
   lines: LineSpec[];
   extraFields: ExtraFieldSpec[];
+  /** Every style choice the variant declares, resolved to a legal value — so a design reads
+   *  `o.styleChoices.emphasis` without a fallback of its own. A variant that declares none
+   *  gets `{}`. */
+  styleChoices: Record<string, string>;
   palette: Palette;
   fontId: string;
   customFont: CustomFont | null;
@@ -587,8 +595,9 @@ export type FieldPlan =
 const CATEGORY_FIELD_PLANS: Partial<Record<AssemblerId, FieldPlan>> = {
   // One hidden textarea IS the rundown of items; the runtime rebuilds the strip from it.
   ticker: { kind: 'list', itemLabel: 'Ticker items', itemHint: 'One item per row' },
-  // `Role | Name` per row; the roll is built from them.
-  'end-credits': { kind: 'list', itemLabel: 'Credits', itemHint: 'Role | Name — one credit per row' },
+  // The whole roll in ONE field: a colon ends a role, the lines beneath it are its people
+  // (docs/END_CREDITS.md). Never a field per person.
+  'end-credits': { kind: 'list', itemLabel: 'Credits', itemHint: 'A colon ends a role — "Camera:" then one name per line' },
   // Question + answer rows + the correct-answer marker: a machine drives them as one unit.
   quiz: { kind: 'fixed', reason: 'A quiz board is question + its answer rows — a fixed set its state machine drives.' },
   // Team names, scores, period, clock: the cells are the design.
@@ -601,6 +610,33 @@ const CATEGORY_FIELD_PLANS: Partial<Record<AssemblerId, FieldPlan>> = {
  *  standard line contract. THE one rule every field-offering surface asks. */
 export function fieldPlanOf(variant: Pick<TemplateVariant, 'category' | 'fieldPlan'>): FieldPlan {
   return variant.fieldPlan ?? CATEGORY_FIELD_PLANS[variant.category] ?? { kind: 'lines', min: 1 };
+}
+
+/**
+ * A design decision the DESIGN owns and the user picks, offered as a segmented row in the
+ * wizard's Style step.
+ *
+ * It exists for the choice that is neither a palette nor a size nor a zone - a genuine fork in
+ * how the design composes, where both answers are correct for different shows and neither is a
+ * different design. cr01's emphasis is the first: a credit is a role and the people who did it,
+ * and which of the two is the headline flips the whole roll. Shipping that as two catalog
+ * entries would put two near-identical cards in Browse with nothing to choose between them.
+ *
+ * The values are STYLE, never content: a choice may pick class names and custom properties, and
+ * must never change which fields the graphic has or what its machine does - those are a graphic
+ * TYPE's business, and the control page an operator gets is generated from them.
+ */
+export interface StyleChoiceSpec {
+  /** Stable key the design reads back out of `ResolvedOptions.styleChoices`. */
+  key: string;
+  /** The row's label in the Style step. */
+  title: string;
+  /** One line under the label, when the labels alone do not say what changes. */
+  help?: string;
+  /** The answers, in the order they are offered. The first is not the default; `value` is. */
+  options: { value: string; label: string }[];
+  /** The answer a design that is never touched ships with. Must be one of `options`. */
+  value: string;
 }
 
 export interface TemplateVariant {
@@ -621,6 +657,9 @@ export interface TemplateVariant {
   fieldPlan?: FieldPlan;
   /** Suggested lines used as the wizard's starting point (and preview defaults). */
   suggestedLines: LineSpec[];
+  /** Design decisions this design hands to the user, offered in the Style step. Absent (the
+   *  case for almost every design) means the Style step shows exactly what it always did. */
+  styleChoices?: StyleChoiceSpec[];
   /** Logo capability — drives the wizard's logo toggle, the import flow, and filtering. */
   logo: LogoSupport;
   /**
@@ -718,6 +757,22 @@ export function paletteById(id: string): Palette {
 // ── Defaults resolver ────────────────────────────────────────────────────────
 
 /** Fill every missing option with the variant's tasteful default. */
+/** Every declared style choice, answered. A value the variant does not offer is dropped, so a
+ *  stale saved draft or a hand-built option object degrades to the design's own default rather
+ *  than to a class name nothing in the stylesheet answers. */
+export function resolveStyleChoices(
+  variant: Pick<TemplateVariant, 'styleChoices'>,
+  picked: Record<string, string> | undefined,
+): Record<string, string> {
+  const resolved: Record<string, string> = {};
+  (variant.styleChoices ?? []).forEach((choice) => {
+    const answer = picked?.[choice.key];
+    const legal = choice.options.some((option) => option.value === answer);
+    resolved[choice.key] = legal ? (answer as string) : choice.value;
+  });
+  return resolved;
+}
+
 export function resolveOptions(variant: TemplateVariant, options: WizardOptions = {}): ResolvedOptions {
   // An EXPLICIT lines array is honoured as given — including an empty one (an imported
   // design creates bare: its fields are added in the editor's Data tab). Only an absent
@@ -728,6 +783,7 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     fps: options.fps ?? DEFAULT_GRAPHICS_FORMAT.fps,
     lines,
     extraFields: options.extraFields ?? [],
+    styleChoices: resolveStyleChoices(variant, options.styleChoices),
     palette: options.palette ?? variant.defaultPalette,
     fontId: options.fontId ?? variant.defaultFontId,
     customFont: options.customFont ?? null,

@@ -5,7 +5,7 @@
 // The format decision is the whole design: a wall is a BOARD, not a roll. People want to find
 // their own name, and you cannot find your name in something that is moving. So it holds
 // still and uses CSS columns to fit many names in one screen - which is also why the names
-// here are plain lines rather than "Role | Name" pairs. The credits parser reads a pipe-less
+// here are plain lines rather than role-and-name pairs. The credits parser reads a marked
 // line inside a section as an ENTRY, so a wall is typed exactly the way you would write it:
 // a heading, then one name per line.
 
@@ -13,7 +13,7 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const WALL_SAMPLE = [
-  'WITH THANKS TO',
+  '# WITH THANKS TO',
   'Alex Rivera',
   'Sam Chen',
   'Maria Santos',

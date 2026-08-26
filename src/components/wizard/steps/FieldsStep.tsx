@@ -89,7 +89,7 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
             ) : variant.suggestedLines[i]?.sample.includes('\n') ? (
               <textarea
                 rows={5}
-                placeholder="One entry per line — e.g.  Role | Name"
+                placeholder="One entry per line"
                 value={line.sample}
                 onChange={(e) => setLine(i, 'sample', e.target.value)}
               />

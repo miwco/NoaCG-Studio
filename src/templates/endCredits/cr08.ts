@@ -13,17 +13,17 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const DONOR_SAMPLE = [
-  'PRINCIPAL BENEFACTORS',
+  '# PRINCIPAL BENEFACTORS',
   'The Halvorsen Family Foundation',
   'Meridian Community Trust',
   '',
-  'PATRONS',
+  '# PATRONS',
   'Alex & Sam Rivera',
   'Dr. Ada Fenwick',
   'Okafor Brothers Ltd',
   'Anonymous',
   '',
-  'SUPPORTERS',
+  '# SUPPORTERS',
   'Priya Raman',
   'Jonas Berg',
   'Elin Kristiansen',

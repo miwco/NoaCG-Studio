@@ -15,13 +15,13 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const REMEMBRANCE_SAMPLE = [
-  'IN REMEMBRANCE',
+  '# IN REMEMBRANCE',
   'Ada Fenwick | 1948 – 2026',
   'Jonas Berg | 1955 – 2026',
   'Maria Santos | 1961 – 2026',
   'Tomas Halvorsen | 1939 – 2026',
   '',
-  'AND ALL THOSE HELD IN OUR THOUGHTS',
+  '# AND ALL THOSE HELD IN OUR THOUGHTS',
   'Remembered by their families and this community',
 ].join('\n');
 

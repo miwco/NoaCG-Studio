@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { FONTS, registerAppFont } from '../../../model/fonts';
-import { PALETTES, paletteById, type Palette, type TemplateVariant, type Zone9 } from '../../../model/wizard';
+import {
+  PALETTES,
+  paletteById,
+  type Palette,
+  type StyleChoiceSpec,
+  type TemplateVariant,
+  type Zone9,
+} from '../../../model/wizard';
 import { contrastRatio, listCssVariables, parseCssColor } from '../../../blocks/cssVars';
 import FontPicker from '../FontPicker';
 import StyleControls from '../../style/StyleControls';
@@ -68,6 +75,15 @@ function placementSummaryOf(draft: WizardDraft): string {
 
 /** Step 4 — colors, font, size, and position. */
 export default function StyleStep({ variant, draft, onDraft, builtCss, markWarning }: Props) {
+  // Which answer a style choice is showing: the draft's, or - while it is untouched, and after
+  // a design switch left a key this design does not offer - the design's own default. The same
+  // rule resolveStyleChoices applies at build, so the highlighted button is always the one the
+  // preview is rendering.
+  const styleChoice = (choice: StyleChoiceSpec): string => {
+    const answer = draft.styleChoices[choice.key];
+    return choice.options.some((option) => option.value === answer) ? answer : choice.value;
+  };
+
   // Everything ELSE the design declares in its :root - its other colours, and its shape
   // (radius, blur, accent weight, tracking, weights, the kicker typeface) - editable right
   // here, so nothing about a design's look needs the editor (docs/GOALS.md "Student release"
@@ -275,6 +291,32 @@ export default function StyleStep({ variant, draft, onDraft, builtCss, markWarni
           </details>
         )}
       </div>
+
+      {/* The design's OWN decisions, when it hands any to the user (TemplateVariant.styleChoices).
+          Not collapsed and not behind the Filters-style disclosure: a design declares one of
+          these only when both answers are genuinely right for different shows, so it is a
+          question the step should ask out loud rather than hide. Almost every design declares
+          none, and then this renders nothing at all. */}
+      {(variant.styleChoices ?? []).map((choice) => (
+        <div className="panel-section" key={choice.key} data-testid={`wz-style-choice-${choice.key}`}>
+          <h3>
+            {choice.title}
+            {choice.help && <span className="muted">{choice.help}</span>}
+          </h3>
+          <div className="row" style={{ gap: 6 }}>
+            {choice.options.map((option) => (
+              <button
+                key={option.value}
+                data-value={option.value}
+                className={styleChoice(choice) === option.value ? 'active' : ''}
+                onClick={() => onDraft({ styleChoices: { ...draft.styleChoices, [choice.key]: option.value } })}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
 
       {/* The typeface COLLAPSES to a row naming the face in use (handoff §2d). Expanded, the
           searchable picker plus its list of families was the tallest thing on the step, for a

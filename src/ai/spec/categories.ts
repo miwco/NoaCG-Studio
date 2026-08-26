@@ -323,15 +323,17 @@ export const AI_CATEGORIES: AiCategory[] = [
         'credits',
         'Credits',
         'lines',
-        'Directed by | Anna Laine\nProduced by | Tom Blake\n\nCamera Operator | Jonas Berg',
-        'One credit per line as "Role | Name"; a bare line is a section heading, a blank line a gap',
+        '# PRODUCTION\nDirected by: Anna Laine\nProduced by: Tom Blake\n\n# CAMERA\nCamera Operators:\nJonas Berg\nLena Fors',
+        'A COLON ends a role and every line beneath it is one of that role’s names (so one ' +
+          '"Camera Operators:" credits five people); "# X" is a heading; a blank line is a gap',
       ),
       f('year', 'Year / copyright', 'text', '© 2026 Your Production'),
     ],
     workflowNotes:
       'DATA-DRIVEN, not a fixed layout: the operator writes the whole credit list into ONE ' +
-      'multiline field and the template parses it — role and name are two columns meeting at a ' +
-      'centre gutter, section headings span both, blank lines breathe. Render however many ' +
+      'multiline field and the template parses it — a role and the people credited with it, ' +
+      'headings spanning the width, blank lines breathing. ONE role may head SEVERAL names, ' +
+      'which is the case a repeated role-and-name pairing gets wrong. Render however many ' +
       'credits they write, and re-parse on every update(). The travel is continuous and ' +
       'strictly linear (ease none) — a roll eased per line reads as broken. Length comes from ' +
       'the content, so it is MEASURED at play time, never a fixed keyframe distance. The list ' +

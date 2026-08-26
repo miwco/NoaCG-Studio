@@ -15,17 +15,17 @@ import { fontById, labelFontFaceCss } from '../../model/fonts';
 import { defineCreditsVariant } from './shared';
 
 const REEL_SAMPLE = [
-  'PRODUCTION',
+  '# PRODUCTION',
   'Director | Alex Rivera',
   'Producer | Sam Chen',
   'Line Producer | Priya Raman',
   '',
-  'GALLERY',
+  '# GALLERY',
   'Vision Mixer | Jonas Berg',
   'Sound Supervisor | Maria Santos',
   'Graphics | Wren Okafor',
   '',
-  'THANK YOU',
+  '# THANK YOU',
   'Every volunteer who gave a Saturday to this',
 ].join('\n');
 
@@ -117,7 +117,7 @@ export const cr06: TemplateVariant = defineCreditsVariant(
   overflow-wrap: break-word;       /* break very long unbroken names */
 }
 
-/* A pipe-less line inside a section — a name with no role, or a line of thanks. */
+/* A line belonging to no role — a name on its own, or a line of thanks. */
 .credits-entry {
   padding: calc(10px * var(--scale)) 0;  /* tighter than a role-above-name stack */
   font-size: calc(38px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
@@ -174,7 +174,7 @@ export const cr06: TemplateVariant = defineCreditsVariant(
 // renderCreditRow(entry): a mono section label, a role-above-name credit, or a plain name.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // The line that opens a section — the house mono label, in the accent color.
+    // A marked heading — the house mono label, in the accent color.
     return '<div class="credits-heading">' + entry.text + '</div>';
   }
   if (entry.type === 'entry') {

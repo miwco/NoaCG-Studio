@@ -22,11 +22,11 @@ export const cr03: TemplateVariant = defineCreditsVariant(
       {
         title: 'Credits',
         sample: [
-          'PRODUCTION',
+          '# PRODUCTION',
           'Director | Alex Rivera',
           'Producer | Sam Chen',
           '',
-          'CAMERA',
+          '# CAMERA',
           'Director of Photography | Maria Santos',
           'Camera Operator | Jonas Berg',
           '',

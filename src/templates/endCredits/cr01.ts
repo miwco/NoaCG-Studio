@@ -1,21 +1,27 @@
 // cr01 "Classic Roll" — the archetypal end-credits roll, and lt01 "Hairline"'s credits
-// sibling (DESIGN_LANGUAGE.md §8, minimal family). No panel, no ornament: centered stacks
-// of role-above-name, section headings in quiet accent caps, and one short gold hairline
-// (the lt01 motif) above the logo at the very end. Whitespace does all the work.
+// sibling (DESIGN_LANGUAGE.md §8, minimal family). No panel, no ornament: centered blocks of
+// a role over the people credited with it, department headings in quiet accent caps, and one
+// short gold hairline (the lt01 motif) above the logo at the very end. Whitespace does all
+// the work.
 
 import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
-// The multi-line credits sample: "Role | Name" per line, a line without a pipe is a
-// section heading, a blank line starts a new section (see parseCredits in shared.ts).
+// The whole credit list is one pasted field. A line ending in a colon is a role; every line
+// beneath it is one of that role's names, which is how "Camera:" credits three people without
+// repeating itself. "# Heading" opens a department, a blank line starts a new section.
+// Full rule set: parseCredits in shared.ts, and docs/END_CREDITS.md.
 const SAMPLE = [
-  'PRODUCTION',
-  'Director | Alex Rivera',
-  'Producer | Sam Chen',
+  '# PRODUCTION',
+  'Director: Alex Rivera',
+  'Producer: Sam Chen',
   '',
-  'CAMERA',
-  'Director of Photography | Maria Santos',
-  'Camera Operator | Jonas Berg',
+  '# CAMERA',
+  'Director of Photography: Maria Santos',
+  'Camera Operators:',
+  'Jonas Berg',
+  'Lena Fors',
+  'Petri Salo',
   '',
   'Special thanks to everyone who made this show possible',
 ].join('\n');
@@ -26,11 +32,26 @@ export const cr01: TemplateVariant = defineCreditsVariant(
     category: 'end-credits',
     name: 'Classic Roll',
     styleTag: 'minimal',
-    description: 'The classic down-scrolling roll - centered role-above-name stacks, nothing else.',
+    description: 'The classic down-scrolling roll - a bold role over the people credited with it, nothing else.',
     maxLines: 2,
     suggestedLines: [
       { title: 'Credits', sample: SAMPLE },
       { title: 'Year / copyright', sample: '© 2026 Your Production' },
+    ],
+    // A credit is a role and the people who did it, and only one of them can be the headline.
+    // Both answers are right for different shows, and neither is a different design - so it is
+    // the user's pick in the Style step rather than two near-identical cards in Browse.
+    styleChoices: [
+      {
+        key: 'emphasis',
+        title: 'Emphasis',
+        help: 'which line is the loud one',
+        options: [
+          { value: 'role', label: 'Role' },
+          { value: 'name', label: 'Name' },
+        ],
+        value: 'role',
+      },
     ],
     logo: 'built-in',
     animationPresets: ['credits-roll'],
@@ -41,14 +62,17 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   {
     name: 'Classic Roll',
     description:
-      'The end-credits everyone knows: a steady upward roll of centered role-above-name ' +
-      'stacks, section headings in quiet accent caps, and a single short hairline above ' +
-      'the closing logo. lt01 Hairline’s credits sibling - restraint everywhere.',
+      'The end-credits everyone knows: a steady upward roll of centered blocks, each one a ' +
+      'role over the people credited with it - one name or five - department headings in ' +
+      'quiet accent caps, and a single short hairline above the closing logo. lt01 ' +
+      'Hairline’s credits sibling - restraint everywhere.',
     uicolor: '1',
   },
-  () => ({
-    html: `    <!-- Classic Roll structure: one masked viewport; rebuildCredits() fills the track. -->
-    <div class="credits-box"><div id="credits-track"></div></div>`,
+  (o) => ({
+    html: `    <!-- Classic Roll structure: one masked viewport; rebuildCredits() fills the track.
+         The second class on the box picks which line is the loud one — swap it for the other
+         one to flip the whole roll (see the CSS below). -->
+    <div class="credits-box credits-box--emph-${o.styleChoices.emphasis}"><div id="credits-track"></div></div>`,
     css: `/* The viewport — a tall centered column the track rolls through. Its height is what
    the roll preset measures, so all travel math keys off this box. */
 .credits-box {
@@ -79,39 +103,80 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   margin-bottom: calc(35px * var(--scale));  /* then settles before its first credit */
 }
 
-/* One credit — a centered stack: role above, name beneath. */
-.credits-row {
-  margin-bottom: calc(33px * var(--scale));  /* the beat between credits — steady reading rhythm */
+/* ── Emphasis ──────────────────────────────────────────────────────────────────────
+   A credit is a role and the people who did it, and only one of the two can be the
+   headline. Which one is the single design decision in this template, so it is a single
+   class on .credits-box in the HTML above — swap it and nothing else changes:
+
+     credits-box--emph-role   ROLE loud, its names quieter beneath it. The department-list
+                              shape: it stays right when one role credits five people,
+                              because the role is the heading of its own little block.
+     credits-box--emph-name   NAME loud, role a small dim label above it. The film
+                              convention — the better read when nearly every role has
+                              exactly one person and the names are what the audience came for.
+
+   Both write the same six custom properties, so the rules further down never branch. */
+.credits-box--emph-role {
+  --credit-role-size: 34px;            /* the loud line — bigger than its names */
+  --credit-role-weight: 700;           /* bold: the weight is what makes it the headline */
+  --credit-role-color: var(--text-color);  /* full-strength; the dimming happens below it */
+  --credit-name-size: 30px;            /* quieter, but never small — these are people's names */
+  --credit-name-weight: 400;           /* regular against the role's bold */
+  --credit-name-color: var(--text-color);  /* still full-strength: a name must always read */
 }
 
-/* Role line — small, spaced caps, dimmed: the label, never the star. */
+.credits-box--emph-name {
+  --credit-role-size: 25px;            /* the label — clearly subordinate to the name below */
+  --credit-role-weight: 400;           /* regular; contrast comes from the name */
+  --credit-role-color: var(--label-color);  /* the family's label color — dimmed */
+  --credit-name-size: 43px;            /* ~1.7:1 over the role — the classic film hierarchy */
+  --credit-name-weight: var(--display-weight);  /* the names' authored display weight */
+  --credit-name-color: var(--text-color);  /* primary text color */
+}
+
+/* One credit — a centered block: the role, then every name credited with it. A role with
+   five names is ONE of these, which is why the beat below sits on the group, not the name. */
+.credits-group {
+  margin-bottom: calc(40px * var(--scale));  /* the beat between roles — steady reading rhythm */
+}
+
+/* Role line. */
 .credits-role {
-  font-size: calc(25px * var(--scale) * var(--type-scale));  /* clearly subordinate to the name below */
-  font-weight: 400;                    /* regular weight — contrast comes from the name */
-  text-transform: uppercase;           /* caps mark it as a label */
+  font-size: calc(var(--credit-role-size) * var(--scale) * var(--type-scale));
+  font-weight: var(--credit-role-weight);
+  text-transform: uppercase;           /* caps mark it as a label, loud or quiet */
   letter-spacing: var(--label-tracking);  /* the role label's authored tracking */
-  color: var(--label-color);           /* the family's label color */
-  margin-bottom: calc(8px * var(--scale));   /* tiny gap: role + name read as one unit */
+  color: var(--credit-role-color);
+  line-height: 1.2;                    /* a long role may wrap; keep the two lines tight */
+  margin-bottom: calc(8px * var(--scale));   /* small gap: a role and its names are one unit */
 }
 
-/* Name line — the star of each stack; the only weighty element in the design. */
+/* Name line — one per person credited with the role above. */
 .credits-name {
-  font-size: calc(43px * var(--scale) * var(--type-scale));  /* ~1.7:1 over the role — clear hierarchy */
-  font-weight: var(--display-weight);  /* the names' authored display weight */
+  font-size: calc(var(--credit-name-size) * var(--scale) * var(--type-scale));
+  font-weight: var(--credit-name-weight);
   line-height: 1.15;                   /* big text sits tight */
   letter-spacing: var(--display-tracking);  /* large display type tightens slightly */
-  color: var(--text-color);            /* primary text color */
+  color: var(--credit-name-color);
+  overflow-wrap: break-word;           /* break a very long unbroken name */
 }
 
-/* A plain line inside a section — a name with no role. Same voice as a name, its own
-   rhythm: rows of these are a list, so they sit tighter than a role-above-name stack. */
+/* Names under one role sit closer to each other than a role sits to the next role — that
+   spacing is the only thing telling the audience these five people share one credit. */
+.credits-name + .credits-name {
+  margin-top: calc(8px * var(--scale));
+}
+
+/* A plain line belonging to no role — a name on its own, a line of thanks. It speaks in the
+   same voice as a credited name so the column stays one design, with its own rhythm: rows of
+   these are a list, so they sit tighter than a role and its names do. */
 .credits-entry {
-  padding: calc(8px * var(--scale)) 0;  /* the list rhythm — tighter than a .credits-row */
-  font-size: calc(38px * var(--scale) * var(--type-scale));  /* a shade under a credited name */
-  font-weight: var(--display-weight);   /* the names' authored display weight */
+  padding: calc(8px * var(--scale)) 0;  /* the list rhythm — tighter than a .credits-group */
+  font-size: calc(var(--credit-name-size) * var(--scale) * var(--type-scale));
+  font-weight: var(--credit-name-weight);
   line-height: 1.2;                     /* comfortable for a long column of names */
   letter-spacing: var(--display-tracking);  /* matches the credited names above it */
-  color: var(--text-color);             /* primary text color */
+  color: var(--credit-name-color);
   overflow-wrap: break-word;            /* break very long unbroken names */
 }
 
@@ -165,21 +230,33 @@ export const cr01: TemplateVariant = defineCreditsVariant(
     },
     rowBuilderJs: `// ── Classic Roll row builders — rebuildCredits() calls these for every parsed entry ──
 
-// renderCreditRow(entry): one heading line or one role-above-name stack.
+// renderCreditGroup(group): one role and EVERY name credited with it, as one centered block.
+// This is the builder that matters: "Camera:" over five operators is a single block here, so
+// the five names keep one role between them instead of repeating it five times.
+function renderCreditGroup(group) {
+  var names = '';
+  group.names.forEach(function (name) {
+    names += '<div class="credits-name">' + name + '</div>';
+  });
+  return '<div class="credits-group">' +
+           '<div class="credits-role">' + group.role + '</div>' +
+           names +
+         '</div>';
+}
+
+// renderCreditRow(entry): everything that is not a group — a department heading, or a line
+// belonging to no role at all.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // The line that opens a section — a heading in quiet accent caps.
+    // "# PRODUCTION" — a department, in quiet accent caps above the roles it collects.
     return '<div class="credits-heading">' + entry.text + '</div>';
   }
   if (entry.type === 'entry') {
-    // A plain line inside a section: a name with no role, a line of thanks.
+    // A line with no role above it: a name on its own, a line of thanks.
     return '<div class="credits-entry">' + entry.text + '</div>';
   }
-  // "Role | Name" — the centered stack: role on top, name beneath.
-  return '<div class="credits-row">' +
-           '<div class="credits-role">' + entry.role + '</div>' +
-           '<div class="credits-name">' + entry.name + '</div>' +
-         '</div>';
+  // One role paired with one name — the same block a group draws, holding a single name.
+  return renderCreditGroup({ role: entry.role, names: [entry.name] });
 }
 
 // renderEndBlock(yearHtml, logoSrc): the sign-off the roll stops on —

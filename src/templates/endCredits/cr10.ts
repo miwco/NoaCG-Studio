@@ -14,16 +14,16 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const GRADUATION_SAMPLE = [
-  'BACHELOR OF SCIENCE',
+  '# BACHELOR OF SCIENCE',
   'Ada Fenwick | Computer Science, with Distinction',
   'Jonas Berg | Electronic Engineering',
   'Priya Raman | Mathematics, with Honours',
   '',
-  'MASTER OF ARTS',
+  '# MASTER OF ARTS',
   'Maria Santos | Broadcast Journalism',
   'Wren Okafor | Design for Performance',
   '',
-  'WITH THE CONGRATULATIONS OF THE FACULTY',
+  '# WITH THE CONGRATULATIONS OF THE FACULTY',
   'Ruth Adeyemi',
   'Tomas Halvorsen',
 ].join('\n');

@@ -15,14 +15,14 @@ import { fontById, labelFontFaceCss } from '../../model/fonts';
 import { defineCreditsVariant } from './shared';
 
 const SPONSOR_SAMPLE = [
-  'PRESENTED BY',
+  '# PRESENTED BY',
   'Meridian Broadcast Systems',
   '',
-  'IN ASSOCIATION WITH',
+  '# IN ASSOCIATION WITH',
   'Halvorsen Optics',
   'Northlight Studios',
   '',
-  'WITH SUPPORT FROM',
+  '# WITH SUPPORT FROM',
   'City Arena',
   'Okafor Brothers Ltd',
   'Kristiansen & Co',

@@ -15,7 +15,7 @@ import { paletteById, type TemplateVariant } from '../../model/wizard';
 import { defineCreditsVariant } from './shared';
 
 const SPONSOR_CRAWL_SAMPLE = [
-  'OUR PARTNERS',
+  '# OUR PARTNERS',
   'Meridian Broadcast Systems',
   'Halvorsen Optics',
   'Northlight Studios',

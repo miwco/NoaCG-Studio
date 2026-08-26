@@ -1,7 +1,9 @@
-// End-credits scaffolding. Credits are data-driven: one textarea field (f0) holds the whole
-// credit list — "Role | Name" per line, a line WITHOUT a pipe is a section heading, a blank
-// line starts a new section — and f1 holds the year/copyright line. The template's JS parses
-// that text into rows at runtime, so operators edit credits without touching code.
+// End-credits scaffolding. Credits are data-driven: ONE textarea field (f0) holds the whole
+// credit list — a line ending in a colon is a role, every line beneath it is one of that
+// role's names, "# Heading" opens a department, a blank line starts a new section — and f1
+// holds the year/copyright line. The template's JS parses that text into rows at runtime, so
+// the whole list is pasted and edited in the playout client, with no field per person and no
+// code touched. The full rule set is on parseCredits below, and in docs/END_CREDITS.md.
 //
 // Structure contract:
 //   <div class="credits">                 root — positioned by zone; opacity:0 until play()
@@ -56,10 +58,16 @@ export interface CreditsDesign {
    * variant's row markup. `logoSrc` is the picked image path, or null; a design whose variant
    * declares `logo: 'none'` never receives anything else, so it should not draw a placeholder
    * slot for a field it does not have. entry is one of
-   *   { type: 'credit',  role, name }   a "Role | Name" line
-   *   { type: 'heading', text }         the line that opens a section
-   *   { type: 'entry',   text }         any other pipe-less line (a name on a wall)
+   *   { type: 'credit',  role, name }   one role paired with one name
+   *   { type: 'heading', text }         a department heading
+   *   { type: 'entry',   text }         a line belonging to no role (a name on a wall)
    * A builder must answer all three; see parseCredits in the runtime below.
+   *
+   * It may ALSO define renderCreditGroup(group) for `{ type: 'group', role, names[] }` — one
+   * role and every name credited with it. That is the shape the parser actually produces, and
+   * the shape a design needs to lay out five camera operators under one "Camera:", or to put a
+   * role in a left column beside a stack of names. A design without one is served the group
+   * flattened into the three row kinds above (creditGroupRows), so it keeps working unchanged.
    */
   rowBuilderJs: string;
   /**
@@ -133,42 +141,105 @@ ${setFieldValueJs}
 
 ${ESCAPE_HTML_JS}
 
-// parseCredits(text): three kinds of line, one rule each.
-//   "Role | Name"  -> a credit row.
-//   a line with no "|" that OPENS a section -> that section's heading.
-//   any other line with no "|" -> a plain entry: a name on a wall, a thank-you, a line of
-//                                 a schedule the design lays out itself.
-// A blank line starts the next section. (The heading rule is positional on purpose: a wall
-// of names is one heading followed by names, and a roll's sections already open with theirs,
-// so both read correctly from the same text with nothing to mark up.)
+// parseCredits(text): the whole credit list is ONE pasted block of plain text, and there is
+// one mark to learn — A COLON ENDS A ROLE. Everything else is a name.
+//
+//   Camera:              a ROLE. Every line beneath it, until the next role, is one of the
+//   Jonas Berg           people credited with it. This is the whole reason the parser groups:
+//   Lena Fors            a show has five camera operators under one "Camera:", and pairing
+//   Petri Salo           each name with its own repeated role label is not how credits read.
+//
+//   Director: Alex Rivera     the same thing inline, for a role with a single name.
+//   Director <TAB> Alex       what a paste out of a Google Doc table or a spreadsheet is.
+//   Director | Alex           the original separator — still read, so older lists still work.
+//   # PRODUCTION              a department heading, above a run of roles. A heading is MARKED
+//                             or it is not a heading; nothing is promoted to one by position.
+//   Alex Rivera               anything else is a NAME: it joins the role above it, or stands
+//                             on its own when there is no role above it.
+//   (blank line)              starts the next section.
+//
+// A semicolon is accepted wherever a colon is, because that is the mark other template
+// systems used, and misremembering which one should not cost anybody an evening.
+//
+// Nothing is required. A list pasted with no marks at all reads as plain names and renders as
+// a clean column — that floor is deliberate, because the first thing anyone does is paste.
 //
 // Every value here is escaped ON THE WAY OUT of the parser, because the row builders below
 // concatenate it into innerHTML. Escaping at this ONE boundary is what makes the design's own
 // renderCreditRow() safe to rewrite without having to remember the rule.
+
+// The longest text accepted BEFORE a colon as a role label. Roles are short; sentences are
+// not. Without this, "And now the moment we have all been waiting for:" becomes a job title.
+var ROLE_LABEL_MAX = 48;
+
 function parseCredits(text) {
   var sections = [];
-  var current = [];
+  var current = [];        // the entries of the section being read
+  var group = null;        // the open { type:'group', role, names } that a bare name joins
+
+  function pushSection() {
+    if (current.length) { sections.push(current); current = []; }
+    group = null;                          // a section break also closes the open role
+  }
+  function openGroup(role) {
+    group = { type: 'group', role: escapeHtml(role.trim()), names: [] };
+    current.push(group);
+  }
+
   text.split('\\n').forEach(function (raw) {
     var line = raw.trim();
-    if (line === '') {                       // blank line -> new section
-      if (current.length) { sections.push(current); current = []; }
+
+    if (line === '') { pushSection(); return; }          // blank line -> new section
+
+    if (line.charAt(0) === '#') {                        // "# PRODUCTION" -> department heading
+      group = null;                                      // a heading closes the role above it
+      current.push({ type: 'heading', text: escapeHtml(line.slice(1).trim()) });
       return;
     }
-    var parts = line.split('|');
-    if (parts.length >= 2) {
-      current.push({
-        type: 'credit',
-        role: escapeHtml(parts[0].trim()),
-        name: escapeHtml(parts.slice(1).join('|').trim())
-      });
-    } else if (current.length === 0) {
-      current.push({ type: 'heading', text: escapeHtml(line) });   // the line that opens a section names it
-    } else {
-      current.push({ type: 'entry', text: escapeHtml(line) });     // a plain line inside a section
+
+    // "Role | Name" or "Role<TAB>Name" — an explicit separator, so no length guard applies:
+    // the operator has said outright which half is which.
+    var split = line.split(/\\t|\\|/);
+    if (split.length >= 2) {
+      openGroup(split[0]);
+      group.names.push(escapeHtml(split.slice(1).join(' ').trim()));
+      return;
     }
+
+    // The colon rule, in ONE branch: text before the colon is the role, whatever follows it on
+    // the same line is that role's first name. "Camera:" simply has nothing after it, which is
+    // what leaves the group open for the names on the lines beneath.
+    var mark = line.search(/[:;]/);
+    if (mark > 0 && mark <= ROLE_LABEL_MAX) {
+      openGroup(line.slice(0, mark));
+      var inlineName = line.slice(mark + 1).trim();
+      if (inlineName) group.names.push(escapeHtml(inlineName));
+      return;
+    }
+
+    // Anything else is a name: it joins the role above it, or stands alone when there is none.
+    // Nothing here promotes a line to a heading on POSITION. An earlier version made the line
+    // that opened a section into that section's heading, which meant the sentence almost every
+    // credit roll ends on — "Special thanks to everyone who made this show possible" — was set
+    // in accent caps at kicker size. A heading is marked or it is not a heading.
+    if (group) group.names.push(escapeHtml(line));
+    else current.push({ type: 'entry', text: escapeHtml(line) });
   });
-  if (current.length) sections.push(current);
+  pushSection();
   return sections;
+}
+
+// creditGroupRows(group): the same group said in the ORIGINAL row vocabulary, for a design
+// that has no renderCreditGroup(). The role and its first name become the credit row that
+// design already draws; the remaining names follow as plain entries, which is what a column of
+// names under one role looks like anyway. A role with no names at all is a heading.
+function creditGroupRows(group) {
+  if (group.names.length === 0) return [{ type: 'heading', text: group.role }];
+  return group.names.map(function (name, i) {
+    return i === 0
+      ? { type: 'credit', role: group.role, name: name }
+      : { type: 'entry', text: name };
+  });
 }
 
 // rebuildCredits(): re-render the track from the hidden #f0 / #f1 / #f2 sources.
@@ -186,7 +257,15 @@ ${hasLogo
   var html = '';
   parseCredits(text).forEach(function (section) {
     html += '<div class="credits-page">';     // one block per section (pages preset uses these)
-    section.forEach(function (entry) { html += renderCreditRow(entry); });
+    section.forEach(function (entry) {
+      if (entry.type !== 'group') { html += renderCreditRow(entry); return; }
+      // A design that draws GROUPS is handed the role and all of its names at once — the only
+      // way "Camera:" over five names can lay out as one block, and the only way a two-column
+      // design can put one role beside a stack of names. Every other design is served the same
+      // group flattened into the row vocabulary it already speaks.
+      if (typeof renderCreditGroup === 'function') { html += renderCreditGroup(entry); return; }
+      creditGroupRows(entry).forEach(function (row) { html += renderCreditRow(row); });
+    });
     html += '</div>';
   });
   // Both escaped: the year is written as markup and the logo path is written INTO an
@@ -275,14 +354,19 @@ ${animationBlock}
 `;
 }
 
+// The fallback list, written the way the field is meant to be written: roles end in a colon,
+// and a role that credits several people simply has several names under it.
 const CREDITS_SAMPLE = [
-  'PRODUCTION',
-  'Director | Alex Rivera',
-  'Producer | Sam Chen',
+  '# PRODUCTION',
+  'Director: Alex Rivera',
+  'Producer: Sam Chen',
   '',
-  'CAMERA',
-  'Director of Photography | Maria Santos',
-  'Camera Operator | Jonas Berg',
+  '# CAMERA',
+  'Director of Photography: Maria Santos',
+  'Camera Operators:',
+  'Jonas Berg',
+  'Lena Fors',
+  'Petri Salo',
   '',
   'Special thanks to everyone who made this show possible',
 ].join('\n');

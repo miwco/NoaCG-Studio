@@ -20,14 +20,19 @@ export const cr02: TemplateVariant = defineCreditsVariant(
     suggestedLines: [
       {
         title: 'Credits',
+        // A line ending in a colon is a role; every line beneath it is one of that role's
+        // names (see parseCredits in shared.ts, and docs/END_CREDITS.md).
         sample: [
-          'PRODUCTION',
-          'Director | Alex Rivera',
-          'Producer | Sam Chen',
+          '# PRODUCTION',
+          'Director: Alex Rivera',
+          'Producer: Sam Chen',
           '',
-          'CAMERA',
-          'Director of Photography | Maria Santos',
-          'Camera Operator | Jonas Berg',
+          '# CAMERA',
+          'Director of Photography: Maria Santos',
+          'Camera Operators:',
+          'Jonas Berg',
+          'Lena Fors',
+          'Petri Salo',
           '',
           'Special thanks to everyone who made this show possible',
         ].join('\n'),
@@ -108,12 +113,27 @@ export const cr02: TemplateVariant = defineCreditsVariant(
   margin-right: calc(15px * var(--scale)); /* air between the dot and the heading text */
 }
 
-/* One credit — a two-column grid whose gutter forms the roll's quiet central axis. */
+/* One credit — a role and everyone credited with it, as a two-column grid whose gutter forms
+   the roll's quiet central axis. A role with five names is ONE row: the role stays alone on
+   the left and the names stack on the right, which is the whole reason this layout is worth
+   having over a centered one. */
 .credits-row {
   display: grid;                   /* two columns meeting at the middle */
   grid-template-columns: 1fr 1fr;  /* equal halves: roles left, names right */
   column-gap: calc(60px * var(--scale));   /* the central gutter both columns align to */
-  margin-bottom: calc(18px * var(--scale));        /* steady rhythm between rows */
+  align-items: baseline;           /* the role sits on the FIRST name's baseline, not the block's middle */
+  margin-bottom: calc(26px * var(--scale));        /* the beat between credits — wider than the gap between names sharing one role */
+}
+
+/* The right column — the names credited with the role opposite them. */
+.credits-names {
+  min-width: 0;                    /* let a long name wrap inside the grid track */
+}
+
+/* Names sharing one role sit closer to each other than one row sits to the next — that
+   spacing is the only thing telling the audience these three people share one credit. */
+.credits-name + .credits-name {
+  margin-top: calc(6px * var(--scale));
 }
 
 /* The role — quieter through lighter weight and a dimmed color, pushed to the gutter. */
@@ -189,24 +209,34 @@ export const cr02: TemplateVariant = defineCreditsVariant(
 
     // The variant's row markup: shared.ts calls these from rebuildCredits(). Plain ES5,
     // returns HTML strings — no DOM work here, the runtime injects the result.
-    rowBuilderJs: `// renderCreditRow(entry): one parsed line -> one row of HTML.
-// entry = { type: 'heading', text } for a line without "|",
-//         { type: 'credit', role, name } for a "Role | Name" line.
+    rowBuilderJs: `// renderCreditGroup(group): one role and EVERY name credited with it, as one grid row —
+// the dimmed role right-aligned in the left column, its names stacked left-aligned in the
+// right. "Camera:" over three operators is a single row here, with one role beside all three.
+function renderCreditGroup(group) {
+  var names = '';
+  group.names.forEach(function (name) {
+    names += '<div class="credits-name">' + name + '</div>';
+  });
+  return '<div class="credits-row">' +
+    '<div class="credits-role">' + group.role + '</div>' +
+    '<div class="credits-names">' + names + '</div>' +
+  '</div>';
+}
+
+// renderCreditRow(entry): everything that is not a group — a department heading, or a line
+// belonging to no role at all.
 function renderCreditRow(entry) {
   if (entry.type === 'heading') {
-    // Section heading: centered across both columns, led by the accent dot (lt10's motif).
+    // Department heading: centered across both columns, led by the accent dot (lt10's motif).
     return '<div class="credits-heading"><span class="credits-dot"></span>' + entry.text + '</div>';
   }
   if (entry.type === 'entry') {
-    // A plain line inside a section: a name with no role. It sits centered across both
-    // columns — there is no role to put opposite it, and a half-empty grid row reads broken.
+    // A line with no role above it. It sits centered across both columns — there is no role
+    // to put opposite it, and a half-empty grid row reads broken.
     return '<div class="credits-entry">' + entry.text + '</div>';
   }
-  // Credit: a two-column grid row — dimmed role right-aligned, semibold name left-aligned.
-  return '<div class="credits-row">' +
-    '<div class="credits-role">' + entry.role + '</div>' +
-    '<div class="credits-name">' + entry.name + '</div>' +
-  '</div>';
+  // One role paired with one name — the same row a group draws, holding a single name.
+  return renderCreditGroup({ role: entry.role, names: [entry.name] });
 }
 
 // renderEndBlock(yearHtml, logoSrc): the centered finale the roll parks on —
