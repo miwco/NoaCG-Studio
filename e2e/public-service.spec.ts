@@ -231,7 +231,7 @@ test('a kicker is drawn on the strip, and one typed alone tags every story under
   expect(r.kickers).toEqual(['SPORT', 'WEATHER', 'WEATHER', '']);
   expect(r.firstStory).toContain('United win 3-0');
   expect(r.insideItem).toBe(true);
-  // Drawn in the accent, which is the shared treatment every design gets for free — so the
+  // Drawn in the accent, which is the shared treatment every design gets for free - so the
   // tag reads as a different thing from the story beside it.
   expect(r.kickerColour).not.toBe(r.storyColour);
 });

@@ -7,10 +7,25 @@
  * so those surfaces can never drift into a second render path (the editor canvas settles the
  * same way in PlayoutSimulator).
  *
- * The recipe: write the data, jump the house entrance builder to the end of its FINITE motion,
- * write the data AGAIN. The second `update()` is load-bearing - the seek suppresses GSAP
- * callbacks, so anything a callback writes (a counter's digits, a bar's fill) would otherwise
- * be left at its pre-entrance value while the layout around it sits at the end state.
+ * The recipe: write the data, jump the house entrance builder to the end of its FINITE
+ * motion, write the data AGAIN, and jump again. The second `update()` is load-bearing - the
+ * seek suppresses GSAP callbacks, so anything a callback writes (a counter's digits, a bar's
+ * fill) would otherwise be left at its pre-entrance value while the layout around it sits at
+ * the end state.
+ *
+ * THE SECOND JUMP IS LOAD-BEARING TOO, and for the opposite reason: a design whose `update()`
+ * RE-RENDERS its own rows throws the settled frame away with the elements it was written on. The
+ * credits family is the worked example (templates/endCredits/shared.ts `rebuildCredits` assigns
+ * `track.innerHTML`), and both of its failure modes were on the Browse grid on 2026-08-26:
+ *
+ *   - the one-pager design came back with EVERY page at its CSS opacity, so all six sections
+ *     drew on top of each other - the "mess" the owner reported;
+ *   - the roll, the crawl and the repeating reel kept the travel transform on the surviving
+ *     track while its content was replaced, parking a full list off-screen: a blank card.
+ *
+ * Re-deriving the jump over whatever `update()` just built fixes both, and costs nothing on a
+ * design that does not rebuild: the builder is measured from the same DOM and writes the same
+ * end values onto the same elements.
  *
  * A template with no builder (blank, hand-written, foreign import) has no entrance to jump, so
  * it gets its own `play()` and is allowed to come to rest on its own clock.
@@ -23,18 +38,25 @@
  * end" of anything - it is an arbitrary phase of whatever is still looping there.
  *
  * That is not a hypothetical. EVERY end-credits design carries an ambient background drift
- * (`.credits-ambient`, `repeat: -1, yoyo`), so every one of them reported a duration of 1e10.
- * Eleven of the thirteen happened to look right anyway, because their travel is a finite tween
- * that had long since finished by t = 1e10. The two whose travel is ITSELF endless - the
- * `credits-loop` reel, cr06 and cr08 - landed at an arbitrary point in the loop, and both
- * settled to a COMPLETELY EMPTY frame: 0% of the viewport covered, on every Home card, every
- * library thumbnail and every operator preview. Measured 2026-08-26; seeking to the finite end
- * instead puts them at 51% and 69%, and leaves the other eleven byte-identical.
+ * (`.credits-ambient`, `repeat: -1, yoyo`), so every one of them reports a duration of 1e10.
+ * Measured over the thirteen of them on 2026-08-26, viewport coverage of the settled frame:
+ *
+ *                                    cr06   cr08   cr01
+ *   one jump, progress(1)              0%     0%    69%
+ *   one jump, the finite end          51%    69%    69%
+ *   two jumps, the finite end        100%   100%    69%
+ *
+ * The two `credits-loop` reels settled to a COMPLETELY EMPTY frame - on every Home card,
+ * every library thumbnail and every operator preview - and each of the two fixes above
+ * repairs that on its own. **The second jump is the one that carries it**; the finite end is
+ * the narrower correctness fix beside it, and on a roll (cr01, whose travel IS finite) it
+ * changes nothing at all. It earns its place anyway, because seeking ten billion seconds in
+ * and landing on a full frame is luck: it holds only because a reel clones enough copies to
+ * cover the viewport at ANY phase. The next endless travel that does not will not be lucky.
  *
  * So: a settled graphic is parked at the end of the motion that HAS an end. An endless track
- * is left wherever the finite motion put it, which for a reel is its natural first position -
- * a full screen of names, which is what the reel looks like on air. There is nothing better to
- * ask for, because "the end" of a thing that never ends is not a place.
+ * is left wherever the finite motion put it, because "the end" of a thing that never ends is
+ * not a place.
  *
  * A ROLL still settles on its own designed rest pose (the logo and year centred), because a
  * roll's travel IS finite - it is the reel and the marquee that have no end. What a preview
@@ -86,19 +108,27 @@ export function settleGraphic(win: SettleWindow | null | undefined, data: string
     return end;
   };
 
+  // Build the entrance and park it at its end. Declared here rather than inlined twice so the
+  // two jumps can never drift into doing different things.
+  const jump = () => {
+    const tl = win.buildInTimeline?.();
+    if (!tl) return;
+    tl.pause();
+    // `time`, not `progress`: an endless child makes `progress(1)` seek to 1e10 seconds,
+    // which is a phase of the loop rather than the end of the entrance.
+    if (typeof tl.getChildren === 'function' && typeof tl.time === 'function') {
+      tl.time(finiteEnd(tl), true);
+    } else {
+      tl.progress(1, true);
+    }
+  };
+
   try {
     win.update?.(data);
     if (typeof win.buildInTimeline === 'function') {
-      const tl = win.buildInTimeline();
-      tl.pause();
-      // `time`, not `progress`: an endless child makes `progress(1)` seek to 1e10 seconds,
-      // which is a phase of the loop rather than the end of the entrance.
-      if (typeof tl.getChildren === 'function' && typeof tl.time === 'function') {
-        tl.time(finiteEnd(tl), true);
-      } else {
-        tl.progress(1, true);
-      }
+      jump();
       win.update?.(data);
+      jump();
     } else {
       win.play?.();
     }

@@ -78,7 +78,7 @@ const ALLOWED = [
   { file: 'src/components/wizard/steps/FinishStep.tsx', line: 'Just the files — OGraf, CasparCG, SPX, LiveOS, an OBS/vMix overlay', why: 'target list on the export door' },
   { file: 'src/components/wizard/steps/ImportDesignStep.tsx', line: "? 'Name it, then send it to a production or export it — OGraf, CasparCG, SPX, LiveOS or an OBS/vMix overlay. The file is kept exactly as you wrote it; NoaCG adds nothing to it.'", why: 'target list on the import finish line' },
   { file: 'src/components/home/sections/ProductionsSection.tsx', line: 'title="Export every graphic of this production — OGraf, CasparCG, SPX, OBS/vMix overlay, H2R, LiveOS"', why: 'target list on the export button' },
-  { file: 'docs.html', line: 'The package on disk is simultaneously a valid <strong>SPX</strong> package and an', why: 'names the two FORMATS one file satisfies at once - the fact is the point' },
+  { file: 'docs.html', line: 'The package on disk is at the same time a valid <strong>SPX</strong> package and an', why: 'names the two FORMATS one file satisfies at once - the fact is the point' },
 
   // ── A named target's own surface, or genuinely host-specific instruction. The reader has
   //    already chosen that host, so telling them where its templates folder is IS the help.

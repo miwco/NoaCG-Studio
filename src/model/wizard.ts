@@ -629,7 +629,7 @@ const CATEGORY_FIELD_PLANS: Partial<Record<AssemblerId, FieldPlan>> = {
     itemLabel: 'Ticker items',
     itemHint: 'SPORT: United win 3-0',
     formatNote:
-      'A colon ends a KICKER — the tag a story is filed under, drawn in the accent colour. ' +
+      'A colon ends a KICKER - the tag a story is filed under, drawn in the accent colour. ' +
       'Put one on its own row and every row under it carries it, until a blank row. ' +
       'A row with no colon is just a story, which is what every ticker was before.',
   },

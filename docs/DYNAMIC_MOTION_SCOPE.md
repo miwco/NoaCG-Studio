@@ -238,16 +238,28 @@ seen from either side.
 "forever" sentinel, ~1e10 s, and a timeline holding one inherits it - so `progress(1)` seeks to
 t = 1e10, which is a phase of whatever is still looping rather than the end of anything. Every
 end-credits design carries an ambient background drift with `repeat: -1`, so every credits
-timeline reported 1e10; eleven of thirteen looked right anyway, because their travel is a finite
-tween long since finished by then. The two whose travel is ITSELF endless - the `credits-loop`
-reel, cr06 and cr08 - landed at an arbitrary loop phase and settled to a **completely empty
-frame**, 0% of the viewport covered, on every one of those surfaces. So a settled graphic is
-parked at **the end of the motion that HAS an end**: `preview/settleGraphic.ts` (the shared
-recipe, serialized into every preview document) and `preview/simulatorRuntime.ts` (the editor's
-own copy) both compute it by ignoring every endless child. An endless track is left where the
-finite motion put it, which for a reel is a full screen of names - there is nothing better to
-ask for, because "the end" of a thing that never ends is not a place. Gate:
-`e2e/end-credits.spec.ts` measures every credits design's settled coverage.
+timeline reports 1e10, and the two whose travel is ITSELF endless - the `credits-loop` reel,
+cr06 and cr08 - settled to a **completely empty frame** on every Home card, every library
+thumbnail, the editor canvas and the operator preview.
+
+Measured on 2026-08-26, viewport coverage of the settled frame:
+
+| recipe | cr06 | cr08 | cr01 (a roll) |
+|---|---|---|---|
+| one jump, `progress(1)` | 0% | 0% | 69% |
+| one jump, the finite end | 51% | 69% | 69% |
+| two jumps, the finite end | 100% | 100% | 69% |
+
+Both halves ship, in `preview/settleGraphic.ts` and its twin in `preview/simulatorRuntime.ts`.
+**The SECOND JUMP is the one that carries it**: a design whose `update()` re-renders its rows
+throws the settled frame away with the elements it was written on, so the jump is re-derived
+over whatever `update()` just built. **The finite end is the narrower correctness fix beside
+it** and changes nothing at all on a roll, whose travel is finite - it earns its place because
+landing on a full frame ten billion seconds in is luck, holding only because a reel clones
+enough copies to cover the viewport at any phase. An endless track is left wherever the finite
+motion put it, because "the end" of a thing that never ends is not a place. Gate:
+`e2e/end-credits.spec.ts` measures every credits design's settled coverage - the check that was
+missing, and the reason nothing in the tree could see an empty preview.
 
 **Its BEGINNING is not worth showing either.** Measured motion is content-length motion and it
 starts with its content off-stage by construction: cr01's roll covers 0% of its viewport for the

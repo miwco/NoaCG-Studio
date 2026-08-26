@@ -9,12 +9,16 @@ at rest, the operator's preview before the first take, the wizard's preview - pa
 of its entrance. For a credit roll or a repeating reel there is no such place, and both recipes
 were asking for one anyway. Two visible faults, one cause:
 
-- **Two credits designs settled to a completely blank frame.** Every credits design carries a slow
-  ambient background drift that repeats forever, which makes the animation library report the
-  whole timeline's length as "forever" - so "jump to the end" jumped ten billion seconds in and
-  landed at a random point of whatever was still looping. The two whose travel is itself endless
-  (the repeating reels) landed with every name off-screen. Nothing in the tree measured it, so
-  nothing said so. They now park at the end of the motion that HAS an end.
+- **Two credits designs settled to a completely blank frame.** Every credits design carries a
+  slow ambient background drift that repeats forever, which makes the animation library report
+  the whole timeline's length as "forever" - so "jump to the end" jumped ten billion seconds in
+  and landed at a random point of whatever was still looping. The two whose travel is itself
+  endless (the repeating reels) landed with every name off-screen. Nothing in the tree measured
+  it, so nothing said so. Two changes now stand between that and the cards: the jump is
+  re-derived after the data is written (which landed on main from another branch, and is the
+  half that carries it), and it goes to the end of the motion that HAS an end rather than to
+  ten billion seconds. Coverage of the settled frame goes 0% to 100% on both designs.
+
 - **The wizard played a roll from zero on every step.** A roll's entrance is eighteen seconds of
   travel that begins with every name below the frame: the box is empty for the first second and a
   half and is not recognisably a credit roll for about twelve. That is the exact moment somebody

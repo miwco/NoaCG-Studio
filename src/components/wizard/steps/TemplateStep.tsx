@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { StyleTag } from '../../../model/fonts';
 import type { TemplateVariant } from '../../../model/wizard';
+import { STYLE_FAMILY_LABELS } from '../../../model/taxonomy';
 import ProjectFormatPicker from '../../ProjectFormatPicker';
 import MiniPreview from '../MiniPreview';
 import {
@@ -17,18 +18,10 @@ interface Props {
   onPickVariant: (variant: TemplateVariant) => void;
 }
 
-/** Every style family, in the order the chips offer them. Typed as the full StyleTag record so
- *  adding a family to the union is a compile error here until it has a label and a chip. */
-const STYLE_LABEL: Record<StyleTag, string> = {
-  minimal: 'Minimal',
-  editorial: 'Editorial',
-  cinematic: 'Cinematic',
-  sport: 'Sport',
-  glass: 'Glass',
-  noacg: 'NoaCG',
-};
-
-const STYLE_ORDER = Object.keys(STYLE_LABEL) as StyleTag[];
+/** Every style family, in the order the chips offer them. The labels are the taxonomy's
+ *  (model/taxonomy.ts STYLE_FAMILY_LABELS), not a second copy kept here: this step and the
+ *  Browse step print the same facet, and two copies is how a rename half-lands. */
+const STYLE_ORDER = Object.keys(STYLE_FAMILY_LABELS) as StyleTag[];
 
 /** The discovery filters — every facet derives from variant metadata, so a new
  *  template family inherits filtering with no extra code. Ephemeral UI state
@@ -81,9 +74,9 @@ export default function TemplateStep({ variants, draft, onDraft, onPickVariant }
                 key={t}
                 className={`wz-filter ${filters.style === t ? 'active' : ''}`}
                 onClick={() => setFilters((f) => ({ ...f, style: f.style === t ? null : t }))}
-                title={`Only ${STYLE_LABEL[t]} designs`}
+                title={`Only ${STYLE_FAMILY_LABELS[t]} designs`}
               >
-                {STYLE_LABEL[t]}
+                {STYLE_FAMILY_LABELS[t]}
               </button>
             ))}
           {anyLogo && (
@@ -124,7 +117,7 @@ export default function TemplateStep({ variants, draft, onDraft, onPickVariant }
             <MiniPreview variant={v} />
             <div className="wz-variant-cap">
               <strong>{v.name}</strong>
-              <span className="wz-style-tag" data-style={v.styleTag}>{STYLE_LABEL[v.styleTag]}</span>
+              <span className="wz-style-tag">{STYLE_FAMILY_LABELS[v.styleTag]}</span>
             </div>
           </button>
         ))}

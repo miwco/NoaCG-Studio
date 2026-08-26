@@ -1,9 +1,9 @@
 // tk18 "Status Rotator" — the technical/status strip. One service at a time, held long enough
 // to read, advanced by the graphic's own timer and pausable on air.
 //
-// Items are written "Service: status" — the shared ticker mark (docs/TICKERS.md) — and the
+// Items are written "Service: status" - the shared ticker mark (docs/TICKERS.md) - and the
 // service name is this design's kicker: a fixed-width column in caps, with the status beside
-// it in ordinary sentence case. The older "Service — status" spelling still splits at the
+// it in ordinary sentence case. The older "Service - status" spelling still splits at the
 // dash, so a list written before the mark existed keeps working.
 // The column is what makes a rotating status list scannable — the eye learns where the name
 // starts and stops re-reading it.
@@ -129,7 +129,7 @@ export const tk18: TemplateVariant = defineTickerVariant(
     // when the show switches to a crawl, where the old em dash was just punctuation.
     //
     // renderTickerItem() still splits an em dash, an en dash or a spaced hyphen, because that
-    // is how every list written for this design before the mark existed reads — and an item
+    // is how every list written for this design before the mark existed reads - and an item
     // written any other way renders whole, so a typo never makes a status disappear.
     rowBuilderJs: `// renderTickerKicked(kicker, text): the service name in its own column, the status beside it.
 function renderTickerKicked(kicker, text) {
@@ -138,7 +138,7 @@ function renderTickerKicked(kicker, text) {
          '</span>';
 }
 
-// renderTickerItem(text): one status with no kicker — the older "Service — status" spelling
+// renderTickerItem(text): one status with no kicker - the older "Service - status" spelling
 // is still split at the dash, and anything else runs whole.
 function renderTickerItem(text) {
   var m = text.match(/^(.*\\S)\\s+[\\u2014\\u2013-]\\s+(\\S.*)$/);

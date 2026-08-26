@@ -50,3 +50,7 @@ benchmarks/pro/evidence/plate-legibility.json text eol=lf
 benchmarks/design-rules/AUDIT-*.md text eol=lf
 benchmarks/video/model-catalog.json text eol=lf
 supabase/advisor-baseline.json text eol=lf
+
+# Rewritten by `npm run check:copy -- --update` (scripts/check-copy.mjs): the per-file
+# baseline of copy tells that predate the gate.
+scripts/copy-baseline.json text eol=lf

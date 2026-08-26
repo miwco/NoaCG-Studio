@@ -95,7 +95,7 @@ test('type, style, and capability facets AND together; clear-all restores the ca
   expect(await resultTotal(page)).toBe(n.lowerThirds);
 
   // Style: the glass family keeps exactly the glass designs.
-  await page.locator('.wz-filter', { hasText: 'Elegant & glass' }).click();
+  await page.locator('.wz-filter', { hasText: 'Glass' }).click();
   expect(await resultTotal(page)).toBe(n.ltGlass);
 
   // Capabilities live behind the Filters disclosure and are STRICT (has logo upload = has it).
@@ -217,6 +217,46 @@ test('search reaches templates through aliases and field semantics', async ({ pa
   await revealDesign(page, 'Clean Clock');
 });
 
+// THE OWNER TRIED TO MAKE A CREDIT ROLL AND COULD NOT FIND ONE (2026-08-26): "when you write
+// credit, there should be something related to credits, not reels and crawls". The ranking was
+// never the fault - every result already was a credits design - but nothing on a card SAID so:
+// the caption read "Crawl", "Pager", "Column Roll" with the style family opposite it in its own
+// colour, and the line naming the graphic sat below in the dim block. This pins the fix from the
+// reader's side: what the search returns, and what the card says it is.
+test('a search for "credit" answers with credits, and every card says so', async ({ page }) => {
+  await toBrowseStep(page);
+  const credits = await page.evaluate(async () => {
+    const { allTemplateMeta } = await import('/src/templates/templateMeta.ts');
+    const { graphicCategoryById } = await import('/src/model/taxonomy.ts');
+    return {
+      name: graphicCategoryById('credits').name,
+      count: allTemplateMeta().filter(({ meta }) => meta.category === 'credits').length,
+    };
+  });
+
+  await page.locator('.wz-browse-search').fill('credit');
+  // Nothing but credits, and all of them: a crawl or a ticker in this result is the failure.
+  expect(await resultTotal(page)).toBe(credits.count);
+
+  // Every card on the page NAMES the category, in the brightest line under its own title -
+  // which is the line the style family used to compete with.
+  const cats = await page.locator('.wz-variant .wz-browse-cat').allInnerTexts();
+  expect(cats.length).toBeGreaterThan(0);
+  for (const text of cats) expect(text).toContain(credits.name);
+
+  // The style family is still ON the card - it is a real facet - but it is a quiet tag on the
+  // last line now, never a second title opposite the name.
+  await expect(page.locator('.wz-variant-cap .wz-style-tag')).toHaveCount(0);
+  await expect(page.locator('.wz-variant .wz-browse-complexity .wz-style-tag').first()).toBeVisible();
+
+  // The producer vocabulary that reached NOTHING before the alias table learned it. Each of
+  // these returned zero templates, or one by accident, when measured on 2026-08-26.
+  for (const phrase of ['crew', 'special thanks', 'end titles', 'supporters', 'closing credits']) {
+    await page.locator('.wz-browse-search').fill(phrase);
+    expect(await resultTotal(page), `"${phrase}" reaches the credits shelf`).toBe(credits.count);
+  }
+});
+
 test('an impossible combination shows the honest empty state with its escape hatches', async ({ page }) => {
   await toBrowseStep(page);
   // A lower third is a name-and-title strap; it structurally never carries a repeating list
@@ -295,10 +335,10 @@ test('the brand toggle ranks the package siblings first without filtering anythi
   await chooseType(page, 'Lower thirds');
   const n = await catalogCounts(page);
   const firstStyle = () => page.locator('.wz-variant .wz-style-tag').first().textContent();
-  expect(await firstStyle()).not.toBe('Elegant & glass');
+  expect(await firstStyle()).not.toBe('Glass');
 
   await page.locator('.wz-match input[type="checkbox"]').check();
-  expect(await firstStyle()).toBe('Elegant & glass');
+  expect(await firstStyle()).toBe('Glass');
   // Ranking, never filtering: the result total is untouched.
   expect(await resultTotal(page)).toBe(n.lowerThirds);
 });

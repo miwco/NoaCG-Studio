@@ -127,6 +127,29 @@ pre {
 pre code { background: none; padding: 0; font-size: inherit; }
 pre .c { color: var(--faint); }
 
+/* Command blocks. src/docs/docs.ts wraps every <pre> in .cmd and adds the copy button, so
+   these rules only ever apply once that module has run; the bare <pre> above still styles
+   itself. The button sits in the wrapper, not in the <pre>, so it holds still while a long
+   command scrolls under it. */
+.cmd { position: relative; }
+.cmd pre { padding-right: 92px; }
+.cmd-copy {
+  position: absolute; top: 10px; right: 10px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--faint); background: rgba(10, 12, 16, 0.85);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.cmd-copy:hover { color: var(--paper); border-color: rgba(232, 237, 242, 0.22); }
+.cmd-copy:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.cmd-copy.is-done { color: var(--amber); border-color: rgba(246, 166, 35, 0.45); }
+/* The button is 50px wide; on a phone the block cannot spare more room than it needs. */
+@media (max-width: 600px) {
+  .cmd pre { padding-right: 72px; }
+}
+
 /* Tables (export settings, versions, troubleshooting) */
 .doc-table { width: 100%; overflow-x: auto; margin: 14px 0; }
 table { border-collapse: collapse; width: 100%; }

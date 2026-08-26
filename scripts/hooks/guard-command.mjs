@@ -59,6 +59,19 @@ if (isCommit) {
     );
   }
 
+  // The em-dash, which is the tell readers actually complain about (owner, 2026-08-26: it is
+  // "the one thing people complain about, claiming it's AI-written"). No escape hatch, because
+  // a commit subject has never needed one - a plain dash, a comma or a colon always works, and
+  // the character is not reachable by accident on any keyboard. Same rule as the copy gate on
+  // user-facing text (scripts/check-copy.mjs); a commit message is read by outsiders too.
+  if (/—/u.test(command)) {
+    deny(
+      'Blocked: this commit message contains an em-dash (—). Use a plain dash (-), a comma, or ' +
+        'two sentences - the em-dash is the single most common reason a reader decides text was ' +
+        'machine-written, and the history is read by outside developers.',
+    );
+  }
+
   // House-style violations: AI/agent mentions, chat-session phrases, internal plan codenames.
   // A commit genuinely about AI tooling may mention these - bypass by putting
   // ALLOW_AI_MENTION=1 in the command (any shell syntax; the literal text is what counts).

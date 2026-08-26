@@ -78,11 +78,11 @@ function tickerRuntimeJs(name: string, animationBlock: string): string {
 ${ESCAPE_HTML_JS}
 
 // parseTickerItems(text): the rundown is ONE block of plain text, and there is one mark to
-// learn — A COLON ENDS A KICKER. Everything else is the story.
+// learn - A COLON ENDS A KICKER. Everything else is the story.
 //
 //   SPORT: United win 3-0     a story TAGGED with what it is about. The tag is the kicker.
 //   SPORT:                    a kicker on its own line. Every story beneath it carries it,
-//   United win 3-0            until a blank line or the next kicker — so a run of stories
+//   United win 3-0            until a blank line or the next kicker - so a run of stories
 //   City held at home         from one desk is typed once, not once per line.
 //   SPORT <TAB> United win    the same, which is what a paste from a spreadsheet gives.
 //   Storm warning issued      anything else is a plain story, with no kicker at all.
@@ -95,7 +95,7 @@ ${ESCAPE_HTML_JS}
 // spoken for by a design cannot be given a second meaning by the parser above it.
 //
 // Nothing is required. A rundown with no marks at all is a plain list of stories, exactly as
-// every ticker read before kickers existed — which is why no sample had to change.
+// every ticker read before kickers existed - which is why no sample had to change.
 //
 // Values are escaped in tickerItemHtml() below rather than here, because a design's
 // renderTickerKicked() is handed the two halves separately and must get them already safe.
@@ -124,7 +124,7 @@ function parseTickerItems(text) {
     var line = raw.trim();
     if (line === '') { open = ''; return; }        // blank line closes the open kicker
 
-    // "SPORT<TAB>United win 3-0" — an explicit separator, so no length guard applies: the
+    // "SPORT<TAB>United win 3-0" - an explicit separator, so no length guard applies: the
     // operator has said outright which half is which.
     var tab = line.indexOf('\\t');
     if (tab > 0) {
@@ -155,7 +155,7 @@ function parseTickerItems(text) {
 // renderTickerItem() keeps its ONE argument, so every design kept working when kickers
 // landed. The kicker rides INSIDE the item the design draws, ahead of the story, which is
 // what makes it travel with it in a marquee and stack with it in a rotator. A design that
-// places the tag itself — tk18 gives it a column of its own — defines
+// places the tag itself - tk18 gives it a column of its own - defines
 // renderTickerKicked(kicker, text) and is handed both halves.
 //
 // Escaped HERE rather than in each design's builder: the builders are the part a design

@@ -160,9 +160,8 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
    * NOT `progress(1)`, for the reason `holdBaselineMs` below already guards against on the other
    * side: one `repeat: -1` child makes GSAP report the whole timeline's duration as its
    * "forever" sentinel, ~1e10 seconds. Seeking to the end of THAT is seeking to an arbitrary
-   * phase of whatever is still looping, which is how the two `credits-loop` designs parked on a
-   * completely empty canvas. preview/settleGraphic.ts carries the full account; this is the
-   * editor's own copy of the same recipe, and the two must agree.
+   * phase of whatever is still looping. preview/settleGraphic.ts carries the full account with
+   * the numbers; this is the editor's own copy of the same recipe, and the two must agree.
    */
   function settleToFiniteEnd(tl: SimTimeline): SimTimeline {
     if (typeof tl.getChildren !== 'function') {
@@ -248,11 +247,22 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     if (w.__activeTl || w.__scrubTl || w.__simSettled) return; // running, paused, or already settled
     w.__simSettled = true;
     resetGraphicInline(w); // a same-document settle after an exit must not inherit its leftovers
+    // Jump, write the data, jump AGAIN - preview/settleGraphic.ts's recipe, and the editor
+    // canvas has to match it or the same graphic reads differently in two places. Both jumps
+    // earn their keep, and on a `credits-loop` reel it is measurable: one jump at `progress(1)`
+    // covers 0% of the viewport, one jump at the finite end 51%, and the two together 100%.
+    // The second is for a design whose `update()` RE-RENDERS its rows (rebuildCredits assigns
+    // `track.innerHTML`), which throws the settled frame away with the elements it was on.
+    const jump = () => {
+      const tl = w.buildInTimeline?.();
+      if (!tl) return;
+      tl.pause();
+      settleToFiniteEnd(tl); // callbacks stay suppressed
+    };
     w.update?.(cmd.data ?? '{}');
-    const tl = w.buildInTimeline();
-    tl.pause();
-    settleToFiniteEnd(tl); // park at the end of the FINITE motion; callbacks stay suppressed
+    jump();
     w.update?.(cmd.data ?? '{}'); // re-render truthful static state (suppressed callbacks skip it)
+    jump();
     return;
   }
 

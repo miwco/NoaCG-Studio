@@ -71,9 +71,9 @@ npx @noacg/cli validate ./football-scoreboard --screenshots ./shots
 npx @noacg/cli save ./football-scoreboard
 ```
 
-Claude Code: `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install
-noacg@noacg-studio` (the skill, a `/noacg:graphic` command and the MCP server). Codex and other
-MCP clients: `cli/plugin/README.md`. The whole account: [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md)
+Claude Code: `claude mcp add noacg -- npx -y @noacg/cli mcp` is the whole setup. The plugin
+(the `noacg-graphic` skill, a `/noacg:graphic` command and the same MCP server) lives in
+`cli/plugin/`; installing it from a clone, and the Codex route, are in `cli/plugin/README.md`. The whole account: [`docs/AGENT_CLI.md`](docs/AGENT_CLI.md)
 and [`docs/AGENT_SAVE.md`](docs/AGENT_SAVE.md).
 
 ## Run it yourself
