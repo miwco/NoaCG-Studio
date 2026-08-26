@@ -1576,6 +1576,7 @@ export default function ProductionPage({ id, sub }: { id: string; sub?: Producti
           liveData={liveData}
           setLiveData={setLiveData}
           resolved={resolved}
+          dataKey={dataKey ?? null}
         />
       )}
       {sub === 'audience' && <ProductionAudienceWorkspace show={show} setShows={setShows} />}

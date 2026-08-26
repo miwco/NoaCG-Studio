@@ -7716,6 +7716,26 @@ h2 + .lib-row,
 .pd-live-add input { width: 190px; }
 .pd-live-add .hint { margin: 0; }
 .pd-live-add code, .pd-live-path { font-family: var(--mono, ui-monospace, monospace); }
+/* THE DATA KEY block: a credential on a screen other people can see, so it reads as its own
+   boxed aside rather than as one more row of the tree. */
+.pd-datakey {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel-2);
+}
+.pd-datakey .hint { margin: 0; max-width: 620px; }
+.pd-datakey-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.pd-datakey-row code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 .pd-raw { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .pd-raw textarea {
   width: 100%;
