@@ -244,15 +244,19 @@ no `--provenance` flag).
    ```bash
    git tag cli-v0.3.0 && git push origin cli-v0.3.0
    ```
-4. Watch the run. It builds from that commit and publishes.
+4. Watch the run. It builds from that commit, publishes, and creates the matching **GitHub
+   Release** with notes generated from the commits since the previous one - so every version on
+   npm is also a version a visitor to the repository page can see.
 
 The tag is the one manual step, and deliberately so: a landing can be re-landed, but **a published
 version can never be taken back**, so it stays a decision a human makes.
 
 **A rehearsal costs nothing.** Run the workflow from the Actions tab with `dry_run` left checked
 (its default): every guard, the install, typecheck, build, the tests and `npm pack --dry-run` run
-for real, and the job stops without burning a version. Unchecking `dry_run` publishes - the same
-thing a tag push does, for when a tagged run needs re-driving.
+for real, and the job stops without burning a version. The GitHub Release is rehearsed too: the
+dry run asks GitHub to *generate* the release notes and prints them, which exercises everything
+about that step except the write. Unchecking `dry_run` publishes - the same thing a tag push
+does, for when a tagged run needs re-driving.
 
 The packing proof (`npm pack --dry-run`) touches no registry, so it runs whatever state the version
 is in. The step after it (`npm publish --dry-run`) is the first that talks to the registry, and it
