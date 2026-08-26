@@ -225,13 +225,13 @@ test('svg import: outlined text gets the honest answer, and still imports as a f
     'outlined.svg',
   );
 
-  await expect(page.getByTestId('import-svg-nolayers')).toContainText('converted to');
+  await expect(page.getByTestId('import-svg-nolayers')).toContainText('turned into outlines');
   await page.locator('.wz-next').click();
 
   // The mapping step names the fix — re-export with real text — rather than a dead checklist.
   const honest = page.getByTestId('map-svg-outlined');
   await expect(honest).toContainText('no text layers');
-  await expect(honest).toContainText('export it again');
+  await expect(honest).toContainText('export again keeping text as text');
   await expect(honest).toContainText('fixed graphic');
 
   // A fixed graphic is still a playable import.
@@ -688,7 +688,7 @@ test('svg import: outlined text — a glyph-shaped group becomes a placed live f
   await page.locator('.wz-next').click();
 
   // The honest answer still stands — and now names the third road.
-  await expect(page.getByTestId('map-svg-outlined')).toContainText('tick a group of shapes');
+  await expect(page.getByTestId('map-svg-outlined')).toContainText('Tick a group of shapes');
   // Every glyph-shaped group is offered, OFF, labelled from its layer name; the backplate's
   // rects are furniture, never letters, so it is not on the list.
   const rows = page.getByTestId('map-svg-outlines');
@@ -1602,7 +1602,7 @@ test('svg import: the followers of a growing panel are proposed, then become the
   // THE PROPOSAL, measured off the artwork: everything drawn below the board. It says so - the
   // reader must be able to tell a guess from their own answer.
   const list = page.getByTestId('map-svg-followers');
-  await expect(list).toContainText('proposed');
+  await expect(list).toContainText('read from your artwork');
   await expect(page.getByTestId('map-svg-follower-s1')).toBeVisible(); // the caption
   await expect(page.getByTestId('map-svg-follower-s2')).toBeVisible(); // the frame-bottom strap
 
@@ -1611,7 +1611,7 @@ test('svg import: the followers of a growing panel are proposed, then become the
   // proposal.
   await page.getByTestId('map-svg-follower-drop-s2').click();
   await expect(page.getByTestId('map-svg-follower-s2')).toHaveCount(0);
-  await expect(list).not.toContainText('proposed');
+  await expect(list).not.toContainText('read from your artwork');
   await page.getByTestId('map-svg-follower-mode-s1').selectOption('grow');
 
   await createProject(page);
@@ -1641,18 +1641,18 @@ test('svg import: picking WHICH panel grows does not quietly change which WAY', 
 
   const mode = page.getByTestId('map-svg-stretch-mode');
   await mode.selectOption('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
 
   // Pick a DIFFERENT panel, then the original one back. Neither may touch the direction.
   await page.getByTestId('map-svg-stretch-shape').selectOption('s1');
   await expect(mode).toHaveValue('grow-y');
   await page.getByTestId('map-svg-stretch-shape').selectOption('s0');
   await expect(mode).toHaveValue('grow-y');
-  await expect(page.getByTestId('map-svg-stretch')).toContainText('the panel gets taller');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('the text wraps onto more lines');
 
   // …and the follower set goes back to being a PROPOSAL, because the one that was there was
   // measured against a different element and would be stale rows about the wrong panel.
-  await expect(page.getByTestId('map-svg-followers')).toContainText('proposed');
+  await expect(page.getByTestId('map-svg-followers')).toContainText('read from your artwork');
 });
 
 test('svg import: an untouched proposal is left to the runtime, not frozen into the graphic', async ({ page }) => {
@@ -1770,7 +1770,7 @@ test('svg import: an ordinary lower third arrives already growing, read from the
   // Nothing PAST the growing edge needs a decision here… the Logo is past it, so the follower
   // list shows (proposed). The ordinary case with an empty proposal renders no list at all -
   // pinned in the followers block above.
-  await expect(page.getByTestId('map-svg-followers')).toContainText('proposed');
+  await expect(page.getByTestId('map-svg-followers')).toContainText('read from your artwork');
 
   // An authored answer replaces the measurement and stops advertising itself as one.
   await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
@@ -1891,6 +1891,202 @@ test('svg import: a hugging panel grows with its text, and what is beyond it tra
   expect(back.panelWidth).toBe(600);
   expect(back.logoLeft).toBe(rest.logoLeft);
   expect(back.size).toBe(rest.size);
+});
+
+// ── THE LADDER, AS THE OWNER RULED IT (2026-08-26) ────────────────────────────────────────
+// He imported the shipped Illustrator lower third, got "shrinks to fit", and said what the
+// order should be: "first I want it to get wider ... and then it should go to the next line.
+// And the last thing is to shrink", shrink last "because that changes the design more". Three
+// more findings came out of the same walk and each is measured below.
+const ILLUSTRATOR_SVG = fileURLToPath(new URL('../docs/svg-samples/illustrator-export.svg', import.meta.url));
+
+/** A board with real room BOTH ways: a margin to widen into and clear artwork below to wrap
+ *  into, which is the one shape that can show a combination doing two things. */
+const BOTH_WAYS_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <rect id="Board" x="300" y="200" width="900" height="110" rx="8" fill="#0d1017"/>
+  <text id="Question" x="340" y="260" font-size="44" fill="#ffffff">Which city?</text>
+  <rect id="Footer" x="300" y="340" width="900" height="60" rx="8" fill="#f6a623"/>
+</svg>`;
+
+test('svg import: the shipped Illustrator lower third arrives growing, not shrinking', async ({ page }) => {
+  // THE BUG THE OWNER HIT. Location (x=200) and Slot (x=700) share one baseline, and the
+  // side-by-side test used to refuse the WHOLE file on that pair - so a banner with three
+  // stacked lines above it defaulted to shrinking. A pair sharing a baseline constrains THOSE
+  // TWO lines and says nothing about the rest.
+  await page.goto('/app');
+  await dropSvg2(page, ILLUSTRATOR_SVG);
+  await expect(page.getByTestId('map-svg-stretch-mode')).toHaveValue('grow-x');
+  await expect(page.getByTestId('map-svg-stretch')).toContainText('read from your artwork');
+
+  // The list is the ladder, in that order, with shrink last - never first.
+  await expect(page.getByTestId('map-svg-stretch-mode').locator('option')).toHaveText([
+    'The panel gets wider',
+    'The panel gets wider, then the text wraps',
+    'The text wraps onto more lines',
+    'The text gets smaller',
+  ]);
+});
+
+test('svg import: growth is symmetrical and a line stops at whatever is drawn beside it', async ({ page }) => {
+  await page.goto('/app');
+  await dropSvg2(page, ILLUSTRATOR_SVG);
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const run = (values: Record<string, string>) =>
+    frame.locator('#f0').evaluate((_el, vals) => {
+      (window as unknown as { update: (json: string) => void }).update(JSON.stringify(vals));
+      const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
+      const panel = document.querySelector('rect[data-noacg-el~="g0"]')!.getBoundingClientRect();
+      const at = (id: string) => {
+        const r = document.getElementById(id)!.getBoundingClientRect();
+        return { left: +(r.left - art.left).toFixed(1), right: +(r.right - art.left).toFixed(1) };
+      };
+      return {
+        frameWidth: art.width,
+        panelLeft: +(panel.left - art.left).toFixed(1),
+        panelRight: +(panel.right - art.left).toFixed(1),
+        name: at('f0'),
+        location: at('f2'),
+        slot: at('f3'),
+      };
+    }, values);
+
+  const rest = await run({ f0: 'Alexandra Riva', f2: 'HELSINKI' });
+  expect(rest.panelLeft).toBe(150);
+  expect(rest.panelRight).toBe(1150);
+
+  // THE CAP IS THE DESIGN'S OWN MARGIN, MIRRORED. "We cannot have templates outgrow the
+  // screen" - and the flat 4% that used to bound this let the banner run to 1843 on a 1920
+  // frame, 73px past the 150px margin the designer left on the left. It now stops at exactly
+  // frame - inset, and the name keeps that same margin inside it.
+  const huge = await run({ f0: 'Bartholomew Featherstonehaugh-Wintersgill of the Northern Reaches and Well Beyond That Too' });
+  expect(huge.panelRight).toBeCloseTo(huge.frameWidth - rest.panelLeft, 0);
+  expect(huge.name.right).toBeLessThanOrEqual(huge.panelRight);
+  // …and the residual gap is the mirrored inset itself, not slack: growth is spent, not wasted.
+  expect(huge.panelRight - huge.name.right).toBeCloseTo(rest.name.left - rest.panelLeft, 0);
+
+  // NEIGHBOURS DO NOT OVERLAP. A long Location used to run to 860 straight through the 19:30
+  // Slot drawn at 700, because its room was measured out to the panel's edge. Its room is now
+  // bounded by what is drawn beside it - and because widening the panel would give it nothing,
+  // it does not drive the growth either.
+  const long = await run({ f0: 'Alexandra Riva', f2: 'HELSINKI METROPOLITAN AREA SOUTH AND EAST DISTRICT' });
+  expect(long.location.right).toBeLessThan(long.slot.left);
+  expect(long.panelRight).toBe(rest.panelRight);
+});
+
+test('svg import: past the floor a value is squeezed inside its room, never painted outside it', async ({ page }) => {
+  // "Nothing may ever paint outside the panel" (owner, 2026-08-26). The ladder used to stop at
+  // the 55% legibility floor and REPORT the value as too long, which left it running 127px past
+  // the banner and across whatever was drawn beside it. The floor still holds the type size; the
+  // floored block is then squeezed to its budget, and it is still reported.
+  await page.goto('/app');
+  await dropSvg2(page, ILLUSTRATOR_SVG);
+  await page.getByTestId('map-svg-stretch-mode').selectOption('shrink');
+  await createProject(page);
+
+  const frame = previewFrame(page);
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      const w = window as unknown as { update: (s: string) => void; noacgTextOverflow: () => string[] };
+      w.update(JSON.stringify({ f0: v }));
+      const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
+      const panel = document.querySelector('rect')!.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return {
+        right: +(r.right - art.left).toFixed(1),
+        panelRight: +(panel.right - art.left).toFixed(1),
+        size: Math.round(parseFloat(getComputedStyle(el).fontSize) * 100) / 100,
+        squeezed: el.getAttribute('textLength') ?? el.children[0]?.getAttribute('textLength') ?? null,
+        over: w.noacgTextOverflow(),
+      };
+    }, value);
+
+  const rest = await run('Alexandra Riva');
+  expect(rest.squeezed).toBeNull();
+  expect(rest.over).toEqual([]);
+
+  const huge = await run('Bartholomew Featherstonehaugh-Wintersgill of the Northern Reaches and Well Beyond That Too');
+  // Floored at 55% of the drawn size, inside the panel, and honestly reported as too long.
+  expect(huge.size).toBeCloseTo(54 * 0.55, 1);
+  expect(huge.right).toBeLessThanOrEqual(huge.panelRight);
+  expect(huge.squeezed).not.toBeNull();
+  expect(huge.over).toEqual(['f0']);
+
+  // The squeeze is not a state the graphic gets stuck in: a value that fits comes back exact.
+  const back = await run('Alexandra Riva');
+  expect(back.squeezed).toBeNull();
+  expect(back.size).toBe(rest.size);
+  expect(back.right).toBe(rest.right);
+  expect(back.over).toEqual([]);
+});
+
+test('svg import: wider THEN wrap is one choice, and it is two rows on one panel', async ({ page }) => {
+  // The owner accepted the three options and then said a real graphic sometimes wants a
+  // COMBINATION: "we should let the customer choose whatever they want, that's the most
+  // important thing." It needs no new format - the runtime already spends width before the fit
+  // and height after it, so "both" is two ordinary rows naming one element.
+  await dropSvgMarkup(page, BOTH_WAYS_SVG, 'both-ways.svg');
+  await page.locator('.wz-next').click();
+  await page.getByTestId('map-svg-stretch-mode').selectOption('grow-xy');
+  await createProject(page);
+
+  const js = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.js;
+  });
+  const table = /var NOACG_LAYOUT = \{[\s\S]*?\n\};/.exec(js)![0];
+  expect(table).toContain("axis: 'x'");
+  expect(table).toContain("axis: 'y'");
+
+  const frame = previewFrame(page);
+  // ONE element, TWO stamps. A single-valued attribute would let the second row erase the first.
+  await expect(frame.locator('#Board')).toHaveAttribute('data-noacg-el', 'g0 g1');
+
+  const run = (value: string) =>
+    frame.locator('#f0').evaluate((el, v) => {
+      (window as unknown as { update: (s: string) => void }).update(JSON.stringify({ f0: v }));
+      const board = document.getElementById('Board')!;
+      const art = document.querySelector('.imported-design-art')!.getBoundingClientRect();
+      const bb = board.getBoundingClientRect();
+      return {
+        width: Math.round(parseFloat(board.getAttribute('width')!)),
+        height: Math.round(parseFloat(board.getAttribute('height')!)),
+        right: Math.round(bb.right - art.left),
+        bottom: Math.round(bb.bottom - art.top),
+        footTop: Math.round(document.getElementById('Footer')!.getBoundingClientRect().top - art.top),
+        lines: el.children.length,
+        size: parseFloat(getComputedStyle(el).fontSize),
+      };
+    }, value);
+
+  const rest = await run('Which city?');
+  expect(rest.width).toBe(900);
+  expect(rest.height).toBe(110);
+
+  // WIDER FIRST. A value that only needs a little more room widens the board and stays on one
+  // line at the drawn size - the wrap rung is not reached.
+  const wider = await run('Which city hosted the very first modern games?');
+  expect(wider.width).toBeGreaterThan(900);
+  expect(wider.lines).toBeLessThan(2);
+  expect(wider.size).toBe(rest.size);
+
+  // THEN WRAP. Past the mirrored margin the board stops widening and the value takes the height
+  // below instead - still at the size the designer drew, because shrinking is the last rung.
+  const wrapped = await run('Which city hosted the first modern Olympic Games '.repeat(12));
+  expect(wrapped.right).toBe(1920 - 300); // the 300px left inset, mirrored
+  expect(wrapped.lines).toBeGreaterThan(1);
+  expect(wrapped.size).toBe(rest.size);
+  expect(wrapped.bottom).toBeLessThanOrEqual(1080 - 200); // and the top inset, mirrored downwards
+  expect(wrapped.footTop - rest.footTop).toBeCloseTo(wrapped.bottom - rest.bottom, 0);
+
+  // Both rows rest together: a short value puts the artwork back exactly as drawn. Two rows on
+  // one element is where that could break - a follower captured after the first row had already
+  // moved it would record the moved pose as its resting one.
+  const back = await run('Which city?');
+  expect(back.width).toBe(900);
+  expect(back.height).toBe(110);
+  expect(back.footTop).toBe(rest.footTop);
 });
 
 test('svg import: retyping a sample repaints the PREVIEW, not a second canvas', async ({ page }) => {

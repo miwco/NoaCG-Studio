@@ -31,6 +31,7 @@ import type {
   AnimSpeed,
   DesignArt,
   DesignSvgBehaviour,
+  DesignSvgGrowth,
   ExtraFieldSpec,
   LineSpec,
   Palette,
@@ -213,8 +214,11 @@ export interface SvgStretchDraft {
   /** Which way it grows (docs/SVG_IMPORT_PLAN.md §6c). 'x' widens it, so the type stays the
    *  size it was drawn - the lower third's banner. 'y' makes it taller, so a long value WRAPS
    *  into new height instead of shrinking - what a board or a card wants, where the panel has
-   *  room below it and the type may not get smaller. Absent = 'x', the hug as it shipped. */
-  axis?: 'x' | 'y';
+   *  room below it and the type may not get smaller. 'xy' is the LADDER (owner, 2026-08-26:
+   *  "first I want it to get wider, and then it should go to the next line") - both, in that
+   *  order, because the runtime already spends width before it wraps. Absent = 'x', the hug as
+   *  it shipped. */
+  axis?: 'x' | 'y' | 'xy';
   /**
    * WHAT TRAVELS with the growing element (plan §6c). Absent/null = the author has not touched
    * the set, so the runtime's own geometric derivation stands and nothing is emitted - which is
@@ -236,6 +240,40 @@ export function svgCandidateExists(draft: WizardDraft, candidateId: string): boo
   return [...s.candidates, ...s.images, ...s.outlines, ...s.groups, ...s.shapes].some(
     (c) => c.id === candidateId,
   );
+}
+
+/**
+ * THE GROWTH ROWS a draft emits (docs/SVG_IMPORT_PLAN.md §6c).
+ *
+ * One row per AXIS, which is what makes the LADDER expressible without a second format: the
+ * owner's order is wider, then wrap, then shrink, and the runtime already spends width before
+ * the fit and height after it - so "both" is two ordinary rows on one element rather than a new
+ * kind of rule. Nothing is emitted at all unless growth is on and still points at a shape the
+ * current file has.
+ *
+ * The declared FOLLOWERS ride the sideways row only. They were measured against the sideways
+ * edge, and a caption drawn under the panel travels down with it whether or not anybody listed
+ * it - which is exactly what the downward row derives on its own.
+ */
+function svgGrowthOptions(draft: WizardDraft): DesignSvgGrowth[] | undefined {
+  const shapeId = draft.svgStretch.shapeId;
+  if (!draft.svgStretch.on || !shapeId) return undefined;
+  if (!draft.designSvg?.shapes.some((s) => s.id === shapeId)) return undefined;
+  const axis = draft.svgStretch.axis ?? 'x';
+  // Only a set the author actually EDITED travels as data. Untouched, the field is left off and
+  // the runtime derives it, which is the behaviour every hugging graphic already shipped with.
+  const followers = draft.svgStretch.followers
+    ? {
+        followers: draft.svgStretch.followers.filter((f) => svgCandidateExists(draft, f.candidateId)),
+      }
+    : {};
+  if (axis === 'xy') {
+    return [
+      { candidateId: shapeId, axis: 'x', ...followers },
+      { candidateId: shapeId, axis: 'y' },
+    ];
+  }
+  return [{ candidateId: shapeId, axis, ...followers }];
 }
 
 /** One layer declared to travel with a growing element. */
@@ -552,27 +590,7 @@ export function draftToOptions(variant: TemplateVariant, draft: WizardDraft): Wi
           behaviour: svgBehaviourOption(draft) ?? undefined,
           // A growth rule travels only when it is both ON and pointed at a shape that still
           // exists: a half-answered picker must never become a graphic that resizes at random.
-          growth:
-            draft.svgStretch.on &&
-            draft.svgStretch.shapeId &&
-            draft.designSvg.shapes.some((s) => s.id === draft.svgStretch.shapeId)
-              ? [
-                  {
-                    candidateId: draft.svgStretch.shapeId,
-                    axis: draft.svgStretch.axis ?? 'x',
-                    // Only a set the author actually EDITED travels as data. Untouched, the
-                    // field is left off and the runtime derives it, which is the behaviour
-                    // every hugging graphic already shipped with (plan §6c).
-                    ...(draft.svgStretch.followers
-                      ? {
-                          followers: draft.svgStretch.followers.filter((f) =>
-                            svgCandidateExists(draft, f.candidateId),
-                          ),
-                        }
-                      : {}),
-                  },
-                ]
-              : undefined,
+          growth: svgGrowthOptions(draft),
           fonts: draft.svgFonts.map((f) => ({
             family: f.family,
             fontId: f.fontId ?? undefined,

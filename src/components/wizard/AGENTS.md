@@ -60,11 +60,10 @@ Two measured constraints:
 - **After Entry, the rail's 216px leaves the row before either pane sees it.** A WORKING left
   pane (`.wz-body-working`, the Import flow's Text step) lifts the measure cap and clamps the
   preview, or the placement canvas drops under the 700px floor `e2e/import-graphic.spec.ts`
-  holds. **Only a step whose left pane is a CANVAS may wear it.** The SVG mapping step did,
-  from when it drew its own artwork; its left pane is a form, and the class was taking the
-  preview down to ~275px wide - the one surface that can run the emitted fit, on the step where
-  the reader decides whether their text fits (docs/SVG_IMPORT_PLAN.md §6a step 1). Dropping it
-  puts the preview back at 614x345 on a 1366x768 laptop, four times the area.
+  holds. **Only a step whose left pane is a CANVAS may wear it.** The SVG mapping step wore it
+  and its left pane is a form: the class took the preview to ~275px wide, on the step where the
+  reader decides whether their text fits (docs/SVG_IMPORT_PLAN.md §6a step 1). Without it the
+  preview is 614x345 on a 1366x768 laptop, four times the area.
 - **The Entry step's HEIGHT budget still binds** (`e2e/wizard-entry-fit.spec.ts`, 1366x768):
   cards share the column, and the grid's 10px came off the hero's title margin. Grow one, pay
   from another.
@@ -253,8 +252,8 @@ Three rules: the spec asks `fit: 'shrink'` (the ladder measures `data-fit="shrin
 line would dodge the too-long warning - plan §6b); the drawn box IS the em box (`lineHeight: 1`)
 and a CLICK gets a field-shaped default; `drawIn` is tracked for the WHOLE step, because the
 rect arrives a frame late and arming at the gesture lost the first drag. The step reports its
-drop HANDLER up, held in a REF with only a boolean in state - held as state, every re-report is
-a render and React stops the wizard with "Maximum update depth exceeded" while every assertion
+drop HANDLER up, held in a REF with only a boolean in state - as state, every re-report is a
+render and React stops the wizard with "Maximum update depth exceeded" while every assertion
 still passes.
 **THE ARTWORK IS ALSO THE CONTROL SURFACE** (plan §6a step 5): every offered layer is tracked
 (`WizardPreview` `pickable` + `onPick`) and the HIT-TEST RUNS APP-SIDE against the pushed rects -
@@ -262,25 +261,25 @@ the iframe has no allow-same-origin and nothing reaches in. Tie-break is the edi
 innermost by depth, then smallest box. The canvas answers WHICH layer; the step decides what a
 pick means (text/picture/outline toggles its binding; a rectangle becomes the growing panel, and
 a DRAG names the axis - dominant direction, 24 canvas-px threshold; picking the growing panel
-with no drag turns it off). The handler is held in a REF, never state - see the draw handler
-above for what state costs. **A pointer is a ONE-SHOT and the rects arrive a frame after the
+with no drag turns it off). The handler is held in a REF, never state (see the draw handler
+above). **A pointer is a ONE-SHOT and the rects arrive a frame after the
 document commits**, so anything driving this canvas must wait for a layer to ANSWER, not for the
 surface to exist (`awaitPickable`).
 **FOLLOWERS: geometry proposes, the author edits** (plan §6c). `proposeFollowers` measures the
-same guess the runtime makes, but on the step's own render so the reader can see it, outermost-
-first (a named group and its contents are never both offered). **An untouched proposal emits
-NOTHING** - the runtime derives, as the hug always did; writing the guess down would freeze a
-design-time measurement into every playout. **The first edit materializes the whole set**
-(`svgStretch.followers`, the derived-machine idiom) and the label stops saying "proposed".
-**The list renders only where there is something to decide** (non-empty proposal, declared set,
-or authored growth): on the ordinary lower third's default nothing needs to move.
-Arming `followArmed` makes a canvas pick toggle a FOLLOWER instead of a binding - a visible
-mode, not a modifier key. **Every handler that patches `svgStretch` must SPREAD it**: rebuilt
-fresh, it dropped the axis (a "grows taller" graphic silently went back to sideways).
-THE HUG's DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
-`proposeBannerGrowth`): a banner rectangle holding stacked START-anchored bound text, with room
-before the safe margin, defaults to grow-x with nothing chosen; side-by-side lines, non-start
-anchors, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
+runtime's own guess on the step's render, outermost-first (a group and its contents are never
+both offered). **An untouched proposal emits NOTHING** - the runtime derives, as the hug always
+did. **The first edit materializes the whole set** (`svgStretch.followers`) and the label stops
+saying it was read from the artwork. **The list renders only where there is something to decide**
+(non-empty proposal, declared set, or authored growth). Arming `followArmed` makes a canvas pick
+toggle a FOLLOWER instead of a binding - a visible mode, not a modifier key. **Every handler
+patching `svgStretch` must SPREAD it**: rebuilt fresh, it dropped the axis.
+THE TOO-LONG CONTROL IS A LADDER, in the owner's order: wider, wider-then-wrap, wrap, smaller -
+shrink LAST, never first. `xy` is both, emitted as two rows on one panel (`svgGrowthOptions`).
+THE DEFAULT IS MEASURED where the artwork is unambiguous (plan §3, GOALS goal 5,
+`proposeBannerGrowth`): a banner rectangle whose STACKED bound lines are all start-anchored,
+with room before the margin, defaults to grow-x with nothing chosen. A pair sharing one baseline
+argues neither way (the runtime bounds each by the other); no stacked line at all, a non-start
+anchor, a full-frame backplate or a quiz behaviour keep shrink and the step asks. Never
 size-against-frame. Re-derives with the rows until a growth control is touched (`authored`).
 Contract + reasoning: docs/SVG_IMPORT_PLAN.md + that file's comments; E2E: e2e/import-svg.spec.ts.
 
@@ -325,7 +324,9 @@ would remove taste, not duplication.
 muted line, and an ⓘ holding what it does AND why it exists. The mapping, Animation and Import
 Design steps wear it; a new section starts with it, not a paragraph under an h3. **THE SPEED
 BUTTONS WRITE 0.6 / 1 / 1.8** (`AnimSpeed`, GOALS goal 6: ±33% was real on the clock, invisible
-across separate replays; 0.75/1.5 stay valid stored values).
+across separate replays; 0.75/1.5 stay valid stored values). **The lifecycle demo's stop/replay
+follow the TEMPLATE's own durations** (`demoCycle`), never a fixed pair: a fixed beat is what made
+Speed and Easing read as dead on a FADE, which has no travel to judge them by.
 **THE EASING DROPDOWN REACTS TO THE MOTION** (`blocks/motionPresets.ts` `easingsForMotions`) and
 shows the no-code `plain` names. Picking a motion that cannot render the current curve drops the
 choice to Auto rather than keeping a setting that does nothing. WizardPreview cancels pending lifecycle-demo timers when

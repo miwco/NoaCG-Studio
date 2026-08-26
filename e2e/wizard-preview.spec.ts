@@ -133,10 +133,63 @@ test('zoom to graphic: the preview reframes onto a small graphic and back', asyn
   await expect.poll(scaleOf).toBeCloseTo(fullCanvas, 2);
 });
 
+test('animation step: the lifecycle demo runs on the GRAPHIC’s clock, not a fixed beat', async ({ page }) => {
+  // WHY THE SPEED KNOB LOOKED DEAD ON A FADE (owner, 2026-08-26; GOALS goal 6). Both controls
+  // reach the render — measured, the emitted NOACG_ANIM carries speed 0.6/1/1.8, the built
+  // entrance lasts 1.333/0.800/0.444s, and a fade's four offered curves produce four different
+  // opacity ramps. What hid all of it was this demo loop: stop at 1700ms and replay at 2800ms
+  // whatever the graphic did, so every setting played inside ONE fixed 2.8s beat — and the
+  // faster the setting, the LONGER the graphic then sat still (367ms of hold at Slower against
+  // 1256ms at Faster: the cadence moved the wrong way). A slide survived it because travel is a
+  // second cue; a fade has no second cue, which is why it was the one that read as broken.
+  //
+  // So the beat is derived from the template's own durations. Measured here as the property
+  // that makes the knob visible: Slower's cycle is materially longer than Faster's.
+  await openWizardTo(page, 'animation');
+  const speed = (label: string) =>
+    page.locator('.panel-section', { hasText: 'Speed' }).getByRole('button', { name: label, exact: true }).first();
+
+  // Sampled INSIDE the document at animation rate: the off-air window is under a second at the
+  // fast setting, which an expect.poll with a growing interval can step straight over.
+  const cycleMs = async () => {
+    await expect.poll(() => rootOpacity(page), { timeout: 8000 }).toBe('1');
+    return root(page).evaluate(
+      (el) =>
+        new Promise<number>((res) => {
+          const t0 = performance.now();
+          let left: number | null = null;
+          const tick = () => {
+            const on = getComputedStyle(el).opacity === '1';
+            if (left === null && !on) left = performance.now() - t0;
+            // The whole cycle: on air, off air, and back on again.
+            if (left !== null && on) return res(performance.now() - t0);
+            if (performance.now() - t0 > 7000) return res(-1);
+            requestAnimationFrame(tick);
+          };
+          tick();
+        }),
+    );
+  };
+
+  await speed('Faster').click();
+  await page.waitForTimeout(900); // past the srcdoc debounce, so the reading is the new document's
+  const fast = await cycleMs();
+
+  await speed('Slower').click();
+  await page.waitForTimeout(900);
+  const slow = await cycleMs();
+  expect(fast).toBeGreaterThan(0);
+  expect(slow).toBeGreaterThan(0);
+
+  // A ±80% speed step now changes the loop's own rhythm by most of a second. The old fixed pair
+  // made this difference ZERO by construction, which no assertion on the emitted data could see.
+  expect(slow).toBeGreaterThan(fast + 400);
+});
+
 test('animation step: a mid-demo preset change never leaves the preview hidden', async ({ page }) => {
   await openWizardTo(page, 'animation');
-  // The lifecycle demo is running (in → out at 1.7s → in again at 2.8s). Change the
-  // preset right around the exit so a stale stop()/play() timer would target the
+  // The lifecycle demo is running (in, then out, then in again — on the graphic's own clock).
+  // Change the preset right around the exit so a stale stop()/play() timer would target the
   // rebuilt document if it survived the rebuild.
   await page.waitForTimeout(1500);
   await page.locator('.wz-anim', { hasText: 'Mask wipe' }).click();
