@@ -187,39 +187,51 @@ result reading 0% for every option is the same defect one surface further in.
     has fourteen still fails it.
 - **The catalog measurement is in this document and re-runnable** - it is the spec, run against a
   `preview_start` dev server on this worktree's port (5280).
-- **CI dispatched on the branch head** (`cd028bf2`, run `33010515567`), and because
-  `src/preview/` is CORE in `scripts/e2e-affected.mjs` this plans the **full suite** rather than an
-  affected subset. **Read WHICH JOBS RAN** before calling it a verdict:
-  `gh run view 33010515567 --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`.
+- **CI READ, and it is a verdict: run `33010515567` on `cd028bf2`, nine E2E shards all planned and
+  all run, Factory gates green, Catalog calibration gate green, Build green.** Eight of nine shards
+  green; **shard 1/9 red on exactly one assertion**, which is the expected baseline drift below and
+  nothing else. Jobs listed rather than assumed
+  (`gh run view 33010515567 --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`) - the only
+  non-success besides that shard is `skipped  Vercel accepted the commit`.
 - **The local spec run is QUEUED and had not drained when this was written** - job `j-0085`,
   `npx playwright test counting-settle end-credits wave2`, waiting behind three other browser jobs
   on a laptop with 1.1 GB free against a 4.0 GB floor. `node scripts/jobs.mjs log j-0085` has its
   output. CI is the stronger verdict and is the one to read; this is the local confirmation, not
   the gate.
-- **BOTH CATALOG BASELINES ARE EXPECTED TO MOVE, and neither was re-recorded here.** This is the
-  one open item; do not read the branch as finished until it is closed.
-  - `e2e/catalog-baseline.json` is a deterministic FINGERPRINT of the emitted code, and
-    `igMotion.ts` / `pollMotion.ts` both emit new lines, so the `js` hash of every infographic and
-    poll variant moves. Safe to re-record anywhere; the diff is the review, and a healthy one
-    touches `js` on those 44 variants and nothing else - no `html`, no `css`, no other category.
-  - `e2e/catalog-render-baseline.json` is COMPUTED STYLE AND GEOMETRY of the settled graphic, and
-    the settled text of a stat genuinely changed from `0%` to `87%`. Its geometry moves with it.
-    That is the look changing ON PURPOSE, which is the one condition its own header allows a
-    re-record under - but it is platform-bound (`win32`, this machine), and
-    `src/templates/AGENTS.md` records what a wholesale geometry re-record under load costs: one
-    run's coin flips become the committed reference. **So run it read-only FIRST, read which
-    variants drift, and only then re-record** - and if the drift reaches outside infographic and
-    poll, hand-edit rather than re-record.
-  - CI plans the full suite here (`src/preview/` is CORE), so `catalog-baseline` is in the run
-    above and is the cheapest place to read the drift. `j-0092` is the same check queued locally
-    as a backup. Re-record with `UPDATE_CATALOG_BASELINE=1 UPDATE_RENDER_BASELINE=1 npx playwright
-    test e2e/catalog-baseline.spec.ts`.
+- **`e2e/counting-settle.spec.ts` RAN AND PASSED ON CI, both recipes** - shard 2/9, which concluded
+  success. Checked by name in the shard logs rather than inferred from a green run, because a new
+  spec that was planned but not executed reads exactly like a passing one:
+  `chromium › e2e/counting-settle.spec.ts:82:3 › every counting design settles on its real figure
+  (thumbnail)` and `… (canvas)`.
+- **ONE baseline moved, the drift was READ first, and it is now re-recorded.** CI's
+  `catalog-baseline.spec.ts` reported 46 changed fingerprints and the list was exactly the healthy
+  one: **`js` on ig01…ig39 and pl01…pl05, and nothing else.** No `html`, no `css`, no other
+  category, no variant outside the two runtimes that gained a line. The committed diff is
+  **44 insertions, 44 deletions, every one of them a `"js"` line**.
+  - **It was re-recorded WITHOUT the recorder, and the equivalence was proved rather than
+    assumed** - the queue was deadlocked (five browser jobs against a 4.0 GB free-RAM floor on a
+    laptop with 3.3 GB free, and no orphan to kill: the memory is the user's own Chrome). The
+    recorder's hash is `sha256(pane).hex.slice(0, 16)`, so the same hash was computed in-page with
+    SubtleCrypto over the same `variant.create({})` output. Two checks make that sound: a control
+    variant nothing touched (`al01`) came back byte-identical to its committed `html`/`css`/`js`
+    triple, proving the in-page hash IS the recorder's; and a SHA-256 over the canonical
+    `id|html|css|js` listing of all 509 variants was computed on both sides and compared -
+    `73d9f4ea…bc0e` on both, so **every one of the 1,527 entries in the committed file equals what
+    the catalog actually emits**, not just the 44 that moved. If you would rather have the
+    recorder's own output, `set "UPDATE_CATALOG_BASELINE=1" && npx playwright test catalog-baseline`
+    must produce a zero diff against what is committed.
+- **`e2e/catalog-render-baseline.json` did NOT move**, which is worth knowing rather than
+  assuming: it is computed style and geometry of the settled graphic, the settled text genuinely
+  changed from `0%` to `87%`, and its own test passed in the same shard. So the figures' boxes are
+  not sized by their digits, and no platform-bound geometry re-record is needed here. Good, because
+  that is the re-record `src/templates/AGENTS.md` warns bakes one loaded run's coin flips into the
+  committed reference. **Do not pass `UPDATE_RENDER_BASELINE=1` on this branch.**
 
 ## What is left
 
-- **Re-record the two catalog baselines after reading the drift** - see above. That is the one
-  thing between this branch and `/queue-merge`, and it needs the drift read before the flags go
-  on.
+- **Read the CI run on the branch head and land it.** Everything else is done: the fix, the gate,
+  the docs and the re-recorded baseline are committed, and the only thing the previous run was red
+  on is the baseline this commit records.
 - `docs/backlog/settle-emitted-runtime-finite-end.md` - the emitted runtime's own settle, with its
   trigger.
 - Owner queue: `docs/acceptance/owner-queue/2026-08-27-stat-cards-show-their-real-number.md`.
