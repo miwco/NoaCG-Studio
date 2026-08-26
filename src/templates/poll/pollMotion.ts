@@ -161,6 +161,14 @@ function pollBarsGrow(target, opts) {
   // The figures: each row's percentage counts from zero to its own share over its bar's exact
   // length. The final text comes from data-target, so a mid-count interruption can never leave
   // a rounded number standing in for the real one.
+  //
+  // Each count ENDS ON A SET of that text, for the reason infographics/igMotion.ts states in
+  // full under "THE SETTLE RULE": a surface that jumps a graphic to its end suppresses GSAP
+  // callbacks, so a figure that only ever reaches the DOM from an onUpdate stays at the 0% the
+  // opening set wrote. A vote board's result step is not in the ENTRANCE, so the thumbnail
+  // recipe never runs it - but the editor canvas's snap walks every step
+  // (preview/simulatorRuntime.ts), and a snapped result reading 0% for every option is the
+  // same defect one surface further in.
   for (var i = 0; i < fills.length; i++) {
     var row = fills[i].closest ? fills[i].closest('.poll-row') : null;
     var num = row ? row.querySelector('.poll-row-value') : null;
@@ -176,6 +184,7 @@ function pollBarsGrow(target, opts) {
         onUpdate: function () { el.textContent = pollPercentText(counter.value); },
         onComplete: function () { el.textContent = text; }
       }, at);
+      tl.set(el, { textContent: text }, at + grow);  // the settle rule, at THIS row's end
     })(num, parseFloat(fills[i].getAttribute('data-value')) || 0, i * stagger);
   }
   return tl;

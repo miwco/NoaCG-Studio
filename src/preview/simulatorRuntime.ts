@@ -247,36 +247,34 @@ export function runSimCommand(w: SimWindow, cmd: SimCommand): void {
     if (w.__activeTl || w.__scrubTl || w.__simSettled) return; // running, paused, or already settled
     w.__simSettled = true;
     resetGraphicInline(w); // a same-document settle after an exit must not inherit its leftovers
-    // Jump, then write the data - and END on the data, which is where this deliberately
-    // DIVERGES from preview/settleGraphic.ts's jump/update/jump.
+    // preview/settleGraphic.ts's recipe, VERBATIM: update, jump, update, jump. That file is
+    // where the recipe is argued and measured; this is the editor's own copy of it, and the
+    // whole point of the copy is that the canvas and the thumbnails show the same frame.
     //
-    // The two orders serve two runtimes that want opposite things, and both faults are real:
+    // The two DIVERGED between 2026-08-26 and 2026-08-27, and the reason is worth keeping,
+    // because it is the shape of the next argument about this file. The canvas ended on the
+    // DATA instead, to keep a counting infographic honest: a settle suppresses GSAP callbacks,
+    // and igMotion wrote its figure only from an onUpdate, so any jump left the readout at 0
+    // and only a following update() put the number back. Credits want the opposite - their
+    // rebuild reassigns the track's innerHTML, so an update() after the jump throws the settled
+    // frame away with the elements it was written on. No ordering of those three calls serves
+    // both, which is how you know the ordering was never the question.
     //
-    //   - CREDITS want the jump last. `rebuildCredits` assigns `track.innerHTML`, so an
-    //     `update()` after the jump throws away the inline props the jump wrote on the ROWS
-    //     (settleGraphic.ts's note has the two symptoms that cost).
-    //   - AN INFOGRAPHIC wants the data last. `igMotion` opens its count-up with
-    //     `tl.set(el, { textContent: '0' + suffix })` and writes the figure from an `onUpdate`.
-    //     A `set` APPLIES under suppressed callbacks and an `onUpdate` does not, so any jump
-    //     leaves the readout reading 0 and only a following `update()` restores the figure.
-    //     Measured: `e2e/wave2.spec.ts` reads `0%` where the stat says `87%`.
-    //
-    // Ending on the data here keeps the editor canvas honest about the figure, and the finite
-    // end below still takes a `credits-loop` reel from 0% of its viewport to 51%.
-    //
-    // THIS DIVERGENCE IS MEANT TO BE TEMPORARY. The fix that removes it is one line per readout
-    // in the emitted runtime, not a reordering of either recipe: end the count-up timeline with
-    // `tl.set(el, { textContent: stat.text })`. A `set` renders under suppression - the same
-    // property that causes the bug - so under normal playback it writes what `onComplete`
-    // already wrote and changes nothing, and under a jump it wins. Once that lands, delete this
-    // note and take settleGraphic.ts's jump/update/jump verbatim, so the canvas and the
-    // thumbnails are one recipe again. The audit it belongs to is "does this readout depend on
-    // a callback firing" - a growing bar and a drawing ring have the same shape as a counter.
+    // The fix went one layer down, into the emitted runtime, where each count now ENDS ON A SET
+    // of its real text (templates/infographics/igMotion.ts, "THE SETTLE RULE"). A set renders
+    // under suppression, so the figure survives a jump on its own and needs no ordering favour
+    // from either recipe. Measured on the canvas, coverage of the settled credits frame:
+    // cr06 51% -> 100%, cr08 69% -> 100%, cr01 unchanged at 69%, and all 21 counting readouts
+    // in the catalog read their own data-target instead of 0.
+    const jump = () => {
+      const tl = w.buildInTimeline!();
+      tl.pause();
+      settleToFiniteEnd(tl); // park at the end of the FINITE motion; callbacks stay suppressed
+    };
     w.update?.(cmd.data ?? '{}');
-    const tl = w.buildInTimeline();
-    tl.pause();
-    settleToFiniteEnd(tl); // park at the end of the FINITE motion; callbacks stay suppressed
-    w.update?.(cmd.data ?? '{}'); // re-render truthful static state (suppressed callbacks skip it)
+    jump();
+    w.update?.(cmd.data ?? '{}'); // a design that re-renders its rows just threw the frame away…
+    jump();                       // …so re-derive it over whatever update() built
     return;
   }
 

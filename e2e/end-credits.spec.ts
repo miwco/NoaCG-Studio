@@ -213,24 +213,42 @@ test('the Style step picks which line of a credit is the loud one', async ({ pag
 // The two designs whose travel is ITSELF endless (the credits-loop reel, cr06 and cr08) landed
 // at an arbitrary phase of that loop and settled to a COMPLETELY EMPTY frame on every one of
 // those surfaces. Nothing measured it, so nothing said so.
-test('every credits design settles with its names ON SCREEN', async ({ page }) => {
-  test.setTimeout(120_000);
-  await enableAdvancedMode(page);
-  await page.goto('/app');
-  await page.keyboard.press('Escape');
+//
+// IT RUNS ON BOTH RECIPES, because there are two and they are meant to be the same one. The
+// thumbnail surfaces settle through preview/settleGraphic.ts; the editor canvas has its own copy
+// in preview/simulatorRuntime.ts. They diverged for a day (2026-08-26) while a counting
+// infographic needed the opposite call order, and the canvas paid for it: cr06 settled at 51% of
+// its viewport and cr08 at 69% where the thumbnails showed 100% of both. Measuring only one
+// recipe is how that divergence lasted as long as it did.
+for (const recipe of ['thumbnail', 'canvas'] as const) {
+  test(`every credits design settles with its names ON SCREEN (${recipe})`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await enableAdvancedMode(page);
+    await page.goto('/app');
+    await page.keyboard.press('Escape');
 
-  const covered = (await page.evaluate(`(async () => {
+    const covered = (await page.evaluate(`(async () => {
     const { CATALOG } = await import('/src/templates/catalog.ts');
     const { composeDocument } = await import('/src/preview/composeDocument.ts');
+    const { postPreviewCmd } = await import('/src/preview/previewProtocol.ts');
+    const recipe = ${JSON.stringify(recipe)};
     const out = [];
     for (const variant of CATALOG['end-credits']) {
       const f = document.createElement('iframe');
       f.style.cssText = 'position:fixed;left:-4000px;top:0;width:1920px;height:1080px;';
       document.body.appendChild(f);
-      // The REAL bootstrap - composeDocument serializes settleGraphic into the document, so
-      // this measures the shipped recipe rather than a copy of it.
-      await new Promise((res) => { f.onload = res; f.srcdoc = composeDocument(variant.create({}), { settleWithData: '{}' }); });
+      // The REAL bootstrap in both cases - composeDocument serializes settleGraphic (and, for
+      // the canvas, runSimCommand) into the document, so this measures the shipped recipe
+      // rather than a copy of it.
+      const doc = composeDocument(variant.create({}), recipe === 'canvas'
+        ? { simulate: true }
+        : { settleWithData: '{}' });
+      await new Promise((res) => { f.onload = res; f.srcdoc = doc; });
       await new Promise((r) => setTimeout(r, 220));
+      if (recipe === 'canvas') {
+        postPreviewCmd(f.contentWindow, { cmd: 'sim-settle', data: '{}' });
+        await new Promise((r) => setTimeout(r, 220));
+      }
       const w = f.contentWindow;
       const box = w.document.querySelector('.credits-box');
       const track = w.document.querySelector('#credits-track');
@@ -246,10 +264,11 @@ test('every credits design settles with its names ON SCREEN', async ({ page }) =
     return out;
   })()`)) as { id: string; pct: number | null }[];
 
-  expect(covered.length).toBeGreaterThan(10);
-  for (const design of covered) {
-    // A number, not a truthy check: 0 is exactly the failure this exists for.
-    expect(design.pct, design.id).not.toBeNull();
-    expect(design.pct, design.id).toBeGreaterThan(20);
-  }
-});
+    expect(covered.length).toBeGreaterThan(10);
+    for (const design of covered) {
+      // A number, not a truthy check: 0 is exactly the failure this exists for.
+      expect(design.pct, design.id).not.toBeNull();
+      expect(design.pct, design.id).toBeGreaterThan(20);
+    }
+  });
+}
