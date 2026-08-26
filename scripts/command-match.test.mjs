@@ -9,7 +9,7 @@
 //                just notice the laptop has stopped responding.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { invokesE2e, invokesSweep, commandSegments, SWEEP_SCRIPTS } from './command-match.mjs';
+import { enqueuesWork, invokesE2e, invokesSweep, commandSegments, SWEEP_SCRIPTS } from './command-match.mjs';
 
 /** Either matcher firing means "this command starts heavy browser work". */
 const startsHeavyWork = (cmd) => invokesE2e(cmd) || invokesSweep(cmd);
@@ -236,4 +236,23 @@ test('asking what WOULD run is not a run', () => {
   assert.ok(invokesE2e('node scripts/e2e-affected.mjs --integration --focus'));
   assert.ok(invokesE2e('npm run test:e2e:integration'));
   assert.ok(invokesE2e('npx playwright test competition-pack.spec.ts'));
+});
+
+test('enqueueing a browser job is not starting one', () => {
+  // `npm run queue` writes a job and returns an id; the runner drains one at a time. The
+  // payload is an ARGUMENT, and commandSegments splits on `&&` without regard for quoting, so
+  // every matcher above sees a Playwright run inside it - which is why this predicate exists.
+  const payload = 'set UPDATE_CATALOG_BASELINE=1&& npx playwright test catalog-baseline';
+  assert.ok(invokesE2e(`npm run queue -- "${payload}"`), 'the payload still reads as a run');
+  assert.ok(enqueuesWork(`npm run queue -- "${payload}"`));
+  assert.ok(enqueuesWork('node scripts/jobs.mjs add "npx playwright test x"'));
+  assert.ok(enqueuesWork('npm run queue:merge'));
+  assert.ok(enqueuesWork('node scripts/jobs.mjs add-merge claude/some-branch'));
+
+  // Only at the FIRST segment, where an invocation has to live - a run that merely mentions
+  // the queue afterwards is still a run.
+  assert.ok(!enqueuesWork('npx playwright test x && npm run queue -- "y"'));
+  assert.ok(!enqueuesWork('npm run jobs'));
+  assert.ok(!enqueuesWork('npm run test:e2e:queued'));
+  assert.ok(!enqueuesWork('grep -n "npm run queue" AGENTS.md'));
 });

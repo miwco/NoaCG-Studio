@@ -21,7 +21,7 @@ import { readHookInput, deny } from './lib.mjs';
 import { devPort, livePort } from '../dev-port.mjs';
 import { isPortBusy } from '../port-probe.mjs';
 import { activeRuns, describeRuns } from '../e2e-runs.mjs';
-import { invokesE2e, invokesSweep } from '../command-match.mjs';
+import { enqueuesWork, invokesE2e, invokesSweep } from '../command-match.mjs';
 
 const input = await readHookInput();
 const command = input?.tool_input?.command;
@@ -125,7 +125,13 @@ if (isCommit) {
 if (invokesE2e(command) || invokesSweep(command)) {
   //   A command that already routes through the waiter serialises itself, so it is exempt:
   //   blocking it would be refusing the very fix this rule recommends.
-  const selfQueuing = /e2e-runs\.mjs\s+--wait/.test(command) || /\btest:e2e[\w:]*:queued\b/.test(command);
+  //   ENQUEUING is the strongest form of that fix and starts nothing at all - see
+  //   `enqueuesWork` in command-match.mjs, which is where that answer lives so the matcher and
+  //   its tests cannot drift apart from the rule.
+  const selfQueuing =
+    enqueuesWork(command) ||
+    /e2e-runs\.mjs\s+--wait/.test(command) ||
+    /\btest:e2e[\w:]*:queued\b/.test(command);
   const others = selfQueuing ? [] : activeRuns({ exclude: process.cwd() });
   if (others.length > 0 && !/NOACG_ALLOW_PARALLEL_E2E\s*=\s*1/.test(command)) {
     deny(

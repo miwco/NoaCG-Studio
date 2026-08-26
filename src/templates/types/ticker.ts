@@ -247,16 +247,16 @@ export const tickerType: GraphicType = {
       fontId: 'inter',
       samples: {
         items: [
-          'Northern line — delays of up to 20 minutes',
-          'Harbour ferry — running to timetable',
-          'Airport shuttle — suspended until 14:00',
-          'City buses — running to timetable',
+          'Northern line: delays of up to 20 minutes',
+          'Harbour ferry: running to timetable',
+          'Airport shuttle: suspended until 14:00',
+          'City buses: running to timetable',
         ].join('\n'),
         label: 'Service status',
       },
       semantics:
-        'A second minimal rotator beside tk10: same machine, but its items are "service — ' +
-        'status" pairs the runtime splits into a name column, which is a different graphic to ' +
+        'A second minimal rotator beside tk10: same machine, but its items carry a KICKER ' +
+        '(docs/TICKERS.md) the design draws as a name column, which is a different graphic to ' +
         'an operator even though it is the same type underneath.',
       create: (_type, options) => tk18.create(options),
     },

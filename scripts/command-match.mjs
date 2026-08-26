@@ -175,3 +175,26 @@ export function invokesSweep(text) {
   const viaNpm = /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)(?:bench|video):[\w:]+(?:\s|$)/;
   return commandSegments(text).some((segment) => direct.test(segment) || viaNpm.test(segment));
 }
+
+/**
+ * ENQUEUEING IS NOT RUNNING. `npm run queue` / `node scripts/jobs.mjs add` write a job and
+ * return an id; the runner drains them strictly one at a time against a budget, which is the
+ * mutual exclusion the guard exists to get.
+ *
+ * It needs saying because the browser-driving payload is an ARGUMENT, and the matchers above
+ * split on shell separators without regard for quoting - so `npm run queue -- "… && npx
+ * playwright test x"` reads as a Playwright run, and the guard refused it at the one moment
+ * queueing is most obviously the right move: something else is already running.
+ *
+ * Answered off the FIRST segment, where an invocation has to live. **This is a mis-typing
+ * guard, not an adversarial one**: `npm run queue -- "…" && playwright test x` is exempted too,
+ * because nothing here can tell that trailing half from the quoted payload. Closing that would
+ * need a quote-aware splitter, and the rule it protects is about accidental overlap.
+ */
+export function enqueuesWork(text) {
+  const [first = ''] = commandSegments(text);
+  return (
+    /^(?:(?:npm|pnpm)\s+run\s+|yarn\s+)queue(?::merge)?(?:\s|$)/.test(first) ||
+    /^node\s+\S*scripts[/\\]jobs\.mjs\s+add(?:-merge)?(?:\s|$)/.test(first)
+  );
+}
