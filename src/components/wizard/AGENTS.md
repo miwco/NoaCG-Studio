@@ -116,9 +116,15 @@ a REACT DISPATCH so chip toggles compose as functional updates (two clicks in on
 never overwrite each other). Zero results name no template dishonestly: the empty state
 offers "remove the most limiting filter" (computed: the chip whose removal restores the most
 results) and a Create-with-AI hand-off. Cards carry the strict info budget (category ·
-subtype, top families, field summary from semantics, ≤3 capability badges, style family,
-complexity), with everything the budget excludes one ⓘ click away in the card's detail panel
-(a SIBLING button of the card button, never nested; one panel open at a time). The footer's brand
+subtype, top families, field summary from semantics, ≤3 capability badges, complexity, style
+family), with everything the budget excludes one ⓘ click away in the card's detail panel
+(a SIBLING button of the card button, never nested; one panel open at a time).
+**THE CAPTION IS THE NAME ALONE, and the line under it says what the graphic IS** (proposal
+§12.3, amended 2026-08-26). The style family is a FILTER, not an identity: it rides the last
+line beside complexity as a dim `.wz-style-tag`, never opposite the name and never in a
+per-family colour. **Every chip row wears a `.wz-filter-lead` caption** naming the question it
+answers ("Inside <shelf>:", "Style:") — the member-category row is level two of the type
+dropdown, the style row is a different facet, and undertitled they read as two more axes. The footer's brand
 toggle feeds `brandFamily` as browse CONTEXT, not a filter: the package's siblings rank
 first, no chip appears, Clear-all leaves it alone, and a genuine programme match always
 outranks it. MiniPreview mounts its iframe only when the card scrolls into view

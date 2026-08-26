@@ -344,7 +344,12 @@ export const SEMANTIC_LABELS: Record<FieldSemantic, string> = {
   percentage: 'Percentage', location: 'Location', date: 'Date', time: 'Time',
   duration: 'Duration', url: 'URL', 'social-handle': 'Social handle',
   'qr-content': 'QR content', image: 'Image', logo: 'Logo', items: 'Items',
-  source: 'Source / platform', amount: 'Amount / total',
+  // ONE WORD EACH. These two carried a slash ("Source / platform", "Amount / total") to cover
+  // both readings at once, and every surface that prints them puts them in a SENTENCE — the
+  // Browse card's field summary reads "name + description + source / platform", and the plural
+  // form of "Amount / total" came out as "2 amount / totals". A label that cannot be said out
+  // loud is not a label.
+  source: 'Source', amount: 'Amount',
 };
 
 // ── Facet E: capabilities ───────────────────────────────────────────────────
@@ -410,17 +415,30 @@ export const COVERAGE_PLACEMENTS: Record<CoverageClass, PlacementId[]> = {
 
 // ── Facet G: visual style ───────────────────────────────────────────────────
 
-/** User-facing labels for the style families — the filter IS the families
- *  (proposal §9); the brief's adjectives are search aliases below. Editorial and
- *  cinematic became real families (their own FAMILY_TOKENS row, palettes, and lower-third
- *  designs), so they leave minimal's and glass's labels and take chips of their own. */
+/**
+ * User-facing labels for the style families — the filter IS the families (proposal §9); the
+ * brief's adjectives are search aliases below.
+ *
+ * ONE PLAIN WORD EACH, and the pairing is deliberately gone. The labels used to be adjective
+ * pairs ("Bold & on-air", "Sport & energetic", "Minimal & clean") and the owner read the row
+ * cold on 2026-08-26: "I get the AI slop feeling with those names… it makes me feel that it's
+ * AI-generated and not genuine. We don't want any hype AI words here anywhere." A pair reads
+ * as copywriting because the second half is always an adjective doing no work — the family is
+ * already named by the first. That reverses proposal §19's "the house family stays labelled
+ * Bold & on-air", which was recorded as a taste call with no evidence either way; this is the
+ * evidence.
+ *
+ * These are the same six words the older Template step has printed all along
+ * (components/wizard/steps/TemplateStep.tsx), which now reads them from here rather than
+ * keeping a second copy — two vocabularies for one facet is how a rename half-lands.
+ */
 export const STYLE_FAMILY_LABELS: Record<StyleTag, string> = {
-  minimal: 'Minimal & clean',
-  editorial: 'Editorial & print',
-  cinematic: 'Cinematic & documentary',
-  sport: 'Sport & energetic',
-  glass: 'Elegant & glass',
-  noacg: 'Bold & on-air',
+  minimal: 'Minimal',
+  editorial: 'Editorial',
+  cinematic: 'Cinematic',
+  sport: 'Sport',
+  glass: 'Glass',
+  noacg: 'NoaCG',
 };
 
 // ── Facet H: motion ─────────────────────────────────────────────────────────
@@ -621,6 +639,21 @@ export const ALIASES: Record<string, AliasTargets> = {
   'outro': { categories: ['credits', 'holding'] },
   'roll': { categories: ['credits'] },
   'credit roll': { categories: ['credits'] },
+  // The rest of the end-of-programme vocabulary. Plain "credit"/"credits" already reaches the
+  // whole shelf through the category NAME in the text index, so it is deliberately not an
+  // alias — consuming the word would cost the design called Credit Reel its name-weight lead
+  // and flatten thirteen designs into catalog order. These are the phrases that reached
+  // nothing or the wrong thing when measured on 2026-08-26: "crew", "special thanks",
+  // "end titles" and "supporters" returned NO template at all, and "closing credits" and
+  // "rolling credits" each returned exactly one, from a loose two-word text match.
+  'closing credits': { categories: ['credits'] },
+  'rolling credits': { categories: ['credits'] },
+  'end titles': { categories: ['credits'] },
+  'crew': { categories: ['credits'] },
+  'cast list': { categories: ['credits'] },
+  'special thanks': { categories: ['credits'] },
+  'supporters': { categories: ['credits'] },
+  'patrons': { categories: ['credits'] },
   'lyrics': { categories: ['caption'] },
   'surtitles': { categories: ['caption'] },
   'subtitles': { categories: ['caption'] },
