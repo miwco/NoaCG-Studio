@@ -96,6 +96,13 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // their steps come first and complete, and the prompt section never manufactures work.
       'Needs you, FIRST, and step-by-step.',
       'A finished session gets no prompt.',
+      // Handoffs are working files, not records - git already keeps the history. Without the
+      // consumed/spent/deferred pass the folder grows monotonically and every plan re-reads it.
+      'Handoff files are CONSUMED, not archived - git is the archive.',
+      // Literal obedience is the failure mode this pair guards: the why travels so a session can
+      // beat the route, and spare capacity drains a declared backlog instead of invented work.
+      'WHY is a TARGET, not a route.',
+      'never invent work to fill a wave',
       // Big prompts are the point: one branch, one gate, one landing instead of three.
       'A starting prompt is a MULTI-STEP ASSIGNMENT, and should be big.',
       // The whole workflow rests on this: it assigns work and does none of it, and it never
