@@ -131,6 +131,24 @@ back turns it red.
 - `npm run test:e2e:affected` queued as **j-0055** (67 spec files); it was RAM-blocked behind
   another session's job at hand-off time. **Read `npm run jobs` before landing.**
 
+## The landing, and a gap in the runner
+
+The branch is finished and pinned at `3247c1d7` - clean tree, `npm run build` green,
+`npm run check:copy` green, catalog baselines re-recorded. **It is not landed**, and cannot be
+until `claude/b-docs-polish-ca8fde` lands: `merge-order` ranks that branch #1 and this one #2, so
+`auto-merge` refuses to touch main while it is ahead. Re-queue with `npm run queue:merge` once it
+is on main.
+
+**A landing job that can only fail on ORDERING spends its whole retry budget and then vanishes.**
+j-0067 requeued itself seven times, every time printing `waiting its turn -
+claude/b-docs-polish-ca8fde is still ahead of main`, exhausted its retries and left the queue. The
+requeue loop is built for "main moved under me", where retrying is exactly right; against "a
+cheaper branch is ahead and its session has not queued it yet", retrying fixes nothing and the
+job dies quietly. The state it leaves behind is the problem: `npm run jobs` shows an empty queue
+and the branch reads `not queued`, which is indistinguishable from work nobody finished. Worth a
+distinct outcome ("blocked by <branch>", held rather than retried) - not touched from this
+session, since the runner belongs to no branch in flight.
+
 ## Open, and deliberately left
 
 - **`docs/GOALS.md` is 431 lines** against the root contract's "~200". It was already ~400 before
