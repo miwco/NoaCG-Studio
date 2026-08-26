@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-26
+---
 # Browse: the style labels, and what each chip row is asking
 
 **Date:** 2026-08-26 · **Branch:** `claude/browse-template-discovery-142aa1`
