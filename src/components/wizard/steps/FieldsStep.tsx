@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { uniqueAssetPath } from '../../../assets/assetUtils';
 import { importImageFile } from '../../../assets/imageImport';
-import { fieldPlanOf, type TemplateVariant } from '../../../model/wizard';
+import { fieldPlanOf, type FieldPlan, type TemplateVariant } from '../../../model/wizard';
 import { setupFields } from '../../../templates/types/graphicType';
 import { typeById } from '../../../templates/types/registry';
 import { FieldControl } from '../../fields/FieldControl';
@@ -16,7 +16,8 @@ interface Props {
 /** Step 3 — the data fields: the visible text lines plus the design's logo slot, offered
  *  EXACTLY as the design's field plan declares (fieldPlanOf, docs/GOALS.md "Student
  *  release" step 5): the standard contract adds/removes lines, a fixed contract edits but
- *  never restructures, a list design gets a rows editor over its one source field.
+ *  never restructures, and a list design gets ONE control over its one source field - a rows
+ *  editor when a line is an item, a paste box when the lines have structure across them.
  *  (An imported design never reaches this step: it creates bare from the Design step and
  *  its fields are added in the editor's Data tab as real placed layers.) */
 export default function FieldsStep({ variant, draft, onDraft }: Props) {
@@ -67,19 +68,38 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
             {plan.kind === 'lines'
               ? `(the design adapts — ${variant.maxLines} max for ${variant.name})`
               : plan.kind === 'list'
-                ? '(rows are content — the design builds itself from them)'
+                ? plan.editor === 'paste'
+                  ? '(paste the whole list — the design builds itself from it)'
+                  : '(rows are content — the design builds itself from them)'
                 : `(this design's field set is fixed)`}
           </span>
         </h3>
         {lines.map((line, i) => (
-          <div className="wz-line-row" key={i}>
+          // A row whose value box is a TEXTAREA is top-aligned: the row centres by default, which
+          // floats a one-line label in the middle of a twelve-line box's empty space.
+          <div
+            className={`wz-line-row${isTallValue(variant, plan, listLineIndex, i) ? ' wz-line-row--tall' : ''}`}
+            key={i}
+          >
             <span className="wz-fid">f{i}</span>
             <input
               placeholder="Label shown to the operator"
               value={line.title}
               onChange={(e) => setLine(i, 'title', e.target.value)}
             />
-            {i === listLineIndex && plan.kind === 'list' ? (
+            {i === listLineIndex && plan.kind === 'list' && plan.editor === 'paste' ? (
+              // The whole list as ONE box, because that is how it arrives: pasted out of a
+              // document or a spreadsheet, with structure running across the lines. A rows
+              // grid cannot take that paste and shows one box per person besides.
+              <textarea
+                className="grow"
+                rows={12}
+                data-testid="list-paste-editor"
+                placeholder={plan.itemHint}
+                value={line.sample}
+                onChange={(e) => setLine(i, 'sample', e.target.value)}
+              />
+            ) : i === listLineIndex && plan.kind === 'list' ? (
               <ListRowsEditor
                 value={line.sample}
                 itemHint={plan.itemHint}
@@ -131,7 +151,16 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
             </>
           )}
           {plan.kind === 'fixed' && plan.reason}
-          {plan.kind === 'list' && (
+          {plan.kind === 'list' && plan.editor === 'paste' && (
+            <>
+              This is ONE field, not a field per person: paste the whole list in and the design
+              rebuilds itself from it — here, and again on air. A line ending in a colon is a
+              role and every line under it is one of that role&rsquo;s names, so one
+              &ldquo;Camera Operators:&rdquo; credits as many people as the show had. A tab or
+              a <code>|</code> works too, which is what a paste from a spreadsheet gives you.
+            </>
+          )}
+          {plan.kind === 'list' && plan.editor !== 'paste' && (
             <>
               Rows here are CONTENT, not fields: on air you edit them as one value and the
               design rebuilds itself — add as many as the show needs.
@@ -223,6 +252,18 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
 
     </div>
   );
+}
+
+/** Does this line's value render as a multi-line box? Mirrors the branch below it, so the row's
+ *  alignment and the control it holds cannot disagree. */
+function isTallValue(
+  variant: TemplateVariant,
+  plan: FieldPlan,
+  listLineIndex: number,
+  i: number,
+): boolean {
+  if (i === listLineIndex && plan.kind === 'list') return plan.editor === 'paste';
+  return !!variant.suggestedLines[i]?.sample.includes('\n');
 }
 
 /**

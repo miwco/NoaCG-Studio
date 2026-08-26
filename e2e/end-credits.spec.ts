@@ -90,6 +90,51 @@ test('the same text lays out as columns in the column design', async ({ page }) 
   expect(role!.x + role!.width).toBeLessThanOrEqual(name!.x);
 });
 
+// The promise is only kept if the SURFACE keeps it. The template had one field from the start;
+// what the wizard DREW was a row-per-line grid with an ✕ on every line and "+ Add a row" under
+// it - one box per person, and no way to paste a roll in at all, since sixty lines have nowhere
+// to go in a single-line input. That is the shape this category exists to avoid, and it shipped
+// because nothing asserted on this step.
+test('the Fields step is one paste box, not a field per person', async ({ page }) => {
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await chooseType(page, 'Credits & thanks');
+  await pickDesign(page, 'Classic Roll');
+  await page.getByRole('button', { name: 'Next →' }).click(); // Fields
+
+  const paste = page.getByTestId('list-paste-editor');
+  await expect(paste).toBeVisible();
+  // Not the ticker's rows grid: no per-line inputs, and nothing offering to add a line.
+  await expect(page.getByTestId('list-rows-editor')).toHaveCount(0);
+  await expect(page.getByTestId('list-row-add')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '+ Add a line' })).toHaveCount(0);
+
+  // A real roll pastes in WHOLE - the case a row grid cannot express at any length.
+  const roll = [
+    '# CREW',
+    'Camera Operators:',
+    ...Array.from({ length: 40 }, (_, i) => `Operator Number ${i + 1}`),
+  ].join('\n');
+  await paste.fill(roll);
+  await expect(paste).toHaveValue(roll);
+
+  await finishIntoEditor(page);
+  await expect(page.locator('.wz-modal')).toBeHidden();
+
+  // …and it is still ONE field on the other side, holding all 40 names under one role.
+  const fields = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    return useTemplateStore.getState().template.fields.map((f) => `${f.field}:${f.ftype}`);
+  });
+  expect(fields).toEqual(['f0:textarea', 'f1:textfield', 'f2:filelist']);
+
+  const frame = page.frameLocator('iframe.preview-frame');
+  const group = frame.locator('.credits-group', { hasText: 'Camera Operators' });
+  await expect(group.locator('.credits-name')).toHaveCount(40);
+});
+
 test('the Style step picks which line of a credit is the loud one', async ({ page }) => {
   await enableAdvancedMode(page);
   await page.goto('/app');

@@ -583,7 +583,25 @@ export type MarkPlacement = 'beside' | 'band';
 export type FieldPlan =
   | { kind: 'lines'; min: number }
   | { kind: 'fixed'; reason: string }
-  | { kind: 'list'; itemLabel: string; itemHint: string; maxItems?: number };
+  | {
+      kind: 'list';
+      itemLabel: string;
+      itemHint: string;
+      maxItems?: number;
+      /**
+       * How the ONE source field is PRESENTED. Both edit the same value.
+       *
+       * `rows` (the default) gives one input per line, with add and remove. Right when a line
+       * IS an item - a ticker's headlines are independent, short, and reordered by hand.
+       *
+       * `paste` gives a single textarea. Right when the lines have STRUCTURE ACROSS them and
+       * the list arrives from somewhere else: a credit roll is a role and the people under it,
+       * copied out of a document or a spreadsheet. A rows grid cannot even accept that paste -
+       * sixty lines have nowhere to go - and it shows one box per name, which is exactly the
+       * "a field per person" shape the category exists to avoid.
+       */
+      editor?: 'rows' | 'paste';
+    };
 
 /**
  * The per-CATEGORY field plans that differ from the standard line contract. A category's
@@ -597,7 +615,12 @@ const CATEGORY_FIELD_PLANS: Partial<Record<AssemblerId, FieldPlan>> = {
   ticker: { kind: 'list', itemLabel: 'Ticker items', itemHint: 'One item per row' },
   // The whole roll in ONE field: a colon ends a role, the lines beneath it are its people
   // (docs/END_CREDITS.md). Never a field per person.
-  'end-credits': { kind: 'list', itemLabel: 'Credits', itemHint: 'A colon ends a role — "Camera:" then one name per line' },
+  'end-credits': {
+    kind: 'list',
+    editor: 'paste',
+    itemLabel: 'Credits',
+    itemHint: '# PRODUCTION\nDirector: Alex Rivera\nCamera Operators:\nJonas Berg\nLena Fors',
+  },
   // Question + answer rows + the correct-answer marker: a machine drives them as one unit.
   quiz: { kind: 'fixed', reason: 'A quiz board is question + its answer rows — a fixed set its state machine drives.' },
   // Team names, scores, period, clock: the cells are the design.

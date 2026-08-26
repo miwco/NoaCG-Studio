@@ -2372,6 +2372,12 @@ kbd {
 /* Step 3: field rows */
 .wz-line-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .wz-line-row input { flex: 1; }
+/* A row whose value box is a TEXTAREA: it shares the row with a one-line label, and centring
+   that label against a twelve-line box leaves it floating in the middle of empty space. The
+   textarea also has to claim the row's free width the way an input does - without `flex` it
+   sizes from its `cols` attribute and stops short of the column the inputs above it end at. */
+.wz-line-row--tall { align-items: flex-start; }
+.wz-line-row textarea { flex: 1; min-width: 0; resize: vertical; }
 /* A FIELD ID badge — "f0". The fixed width is what keeps a column of them aligned. */
 .wz-fid { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); width: 24px; flex: none; }
 /* A SETUP row — the design's non-line decisions (which answer is correct, the club colours).
