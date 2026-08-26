@@ -1003,3 +1003,32 @@ internal note, audited like every other admin write. Reading is `support`, triag
   worse (`docs/AI_LITE_PROMOTION.md`). There is no score, no league table, and the per-model
   split answers "where do I look first", which is a different question from "which is best".
   The no-ranking rule §9 holds for the Models page holds here for the same reason.
+
+### The inbox does not wait to be visited
+
+**A nightly digest mails what came in to `contact.noacg@gmail.com`.** The owner's ruling,
+2026-08-26: *"I will not remember to go to the admin page."* An inbox that only works for somebody
+who opens it is, for feedback, worse than no feedback button - the button teaches users that
+telling us something is pointless, and that lesson is not reversible by fixing the page later.
+
+`.github/workflows/feedback-digest.yml` runs `scripts/feedback-digest.mjs` at 06:40 UTC. It is one
+GET against `user_feedback` over a 26-hour window, ordered most-negative-first like the page, and
+one plain-text mail. It writes nothing: triage stays here, because triage is a write path with an
+audit trail and a digest is a copy.
+
+Three properties are asserted in `scripts/feedback-digest.test.mjs` (part of `npm run build`)
+rather than trusted:
+
+- **Nothing a person wrote reaches the job log.** This repository is public and its Actions logs
+  are public with it. A real run prints counts, built from the summary object, which has no
+  message field. The one mode that renders a digest to a log is `--dry-run`, and it reads made-up
+  fixture rows out of the script file and opens no socket.
+- **A missing secret is neutral, never red.** Until the two secrets exist the job says so and
+  exits green. A nightly red for a configuration step nobody has taken yet is how an owner learns
+  to ignore red.
+- **An empty window sends nothing.** A nightly "nothing happened" mail is the fastest way to get
+  this address filtered into a folder that never gets opened.
+
+The window overlaps by two hours on purpose, the same tolerance `nightly-drift.yml` uses: GitHub
+delays and sometimes drops scheduled runs, a repeated paragraph costs the reader two seconds, and
+a missed one is the whole failure being prevented.
