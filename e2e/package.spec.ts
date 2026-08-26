@@ -121,13 +121,16 @@ test('end credits: text field drives the parsed roll', async ({ page }) => {
   await toVariantStep(page, 'Credits', 'Classic Roll');
   await create(page);
   const track = frame(page).locator('#credits-track');
-  await expect(track.locator('.credits-row').first()).toBeAttached();
+  // A role and the people credited with it is ONE block (docs/END_CREDITS.md) - this design
+  // draws groups, so a role heading five names stays one credit rather than five.
+  await expect(track.locator('.credits-group').first()).toBeAttached();
   await expect(track.locator('.credits-end')).toBeAttached(); // logo + year block
   // Editing the credits in the Data panel + ⟳ Update re-renders the rows.
   await page.getByTestId('dock-tab-data').click();
-  await page.locator('.panel-body textarea').first().fill('CREW\nShowrunner | Nova Reyes');
+  await page.locator('.panel-body textarea').first().fill('# CREW\nShowrunner: Nova Reyes');
   await page.locator('.panel-body').getByRole('button', { name: '⟳ Update' }).click();
-  await expect(track.locator('.credits-row')).toHaveCount(1);
+  await expect(track.locator('.credits-group')).toHaveCount(1);
+  await expect(track.locator('.credits-heading')).toHaveText(['CREW']);
   await page.getByRole('button', { name: '▶ Play' }).click();
   await expect
     .poll(async () => frame(page).locator('.credits').evaluate((el) => getComputedStyle(el).opacity))
