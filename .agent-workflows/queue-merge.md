@@ -75,6 +75,29 @@ loudly as it refuses a red one. A bare markdown-only push is therefore a refusal
 And the pre-check is only ever the run the GATE consumes when main has not moved by your turn - if
 it has, phase 2 makes a merge commit and the gate waits on a fresh run for that sha regardless.
 
+**IF THE GATE IS WAITING AND NO RUN APPEARS, HAND IT ONE.** `waitForCi` polls for a run on the
+verified sha for TEN MINUTES (`auto-merge.mjs`, `attempt < 60` at 10s apart) and then refuses with
+"no green CI run for the integrated commit" - which reads like a fault in your tree and is not. It
+is waiting on GitHub's PUSH WEBHOOK to create that run, and delivery is not bounded: on 2026-08-26
+three webhooks arrived 28-35 minutes late. When `main` has moved, the sha being verified is a merge
+commit the job has just minted, so no run can exist yet and the whole budget is spent hoping.
+
+While it waits, dispatch one:
+
+    gh workflow run ci.yml --ref <branch>
+
+A `workflow_dispatch` is created by the API immediately, with no webhook in the path, and `--ref`
+targets the branch TIP - which after the job's own push IS the verified sha. `waitForCi` finds it
+on its next ten-second tick. Watch `node scripts/jobs.mjs log <job>` for the push line
+(`<old>..<new>  <branch> -> <branch>`) and dispatch as soon as it appears; that is what landed
+this file's own branch after its first attempt died on the ordering block.
+
+The rule under both halves: **never let the gate wait on a webhook.** Main has NOT moved - queue
+while a run for your tip already exists. Main HAS moved - hand the gate a run while it waits. The
+residual race is that the push's own webhook can arrive mid-watch and cancel your dispatch (the
+ci.yml concurrency group is the REF, not the sha), which refuses loudly; re-queue, and by then a
+run for that sha is on disk.
+
 Nothing else to do. Merge jobs never run beside each other, so queued landings drain strictly one
 at a time in order. If `main` moves under yours mid-gate it re-integrates and re-verifies by
 itself, up to three times.
