@@ -92,6 +92,26 @@ on its next ten-second tick. Watch `node scripts/jobs.mjs log <job>` for the pus
 (`<old>..<new>  <branch> -> <branch>`) and dispatch as soon as it appears; that is what landed
 this file's own branch after its first attempt died on the ordering block.
 
+**But do not let the gate read that dispatch before GitHub has given it jobs.** `waitForCi` takes
+`gh run list --limit 1` - the NEWEST run for the sha, which is your dispatch - and hands it to
+`gh run watch --exit-status`, which **returns immediately on a run that is still `pending` with
+zero jobs**. Phase 3 then classifies a run that has not started, and refuses with
+
+    run concluded ""; no "CI gate" job
+
+which reads like a red suite and is neither. Measured 2026-08-26 on job `j-0088`: the dispatch was
+created 27 seconds after the push and the landing was refused inside the same minute, having
+changed nothing. Dispatching *the instant* the push line appears is exactly when this race is
+worst, so after dispatching, confirm the run has materialised:
+
+    gh run view <id> --json jobs -q '.jobs | length'   # must be non-zero
+
+If it refuses anyway, nothing is broken and nothing was touched: let that run finish green and
+**queue again**. The second attempt needs no dispatch at all - a completed green run for the tip
+already exists, so `waitForCi` consumes it on its first tick. The durable fix belongs in
+`waitForCi` (ignore a run with no jobs, and poll until `conclusion` is non-null rather than
+trusting `gh run watch` to block); it is named here and not done here.
+
 The rule under both halves: **never let the gate wait on a webhook.** Main has NOT moved - queue
 while a run for your tip already exists. Main HAS moved - hand the gate a run while it waits. The
 residual race is that the push's own webhook can arrive mid-watch and cancel your dispatch (the

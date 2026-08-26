@@ -1,7 +1,7 @@
 {
   "name": "noacg",
   "version": "0.2.0",
-  "description": "Make broadcast graphics for NoaCG Studio from Codex: the noacg-graphic skill (the NoaCG contract, the tools, the loop - not how to design) for the noacg CLI + MCP server.",
+  "description": "Make broadcast graphics for NoaCG Studio from Codex. The plugin entrance to the NoaCG CLI: the noacg-graphic skill (the NoaCG contract, the tools, the loop - not how to design), and the noacg MCP server.",
   "author": {
     "name": "NoaCG Studio",
     "url": "https://noacg.studio"
@@ -24,7 +24,7 @@
   "interface": {
     "displayName": "NoaCG",
     "shortDescription": "Make broadcast graphics for NoaCG Studio",
-    "longDescription": "Design a broadcast graphic the way you normally design, validate and screenshot it with the noacg CLI, and save it into your NoaCG Studio library - ready to operate live from NoaCG's control panel and play out in CasparCG, SPX, OBS, vMix or any OGraf renderer.",
+    "longDescription": "Design a broadcast graphic the way you normally design, validate and screenshot it with the NoaCG CLI, and save it into your NoaCG Studio library - ready to operate live from NoaCG's control panel and export to CasparCG, SPX, OBS, vMix, H2R, LiveOS or any OGraf renderer.",
     "developerName": "NoaCG Studio",
     "category": "Developer Tools",
     "capabilities": [

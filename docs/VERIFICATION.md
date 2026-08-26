@@ -410,6 +410,22 @@ It reads the production ref from `VITE_SUPABASE_URL`, never from `supabase/.temp
 CLI's per-checkout LINK state, and a worktree linked to a staging project would otherwise make the
 check answer confidently about the wrong database.
 
+**None of this covers `noacg-staging`.** Both the automatic push and the drift check are aimed at
+the single project `VITE_SUPABASE_URL` names, so the one other database this repo owns is still
+kept current by somebody remembering - `hosted-latency.yml`'s header says as much, and says the
+symptom of forgetting is the suite failing loudly. What 2026-08-26 added is the other half of that
+sentence: **staging catching UP can also turn a job red**, because a probe or a spec may be leaning
+on a privilege a migration is about to take away. Neither direction is currently detected by
+anything except a scheduled run going red twelve hours later, and the two look identical from the
+email. Read both ledgers before believing either diagnosis:
+
+```bash
+node -e 'fetch("https://api.supabase.com/v1/projects/<ref>/database/query",{method:"POST",
+  headers:{Authorization:`Bearer ${process.env.SUPABASE_ACCESS_TOKEN}`,"Content-Type":"application/json"},
+  body:JSON.stringify({query:"select version from supabase_migrations.schema_migrations order by version"})
+}).then(r=>r.json()).then(v=>console.log(v.length,v.at(-1)))'
+```
+
 ## Freshness is TIME-driven, never commit-driven
 
 `docs/STACK_FRESHNESS.md` owns this. `npm run check:freshness` is not in the build gate, because
@@ -614,16 +630,31 @@ gh api repos/{owner}/{repo}/actions/runs/<id>/attempts/1 --jq '.conclusion'
 
 ### An issue COMMENT emails; an issue staying open does not
 
-Notification *threads* collapse to one per issue, so the inbox is worse than a thread count
-suggests: GitHub mails a person for every comment. Over the window that was **9 issues opened and
-17 comments** on top of the 35 run failures - about 61 emails, ~16 a day, of which 26 were issue
-traffic. **Seven of those 17 comments were the same sentence** ("Still red.") on issue #38, one
-per `workflow_dispatch` while a branch iterated on a broken workflow.
+Notification *threads* collapse to one per issue, so the inbox can be worse than a thread count
+suggests: GitHub mails a **subscriber** for every comment. Over the window that was **9 issues
+opened and 17 comments** on top of the 35 run failures, and **seven of those 17 comments were the
+same sentence** ("Still red.") on issue #38, one per `workflow_dispatch` while a branch iterated on
+a broken workflow.
 
 That asymmetry is why every rolling alarm here withholds a repeat of an identical finding while
 keeping the run red: a red tick costs nobody an email once it has been reported, and a comment
-costs one every time. See `nightly-drift.yml`'s header, and commit 1e05894e for `configured-suite`
-and `nightly`.
+costs a subscriber one every time. See `nightly-drift.yml`'s header, and commit 1e05894e for
+`configured-suite` and `nightly`.
+
+**Correction, measured 2026-08-26: on THIS account those issue comments cost nothing.** The
+original figure ("about 61 emails, of which 26 were issue traffic") was inferred from the issue
+timeline, not read out of the inbox - the only thing actually counted there was the 35 `CheckSuite`
+threads. Read out of the inbox instead, the last 48 hours contain **five rolling issues opened and
+five comments, and zero `Issue` notification threads**. Widening the query to 2026-08-20 returns
+exactly one, whose `reason` is `comment` - an issue the owner had themselves replied to. The repo
+carries no watch subscription (`gh api repos/{owner}/{repo}/subscription` is a 404), so an issue
+filed and commented by `github-actions[bot]` reaches nobody until a human joins the thread.
+
+Two things follow, and they point in opposite directions. The withheld-repeat work was still right
+- it keeps a rolling issue readable, and it protects anyone who *does* subscribe - but it bought
+this inbox nothing, so it is not where the remaining noise is. And the inbox is simpler than the
+dashboard suggests: **every email in the window was a `ci_activity` `CheckSuite` thread**, which is
+GitHub telling the owner that a run *they* triggered went red. There is no second source to chase.
 
 ### The classes
 
@@ -643,6 +674,47 @@ verdict; check `jobs: []` before treating one as red. And a rolling alarm filed 
 `github.ref == 'refs/heads/main'`, and `configured-suite.yml` does not - which is where issue
 #38's seven identical comments came from.
 
+### The last 48 hours, and which causes are now closed
+
+**Measured 2026-08-24 20:00 to 2026-08-26 20:00 UTC**: 307 runs - 243 green, 35 cancelled, 25
+failed, 4 still queued. The inbox holds **27 `CheckSuite` threads**, and they reconcile exactly:
+25 failures plus the failed **attempt 1** of two runs a re-run turned green
+(`claude/svg-vertical-growth`, `claude/configured-alarm-no-repeat`). None of the 35 cancelled runs
+produced a thread, which is the 2026-08-25 finding holding at a larger sample.
+
+Every emailed failure, by cause:
+
+| Emails | Cause | Class | Status |
+|---:|---|---|---|
+| 8 | `configured-suite` dispatched over and over on `claude/configured-suite-no-service-role` (7) and once on `main`, while that branch removed the service-role key from the workflow | self-requested | **closed** - the branch landed; `configured-suite` has been green since, and `nightly-drift` confirmed the schedule firing again at 2026-08-26 20:03 |
+| 12 | `CI` red on a feature branch - 4 with `Build` (typecheck + lint) red, the rest E2E shards | real failure, on the author's own push | correct by design; nothing to close |
+| 3 | `CI` red on `main`, all E2E shards (2026-08-24 20:48, 08-25 07:20, 08-25 10:02) | real failure | **closed** - filed as #40, #42, #43 and each fixed the same day |
+| 1 | `nightly-drift` red: the configured suite was not running on its schedule (2026-08-25 18:57) | by-design alarm | **closed** - #44, closed 2026-08-26 07:09 |
+| 1 | `hosted-latency` red: the latency probe answered `42501 permission denied for table documents` (2026-08-26 03:37) | **misleading** - read as a hosted regression, was neither | **closed by this commit**; #45 was the open issue |
+
+The `hosted-latency` one is the only entry that was not what it looked like, and it is worth the
+detail because the obvious diagnosis was wrong twice over. The suspicion was staging schema drift:
+0051 and 0052 had landed on production the day before, staging is kept current by hand, and the job
+went red on the first scheduled run afterwards. Checked rather than assumed - both projects'
+ledgers hold all 52 migrations and their `anon`/`authenticated` grant matrices are identical, so
+**staging was not behind; it had just caught up.** The probe queried `public.documents` with only
+the anon API key, which worked solely through the bootstrap grant 0052 deliberately revokes. Its
+one healthy reading (~245 ms, run 32852705499) was taken while staging was still two migrations
+behind. The probe now carries the signed-in JWT the job already mints, and the first run of the
+fixed workflow was green for a reason rather than merely green: 35 passed, clean verdict, and a
+real **~335 ms/request** off a query that returned a row (33009345645).
+
+**That resets the latency baseline, and the step is not a slowdown.** ~245 ms was an anon request
+with no JWT - no token verification, and the RLS predicate evaluated against no user. ~335 ms is a
+signed-in read of a real row. The request changed, not the database. The workflow's step summary
+says so on every run; compare only readings from 2026-08-26 onward, and do not draw the eventual
+threshold across the join.
+
+Read against the classes above, the standing shape of this inbox is: **~13 emails a day, all of
+them `ci_activity`, and about half of them a person's own branch telling them their own push is
+red.** The remaining reducible noise is flakes (2 in 48 hours) and repeated dispatches on a branch
+being iterated - not issue traffic, which costs this account nothing.
+
 ### Reproducing the inventory
 
 ```bash
@@ -651,4 +723,21 @@ gh api --paginate "repos/{owner}/{repo}/actions/runs?created=>=<DATE>&per_page=1
         | "\(.updated_at)\t\(.conclusion)\t\(.name)\tev=\(.event)\tbr=\(.head_branch)\tid=\(.id)"'
 # then, per cancelled run, tell a mid-run cancel from one that never started:
 gh api repos/{owner}/{repo}/actions/runs/<id>/jobs --jq '[.jobs[]] | length'
+```
+
+Three more, each of which changed a conclusion above rather than decorating it:
+
+```bash
+# WHY each thread was sent. If every reason is ci_activity there is no second source to chase.
+gh api --paginate "notifications?all=true&per_page=100&since=<ISO>" \
+  --jq '.[] | select(.repository.full_name=="{owner}/{repo}") | .reason' | sort | uniq -c
+
+# Whether issue traffic can email this account at ALL. A 404 means no watch subscription, so a
+# bot-filed rolling issue notifies nobody until a human replies to it.
+gh api repos/{owner}/{repo}/subscription --jq '{subscribed,ignored,reason}'
+
+# The threads a run list cannot show: attempt 1 of a run that a re-run turned green.
+gh api --paginate "repos/{owner}/{repo}/actions/runs?created=>=<DATE>&per_page=100" \
+  --jq '.workflow_runs[] | select(.run_attempt > 1)
+        | "\(.created_at)\t\(.name)\tbr=\(.head_branch)\tfinal=\(.conclusion)"'
 ```
