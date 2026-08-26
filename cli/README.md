@@ -1,11 +1,25 @@
 # @noacg/cli
 
-The [NoaCG Studio](https://noacg.studio) command-line tool and MCP server: make broadcast
-graphics for NoaCG from a coding agent's terminal - scaffold, validate, inspect, screenshot,
-package, save - against any NoaCG deployment. The full account is the repo's `docs/AGENT_CLI.md`.
+**The NoaCG CLI** - the agent door into [NoaCG Studio](https://noacg.studio). Make broadcast
+graphics for NoaCG from a coding agent, or from your own terminal: scaffold, validate, inspect,
+screenshot, package, save - against any NoaCG deployment. The full account is the repo's
+`docs/AGENT_CLI.md`.
 
 **The package is `@noacg/cli`; the command it installs is `noacg`.** So `npm i -g @noacg/cli`
 gives you `noacg validate …`, and every command below is spelled the way you will type it.
+
+**One tool, three entrances.** The MCP server is not a second thing to choose between: `noacg mcp`
+runs this same package as an MCP server, and the Claude Code / Codex plugin bundles it along with
+the `noacg-graphic` skill. Pick the entrance your agent uses -
+
+| Entrance | For | Install |
+|---|---|---|
+| **the plugin** | Claude Code, Codex | one command, below - it brings the skill, a command and the MCP server |
+| **the MCP server** | any MCP client | `npx -y @noacg/cli mcp` over stdio |
+| **the terminal** | an agent that runs shell commands, and you | `npm i -g @noacg/cli` |
+
+Whichever you pick, the `noacg-graphic` skill is the same text: what a NoaCG graphic must expose,
+and the loop to get there. It is the contract, not design guidance.
 
 It also carries `noacg caspar`, which is not about authoring: it talks **AMCP to a CasparCG
 server**, so a NoaCG production can go on a channel from the studio page (or straight from the
@@ -83,12 +97,19 @@ Playwright-installed Chromium is used), `NOACG_AGENT_KEY` (a key for CI - beats 
 
 One folder is a valid EBU OGraf v1 Graphic, the SPX/CasparCG package and the workspace you edit.
 Zip it and it imports through the studio's Import door; drop it in an OGraf renderer and it plays.
+Those two are what the folder satisfies IN PLACE; the graphic itself is plain HTML, CSS and JS,
+and NoaCG exports it to an OBS/vMix overlay, H2R or LiveOS from the same sources. In through
+NoaCG, out to anything.
 
 ## MCP
 
-Tools: `noacg_types`, `noacg_scaffold`, `noacg_validate` (screenshots as images), `noacg_inspect`,
-`noacg_screenshot`, `noacg_save` (after `noacg login`), `noacg_docs`; the skill's references are
-resources (`noacg://docs/<topic>`). The `noacg-graphic` skill ships under `skill/`.
+The same verbs, spoken over stdio - `npx -y @noacg/cli mcp`. Seven tools: `noacg_types`,
+`noacg_scaffold`, `noacg_validate` (screenshots as images), `noacg_inspect`, `noacg_screenshot`,
+`noacg_docs`, `noacg_save` (after `noacg login`); the skill's references are also resources
+(`noacg://docs/<topic>`). The `noacg-graphic` skill ships under `skill/`.
+
+`caspar` is deliberately not an MCP tool: it drives live playout hardware, which is an operator's
+decision rather than an authoring agent's.
 
 ## Develop
 

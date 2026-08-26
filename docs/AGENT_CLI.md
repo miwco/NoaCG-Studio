@@ -1,4 +1,4 @@
-# The agent door: `noacg` CLI + MCP server, the `/bridge` page, the graphic package
+# The agent door: the NoaCG CLI, the `/bridge` page, the graphic package
 
 > Let users use Claude Code, Codex and future coding/design agents to create genuinely
 > excellent-looking graphics IN THE WAY THOSE AGENTS WORK BEST, while NoaCG provides the bridge
@@ -7,7 +7,7 @@
 
 Two conditions, both required: the graphic must look genuinely good, and it must be genuinely
 NoaCG-playable (fields, actions, animation, validation, compatibility, operator controls and
-playout all work). **The CLI/MCP is a BRIDGE and broadcast interface, not a creative harness.**
+playout all work). **The agent door is a BRIDGE and broadcast interface, not a creative harness.**
 NoaCG tells the agent WHAT the graphic must expose, WHICH runtime/interchange contract to satisfy,
 HOW to validate, inspect, play and save it, and the hard broadcast constraints that matter. It is
 deliberately silent about composition, hierarchy, shape language and the agent's design process -
@@ -15,16 +15,33 @@ the agent does what it is already good at; NoaCG supplies the contract, tools, v
 destination. The outcome to judge every decision against: *"I asked my coding agent to make a
 great graphic. It made one. Now it is in NoaCG, editable and ready to go on air."*
 
+## One name for each thing
+
+Four names had grown for what is really one artifact and one capability, which made the whole
+surface read as four products. There is one of each, and everything else is packaging:
+
+| Name | What it means | What it is NOT |
+|---|---|---|
+| **the agent door** | the CAPABILITY: a coding agent can make a graphic that is genuinely NoaCG-playable, and put it in a library. The subject of this document. | not a thing you install |
+| **the NoaCG CLI** | the ARTIFACT: one npm package `@noacg/cli`, installing one command `noacg`. Every verb the door has lives here. | not a second tool beside the MCP server - `noacg mcp` IS this package |
+| **the three entrances** | the ways an agent arrives at that one artifact: **the plugin** (Claude Code and Codex), **the MCP server** (`noacg mcp`, for any MCP client), **the terminal** (`noacg <command>`, for an agent that runs shell commands, and for a person) | not three implementations - one library, three front doors |
+| **the `noacg-graphic` skill** | the CONTRACT TEXT the door teaches: what a graphic must expose, and the loop. Every entrance carries the same copy, generated from one source. | not an entrance of its own, and not design guidance |
+
+So: "install the NoaCG CLI" (or the plugin, which brings it), "the MCP server exposes seven
+tools", "the skill teaches the contract", "the agent door works" - and never "the CLI and the MCP
+server" as though they were two things to choose between.
+
 ## The shape
 
 ```
  user's machine                                            the NoaCG deployment (NOACG_URL)
  ┌──────────────────────────────────────────┐              ┌───────────────────────────────────┐
  │ Claude Code / Codex / any MCP client     │              │ /bridge   window.noacgBridge       │
- │   the noacg-graphic skill (contract only)│   drives     │   hello types scaffold validate    │
- │   noacg CLI (playwright-core, system     ├─────────────▶│   inspect compose readPackage      │
- │     Chrome/Edge, a FRESH contained ctx)  │  headless    │   exportPackage packEntry          │
- │   noacg mcp  (same library, stdio)       │  Chromium    │   graphicDoc ografHost             │
+ │   3 entrances: plugin, mcp, terminal     │   drives     │   hello types scaffold validate    │
+ │   all of them THE NoaCG CLI  ────────────├─────────────▶│   inspect compose readPackage      │
+ │     (playwright-core, system Chrome/Edge,│  headless    │   exportPackage packEntry          │
+ │      a FRESH contained context)          │  Chromium    │   graphicDoc ografHost             │
+ │   carries: the noacg-graphic skill       │              │                                   │
  │   holds: a scoped agent key              │              ├───────────────────────────────────┤
  │     (noacg login, docs/AGENT_SAVE.md)    │   POST       │ /api/me/graphics  -> the library  │
  └──────────────────────────────────────────┘              └───────────────────────────────────┘
@@ -37,8 +54,17 @@ key and no store (`src/bridge/`, `docs/ARCHITECTURE.md`).
 
 ## The graphic package (the workspace on disk)
 
-One folder that is simultaneously a valid **EBU OGraf v1** Graphic and the **SPX** package, and
-the workspace an agent edits (`src/export/noacgPackage.ts`, `docs/OGRAF.md`):
+First, what this package is FOR. An agent needs one folder it can edit, validate and hand over,
+and NoaCG's job is that whatever comes out of that folder runs wherever the user needs it: SPX,
+CasparCG, an OBS or vMix overlay, H2R, LiveOS, an OGraf renderer, and whatever is added next.
+**In through NoaCG, out to anything.** The workspace happens to satisfy two of those targets in
+place, without a build step, which is a convenience rather than an identity - the graphic is not
+"an SPX template" or "an OGraf graphic" underneath, it is HTML, CSS and JS that every target
+adapts (root `AGENTS.md`, "Export anywhere"). The other targets are one `noacg pack` or one
+export away from the same sources.
+
+So: one folder that is simultaneously a valid **EBU OGraf v1** Graphic and the **SPX** package,
+and the workspace an agent edits (`src/export/noacgPackage.ts`, `docs/OGRAF.md`):
 
 ```
 <slug>/
@@ -59,9 +85,39 @@ detectable), and the generator. Nothing else is NoaCG-specific; there is no seco
 `zip` the folder and it imports through the studio's Import door (it is an SPX package); drop it
 in an OGraf renderer and it plays (it is an OGraf package); `noacg save` puts it in your library.
 
-## The CLI
+**"Simultaneously valid" is measured, not asserted.** It is the kind of claim that reads true and
+can be false in a way nothing local notices, so it is checked against the standard rather than
+against our reading of it. Externally, in a renderer nobody here wrote: `docs/OGRAF.md`, twice.
+Mechanically, most recently on **2026-08-26** against this branch, on a package the CLI itself
+produced (`scaffold --type scoreboard --design neutral`, then `validate`):
 
-Install: `npx @noacg/cli <command>` (or `npm i -g @noacg/cli`). Every command takes `--json` for
+- **The manifest, against the EBU's PUBLISHED schema files** - all seven fetched from
+  `ograf.ebu.io` that day and loaded into ajv (draft 2020-12), not our transcription of them.
+  Valid. The harness was mutation-tested in the same run so that "valid" is a result: a vendor
+  field without the `v_` prefix, a missing `main`, a `default` typed against its property, a
+  `null` where a number belongs, an unknown constraint key, a fractional duration and
+  `stepCount: -2` were each rejected. One mutation was NOT rejected, and it is a limit of the
+  standard's schema rather than of the harness: **a duplicate `customActions` id passes the
+  published schema**, because JSON Schema cannot express uniqueness across a keyed array. Our own
+  `ografSchema.ts` refuses it, and should keep refusing it - a renderer that registers actions by
+  id would silently lose one.
+- **The OGraf half ALONE, driven as a stranger's package.** The sources and the root `v_noacg`
+  block were deleted from a copy, leaving only what a renderer reads: manifest, `graphic.mjs`,
+  `js/gsap.min.js`, `fonts/`. `noacg validate` then read that copy as a THIRD-PARTY OGraf Graphic
+  (the path that knows nothing about NoaCG) and drove it in the OGraf host: `load`, `updateAction`,
+  all four `customAction`s, `playAction`, `stopAction`, `dispose` - nine actions, every one `200`,
+  and the on-air frame painted in the bundled Inter fetched from inside the package rather than
+  from the host page. The SPX half of the same folder had already passed the static gate and the
+  runtime bench in the ordinary `validate` above it.
+
+What that does NOT prove is any particular renderer's behaviour - only that the package satisfies
+the contract those renderers read. The external walks in `docs/OGRAF.md` are what covers the rest,
+and the honest limits are listed there.
+
+## The NoaCG CLI
+
+One package, one command, and the whole door: install `@noacg/cli` and you have `noacg`. Install:
+`npx @noacg/cli <command>` (or `npm i -g @noacg/cli`). Every command takes `--json` for
 machine-readable output. Exit codes: `0` clean, `1` the graphic has findings (validate) or the
 request was refused, `2` a usage/IO error.
 
@@ -80,7 +136,7 @@ request was refused, `2` a usage/IO error.
 | `noacg save <dir\|zip> [--name N] [--folder F] [--no-bench]` | Validate (gate + bench) in the bridge, refuse on errors, then POST the library record to `/api/me/graphics` with the key; prints the `#/graphic/<id>` link, which opens at once (a miss while signed in runs one sync pass). SAVE is the library - never publish, never a production. |
 | `noacg caspar agent [--port 8899] [--token T] [--new-token] [--origin URL ...] [--quiet]` | The ONE command here that is not about authoring a graphic (`docs/CASPARCG_CONNECT.md`). It holds an AMCP socket to CasparCG on behalf of the STUDIO PAGE, because a browser's only socket is a WebSocket and AMCP will never answer an HTTP Upgrade. Loopback-only bind, a stored per-machine token, an origin allowlist, and a `Host`-header check; `/health` is the one unauthenticated route so the panel can tell a missing agent from a rejected token. It lives in this CLI rather than as a second local helper, the same call `docs/PLAYOUT_INTEGRATION.md` §4 made for the exported package's relay. |
 | `noacg caspar status\|send\|play\|stop [--server HOST] [--amcp-port 5250] [--channel 1] [--layer 20]` | The same AMCP with no browser in the loop at all - which is also the answer for Safari and any browser that will not let a page reach a local address. `play --url <output URL>` is the whole live link: one `PLAY <channel>-<layer> [HTML] "<url>"`, after which every cue rides the durable command log. |
-| `noacg mcp` | The same verbs as an MCP server over stdio (`noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`, `noacg_screenshot`, `noacg_save`; screenshots are returned as images). `caspar` is deliberately NOT exposed: it drives live playout hardware, which is an operator's decision and not an authoring agent's. |
+| `noacg mcp` | The SAME code as the rows above, spoken as an MCP server over stdio - the second entrance, not a second tool (`noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`, `noacg_screenshot`, `noacg_docs`, `noacg_save`; screenshots are returned as images, and the skill's references are also resources at `noacg://docs/<topic>`). `caspar` is deliberately NOT exposed: it drives live playout hardware, which is an operator's decision and not an authoring agent's. That exclusion, the tool set and every tool's arguments are pinned offline by `cli/test/mcp.test.mjs`. |
 
 Environment: `NOACG_URL` (the deployment to drive and save to; default `https://noacg.studio`;
 `http://localhost:<port>` for a dev server; any self-host), `NOACG_BROWSER` (a Chromium
@@ -128,7 +184,7 @@ first can run in CI.
 
 | Tier | File | Needs | Runs |
 |---|---|---|---|
-| offline | `cli/test/unit.test.mjs`, `cli/test/caspar.test.mjs` | nothing - no network, no browser, no deployment | **every push** (the CLI step in `ci.yml`) and `npm --prefix cli test` |
+| offline | `cli/test/unit.test.mjs`, `cli/test/mcp.test.mjs`, `cli/test/caspar.test.mjs` | nothing - no network, no browser, no deployment | **every push** (the CLI step in `ci.yml`) and `npm --prefix cli test` |
 | against a bridge | `cli/test/smoke.test.mjs` | a dev server at `NOACG_URL` and a headless Chromium | `npm run bench:cli` on a developer machine |
 
 The offline tier is where a regression actually gets caught, so it covers the parts a fault would
@@ -137,6 +193,19 @@ workspace ↔ zip boundary (the module that has been wrong twice, and the one pl
 attacker-named paths to disk), the credential store and its `NOACG_AGENT_KEY`-beats-the-file
 precedence, the `--fields` grammar, and the process contract - exit codes, and the rule that
 `--json` puts exactly one parsable object on stdout however the command ended.
+
+**`mcp.test.mjs` covers the MCP ENTRANCE the same way** (added 2026-08-26). Until it existed, the
+terminal entrance was pinned by `unit.test.mjs` and the MCP entrance by nothing that runs in CI -
+everything about it lived in `smoke.test.mjs`, which skips itself whenever no bridge answers. So
+the surface an installed plugin actually talks to could change shape and every green run in this
+repository would have said nothing. It drives a real MCP client against `noacg mcp` over stdio,
+with `NOACG_URL` pointed at a closed port, and asserts: the tool set is exactly the seven
+authoring verbs; **`caspar` is not among them**, which was a rule stated only in prose; every
+tool's title, description and argument list; the server's own name and version; and that
+`noacg_docs` and the `noacg://docs/<topic>` resources answer with no deployment, no browser and
+no key, because an agent has to be able to read the contract before it has any of those. The
+assertions were mutation-tested before landing - renaming one tool and dropping one required
+argument each failed three of the eight tests.
 
 `smoke.test.mjs` **skips itself with a message** when no bridge answers, rather than passing: an
 offline `npm test` that reported six green tests it never ran would be worse than no test at all.
@@ -150,7 +219,8 @@ behind a live e2e suite instead of running beside one (root `AGENTS.md`, "Verify
 
 ## The skill (`cli/skill/noacg-graphic/`)
 
-Contract-only by default: the SPX/NoaCG runtime contract (definition + DataFields, `fN` ->
+The contract TEXT, carried by all three entrances - not a fourth thing to install and not an
+entrance of its own. Contract-only by default: the SPX/NoaCG runtime contract (definition + DataFields, `fN` ->
 `id="fN"`, `play/stop/update/next`, ES5, GSAP only, relative references), the EDITABILITY contract
 (the structure spine `.<prefix> > .<prefix>-box > .<prefix>-mask > span#fN`, the `:root`
 variables, the marked ANIMATION region with its NOACG_ANIM data and the interpreter you never
@@ -205,9 +275,11 @@ zod MIT, jszip MIT-or-GPL). `cli/LICENSE` and the `license` field in `cli/packag
 plugin manifests must stay in step; a published version's licence is frozen in the registry, so
 this had to be right BEFORE the first publish rather than after.
 
+Every channel below ships the same one artifact; what differs is which entrance it opens.
+
 | Channel | What ships | Install |
 |---|---|---|
-| **npm** `@noacg/cli` (`cli/`) | the CLI + MCP server (`dist/`), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx @noacg/cli <cmd>` / `npm i -g @noacg/cli` |
+| **npm** `@noacg/cli` (`cli/`) | the NoaCG CLI (`dist/`, which is the terminal AND the MCP server), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx @noacg/cli <cmd>` / `npm i -g @noacg/cli` |
 | **Claude Code plugin** (`cli/plugin/`, marketplace `noacg-studio` = root `.claude-plugin/marketplace.json`) | the skill copy, `/noacg:graphic`, `.mcp.json` running `npx -y @noacg/cli mcp` | `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`; from a clone `claude plugin marketplace add ./`, or for one session `claude --plugin-dir ./cli/plugin` |
 | **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`) | the skill copy | copy `cli/plugin/skills/noacg-graphic/` to `~/.codex/skills/`; `codex mcp add noacg -- npx -y @noacg/cli mcp` |
 | **In-repo dogfooding** | the thin adapter triple (`.agent-workflows/noacg-graphic.md`, `.claude/skills/`, `.agents/skills/`) - POINTERS at the source | already there |
@@ -339,3 +411,14 @@ production shows an input per field + Take/Update/Next/Out. No application code 
   scaffold arms carried the machine every time, free arms shipped state as fields on 4 of 7
   typed-action cells; and all five novel-brief cells authored a WORKING machine from scratch -
   the evidence the Future item "agent-authored machines" was waiting on (owner gate).
+- **Round two (2026-08-26): one vocabulary, a measured OGraf claim, an entrance with tests.** The
+  four names became one artifact and one capability ("One name for each thing" above, applied
+  across the CLI, the plugin, the skill's own description and the `/docs` page). The dual
+  package's "simultaneously valid" claim stopped resting on a hand walk: the manifest against the
+  EBU's published schema files with a mutation-tested ajv harness, and the OGraf half alone -
+  sources and `v_noacg` deleted - driven through nine lifecycle actions as a stranger's package
+  (both above, and `docs/OGRAF.md`). `docs/OGRAF.md` also gained the practical answer to "how do I
+  play a NoaCG production on an OGraf renderer today", which is that NoaCG packages and the
+  renderer controls. And the MCP entrance got the offline tests it had never had
+  (`cli/test/mcp.test.mjs`), which is what turned the "caspar is not exposed" rule from prose into
+  something a build can fail on. Version stayed 0.2.0; nothing was published.

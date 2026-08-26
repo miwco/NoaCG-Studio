@@ -1,5 +1,10 @@
 # The `noacg` plugin (Claude Code + Codex)
 
+The plugin is one of three entrances to the **NoaCG CLI** (`@noacg/cli`, the command `noacg`) -
+the others being the MCP server on its own and the plain terminal. It is the easiest one: it
+brings the contract, the command and the tools together with nothing to install first. Everything
+it runs is that same npm package; there is no separate plugin implementation.
+
 One plugin directory, two manifests: `.claude-plugin/plugin.json` for Claude Code and
 `.codex-plugin/plugin.json` for Codex. Both read the same `skills/noacg-graphic/`.
 

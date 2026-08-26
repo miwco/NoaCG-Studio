@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-26
+---
 # A settled graphic is not an empty box
 
 **Date:** 2026-08-26 · **Branch:** `claude/c-credits-tickers-roll`

@@ -4,6 +4,14 @@ NoaCG Studio exports any graphic as an **OGraf v1 Graphic** - the EBU's open sta
 web-based broadcast graphics. This page is for the engineer who has to load one of our packages
 into their renderer: what we emit, what maps to what, and where the limits are.
 
+> **Where this sits.** OGraf is one of six export targets, beside SPX, CasparCG, an OBS/vMix
+> overlay, H2R and LiveOS, and more will follow. The product is not an OGraf generator any more
+> than it is an SPX generator: you make a graphic in NoaCG and take it wherever it has to run.
+> OGraf gets this much attention because it is the open standard, because it is the one target
+> that also lets a graphic come back IN, and because EBU/YLE are the first customers who asked
+> for it - not because a NoaCG graphic is an OGraf graphic underneath. It is not. The code is the
+> source of truth, and every target is an adapter off it.
+
 ## The free starters page (`/ograf`)
 
 **<https://noacg.studio/ograf>** hands out six curated catalog graphics as free OGraf starter
@@ -36,6 +44,87 @@ break that spec, not the page.
 The same package is also the **LiveOS (NetOn.Live)** export; that target is this package with
 NetOn.Live install steps in its README, because the LiveOS HTML5 graphics engine is
 OGraf-compliant.
+
+## Playing a NoaCG production on an OGraf renderer, today
+
+The question this section answers is the practical one: I have graphics in NoaCG and a renderer
+that speaks OGraf - what do I actually do? Every step below was walked on 2026-08-26; where
+something does not exist yet it says so rather than describing an intention.
+
+**The short version: NoaCG is the authoring and packaging side, and the renderer is the playout
+and control side.** You download a folder per graphic and hand it to the renderer. From that point
+the renderer owns loading, cueing and data - the export dialog says exactly that, "Controlled by
+your OGraf renderer". NoaCG's own hosted control page and its `/output?production=<slug>` URL are
+the OTHER playout route (a browser source in OBS, vMix or CasparCG); they do not drive an OGraf
+renderer, and there is no NoaCG-to-renderer control link today.
+
+### 1. Get the package
+
+Four doors, all producing the same shape of folder:
+
+| Door | What you do | What you get |
+|---|---|---|
+| **`/ograf`**, the free starters page | Click **⬇ OGraf package** on a card | `<slug>-ograf.zip`, one folder inside: the manifest, `graphic.mjs`, `lib/gsap.min.js`, `fonts/`, `FIELDS.md`, `FONT_LICENSES.md`, `README.md` and `GUIDE.md`. No account, nothing installed. Built by the real exporter at click time |
+| **one graphic from the studio** | Finish the wizard and press **Export it** (or **Export…** in the library), pick **OGraf (EBU) export**, press **Validate & download** | the same folder for YOUR graphic. The button names the target back to you, and validation is the gate - a graphic with errors does not download |
+| **a whole production** | On the production, **Export…** → **OGraf (EBU) export** → **Validate & download** | one zip, **one folder per graphic in the production**. Same-named graphics get suffixed (`House Ident 2` → `house_ident_2/`, id `noacg-house-ident-2`) so no two manifests collide in a renderer |
+| **the `noacg` CLI** | `noacg scaffold …` then `noacg validate <dir>` (docs/AGENT_CLI.md) | the dual package: the OGraf half beside the editable SPX sources. A renderer reads the manifest and `graphic.mjs` and ignores the rest |
+
+"Download the template" is that first column, and it is the whole step: there is no separate
+publish, no key, and no account involved in producing an OGraf package.
+
+### 2. Give it to the renderer
+
+Two rules decide everything about this step, and both are properties of the standard rather than
+of NoaCG:
+
+- **`graphic.mjs` is an ES module, so the package has to be served over `http(s)`.** Browsers
+  refuse module imports over `file://`. Opening the folder from a disk path will not work in any
+  renderer, and that is not a bug in the package. (Our single-file targets - CasparCG, OBS/vMix,
+  H2R - are the ones that run from a bare file; that is what they are for.)
+- **The renderer decides how a Graphic is installed.** There is no standard install verb. In
+  SuperFly.tv's OGraf server, the renderer used for both external rounds recorded below, it is a
+  zip upload endpoint, and the Graphic then appears by its manifest `id`. Another renderer may
+  want the folder in a directory it watches, or a URL. Read its documentation - OGraf standardises
+  what a Graphic IS, not how it arrives.
+
+### 3. Drive it
+
+The renderer's control API or automation system drives it, using the vocabulary the manifest
+declares:
+
+- `load` with a data object, then `playAction` to bring it on, `stopAction` to take it off.
+- **Data keys are `f0`, `f1`, …**, not labels - `schema` in the manifest, and `FIELDS.md` in the
+  package is the table that translates them. This trips people up: the operator-facing name is in
+  `title`, and the key is what you send.
+- `updateAction` writes changed fields and never causes a state change. That is a house rule and
+  an OGraf one.
+- `customAction({id, payload})` fires one of the graphic's own operator events - the buttons a
+  scoreboard or a quiz needs. `customActions` in the manifest lists them.
+- Repeated `playAction` walks the default path when `stepCount` is above 1. An operator who only
+  ever presses play/next/stop gets a coherent graphic, whatever the machine underneath does.
+
+### What you do NOT get on this route
+
+Stated plainly, because the alternative is finding out during a show:
+
+- **NoaCG's control page does not reach the renderer.** The generated control panel, the audience
+  plane, the cue rundown and the hosted command log all belong to NoaCG's own output URL. On an
+  OGraf renderer the operator surface is the renderer's.
+- **A production is a bag of graphics here, not a rundown.** The production export writes one
+  folder per graphic; the cue order, the layers and the timing live in NoaCG and do not travel in
+  an OGraf package. To move those too, the graphics pack (`docs/GRAPHICS_PACKS.md`) is the
+  re-importable file, and it only means anything to NoaCG.
+- **A round trip is one-way in practice.** NoaCG can re-import its own OGraf package losslessly
+  (that is what the `v_noacg` block is for), but a graphic edited inside somebody else's renderer
+  is not coming back.
+
+### Working the other way: a graphic NoaCG has never seen
+
+The door goes both ways, which is the part that surprises people. `noacg inspect <dir|zip>` reads
+ANY OGraf package and prints the operator surface NoaCG would derive from it - an input per
+`schema` property, a button per `customAction`, the step semantics - and `noacg validate` mounts
+it and drives its whole lifecycle. Neither consults a category. `e2e/ograf-contract.spec.ts`
+renders the real control components from a hand-written third-party manifest.
 
 ## What is in the package
 
@@ -271,6 +360,42 @@ is cleared, so it never calls an action after `dispose()` - the `409` for that c
 guarantee rather than something this host exercised. And the community **OGraf DevTool** could not
 be run here: it serves graphics through a Service Worker, which the browser used for this round
 would not register.
+
+### 2026-08-26: the same claim, checked mechanically
+
+Both rounds above are hand walks, which means they are repeated when somebody remembers to repeat
+them. This one is the same claim taken apart into two checks that a machine performs, on a package
+the CLI itself produced that day (`noacg scaffold --type scoreboard --design neutral`, then
+`noacg validate`), so "the dual package is simultaneously valid" stops resting on 2026-08-22.
+
+**The manifest, against the EBU's published schema files.** All seven fetched from `ograf.ebu.io`
+and loaded into ajv (draft 2020-12) - the published files, not `ografSchema.ts`'s transcription of
+them. **Valid.** Mutation-tested in the same run so that verdict is a result rather than a rubber
+stamp: an un-prefixed vendor field, a missing `main`, a `default` typed against its property, a
+`null` where a number belongs, an unknown constraint key, a fractional duration and
+`stepCount: -2` were each rejected.
+
+One mutation was **not** rejected, and it is worth writing down because it is a limit of the
+standard's schema rather than of the harness: **a duplicate `customActions` id passes the
+published schema.** JSON Schema cannot express uniqueness across a keyed array, so nothing in the
+spec's own files catches two actions called `goalA`. Our validator does
+(`e2e/ograf-conformance.spec.ts` item 2 pins it), and it should keep doing so - a renderer that
+registers actions by id would silently lose one, which is the same shape of fault as the id defect
+the 2026-08-18 round found.
+
+**The OGraf half alone, read as a stranger's package.** The point of a dual package is that a
+renderer can ignore the SPX sources; the way to test that is to delete them. A copy was reduced to
+what a renderer actually reads - the manifest, `graphic.mjs`, `js/gsap.min.js`, `fonts/` - and the
+root `v_noacg` block was removed too, so nothing marked it as ours. `noacg validate` then read that
+copy as a **third-party** OGraf Graphic (the code path that knows nothing about NoaCG templates)
+and drove it in the OGraf host: `load`, `updateAction`, all four `customAction`s, `playAction`,
+`stopAction`, `dispose` - **nine actions, every one `200`** - and the on-air frame painted in the
+bundled Inter, fetched from inside the package rather than from the host page, which is the
+2026-08-18 font defect staying fixed.
+
+What this round does not replace: it drives OUR host, so it proves the package satisfies the
+contract, not that any given renderer behaves. The external walks above are what covers that, and
+this is what makes it cheap to notice when the generated component or the manifest changes shape.
 
 ## How conformance is checked
 
