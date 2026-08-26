@@ -156,6 +156,12 @@ jobs:
             exit 1
           fi
           echo "Test account authenticates against staging."
+          # HAND THE TOKEN TO THE LATENCY PROBE. The probe has to query as `authenticated`, and this
+          # is the step that already holds a token - re-running the password grant there would put a
+          # second sign-in inside the thing being measured. Masked because it is a real (one-hour)
+          # JWT, even though the account it belongs to is a throwaway on a throwaway project.
+          echo "::add-mask::${token}"
+          echo "E2E_ACCESS_TOKEN=${token}" >> "$GITHUB_ENV"
 
       # THE MEASUREMENT. Round-trip latency to the hosted project from THIS runner, recorded before
       # the suite so a slow run can be read against a number rather than a guess. Twenty requests
@@ -164,21 +170,39 @@ jobs:
       - name: Measure round-trip latency
         run: |
           set -euo pipefail
-          # A REAL QUERY, THROUGH POSTGREST AND RLS - the path the app actually takes. The first
-          # version of this step measured `/rest/v1/` with the anon key, which that endpoint
-          # REFUSES ("Only the `service_role` API key can be used for this endpoint"), so all 20
-          # requests were 401s and the reported number was the round trip of an error. It read
-          # ~18 ms and looked entirely plausible next to a real 207 ms. Measured on the workflow's
-          # first ever run (32849546221) and fixed immediately, because that number is the ONE
-          # thing this job exists to produce.
+          # A REAL QUERY, THROUGH POSTGREST AND RLS, AS THE ROLE THE APP SIGNS IN AS. Two different
+          # mistakes have been made in this one line already, and the guard below is what caught
+          # both:
+          #
+          #   1. The first version measured `/rest/v1/` with the anon key, which that endpoint
+          #      REFUSES ("Only the `service_role` API key can be used for this endpoint"), so all
+          #      20 requests were 401s and the reported number was the round trip of an error. It
+          #      read ~18 ms and looked entirely plausible next to a real 207 ms. Caught on the
+          #      workflow's first ever run (32849546221).
+          #   2. The fix pointed at `documents` but still sent nothing except the ANON key. That
+          #      worked for exactly one run (~245 ms, 32852705499) and only because staging was two
+          #      migrations behind at the time: `anon` could read `documents` solely through the
+          #      grant hosted Supabase's bootstrap hands every new table. 0051 narrowed the matrix
+          #      to what the RLS policies actually name and 0052 revoked the remainder, so `anon`
+          #      holds NOTHING on `documents` by design. The moment staging caught up, the probe
+          #      answered `42501 permission denied for table documents` and the scheduled run went
+          #      red (32927130086, 2026-08-26) - reading exactly like the staging drift it was not.
+          #
+          # So the probe now carries the signed-in JWT minted above. That is the path a user's sync
+          # actually takes, on the very table whose latency defect this whole job exists for, and it
+          # cannot be revoked underneath us unnoticed: `authenticated` holding SELECT on `documents`
+          # is asserted by 0052's own self-check, so a migration that took it away could not apply.
           probe="${VITE_SUPABASE_URL}/rest/v1/documents?select=id&limit=1"
 
           # PROVE the probe does real work before timing it. Without this the step cannot tell a
           # fast answer from a fast refusal, which is exactly how the first version passed while
-          # measuring nothing.
-          code="$(curl -s -o /tmp/probe.json -w '%{http_code}' -H "apikey: ${VITE_SUPABASE_ANON_KEY}" "$probe")"
+          # measuring nothing - and how the second would have gone on reporting a number after
+          # staging changed underneath it.
+          code="$(curl -s -o /tmp/probe.json -w '%{http_code}' \
+            -H "apikey: ${VITE_SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${E2E_ACCESS_TOKEN}" "$probe")"
           if [ "$code" != "200" ]; then
-            echo "::error title=Latency probe is not measuring a real query::${probe} answered ${code}, so any timing below would be the round trip of a refusal rather than of work. Body: $(head -c 200 /tmp/probe.json)"
+            echo "::error title=Latency probe is not measuring a real query::${probe} answered ${code} for the SIGNED-IN test account, so any timing below would be the round trip of a refusal rather than of work. Check what 'authenticated' holds on public.documents before suspecting latency. Body: $(head -c 200 /tmp/probe.json)"
             exit 1
           fi
 
@@ -189,7 +213,11 @@ jobs:
           urls=""
           for _ in $(seq 1 20); do urls="$urls $probe"; done
           start=$(date +%s%N)
-          curl -s -o /dev/null -H "apikey: ${VITE_SUPABASE_ANON_KEY}" $urls
+          # The SAME headers the guard just proved, or the timed request is not the request that was
+          # checked - which is how a probe starts measuring a refusal again.
+          curl -s -o /dev/null \
+            -H "apikey: ${VITE_SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${E2E_ACCESS_TOKEN}" $urls
           end=$(date +%s%N)
           per=$(( (end - start) / 1000000 / 20 ))
           echo "round trip to staging: ~${per} ms/request from this runner"
