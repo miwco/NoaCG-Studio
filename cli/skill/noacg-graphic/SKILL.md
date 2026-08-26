@@ -5,8 +5,8 @@ description: >-
   third, scoreboard, bug, card, ticker, countdown, full-screen or novel on-air graphic the user
   asks for. Use when the user says "for NoaCG", names NoaCG/SPX/CasparCG/OGraf playout, or wants a
   graphic they can operate live (editable fields, Take/Update/Out). Teaches the NoaCG CONTRACT
-  (what the graphic must expose and satisfy), the `noacg` CLI/MCP tools (scaffold, validate,
-  inspect, screenshot, save) and the loop - not how to design; design it the way you normally
+  (what the graphic must expose and satisfy), the NoaCG CLI (scaffold, validate, inspect,
+  screenshot, save - in a terminal or as MCP tools) and the loop - not how to design; design it the way you normally
   would.
 ---
 
@@ -59,8 +59,10 @@ check it, and how it reaches the user's library. It does not tell you how it sho
    account? `zip` the folder - it imports through the studio's Import door, and it is also a
    complete OGraf package any OGraf renderer plays.)
 
-MCP clients use the same verbs as tools (`noacg_types`, `noacg_scaffold`, `noacg_validate`,
-`noacg_inspect`, `noacg_screenshot`, `noacg_save`); screenshots come back as images.
+The commands above and the MCP tools are the same NoaCG CLI, reached two ways. An MCP client
+calls them as `noacg_types`, `noacg_scaffold`, `noacg_validate`, `noacg_inspect`,
+`noacg_screenshot`, `noacg_docs` and `noacg_save`; screenshots come back as images. Use whichever
+your client gives you - the verbs, the arguments and the answers are identical.
 
 ## The one content rule
 

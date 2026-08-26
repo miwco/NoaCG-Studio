@@ -1,6 +1,8 @@
 # NoaCG Studio — UI Redesign Handoff
 
-Reference screens live in `exports/` (2× PNGs). The living mockups are in `Wizard Explorations.dc.html` — option ids (1a…5c) match the badges on each frame.
+This prose is the binding half of the redesign, referenced by name from source comments and e2e
+specs. The mockup PNGs it was written beside were planning artefacts and are no longer in the
+repository; the option ids (1a…5c) survive as the section numbering below.
 
 ## 1. Design language
 

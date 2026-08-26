@@ -1,8 +1,8 @@
 # The playout dashboard — one operator surface, three deployments
 
 Binding design contract for the surface an operator drives a production from. Owner-specified
-2026-08-05; reference designs `re-design/4a-playout-desktop.png` + `4b-playout-phone.png`, and
-the four INTERACTIVE blueprints in §8a. Three surfaces render it and **must not diverge**:
+2026-08-05 against desktop and phone reference designs (those mockup PNGs were planning
+artefacts and are no longer in the repository), and the four INTERACTIVE blueprints in §8a. Three surfaces render it and **must not diverge**:
 
 | Deployment | Code | Wire |
 |---|---|---|

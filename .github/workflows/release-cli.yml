@@ -22,7 +22,8 @@
 #   1. Bump `cli/package.json` version and run `npm --prefix cli run build` - that stamps the two
 #      plugin manifests and the root marketplace entry. Commit; land on main through /queue-merge.
 #   2. `git tag cli-v0.3.0 && git push origin cli-v0.3.0`
-#   3. Watch this workflow. It builds from that commit and publishes with provenance.
+#   3. Watch this workflow. It builds from that commit, publishes with provenance, and creates
+#      the matching GitHub Release so the version is visible on the repository page too.
 #
 # The tag is the ONE step a human takes, and it is the step this repository's own rule reserves
 # for a human: a landing can be re-landed, but a published version can never be taken back.
@@ -60,8 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: read
-      # The whole point: GitHub mints an OIDC token, npm trades it for a short-lived credential.
+      # WRITE, not read, and only here: the last step creates the GitHub Release for the version
+      # that was just published. Nothing before it writes anything - the checkout, the ancestor
+      # check and the build are all reads - so the widened token is spent on one API call at the
+      # end of a job that is already pinned to this repository and refused on a fork.
+      contents: write
+      # GitHub mints an OIDC token, npm trades it for a short-lived credential.
       id-token: write
     steps:
       # Full history: the ancestor-of-main check below needs real refs, not a shallow cone.
@@ -191,6 +196,18 @@ jobs:
         working-directory: cli
         run: npm publish --dry-run
 
+      # PROVE THE RELEASE PATH WITHOUT MAKING ONE. Generating the notes is the only part of
+      # `gh release create` that can fail on its own (a bad target, a repository that refuses the
+      # token), and this endpoint returns them without creating anything - so a dry run answers
+      # "would the release step work?" instead of leaving it untested until a real publish.
+      - name: Rehearse the GitHub Release notes (dry run)
+        if: ${{ inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes"             -f tag_name="cli-v${VERSION}"             -f target_commitish="${GITHUB_SHA}"             --jq '.name, .body'
+
       - name: Stop here (dry run)
         if: ${{ inputs.dry_run }}
         env:
@@ -215,6 +232,27 @@ jobs:
         if: ${{ !inputs.dry_run }}
         working-directory: cli
         run: npm publish
+
+      # EVERY PUBLISHED VERSION SHOWS ON GITHUB. Zero releases on a repository reads as a dead
+      # project, and the agent door sends developers to this page first. `--generate-notes` lets
+      # GitHub write the changelog from the commits since the previous release, so this costs
+      # nothing per release and cannot drift out of date.
+      #
+      # `--target` matters on a manual dispatch, where there is no tag yet: gh creates
+      # `cli-vX.Y.Z` pointing at the commit that was actually published. On a tag push the tag
+      # already exists at that same commit and `--target` is a no-op.
+      #
+      # A release that fails must not read as a failed PUBLISH - the package is on npm either way
+      # and cannot be unpublished - so this step reports rather than fails the job.
+      - name: Create the GitHub Release
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "cli-v${VERSION}"             --target "${GITHUB_SHA}"             --title "@noacg/cli v${VERSION}"             --generate-notes
+          echo "::notice title=Released::https://github.com/${GITHUB_REPOSITORY}/releases/tag/cli-v${VERSION}"
 
       - name: Say what landed
         if: ${{ !inputs.dry_run }}

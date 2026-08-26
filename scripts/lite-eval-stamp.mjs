@@ -16,7 +16,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { benchEnvPath } from './lite-eval-paths.mjs';
-import { DEFAULT_EVAL_EMAIL, mintToken } from './lite-eval-token.mjs';
+import { defaultEvalEmail, mintToken } from './lite-eval-token.mjs';
 
 const KEY = 'NOACG_LITE_EVAL_BEARER_TOKEN';
 const arg = process.argv[2];
@@ -37,7 +37,7 @@ if (arg === '-') {
   token = readFileSync(arg, 'utf8').trim();
   origin = arg;
 } else {
-  const email = (arg ?? DEFAULT_EVAL_EMAIL).trim();
+  const email = (arg ?? defaultEvalEmail()).trim();
   try {
     const minted = await mintToken(email);
     token = minted.token;

@@ -12,14 +12,30 @@
 // Also the module the other tools import for identity, so "which account is the eval running
 // as?" has exactly one answer.
 
+import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { argv } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import { mainCheckout, mainEnv } from './lite-eval-paths.mjs';
 
-/** The account every prior Lite round has run as. Overridable by argument on every entry point. */
-export const DEFAULT_EVAL_EMAIL = 'mirko.ahonen@gmail.com';
+/** The account the eval runs as when no argument names one. This repository is public, so the
+ *  address is never committed: it comes from NOACG_EVAL_EMAIL (the environment, or the main
+ *  checkout's .env), and otherwise from the git identity of whoever is running the tool - which
+ *  on the machine that holds the Supabase service key is the owner's account anyway. Overridable
+ *  by argument on every entry point. */
+export function defaultEvalEmail() {
+  const fromEnv = process.env.NOACG_EVAL_EMAIL ?? mainEnv().NOACG_EVAL_EMAIL;
+  if (fromEnv) return fromEnv.trim();
+  let fromGit;
+  try {
+    fromGit = execFileSync('git', ['config', 'user.email'], { encoding: 'utf8' }).trim();
+  } catch {
+    fromGit = '';
+  }
+  if (fromGit) return fromGit;
+  throw new Error('No eval account: set NOACG_EVAL_EMAIL, or pass the address as an argument.');
+}
 
 function adminClient() {
   const env = mainEnv();
@@ -45,13 +61,13 @@ async function findUser(admin, email) {
 }
 
 /** The user id behind an email - what AI_LITE_OVERRIDE_USER_IDS needs. */
-export async function resolveUserId(email = DEFAULT_EVAL_EMAIL) {
+export async function resolveUserId(email = defaultEvalEmail()) {
   const { admin } = adminClient();
   return (await findUser(admin, email)).id;
 }
 
 /** A short-lived (about an hour) access token for that account. Returns `{ userId, email, token }`. */
-export async function mintToken(email = DEFAULT_EVAL_EMAIL) {
+export async function mintToken(email = defaultEvalEmail()) {
   const { url, anonKey, admin } = adminClient();
   const user = await findUser(admin, email);
 
@@ -76,7 +92,7 @@ export async function mintToken(email = DEFAULT_EVAL_EMAIL) {
 
 const invokedDirectly = argv[1] && realpathSync(argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (invokedDirectly) {
-  const email = (argv.slice(2).find((a) => a.includes('@')) ?? DEFAULT_EVAL_EMAIL).trim();
+  const email = (argv.slice(2).find((a) => a.includes('@')) ?? defaultEvalEmail()).trim();
   try {
     if (argv.includes('--id')) {
       console.log(await resolveUserId(email));
