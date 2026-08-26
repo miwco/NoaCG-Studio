@@ -124,6 +124,31 @@ place to find that out than a scheduled run reading like a hosted regression.
 - Nothing was written to any database. The main checkout is linked to production; this worktree was
   never linked to anything.
 
+## One more CI-health fault, found by being bitten by it
+
+Landing this branch was refused once, and the cause was the landing procedure's own advice. Written
+into `.agent-workflows/queue-merge.md`, because a trap belongs in the contract that loads where it
+fires rather than in a handoff nobody re-reads.
+
+`auto-merge.mjs`'s `waitForCi` takes `gh run list --limit 1` - the NEWEST run for the sha, which is
+the dispatch you were just told to make - and hands it to `gh run watch --exit-status`. That
+**returns immediately on a run still `pending` with zero jobs.** Phase 3 then classifies a run that
+has not started and refuses with `run concluded ""; no "CI gate" job`, which reads exactly like a
+red suite. On `j-0088` the dispatch was created 27 seconds after the push and the landing was
+refused inside the same minute. Nothing was changed by the refusal.
+
+The advice "dispatch as soon as the push line appears" is what makes this likely: it puts the
+dispatch inside the same ten-second tick the gate is polling on. The doc now says to confirm
+`gh run view <id> --json jobs -q '.jobs | length'` is non-zero, and that a refusal is answered by
+re-queueing once the run is green - the second attempt needs no dispatch, because a finished green
+run for the tip already exists.
+
+**The durable fix is one function and it is not built here**: `waitForCi` should skip a run with no
+jobs and poll until `conclusion` is non-null, rather than trusting `gh run watch` to block. That is
+a change to the shared landing path, it wants its own branch and its own test in
+`scripts/auto-merge.test.mjs`, and doing it inside a session about hosted-latency would be the
+wrong place for it.
+
 ## Open
 
 - Issue #45 "Hosted-latency suite is red" closes automatically on the first green run of the fixed
