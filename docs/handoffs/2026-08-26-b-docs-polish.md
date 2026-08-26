@@ -1,6 +1,6 @@
 # Session B - the docs polish round
 
-Branch `claude/b-docs-polish-ca8fde`, two commits on top of the docs home (`00f15ba8`). The owner
+Branch `claude/b-docs-polish-ca8fde`, four commits on top of the docs home (`00f15ba8`). The owner
 walked `/docs` and the landing on 2026-08-26, accepted both ("I think it's good; the important
 things are there"), and gave four corrections. Standing memory: `docs-public-copy-voice`.
 
@@ -93,12 +93,43 @@ The de-hyping had also sanded the bluntness off outlined-text imports ("gives a 
 Restored to what `SVG_AUTHORING.md:135` says: the stand-in is re-rendered type, the kerning is the
 font's and not the designer's.
 
+## The copy gate collided with this branch, and the collision reads backwards
+
+`scripts/check-copy.mjs` landed on main while this was in flight. It ratchets per-file copy-tell
+counts, and it fails in **both** directions. Taking main in turned this branch red on Build with:
+
+    FIXED  docs.html  em-dash: 68 -> 0
+    FIXED  index.html  em-dash: 33 -> 0
+    FAIL - 2 entr(ies) improved and the baseline still holds the old number.
+
+Not new tells. The tone pass had already taken all 101, and the baseline still recorded the
+pre-drain numbers, which the gate refuses because a stale-high baseline hands the file back the room
+it just gave up. There was nothing to rewrite: `npm run check:copy -- --update` drops both files out
+of `scripts/copy-baseline.json` entirely, and that was the whole fix (`cbb4c214`).
+
+**That makes this branch slice 1 of `docs/backlog/copy-tells-drain.md`** - the 101 public-facing
+lines it called the highest-value, lowest-risk cut. Marked done there, with the remaining totals
+corrected to 5,717 lines across 538 files, so nobody picks it up twice.
+
+The wave orchestrator's advice for this failure ("rewrite the named lines") is right for the NEW
+direction and wrong for the FIXED one; a session following it after a drain would hunt for text that
+is not there. Passed to the two live sessions whose branches touch prose.
+
+Worth knowing about the queue: this branch WAS queued (j-0053). The job ran, integrated main, CI went
+red on the integrated sha, and `auto-merge` refused at preflight phase 3. That is the flow working.
+A wave view that reads branch-ahead state rather than job history will report it as "never queued".
+
 ## Verified
 
-- `npm run build` green (both commits).
+- `npm run build` green on all four commits, including after the copy gate arrived.
 - `e2e/docs.spec.ts` + `e2e/landing.spec.ts`, 11/11 through the run queue, twice. Two new tests:
   one clicks the install block's copy button and reads the command back off the clipboard, one
   fails if the handle reappears in visible text.
+- CI: run 32978314227 green on `a19bdd76` (the pre-integration tip), then red on the integrated
+  `562c5acb` for the copy baseline alone with all nine E2E shards green, then a dispatched full run
+  on `cbb4c214` after the fix. Dispatched rather than push-triggered on purpose: that last commit
+  touches only a JSON baseline and a backlog file, so a plan from the previous push would have
+  skipped every shard and preflight would have refused the run as unproven.
 - The page driven in the real dev server: no console errors, sixteen blocks and sixteen buttons,
   the button clear of the text even with the widest command scrolled fully right, no horizontal
   page scroll at 375px.
