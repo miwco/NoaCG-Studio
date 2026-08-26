@@ -636,8 +636,14 @@ CG 1-20 STOP</code></pre>
             A coding agent can write the HTML, CSS and JavaScript of a graphic. What it cannot
             work out on its own is what NoaCG requires of one: which fields the operator sees,
             which events it accepts, and whether it still behaves under a real playout run. The
-            <code>noacg</code> command-line tool supplies that part. It carries the contract, runs
-            the same validator the studio runs, and can put the finished graphic in your library.
+            <strong>NoaCG CLI</strong> supplies that part. It carries the contract, runs the same
+            validator the studio runs, and can put the finished graphic in your library.
+          </p>
+          <p>
+            It is one tool with three entrances, so pick whichever suits the agent you use: the
+            <strong>plugin</strong> for Claude Code and Codex, the <strong>MCP server</strong> for
+            any other MCP client, or the plain <strong>terminal</strong>. They all run the same
+            package, <code>@noacg/cli</code>, and carry the same contract text.
           </p>
 
           <h3 id="agent-install">Install</h3>
@@ -746,7 +752,10 @@ CG 1-20 STOP</code></pre>
           <p>
             The package on disk is at the same time a valid <strong>SPX</strong> package and an
             <strong>EBU OGraf v1</strong> graphic. Zip it and it also imports through the studio's
-            Import door, or plays in any OGraf renderer. The full reference is
+            Import door, or plays in any OGraf renderer. Those two are what the folder satisfies
+            with no build step; the graphic itself is plain HTML, CSS and JavaScript, so the same
+            sources also export to CasparCG, an OBS or vMix overlay, H2R and LiveOS. The full
+            reference is
             <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/AGENT_CLI.md">AGENT_CLI.md</a>.
           </p>
         </section>

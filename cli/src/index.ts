@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// `noacg` - the NoaCG Studio command-line tool (docs/AGENT_CLI.md).
+// `noacg` - THE NoaCG CLI (docs/AGENT_CLI.md). One artifact, three entrances: this terminal,
+// `noacg mcp` (the same verbs as an MCP server), and the Claude Code / Codex plugin, which
+// bundles both with the noacg-graphic skill. There is no second implementation anywhere.
 //
 // An external coding agent's door into NoaCG: scaffold a graphic from a type or a field list,
 // validate + bench it (and see it), inspect the operator surface it earns, package it, and -
@@ -10,7 +12,7 @@
 
 import { closeBrowser } from './browser.js';
 import { cliVersion } from './config.js';
-import { EXIT_OK, EXIT_USAGE, Out, parseArgs, UsageError, type ParsedArgs } from './output.js';
+import { EXIT_OK, EXIT_USAGE, Out, parseArgs, type ParsedArgs } from './output.js';
 import { runDoctor } from './commands/doctor.js';
 import { runTypes } from './commands/types.js';
 import { runScaffold } from './commands/scaffold.js';
@@ -26,7 +28,11 @@ import { runSave } from './commands/save.js';
 import { runCaspar } from './commands/caspar.js';
 import { runMcp } from './mcp.js';
 
-const USAGE = `noacg v${cliVersion()} - make broadcast graphics for NoaCG Studio from your terminal.
+const USAGE = `noacg v${cliVersion()} - the NoaCG CLI: make broadcast graphics for NoaCG Studio.
+
+This one tool has three entrances: this terminal, "noacg mcp" (the same verbs as an MCP server,
+for any MCP client), and the Claude Code / Codex plugin, which bundles both with the
+noacg-graphic skill. Same package either way.
 
 Usage: noacg <command> [options]   (add --json to any command for machine-readable output)
 
@@ -49,7 +55,7 @@ Usage: noacg <command> [options]   (add --json to any command for machine-readab
                                  Talk AMCP to a CasparCG server (docs/CASPARCG_CONNECT.md).
                                  "agent" holds the socket a browser cannot, on 127.0.0.1 only,
                                  so Settings -> Playout can reach it; the rest need no browser.
-  mcp                            Run as an MCP server over stdio.
+  mcp                            Run as an MCP server over stdio (same verbs, spoken as tools).
 
 Environment: NOACG_URL (default https://noacg.studio), NOACG_BROWSER (a Chromium executable),
              NOACG_AGENT_KEY (a key for CI - beats the stored one).
@@ -99,7 +105,10 @@ async function main(): Promise<number> {
     const message = e instanceof Error ? e.message : String(e);
     if (out.json) out.result({ ok: false, error: message });
     out.log(`noacg: ${message}`);
-    return e instanceof UsageError ? EXIT_USAGE : EXIT_USAGE;
+    // Every failure that reaches here is exit 2. A UsageError is the argument grammar refusing;
+    // anything else is IO or the bridge, which the documented contract also calls a 2 - only
+    // findings and an explicit refusal are exit 1, and those return their own code above.
+    return EXIT_USAGE;
   } finally {
     if (name !== 'mcp') await closeBrowser();
   }

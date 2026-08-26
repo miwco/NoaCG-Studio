@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-26
+---
 # Tickers: a colon ends a kicker
 
 **Date:** 2026-08-26 · **Branch:** `claude/c-credits-tickers-roll`

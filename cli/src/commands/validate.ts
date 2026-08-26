@@ -60,15 +60,21 @@ export async function runValidate(args: ParsedArgs, out: Out): Promise<number> {
       const files = await packageEntries(bytes);
       const result = await ografBench(bridge, read, files, { screenshot: !!shotsDir });
       const errors = [...read.errors.map((e) => `ograf-manifest: ${e}`), ...result.errors];
+      // A frame this branch wrote has to be NAMED, in the text and in --json alike: the NoaCG
+      // branch below prints its `Screenshots:` line, and a caller that only gets one on the other
+      // path cannot tell "no frame was written" from "a frame was written somewhere".
+      let shot: string | undefined;
       if (shotsDir && result.screenshot) {
+        shot = path.join(path.resolve(shotsDir), 'onair.png');
         await fs.mkdir(path.resolve(shotsDir), { recursive: true });
-        await fs.writeFile(path.join(path.resolve(shotsDir), 'onair.png'), result.screenshot);
+        await fs.writeFile(shot, result.screenshot);
       }
-      Object.assign(report, { ok: errors.length === 0, errors, steps: result.steps, contract: read.contract, manifest: read.manifest });
+      Object.assign(report, { ok: errors.length === 0, errors, steps: result.steps, contract: read.contract, manifest: read.manifest, ...(shot ? { screenshots: { onair: shot } } : {}) });
       out.result(report);
       out.say(`${errors.length ? 'FAIL' : 'OK'} - ${errors.length} error(s)`);
       for (const e of errors) out.say(`- ERROR ${e}`);
       out.say(`Host: ${result.steps.map((s) => `${s.action} -> ${s.statusCode}`).join(', ')}`);
+      if (shot) out.say(`Screenshots: ${shot}`);
       out.say(`Operator surface: ${read.contract.descriptors.length} input(s), ${read.contract.buttons.length} button(s), steps ${read.contract.steps.count}`);
       return errors.length ? EXIT_FINDINGS : EXIT_OK;
     }

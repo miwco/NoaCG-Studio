@@ -78,8 +78,18 @@ Approved variations (see `1-Brand-System.html`, section 01):
 
 ## 4. Typography
 
-- **Space Grotesk** — display, UI, wordmark. Weights 400 / 500 / 600 / 700.
+- **Space Grotesk** — display and the wordmark. Weights 400 / 500 / 600 / 700.
+- **IBM Plex Sans** — UI chrome: every reading surface in the app. Variable 100–700.
 - **JetBrains Mono** — labels, data, timecode, technical tags. 400 / 500 / 700.
+
+**Where the shipped app diverges from this manual, and why.** v1.0 gave Space Grotesk the UI as
+well as the display role. The 2026 app redesign moved UI chrome to **IBM Plex Sans**: Space
+Grotesk is a display face, and at 11–14px across dense panels, tables and inspectors it read as
+styled rather than neutral. Space Grotesk keeps the wordmark and the display lockup, which is
+where the identity actually lives. All three faces are bundled locally in `src/brandTokens.css`,
+which is the single source of the palette and the typefaces for the product itself — the app
+loads no font from a CDN. The kit's own HTML files below still use Google Fonts; they are a brand
+record opened in a browser, not product code.
 
 **Scale**
 
