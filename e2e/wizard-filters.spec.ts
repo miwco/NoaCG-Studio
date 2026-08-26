@@ -326,6 +326,10 @@ test('field plan: a ticker offers a rows editor, never line add/remove', async (
   const rowsEditor = page.getByTestId('list-rows-editor');
   await expect(rowsEditor).toBeVisible();
   await expect(page.getByTestId('field-plan-hint')).toContainText('Rows here are CONTENT');
+  // …and the list's own TEXT FORMAT is stated on the step, not only in docs/. This is where a
+  // person decides whether the template suits their show, so it is where the one mark the
+  // field carries has to be readable (docs/TICKERS.md).
+  await expect(page.getByTestId('list-format-note')).toContainText('A colon ends a KICKER');
   // No structural line add/remove anywhere on the step.
   await expect(page.getByRole('button', { name: '+ Add a line' })).toHaveCount(0);
 

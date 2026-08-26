@@ -29,11 +29,13 @@ ${motionSpeedJs}
 // a real timer transition.
 var tickerIndex = 0;              // which item is showing (runtime data, never a state)
 
+// The SAME parse the marquee runs (parseTickerItems, in the shared runtime above), so a
+// kicker means the same thing whichever motion preset the design ships with. Reading the raw
+// lines here instead is what would make "SPORT:" a story of its own in a rotating strip.
 function tickerItems() {
   var source = document.getElementById('f0');
   if (!source) return [];
-  return source.textContent.split('\\n').map(function (l) { return l.trim(); })
-    .filter(function (l) { return l !== ''; });
+  return parseTickerItems(source.textContent);
 }
 
 function tickerShowNext() {
@@ -47,9 +49,9 @@ function tickerShowCurrent() {
   var items = tickerItems();
   var track = document.getElementById('ticker-track');
   if (!track || items.length === 0) return;
-  // escapeHtml() for the same reason rebuildTicker() uses it: the item text is data, and the
-  // rotator writes it through innerHTML.
-  track.innerHTML = renderTickerItem(escapeHtml(items[tickerIndex % items.length]));
+  // tickerItemHtml() for the same reason rebuildTicker() uses it: it is where the item's two
+  // halves are escaped, and where a design's own kicker markup is offered the chance to run.
+  track.innerHTML = tickerItemHtml(items[tickerIndex % items.length]);
 }
 
 // tickerMarquee(): the classic endless travel. The track holds the items TWICE, so sliding

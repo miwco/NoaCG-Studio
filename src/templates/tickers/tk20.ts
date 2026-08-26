@@ -25,10 +25,10 @@ export const tk20: TemplateVariant = defineTickerVariant(
       {
         title: 'Crawl items',
         sample: [
-          'Central bank leaves its main rate unchanged at 3.25%',
-          'Port workers accept the revised pay offer',
-          'Two new hospital wings approved in the capital region',
-          'Storm warning remains in force along the southern coast',
+          'ECONOMY: Central bank leaves its main rate unchanged at 3.25%',
+          'LABOUR: Port workers accept the revised pay offer',
+          'HEALTH: Two new hospital wings approved in the capital region',
+          'WEATHER: Storm warning remains in force along the southern coast',
         ].join('\n'),
       },
       { title: 'Label', sample: 'News' },

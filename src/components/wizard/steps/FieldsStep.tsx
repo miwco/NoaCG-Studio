@@ -167,6 +167,15 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
               design rebuilds itself — add as many as the show needs.
             </>
           )}
+          {/* The list's own TEXT FORMAT, when it has one. A format stated only in docs/ is a
+              format nobody uses: this step is where a person decides whether the template
+              suits their show. */}
+          {plan.kind === 'list' && plan.formatNote && (
+            <>
+              {' '}
+              <span data-testid="list-format-note">{plan.formatNote}</span>
+            </>
+          )}
         </p>
       </div>
 

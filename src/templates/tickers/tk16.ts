@@ -23,6 +23,9 @@ export const tk16: TemplateVariant = defineTickerVariant(
       {
         title: 'Lines',
         sample: [
+          // The GROUPED form: one kicker typed on its own line tags every update beneath it,
+          // which is exactly how a developing story arrives — one incident, several lines.
+          'RAIL INCIDENT:',
           'Emergency services confirm all passengers have been accounted for',
           'Transport minister to make a statement within the hour',
           'The line will remain closed for the rest of the day',

@@ -394,6 +394,21 @@ The rest are a paragraph each and stay here:
   two-line ticker emits byte-identically to before it existed. **A strip that neither travels
   nor rotates does not belong here** (docs/PUBLIC_SERVICE_PACK.md §1): the static notices live
   in alerts/ and publicInfo/.
+  **THE TEXT FORMAT IS `docs/TICKERS.md`** - one mark, `A COLON ENDS A KICKER`, and everything
+  else is the story. `parseTickerItems` emits `{ kicker, text }`; a kicker on its own line tags
+  every story beneath it until a blank line or the next kicker. Two rules differ from
+  end-credits, and both are earned by what ticker designs already do with those characters: the
+  colon must be **followed by a space or end the line** (tk13 writes "United 2:1 City", tk17
+  "close at 20:00" - a length guard alone made kickers of all of them), and **`|` is not a
+  separator** (tk17 splits an item at it into two LANGUAGES). The shared treatment is
+  `.ticker-kicker`, emitted before the design's CSS so a design can restate it; a design that
+  PLACES the tag itself defines `renderTickerKicked(kicker, text)` and is handed both halves
+  already escaped - tk18's service column is the worked example. `renderTickerItem(text)` is
+  unchanged and still the only builder a design must provide. Pinned by
+  `scripts/ticker-parser.test.mjs`, which runs the EMITTED JavaScript.
+  **The value axis is still per-design and not portable**: tk04, tk06, tk14 and tk22 parse a
+  price or a change out of the line by POSITION and tk13 an `n - n` score, each with its own
+  rule. Leave them; folding a value into the kicker's grammar mints a second mark to learn.
 - **alerts/** - al01…al13 (prefix 'alert', `TemplateType 'alert'`), a STANDARD-CONTRACT category:
   assembleStandard + the shared preset bank + line masks + steps, nothing category-specific in the
   runtime. What it adds is the SEVERITY FLAG - four stacked `.alert-level-N` blocks
@@ -607,8 +622,10 @@ the credits/tickers/infographics runtimes).
 **Operator text reaching `innerHTML` is ESCAPED at the data boundary** - `escapeHtml()` (emitted
 from `shared/base.ts` `ESCAPE_HTML_JS`), applied where the runtime READS the field, not inside
 each design's row builder: the builder is the part a design rewrites, so the safety of the
-category must not depend on remembering the rule. Tickers escape in `rebuildTicker()` +
-`tickerShowCurrent()`, credits in `parseCredits()` + the end block's year and logo path (that
+category must not depend on remembering the rule. Tickers escape in `tickerItemHtml()`, the one
+place both `rebuildTicker()` and `tickerShowCurrent()` go through and the one place a design's
+`renderTickerKicked()` is handed its two halves; credits in `parseCredits()` + the end block's
+year and logo path (that
 one lands inside an `src="..."` attribute), the repeating-data and competition runtimes at
 their own rebuilds. **A field value is not always typed by the operator** - the show-chat block
 writes what an anonymous audience member sent in, and the control layer writes staged data - so

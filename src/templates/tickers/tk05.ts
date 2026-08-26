@@ -19,10 +19,10 @@ export const tk05: TemplateVariant = defineTickerVariant(
       {
         title: 'Ticker items',
         sample: [
-          'Parliament passes 2026 budget after all-night session',
-          'Central bank holds rate at 3.25%',
-          'National team qualifies for the final',
-          'Storm warning issued for the coast',
+          'POLITICS: Parliament passes 2026 budget after all-night session',
+          'ECONOMY: Central bank holds rate at 3.25%',
+          'SPORT: National team qualifies for the final',
+          'WEATHER: Storm warning issued for the coast',
         ].join('\n'),
       },
       { title: 'Label', sample: 'News' },

@@ -601,6 +601,16 @@ export type FieldPlan =
        * "a field per person" shape the category exists to avoid.
        */
       editor?: 'rows' | 'paste';
+      /**
+       * One sentence naming this list's TEXT FORMAT, shown under the editor beside the
+       * generic explanation of what a list field is.
+       *
+       * A list category's one field carries a format - end credits have "a colon ends a role",
+       * a ticker has "a colon ends a kicker" - and a format nobody is told about is a format
+       * nobody uses. The step is where a person decides whether the template is any good, so
+       * it is where the format has to be stated, not only in docs/.
+       */
+      formatNote?: string;
     };
 
 /**
@@ -612,7 +622,17 @@ export type FieldPlan =
  */
 const CATEGORY_FIELD_PLANS: Partial<Record<AssemblerId, FieldPlan>> = {
   // One hidden textarea IS the rundown of items; the runtime rebuilds the strip from it.
-  ticker: { kind: 'list', itemLabel: 'Ticker items', itemHint: 'One item per row' },
+  // A row stays one item - a ticker's stories are short and reordered by hand - and the one
+  // mark it carries is the kicker (docs/TICKERS.md).
+  ticker: {
+    kind: 'list',
+    itemLabel: 'Ticker items',
+    itemHint: 'SPORT: United win 3-0',
+    formatNote:
+      'A colon ends a KICKER — the tag a story is filed under, drawn in the accent colour. ' +
+      'Put one on its own row and every row under it carries it, until a blank row. ' +
+      'A row with no colon is just a story, which is what every ticker was before.',
+  },
   // The whole roll in ONE field: a colon ends a role, the lines beneath it are its people
   // (docs/END_CREDITS.md). Never a field per person.
   'end-credits': {

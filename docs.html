@@ -49,6 +49,7 @@
         <p class="group">Guides</p>
         <a href="#svg">Import your own SVG graphic</a>
         <a href="#end-credits">End credits</a>
+        <a href="#tickers">Tickers</a>
         <a href="#browser-source">OBS, vMix &amp; browser sources</a>
         <a href="#casparcg">CasparCG</a>
         <p class="group">Run the show</p>
@@ -240,6 +241,72 @@ Petri Salo</code></pre>
             its names quieter beneath it, which is what stays right when one role credits five
             people. <em>Name</em> sets the name big with the role as a small label above it: the
             film convention, and the better read when nearly every role has exactly one person.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ TICKERS ═══════════════════════ -->
+        <section id="tickers">
+          <h2>Tickers</h2>
+          <p>
+            A ticker is a rundown of stories, and a rundown is not a list of fields. Every ticker
+            design has <strong>one</strong> field for the whole rundown — a text box you type or
+            paste into, in the studio, on the production dashboard, or later in whatever plays it
+            out. Adding a story never adds a field.
+          </p>
+          <p>
+            So the format carries the one distinction a ticker item is made of: which part is the
+            <strong>kicker</strong> — the tag a story is filed under — and which part is the
+            <strong>story</strong>. It is the same shape as the credit roll above, on purpose.
+          </p>
+
+          <h3 id="tickers-colon">A colon ends a kicker. Everything else is the story.</h3>
+          <pre><code>SPORT: United win 3-0</code></pre>
+          <p>
+            A desk with several stories puts the colon at the end of its own line, and the
+            stories follow beneath it — until a blank line or the next kicker:
+          </p>
+          <pre><code>SPORT:
+United win 3-0
+City held at home
+Rovers sign a goalkeeper</code></pre>
+
+          <h3 id="tickers-rules">The complete set</h3>
+          <ul>
+            <li><code>SPORT: United win 3-0</code> — one story, tagged <em>SPORT</em>.</li>
+            <li><code>SPORT:</code> — a kicker; every line under it carries it.</li>
+            <li><code>SPORT</code> TAB <code>United win 3-0</code> — the same as the first, which
+              is what a paste from a spreadsheet column gives you.</li>
+            <li><code>Storm warning issued</code> — a plain story, with no tag at all.</li>
+            <li>A blank line closes the open kicker.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>. And
+            <strong>nothing is required</strong>: a rundown typed with no marks at all is a plain
+            list of stories, exactly as tickers read before kickers existed.
+          </p>
+
+          <h3 id="tickers-numbers">Scores, clocks and links are safe</h3>
+          <p>
+            The colon has to be <strong>followed by a space</strong>, or end the line. That is
+            what keeps a ticker's own numbers out of it:
+          </p>
+          <pre><code>NORTHERN UNITED 2:1 CITY ROVERS
+Polling stations close at 20:00
+Full results at https://example.org</code></pre>
+          <p>
+            None of those is a kicker, and <code>TRAVEL: the 20:45 service is cancelled</code> is
+            read the way you meant it. One more difference from end credits: a
+            <code>|</code> is <em>not</em> a separator in a ticker, because Bilingual Crawl
+            already splits an item at it into its two languages.
+          </p>
+
+          <h3 id="tickers-designs">The same rundown in any design</h3>
+          <p>
+            The format says what the content <em>is</em>, never how it is arranged — so switching
+            design never means retyping the rundown. Every ticker draws a kicker in the accent
+            colour ahead of its story, and a design that wants it somewhere else places it
+            itself: <strong>Status Rotator</strong> puts it in a fixed-width name column, which is
+            what makes a service status scannable.
           </p>
         </section>
 

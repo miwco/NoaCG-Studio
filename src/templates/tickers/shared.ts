@@ -4,6 +4,11 @@
 // JS renders the items at runtime; the marquee preset needs them rendered TWICE for a
 // seamless loop, so rebuildTicker() handles that automatically.
 //
+// THE TEXT FORMAT IS docs/TICKERS.md, and it has one mark: A COLON ENDS A KICKER. A ticker
+// item is a story, optionally tagged with what it is about ("SPORT: United win 3-0"), and a
+// kicker typed on its own line tags every story beneath it. The full rule set is on
+// parseTickerItems below.
+//
 // Structure contract:
 //   <div class="ticker">                root — positioned by zone; opacity:0 until play()
 //     <div class="ticker-box">          the strip; presets fade this
@@ -72,20 +77,107 @@ function tickerRuntimeJs(name: string, animationBlock: string): string {
 
 ${ESCAPE_HTML_JS}
 
-// rebuildTicker(): re-render the items from the hidden #f0 source (one item per line).
+// parseTickerItems(text): the rundown is ONE block of plain text, and there is one mark to
+// learn — A COLON ENDS A KICKER. Everything else is the story.
+//
+//   SPORT: United win 3-0     a story TAGGED with what it is about. The tag is the kicker.
+//   SPORT:                    a kicker on its own line. Every story beneath it carries it,
+//   United win 3-0            until a blank line or the next kicker — so a run of stories
+//   City held at home         from one desk is typed once, not once per line.
+//   SPORT <TAB> United win    the same, which is what a paste from a spreadsheet gives.
+//   Storm warning issued      anything else is a plain story, with no kicker at all.
+//   (blank line)              closes the open kicker.
+//
+// A semicolon is accepted wherever a colon is, for the same reason end credits accept one.
+//
+// NO PIPE, and that is a deliberate difference from docs/END_CREDITS.md: tk17 splits an item
+// at "|" into its two LANGUAGES, and that design ships with bilingual samples. A mark already
+// spoken for by a design cannot be given a second meaning by the parser above it.
+//
+// Nothing is required. A rundown with no marks at all is a plain list of stories, exactly as
+// every ticker read before kickers existed — which is why no sample had to change.
+//
+// Values are escaped in tickerItemHtml() below rather than here, because a design's
+// renderTickerKicked() is handed the two halves separately and must get them already safe.
+
+// The longest text accepted BEFORE the colon as a kicker. A kicker is a tag; a headline is
+// not. Without this, "The question everyone was asking was this:" becomes a tag.
+var KICKER_LABEL_MAX = 32;
+
+// tickerKickerMark(line): the index of the colon that ends the kicker, or -1 for none.
+//
+// The colon must be FOLLOWED BY A SPACE or by nothing at all. That is the second condition,
+// and it is why this is not the credits rule verbatim: a ticker's own designs write
+// "United 2:1 City" (tk13 lifts the n:n into a score chip), "Polling stations close at 20:00"
+// and "Results from 21:00", and a length guard alone would have turned every one of those
+// into a kicker. A tag is written with a space after its colon; a score and a clock are not.
+function tickerKickerMark(line) {
+  var mark = line.search(/[:;](?=\\s|$)/);
+  return (mark > 0 && mark <= KICKER_LABEL_MAX) ? mark : -1;
+}
+
+function parseTickerItems(text) {
+  var items = [];
+  var open = '';                       // the kicker the following bare lines inherit
+
+  text.split('\\n').forEach(function (raw) {
+    var line = raw.trim();
+    if (line === '') { open = ''; return; }        // blank line closes the open kicker
+
+    // "SPORT<TAB>United win 3-0" — an explicit separator, so no length guard applies: the
+    // operator has said outright which half is which.
+    var tab = line.indexOf('\\t');
+    if (tab > 0) {
+      open = line.slice(0, tab).trim();
+      var tabbed = line.slice(tab + 1).trim();
+      if (tabbed) items.push({ kicker: open, text: tabbed });
+      return;
+    }
+
+    // The colon rule, in ONE branch: text before the colon is the kicker, whatever follows it
+    // on the same line is that kicker's first story. "SPORT:" simply has nothing after it,
+    // which is what leaves the kicker open for the lines beneath.
+    var mark = tickerKickerMark(line);
+    if (mark > 0) {
+      open = line.slice(0, mark).trim();
+      var inline = line.slice(mark + 1).trim();
+      if (inline) items.push({ kicker: open, text: inline });
+      return;
+    }
+
+    items.push({ kicker: open, text: line });
+  });
+  return items;
+}
+
+// tickerItemHtml(item): one parsed item as markup.
+//
+// renderTickerItem() keeps its ONE argument, so every design kept working when kickers
+// landed. The kicker rides INSIDE the item the design draws, ahead of the story, which is
+// what makes it travel with it in a marquee and stack with it in a rotator. A design that
+// places the tag itself — tk18 gives it a column of its own — defines
+// renderTickerKicked(kicker, text) and is handed both halves.
+//
+// Escaped HERE rather than in each design's builder: the builders are the part a design
+// rewrites, and the safety of the strip must not depend on remembering the rule.
+function tickerItemHtml(item) {
+  var text = escapeHtml(item.text);
+  if (!item.kicker) return renderTickerItem(text);
+  var kicker = escapeHtml(item.kicker);
+  if (typeof renderTickerKicked === 'function') return renderTickerKicked(kicker, text);
+  return renderTickerItem('<span class="ticker-kicker">' + kicker + '</span>' + text);
+}
+
+// rebuildTicker(): re-render the items from the hidden #f0 source.
 function rebuildTicker() {
   var track = document.getElementById('ticker-track');
   // A ROTATING ticker shows one item at a time and the graphic's own timer advances it, so
   // rendering the whole list here would both look wrong and pile every item into the strip at
   // once. Hand it back to the rotator instead.
   if (TICKER_ROTATE && typeof tickerShowNext === 'function') { tickerShowCurrent(); return; }
-  var lines = document.getElementById('f0').textContent.split('\\n');
   var html = '';
-  lines.forEach(function (raw) {
-    var item = raw.trim();
-    // Escaped HERE rather than in each design's renderTickerItem: the row builder is the part
-    // a design rewrites, and the safety of the strip must not depend on remembering to.
-    if (item !== '') html += renderTickerItem(escapeHtml(item));
+  parseTickerItems(document.getElementById('f0').textContent).forEach(function (item) {
+    html += tickerItemHtml(item);
   });
   // The marquee loop needs the set twice: sliding one set length reads as endless.
   track.innerHTML = TICKER_DOUBLE_ITEMS ? html + html : html;
@@ -173,9 +265,12 @@ const ROTATE_CSS = `
 }
 `;
 
+// The fallback rundown, for a design that declares no sample of its own. Two of the four are
+// tagged and two are not, because that is what the format promises: a kicker is available on
+// any item and required on none.
 const ITEMS_SAMPLE = [
-  'Welcome to tonight’s live show',
-  'Guest lineup announced for next week',
+  'TONIGHT: Welcome to the live show',
+  'NEXT WEEK: Guest lineup announced',
   'Send your questions with #ontheair',
   'Tickets for the summer tour are on sale now',
 ].join('\n');
@@ -234,6 +329,18 @@ ${resetCanvasCss(o.resolution)}
   position: absolute;
 ${zoneCssText(o.zone, o.nudge, o.resolution)}
   opacity: 0;                      /* hidden until play() runs the entrance */
+}
+
+/* ── Item kicker: the tag a story is filed under ("SPORT: United win 3-0"). ──
+   Shared, and emitted BEFORE the design so a design that wants its own treatment simply
+   restates the rule. Every ticker gets one for free, which is what makes the mark portable:
+   the same rundown carries its tags into whichever design you switch to. */
+.ticker-kicker {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-right: calc(10px * var(--scale));
 }
 
 /* ── Design ── */

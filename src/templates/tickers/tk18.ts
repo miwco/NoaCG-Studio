@@ -1,8 +1,10 @@
 // tk18 "Status Rotator" — the technical/status strip. One service at a time, held long enough
 // to read, advanced by the graphic's own timer and pausable on air.
 //
-// Items are written "Service — status" and the runtime splits them at the dash: the service
-// name goes into a fixed-width column in caps, the status follows in ordinary sentence case.
+// Items are written "Service: status" — the shared ticker mark (docs/TICKERS.md) — and the
+// service name is this design's kicker: a fixed-width column in caps, with the status beside
+// it in ordinary sentence case. The older "Service — status" spelling still splits at the
+// dash, so a list written before the mark existed keeps working.
 // The column is what makes a rotating status list scannable — the eye learns where the name
 // starts and stops re-reading it.
 //
@@ -24,12 +26,12 @@ export const tk18: TemplateVariant = defineTickerVariant(
     maxLines: 2,
     suggestedLines: [
       {
-        title: 'Statuses (use — between service and status)',
+        title: 'Statuses (a colon ends the service name)',
         sample: [
-          'Northern line — delays of up to 20 minutes',
-          'Harbour ferry — running to timetable',
-          'Airport shuttle — suspended until 14:00',
-          'City buses — running to timetable',
+          'Northern line: delays of up to 20 minutes',
+          'Harbour ferry: running to timetable',
+          'Airport shuttle: suspended until 14:00',
+          'City buses: running to timetable',
         ].join('\n'),
       },
       { title: 'Label', sample: 'Service status' },
@@ -121,17 +123,26 @@ export const tk18: TemplateVariant = defineTickerVariant(
   color: var(--label-color);       /* the family's label colour */
   vertical-align: baseline;        /* the name and the status share a baseline */
 }`,
-    // renderTickerItem(text): "Service — status". Accepts an em dash, an en dash or a plain
-    // hyphen surrounded by spaces; an item written any other way renders whole, so a typo
-    // never makes a status disappear.
-    rowBuilderJs: `// renderTickerItem(text): one status — the service name is split into its own column.
+    // The service name is this design's KICKER, drawn as a column instead of an inline tag.
+    // renderTickerKicked() is the seam for exactly that (tickers/shared.ts), and taking it is
+    // what makes the same rundown portable: "Northern line: delays" keeps its service name
+    // when the show switches to a crawl, where the old em dash was just punctuation.
+    //
+    // renderTickerItem() still splits an em dash, an en dash or a spaced hyphen, because that
+    // is how every list written for this design before the mark existed reads — and an item
+    // written any other way renders whole, so a typo never makes a status disappear.
+    rowBuilderJs: `// renderTickerKicked(kicker, text): the service name in its own column, the status beside it.
+function renderTickerKicked(kicker, text) {
+  return '<span class="ticker-item">' +
+         '<span class="ticker-service">' + kicker + '</span>' + text +
+         '</span>';
+}
+
+// renderTickerItem(text): one status with no kicker — the older "Service — status" spelling
+// is still split at the dash, and anything else runs whole.
 function renderTickerItem(text) {
   var m = text.match(/^(.*\\S)\\s+[\\u2014\\u2013-]\\s+(\\S.*)$/);
-  if (m) {
-    return '<span class="ticker-item">' +
-           '<span class="ticker-service">' + m[1] + '</span>' + m[2] +
-           '</span>';
-  }
+  if (m) return renderTickerKicked(m[1], m[2]);
   return '<span class="ticker-item">' + text + '</span>';
 }`,
     // A rotating strip shows ONE item at a time — the assembler turns doubling off for the

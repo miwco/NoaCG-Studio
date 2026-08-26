@@ -188,6 +188,119 @@ test('tickers survive both extremes of item length: one very long story, and for
   expect(r.rotatorLong.boxWithinFrame).toBe(true);
 });
 
+// ── The KICKER (docs/TICKERS.md): the one mark a ticker's single field carries. These drive
+// the EMITTED runtime rather than the parser - scripts/ticker-parser.test.mjs already runs the
+// parser itself - because what has to hold is that the tag reaches the screen, keeps reaching
+// it when the show switches design, and never eats a score or a clock.
+
+test('a kicker is drawn on the strip, and one typed alone tags every story under it', async ({ page }) => {
+  await toApp(page);
+  const r = (await page.evaluate(`(async () => {
+    ${HARNESS}
+    const tpl = await build('tk05');
+    const w = await boot(tpl);
+    w.update(JSON.stringify({ f0: [
+      'SPORT: United win 3-0',
+      'WEATHER:',
+      'Storm warning issued for the coast',
+      'Ferries cancelled until Thursday',
+      '',
+      'Full results after the break',
+    ].join('\\n') }));
+    w.play();
+    await sleep(200);
+    // The marquee renders the set twice for its seamless loop, so read the first set only.
+    const items = Array.from(w.document.querySelectorAll('.ticker-item')).slice(0, 4);
+    const kicker = w.document.querySelector('.ticker-kicker');
+    return {
+      kickers: items.map((el) => (el.querySelector('.ticker-kicker') || {}).textContent || ''),
+      // The story survives intact beside its tag - the kicker is added, never substituted.
+      firstStory: items[0].textContent,
+      // A tag nobody can tell apart from the story is not a tag: read both colours off the
+      // rendered frame rather than trusting the stylesheet to have been applied.
+      kickerColour: w.getComputedStyle(kicker).color,
+      storyColour: w.getComputedStyle(items[0]).color,
+      // The tag rides INSIDE the item, which is what makes it travel with it.
+      insideItem: !!items[0].querySelector('.ticker-kicker'),
+    };
+  })()`)) as { kickers: string[]; firstStory: string; kickerColour: string; storyColour: string; insideItem: boolean };
+
+  // One inline kicker, then a kicker typed alone tagging BOTH stories beneath it, then a
+  // blank line closing it so the last story carries no tag at all.
+  expect(r.kickers).toEqual(['SPORT', 'WEATHER', 'WEATHER', '']);
+  expect(r.firstStory).toContain('United win 3-0');
+  expect(r.insideItem).toBe(true);
+  // Drawn in the accent, which is the shared treatment every design gets for free — so the
+  // tag reads as a different thing from the story beside it.
+  expect(r.kickerColour).not.toBe(r.storyColour);
+});
+
+test('the same rundown keeps its tags in a design that draws them its own way', async ({ page }) => {
+  await toApp(page);
+  const r = (await page.evaluate(`(async () => {
+    ${HARNESS}
+    // The portability claim, measured: ONE rundown, two designs. tk05 draws the shared inline
+    // tag; tk18 takes renderTickerKicked() and gives it a column. Before the mark existed,
+    // tk18's service name was an em dash nothing else could read.
+    const rundown = 'Northern line: delays of up to 20 minutes';
+    const out = {};
+    for (const id of ['tk05', 'tk18']) {
+      const tpl = await build(id);
+      const w = await boot(tpl);
+      w.update(JSON.stringify({ f0: rundown }));
+      w.play();
+      await sleep(250);
+      const tag = w.document.querySelector('.ticker-kicker, .ticker-service');
+      out[id] = {
+        tag: tag ? tag.textContent : null,
+        story: w.document.querySelector('.ticker-item').textContent,
+      };
+    }
+    return out;
+  })()`)) as Record<string, { tag: string | null; story: string }>;
+
+  for (const id of ['tk05', 'tk18']) {
+    expect(r[id].tag, id).toBe('Northern line');
+    expect(r[id].story, id).toContain('delays of up to 20 minutes');
+    // The tag is not repeated inside the story text - it was lifted out, not duplicated.
+    expect(r[id].story.indexOf('Northern line'), id).toBe(r[id].story.lastIndexOf('Northern line'));
+  }
+});
+
+test('a score, a clock and a link are not kickers - the colon needs a space after it', async ({ page }) => {
+  await toApp(page);
+  const r = (await page.evaluate(`(async () => {
+    ${HARNESS}
+    // Every one of these ships in a real sample today. A length guard alone - which is all the
+    // credit roll's colon rule has - would have made a tag of each.
+    const tpl = await build('tk13');
+    const w = await boot(tpl);
+    w.update(JSON.stringify({ f0: [
+      'NORTHERN UNITED 2:1 CITY ROVERS',
+      'Polling stations close at 20:00',
+      'Full results at https://example.org/results',
+      'TRAVEL: the 20:45 service is cancelled',
+    ].join('\\n') }));
+    w.play();
+    await sleep(200);
+    const items = Array.from(w.document.querySelectorAll('.ticker-item')).slice(0, 4);
+    return {
+      kickers: items.map((el) => (el.querySelector('.ticker-kicker') || {}).textContent || ''),
+      texts: items.map((el) => el.textContent),
+      // The fixture's own score chip still works: the parser left the line alone.
+      scoreChip: (w.document.querySelector('.ticker-score') || {}).textContent || null,
+    };
+  })()`)) as { kickers: string[]; texts: string[]; scoreChip: string | null };
+
+  expect(r.kickers).toEqual(['', '', '', 'TRAVEL']);
+  expect(r.texts[0]).toContain('CITY ROVERS');
+  expect(r.texts[1]).toContain('20:00');
+  expect(r.texts[2]).toContain('https://example.org/results');
+  // …and the real tag on the fourth line survived the clock later in the same line.
+  expect(r.texts[3]).toContain('20:45');
+  expect(r.scoreChip).toBe('2:1');
+});
+
 test('the bilingual crawl splits both languages, and passes an untranslated item through whole', async ({ page }) => {
   await toApp(page);
   const r = (await page.evaluate(`(async () => {
