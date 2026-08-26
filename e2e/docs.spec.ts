@@ -28,6 +28,26 @@ test('every section-nav link points at a section that exists', async ({ page }) 
   }
 });
 
+test('the graphics shelf holds one guide per kind', async ({ page }) => {
+  await page.goto('/docs');
+  const graphics = page.locator('#graphics');
+  // The kinds are guides INSIDE one section now, because the left nav carries main topics only
+  // (owner, 2026-08-26: end credits and tickers as top-level entries confused it). Their
+  // anchors are what the rest of the repo links to, so they have to survive the nesting.
+  for (const id of ['scoreboards', 'quiz', 'end-credits', 'tickers']) {
+    await expect(graphics.locator(`[id="${id}"]`)).toHaveCount(1);
+  }
+  // Quizzes and game shows are what the 2026-09-12 student production runs on, so the buttons
+  // an operator presses are named here or the guide is decoration.
+  await expect(graphics).toContainText('Lock it in');
+  await expect(graphics).toContainText('Reveal correct');
+  // The scoreboard's one non-obvious behaviour: the goal press moves the score with it.
+  await expect(graphics).toContainText('Goal A');
+  // And the two text-box formats keep the rule each of them turns on.
+  await expect(graphics).toContainText('A colon ends a role');
+  await expect(graphics).toContainText('A colon ends a kicker');
+});
+
 test('the four guides carry their load-bearing content', async ({ page }) => {
   await page.goto('/docs');
 

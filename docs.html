@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  THE PUBLIC DOCS PAGE (/docs). Before editing the words here, read src/docs/AGENTS.md: it holds
+  the voice (plain information, zero em-dashes - `npm run check:copy` fails the build on one), the
+  rule that nothing is documented until it has been run, and why the left nav carries main topics
+  only while a per-kind guide nests inside the Graphics section.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -46,10 +52,10 @@
       <nav class="doc-nav" aria-label="Sections">
         <p class="group">Start</p>
         <a href="#getting-started">Getting started</a>
-        <p class="group">Guides</p>
+        <p class="group">Make a graphic</p>
+        <a href="#graphics">Graphics</a>
         <a href="#svg">Import your own SVG graphic</a>
-        <a href="#end-credits">End credits</a>
-        <a href="#tickers">Tickers</a>
+        <p class="group">Connect playout</p>
         <a href="#browser-source">OBS, vMix &amp; browser sources</a>
         <a href="#casparcg">CasparCG</a>
         <p class="group">Run the show</p>
@@ -82,8 +88,258 @@
               production and <a href="#dashboard">run the show</a>.</li>
           </ol>
           <p>
-            The guides below cover the rest: bringing your own design in as an SVG, connecting
-            playout systems, live data, and letting a coding agent do the authoring.
+            The guides below cover the rest: what each kind of graphic asks you to type, bringing
+            your own design in as an SVG, connecting playout systems, live data, and letting a
+            coding agent do the authoring.
+          </p>
+        </section>
+
+        <!-- ═══════════════════════ GRAPHICS ═══════════════════════ -->
+        <section id="graphics">
+          <h2>Graphics</h2>
+          <p>
+            Every graphic is one <strong>kind</strong> in one <strong>design</strong>. The kind
+            decides what you type and what the operator's buttons do. The design decides how it
+            looks. Changing the design never means retyping the content.
+          </p>
+          <p>
+            Most kinds need no guide: a lower third, a card, a corner bug or a countdown takes a
+            few plain fields and the wizard shows you all of them at once. The four below are
+            worth reading first, because each asks for its content in a particular shape.
+          </p>
+          <ul class="doc-kinds">
+            <li><a href="#scoreboards">Scoreboards</a> - two teams, two scores, and a goal press
+              that moves one of them.</li>
+            <li><a href="#quiz">Quizzes and game shows</a> - a question, the answers, a locked-in
+              pick and the reveal.</li>
+            <li><a href="#end-credits">End credits</a> - the whole roll in one text box.</li>
+            <li><a href="#tickers">Tickers</a> - the whole rundown in one text box.</li>
+          </ul>
+
+          <h3 id="scoreboards" class="doc-kind">Scoreboards</h3>
+          <p>
+            A scoreboard has four fields: <strong>Team A</strong>, <strong>Score A</strong>,
+            <strong>Team B</strong> and <strong>Score B</strong>. Type a new score and the number
+            on air changes. Nothing else moves, and nothing has to be played again.
+          </p>
+
+          <h4 id="scoreboards-goal">The goal press moves the score</h4>
+          <p>
+            The operator's buttons are <strong>Goal A</strong>, <strong>Goal B</strong>,
+            <strong>Clear flag</strong> and <strong>Full time</strong>. Goal A raises the goal
+            marker <em>and</em> adds one to Score A on the same press, so there is nothing else to
+            remember while the marker is up. Press it again while the marker is still up and it
+            plays again and adds another. Clear flag takes the marker down and leaves the score
+            where it is.
+          </p>
+          <p>
+            <strong>Full time</strong> marks the result final. It is independent of the goal
+            marker, so a goal and a full-time call cannot get in each other's way.
+          </p>
+          <p>
+            Any figure can still be typed. The score is a value, not a mode, which is why
+            correcting one after the fact is only a number changing on screen.
+          </p>
+
+          <h4 id="scoreboards-designs">The designs</h4>
+          <p>
+            <strong>Match Strip</strong> is the sport strip: team names against big scores with
+            one accent edge. <strong>Quiet Score</strong> is a panel-free corner stack, two rows
+            split by a hairline. <strong>House Score</strong> and <strong>Frost Score</strong> are
+            the house and frosted-glass versions. All four take the same fields and the same
+            buttons.
+          </p>
+
+          <h3 id="quiz" class="doc-kind">Quizzes and game shows</h3>
+          <p>
+            This is the kind a school or student production runs: a question on screen, a
+            contestant picks, the pick is locked, the correct answer is revealed. There are three
+            boards, for two, three and four answers, and they behave identically. More rows means
+            more fields, never more buttons.
+          </p>
+
+          <h4 id="quiz-fields">What you type</h4>
+          <p>
+            The <strong>Question</strong>, then <strong>Answer A</strong> to
+            <strong>Answer D</strong> (fewer on the smaller boards). Two more fields belong to the
+            operator rather than the audience: <strong>Correct answer</strong>, set before the
+            show, and <strong>Selected answer</strong>, set as the contestant makes their pick.
+            Typing in either one changes nothing on screen by itself.
+          </p>
+
+          <h4 id="quiz-run">Running it</h4>
+          <ol>
+            <li><strong>Select answer</strong> highlights the pick. Press it again with a different
+              letter as often as the contestant changes their mind.</li>
+            <li><strong>Lock it in</strong> makes the pick final. Select then greys out, and it is
+              not merely refused: the board has no route out of locked except the reveal, so a
+              late selection has nowhere to go.</li>
+            <li><strong>Reveal correct</strong> shows the right answer, and marks the pick and the
+              correct answer differently when they are not the same row.</li>
+            <li><strong>Show audience result</strong> is optional and comes after the verdict. It
+              paints a percentage on every row, read from one field written in row order:
+              <code>34 | 52 | 9 | 5</code>.</li>
+          </ol>
+
+          <h4 id="quiz-sealed">Locking a pick nobody has seen yet</h4>
+          <p>
+            A game show usually locks the answer before showing it. Type the letter into
+            <strong>Selected answer</strong> without pressing Select, then press
+            <strong>Lock it in</strong> straight from the question: the board locks with the choice
+            still hidden. <strong>Reveal choice</strong> then shows it as its own beat. Going
+            straight to <strong>Reveal correct</strong> from there is allowed too, because the
+            verdict shows the pick anyway.
+          </p>
+
+          <h4 id="quiz-elsewhere">In a playout system that has no buttons</h4>
+          <p>
+            The board's default path is question, reveal, out. A playout system that only knows how
+            to step forward gets exactly that, with no control page and nothing to configure.
+          </p>
+
+          <h4 id="quiz-designs">The designs</h4>
+          <p>
+            <strong>Arena Quiz</strong> is the game-show board: a leaning question slab over four
+            lettered answer rows. <strong>House Quiz</strong>, <strong>Frost Quiz</strong> and
+            <strong>Clean Quiz</strong> are the house, frosted and quiet versions of it. The
+            two-answer and three-answer boards carry four matching designs each, named Split and
+            Triple.
+          </p>
+
+          <h3 id="end-credits" class="doc-kind">End credits</h3>
+          <p>
+            A credit roll is a list of people, and a list of people is not a list of fields. Every
+            end-credits design has <strong>one</strong> field for the whole roll: a text box you
+            paste into, in the studio, on the production dashboard, or later in whatever plays it
+            out. A show with five camera operators does not add five fields to the template.
+          </p>
+          <p>
+            So the format has to carry the one distinction a credit roll is made of: which part is
+            the <strong>role</strong>, and which part is the <strong>person</strong>. There is one
+            mark to learn.
+          </p>
+
+          <h4 id="credits-colon">A colon ends a role. Everything else is a name.</h4>
+          <pre><code>Director: Alex Rivera</code></pre>
+          <p>
+            A role with more than one person puts the colon at the end of its own line, and the
+            people follow beneath it, for as long as no new role appears:
+          </p>
+          <pre><code>Camera Operators:
+Jonas Berg
+Lena Fors
+Petri Salo</code></pre>
+          <p>
+            You type it the way you would write it on paper, instead of repeating the word
+            <em>Camera</em> on five lines.
+          </p>
+
+          <h4 id="credits-rules">The marks</h4>
+          <ul>
+            <li><code>Director:</code> marks a role. Every line under it is one of its names.</li>
+            <li><code>Director: Alex Rivera</code> is the same, inline, for a role with one
+              person.</li>
+            <li><code>Director</code> TAB <code>Alex Rivera</code> is the same. This is what a
+              paste from a Google Doc table or a spreadsheet column looks like.</li>
+            <li><code>Director | Alex Rivera</code> is the same, with the older separator.
+              Existing lists keep working.</li>
+            <li><code>Alex Rivera</code> is a name. It joins the role above it, or stands on its
+              own if there is none.</li>
+            <li><code>#&nbsp;PRODUCTION</code> is a department heading, above a run of roles.</li>
+            <li>A blank line starts a new section.</li>
+            <li>The text before a colon has to be 48 characters or shorter to be read as a role.
+              A longer line is a name, so a sentence that happens to contain a colon is not turned
+              into a job title.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
+            some other template systems use.
+          </p>
+          <p>
+            <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
+            line is read as a name, which gives a clean column of names. A line is never promoted
+            to a heading because of where it sits, so a roll can end on "Special thanks to
+            everyone who made this show possible" without that line being set in accent capitals.
+          </p>
+
+          <h4 id="credits-designs">The same text in any design</h4>
+          <p>
+            The format marks roles and names; the design decides the arrangement. Switching design
+            does not mean retyping the credits. <strong>Classic Roll</strong> gives centred blocks
+            with the role over its names. <strong>Column Roll</strong> puts the role right-aligned
+            in a left column with its names stacked in the right. <strong>Programme Roll</strong>
+            sets it as serif leader rows on paper. Walls, donor boards, sponsor crawls and
+            schedules in the same category read the same text.
+          </p>
+          <p>
+            Classic Roll adds one choice in the wizard's <strong>Style</strong> step,
+            <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
+            its names quieter beneath it. Use it when a role credits several people.
+            <em>Name</em> sets the name big with the role as a small label above it: the film
+            convention. Use it when nearly every role has one person.
+          </p>
+
+          <h3 id="tickers" class="doc-kind">Tickers</h3>
+          <p>
+            A ticker is a rundown of stories, and a rundown is not a list of fields. Every ticker
+            design has <strong>one</strong> field for the whole rundown - a text box you type or
+            paste into, in the studio, on the production dashboard, or later in whatever plays it
+            out. Adding a story never adds a field.
+          </p>
+          <p>
+            So the format carries the one distinction a ticker item is made of: which part is the
+            <strong>kicker</strong> - the tag a story is filed under - and which part is the
+            <strong>story</strong>. It is the same shape as the credit roll above, on purpose.
+          </p>
+
+          <h4 id="tickers-colon">A colon ends a kicker. Everything else is the story.</h4>
+          <pre><code>SPORT: United win 3-0</code></pre>
+          <p>
+            A desk with several stories puts the colon at the end of its own line, and the
+            stories follow beneath it - until a blank line or the next kicker:
+          </p>
+          <pre><code>SPORT:
+United win 3-0
+City held at home
+Rovers sign a goalkeeper</code></pre>
+
+          <h4 id="tickers-rules">The complete set</h4>
+          <ul>
+            <li><code>SPORT: United win 3-0</code> - one story, tagged <em>SPORT</em>.</li>
+            <li><code>SPORT:</code> - a kicker; every line under it carries it.</li>
+            <li><code>SPORT</code> TAB <code>United win 3-0</code> - the same as the first, which
+              is what a paste from a spreadsheet column gives you.</li>
+            <li><code>Storm warning issued</code> - a plain story, with no tag at all.</li>
+            <li>A blank line closes the open kicker.</li>
+          </ul>
+          <p>
+            A <strong>semicolon works everywhere a colon does</strong>. And
+            <strong>nothing is required</strong>: a rundown typed with no marks at all is a plain
+            list of stories, exactly as tickers read before kickers existed.
+          </p>
+
+          <h4 id="tickers-numbers">Scores, clocks and links are safe</h4>
+          <p>
+            The colon has to be <strong>followed by a space</strong>, or end the line. That is
+            what keeps a ticker's own numbers out of it:
+          </p>
+          <pre><code>NORTHERN UNITED 2:1 CITY ROVERS
+Polling stations close at 20:00
+Full results at https://example.org</code></pre>
+          <p>
+            None of those is a kicker, and <code>TRAVEL: the 20:45 service is cancelled</code> is
+            read the way you meant it. One more difference from end credits: a
+            <code>|</code> is <em>not</em> a separator in a ticker, because Bilingual Crawl
+            already splits an item at it into its two languages.
+          </p>
+
+          <h4 id="tickers-designs">The same rundown in any design</h4>
+          <p>
+            The format says what the content <em>is</em>, never how it is arranged - so switching
+            design never means retyping the rundown. Every ticker draws a kicker in the accent
+            colour ahead of its story, and a design that wants it somewhere else places it
+            itself: <strong>Status Rotator</strong> puts it in a fixed-width name column, which is
+            what makes a service status scannable.
           </p>
         </section>
 
@@ -178,146 +434,7 @@
         </section>
 
         <!-- ═══════════════════════ END CREDITS ═══════════════════════ -->
-        <section id="end-credits">
-          <h2>End credits</h2>
-          <p>
-            A credit roll is a list of people, and a list of people is not a list of fields. Every
-            end-credits design has <strong>one</strong> field for the whole roll: a text box you
-            paste into, in the studio, on the production dashboard, or later in whatever plays it
-            out. A show with five camera operators does not add five fields to the template.
-          </p>
-          <p>
-            So the format has to carry the one distinction a credit roll is made of: which part is
-            the <strong>role</strong>, and which part is the <strong>person</strong>. There is one
-            mark to learn.
-          </p>
 
-          <h3 id="credits-colon">A colon ends a role. Everything else is a name.</h3>
-          <pre><code>Director: Alex Rivera</code></pre>
-          <p>
-            A role with more than one person puts the colon at the end of its own line, and the
-            people follow beneath it, for as long as no new role appears:
-          </p>
-          <pre><code>Camera Operators:
-Jonas Berg
-Lena Fors
-Petri Salo</code></pre>
-          <p>
-            You type it the way you would write it on paper, instead of repeating the word
-            <em>Camera</em> on five lines.
-          </p>
-
-          <h3 id="credits-rules">The marks</h3>
-          <ul>
-            <li><code>Director:</code> marks a role. Every line under it is one of its names.</li>
-            <li><code>Director: Alex Rivera</code> is the same, inline, for a role with one
-              person.</li>
-            <li><code>Director</code> TAB <code>Alex Rivera</code> is the same. This is what a
-              paste from a Google Doc table or a spreadsheet column looks like.</li>
-            <li><code>Director | Alex Rivera</code> is the same, with the older separator.
-              Existing lists keep working.</li>
-            <li><code>Alex Rivera</code> is a name. It joins the role above it, or stands on its
-              own if there is none.</li>
-            <li><code>#&nbsp;PRODUCTION</code> is a department heading, above a run of roles.</li>
-            <li>A blank line starts a new section.</li>
-            <li>The text before a colon has to be 48 characters or shorter to be read as a role.
-              A longer line is a name, so a sentence that happens to contain a colon is not turned
-              into a job title.</li>
-          </ul>
-          <p>
-            A <strong>semicolon works everywhere a colon does</strong>, because that is the mark
-            some other template systems use.
-          </p>
-          <p>
-            <strong>Nothing is required.</strong> Paste a bare list with no marks at all and every
-            line is read as a name, which gives a clean column of names. A line is never promoted
-            to a heading because of where it sits, so a roll can end on "Special thanks to
-            everyone who made this show possible" without that line being set in accent capitals.
-          </p>
-
-          <h3 id="credits-designs">The same text in any design</h3>
-          <p>
-            The format marks roles and names; the design decides the arrangement. Switching design
-            does not mean retyping the credits. <strong>Classic Roll</strong> gives centred blocks
-            with the role over its names. <strong>Column Roll</strong> puts the role right-aligned
-            in a left column with its names stacked in the right. <strong>Programme Roll</strong>
-            sets it as serif leader rows on paper. Walls, donor boards, sponsor crawls and
-            schedules in the same category read the same text.
-          </p>
-          <p>
-            Classic Roll adds one choice in the wizard's <strong>Style</strong> step,
-            <strong>Emphasis</strong>. <em>Role</em> (the default) sets the role big and bold with
-            its names quieter beneath it. Use it when a role credits several people.
-            <em>Name</em> sets the name big with the role as a small label above it: the film
-            convention. Use it when nearly every role has one person.
-          </p>
-        </section>
-
-        <!-- ═══════════════════════ TICKERS ═══════════════════════ -->
-        <section id="tickers">
-          <h2>Tickers</h2>
-          <p>
-            A ticker is a rundown of stories, and a rundown is not a list of fields. Every ticker
-            design has <strong>one</strong> field for the whole rundown - a text box you type or
-            paste into, in the studio, on the production dashboard, or later in whatever plays it
-            out. Adding a story never adds a field.
-          </p>
-          <p>
-            So the format carries the one distinction a ticker item is made of: which part is the
-            <strong>kicker</strong> - the tag a story is filed under - and which part is the
-            <strong>story</strong>. It is the same shape as the credit roll above, on purpose.
-          </p>
-
-          <h3 id="tickers-colon">A colon ends a kicker. Everything else is the story.</h3>
-          <pre><code>SPORT: United win 3-0</code></pre>
-          <p>
-            A desk with several stories puts the colon at the end of its own line, and the
-            stories follow beneath it - until a blank line or the next kicker:
-          </p>
-          <pre><code>SPORT:
-United win 3-0
-City held at home
-Rovers sign a goalkeeper</code></pre>
-
-          <h3 id="tickers-rules">The complete set</h3>
-          <ul>
-            <li><code>SPORT: United win 3-0</code> - one story, tagged <em>SPORT</em>.</li>
-            <li><code>SPORT:</code> - a kicker; every line under it carries it.</li>
-            <li><code>SPORT</code> TAB <code>United win 3-0</code> - the same as the first, which
-              is what a paste from a spreadsheet column gives you.</li>
-            <li><code>Storm warning issued</code> - a plain story, with no tag at all.</li>
-            <li>A blank line closes the open kicker.</li>
-          </ul>
-          <p>
-            A <strong>semicolon works everywhere a colon does</strong>. And
-            <strong>nothing is required</strong>: a rundown typed with no marks at all is a plain
-            list of stories, exactly as tickers read before kickers existed.
-          </p>
-
-          <h3 id="tickers-numbers">Scores, clocks and links are safe</h3>
-          <p>
-            The colon has to be <strong>followed by a space</strong>, or end the line. That is
-            what keeps a ticker's own numbers out of it:
-          </p>
-          <pre><code>NORTHERN UNITED 2:1 CITY ROVERS
-Polling stations close at 20:00
-Full results at https://example.org</code></pre>
-          <p>
-            None of those is a kicker, and <code>TRAVEL: the 20:45 service is cancelled</code> is
-            read the way you meant it. One more difference from end credits: a
-            <code>|</code> is <em>not</em> a separator in a ticker, because Bilingual Crawl
-            already splits an item at it into its two languages.
-          </p>
-
-          <h3 id="tickers-designs">The same rundown in any design</h3>
-          <p>
-            The format says what the content <em>is</em>, never how it is arranged - so switching
-            design never means retyping the rundown. Every ticker draws a kicker in the accent
-            colour ahead of its story, and a design that wants it somewhere else places it
-            itself: <strong>Status Rotator</strong> puts it in a fixed-width name column, which is
-            what makes a service status scannable.
-          </p>
-        </section>
 
         <!-- ═══════════════════════ BROWSER SOURCES ═══════════════════════ -->
         <section id="browser-source">
@@ -605,10 +722,15 @@ CG 1-20 STOP</code></pre>
           <p>
             For a timing system, a results service or your own scripts: push values into a
             published production over plain HTTPS, authenticated by the production's own data key.
-            The key is minted when the production is published. There is no screen that shows it
-            yet, so this route currently needs access to the production's row in the database;
-            self-hosted deployments can read it there. Writes become rows in the production's
-            command log, so the renderer cannot tell your update from an operator's.
+            Writes become rows in the production's command log, so the renderer cannot tell your
+            update from an operator's.
+          </p>
+          <p>
+            <strong>Where to find the key.</strong> Publish the production, open its
+            <strong>Data</strong> tab, and press <strong>▾ Data key</strong> in the Production data
+            panel. Reveal it, copy it, and put it in your integration's server-side configuration.
+            Publishing again mints a new key and the old one stops working, which is also how you
+            revoke one.
           </p>
           <pre><code>curl -s https://noacg.studio/api/data/update \
   -H "Authorization: Bearer $NOACG_DATA_KEY" \
