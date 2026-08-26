@@ -79,7 +79,7 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // morning is the exact cost this shape removes, so every prompt queues itself - and a
       // session that stops to ask a human is a session that does nothing all night.
       'QUEUE is mandatory on every prompt and is the last thing in it',
-      'No prompt ever contains a step for the user.',
+      'No prompt ever contains a step for the user, and no session blocks on a question.',
       // The two exceptions to NEVER ACTS are enumerated so neither can widen quietly, and
       // neither of them reaches landing.
       'Exactly two exceptions, both bounded',
@@ -106,6 +106,12 @@ const CRITICAL_WORKFLOW_MARKERS = new Map([
       // Paid-for on 2026-08-26: a build gate landing mid-wave turns every sibling's merge of
       // main into a moving target, and their reds read as their own fault.
       'A GATE LANDS ALONE.',
+      // The owner is the top-level coordinator, consulted on major forks - never a gate on
+      // machine-decidable choices, however important; and a why that is not true breaks
+      // working software when executed to the letter.
+      'a question reaches the user only when the',
+      'THE WHY MUST BE TRUE, and function outranks cosmetics.',
+      'THE WAVE WINDOW is whatever time the user names in the invocation',
       // The self-feeding wave is bounded by the report, not by pre-approval - the loop can
       // extend a wave, never extend itself past the owner's checkpoint.
       'THE REPORT IS THE CHECKPOINT.',

@@ -67,6 +67,13 @@ the merging. It is the default when the user says so, or when a wave is being st
 of a day. Everything below marked *night* is mandatory there and merely good practice in a day
 wave, where the user is awake to unstick things.
 
+**THE WAVE WINDOW is whatever time the user names in the invocation** - three and seven hours are
+the common shapes - and the plan scopes to it: prompt cores sized to finish inside it, tails cut
+first, continuations only if they fit. Unstated, plan to the next natural checkpoint and say
+which. **24 hours is the absolute ceiling of any unattended chain**, because the owner tries the
+build at least daily and the loop must never drift further than one day from a human's eyes. The
+window is a scope, not a schedule - no other clock mechanics.
+
 ## Output
 
 Seven sections, in this order. Nothing else - no session summary, no restatement of the input.
@@ -128,7 +135,14 @@ disjoint:
   note in a prompt does not cover this - the builder may rightly choose a better design than
   the planner named.
 
-Then the second, unrelated limit: **One browser-driving job per MACHINE, not per worktree** (the
+Then the machine's own limits. **RAM is a shared resource like the browser slot and the merge
+queue** - this laptop is RAM-bound, and a wave where every session queues a full catalog battery
+at once starves the landings (measured 2026-08-26: 0.1 GB free, seven gate jobs waiting behind
+one suite). The plan names which sessions carry heavy local batteries and staggers or trims them:
+only the AFFECTED gates, cheapest first, and verification CI can prove stays in CI. Jobs waiting
+politely on the queue's RAM floor is the system working; the machine glugging is not.
+
+And: **One browser-driving job per MACHINE, not per worktree** (the
 rule and its override live in the root `AGENTS.md`). Editing parallelises; a browser job does not.
 Note what this does NOT cover: the per-change gate belongs to CI now, so the only work that needs
 the laptop's browser is what CI cannot do - in-browser visual acceptance, the catalog gates
@@ -248,10 +262,16 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **There is no `WAIT` line, because a wave is order-free** (section 2). `START` is `now` for every
   session the user starts. The only other value is `on <branch> landing`, and that belongs to a
   follow-on this workflow launches itself - never to a prompt the user is asked to hold.
-- **No prompt ever contains a step for the user.** Not "ask the owner", not "wait for approval",
-  not "have the user run this". A session that stops to ask is a session that does nothing all
-  night. Anything that genuinely needs the user is a note in section 4, never a line in a prompt;
-  if a task cannot be written without one, it does not go in the wave.
+- **No prompt ever contains a step for the user, and no session blocks on a question.** Not "ask
+  the owner", not "wait for approval". A session that stops to ask does nothing all night: it
+  decides with the WHY, or writes the question into its handoff and does the rest. The owner
+  dropping in to talk to a running session is always welcome and never required - a wave must
+  finish identically with or without it. Anything that genuinely needs the user is a note in
+  section 4, never a line in a prompt.
+- **Claude Code prompts open with a Remote Control reminder** while the auto-connect bug stands:
+  the session's first output tells the user to type `/remote-control` (a session cannot invoke
+  terminal built-ins itself). Temporary - drop this bullet when new sessions reach the phone on
+  their own; the memory `remote-control-every-session` carries the exit test.
 - **`<tool>` is whichever tool will run it** - `claude/…` or `codex/…`. Never hardcode one.
 - **`MODEL` is two facts in one line: the tier, and the KIND of reasoning the task rewards.**
   The tier decides what the user launches the session on; the second half is the more useful
@@ -280,6 +300,12 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 - **WHY says what breaks if this is not done**, where GOAL says what will be true. It exists so
   the receiving session can TEST the assignment instead of obeying it. Same rule and same reason
   as the handoff workflow's, pinned there.
+- **THE WHY MUST BE TRUE, and function outranks cosmetics.** A session that senses a cosmetic
+  why behind a functional cost says so instead of complying: on 2026-08-26 a docs session
+  removed a personal handle to the letter and broke the documented CLI install path - the owner's
+  own verdict was "a vanity reason and not our true reason to break the functionality". When the
+  asked change would break something that works, keep the function, do the rest, and put the
+  tension in the handoff.
 - **WHY is a TARGET, not a route.** The steps in DO are the planner's best route to the WHY - not
   the assignment itself. A session that sees a better route to the same WHY builds it when it
   fits inside its `TOUCHES` set and says so in the handoff; when the better route would change
@@ -318,9 +344,15 @@ QUEUE  Then, as your LAST TWO actions and in this order:
 
 ### 6. Open questions, then one pick
 
-Only decisions that change what the work IS and that the user alone can make; a question with an
-obvious default is not a question. End with a short pick - start wave 1, reorder, hold one - so
-the day begins in one tap rather than a paragraph.
+**The ask-test, and it is strict (owner, 2026-08-26): a question reaches the user only when the
+user holds information the machine lacks** - a taste ruling, product direction, real money, an
+external account, an irreversible step past `main`. Importance alone never qualifies: an
+important, machine-decidable choice is DECIDED, done, and reported with its why, and the user
+vetoes after the fact. The user is the top-level coordinator, in the loop for major forks - not a
+gate on execution. A question that fails the test becomes a decision in the report.
+
+End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
+than a paragraph.
 
 ### 7. The morning report
 
@@ -473,7 +505,8 @@ Each wave is also an experiment on the orchestration itself, and this contract i
 results accrue - the same failure must never fire twice. When a wave surfaces an orchestration
 lesson (a collision class the plan missed, a report section that failed its reader, a rule that
 was ambiguous under pressure), the orchestrator applies it HERE under its own-contract carve-out,
-lands it through the queue like everything else, and names the change in the report. Product
+lands it through the queue like everything else, and names the change in the report. **A wave
+that taught nothing says so** - a lesson is found, never invented, exactly as work is. Product
 lessons are not this: they go to the taste rubric via the owner's rulings, to `docs/backlog/`,
 or to a prompt. The test for which is which: would the fix change what a SESSION builds, or how
 a WAVE is planned? Only the second belongs here.
