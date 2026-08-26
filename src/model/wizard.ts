@@ -686,6 +686,21 @@ export interface TemplateVariant {
   /** Logo capability — drives the wizard's logo toggle, the import flow, and filtering. */
   logo: LogoSupport;
   /**
+   * What an `optional`-logo design does when nobody has decided — the same tri-state
+   * `defaultSteps` uses (null = the design decides), and for the same reason: it is the design
+   * that knows whether its composition was drawn around a mark.
+   *
+   * A closing roll conventionally ends on one, so cr01 asks for it; the user can still switch
+   * it off, which is the whole point. Absent falls back to "an image was provided", which is
+   * what every optional design did before this existed.
+   *
+   * Reach for `optional` + this, never `built-in`, unless the design genuinely cannot be drawn
+   * without a mark. `built-in` renders the toggle CHECKED AND DISABLED - a graphic nobody can
+   * export without a logo slot - and that was never a decision any design should make for a
+   * broadcaster.
+   */
+  defaultLogo?: boolean;
+  /**
    * WHAT that image slot is for, when the design's slot is not a brand mark.
    *
    * `logo` answers "does this design take an image field"; it does not answer "what kind of
@@ -824,7 +839,8 @@ export function resolveOptions(variant: TemplateVariant, options: WizardOptions 
     logoAssetPath: options.logoAssetPath ?? null,
     logoEnabled:
       variant.logo === 'built-in' ||
-      (variant.logo === 'optional' && (options.logoEnabled ?? !!options.logoAssetPath)),
+      (variant.logo === 'optional' &&
+        (options.logoEnabled ?? variant.defaultLogo ?? !!options.logoAssetPath)),
     logoInkKnocked: options.logoInkKnocked ?? false,
     markPlacement: variant.markPlacement ?? null,
     designArt: options.designArt ?? null,

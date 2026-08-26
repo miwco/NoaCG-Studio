@@ -319,7 +319,7 @@ export default function FinishStep({
             <strong>Export it</strong>
           </span>
           <span className="hint">
-            Just the files — SPX, CasparCG, OGraf, LiveOS, an OBS/vMix overlay
+            Just the files — OGraf, CasparCG, SPX, LiveOS, an OBS/vMix overlay
             {isRenderConfigured() ? ', or a rendered video' : ''}. Saved to your library first.
           </span>
         </button>

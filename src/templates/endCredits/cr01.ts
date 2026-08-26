@@ -53,7 +53,11 @@ export const cr01: TemplateVariant = defineCreditsVariant(
         value: 'role',
       },
     ],
-    logo: 'built-in',
+    // OPTIONAL, defaulting on. A closing roll conventionally ends on a mark, so an untouched
+    // build still carries one - but a broadcaster who does not want a logo slot must be able to
+    // switch it off, and 'built-in' renders that checkbox checked AND disabled.
+    logo: 'optional',
+    defaultLogo: true,
     animationPresets: ['credits-roll'],
     defaultPalette: paletteById('ivory'),
     defaultFontId: 'inter',
@@ -194,7 +198,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   margin: 0 auto calc(40px * var(--scale));  /* centered, with air before the logo */
 }
 
-/* Delivered logo — kept modest; the credits end quietly, not with a billboard. */
+${o.logoEnabled ? `/* Delivered logo — kept modest; the credits end quietly, not with a billboard. */
 .credits-logo {
   max-width: calc(375px * var(--scale));   /* wide logos shrink to fit the column's core */
   max-height: calc(138px * var(--scale));  /* tall logos cap here — proportions preserved */
@@ -215,7 +219,7 @@ export const cr01: TemplateVariant = defineCreditsVariant(
   text-transform: uppercase;           /* label, not content */
   color: var(--text-dim);              /* dimmed — the placeholder never competes */
   margin-bottom: calc(30px * var(--scale)); /* same air as the real logo would get */
-}
+}` : ''}
 
 /* Year / copyright — the very last line; quiet and dimmed. */
 .credits-year {
@@ -259,17 +263,19 @@ function renderCreditRow(entry) {
   return renderCreditGroup({ role: entry.role, names: [entry.name] });
 }
 
-// renderEndBlock(yearHtml, logoSrc): the sign-off the roll stops on —
-// a short accent hairline, then the logo, then the year line.
-function renderEndBlock(yearHtml, logoSrc) {
+// renderEndBlock(yearHtml${o.logoEnabled ? ', logoSrc' : ''}): the sign-off the roll stops on —
+// a short accent hairline${o.logoEnabled ? ', then the logo,' : ' and'} then the year line.${o.logoEnabled ? '' : `
+// This project asked for no logo slot, so there is no f2 field and no mark to draw - the
+// roll signs off on its hairline and its year alone.`}
+function renderEndBlock(yearHtml${o.logoEnabled ? ', logoSrc' : ''}) {${o.logoEnabled ? `
   // With a delivered logo we show the image; without one, a styled placeholder
   // frame marks the slot (drop a file in via the import flow to fill it).
   var logo = logoSrc
     ? '<img class="credits-logo" src="' + logoSrc + '" alt="Logo">'
-    : '<div class="credits-logo-slot">Your logo</div>';
+    : '<div class="credits-logo-slot">Your logo</div>';` : ''}
   return '<div class="credits-end">' +
-           '<div class="credits-rule"></div>' +   // the lt01 hairline motif, laid flat
-           logo +
+           '<div class="credits-rule"></div>' +   // the lt01 hairline motif, laid flat${o.logoEnabled ? `
+           logo +` : ''}
            '<div class="credits-year">' + yearHtml + '</div>' +
          '</div>';
 }`,

@@ -191,7 +191,7 @@ function FieldsSection({
   return (
     <>
       <p className="hint">
-        The editable data fields the graphic carries — each becomes a real SPX operator field.
+        The editable data fields the graphic carries — each becomes a real operator field.
         The first text fields are the visible lines.
       </p>
       {spec.fields.map((f, i) => (

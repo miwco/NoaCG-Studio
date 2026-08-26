@@ -43,7 +43,8 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
   // The logo slot: built-in designs always carry one; optional designs get a toggle.
   // Unset (null) follows "a logo image exists" — the import flow pre-fills it.
   const logoOn =
-    variant.logo === 'built-in' || (draft.logoEnabled ?? draft.logoAssetPath !== null);
+    variant.logo === 'built-in' ||
+    (draft.logoEnabled ?? variant.defaultLogo ?? draft.logoAssetPath !== null);
   const logoImage = draft.importedImages.find((a) => a.path === draft.logoAssetPath);
 
   /** Upload a custom logo: embed it as a data-URL asset and point the slot at it. */
@@ -201,7 +202,7 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
 
       {variant.logo !== 'none' && (
         <div className="panel-section">
-          <h3>Logo <span className="muted">a real SPX image field — swap the file at playout</span></h3>
+          <h3>Logo <span className="muted">a real image field — swap the file at playout</span></h3>
           {/* The one checkbox row (re-design/handoff.md §6). */}
           <label className="dlg-check" style={{ cursor: variant.logo === 'built-in' ? 'default' : 'pointer' }}>
             <input
@@ -214,7 +215,7 @@ export default function FieldsStep({ variant, draft, onDraft }: Props) {
               <span className="dlg-check-title">Include a logo slot</span>
               <span className="dlg-check-desc">
                 {variant.logo === 'built-in'
-                  ? 'This design always carries its logo slot — upload yours or pick a file later in SPX.'
+                  ? 'This design always carries its logo slot — upload yours or pick a file later at playout.'
                   : 'Adds an image field to the design; leave it empty for a clean placeholder.'}
               </span>
             </span>

@@ -645,7 +645,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
             </button>
             {/* A bare "»" is not a label an operator can read under pressure — the glyph keeps
                 the SPX vocabulary, the word says what pressing it does. */}
-            <button onClick={() => postCmd({ cmd: 'next' })} title="Advance to the next step (SPX Continue)" data-testid="control-next">
+            <button onClick={() => postCmd({ cmd: 'next' })} title="Advance to the next step" data-testid="control-next">
               » Next
             </button>
             <button

@@ -430,7 +430,7 @@ export default function AnimationStep({ variant, template, draft, onDraft, onRep
             <span className="dlg-check-text">
               <span className="dlg-check-title">Reveal in steps</span>
               <span className="dlg-check-desc">
-                ▶ Play shows only the first line; each press of » Next (SPX <em>Continue</em>)
+                ▶ Play shows only the first line; each press of » Next
                 reveals one more. Test it with the » Next button after creating.
               </span>
             </span>

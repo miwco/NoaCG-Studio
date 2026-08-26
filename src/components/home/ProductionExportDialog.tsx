@@ -120,7 +120,7 @@ export default function ProductionExportDialog({ show, onClose }: { show: Show; 
           <p className="hint">
             A package is a self-contained copy, driven by the playout host. To put this
             <strong> live</strong> production into SPX instead - cued from here, from the control
-            page or from a phone - use <strong>Links → SPX template</strong> on the production page.
+            page or from a phone - use <strong>Links → Template file</strong> on the production page.
           </p>
           <p className="hint">
             To <strong>share or back up</strong> this production for NoaCG itself — graphics,

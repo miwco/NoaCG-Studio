@@ -207,7 +207,7 @@ export default function ProductionsSection({
               <button
                 onClick={() => setExportShow(r)}
                 disabled={r.graphics.length === 0}
-                title="Export every graphic of this production — SPX, CasparCG, OBS/vMix overlay, H2R, OGraf, LiveOS"
+                title="Export every graphic of this production — OGraf, CasparCG, SPX, OBS/vMix overlay, H2R, LiveOS"
                 aria-label={`Export ${r.name}`}
                 data-testid="export-production-row"
               >

@@ -326,7 +326,7 @@ export function renderProductionControllerHtml(payload: ControllerPayload): stri
       <button class="take" id="v-take" title="Air the previewed cue">⟳ TAKE <kbd>SPACE</kbd></button>
       <button id="v-retake" disabled title="Re-take: play this cue's entrance again from the start">⟳ Re-take <kbd>R</kbd></button>
       <button id="v-update" title="Push the edited values to air without re-animating">✎ Update <kbd>U</kbd></button>
-      <button id="v-next" title="Advance the on-air graphic one step (SPX Continue)">» Next <kbd>N</kbd></button>
+      <button id="v-next" title="Advance the on-air graphic one step">» Next <kbd>N</kbd></button>
       <button id="v-out" title="Play the selected cue's layer off air">■ Out <kbd>0</kbd></button>
       <span class="onair-line" id="live-line"></span>
     </div>

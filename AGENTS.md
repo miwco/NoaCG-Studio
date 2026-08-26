@@ -37,6 +37,9 @@ catalog road, CasparCG + OBS are still the verification targets, AI work stays p
 - **Best & easiest to create - and put on air** - premium output with the least friction; a
   non-technical user can make a great graphic AND run it live without ever touching code.
   **AI-assisted** (later), but a pro keeps full control.
+- **Client-agnostic, and nothing MANDATORY** - a playout client is one TARGET among others,
+  never our word for a general concept; OGraf leads (EBU/YLE are the first customers). A slot is
+  `logo: 'optional'` + `defaultLogo`, never `'built-in'`. Gate: `check:client-neutral`.
 - **Export anywhere, SPX-canonical** - SPX is the canonical *internal* format and the strictest
   validation target; every other target is an adapter off the same source. SPX compatibility stays
   rock-solid, but the product is not "an SPX generator."

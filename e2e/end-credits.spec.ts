@@ -135,6 +135,46 @@ test('the Fields step is one paste box, not a field per person', async ({ page }
   await expect(group.locator('.credits-name')).toHaveCount(40);
 });
 
+// Nothing about a broadcaster's graphic may be MANDATORY. The roll declared logo: 'built-in',
+// which renders the wizard's checkbox ticked AND disabled - so a broadcaster who does not want a
+// logo slot could not export without one. It defaults ON, because a closing roll conventionally
+// ends on a mark; the point is that it can be switched off.
+test('the closing logo is a default, not a requirement', async ({ page }) => {
+  await enableAdvancedMode(page);
+  await page.goto('/app');
+  await expect(page.locator('.wz-modal')).toBeVisible();
+  await page.locator('[data-entry="template"]').click();
+  await chooseType(page, 'Credits & thanks');
+  await pickDesign(page, 'Classic Roll');
+  await page.getByRole('button', { name: 'Next →' }).click(); // Fields
+
+  const logo = page.getByRole('checkbox').first();
+  await expect(logo).toBeChecked();
+  await expect(logo).toBeEnabled();
+  await logo.uncheck();
+
+  await finishIntoEditor(page);
+  await expect(page.locator('.wz-modal')).toBeHidden();
+
+  // No field, and no markup or styling for a slot the graphic does not have.
+  const built = await page.evaluate(async () => {
+    const { useTemplateStore } = await import('/src/store/templateStore.ts');
+    const t = useTemplateStore.getState().template;
+    return {
+      fields: t.fields.map((f) => f.field),
+      logoInHtml: t.html.includes('id="f2"'),
+      logoInCss: t.css.includes('.credits-logo'),
+      logoInJs: t.js.includes('credits-logo'),
+    };
+  });
+  expect(built).toEqual({ fields: ['f0', 'f1'], logoInHtml: false, logoInCss: false, logoInJs: false });
+
+  // The roll still signs off - the hairline and the year are not the logo's dependants.
+  const frame = page.frameLocator('iframe.preview-frame');
+  await expect(frame.locator('.credits-end .credits-year')).toBeVisible();
+  await expect(frame.locator('.credits-logo-slot')).toHaveCount(0);
+});
+
 test('the Style step picks which line of a credit is the loud one', async ({ page }) => {
   await enableAdvancedMode(page);
   await page.goto('/app');

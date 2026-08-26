@@ -1981,8 +1981,8 @@ export default function AiStep({
               <p className={validation?.ok ? 'status-ok' : 'status-bad'} style={{ marginTop: 6 }}>
                 {validation?.ok
                   ? lastPath === 'raw'
-                    ? '✓ Passes SPX validation — press Play in the preview, then Create project.'
-                    : '✓ Passes SPX validation and the live playout test — press Play in the preview, then Create project.'
+                    ? '✓ Passes validation — press Play in the preview, then Create project.'
+                    : '✓ Passes validation and the live playout test — press Play in the preview, then Create project.'
                   : `✗ ${validation?.errors.length} check(s) failing — refine or regenerate.`}
               </p>
               {/* ON-AIR READINESS: the checks that already ran, grouped into what an

@@ -2813,7 +2813,7 @@ function ProductionLinks({
             host that cannot take the link, so as a full-size row with its own paragraph it
             read as a fourth capability and pushed the control page below the fold. */}
         <LinkRow
-          label="SPX template"
+          label="Template file"
           testId="spx-template"
           quiet
           help={

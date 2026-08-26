@@ -354,7 +354,7 @@ export default function ImportDesignStep({
         <h3>What happens next</h3>
         <p className="hint">
           {templateFile
-            ? 'Name it, then send it to a production or export it — SPX, CasparCG, OGraf, LiveOS or an OBS/vMix overlay. The file is kept exactly as you wrote it; NoaCG adds nothing to it.'
+            ? 'Name it, then send it to a production or export it — OGraf, CasparCG, SPX, LiveOS or an OBS/vMix overlay. The file is kept exactly as you wrote it; NoaCG adds nothing to it.'
             : svg
               ? 'The next steps choose which text layers the operator can edit, match the typefaces, and pick how it moves on and off air. The SVG itself is never redrawn — your exact artwork goes on air, and exports as a working template.'
               : 'The next steps clean up the artwork if it needs it, place the text fields on it, and choose how it moves on and off air. Your artwork is never redrawn or regenerated — NoaCG only adds the broadcast behaviour around it, and exports it as a working template.'}

@@ -110,8 +110,8 @@ export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo,
             the live URL would make one term mean two products on the one screen. */}
         <p className="wz-hero-sub">
           Choose your graphics, then pick who drives them. Our controller runs the show live
-          through one browser source your playout client loads once, or export them for SPX
-          Graphics, CasparCG, OGraf, H2R Graphics, LiveOS, OBS and vMix.
+          through one browser source your playout client loads once, or export them for OGraf,
+          CasparCG, SPX Graphics, H2R Graphics, LiveOS, OBS and vMix.
         </p>
       </div>
 
@@ -205,7 +205,7 @@ export default function EntryStep({ onTemplates, onImportGraphic, onAi, onVideo,
               <span className="wz-entry-icon">‹›</span>
               <strong>Blank project</strong>
             </span>
-            <span className="hint">A minimal valid SPX template — pure code-first, no training wheels.</span>
+            <span className="hint">A minimal valid template — pure code-first, no training wheels.</span>
           </button>
         )}
       </div>
