@@ -218,6 +218,28 @@ blank card now shows names. If a thumbnail measurement was taken before this bra
   `catch { return null }` turned into a fifteen-second timeout blaming the product. The
   catches now re-throw anything that is not the mid-swap error they were written for.
 
+## A landing hazard that is not about this branch
+
+`auto-merge.mjs` `waitForCi` polls `gh run list --commit <sha>` sixty times at ten seconds, so
+a run has **ten minutes to APPEAR** on the commit the job just pushed. GitHub webhooks ran 28 to
+40 minutes late on 2026-08-26 (measured by the docs-polish session, not by me), which means a
+landing whose branch is behind main pushes a merge sha and can then time out waiting for a run
+that is merely queued somewhere else. It reads as a fault in the tree and is not one.
+
+Two ways round it, cheapest first:
+
+- **Be up to date when your turn comes.** If the branch tip already equals the integrated sha,
+  the run you dispatched yourself is already on that commit and `waitForCi` finds it on its
+  first poll. That is the whole trick.
+- **Dispatch while it waits.** `gh workflow run ci.yml --ref <branch>` targets the tip, which
+  after the job pushes IS the sha it is waiting for, and a dispatch appears immediately with no
+  webhook involved.
+
+The real fix is in `waitForCi` itself - a wait with no way to make the thing it waits for happen
+is a missing mechanism, and it could dispatch the run rather than give up. It is deliberately
+NOT done on this branch: that is shared landing machinery and several branches were queueing
+through it the same evening.
+
 ## What is left, and what I would do next
 
 - **The ticker's VALUE axis is still per-design and not portable.** tk04, tk06, tk14, tk22 parse
