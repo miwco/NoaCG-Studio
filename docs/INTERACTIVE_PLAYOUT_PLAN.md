@@ -858,8 +858,8 @@ implementation time; two branches minting the same number is a known trap), one 
   preview and reality cannot drift.
 - **Rehearsal/offline seam:** one `AudienceBackend` interface
   (`src/audience/audienceTypes.ts`), two providers — `audienceData.ts` (Supabase) and
-  `localAudience.ts` (in-memory + a submission/vote simulator). Rehearse mode or an offline
-  build uses the local provider, which makes the whole audience workflow drivable by the
+  `localAudience.ts` (in-memory + a submission/vote simulator). An unpublished production or an
+  offline build uses the local provider, which makes the whole audience workflow drivable by the
   offline e2e suite.
 - **Entitlement: new key `audience`** (not a widening of `showchat` — the 0022 kill-switch
   contract promises the admin page states exactly what a switch stops). One entry each in
