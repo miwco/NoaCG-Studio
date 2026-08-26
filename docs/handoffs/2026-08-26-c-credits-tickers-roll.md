@@ -170,18 +170,30 @@ blank card now shows names. If a thumbnail measurement was taken before this bra
 - `npm run build` green on every commit (typecheck, lint, dep-cruiser, 320+ node tests, vite,
   prerender, line endings, the instruction-chain ratchet at its new 112,000).
 - `scripts/ticker-parser.test.mjs`: 16 tests, in the build.
-- CI dispatched on the branch head (run 32984222302). **Read WHICH JOBS RAN**
+- CI dispatched on the branch head. **Read WHICH JOBS RAN**
   (`gh run view <id> --json jobs -q '.jobs[] | "\(.conclusion)\t\(.name)"'`) — a green run that
   planned only the last push is not a verdict.
 - Catalog baselines re-recorded after the tk18 type fix and verified with no update flags.
-- **The four local catalog sweeps still owe a run**: `overflow-sweep --baseline`,
-  `type-floor`, `field-coverage`, `numerals`. They are NOT in CI (only the calibration
-  tripwire and the factory gates are), and they do NOT start a dev server of their own - every
-  queued attempt died on `navigating to http://localhost:5198/app`. Start one with
-  `preview_start {name: "dev"}` first, and run them AFTER any Playwright job, because a
-  hand-started server on this port is the `reuseExistingServer` trap in e2e/AGENTS.md. Five
-  ticker samples changed, so `overflow-sweep --baseline` may write a diff that belongs in this
-  branch.
+- **All five catalog gates green, plus the factory gates**, run against a `preview_start` dev
+  server: `type-floor` (507 variants), `numerals` (335), `field-coverage`, `overflow-sweep
+  --baseline`, `test:e2e:catalog` (35), `node scripts/factory.mjs` (293 candidates). `l3-sweep`
+  clean for both affected categories, `ticker` and `end-credits`.
+- **The overflow baseline was re-recorded, and only three of its rows are mine.** A marquee's
+  items travel past a clipping viewport, so `.ticker-item` and `.ticker-sep` were already
+  accepted escapes and `.ticker-kicker` is the same escape under a new name (tk05, tk16,
+  tk20). The other ten rows were OWED: cr01-cr04 and cr13 still carried `credits-row` /
+  `credits-heading` / `credits-dot`, row kinds that stopped existing when the parser started
+  emitting groups - so the sweep had been failing on main for reasons nothing here caused.
+- **Those four sweeps do NOT start a dev server of their own.** Every queued attempt died on
+  `navigating to http://localhost:5198/app`. Start one with `preview_start {name: "dev"}`
+  first, run them, and STOP it before any Playwright job - a hand-started server on this port
+  is the `reuseExistingServer` trap in e2e/AGENTS.md. `scripts/factory.mjs` says so itself.
+- **The affected suite found two failures and both are fixed and re-run green** (28 passed
+  across wizard-preview, end-credits and public-service): the tk18 baseline drift above, and
+  a bug of my own worth knowing - `expect.poll(reader)` calls the reader with NO arguments,
+  so a reader written to take `page` threw a TypeError that the file's blanket
+  `catch { return null }` turned into a fifteen-second timeout blaming the product. The
+  catches now re-throw anything that is not the mid-swap error they were written for.
 
 ## What is left, and what I would do next
 
