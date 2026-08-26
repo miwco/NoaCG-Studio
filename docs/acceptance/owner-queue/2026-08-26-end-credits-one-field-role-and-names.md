@@ -1,3 +1,7 @@
+---
+kind: walk
+date: 2026-08-26
+---
 # End credits: one field, a role over its people
 
 **Date:** 2026-08-26 · **Branches:** `claude/noacg-end-credits-template-132d41`,
