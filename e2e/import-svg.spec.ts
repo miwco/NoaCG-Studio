@@ -1964,7 +1964,19 @@ test('svg import: growth is symmetrical and a line stops at whatever is drawn be
   expect(huge.panelRight).toBeCloseTo(huge.frameWidth - rest.panelLeft, 0);
   expect(huge.name.right).toBeLessThanOrEqual(huge.panelRight);
   // …and the residual gap is the mirrored inset itself, not slack: growth is spent, not wasted.
-  expect(huge.panelRight - huge.name.right).toBeCloseTo(rest.name.left - rest.panelLeft, 0);
+  //
+  // Bounded on BOTH sides but not pinned to a single number, because only one side of it is a
+  // guarantee. The panel edge is exact and font-free (it is the cap, asserted above). Where the
+  // TEXT lands inside it is not: the size search stops as soon as the block fits its budget
+  // rather than landing on it, so the last step can leave a pixel unspent, and how much depends
+  // on the face's own metrics - this measured 50 on Windows and 51 on CI's Linux fonts, and
+  // pinning it to ±0.5 failed the shard while nothing was wrong. What must never happen is the
+  // gap coming out SMALLER than the inset: that is the text eating the margin it is mirroring,
+  // which is the whole defect this asserts against.
+  const drawnInset = rest.name.left - rest.panelLeft;
+  const grownGap = huge.panelRight - huge.name.right;
+  expect(grownGap).toBeGreaterThanOrEqual(drawnInset - 0.5);
+  expect(grownGap).toBeLessThan(drawnInset + 3);
 
   // NEIGHBOURS DO NOT OVERLAP. A long Location used to run to 860 straight through the 19:30
   // Slot drawn at 700, because its room was measured out to the panel's edge. Its room is now
