@@ -1006,15 +1006,22 @@ internal note, audited like every other admin write. Reading is `support`, triag
 
 ### The inbox does not wait to be visited
 
-**A nightly digest mails what came in to `contact.noacg@gmail.com`.** The owner's ruling,
-2026-08-26: *"I will not remember to go to the admin page."* An inbox that only works for somebody
-who opens it is, for feedback, worse than no feedback button - the button teaches users that
-telling us something is pointless, and that lesson is not reversible by fixing the page later.
+**The reminder arrives weekly in Claude Code, not by mail.** The owner's ruling, 2026-08-26:
+*"I will not remember to go to the admin page."* An inbox that only works for somebody who opens
+it is, for feedback, worse than no feedback button - the button teaches users that telling us
+something is pointless, and that lesson is not reversible by fixing the page later.
 
-`.github/workflows/feedback-digest.yml` runs `scripts/feedback-digest.mjs` at 06:40 UTC. It is one
-GET against `user_feedback` over a 26-hour window, ordered most-negative-first like the page, and
-one plain-text mail. It writes nothing: triage stays here, because triage is a write path with an
-audit trail and a digest is a copy.
+**The mail digest is BUILT AND PARKED** (2026-08-27): it needs a Gmail app password and four
+repository secrets, and the owner has no time to wire them. `.github/workflows/feedback-digest.yml`
+stays scheduled and stays INERT-GREEN - with the secrets absent it prints a notice and exits 0, so
+it costs nothing and turns on the day somebody sets them. What stands in its place is a weekly
+ROUTINE (`docs/ROUTINES.md`) that runs `npm run feedback:count` against the local `.env` and
+reports the numbers in chat with a link to open `/admin`. Counts travel; what a person wrote stays
+behind the admin login, which is stricter than mailing it.
+
+`scripts/feedback-digest.mjs` is one GET against `user_feedback` over a 26-hour window (`--count`
+looks back 168 hours instead), ordered most-negative-first like the page. It writes nothing in any
+mode: triage stays here, because triage is a write path with an audit trail and a digest is a copy.
 
 Three properties are asserted in `scripts/feedback-digest.test.mjs` (part of `npm run build`)
 rather than trusted:

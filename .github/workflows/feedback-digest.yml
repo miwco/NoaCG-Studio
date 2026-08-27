@@ -8,11 +8,17 @@
 # So this reads yesterday's rows and mails them. Triage stays on the admin page - this is a read
 # path and the only thing it changes is what the owner knows.
 #
-# INERT UNTIL THE SECRETS EXIST, AND NEVER RED FOR THEIR ABSENCE. The two secrets are created by
-# hand once (docs/acceptance/owner-queue/2026-08-26-feedback-digest-secrets.md). Until then the
-# job checks, says so with a notice and exits green. A repository that goes red every night for a
-# configuration step nobody has taken yet is a repository whose owner stops reading red, and this
-# repo already pays for every alarm it fires (docs/VERIFICATION.md, "What a red run means").
+# PARKED, 2026-08-27, AND DELIBERATELY LEFT SCHEDULED. Wiring the Gmail app password is time the
+# owner does not have, so the standing reminder moved into Claude Code instead: a WEEKLY routine
+# (docs/ROUTINES.md) runs `npm run feedback:count` against the local .env and reports the numbers
+# in chat. This job stays here because it costs nothing while inert and turns on the day somebody
+# sets the four secrets - deleting it would only mean writing it again.
+#
+# INERT UNTIL THE SECRETS EXIST, AND NEVER RED FOR THEIR ABSENCE. The four secrets are created by
+# hand once (docs/ROUTINES.md, "The parked mail digest"). Until then the job checks, says so with
+# a notice and exits green. A repository that goes red every night for a configuration step nobody
+# has taken yet is a repository whose owner stops reading red, and this repo already pays for
+# every alarm it fires (docs/VERIFICATION.md, "What a red run means").
 #
 # THE REPOSITORY IS PUBLIC AND SO IS THIS LOG. `user_feedback.message` is somebody's own words.
 # The script prints counts and nothing else on a real run; the only rendered digest that ever
@@ -90,7 +96,7 @@ jobs:
       - name: Say why nothing was sent
         if: ${{ steps.config.outputs.ready == 'false' && !inputs.dry_run }}
         run: |
-          echo "::notice title=Feedback digest is inert::Missing secrets: ${{ steps.config.outputs.missing }}. The shape above is fixtures. See docs/acceptance/owner-queue/2026-08-26-feedback-digest-secrets.md for the two steps that turn this on."
+          echo "::notice title=Feedback digest is inert::Missing secrets: ${{ steps.config.outputs.missing }}. The shape above is fixtures. See docs/ROUTINES.md for the steps that turn this on."
 
       - name: Read the feedback and mail it
         if: ${{ steps.config.outputs.ready == 'true' && !inputs.dry_run }}
