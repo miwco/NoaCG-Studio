@@ -61,6 +61,30 @@ function infographicStat(el) {
 // number". A width, a dashoffset and an opacity are tween TARGETS and settle correctly on
 // their own; anything a callback types into the DOM does not. Add a readout, add its set.
 
+// ---- THE ZERO RULE: a readout empties when the GRAPHIC appears, not when its count starts ----
+//
+// The other end of the same timeline, and the other half of the same bug. Every preset opens by
+// revealing the graphic and emptying what the entrance is about to fill - the bars to 0%, the
+// ring to a full dashoffset - and then adds the measured builder a few tenths later, so the
+// count starts once the panel has settled. The FIGURES were not in that opening: each count
+// emptied its own readout at the moment the count began.
+//
+// A played graphic gets its data BEFORE it is taken: SPX, CasparCG and the playout dashboard all
+// call update() and then play(). So for the whole head start the readout sat on screen showing
+// the operator's real figure, and the count then snapped it back to zero and counted up to the
+// number it had just been showing. Reproduced 2026-08-27 in that order: ig01 painted 87% through
+// 400 ms of its 600 ms panel rise, and twelve readouts across ten designs did the same.
+//
+// So a builder takes that head start as opts.lead and positions its own contents from it: the
+// opening zero at 0, the count at the lead, the settle set at the lead plus the count's length.
+// It says it did so by marking the timeline it returns noacgLeadApplied, and the interpreter
+// (templates/shared/animRuntime.ts) then adds that timeline at 0 rather than at the offset.
+// Absolute timings are unchanged - the count starts and lands exactly where it did. Only the
+// emptying moved, onto the entrance's first frame, where the panel is still fully transparent.
+//
+// A builder that owns no readout ignores the lead, returns an unmarked timeline and is added at
+// the offset exactly as before - which is every measured motion in every other category.
+
 // infographicCountUp(): the headline number rolls from zero up to the operator's figure. The
 // target is their data, so it cannot be a keyframe — it is read here, at play time. A design
 // that pairs a progress bar with the stat grows it once the number lands.
@@ -69,13 +93,15 @@ function infographicCountUp(target, opts) {
   var stat = infographicStat(el);
   if (!stat) return null;
   var speed = motionSpeed();
+  var lead = (opts && opts.lead) || 0;           // the head start the entrance gives this count
+  var count = 1.6 / speed;                       // how long the figure takes to arrive
   var counter = { value: 0 };                    // a plain object GSAP can tween
 
   var tl = gsap.timeline();
-  tl.set(el, { textContent: '0' + stat.suffix });
+  tl.set(el, { textContent: '0' + stat.suffix }, 0);  // the zero rule - the entrance's first frame
   tl.to(counter, {
     value: stat.value,
-    duration: 1.6 / speed,
+    duration: count,
     ease: (opts && opts.ease) || 'expo.out',
     onUpdate: function () {
       el.textContent = Math.round(counter.value) + stat.suffix;  // whole numbers read best
@@ -83,12 +109,15 @@ function infographicCountUp(target, opts) {
     onComplete: function () {
       el.textContent = stat.text;                // restore the exact text (keeps decimals)
     }
-  });
-  tl.set(el, { textContent: stat.text });        // the settle rule - appended at the count's end,
-                                                 // before the bars extend the timeline past it
+  }, lead);
+  tl.set(el, { textContent: stat.text }, lead + count);  // the settle rule, at the count's end
 
-  var bars = infographicBarsGrow('.infographic-bar-fill', opts);  // harmless when there are none
-  if (bars) tl.add(bars);                        // the bar fills once the figure has landed
+  // The bar fills once the figure has landed (harmless when there are none). Its own lead
+  // carries this count's, so a readout cap it owns empties on the same first frame this
+  // figure does instead of waiting for its bar's turn.
+  var bars = infographicBarsGrow('.infographic-bar-fill', { lead: lead + count });
+  if (bars) tl.add(bars, 0);
+  tl.noacgLeadApplied = true;                    // positioned from opts.lead (the zero rule)
   return tl;
 }
 
@@ -102,6 +131,7 @@ function infographicBarsGrow(target, opts) {
   var fills = document.querySelectorAll(target);
   if (!fills.length) return null;
   var speed = motionSpeed();
+  var lead = (opts && opts.lead) || 0;           // the head start the entrance gives this growth
   var grow = 0.9 / speed;                        // one bar's growth time
   var stagger = 0.12 / speed;                    // bars arrive one after another
   var tl = gsap.timeline();
@@ -116,7 +146,7 @@ function infographicBarsGrow(target, opts) {
       ease: 'power3.out',
       stagger: stagger
     },
-    0                                            // explicit position — the counts below share the clock
+    lead                                         // explicit position — the counts below share the clock
   );
   // The readout numbers: a bar's cap counts to its own figure over the same curve and length
   // as the growth, so number and bar land together. infographicStat() reads the real target
@@ -127,7 +157,9 @@ function infographicBarsGrow(target, opts) {
     if (!stat) continue;
     (function (el, figure, at) {
       var counter = { value: 0 };                // a plain object GSAP can tween
-      tl.set(el, { textContent: '0' + figure.suffix }, at);
+      tl.set(el, { textContent: '0' + figure.suffix }, 0);  // the zero rule - the first frame, not
+                                                 // this bar's turn: a cap emptied at its own
+                                                 // stagger slot shows the real figure until then
       tl.to(counter, {
         value: figure.value,
         duration: grow,                          // the bar's exact length — they land together
@@ -140,8 +172,9 @@ function infographicBarsGrow(target, opts) {
         }
       }, at);
       tl.set(el, { textContent: figure.text }, at + grow);  // the settle rule, at THIS bar's end
-    })(num, stat, i * stagger);                  // aligned with this bar's stagger slot
+    })(num, stat, lead + i * stagger);           // aligned with this bar's stagger slot
   }
+  tl.noacgLeadApplied = true;                    // positioned from opts.lead (the zero rule)
   return tl;
 }
 
@@ -154,6 +187,8 @@ function infographicRingFill(target, opts) {
   var el = document.getElementById('f0');        // the stat the ring is drawn around
   var stat = infographicStat(el);
   var speed = motionSpeed();
+  var lead = (opts && opts.lead) || 0;           // the head start the entrance gives this draw
+  var draw = 1.4 / speed;                        // how long the ring takes to come round
   var ease = (opts && opts.ease) || 'power3.out';
   // A ring can only draw 0-100. The NUMBER still counts to the figure they typed — a clamped
   // ring is a drawing limit, not a licence to show a different value than the operator entered.
@@ -162,15 +197,15 @@ function infographicRingFill(target, opts) {
   var tl = gsap.timeline();
   tl.fromTo(ring,
     { strokeDashoffset: 100 },                   // replay-safe: always starts empty
-    { strokeDashoffset: 100 - percent, duration: 1.4 / speed, ease: ease },
-    0
+    { strokeDashoffset: 100 - percent, duration: draw, ease: ease },
+    lead
   );
   if (stat) {
     var counter = { value: 0 };
-    tl.set(el, { textContent: '0' + stat.suffix }, 0);
+    tl.set(el, { textContent: '0' + stat.suffix }, 0);  // the zero rule - the first frame
     tl.to(counter, {
       value: stat.value,
-      duration: 1.4 / speed,                     // the same length as the draw — they land together
+      duration: draw,                            // the same length as the draw — they land together
       ease: ease,
       onUpdate: function () {
         el.textContent = Math.round(counter.value) + stat.suffix;
@@ -178,9 +213,10 @@ function infographicRingFill(target, opts) {
       onComplete: function () {
         el.textContent = stat.text;
       }
-    }, 0);
-    tl.set(el, { textContent: stat.text }, 1.4 / speed);  // the settle rule, at the draw's end
+    }, lead);
+    tl.set(el, { textContent: stat.text }, lead + draw);  // the settle rule, at the draw's end
   }
+  tl.noacgLeadApplied = true;                    // positioned from opts.lead (the zero rule)
   return tl;
 }
 
@@ -196,6 +232,8 @@ function infographicGoalRing(target, opts) {
   var ring = document.querySelector(target);
   if (!ring) return null;
   var speed = motionSpeed();
+  var lead = (opts && opts.lead) || 0;           // the head start the entrance gives this draw
+  var draw = 1.4 / speed;                        // how long the ring takes to come round
   var ease = (opts && opts.ease) || 'power3.out';
   // The ring's own percent, written by rebuildInfographic() — never parsed out of #f0.
   var percent = Math.max(0, Math.min(100, parseFloat(ring.getAttribute('data-value')) || 0));
@@ -203,8 +241,8 @@ function infographicGoalRing(target, opts) {
   var tl = gsap.timeline();
   tl.fromTo(ring,
     { strokeDashoffset: 100 },                   // replay-safe: always starts empty
-    { strokeDashoffset: 100 - percent, duration: 1.4 / speed, ease: ease },
-    0
+    { strokeDashoffset: 100 - percent, duration: draw, ease: ease },
+    lead
   );
   // The headline figure counts to the operator's total over the ring's exact length, so the
   // number lands the moment the ring stops.
@@ -212,10 +250,10 @@ function infographicGoalRing(target, opts) {
   var stat = infographicStat(el);
   if (stat) {
     var counter = { value: 0 };                  // a plain object GSAP can tween
-    tl.set(el, { textContent: '0' + stat.suffix }, 0);
+    tl.set(el, { textContent: '0' + stat.suffix }, 0);  // the zero rule - the first frame
     tl.to(counter, {
       value: stat.value,
-      duration: 1.4 / speed,                     // the same length as the draw — they land together
+      duration: draw,                            // the same length as the draw — they land together
       ease: ease,
       onUpdate: function () {
         el.textContent = infographicGroupDigits(Math.round(counter.value)) + stat.suffix;
@@ -223,9 +261,10 @@ function infographicGoalRing(target, opts) {
       onComplete: function () {
         el.textContent = stat.text;              // restore the exact text the rebuild formatted
       }
-    }, 0);
-    tl.set(el, { textContent: stat.text }, 1.4 / speed);  // the settle rule, at the draw's end
+    }, lead);
+    tl.set(el, { textContent: stat.text }, lead + draw);  // the settle rule, at the draw's end
   }
+  tl.noacgLeadApplied = true;                    // positioned from opts.lead (the zero rule)
   return tl;
 }
 

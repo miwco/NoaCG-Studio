@@ -38,11 +38,23 @@ work the moment the plugin is installed. Saving needs `noacg login` once (docs/A
 
 From a checkout, for one session only: `claude --plugin-dir ./cli/plugin`.
 
-**Codex**: copy `skills/noacg-graphic/` to `~/.codex/skills/noacg-graphic/` (Codex loads every
-`~/.codex/skills/*/SKILL.md`), and add the MCP server with
-`codex mcp add noacg -- npx -y @noacg/cli mcp`. A Codex plugin marketplace entry is not shipped yet -
-the `.codex-plugin/plugin.json` manifest is here so the same directory is installable the day one
-is added.
+**Codex**: `codex plugin` reads the SAME root `.claude-plugin/marketplace.json`, so the plugin
+installs from the repository the same way (verified 2026-08-27 against `origin/main` and against a
+local checkout):
+
+```bash
+codex plugin marketplace add miwco/NoaCG-Studio
+codex plugin add noacg@noacg-studio
+```
+
+That copies the whole plugin directory into `~/.codex/plugins/cache/noacg-studio/noacg/<version>/`
+- the skill, the command and `.mcp.json` - and `codex mcp list` then shows the `noacg` server
+without a line ever being written to `~/.codex/config.toml`. So neither the manual skill copy nor
+`codex mcp add` is needed any more.
+
+On a Codex build without `codex plugin`, the old path still works: copy `skills/noacg-graphic/` to
+`~/.codex/skills/noacg-graphic/` (Codex loads every `~/.codex/skills/*/SKILL.md`), and add the MCP
+server with `codex mcp add noacg -- npx -y @noacg/cli mcp`.
 
 **Any MCP client**: `npx -y @noacg/cli mcp` over stdio; the skill's references are the server's
 resources (`noacg://docs/<topic>`).

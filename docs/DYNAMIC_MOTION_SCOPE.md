@@ -314,6 +314,56 @@ category is covered the day it lands. It runs on BOTH recipes, and so does
 `e2e/end-credits.spec.ts`'s coverage sweep - two copies of a recipe that are only ever measured
 one at a time are two recipes, which is exactly how the divergence lasted as long as it did.
 
+### 11a-ii. A readout empties when the GRAPHIC appears, not when its count starts (2026-08-27)
+
+The other end of the same timeline, found the day after 11a by playing a stat card from the
+playout dashboard: the final count, a snap to zero, then the count up to the number that had just
+been on screen.
+
+**A dynamic's `time` is a HEAD START.** The step reveals the graphic at 0 and the measured motion
+begins a few tenths later, once the panel has settled - which is right for the motion and wrong
+for the DATA. A playout server writes the data BEFORE it takes the graphic: SPX, CasparCG and our
+own dashboard all call `update()` then `play()`. So a count that empties its own readout when the
+count begins leaves the operator's real figure on screen for the whole head start. The presets
+were already emptying the bars, the rings and the progress lines on the entrance's first frame;
+only the FIGURES were left out of that opening.
+
+Measured 2026-08-27 in the playout order: **twelve readouts across ten designs - every counted
+readout in the catalog.** 11a's settle sweep could never have seen it, because a jump renders the
+zero and the figure in the same frame. Only real playback has a gap.
+
+**The primitive grew one option and one marker, both additive.** The interpreter now hands the
+head start over as `opts.lead` as well as using it as a position, and a builder that positions its
+own contents from it says so by marking the timeline it returns `noacgLeadApplied`; that timeline
+is added at 0, where its opening zero lands on the step's first frame:
+
+```js
+var lead = (at || 0) / speed;
+var segment = build(target, { speed: speed, ease: step.ease, lead: lead });
+if (segment) tl.add(segment, segment.noacgLeadApplied ? 0 : lead);
+```
+
+Absolute timings are unchanged - the count starts and lands exactly where it did; only the
+emptying moved. **A builder that owns no readout ignores the lead, returns an unmarked timeline
+and is added at the offset exactly as before**, which is every measured motion in every other
+category. That is deliberately opt-in: making every builder lead-aware would move the emitted
+bytes of the whole catalog for categories with no readout to fix.
+
+**Neither the data model nor the region's own shape changed**, and that was a constraint rather
+than a preference. `blocks/timelineModel.ts` `parseAddSegment` accepts exactly
+`tl.add(builderName('#target'))` with an optional position; a second argument in a preset's emit
+makes it return null, which makes `importAnimData` refuse the whole template, which silently ships
+every infographic with a LEGACY region and a read-only timeline dock. The head start already lives
+in the data as the dynamic's `time`, so the runtime re-derives the lead from it and the preset's
+emit is untouched.
+
+**The gate** is the played-path sweep in `e2e/counting-settle.spec.ts`: `update()` with the
+design's own field defaults, `play()`, then a reading on every animation frame. It decides which
+readouts COUNT by whether their text moves during the entrance - `update()` writes `data-target`
+onto every field, so the mark alone also catches static captions no builder touches - and asserts
+both halves: no readout shows its figure on the first frame it is visible, and every one of them
+still ends the entrance on its own data.
+
 ### 11b. The emitted runtime still uses `progress(1)`, and the reason has changed
 
 `templates/shared/animRuntime.ts` seeks with `progress(1, true)` in three places: finishing one

@@ -65,6 +65,13 @@ every section stays mounted and no preference is reachable only by clicking the 
   ◨/code toggles close-or-reveal those panels. Binds global Ctrl/Cmd+Z to undo() and
   Ctrl/Cmd+Shift+Z (+ Ctrl+Y) to redo() (skipped when focus is in Monaco or a form field).
   useIsMobile/useSplitter support the mobile and resizable layouts.
+- **NewGraphicButton** - THE door to the wizard, mounted by all five shells (Home, the editor,
+  the control page, the production dashboard, the video shell). One component because the five
+  buttons had drifted: only the editor guarded the working document, the video shell opened the
+  wizard through the store FLAG rather than the route (so Back could not close it), and the
+  production dashboard had no door at all. Always `#/new`, always behind `requestSwitch`. Pass
+  `productionId` on a production surface - the wizard then pre-applies that show and preselects
+  it on Finish, so a graphic made while standing in a production joins it.
 - **CodeEditor** - Monaco + change-highlight decorations + change dots on inactive tabs the last
   apply touched + hover explanations (the teach/ module registers its tooltips here; there is no
   Learn tab). Its toolbar also carries the **Comments** control (src/editor/, shared with the
