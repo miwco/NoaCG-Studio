@@ -355,6 +355,14 @@ function PlayoutSection() {
         browsers this works in; Safari refuses a secure page reaching a local address outright, and
         there <code>noacg caspar play</code> airs a production with no browser at all.
       </p>
+      <p className="dlg-hint">
+        Which server versions work, what to put on a channel by hand, and how to play an exported
+        file are in the{' '}
+        <a href="/docs#casparcg" target="_blank" rel="noreferrer">
+          CasparCG guide
+        </a>
+        .
+      </p>
     </div>
   );
 }
