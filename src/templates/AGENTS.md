@@ -367,7 +367,8 @@ code (with the thin `CLAUDE.md`), loaded only when you work in that directory. A
 writes its lesson there, never back into this file - which is what keeps every session's
 instruction chain affordable (`npm run check:shared-instructions` prints the headroom).
 
-- **lowerThirds/** - lt01…lt62 plus the ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
+- **lowerThirds/** - lt01…lt67 (six ids retired 2026-08-28, never re-minted) plus the
+  ls01…ls41 SPECIALIST pack -> `lowerThirds/AGENTS.md`
 - **infoCards/** - card01…card71, the standard contract's other line-based family ->
   `infoCards/AGENTS.md`
 - **endCredits/** - cr01…cr13, the LIST category (rolls, walls, boards) -> `endCredits/AGENTS.md`
