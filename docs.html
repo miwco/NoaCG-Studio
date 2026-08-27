@@ -43,8 +43,8 @@
       <h1>Guides for making a graphic and putting it on air.</h1>
       <p class="lede">
         The studio is at <a href="/app">noacg.studio/app</a> and it is free. Each guide names the
-        software it needs. An account is required only to publish a production or to save from the
-        command line; everything else, including export, works without one.
+        software it needs. An account is required only to publish a production, or to let a coding
+        agent save into your library; everything else, including export, works without one.
       </p>
     </div>
 
@@ -349,8 +349,9 @@ Full results at https://example.org</code></pre>
           <p>
             SVG import is how you bring a graphic you designed yourself into NoaCG. Design it in
             Illustrator, Figma or Inkscape, export an SVG, and drop it on the Import door. Your
-            text layers become operator fields. The drawing is not redrawn: the typography and
-            geometry go on air as drawn, and export to every target like any other graphic.
+            text layers become operator fields. The drawing is not redrawn. Your typography and
+            geometry go on air as you drew them, and export to every target like any other
+            graphic.
           </p>
           <p>
             Where to drop it: <a href="/app#/new">the studio</a> &rarr; <strong>New graphic</strong>
@@ -432,9 +433,6 @@ Full results at https://example.org</code></pre>
             <code>quiz-board.svg</code> in the samples folder.
           </p>
         </section>
-
-        <!-- ═══════════════════════ END CREDITS ═══════════════════════ -->
-
 
         <!-- ═══════════════════════ BROWSER SOURCES ═══════════════════════ -->
         <section id="browser-source">
@@ -755,129 +753,142 @@ CG 1-20 STOP</code></pre>
         <section id="claude-code">
           <h2>Make graphics with Claude Code, Codex or any coding agent</h2>
           <p>
-            A coding agent can write the HTML, CSS and JavaScript of a graphic. What it cannot
-            work out on its own is what NoaCG requires of one: which fields the operator sees,
-            which events it accepts, and whether it still behaves under a real playout run. The
-            <strong>NoaCG CLI</strong> supplies that part. It carries the contract, runs the same
-            validator the studio runs, and can put the finished graphic in your library.
+            A coding agent can create the HTML, CSS and JavaScript for a graphic. NoaCG turns that
+            graphic into something you can actually use on air: with operator controls, live
+            events, validation and predictable playout behaviour. The <strong>NoaCG CLI</strong>
+            gives coding agents everything they need to build to that standard. It carries the
+            NoaCG contract, runs the same validator as the Studio, and can add the finished
+            graphic directly to your library.
           </p>
           <p>
-            It is one tool with three entrances, so pick whichever suits the agent you use: the
-            <strong>plugin</strong> for Claude Code and Codex, the <strong>MCP server</strong> for
-            any other MCP client, or the plain <strong>terminal</strong>. They all run the same
-            package, <code>@noacg/cli</code>, and carry the same contract text.
+            What lands there is an ordinary NoaCG graphic: it goes into a
+            <a href="#dashboard">production</a>, answers the operator events its own
+            <a href="#behaviour">behaviour</a> defines, and takes <a href="#data">live data</a>
+            from a sheet or an API.
           </p>
 
-          <h3 id="agent-install">Install</h3>
+          <h3 id="agent-install">Connect NoaCG to your agent</h3>
           <p>
-            For Claude Code the plugin is the whole thing: the <code>noacg-graphic</code> skill,
-            a <code>/noacg:graphic</code> command and the MCP server, in two commands with
-            nothing to install first.
+            Two commands, once per machine. After that you talk to your agent, not to the CLI.
+          </p>
+          <p>
+            <strong>Claude Code.</strong> The plugin carries the <code>noacg-graphic</code> skill,
+            a <code>/noacg:graphic</code> command and the tools, with nothing to install first.
           </p>
           <pre><code>claude plugin marketplace add miwco/NoaCG-Studio</code></pre>
           <pre><code>claude plugin install noacg@noacg-studio</code></pre>
+          <p><strong>Codex.</strong> The same plugin, from the same repository.</p>
+          <pre><code>codex plugin marketplace add miwco/NoaCG-Studio</code></pre>
+          <pre><code>codex plugin add noacg@noacg-studio</code></pre>
           <p>
-            Then ask your agent for a graphic, or run <code>/noacg:graphic a football scoreboard
-            for our school channel</code>. If you want the tools without the skill, register the
-            server on its own instead:
-          </p>
-          <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
-          <p>
-            That form registers it for the directory you run it in; add <code>--scope user</code>
-            to have it everywhere. Either way you need Node.js 20 or newer, and a system Chrome
-            or Edge, which the validator drives in headless mode. No account is needed until you
-            want to save a graphic into a library.
-          </p>
-          <p>
-            The server carries the contract with it: an agent can read the reference texts
-            through its <code>noacg_docs</code> tool, and <code>noacg types</code> lists the
-            graphic types, their fields and their operator events, which is where the
-            <code>--type</code> value below comes from.
-          </p>
-          <p>To run the commands yourself, install the tool once:</p>
-          <pre><code>npm i -g @noacg/cli</code></pre>
-          <p>
-            That gives you <code>noacg</code>. Every command below also works as
-            <code>npx @noacg/cli &lt;command&gt;</code> with nothing installed. The package is
-            <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a> on npm.
-          </p>
-
-          <h3 id="agent-setup">Other agents</h3>
-          <p><strong>Codex.</strong> The same server, its own command:</p>
-          <pre><code>codex mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
-          <p>
-            Codex loads every <code>~/.codex/skills/*/SKILL.md</code>, so copy
-            <code>skill/noacg-graphic/</code> out of the package (or
-            <code>cli/plugin/skills/noacg-graphic/</code> from a clone) to
-            <code>~/.codex/skills/noacg-graphic/</code> as well. Without it Codex has the tools but
-            no reason to reach for them.
-          </p>
-          <p>
-            <strong>Any other MCP client.</strong> Run the server over stdio. It exposes types,
-            scaffold, validate, inspect, screenshot, save and the contract references as tools:
+            <strong>Any other agent that speaks MCP.</strong> Register the server over stdio:
+            command <code>npx</code>, arguments <code>-y @noacg/cli mcp</code>. It brings the
+            tools, and the contract text comes with them as the server's own resources.
           </p>
           <pre><code>npx -y @noacg/cli mcp</code></pre>
           <p>
-            <strong>No agent, just you.</strong> Every verb is a plain command. See the loop
-            below.
-          </p>
-          <p>
-            By default everything talks to <code>https://noacg.studio</code>. Set
-            <code>NOACG_URL</code> to point at a self-hosted or local deployment instead.
+            All three need Node.js 20 or newer and a system Chrome or Edge, which the validator
+            drives in headless mode. No account is needed until you save a graphic into a library.
           </p>
 
-          <h3 id="agent-loop">The loop</h3>
+          <h3 id="agent-loop">Then describe the graphic you want</h3>
           <p>
-            Ask your agent for a graphic ("make me a clean scoreboard for a floorball stream:
-            home, away, period, clock"), or walk it yourself.
+            "Make me a clean scoreboard for a floorball stream: home, away, period, clock." In
+            Claude Code, <code>/noacg:graphic</code> starts the same thing.
           </p>
+          <p>
+            The part that makes that work is the <code>noacg-graphic</code> skill the plugin
+            carries. It teaches the agent how a NoaCG graphic is put together, which tools to
+            reach for, how to validate what it wrote, and how to save the result into your
+            library. It says nothing about how the graphic should look, which stays the agent's
+            job.
+          </p>
+          <p>Working from that, the agent:</p>
           <ol>
-            <li>
-              Start from a working chassis. The directory is created relative to where you run
-              the command, and it has to be new or empty. This step is optional, because an agent
-              can also author from scratch against the contract.
-              <pre><code>npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug</code></pre>
-            </li>
-            <li>Author it. Edit the sources: <code>&lt;name&gt;.html</code>,
-              <code>css/template.css</code>, <code>js/template.js</code>, and the
-              <code>images/</code> and <code>fonts/</code> folders. Leave
-              <code>&lt;name&gt;.ograf.json</code>, <code>graphic.mjs</code>,
-              <code>FIELDS.md</code>, <code>README.md</code> and <code>controlpanel.html</code>
-              alone: the next step rewrites them from the sources, so an edit made there is
-              lost.</li>
-            <li>
-              Validate. This is the studio's own gate plus a live playout bench, with off-air,
-              on-air and stress screenshots, so the agent can see what it made.
-              <pre><code>npx @noacg/cli validate my-scorebug --screenshots shots</code></pre>
-            </li>
-            <li>
-              Log in, once per machine. The key can only create graphics.
-              <pre><code>npx @noacg/cli login</code></pre>
-            </li>
-            <li>
-              Put it in your NoaCG library.
-              <pre><code>npx @noacg/cli save my-scorebug</code></pre>
-            </li>
+            <li><strong>Scaffolds</strong> a starting package when the graphic needs a type's
+              fields and operator events. This step is optional: it can also author from scratch
+              against the contract.</li>
+            <li><strong>Authors</strong> the graphic itself, the way it normally writes code.</li>
+            <li><strong>Validates</strong> it against the studio's own gate and a live playout
+              bench, with off-air, on-air and stress screenshots, so it can see what it made.</li>
+            <li><strong>Iterates</strong> on the findings, which read the way a compiler reports
+              errors, until they are clean.</li>
+            <li><strong>Saves</strong> it into your NoaCG library and prints the link.</li>
           </ol>
           <p>
-            <code>validate</code> reports findings the way a compiler reports errors, and the
-            agent iterates until it is clean. <code>save</code> refuses anything that does not
-            pass. The saved graphic is editable in the studio and exportable to any target.
+            Saving is the one step that needs you. Run <code>noacg login</code> once per machine
+            and approve it in the browser. The key it stores can only create graphics in your
+            library, and Settings, under Account, Agent access, revokes it.
+          </p>
+          <pre><code>npx @noacg/cli login</code></pre>
+          <p>
+            <code>save</code> refuses a graphic that does not pass validation. What it saves is
+            editable in the studio like any other graphic, and exports to every target NoaCG
+            supports.
+          </p>
+
+          <h3 id="agent-setup">Reference</h3>
+          <p>
+            All three entrances above are one npm package,
+            <a href="https://www.npmjs.com/package/@noacg/cli"><code>@noacg/cli</code></a>,
+            installing one command, <code>noacg</code>. You can also run it yourself.
+          </p>
+          <pre><code>npm i -g @noacg/cli</code></pre>
+          <p>
+            Every command also works as <code>npx @noacg/cli &lt;command&gt;</code> with nothing
+            installed. The loop by hand is three of them:
+          </p>
+          <pre><code>npx @noacg/cli scaffold --type scoreboard --design neutral --out my-scorebug</code></pre>
+          <pre><code>npx @noacg/cli validate my-scorebug --screenshots shots</code></pre>
+          <pre><code>npx @noacg/cli save my-scorebug</code></pre>
+          <p>
+            <code>scaffold</code> creates the directory relative to where you run the command, and
+            it has to be new or empty. <code>noacg types</code> lists the graphic types the
+            deployment knows, with their fields and operator events, which is where a
+            <code>--type</code> value comes from.
           </p>
           <p>
-            When something fails for a reason the findings do not explain, <code>noacg doctor</code>
-            prints what the tool resolved: which browser it will drive, which deployment
-            <code>NOACG_URL</code> points at, the bridge version it found there, and whether a key
-            is held.
+            <strong>The MCP server without the skill.</strong> For the tools in Claude Code but
+            not the plugin:
+          </p>
+          <pre><code>claude mcp add noacg -- npx -y @noacg/cli mcp</code></pre>
+          <p>
+            That registers it for the directory you run it in; add <code>--scope user</code> to
+            have it everywhere. The server exposes types, scaffold, validate, inspect, screenshot,
+            save and the contract references, so an agent can read the contract through
+            <code>noacg_docs</code> before it has a deployment or a key.
+          </p>
+          <p>
+            <strong>Which files to edit.</strong> A package holds sources and generated files.
+            Edit <code>&lt;name&gt;.html</code>, <code>css/template.css</code>,
+            <code>js/template.js</code>, and the <code>images/</code> and <code>fonts/</code>
+            folders. Leave <code>&lt;name&gt;.ograf.json</code>, <code>graphic.mjs</code>,
+            <code>FIELDS.md</code>, <code>README.md</code> and <code>controlpanel.html</code>
+            alone: <code>validate</code> rewrites them from the sources, so an edit made there is
+            lost.
+          </p>
+          <p>
+            <strong>Which deployment it talks to.</strong> <code>https://noacg.studio</code> by
+            default. <code>NOACG_URL</code> points it at a local dev server or a self-hosted one
+            instead. <code>NOACG_BROWSER</code> names a Chromium executable when the system Chrome
+            or Edge is not the one to use, and <code>NOACG_AGENT_KEY</code> supplies a key in CI,
+            where nothing can open a consent page in a browser.
+          </p>
+          <p>
+            <strong>When something fails for a reason the findings do not explain</strong>,
+            <code>doctor</code> prints what the tool resolved: which browser it will drive, which
+            deployment <code>NOACG_URL</code> points at, the bridge version it found there, and
+            whether a key is held.
           </p>
           <pre><code>npx @noacg/cli doctor</code></pre>
           <p>
-            The package on disk is at the same time a valid <strong>SPX</strong> package and an
+            <strong>What the package is.</strong>
+            The folder is at the same time a valid <strong>SPX</strong> package and an
             <strong>EBU OGraf v1</strong> graphic. Zip it and it also imports through the studio's
-            Import door, or plays in any OGraf renderer. Those two are what the folder satisfies
-            with no build step; the graphic itself is plain HTML, CSS and JavaScript, so the same
-            sources also export to CasparCG, an OBS or vMix overlay, H2R and LiveOS. The full
-            reference is
+            Import door, or plays in any OGraf renderer.
+            Those two are what the folder satisfies with no build step; the graphic itself is
+            plain HTML, CSS and JavaScript, so the same sources also export to CasparCG, an OBS or
+            vMix overlay, H2R and LiveOS. The full reference is
             <a href="https://github.com/miwco/NoaCG-Studio/blob/main/docs/AGENT_CLI.md">AGENT_CLI.md</a>.
           </p>
         </section>

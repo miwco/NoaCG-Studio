@@ -15,12 +15,12 @@ import WorkspaceDock from './WorkspaceDock';
 import CommunityGallery from './CommunityGallery';
 import ModerationQueue from './ModerationQueue';
 import BrandLogo from './BrandLogo';
+import NewGraphicButton from './NewGraphicButton';
 import SaveControls from './save/SaveControls';
 import { BetaFeedbackButton } from './feedback/BetaFeedback';
 import SaveDialogs from './save/SaveDialogs';
 import InsertTemplateDialog from './InsertTemplateDialog';
 import { useRouter } from '../app/router';
-import { useSaveUi } from '../store/saveActions';
 import AuthStatus from './auth/AuthStatus';
 import SignInDialog from './auth/SignInDialog';
 import { useAuthState } from './auth/useAuthState';
@@ -396,12 +396,7 @@ export default function AppShell() {
         >
           <span>{resetArmed ? '↺ Confirm reset?' : '↺ Reset'}</span>
         </button>
-        <button
-          onClick={() => useSaveUi.getState().requestSwitch(() => navigate({ view: 'new' }))}
-          title="Start a new project from a template"
-        >
-          + New graphic
-        </button>
+        <NewGraphicButton />
         <button
           className="home-btn"
           onClick={() => navigate({ view: 'home', section: null })}
