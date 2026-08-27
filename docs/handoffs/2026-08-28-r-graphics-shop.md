@@ -128,6 +128,8 @@ those specs produce is one token — but the terms come from a model's intent an
 brief, so the day one of them is two words with one meaningless half is not a day anybody will
 be reading search.ts.
 
-**Before landing:** the failure needs one clean confirmation on CI, which plans the full
-affected set from the fork point. If it comes back there, read its assertion before touching
-search.ts — the measurement above says the cause is elsewhere.
+**CI settled it.** Run `33121849911` on `6363a700`: **all nine E2E shards ran and passed**,
+with Build, Factory gates, the Catalog calibration gate and the CI gate — read job by job
+(`gh run view 33121849911 --json jobs`), not off the green tick. `adapt-first` is in that
+plan. So the local failure was the load, and the carve-out stands as the guard it is written
+as rather than as a fix for it.
