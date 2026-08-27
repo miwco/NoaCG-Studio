@@ -103,4 +103,31 @@ Two items, both with routes under a minute:
 ## Verification
 
 `npm run build` green. `e2e/wizard-filters.spec.ts`, `e2e/wizard-kit.spec.ts` and
-`e2e/template-pack-10.spec.ts` run green locally; CI plans the rest.
+`e2e/template-pack-10.spec.ts`: 36 passed. The affected plan
+(`npm run test:e2e:focus:queued`): **849 passed, 1 failed** — `e2e/adapt-first.spec.ts:116`,
+"a brief becomes a customized graphic adapted from a proven design" — plus the catalog gate,
+35 passed.
+
+**That one failure is not attributed, and here is exactly what is and is not known about it.**
+It passed on a re-run of the unchanged commit, together with the whole of
+`e2e/ai-retrieval.spec.ts`. I did not capture its assertion before the reporter's tail rolled
+past it, so I cannot say what it claimed. What IS measured is that the search change could not
+have moved that spec's retrieval: `node scripts/spike-brief-terms.mjs` prints every term the
+worship brief produces, asked both as a person's search and as a brief term, and **all eleven
+are identical** — every one is a single token, and a lone unreachable token scores zero with
+the drop or without it. The affected run also shared the machine with another checkout's
+type-floor sweep, and this spec is a long AI-mocked walk into the editor. A timeout under load
+is the likeliest reading, and it is a reading, not a finding.
+
+**What did come out of chasing it is a real carve-out**, kept on its own merits: a BRIEF TERM
+now keeps the exact token-AND (`BrowseContext.briefTerm` turns the drop off along with
+`namedAliasScore`). Retrieval weights each term by its idf, so a term matching nothing is
+free, while the same term with its unreachable half dropped matches a great many designs at a
+low idf and sprays score across the pool. No shortlist in the suite moves today — every term
+those specs produce is one token — but the terms come from a model's intent and a person's
+brief, so the day one of them is two words with one meaningless half is not a day anybody will
+be reading search.ts.
+
+**Before landing:** the failure needs one clean confirmation on CI, which plans the full
+affected set from the fork point. If it comes back there, read its assertion before touching
+search.ts — the measurement above says the cause is elsewhere.

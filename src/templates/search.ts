@@ -329,7 +329,27 @@ export interface BrowseContext {
    * This query is ONE TERM OF A BRIEF, not a person's search — the AI shortlist asking "which
    * designs does this word reach" (ai/retrieval.ts), one term at a time.
    *
-   * It turns off `namedAliasScore`, and only that. That bonus exists so a person typing a
+   * It turns off `namedAliasScore` AND the unreachable-token drop, and nothing else. Both
+   * exist for a RANKED LIST a person reads, and retrieval shows no list and no first page.
+   *
+   * The drop is the more dangerous of the two here. Retrieval weights each term by its idf
+   * (`log(pool / hits)`) and compares the products against a relative cut, so a term matching
+   * NOTHING is free - it contributes no score to anybody. Drop its unreachable word and the
+   * same term matches a great many designs at a low idf, spraying a small score across the
+   * pool and reordering the shortlist: a two-word term stops meaning "no design carries this"
+   * and starts meaning "every design carrying the half of it that exists".
+   *
+   * This is a guard, not a repair - measured 2026-08-28 with
+   * `scripts/spike-brief-terms.mjs`, every term the worship brief in `e2e/adapt-first.spec.ts`
+   * produces is a SINGLE token, and a lone unreachable token scores zero either way, so no
+   * shortlist in the suite moves today. It is declared because the terms come from a model's
+   * intent and a person's brief, so the day one of them is two words with one meaningless
+   * half is not a day anybody will be watching this file.
+   *
+   * Declared on the unusual caller rather than the ordinary one, so browse surfaces get both
+   * behaviours by default and the one consumer with a different question opts out explicitly.
+   *
+   * On `namedAliasScore`: that bonus exists so a person typing a
    * design's own name sees it first, which is a RANKED-LIST concern: retrieval shows no list
    * and no first page. It multiplies each score by the term's idf and compares the products
    * against a relative relevance cut, so an absolute bonus on one design does not merely
@@ -337,8 +357,6 @@ export interface BrowseContext {
    * cleared the cut stops clearing it. Measured: it dropped a worship brief from two designs
    * above the cut to one, and `e2e/ai-retrieval.spec.ts` is the gate that said so.
    *
-   * Declared on the unusual caller rather than the ordinary one, so browse surfaces get the
-   * fix by default and the one consumer with a different question opts out of it explicitly.
    */
   briefTerm?: boolean;
 }
@@ -349,8 +367,10 @@ export function browseTemplates(filters: BrowseFilters, context: BrowseContext =
   const q = parseQuery(filters.query);
   const hasQuery = filters.query.trim().length > 0;
   // A token nothing in the catalog carries would take the whole AND to zero, so it is set aside
-  // rather than allowed to answer an almost-right question with an empty grid.
-  const tokens = q.tokens.filter((t) => tokenReaches(t));
+  // rather than allowed to answer an almost-right question with an empty grid — for a PERSON's
+  // search. A brief term keeps the exact AND, because a term that matches nothing is what makes
+  // its idf meaningful (see BrowseContext.briefTerm).
+  const tokens = context.briefTerm ? q.tokens : q.tokens.filter((t) => tokenReaches(t));
   const ignored = q.tokens.filter((t) => !tokens.includes(t));
   const results: BrowseResult[] = [];
 
