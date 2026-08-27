@@ -1,7 +1,13 @@
 # Handoff - the lower-third taste round: shapes drawn, duplicates gone, the rest ranked
 
-Session S (catalog taste), 2026-08-28. Everything here landed on `claude/s-catalog-taste-d782b9`;
-the branch is queued. `docs/handoffs/lower-third-shapes.md` was the assignment and is consumed.
+Session S (catalog taste), 2026-08-28. Everything here is on `claude/s-catalog-taste-d782b9` -
+pushed, CI green on the integrated sha (all nine shards + the catalog calibration gate ran).
+`docs/handoffs/lower-third-shapes.md` was the assignment and is consumed.
+
+**Queueing was BLOCKED at the end of the session**: the main checkout was sitting on the live
+`claude/quality-review-2026-08-28` branch with uncommitted files, so `main` was checked out
+nowhere and `auto-merge` fails closed on that precondition. The branch is finished - run
+`npm run queue:merge` from this worktree once the main checkout is back on `main`.
 
 ## What shipped
 
