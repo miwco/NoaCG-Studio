@@ -114,7 +114,14 @@ ${maskLines([
   margin-top: calc(16px * var(--scale));  /* air under the tag */
   font-size: calc(48px * var(--scale) * var(--type-scale));  /* display scale, sized to wrap in 380px */
   font-weight: var(--display-weight);  /* the family's heavy weight */
-  line-height: 1.2;                /* the tightest stack the line mask holds (lt64's floor: the glyph box is ~1.2em whatever line-height says) */
+  /* 1.3 IS A MEASURED FLOOR, not taste - and it is Oswald's, not the category's. lt64's 1.2
+     rule assumed a face whose ink stays inside a 1.2em line box; Oswald at weight 800 paints
+     4.4px PAST one at this size (canvas actualBoundingBox over 'ÅÖĝjpqy...'), so at 1.2 the
+     line mask cuts the ring off an Å - a real letter in the Nordic names this block will
+     carry. 1.3 covers the measured ink with margin. The overflow sweep still reports a
+     -mask:y row, because it measures the face's GLYPH box (1.48em for Oswald - mostly built-in
+     line gap, not ink); that row is baselined as benign. */
+  line-height: 1.3;                /* covers Oswald's measured ink at 800 - see above */
   letter-spacing: var(--display-tracking);  /* the family's display tracking */
   text-transform: uppercase;       /* the sport voice: condensed caps */
   color: var(--text-color);        /* primary text colour */
@@ -132,7 +139,7 @@ ${maskLines([
 .lower-third-role {
   font-size: calc(24px * var(--scale) * var(--type-scale));  /* above the secondary floor */
   font-weight: 500;                /* the reading weight */
-  line-height: 1.25;               /* wraps in this width */
+  line-height: 1.3;                /* wraps in this width; covers Oswald's ink like the name above */
   letter-spacing: 0.02em;          /* condensed faces open slightly at reading sizes */
   color: var(--text-dim);          /* secondary text colour */
 }`,
