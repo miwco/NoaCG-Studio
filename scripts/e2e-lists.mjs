@@ -30,6 +30,13 @@ export const FOCUS = [
   'flows.spec.ts',
   'format.spec.ts',
   'hosted-control.spec.ts',
+  // SVG IMPORT is how a student's own artwork gets in, so the road belongs to the sprint's
+  // definition of the product. This is the EXPORTER CORPUS spec - six files shaped the way
+  // Illustrator, Figma, Inkscape and Affinity really export, each pinning an answer the importer
+  // used to get wrong (e2e/fixtures/svg-corpus/README.md). Its 2180-line sibling
+  // `import-svg.spec.ts` deliberately stays out: it covers the same road far more slowly, and
+  // merge latency is the bottleneck the sprint is protecting.
+  'import-svg-corpus.spec.ts',
   'landing.spec.ts',
   'layout.spec.ts',
   'lazy-editor.spec.ts',
