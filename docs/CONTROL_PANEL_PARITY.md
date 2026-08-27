@@ -5,10 +5,16 @@ graphic arrive with a working control panel?* - asked of a lower third and of on
 interactive type the catalog ships. Written 2026-08-09 from a driven browser, not from reading the
 code.
 
-**Binding owner decision it serves (2026-08-08): AI NEVER AUTHORS A STATE MACHINE.** A graphic
-TYPE owns its states, events and operator controls; AI picks the type and fills content and design,
-and the machine arrives from the type registry. Nothing below asks a model for a state or an event,
-and §6 says what that leaves for Lite to do.
+**What it measures: the machine arrives from the graphic TYPE.** A type owns its states, events
+and operator controls; AI picks the type and fills content and design, and the machine arrives
+from the type registry. Nothing measured below asks a model for a state or an event, and §6 says
+what that leaves for Lite to do.
+
+**The rule this served has since changed, and the measurement has not.** "AI never authors a
+state machine" (owner, 2026-08-08) was **superseded on 2026-08-27**: custom control panels are
+open on every path, Lite and Pro included, gated rather than forbidden
+(`docs/CONTROL_PANEL_ROAD.md` §2). Type-supplied machines stay the default and the cheap path -
+everything below still holds - but "the model may not author one" is no longer why.
 
 ## 1. How it was measured
 
@@ -317,8 +323,9 @@ paints in NO state is still reported) - the guard was verified red before it was
 **Very little at the machine level, and the reason is structural.** Lite compiles through
 `specToTemplate` → `variant.create(options)`, and for a typed design `create()` is the wrapper that
 calls `attachMachine(type, …)` (`types/graphicType.ts:615`). The machine, its controls and its
-labels therefore arrive with the template whatever asked for it - which is what makes the owner
-decision ("AI never authors a state machine") free rather than expensive.
+labels therefore arrive with the template whatever asked for it - which is what makes
+type-supplied behaviour the free path, and why it stays the default now that authored machines
+are allowed under the gates.
 `e2e/lite-parity.spec.ts` already pins that a Lite result and a hand-picked build have the same
 fields, the same event buttons and the same state groups; today it pins that over six lower-third
 chassis, where the claim is vacuous because none of them has an event.

@@ -1,7 +1,10 @@
 # NoaCG Lite - the plan to the student release
 
-**Status: LIVE plan, 2026-08-08. The deadline is students live 2026-08-21.** This file is the
-forward plan only - what must be true by that date, in what order, and how it is judged. Nothing
+**Status: written 2026-08-08 against a deadline that has passed.** Students went live and the
+student release closed on 2026-08-22 (`docs/GOALS_ARCHIVE.md`); AI work is postponed behind the
+2026-09-12 production, so nothing here is in flight. The doctrine and the four owner decisions in
+§2 still stand and exist in no other file - read it for those, not for a schedule. This file is
+the forward plan only - what must be true by that date, in what order, and how it is judged. Nothing
 historical lives here: the OpenRouter-era rounds and route tables are `docs/AI_LITE_BENCHMARK.md`
 Appendix C (parked), the dead ends and their retry conditions are `docs/AI_ATTEMPTS.md`, and the
 doctrine and code contract are `src/ai/AGENTS.md` and `docs/ADAPT_FIRST_PLAN.md`.
@@ -59,8 +62,7 @@ These are binding and exist in no other file.
    the whole browse catalog and each category is taken as far as it goes; a category that cannot be
    made good in time ships as good as it got, or is switched off, but it is not quietly dropped from
    the plan. *(Count the union rather than quoting a number: `AssemblerId` in
-   `src/model/wizard.ts` carries 22 browse categories once `imported-design` is excluded, while the
-   root AGENTS.md map says 21.)*
+   `src/model/wizard.ts` carries 22 browse categories once `imported-design` is excluded.)*
 2. **Success test: the owner judges a GALLERY of real generations, per round.** Machine-valid is not
    the bar and never was. A bench and a judge have each already passed a graphic carrying a real
    clipping bug, so a round is not read until its frames are.
