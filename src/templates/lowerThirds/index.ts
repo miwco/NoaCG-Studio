@@ -1,5 +1,4 @@
-// The lower-third catalog: 54 hand-tuned designs across six style families
-// (11 minimal · 7 editorial · 7 cinematic · 10 sport · 10 glass · 9 noacg house). Each is a
+// The lower-third catalog: 66 hand-tuned designs across six style families. Each is a
 // TemplateVariant whose create(options) generates a complete, teachable SPX template (see
 // shared.ts + docs/DESIGN_LANGUAGE.md).
 //
@@ -90,6 +89,8 @@ import { lt61 } from './lt61';
 import { lt62 } from './lt62';
 import { lt63 } from './lt63';
 import { lt64 } from './lt64';
+import { lt66 } from './lt66';
+import { lt67 } from './lt67';
 
 
 /** The matrix above, in browse order: the generalist straps, grouped by style family. */
@@ -128,6 +129,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt31, // Standfirst — name only on a flat ink panel, opened by a short rule
   lt59, // Byline Serif - the catalog's first serif strap, printed on paper stock
   lt63, // Broadsheet Band - the full-width paper band; name and role share one row
+  lt67, // Matte Window - the framed cut-out: a paper mat with a window of picture, the name inside
   // Cinematic (the documentary voice: scrims, hairlines, wide light caps)
   lt32, // Scrim — name and role on a scrim that fades into the shot
   lt33, // Wide Caps — one name in very wide tracked caps, centred
@@ -150,6 +152,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt57, // Volt Call — leaning call-to-action slab (call-to-action type, sport)
   lt58, // Clean Call - minimal hairline call-to-action strap
   lt61, // Poster Slab - a condensed poster billing on a cut slab
+  lt66, // Top Corner - the corner block: a standing slab in the top corner, name stacked in caps
   lt62, // House Weather - current conditions: place, tabular temperature, condition, wind
   // Modern social / glass
   lt08, // Frosted Card — backdrop-blur glass card (logo slot)
