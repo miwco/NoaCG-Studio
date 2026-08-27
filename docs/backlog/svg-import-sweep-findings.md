@@ -13,6 +13,34 @@ follows is where it does not work *as advertised*.
 Six defects were small and clear and are fixed on this branch. Five are structural and are filed
 below with the fixture that reproduces them.
 
+## The table
+
+After the fixes: **12 clean, 8 with a note, 0 failures.** Every note left is one of the five
+findings below - re-run `node scripts/svg-import-sweep.mjs` and the notes should be exactly these.
+
+| Family | Fixture | Verdict |
+|---|---|---|
+| illustrator | `illustrator-internal-css-lower-third` | clean |
+| illustrator | `illustrator-kerned-headline` | clean - kerned runs bind as ONE field |
+| illustrator | `illustrator-quiz-board-multiline` | clean - stacked tspans bind one field per line |
+| illustrator | `illustrator-mixed-outlines` | clean - live text beside an outline row |
+| figma | `figma-frame-export-lower-third` | clean |
+| figma | `figma-nested-frames-quiz-board` | clean |
+| figma | `figma-outline-text-title-card` | **finding 1** - no outline rows, no recovery |
+| figma | `figma-embedded-raster-card` | **finding 2** - no picture field |
+| inkscape | `inkscape-lower-third-layers` | clean |
+| inkscape | `inkscape-text-on-path-bumper` | clean |
+| inkscape | `inkscape-flowed-text-card` | finding 5 - growth default |
+| inkscape | `inkscape-millimetre-scorebug` | **finding 3** - lands at 339 × 191 |
+| effects | `effects-external-ref-and-script` | clean - both removals reported |
+| effects | `effects-symbol-library-ticker` | clean - symbol text explained |
+| effects | `effects-gradient-shadow-lower-third` | **finding 4** - silently shrinks |
+| effects | `effects-figma-masked-reveal` | finding 5 - growth default |
+| geometry | `origin-shifted-quiz-board` | clean - viewBox origin at -960,-540 |
+| geometry | `no-viewbox-px-and-pt` | clean |
+| geometry | `nested-svg-sub-artboard` | finding 5 - growth default |
+| geometry | `ticker-strip-3840` | finding 5 - growth default |
+
 ## Fixed here
 
 | What was wrong | Where | Reproduced by |
