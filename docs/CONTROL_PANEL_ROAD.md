@@ -227,7 +227,7 @@ the calendar.
    controls for every model... we need to update it so we can do any graphic, have any control
    panel, and ensure it will always work."* The 2026-08-08 "AI never authors machines" stance is
    retired - in the owner's words, old thinking - and the safety model is the gates. Lite and Pro
-   are DIRECTION ONLY: built after the student release, when AI work resumes.
+   are DIRECTION ONLY: built after the 2026-09-12 production, when AI work resumes.
 2. **§3 - ratified as planned.** Offer-by-predicate, default to no behaviour, never interrogate,
    and an honest "something else" exit that points at the node editor and the agent door and
    records the ask as feedback.
