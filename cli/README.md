@@ -14,7 +14,7 @@ the `noacg-graphic` skill. Pick the entrance your agent uses -
 
 | Entrance | For | Install |
 |---|---|---|
-| **the plugin** | Claude Code, Codex | one command, below - it brings the skill, a command and the MCP server |
+| **the plugin** | Claude Code, Codex | two commands, below - it brings the skill, a command and the MCP server |
 | **the MCP server** | any MCP client | `npx -y @noacg/cli mcp` over stdio |
 | **the terminal** | an agent that runs shell commands, and you | `npm i -g @noacg/cli` |
 
@@ -43,8 +43,17 @@ claude plugin install noacg@noacg-studio
 
 For the MCP server on its own: `claude mcp add noacg -- npx -y @noacg/cli mcp`.
 
-**Codex**: copy `skill/noacg-graphic/` from this package (or `cli/plugin/skills/noacg-graphic/`
-in the repo) to `~/.codex/skills/noacg-graphic/`, then `codex mcp add noacg -- npx -y @noacg/cli mcp`.
+**Codex**: the same plugin, from the same repository. `codex plugin add` installs the skill and
+registers the MCP server from the plugin's own `.mcp.json`, so there is nothing to copy by hand.
+
+```
+codex plugin marketplace add miwco/NoaCG-Studio
+codex plugin add noacg@noacg-studio
+```
+
+On a Codex without `codex plugin`, do it the long way instead: copy `skill/noacg-graphic/` from
+this package (or `cli/plugin/skills/noacg-graphic/` in the repo) to `~/.codex/skills/noacg-graphic/`,
+then `codex mcp add noacg -- npx -y @noacg/cli mcp`.
 
 **Any MCP client**: run `npx -y @noacg/cli mcp` as a stdio server - command `npx`, args
 `-y @noacg/cli mcp`.

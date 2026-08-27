@@ -281,8 +281,23 @@ Every channel below ships the same one artifact; what differs is which entrance 
 |---|---|---|
 | **npm** `@noacg/cli` (`cli/`) | the NoaCG CLI (`dist/`, which is the terminal AND the MCP server), the skill (`skill/` IS `cli/skill/noacg-graphic/`), README, LICENSE | `npx @noacg/cli <cmd>` / `npm i -g @noacg/cli` |
 | **Claude Code plugin** (`cli/plugin/`, marketplace `noacg-studio` = root `.claude-plugin/marketplace.json`) | the skill copy, `/noacg:graphic`, `.mcp.json` running `npx -y @noacg/cli mcp` | `claude plugin marketplace add miwco/NoaCG-Studio` then `claude plugin install noacg@noacg-studio`; from a clone `claude plugin marketplace add ./`, or for one session `claude --plugin-dir ./cli/plugin` |
-| **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`) | the skill copy | copy `cli/plugin/skills/noacg-graphic/` to `~/.codex/skills/`; `codex mcp add noacg -- npx -y @noacg/cli mcp` |
+| **Codex** (`cli/plugin/.codex-plugin/plugin.json`, the same `skills/`, the same root marketplace) | the whole plugin directory: the skill copy, the command, `.mcp.json` | `codex plugin marketplace add miwco/NoaCG-Studio` then `codex plugin add noacg@noacg-studio` |
 | **In-repo dogfooding** | the thin adapter triple (`.agent-workflows/noacg-graphic.md`, `.claude/skills/`, `.agents/skills/`) - POINTERS at the source | already there |
+
+**Codex reads the SAME root marketplace manifest** (measured 2026-08-27, `codex plugin`): a
+`codex plugin marketplace add` of either `miwco/NoaCG-Studio` or a local checkout resolves the
+marketplace name `noacg-studio` out of `.claude-plugin/marketplace.json`, and `codex plugin add
+noacg@noacg-studio` copies the whole `cli/plugin/` directory to
+`~/.codex/plugins/cache/noacg-studio/noacg/<version>/` - skill, command and `.mcp.json` alike.
+`codex mcp list` then shows the `noacg` server as enabled with **no `[mcp_servers.noacg]` block in
+`~/.codex/config.toml`**, which is how you can tell the plugin is what registered it: remove the
+plugin and the row disappears. So the manual skill copy and the separate `codex mcp add` that this
+document used to require are both gone, and Codex now installs in the same two commands as Claude
+Code. The `.codex-plugin/plugin.json` manifest carries the Codex-side interface metadata; the
+marketplace entry it is found through is the Claude one. Nothing shrinks the CLAUDE side below two
+commands: `claude plugin install` resolves `plugin@marketplace` only against a marketplace that is
+already configured, and a repo shorthand in that position fails with *"Plugin "noacg" not found in
+marketplace "miwco/NoaCG-Studio""*.
 
 `cli/scripts/build-skill.mjs` writes every generated copy from `cli/skill/noacg-graphic/` and stamps
 the npm version onto the two plugin manifests and the marketplace entry; `npm run build` runs it in
