@@ -61,6 +61,11 @@ the live files in `docs/handoffs/`, then the `## NOW` section of `docs/GOALS.md`
 never invent work to fill a wave. Backlog items graduate into GOALS or die in the folder; the
 morning report proposes graduations as candidate rows, and the user rules.
 
+**Nothing from the input is dropped silently** (owner, 2026-08-27). Every distinct ask in the
+pasted input ends up as one of: a session, a section-4 pushback, a section-6 line, or a NAMED
+leftover routed to memory or the backlog. A long dictated ramble is the owner thinking out loud -
+the plan is where it becomes legible which thoughts became work and which were parked.
+
 **Day wave or night wave.** A NIGHT wave is planned in the evening, started by the user, and
 expected to be landed and pushed by morning - roughly seven unattended hours, with the queue doing
 the merging. It is the default when the user says so, or when a wave is being started at the end
@@ -289,7 +294,7 @@ QUEUE  Then, as your LAST TWO actions and in this order:
   | **`opus high`** | **the default. Assume this unless there is a reason written on the line** |
   | `opus xhigh` / `opus max` | one wrong judgement is expensive AND the evidence is already gathered - deciding, not exploring |
   | `fable high` | HIGH-VALUE, IMPORTANT tasks only - the ones the day's direction turns on. Never for volume, never because a task looks big. `high` is its default effort too |
-  | `ultracode` | only when GENUINELY beneficial: a real fan-out over many independent items, or a verdict worth adversarial verification. Name what the fan-out is on the line, or it is not one |
+  | `ultracode` | only when GENUINELY beneficial: a real fan-out over many independent items, or a verdict worth adversarial verification. Name what the fan-out is on the line, or it is not one. The owner is on the max plan and tokens are not the constraint (2026-08-27): big decisions and their verification are legitimate uses; volume for its own sake still is not |
 
 - **Justify every rung off the default, in the same line.** `opus high` needs no defence; anything
   above or below it says why in a clause. That is what stops the ladder drifting upward on
@@ -360,6 +365,14 @@ important, machine-decidable choice is DECIDED, done, and reported with its why,
 vetoes after the fact. The user is the top-level coordinator, in the loop for major forks - not a
 gate on execution. A question that fails the test becomes a decision in the report.
 
+**Answer it yourself first (owner, 2026-08-27).** A question that passes the ask-test only as
+taste - the owner COULD rule, but a recommendation exists - is not asked: write the
+recommendation, decide with it, and carry it to the wave-end alignment questionnaire (section 7)
+for a cheap after-the-fact veto. The owner's own licence: *"everything doesn't have to go right
+the first time"* - anything reversible may be tried, and a wrong call is corrected in the next
+prompt. What still waits for the owner: money, steps past `main`, external accounts, and genuine
+direction forks. The loop teaches the owner's taste by showing its calls, not by asking.
+
 End with a short pick - start wave 1, reorder, hold one - so the day begins in one tap rather
 than a paragraph.
 
@@ -395,6 +408,14 @@ behind a link:
    a conditional one, which arm the handoff file selected; ticks fired and the time of the last
    one. A report that cannot show a live tick late in the night is reporting a dead loop. Work
    the night opened up that fits no prompt goes here as candidate rows.
+8. **The alignment questionnaire** - every decision taken on the owner's behalf this wave (the
+   section-6 answer-it-yourself rule), asked back as options-with-recommendation with the taken
+   answer marked. A teaching instrument, not a gate: the work already shipped, the owner vetoes
+   cheaply, and the pattern of vetoes is what tunes the next wave's decisions.
+9. **One lesson, in every report** - one thing this wave taught that the next wave will apply,
+   named concretely; when it is an orchestration rule, it is also applied to this file ("Every
+   wave improves this file"). A wave that taught nothing says so - a lesson is found, never
+   invented.
 
 In Claude Code the watch loop produces this by itself when the wave finishes. Anywhere without a
 loop, it is produced by re-invoking this workflow in the morning, and section 7 of the evening's
@@ -444,6 +465,11 @@ The rules that keep it from becoming an unattended agent doing whatever it likes
 (owner, 2026-08-26). This is the loosening the follow-on rules deliberately did not make, and it
 is bounded by the WHY chain instead of by pre-approval:
 
+- **A continuation opens with FRESH EYES ON THE PRODUCT, not on the prose** (owner, 2026-08-27).
+  Its first step is driving what the trigger session landed - does it work, is it logical, does
+  it serve the why - before building on it. A handoff describes what its author believes
+  happened; the fresh read is what catches the belief being wrong, and what it finds goes in the
+  continuation's own handoff either way.
 - **The WHY must already exist in writing.** A continuation's GOAL and WHY come from the landed
   handoff's own "what is left", and that WHY must trace to `docs/GOALS.md` ## NOW or to the
   wave's stated goals. The loop writes the prompt in the section-5 format, quoting the handoff's
