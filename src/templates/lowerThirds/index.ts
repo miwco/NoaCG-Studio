@@ -1,6 +1,12 @@
-// The lower-third catalog: 66 hand-tuned designs across six style families. Each is a
+// The lower-third catalog: 60 hand-tuned designs across six style families. Each is a
 // TemplateVariant whose create(options) generates a complete, teachable SPX template (see
 // shared.ts + docs/DESIGN_LANGUAGE.md).
+//
+// SIX DESIGNS WERE RETIRED 2026-08-28 as measured near-duplicates (card-pair-sweep, the
+// rendered-card instrument): lt10 (rendered twin of ls16), lt21 (of lt27), and the four
+// hand-authored logo variants lt23 / lt29 / lt36 / lt47, whose plain siblings (lt02, lt25,
+// lt32, lt15) already carry the shared optional mark slot - so at default render the pair was
+// the same card twice. Do not re-mint the retired ids.
 //
 // The set is built as a MATRIX, not a list, so the wizard's filter chips always have somewhere to
 // land. Every family answers the same questions:
@@ -33,7 +39,6 @@ import { lt06 } from './lt06';
 import { lt07 } from './lt07';
 import { lt08 } from './lt08';
 import { lt09 } from './lt09';
-import { lt10 } from './lt10';
 import { lt11 } from './lt11';
 import { lt12 } from './lt12';
 import { lt13 } from './lt13';
@@ -44,22 +49,18 @@ import { lt17 } from './lt17';
 import { lt18 } from './lt18';
 import { lt19 } from './lt19';
 import { lt20 } from './lt20';
-import { lt21 } from './lt21';
 import { lt22 } from './lt22';
-import { lt23 } from './lt23';
 import { lt24 } from './lt24';
 import { lt25 } from './lt25';
 import { lt26 } from './lt26';
 import { lt27 } from './lt27';
 import { lt28 } from './lt28';
-import { lt29 } from './lt29';
 import { lt30 } from './lt30';
 import { lt31 } from './lt31';
 import { lt32 } from './lt32';
 import { lt33 } from './lt33';
 import { lt34 } from './lt34';
 import { lt35 } from './lt35';
-import { lt36 } from './lt36';
 import { lt37 } from './lt37';
 import { lt38 } from './lt38';
 import { lt39 } from './lt39';
@@ -70,7 +71,6 @@ import { lt43 } from './lt43';
 import { lt44 } from './lt44';
 import { lt45 } from './lt45';
 import { lt46 } from './lt46';
-import { lt47 } from './lt47';
 import { lt48 } from './lt48';
 import { lt49 } from './lt49';
 import { lt50 } from './lt50';
@@ -113,9 +113,7 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt04, // Kicker — light panel, accent kicker chip above the name
   lt19, // Rule Under — name only, over a rule the width of the name
   lt20, // Quiet Center — short rule over a centred name and role
-  lt21, // Right Rail — mirrored hairline, type ragged-left
   lt22, // Stack Three — name / role / tracked organisation, one tall rule
-  lt23, // Mark Left — logo mark, accent divider, name and role (leading logo)
   lt24, // Credential Strap — five inputs: two headlines over a ruled meta band
   lt18, // Line Handle — compact minimal social mark (social-handle type, minimal)
   lt60, // Lowercase Quiet - no capitals, no accent bar: weight and a hairline carry it
@@ -124,7 +122,6 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt26, // Byline — publication kicker printed above the name and role
   lt27, // Column Rule — right-anchored sidebar, type ragged-left
   lt28, // Feature Center — centred kicker, rule, name and role on paper
-  lt29, // Imprint — name and role, divider, then the publication mark (trailing logo)
   lt30, // Dateline — four inputs, closing on a ruled dateline in accent caps
   lt31, // Standfirst — name only on a flat ink panel, opened by a short rule
   lt59, // Byline Serif - the catalog's first serif strap, printed on paper stock
@@ -135,7 +132,6 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   lt33, // Wide Caps — one name in very wide tracked caps, centred
   lt34, // Title Strap — centred name over a hairline, role beneath
   lt35, // Letterbox — three lines under a full-width hairline, rising scrim
-  lt36, // Frame Mark — production mark, hairline column, name and role (leading logo)
   lt37, // Slate — four right-anchored rows against a hairline column
   lt38, // Fade Rule — compact right-anchored pair over a dissolving hairline
   // Sport / esport (bold: slabs, heavy caps, hard shadows)
@@ -157,11 +153,9 @@ const GENERAL_LOWER_THIRDS: TemplateVariant[] = [
   // Modern social / glass
   lt08, // Frosted Card — backdrop-blur glass card (logo slot)
   lt09, // Gradient Pill — compact pill, name + handle inline
-  lt10, // Soft Stack — floating card, accent dot, three-line capable
   lt15, // Frost Strap — glass lower third with a real accent edge (lower-third type, glass)
   lt45, // Glass Chip — the smallest glass design, centred
   lt46, // Glass Column — soft accent edge + three voices
-  lt47, // Glass Sign — card signed off by a trailing logo
   lt48, // Glass Tag — right-anchored capsule: an accent dot and one name
   lt49, // Glass Board — logo well + four lines, the remote-guest board
   lt16, // Frost Handle — compact glass social mark (social-handle type, glass)
