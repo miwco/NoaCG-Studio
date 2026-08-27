@@ -1,6 +1,7 @@
 // What the digest must never get wrong, asserted rather than trusted.
 //
-// Three properties matter more than the rest, and each has a test below that fails loudly:
+// Four properties matter more than the rest, and each has a test below that fails loudly:
+//   0. `--count` never even ASKS for the message column, so its output cannot contain one.
 //   1. The JOB LOG cannot carry a person's words. This repository is public.
 //   2. The read path is a GET, with the service key in headers and never in a URL.
 //   3. The message that reaches SMTP is well-formed: dot-stuffed, CRLF, no line over the
@@ -13,18 +14,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  COUNT_SELECT_COLUMNS,
+  COUNT_WINDOW_HOURS,
   DEFAULT_RECIPIENT,
   DEFAULT_WINDOW_HOURS,
   FIXTURE_ROWS,
   ROW_LIMIT,
+  SELECT_COLUMNS,
   buildMessage,
+  countLines,
   dotStuff,
   encodeHeaderValue,
+  fetchCount,
   fetchRows,
   logLine,
   main,
   readSecrets,
   renderDigest,
+  runCount,
   sortForInbox,
   subjectFor,
   summarize,
@@ -263,4 +270,125 @@ test('the built message is CRLF, headed, and separated from its body', () => {
   assert.match(raw, /\r\nAuto-Submitted: auto-generated\r\n\r\n/);
   assert.match(raw, /\r\n\.\.a stuffed line/);
   assert.ok(!/\n(?!\r)/.test(raw.replace(/\r\n/g, '')), 'no bare newline may remain');
+});
+
+// -- 6. the count mode, which is the one that actually runs ---------------------------------
+//
+// The weekly routine in docs/ROUTINES.md reads these numbers out in chat. Its safety property is
+// structural rather than editorial: the column is never requested, so no rewrite of the printing
+// can leak a sentence.
+
+test('the counting read asks for every column except the one carrying words', () => {
+  assert.ok(SELECT_COLUMNS.includes('message'), 'the mail digest still needs the message');
+  assert.ok(!COUNT_SELECT_COLUMNS.includes('message'), 'the count mode must never ask for it');
+  assert.deepEqual(
+    COUNT_SELECT_COLUMNS,
+    SELECT_COLUMNS.filter((column) => column !== 'message'),
+    'nothing else may be dropped by accident - the breakdown depends on the rest',
+  );
+});
+
+test('runCount sends no message column and prints nothing a person wrote', async () => {
+  const planted = 'PLANTED SENTENCE THAT MUST NOT BE PRINTED';
+  const selects = [];
+  const fetchImpl = async (target) => {
+    const url = new URL(target);
+    selects.push(url.searchParams.get('select'));
+    if (url.searchParams.get('limit') === '0') {
+      // The notes count: zero rows, the total in the header.
+      return { ok: true, status: 206, headers: new Headers({ 'content-range': '*/2' }), json: async () => [] };
+    }
+    // A hostile server answering with a column that was never asked for.
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => [
+        { created_at: '2026-08-26T10:00:00.000Z', kind: 'beta', sentiment: 'negative', reasons: ['export-problem'], status: 'new', message: planted },
+        { created_at: '2026-08-26T09:00:00.000Z', kind: 'generation', sentiment: 'positive', reasons: [], status: 'reviewed', message: planted },
+      ],
+    };
+  };
+
+  const { summary, lines } = await runCount({
+    url: 'https://x.supabase.co',
+    key: 'service-key',
+    since: WINDOW.since,
+    appUrl: 'https://noacg.studio',
+    windowHours: COUNT_WINDOW_HOURS,
+    fetchImpl,
+  });
+
+  for (const select of selects) {
+    assert.ok(!select.includes('message'), 'the count mode asked for ' + select);
+  }
+  assert.equal(summary.total, 2);
+  assert.equal(summary.negative, 1);
+  assert.equal(summary.withMessage, 2, 'the note count comes from the header, not from a row');
+  assert.equal(summary.untriaged, 1);
+  const text = lines.join('\n');
+  assert.ok(!text.includes(planted), 'no line may carry what a person wrote');
+  assert.match(text, /2 piece\(s\) of feedback in the last 168 hours \(7 day\(s\)\)/);
+  assert.match(text, /2 with a written note, 1 still at status "new"/);
+  assert.match(text, /https:\/\/noacg\.studio\/admin/);
+});
+
+test('an empty week says there is nothing to open', () => {
+  const lines = countLines({
+    summary: { total: 0, negative: 0, positive: 0, withMessage: 0, untriaged: 0, beta: 0, generation: 0, topReasons: [] },
+    windowHours: COUNT_WINDOW_HOURS,
+  });
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /No feedback in the last 168 hours/);
+});
+
+test('fetchCount reads the total out of the header and carries no rows back', async () => {
+  let seen = null;
+  const total = await fetchCount({
+    url: 'https://x.supabase.co',
+    key: 'service-key',
+    since: WINDOW.since,
+    filter: { message: 'neq.' },
+    fetchImpl: async (target, init) => {
+      seen = { target, init };
+      return { ok: true, status: 206, headers: new Headers({ 'content-range': '*/7' }), json: async () => [] };
+    },
+  });
+  assert.equal(total, 7);
+  assert.equal(seen.init.method, 'GET');
+  assert.equal(seen.init.headers.prefer, 'count=exact');
+  const url = new URL(seen.target);
+  assert.equal(url.searchParams.get('limit'), '0', 'a count must not fetch rows');
+  assert.equal(url.searchParams.get('message'), 'neq.', 'an empty string is what "no note" looks like');
+  assert.ok(!seen.target.includes('service-key'), 'the key must never travel in the URL');
+});
+
+test('a count with no usable header fails rather than reporting zero', async () => {
+  await assert.rejects(
+    fetchCount({
+      url: 'https://x.supabase.co',
+      key: 'k',
+      since: WINDOW.since,
+      fetchImpl: async () => ({ ok: true, status: 200, headers: new Headers(), json: async () => [] }),
+    }),
+    /no usable content-range/,
+  );
+});
+
+test('the count mode looks back a week, and an explicit window still wins', () => {
+  assert.equal(readSecrets({}, { defaultWindowHours: COUNT_WINDOW_HOURS }).windowHours, 168);
+  assert.equal(
+    readSecrets({ FEEDBACK_DIGEST_WINDOW_HOURS: '48' }, { defaultWindowHours: COUNT_WINDOW_HOURS }).windowHours,
+    48,
+  );
+});
+
+test('counting needs the database pair only, and says so loudly when it is missing', async () => {
+  const secrets = readSecrets({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'k' });
+  assert.deepEqual(secrets.missingForRead, [], 'no SMTP secret is needed to read');
+  assert.deepEqual(secrets.missing, ['FEEDBACK_DIGEST_SMTP_USER', 'FEEDBACK_DIGEST_SMTP_PASS']);
+
+  // Unlike the scheduled mail job, a person is standing here waiting for a number. Exiting green
+  // with no number would answer a question nobody asked.
+  await assert.rejects(main(['--count'], {}), /Cannot count: missing SUPABASE_URL/);
 });
