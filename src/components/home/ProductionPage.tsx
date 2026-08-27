@@ -104,6 +104,7 @@ import {
   pictureLabel,
 } from '../../templates/picture';
 import BrandLogo from '../BrandLogo';
+import NewGraphicButton from '../NewGraphicButton';
 import LibMenu from './LibMenu';
 import { copyLink } from './copyLink';
 import { IconDownload, IconLink, IconTv } from '../icons';
@@ -2556,6 +2557,13 @@ function ProductionShell({
           })}
         </nav>
         <div className="spacer" />
+        {/* The wizard, from the surface a show is actually run from (owner, 2026-08-27: "I
+            don't get there fast enough from other views"). It is the SAME door as the rail's
+            "＋ New graphic for this production…" - both carry this production, so a graphic
+            made from here joins the show you are standing in. Kept at the start of the right
+            cluster, far from ■ All out: a hand reaching for the panic control must never
+            land on navigation. */}
+        <NewGraphicButton productionId={show.id} />
         {/* The renderer heartbeat — only once published. Unpublished, the mode chip already
             says so and a second "not published" beside it is noise, not status. */}
         {hostedSlug && (

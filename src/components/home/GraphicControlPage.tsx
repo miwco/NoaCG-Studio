@@ -46,6 +46,7 @@ import type { AnimPhase } from '../../blocks/presetRegistry';
 import MotionPresetPicker from '../MotionPresetPicker';
 import { FieldRow } from '../fields/FieldControl';
 import BrandLogo from '../BrandLogo';
+import NewGraphicButton from '../NewGraphicButton';
 import ProductionPicker from './ProductionPicker';
 import { IconControl } from '../icons';
 import { slug } from '../../export/common';
@@ -557,9 +558,7 @@ export default function GraphicControlPage({ id }: { id: string }) {
         <div className="spacer" />
         {/* Every surface keeps a door to the wizard (acceptance feedback: creating must be
             reachable from anywhere, not only from Home and the editor). */}
-        <button onClick={() => navigate({ view: 'new' })} data-testid="control-new-project">
-          + New graphic
-        </button>
+        <NewGraphicButton testid="control-new-project" />
         <ProductionPicker
           open={addProdOpen}
           onOpenChange={setAddProdOpen}

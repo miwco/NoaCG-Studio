@@ -29,8 +29,18 @@
 // caller exits 0 with a notice. Anything else - a Supabase error, an SMTP refusal - is a real
 // failure and fails loudly, because at that point somebody IS relying on the mail arriving.
 //
+// THE COUNT MODE, AND WHY IT IS THE ONE THAT ACTUALLY RUNS. The mail half is parked - it wants a
+// Gmail app password nobody has had five minutes for - so the standing reminder moved to a WEEKLY
+// ROUTINE in Claude Code (docs/ROUTINES.md), which runs `--count` against the local .env and reads
+// the numbers out in chat. That mode needs no SMTP secret and it never asks the database for the
+// message column at all: COUNT_SELECT_COLUMNS has no `message` in it, and the one fact it wants
+// about written notes - how many there are - comes back as a PostgREST row count with zero rows
+// attached. So there is no code path in `--count` that could print somebody's words even if the
+// printing were rewritten carelessly, which is a stronger promise than `logLine()` makes.
+//
 // Usage:
 //   node scripts/feedback-digest.mjs            # read, render, send (needs the secrets)
+//   node scripts/feedback-digest.mjs --count    # counts only, to stdout (needs only the DB pair)
 //   node scripts/feedback-digest.mjs --dry-run  # render FIXTURE rows to stdout, no network
 //
 // Environment:
@@ -43,6 +53,9 @@
 //   NOACG_APP_URL               base URL used for the "open the inbox" link
 
 import { connect as tlsConnect } from 'node:tls';
+import { fileURLToPath } from 'node:url';
+
+import { ambientEnv } from './read-dotenv.mjs';
 
 export const DEFAULT_RECIPIENT = 'contact.noacg@gmail.com';
 export const DEFAULT_APP_URL = 'https://noacg.studio';
@@ -57,6 +70,10 @@ export const DEFAULT_WINDOW_HOURS = 26;
 // single-digit feedback per day. If a burst ever exceeds this the digest says so out loud rather
 // than silently showing the first hundred.
 export const ROW_LIMIT = 200;
+
+// A week, because the routine that calls `--count` runs weekly and a count that does not cover
+// the whole gap between two readings is a count of the wrong thing.
+export const COUNT_WINDOW_HOURS = 168;
 
 /** The columns the digest reads. Named explicitly so adding a column to the table never widens
  *  what an email carries by accident. `user_id` is NOT among them: the digest reports whether a
@@ -75,6 +92,12 @@ export const SELECT_COLUMNS = [
   'intent_kind',
   'status',
 ];
+
+/** What `--count` reads. It is SELECT_COLUMNS minus `message`, and the subtraction is the whole
+ *  point: a mode whose output is numbers should not be holding anybody's sentence in memory to
+ *  begin with. Everything left is either a timestamp or a value out of a closed vocabulary
+ *  (`src/feedback/contract.ts`), so no row read here can carry free text. */
+export const COUNT_SELECT_COLUMNS = SELECT_COLUMNS.filter((column) => column !== 'message');
 
 /** Made-up rows, used by --dry-run only. Their whole purpose is to be safe to print in a public
  *  log, so nothing here is real feedback and the messages say so. */
@@ -130,7 +153,7 @@ export const FIXTURE_ROWS = [
  * missing secret is the ordinary state of this workflow before somebody has configured it and
  * must not look like a fault.
  */
-export function readSecrets(env = process.env) {
+export function readSecrets(env = process.env, { defaultWindowHours = DEFAULT_WINDOW_HOURS } = {}) {
   const url = (env.SUPABASE_URL ?? env.VITE_SUPABASE_URL ?? '').trim().replace(/\/+$/, '');
   const key = (env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_SECRET_KEY ?? '').trim();
   const smtpUser = (env.FEEDBACK_DIGEST_SMTP_USER ?? '').trim();
@@ -140,23 +163,34 @@ export function readSecrets(env = process.env) {
 
   const parsedWindow = Number.parseFloat(env.FEEDBACK_DIGEST_WINDOW_HOURS ?? '');
   const windowHours =
-    Number.isFinite(parsedWindow) && parsedWindow > 0 ? parsedWindow : DEFAULT_WINDOW_HOURS;
+    Number.isFinite(parsedWindow) && parsedWindow > 0 ? parsedWindow : defaultWindowHours;
 
   const missing = [];
   if (!url) missing.push('SUPABASE_URL');
   if (!key) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  // The database pair alone is what a READ needs. `--count` never sends anything, so the SMTP
+  // pair being absent must not stop it - that is the whole reason the parked mail half does not
+  // park the weekly reminder with it.
+  const missingForRead = [...missing];
   if (!smtpUser) missing.push('FEEDBACK_DIGEST_SMTP_USER');
   if (!smtpPass) missing.push('FEEDBACK_DIGEST_SMTP_PASS');
 
-  return { url, key, smtpUser, smtpPass, to, appUrl, windowHours, missing };
+  return { url, key, smtpUser, smtpPass, to, appUrl, windowHours, missing, missingForRead };
 }
 
 // -- reading -------------------------------------------------------------------------------
 
 /** The read-only REST call. GET, and only GET. */
-export async function fetchRows({ url, key, since, limit = ROW_LIMIT, fetchImpl = fetch }) {
+export async function fetchRows({
+  url,
+  key,
+  since,
+  limit = ROW_LIMIT,
+  columns = SELECT_COLUMNS,
+  fetchImpl = fetch,
+}) {
   const query = new URLSearchParams({
-    select: SELECT_COLUMNS.join(','),
+    select: columns.join(','),
     created_at: `gte.${since}`,
     order: 'created_at.desc',
     limit: String(limit),
@@ -182,6 +216,46 @@ export async function fetchRows({ url, key, since, limit = ROW_LIMIT, fetchImpl 
     throw new Error('Supabase read returned something other than a list of rows.');
   }
   return rows;
+}
+
+/**
+ * How many rows match, WITHOUT reading any of them. PostgREST answers a `count=exact` request
+ * with the total in the `content-range` header and a body of zero rows, which is exactly the
+ * shape `--count` wants for the one question it cannot answer from the columns it reads: how
+ * many people wrote something. `message=neq.` filters on the empty string, because the write
+ * path stores `''` for "no note" and never null (`api/_lib/feedbackStore.ts`).
+ */
+export async function fetchCount({ url, key, since, filter = {}, fetchImpl = fetch }) {
+  const query = new URLSearchParams({
+    select: 'id',
+    created_at: `gte.${since}`,
+    limit: '0',
+    ...filter,
+  });
+  const response = await fetchImpl(`${url}/rest/v1/user_feedback?${query}`, {
+    method: 'GET',
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      accept: 'application/json',
+      prefer: 'count=exact',
+      range: '0-0',
+    },
+  });
+  if (!response.ok && response.status !== 206) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `Supabase count failed: ${response.status} ${response.statusText} ${detail}`.trim(),
+    );
+  }
+  // "*/6" - the part after the slash is the total. A missing header means the server did not
+  // honour the preference, and guessing a number there would be worse than saying so.
+  const range = response.headers.get('content-range') ?? '';
+  const total = Number.parseInt(range.split('/')[1] ?? '', 10);
+  if (!Number.isFinite(total)) {
+    throw new Error(`Supabase count returned no usable content-range (got "${range}").`);
+  }
+  return total;
 }
 
 // -- shaping -------------------------------------------------------------------------------
@@ -301,6 +375,54 @@ export function renderDigest({ rows, since, until, windowHours, appUrl = DEFAULT
   }
 
   return { subject: subjectFor(summary), text: `${lines.join('\n')}\n`, summary };
+}
+
+/**
+ * The whole output of `--count`, and every line of it is a number or a closed vocabulary value.
+ * Written as a list rather than printed inline so a test can assert on it directly - the promise
+ * that this mode prints no free text is only worth as much as the thing checking it.
+ */
+export function countLines({ summary, windowHours, appUrl = DEFAULT_APP_URL, capped = false }) {
+  const days = Math.round(windowHours / 24);
+  const lines = [];
+
+  if (summary.total === 0) {
+    lines.push(`No feedback in the last ${windowHours} hours (${days} day(s)). Nothing to open.`);
+    return lines;
+  }
+
+  lines.push(
+    `${summary.total} piece(s) of feedback in the last ${windowHours} hours (${days} day(s)): ` +
+      `${summary.negative} negative, ${summary.positive} positive.`,
+  );
+  lines.push(
+    `${summary.withMessage} with a written note, ${summary.untriaged} still at status "new".`,
+  );
+  lines.push(`Kinds: ${summary.generation} generation rating(s), ${summary.beta} beta note(s).`);
+  if (summary.topReasons.length > 0) {
+    lines.push(`Reasons given: ${summary.topReasons.map(([id, n]) => `${id} x${n}`).join(', ')}`);
+  }
+  if (capped) {
+    lines.push(
+      `NOTE: the breakdown above was built from the newest ${ROW_LIMIT} rows; the totals are exact.`,
+    );
+  }
+  lines.push(`What people actually wrote is at ${appUrl}/admin - the words never leave that page.`);
+  return lines;
+}
+
+/** The counting run. Two requests: the narrow rows for the breakdown, one count for the notes. */
+export async function runCount({ url, key, since, appUrl, windowHours, fetchImpl = fetch }) {
+  const [rows, withMessage] = await Promise.all([
+    fetchRows({ url, key, since, columns: COUNT_SELECT_COLUMNS, fetchImpl }),
+    fetchCount({ url, key, since, filter: { message: 'neq.' }, fetchImpl }),
+  ]);
+  const summary = {
+    ...summarize(rows),
+    withMessage,
+    untriaged: rows.filter((row) => row.status === 'new').length,
+  };
+  return { summary, lines: countLines({ summary, windowHours, appUrl, capped: rows.length >= ROW_LIMIT }) };
 }
 
 // -- the mail itself -----------------------------------------------------------------------
@@ -438,7 +560,11 @@ export async function sendMail({ host = 'smtp.gmail.com', port = 465, user, pass
 
 export async function main(argv = process.argv.slice(2), env = process.env) {
   const dryRun = argv.includes('--dry-run');
-  const secrets = readSecrets(env);
+  const countOnly = argv.includes('--count');
+  const secrets = readSecrets(
+    env,
+    countOnly ? { defaultWindowHours: COUNT_WINDOW_HOURS } : undefined,
+  );
   const until = new Date();
   const since = new Date(until.getTime() - secrets.windowHours * 3_600_000);
 
@@ -457,6 +583,26 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     console.log(`Subject: ${digest.subject}`);
     console.log('');
     console.log(digest.text);
+    return 0;
+  }
+
+  if (countOnly) {
+    // Counts only, and this is the mode a person reads in chat rather than in a log. A missing
+    // database pair here IS a fault worth stopping for: unlike the scheduled mail job, somebody
+    // asked for this number just now and a green silence would answer the wrong question.
+    if (secrets.missingForRead.length > 0) {
+      throw new Error(
+        `Cannot count: missing ${secrets.missingForRead.join(', ')}. The pair lives in .env.`,
+      );
+    }
+    const { lines } = await runCount({
+      url: secrets.url,
+      key: secrets.key,
+      since: since.toISOString(),
+      appUrl: secrets.appUrl,
+      windowHours: secrets.windowHours,
+    });
+    for (const line of lines) console.log(line);
     return 0;
   }
 
@@ -508,11 +654,22 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
 const invokedDirectly =
   process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, '/')}`).href;
 if (invokedDirectly) {
-  main().then(
-    (code) => process.exit(code),
+  // The file first, the real environment last (scripts/read-dotenv.mjs). In Actions there is no
+  // .env and this is exactly `process.env`; on a laptop it is what makes `--count` work with no
+  // configuration beyond the .env the checkout already has. A linked worktree with no .env of its
+  // own reads the main checkout's, so the answer does not depend on which window you typed in.
+  const env = ambientEnv(fileURLToPath(new URL('..', import.meta.url)));
+  // `exitCode` rather than `process.exit()`: exiting the instant the promise settles tears the
+  // event loop down while undici still holds the keep-alive socket, and Node aborts with a libuv
+  // assertion instead of the code we asked for. Letting the loop drain costs a second and always
+  // reports the truth.
+  main(process.argv.slice(2), env).then(
+    (code) => {
+      process.exitCode = code;
+    },
     (error) => {
       console.error(`::error title=Feedback digest failed::${error.message}`);
-      process.exit(1);
+      process.exitCode = 1;
     },
   );
 }

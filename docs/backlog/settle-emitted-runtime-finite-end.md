@@ -1,8 +1,8 @@
 # The emitted runtime settles with `progress(1)`, so one endless child snaps to a place nobody chose
 
 **Filed:** 2026-08-27. **Source:** measurement, from the branch that fixed the counting readouts
-(`docs/handoffs/2026-08-27-f-infographic-settle.md`); the question was left open by
-`docs/handoffs/2026-08-26-c-credits-tickers-roll.md`.
+(the settle rule in `src/templates/infographics/igMotion.ts`, landed as `4018768a`). Both
+handoffs that carried the working notes have since been retired; the history has them.
 
 ## Why
 

@@ -102,7 +102,8 @@
     "db:push": "node scripts/db-push.mjs",
     "test:db-push": "node --test scripts/db-push.test.mjs",
     "test:feedback-digest": "node --test scripts/feedback-digest.test.mjs",
-    "feedback:digest:dry": "node scripts/feedback-digest.mjs --dry-run"
+    "feedback:digest:dry": "node scripts/feedback-digest.mjs --dry-run",
+    "feedback:count": "node scripts/feedback-digest.mjs --count"
   },
   "overrides": {
     "dompurify": "3.4.13",
