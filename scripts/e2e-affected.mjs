@@ -356,6 +356,16 @@ const MAP = [
   [/^src\/control\/casparLink\.ts$/, ['caspar-connect.spec.ts']],
   [/^src\/components\/SettingsDialog\.tsx$/, ['caspar-connect.spec.ts']],
   [/^src\/components\/home\/ProductionPage\.tsx$/, ['caspar-connect.spec.ts']],
+  // THE WIZARD DOOR (components/NewGraphicButton.tsx) is mounted by five shells at once, so a
+  // change to it moves the same control on Home, the editor, the control page, the production
+  // dashboard and the video shell. AppShell and styles.css are already CORE, so this row is not
+  // what makes such a change verified - it records which specs OWN the door, so a later refactor
+  // touching only this file still runs them instead of falling through to the unmapped
+  // escalation and reading as covered by everything in general.
+  [
+    /^src\/components\/NewGraphicButton\.tsx$/,
+    ['project.spec.ts', 'library.spec.ts', 'control.spec.ts', 'productions.spec.ts', 'wizard-kit.spec.ts'],
+  ],
 ];
 
 // Anything matching these runs the FULL suite - shared foundations with fan-out everywhere.
